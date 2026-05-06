@@ -6,6 +6,10 @@ from models.booking import Booking, BookingCreate, BookingResponse, BookingStatu
 from models.property import PropertyStatus
 from middleware.auth_middleware import get_current_user
 from services.razorpay_service import razorpay_service
+from services.booking_notifications import (
+    notify_host_booking_confirmed,
+    schedule_soft_lock_reminder,
+)
 from datetime import datetime, timedelta
 import logging
 
@@ -147,6 +151,9 @@ async def create_booking(
         )
         
         logger.info(f"Booking created with soft lock: {booking.booking_id}")
+
+        # Schedule soft-lock reminder 2 minutes before expiry (fire-and-forget)
+        schedule_soft_lock_reminder(db, booking.booking_id, booking.soft_lock_expires_at)
         
         return {
             "booking_id": booking.booking_id,
@@ -242,7 +249,16 @@ async def confirm_payment(
             logger.warning(f"Failed to create booking blocked-date entry: {block_err}")
         
         logger.info(f"Booking confirmed: {booking_id}")
-        
+
+        # Notify host (and guest) of confirmed booking — non-blocking via background task
+        try:
+            confirmed_booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+            if confirmed_booking:
+                import asyncio
+                asyncio.create_task(notify_host_booking_confirmed(db, confirmed_booking))
+        except Exception as notify_err:
+            logger.warning(f"Failed to schedule confirmed-booking notifications: {notify_err}")
+
         return {
             "message": "Booking confirmed successfully",
             "booking_id": booking_id
@@ -512,6 +528,16 @@ async def mock_pay(
         logger.warning(f"Failed to create booking blocked-date entry: {block_err}")
 
     logger.info(f"[MOCK] Booking confirmed via mock-pay: {booking_id}")
+
+    # Notify host (and guest) — same triggers as the live confirm-payment path
+    try:
+        confirmed_booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+        if confirmed_booking:
+            import asyncio
+            asyncio.create_task(notify_host_booking_confirmed(db, confirmed_booking))
+    except Exception as notify_err:
+        logger.warning(f"Failed to schedule confirmed-booking notifications: {notify_err}")
+
     return {
         "message": "Booking confirmed via mock payment",
         "booking_id": booking_id,

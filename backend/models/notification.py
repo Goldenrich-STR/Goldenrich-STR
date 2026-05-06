@@ -2,10 +2,13 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
+from uuid import uuid4
 
 class NotificationType(str, Enum):
     BOOKING_CONFIRMED = "booking_confirmed"
     BOOKING_CANCELLED = "booking_cancelled"
+    BOOKING_PENDING_PAYMENT = "booking_pending_payment"
+    NEW_BOOKING_RECEIVED = "new_booking_received"
     PROPERTY_APPROVED = "property_approved"
     PROPERTY_REJECTED = "property_rejected"
     KYC_APPROVED = "kyc_approved"
@@ -33,7 +36,7 @@ class NotificationStatus(str, Enum):
     READ = "read"
 
 class Notification(BaseModel):
-    notification_id: str = Field(default_factory=lambda: f"notif_{int(datetime.utcnow().timestamp())}")
+    notification_id: str = Field(default_factory=lambda: f"notif_{uuid4().hex[:14].upper()}")
     user_id: str
     
     # Notification details
