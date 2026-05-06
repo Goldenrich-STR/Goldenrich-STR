@@ -67,21 +67,28 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 - **Frontend** `GuestBrowse.js` rewrite: top sticky search bar (city/dates/category), advanced filters drawer (property type, BHK, price min/max, amenities pills, instant + pet toggles), sort dropdown, view toggle (Grid / Split / Map), Leaflet+OSM map with custom price-pin divIcons, popup-to-detail navigation, hover-to-highlight pin sync, fit-bounds, empty/error states.
 - All filter combinations + 4 sort orders + bbox + date-availability tested (20/20 pytest pass).
 
+### Phase 8 — Property Detail + Booking Soft-Lock (Complete — May 2026)
+- **Backend**: `GET /api/properties/{id}` now joins safe public host info (full_name, city, profile_image, kyc_status, created_at, role) — no PII leaks. `services/razorpay_service.py` rewritten with `is_mock` fallback when keys are demo/missing — produces deterministic HMAC signatures, exposes `mock_complete_payment(order_id)` helper. Booking `create_order` flow now succeeds in demo without external Razorpay calls; `confirm-payment` flips to `confirmed` and inserts a `booking`-source blocked-date entry (Phase 6 integration), reflected in iCal export.
+- **Frontend** `/property/:id` (public route): hero gallery with prev/next, title + location + instant-booking badge, host strip with KYC verified pill, description, icon-amenities grid, in-page availability calendar (past + blocked dates disabled, click-to-select range), sticky booking card with date pickers + guests + price breakdown (base × nights, 10% service, 18% GST, total), Book Now button.
+- **Frontend** `/guest/booking-confirmation`: reservation held card, soft-lock countdown timer (mm:ss), trip details, full price summary, mock-mode disclaimer, back-to-search.
+- 19/19 backend pytest pass + 100% frontend flows (test report iteration_3).
+
 ---
 
-## Test Status (Iteration 2, May 6 2026)
+## Test Status (Iteration 3, May 6 2026)
 - Phase 6 backend: 20/20 pass — `/app/backend/tests/test_phase6_calendar.py`
 - Phase 7 backend: 20/20 pass — `/app/backend/tests/test_phase7_search.py`
-- Frontend: 100% on critical flows (host calendar, guest browse split-view + map + filters + sort)
-- Mocked: Razorpay, MSG91, Email, SendGrid
+- Phase 8 backend: 19/19 pass — `/app/backend/tests/test_phase8_property_detail.py`
+- Frontend: 100% on critical flows (host calendar, guest browse, property detail + soft-lock booking)
+- Mocked: Razorpay (with deterministic HMAC fallback), MSG91, Email, SendGrid
 
 ---
 
 ## Pending Backlog
 
 ### P1 — Next Up
-- **Property Detail Page `/property/{id}`**: gallery, description, amenities list, host info, availability calendar widget, **Book Now** button (currently shows 404 — clicking a search result lands on this page)
-- **Booking Flow (frontend)**: date picker tied to availability API, soft-lock countdown UI, Razorpay checkout modal, confirmation screen
+- **Real Razorpay checkout modal** — currently soft-lock created with mock signature; wire `Razorpay.open()` SDK + `confirm-payment` call
+- **Guest "My Bookings" page** `/guest/bookings` — list past + upcoming reservations (currently 404)
 - **Property Listing Creation Flow (Host)**: subscription select + ₹500 registration fee modal, multi-step form, image upload
 - **Property Verification Workflow (real)**: Broker physical visit submission → RM remote review → Admin final approval
 
