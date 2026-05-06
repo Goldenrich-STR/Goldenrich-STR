@@ -1,5 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { authAPI, apiClient } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -16,14 +16,29 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('propnest_token'));
   const [loading, setLoading] = useState(true);
 
+  const refreshUser = useCallback(async () => {
+    if (!localStorage.getItem('propnest_token')) return null;
+    try {
+      const res = await apiClient.get('/auth/me');
+      setUser(res.data);
+      localStorage.setItem('propnest_user', JSON.stringify(res.data));
+      return res.data;
+    } catch (e) {
+      // 401 etc.
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
-    // Load user from localStorage on mount
+    // Load user from localStorage on mount, then refresh from server
     const storedUser = localStorage.getItem('propnest_user');
     if (storedUser && token) {
       setUser(JSON.parse(storedUser));
+      // Best-effort refresh in background
+      refreshUser();
     }
     setLoading(false);
-  }, [token]);
+  }, [token, refreshUser]);
 
   const login = async (email, password) => {
     try {
@@ -81,6 +96,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    refreshUser,
     isAuthenticated: !!token && !!user,
   };
 

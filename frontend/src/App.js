@@ -10,6 +10,7 @@ import GuestBrowse from "./pages/GuestBrowse";
 import GuestBookings from "./pages/GuestBookings";
 import HostDashboard from "./pages/HostDashboard";
 import HostCalendar from "./pages/HostCalendar";
+import HostListProperty from "./pages/HostListProperty";
 import PropertyDetail from "./pages/PropertyDetail";
 import BookingConfirmation from "./pages/BookingConfirmation";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -118,6 +119,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["host"]}>
                   <HostCalendar />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/host/list-property"
+              element={
+                <ProtectedRoute allowedRoles={["host"]}>
+                  <HostListProperty />
                 </ProtectedRoute>
               }
             />

@@ -10,6 +10,8 @@ const apiClient = axios.create({
   },
 });
 
+export { apiClient };
+
 // Add auth token to requests
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('propnest_token');
@@ -53,6 +55,39 @@ export const propertyAPI = {
   
   submitForVerification: (propertyId) =>
     apiClient.post(`/properties/${propertyId}/submit-verification`),
+};
+
+// Subscription API
+export const subscriptionAPI = {
+  getPlans: (planType) =>
+    apiClient.get('/subscriptions/plans', { params: planType ? { plan_type: planType } : {} }),
+
+  createRegistrationFeeOrder: () =>
+    apiClient.post('/subscriptions/registration-fee'),
+
+  confirmRegistrationFee: (data) =>
+    apiClient.post('/subscriptions/confirm-registration-fee', data),
+
+  mockPayRegistrationFee: (orderId) =>
+    apiClient.post('/subscriptions/registration-fee/mock-pay', null, {
+      params: { razorpay_order_id: orderId },
+    }),
+};
+
+// Upload API
+export const uploadAPI = {
+  uploadImage: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post('/upload/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    // Convert relative /api/uploads/... to absolute URL using BACKEND_URL
+    return {
+      ...res.data,
+      url: res.data.url.startsWith('http') ? res.data.url : `${BACKEND_URL}${res.data.url}`,
+    };
+  },
 };
 
 // Booking API

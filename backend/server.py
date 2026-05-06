@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
@@ -37,6 +38,7 @@ from routes.broker_routes import router as broker_router
 from routes.employee_routes import router as employee_router
 from routes.notification_routes import router as notification_router
 from routes.calendar_routes import router as calendar_router
+from routes.upload_routes import router as upload_router
 
 # Include routers with /api prefix
 app.include_router(auth_router, prefix="/api")
@@ -49,6 +51,13 @@ app.include_router(broker_router, prefix="/api")
 app.include_router(employee_router, prefix="/api")
 app.include_router(notification_router, prefix="/api")
 app.include_router(calendar_router, prefix="/api")
+app.include_router(upload_router, prefix="/api")
+
+# Static files: serve uploaded property images
+from pathlib import Path as _Path
+_uploads_dir = _Path("/app/backend/uploads")
+_uploads_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/api/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 
 # CORS middleware
 app.add_middleware(

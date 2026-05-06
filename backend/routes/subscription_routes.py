@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pydantic import BaseModel
 from typing import List, Optional
 from models.subscription import SubscriptionPlan, Subscription, SubscriptionCreate, SubscriptionPlanType, SubscriptionStatus
 from models.user import UserRole
@@ -11,6 +12,12 @@ import os
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
+
+
+class ConfirmRegistrationFeeRequest(BaseModel):
+    razorpay_payment_id: str
+    razorpay_order_id: str
+    razorpay_signature: str
 
 async def get_db():
     from server import db_instance
@@ -293,6 +300,7 @@ async def create_registration_fee_order(
         return {
             "razorpay_order_id": razorpay_result["order"]["id"],
             "razorpay_key_id": razorpay_service.key_id,
+            "is_mock": razorpay_service.is_mock,
             "amount": REGISTRATION_FEE_AMOUNT,
             "currency": "INR",
             "description": "PropNest Host Registration Fee"
@@ -309,9 +317,7 @@ async def create_registration_fee_order(
 
 @router.post("/confirm-registration-fee")
 async def confirm_registration_fee_payment(
-    razorpay_payment_id: str,
-    razorpay_order_id: str,
-    razorpay_signature: str,
+    payload: ConfirmRegistrationFeeRequest,
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -319,9 +325,9 @@ async def confirm_registration_fee_payment(
     try:
         # Verify payment signature
         is_valid = razorpay_service.verify_payment_signature(
-            razorpay_order_id,
-            razorpay_payment_id,
-            razorpay_signature
+            payload.razorpay_order_id,
+            payload.razorpay_payment_id,
+            payload.razorpay_signature,
         )
         
         if not is_valid:
@@ -335,7 +341,7 @@ async def confirm_registration_fee_payment(
             {"user_id": current_user["user_id"]},
             {"$set": {
                 "registration_fee_paid": True,
-                "registration_fee_payment_id": razorpay_payment_id,
+                "registration_fee_payment_id": payload.razorpay_payment_id,
                 "updated_at": datetime.utcnow()
             }}
         )
@@ -356,6 +362,50 @@ async def confirm_registration_fee_payment(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to confirm registration fee payment"
         )
+
+
+@router.post("/registration-fee/mock-pay")
+async def mock_pay_registration_fee(
+    razorpay_order_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Demo-only: simulate the registration fee payment when running in mock mode."""
+    if not razorpay_service.is_mock:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mock payment is only available in demo mode.",
+        )
+
+    user = await db.users.find_one({"user_id": current_user["user_id"]})
+    if user.get("registration_fee_paid", False):
+        return {"message": "Registration fee already paid", "trial_activated": True}
+
+    mock = razorpay_service.mock_complete_payment(razorpay_order_id)
+    if not mock.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=mock.get("error", "Mock payment failed"),
+        )
+
+    await db.users.update_one(
+        {"user_id": current_user["user_id"]},
+        {"$set": {
+            "registration_fee_paid": True,
+            "registration_fee_payment_id": mock["razorpay_payment_id"],
+            "updated_at": datetime.utcnow(),
+        }},
+    )
+    logger.info(f"[MOCK] Registration fee paid: {current_user['user_id']}")
+    return {
+        "message": "Registration fee paid (mock)",
+        "trial_activated": True,
+        "trial_period_days": 90,
+        "razorpay_payment_id": mock["razorpay_payment_id"],
+        "razorpay_order_id": razorpay_order_id,
+        "razorpay_signature": mock["razorpay_signature"],
+        "mock": True,
+    }
 
 # ========== ADMIN: SUBSCRIPTION PLAN MANAGEMENT ==========
 

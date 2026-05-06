@@ -70,12 +70,12 @@ const HostDashboard = () => {
             My Properties
           </h2>
           <button
-            onClick={() => navigate('/host/create-property')}
+            onClick={() => navigate('/host/list-property')}
             className="btn-primary flex items-center space-x-2"
             data-testid="create-property-btn"
           >
             <Plus className="w-5 h-5" />
-            <span>Add Property</span>
+            <span>List a property</span>
           </button>
         </div>
 

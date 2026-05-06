@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from models.user import UserCreate, UserLogin, UserResponse, User, UserRole
 from utils.auth import hash_password, verify_password, create_access_token
 from services.otp_service import otp_service
+from middleware.auth_middleware import get_current_user
 import phonenumbers
 import logging
 
@@ -239,3 +240,22 @@ async def login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends(get_d
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Login failed"
         )
+
+
+@router.get("/me")
+async def get_current_user_profile(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Return the latest profile of the authenticated user (sans secrets)."""
+    user = await db.users.find_one(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0, "password_hash": 0, "registration_fee_payment_id": 0},
+    )
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    # Convert datetimes to ISO
+    for key in ("created_at", "updated_at"):
+        if user.get(key):
+            user[key] = user[key].isoformat() if hasattr(user[key], "isoformat") else user[key]
+    return user

@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime, date
 from enum import Enum
+from uuid import uuid4
 
 class PropertyType(str, Enum):
     APARTMENT = "apartment"
@@ -41,7 +42,7 @@ class BHKType(str, Enum):
     BANQUET = "banquet"
 
 class Property(BaseModel):
-    property_id: str = Field(default_factory=lambda: f"prop_{datetime.utcnow().timestamp()}")
+    property_id: str = Field(default_factory=lambda: f"prop_{uuid4().hex[:14]}")
     owner_id: str
     broker_id: Optional[str] = None
     
