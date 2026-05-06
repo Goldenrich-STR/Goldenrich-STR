@@ -1,0 +1,63 @@
+{
+  "summary": "Phase 10 (Guest My Bookings) tested. Backend: 9/9 new tests pass + full regression 76/80 (4 phase-8 setup errors are pre-existing flakiness from accumulated bookings, not related to phase 10). Frontend: page loads, all 3 tabs work, counts (Upcoming 32, Past 0, Cancelled 10) render, default tab is upcoming, ProtectedRoute redirects unauth to /login, browse-link and find-stay-btn navigate to /guest/browse. CRITICAL bug surfaced: booking_id is generated as BK{int(datetime.utcnow().timestamp())} (second resolution) causing collisions — DB now has multiple bookings sharing the same booking_id, which yields React duplicate-key warnings and arbitrary find_one() results in cancel/get/confirm-payment flows.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "models/booking.py booking_id default_factory",
+        "issue": "booking_id = f'BK{int(datetime.utcnow().timestamp())}' is per-second; two bookings created in the same second collide. Visible in production data (e.g. BK1778068919, BK1778068103, BK1778068081, BK1778067842 each have multiple documents in DB). Affects cancel/{id}, GET /bookings/{id}, confirm-payment because find_one({'booking_id': bid}) returns arbitrary doc; also breaks React keys in /guest/bookings.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "/api/bookings/{id}/cancel",
+        "issue": "Cannot easily test 'past check-in' 400 path since backend uses utcnow().date() vs stored ISO string check_in_date — covered by code path but no live data with past + active state to assert end-to-end."
+      },
+      {
+        "endpoint": "tests/test_phase8_property_detail.py::TestBookingFlow",
+        "issue": "Pre-existing flakiness: 4 setup errors (409 'already booked') because hard-coded date offsets have been consumed by prior runs. Not a phase-10 regression."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "GuestBookings booking list",
+        "issue": "React 'Encountered two children with the same key' warning for booking_id used as map key. Root cause is backend booking_id collision (see backend critical). Also two list items in Upcoming tab clearly render with the SAME visible booking_id but different dates (BK1778068919 shown twice) — guests see ambiguous duplicates.",
+        "selector": "[data-testid^='booking-']",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase10_my_bookings.py",
+    "/app/test_reports/pytest/phase10_results.xml",
+    "/app/test_reports/pytest/all_results.xml"
+  ],
+  "action_items": [
+    "URGENT: Fix booking_id generator in /app/backend/models/booking.py to be unique. Suggested: f'BK{int(datetime.utcnow().timestamp()*1000)}{uuid4().hex[:6]}' or just use uuid4().hex. Add a unique index in MongoDB on bookings.booking_id to prevent future collisions and back-fill duplicates.",
+    "Consider de-duplicating existing duplicate booking_id rows in the bookings collection so /guest/bookings stops showing visual duplicates.",
+    "Optional: refactor phase 8 TestBookingFlow setup to find a free window (mirror phase 10 retry helper) instead of fixed-offset dates."
+  ],
+  "critical_code_review_comments": [
+    "models/booking.py: booking_id factory is timestamp-second based — guaranteed to collide under load and even under test/seed conditions. Use uuid or millisecond+uuid suffix and add MongoDB unique index.",
+    "routes/booking_routes.py cancel_booking: comparing ISO strings ('YYYY-MM-DD') with date().isoformat() works because both are zero-padded ISO; OK.",
+    "routes/booking_routes.py _attach_property_info: handles missing properties by setting None — frontend already guards via property?.title. Good.",
+    "Soft lock has no background reaper — after 10 minutes the booking remains soft_lock and continues to block dates. Consider TTL index on soft_lock_expires_at or a reaper job."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase10_my_bookings.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (9/9 phase 10) / 95% overall (76/80)",
+    "frontend": "90% (all flows work; React key warning due to backend duplicate IDs)"
+  },
+  "test_credentials": "guest@propnest.com/guest123, host@propnest.com/host123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Tests create transient bookings far in the future (today+500..620 days) on prop_demo_3..8 and cancel them in cleanup. _create_future_booking sleeps ~1.05s between calls to work around the booking_id collision bug.",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Phase 10 backend fully passes. The booking_id collision is the root cause of the React duplicate-key warning and of the 'cancel returns already cancelled on a brand-new booking' flake we hit while authoring tests. After main agent fixes booking_id uniqueness, the time.sleep(1.05) workaround in /app/backend/tests/test_phase10_my_bookings.py::_create_future_booking can be removed.",
+  "rca of the issue": "Symptom: GuestBookings page logs 'Encountered two children with the same key BK1778068919' (and others), and two visible rows render with identical booking_id but different dates. Reproduction: log in as guest@propnest.com, visit /guest/bookings — open DevTools console. Root cause: models/booking.py defines booking_id default factory as f'BK{int(datetime.utcnow().timestamp())}' which is second-resolution; any two bookings created within the same second (common during seed scripts and concurrent users) share the same booking_id. There is no MongoDB unique index, so collisions persist as duplicate documents. This further breaks /api/bookings/{id} GET / cancel / confirm-payment because find_one returns whichever doc Mongo picks first — explaining the test flake where cancelling a freshly created booking returned 'Booking already cancelled' (find_one returned a previous already-cancelled doc with the same id). Mitigation: switch booking_id factory to uuid4().hex (or BK + uuid4().hex[:12]) AND add bookings.booking_id unique index; back-fill duplicates."
+}

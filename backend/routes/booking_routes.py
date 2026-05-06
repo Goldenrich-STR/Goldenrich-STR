@@ -257,21 +257,40 @@ async def confirm_payment(
             detail="Failed to confirm payment"
         )
 
+async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> list:
+    """Embed minimal property info (title, city, images, property_type) into each booking."""
+    if not bookings:
+        return bookings
+    property_ids = list({b.get("property_id") for b in bookings if b.get("property_id")})
+    if not property_ids:
+        return bookings
+    cursor = db.properties.find(
+        {"property_id": {"$in": property_ids}},
+        {"_id": 0, "property_id": 1, "title": 1, "city": 1, "state": 1, "images": 1, "property_type": 1, "category": 1},
+    )
+    props = await cursor.to_list(length=len(property_ids))
+    by_id = {p["property_id"]: p for p in props}
+    for b in bookings:
+        b["property"] = by_id.get(b.get("property_id"))
+    return bookings
+
+
 @router.get("/guest/my-bookings")
 async def get_guest_bookings(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Get all bookings made by the current guest."""
+    """Get all bookings made by the current guest, sorted by check-in desc, with property summary."""
     try:
-        cursor = db.bookings.find({"guest_id": current_user["user_id"]}, {"_id": 0})
-        bookings = await cursor.to_list(length=100)
-        
-        return {
-            "bookings": bookings,
-            "total": len(bookings)
-        }
-    
+        cursor = (
+            db.bookings.find({"guest_id": current_user["user_id"]}, {"_id": 0})
+            .sort("check_in_date", -1)
+        )
+        bookings = await cursor.to_list(length=200)
+        bookings = await _attach_property_info(db, bookings)
+
+        return {"bookings": bookings, "total": len(bookings)}
+
     except Exception as e:
         logger.error(f"Error fetching guest bookings: {str(e)}")
         raise HTTPException(
@@ -284,16 +303,17 @@ async def get_host_bookings(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Get all bookings for properties owned by the current host."""
+    """Get all bookings for properties owned by the current host, with property summary."""
     try:
-        cursor = db.bookings.find({"host_id": current_user["user_id"]}, {"_id": 0})
-        bookings = await cursor.to_list(length=100)
-        
-        return {
-            "bookings": bookings,
-            "total": len(bookings)
-        }
-    
+        cursor = (
+            db.bookings.find({"host_id": current_user["user_id"]}, {"_id": 0})
+            .sort("check_in_date", -1)
+        )
+        bookings = await cursor.to_list(length=200)
+        bookings = await _attach_property_info(db, bookings)
+
+        return {"bookings": bookings, "total": len(bookings)}
+
     except Exception as e:
         logger.error(f"Error fetching host bookings: {str(e)}")
         raise HTTPException(
@@ -334,6 +354,68 @@ async def get_booking_details(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch booking"
+        )
+
+
+@router.post("/{booking_id}/cancel")
+async def cancel_booking(
+    booking_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Cancel a booking. Guest can cancel their own soft_lock or confirmed bookings."""
+    try:
+        booking_dict = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+        if not booking_dict:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+        if booking_dict["guest_id"] != current_user["user_id"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+
+        current_status = booking_dict.get("booking_status")
+        if current_status == BookingStatus.CANCELLED.value:
+            return {"message": "Booking already cancelled", "booking_id": booking_id}
+        if current_status not in (BookingStatus.SOFT_LOCK.value, BookingStatus.CONFIRMED.value):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot cancel a booking in '{current_status}' state",
+            )
+
+        # Past check-in: block cancellation (in real app you'd allow with penalty)
+        if booking_dict.get("check_in_date") and booking_dict["check_in_date"] < datetime.utcnow().date().isoformat():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot cancel a booking whose check-in has already passed",
+            )
+
+        await db.bookings.update_one(
+            {"booking_id": booking_id},
+            {
+                "$set": {
+                    "booking_status": BookingStatus.CANCELLED.value,
+                    "cancelled_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow(),
+                }
+            },
+        )
+
+        # Free up the dates: remove booking-source blocked-date entry if present
+        try:
+            await db.blocked_dates.delete_many(
+                {"source": "booking", "source_id": booking_id}
+            )
+        except Exception as block_err:
+            logger.warning(f"Failed to remove booking blocked-date entry: {block_err}")
+
+        logger.info(f"Booking cancelled: {booking_id} by guest {current_user['user_id']}")
+        return {"message": "Booking cancelled", "booking_id": booking_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error cancelling booking: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to cancel booking",
         )
 
 

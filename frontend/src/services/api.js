@@ -77,6 +77,9 @@ export const bookingAPI = {
   
   getBookingDetails: (bookingId) =>
     apiClient.get(`/bookings/${bookingId}`),
+
+  cancelBooking: (bookingId) =>
+    apiClient.post(`/bookings/${bookingId}/cancel`),
 };
 
 // Calendar API

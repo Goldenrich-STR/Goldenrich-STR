@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
 import GuestBrowse from "./pages/GuestBrowse";
+import GuestBookings from "./pages/GuestBookings";
 import HostDashboard from "./pages/HostDashboard";
 import HostCalendar from "./pages/HostCalendar";
 import PropertyDetail from "./pages/PropertyDetail";
@@ -91,6 +92,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["guest"]}>
                   <BookingConfirmation />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/guest/bookings"
+              element={
+                <ProtectedRoute allowedRoles={["guest"]}>
+                  <GuestBookings />
                 </ProtectedRoute>
               }
             />
