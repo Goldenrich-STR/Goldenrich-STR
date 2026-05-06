@@ -1,0 +1,237 @@
+from fastapi import APIRouter, HTTPException, status, Depends
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from pydantic import BaseModel
+from models.user import UserCreate, UserLogin, UserResponse, User, UserRole
+from utils.auth import hash_password, verify_password, create_access_token
+from services.otp_service import otp_service
+import phonenumbers
+import logging
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+class SendOTPRequest(BaseModel):
+    phone: str
+    purpose: str = "registration"
+
+class VerifyOTPRequest(BaseModel):
+    phone: str
+    otp: str
+    purpose: str = "registration"
+
+@router.post("/send-otp")
+async def send_otp(request: SendOTPRequest):
+    """Send OTP to phone number for verification."""
+    try:
+        # Validate phone number
+        parsed = phonenumbers.parse(request.phone, "IN")
+        if not phonenumbers.is_valid_number(parsed):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid phone number"
+            )
+        
+        # Generate and store OTP
+        result = otp_service.generate_and_store_otp(request.phone, request.purpose)
+        
+        if result["success"]:
+            # In production, send OTP via MSG91
+            # For now, return OTP in response for testing
+            return {
+                "message": "OTP sent successfully",
+                "otp": result["otp"],  # Remove in production
+                "expires_in": result["expires_in"]
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result["error"]
+            )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending OTP: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send OTP"
+        )
+
+@router.post("/verify-otp")
+async def verify_otp(request: VerifyOTPRequest):
+    """Verify OTP submitted by user."""
+    try:
+        result = otp_service.verify_otp(request.phone, request.otp, request.purpose)
+        
+        if result["success"]:
+            return {
+                "message": result["message"],
+                "verified": True
+            }
+        else:
+            if result.get("locked"):
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=result["error"]
+                )
+            elif result.get("expired"):
+                raise HTTPException(
+                    status_code=status.HTTP_410_GONE,
+                    detail=result["error"]
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=result["error"]
+                )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying OTP: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Verification error"
+        )
+
+@router.post("/register", response_model=TokenResponse)
+async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends()):
+    """Register a new user."""
+    try:
+        # Check if user already exists
+        existing_user = await db.users.find_one({"email": user_data.email})
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        
+        # Check if phone already exists
+        existing_phone = await db.users.find_one({"phone": user_data.phone})
+        if existing_phone:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Phone number already registered"
+            )
+        
+        # Hash password
+        hashed_password = hash_password(user_data.password)
+        
+        # Create user object
+        user = User(
+            email=user_data.email,
+            phone=user_data.phone,
+            password_hash=hashed_password,
+            full_name=user_data.full_name,
+            role=user_data.role,
+            city=user_data.city,
+            lg_code=user_data.lg_code,
+            terms_accepted=user_data.terms_accepted,
+            is_phone_verified=True  # Assuming OTP was verified before registration
+        )
+        
+        # Insert into database
+        user_dict = user.model_dump()
+        await db.users.insert_one(user_dict)
+        
+        # Create access token
+        access_token = create_access_token(data={
+            "user_id": user.user_id,
+            "email": user.email,
+            "role": user.role.value
+        })
+        
+        # Return response
+        user_response = UserResponse(
+            user_id=user.user_id,
+            email=user.email,
+            phone=user.phone,
+            full_name=user.full_name,
+            role=user.role,
+            city=user.city,
+            profile_image=user.profile_image,
+            kyc_status=user.kyc_status,
+            is_active=user.is_active,
+            created_at=user.created_at
+        )
+        
+        return TokenResponse(
+            access_token=access_token,
+            user=user_response
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Registration error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed"
+        )
+
+@router.post("/login", response_model=TokenResponse)
+async def login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends()):
+    """Login user and return JWT token."""
+    try:
+        # Find user by email
+        user_dict = await db.users.find_one({"email": credentials.email}, {"_id": 0})
+        
+        if not user_dict:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
+        # Verify password
+        if not verify_password(credentials.password, user_dict["password_hash"]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
+        # Check if user is active
+        if not user_dict.get("is_active", True):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is deactivated"
+            )
+        
+        # Create access token
+        access_token = create_access_token(data={
+            "user_id": user_dict["user_id"],
+            "email": user_dict["email"],
+            "role": user_dict["role"]
+        })
+        
+        # Return response
+        user_response = UserResponse(
+            user_id=user_dict["user_id"],
+            email=user_dict["email"],
+            phone=user_dict["phone"],
+            full_name=user_dict["full_name"],
+            role=user_dict["role"],
+            city=user_dict.get("city"),
+            profile_image=user_dict.get("profile_image"),
+            kyc_status=user_dict.get("kyc_status"),
+            is_active=user_dict["is_active"],
+            created_at=user_dict["created_at"]
+        )
+        
+        return TokenResponse(
+            access_token=access_token,
+            user=user_response
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Login failed"
+        )
