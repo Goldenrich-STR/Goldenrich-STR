@@ -58,22 +58,21 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 
 ### Phase 6 — Notifications + Calendar (Complete — Feb/May 2026)
 - **Notifications**: MSG91 SMS/WhatsApp + Email service layer (DEMO), in-app NotificationCenter, NotificationBell badge.
-- **Calendar Management** (just shipped):
-  - `BlockedDate`, `ExternalCalendar`, `CalendarEvent` models
-  - Block/unblock manual dates with conflict checks (active booking, overlap, past-date, range validation)
-  - Unified host calendar view (bookings + manual blocks + external feeds), color-coded
-  - iCal `.ics` export per property (downloadable)
-  - External iCal source CRUD + manual sync trigger
-  - Booking creation now respects blocked-dates collection (409 on conflict)
-  - Confirmed bookings auto-create a `BOOKING`-source blocked-date entry (so iCal export reflects them)
-  - Frontend `/host/calendar` page: month-grid UI, property selector, side panels for manual blocks (all upcoming) + external calendars, auto-jump to month of newly created block, iCal download
-- **DI bug fix (regression)**: All routes that used `db: AsyncIOMotorDatabase = Depends()` (booking, property, subscription, cms, admin) were patched to use a local `get_db` helper. Previously these endpoints returned 422 with "missing client/name/kwargs" — now fixed and verified.
+- **Calendar Management**: BlockedDate/ExternalCalendar models, block/unblock with conflict checks, unified host calendar view (bookings + manual + external, color-coded), .ics export per property, external iCal CRUD + sync, booking creation respects blocked-dates collection, confirmed bookings auto-create BOOKING-source blocks. Frontend `/host/calendar` with month-grid UI, property selector, side panels, auto-jump on new block, iCal download.
+- **DI bug fix (regression)**: All routes that used `db: AsyncIOMotorDatabase = Depends()` were patched to use a local `get_db` helper.
+
+### Phase 7 — Guest Search & Discovery (Complete — May 2026)
+- **Backend** `/api/properties/search` extended with: `property_type`, `pet_friendly`, `check_in/check_out` (auto-excludes properties with overlapping bookings or blocked dates), `bbox` (map-viewport filter), `sort` (`recommended`/`price_asc`/`price_desc`/`newest`). Returns `filters_applied` echo for client state restore.
+- **Seed**: 8 demo LIVE properties across India with lat/lng (`/app/backend/seed_demo_properties.py`).
+- **Frontend** `GuestBrowse.js` rewrite: top sticky search bar (city/dates/category), advanced filters drawer (property type, BHK, price min/max, amenities pills, instant + pet toggles), sort dropdown, view toggle (Grid / Split / Map), Leaflet+OSM map with custom price-pin divIcons, popup-to-detail navigation, hover-to-highlight pin sync, fit-bounds, empty/error states.
+- All filter combinations + 4 sort orders + bbox + date-availability tested (20/20 pytest pass).
 
 ---
 
-## Test Status (Iteration 1, May 6 2026)
-- Backend: 20/20 pytest cases pass — `/app/backend/tests/test_phase6_calendar.py`
-- Frontend: 100% on critical flows tested (host login, calendar load, block/unblock, external CRUD, iCal export)
+## Test Status (Iteration 2, May 6 2026)
+- Phase 6 backend: 20/20 pass — `/app/backend/tests/test_phase6_calendar.py`
+- Phase 7 backend: 20/20 pass — `/app/backend/tests/test_phase7_search.py`
+- Frontend: 100% on critical flows (host calendar, guest browse split-view + map + filters + sort)
 - Mocked: Razorpay, MSG91, Email, SendGrid
 
 ---
@@ -81,8 +80,8 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 ## Pending Backlog
 
 ### P1 — Next Up
-- **Guest Search & Discovery**: unified search bar, location/map search (Google Maps), advanced filters
-- **Booking Flow (frontend)**: date picker tied to availability API, soft-lock countdown, Razorpay checkout modal
+- **Property Detail Page `/property/{id}`**: gallery, description, amenities list, host info, availability calendar widget, **Book Now** button (currently shows 404 — clicking a search result lands on this page)
+- **Booking Flow (frontend)**: date picker tied to availability API, soft-lock countdown UI, Razorpay checkout modal, confirmation screen
 - **Property Listing Creation Flow (Host)**: subscription select + ₹500 registration fee modal, multi-step form, image upload
 - **Property Verification Workflow (real)**: Broker physical visit submission → RM remote review → Admin final approval
 
