@@ -10,6 +10,7 @@ import GuestBrowse from "./pages/GuestBrowse";
 import HostDashboard from "./pages/HostDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import BrokerDashboard from "./pages/BrokerDashboard";
+import EmployeeDashboard from "./pages/EmployeeDashboard";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -102,19 +103,12 @@ function App() {
               }
             />
 
-            {/* Employee Routes - Placeholder */}
+            {/* Employee Routes */}
             <Route
               path="/employee/dashboard"
               element={
                 <ProtectedRoute allowedRoles={["employee"]}>
-                  <div className="min-h-screen bg-sand-50 flex items-center justify-center">
-                    <div className="text-center">
-                      <h1 className="text-4xl font-extrabold text-charcoal mb-4">
-                        Employee Dashboard
-                      </h1>
-                      <p className="text-charcoal-light">Coming soon...</p>
-                    </div>
-                  </div>
+                  <EmployeeDashboard />
                 </ProtectedRoute>
               }
             />
