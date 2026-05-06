@@ -73,24 +73,31 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 - **Frontend** `/guest/booking-confirmation`: reservation held card, soft-lock countdown timer (mm:ss), trip details, full price summary, mock-mode disclaimer, back-to-search.
 - 19/19 backend pytest pass + 100% frontend flows (test report iteration_3).
 
+### Phase 9 — Razorpay Checkout Integration (Complete — May 2026)
+- **Backend**: `POST /api/bookings/confirm-payment` refactored to accept a Pydantic `ConfirmPaymentRequest` body (was query params). New `GET /api/bookings/payment/config` (public) exposes `{provider, key_id, is_mock, currency}` so frontend can pick mock vs live flow. New `POST /api/bookings/{id}/mock-pay` (demo-only, gated on `is_mock=True`) confirms a soft-locked booking with deterministic HMAC and upserts the booking-source blocked-date entry — symmetric side-effects with the real confirm-payment path.
+- **Frontend** `BookingConfirmation.js` rewrite: loads payment config on mount; in mock mode shows demo banner + "Complete demo payment" button → calls `/mock-pay`; in live mode opens `window.Razorpay({...}).open()` with order_id, prefill, theme, success-handler that calls `/confirm-payment` with the SDK signature. Adds confirmed-card (Sparkles + payment ID), expired-card on soft-lock timeout, "View my bookings" CTA after success.
+- Razorpay SDK script added to `index.html`. End-to-end mock flow verified: Book Now → soft-lock → Complete demo payment → "Booking confirmed!" with payment ID, blocked-date entry created, re-attempt 409.
+- 12/12 backend pytest pass + 100% frontend flows (test report iteration_4).
+
 ---
 
-## Test Status (Iteration 3, May 6 2026)
+## Test Status (Iteration 4, May 6 2026)
 - Phase 6 backend: 20/20 pass — `/app/backend/tests/test_phase6_calendar.py`
 - Phase 7 backend: 20/20 pass — `/app/backend/tests/test_phase7_search.py`
-- Phase 8 backend: 19/19 pass — `/app/backend/tests/test_phase8_property_detail.py`
-- Frontend: 100% on critical flows (host calendar, guest browse, property detail + soft-lock booking)
-- Mocked: Razorpay (with deterministic HMAC fallback), MSG91, Email, SendGrid
+- Phase 8 backend: 19/19 pass — `/app/backend/tests/test_phase8_property_detail.py` (4 fixture date warnings; non-blocking)
+- Phase 9 backend: 12/12 pass — `/app/backend/tests/test_phase9_payment.py`
+- Frontend: 100% on critical flows (host calendar, guest browse, property detail, full booking + payment cycle)
+- Mocked: Razorpay (with deterministic HMAC fallback + mock-pay endpoint), MSG91, Email, SendGrid
 
 ---
 
 ## Pending Backlog
 
 ### P1 — Next Up
-- **Real Razorpay checkout modal** — currently soft-lock created with mock signature; wire `Razorpay.open()` SDK + `confirm-payment` call
-- **Guest "My Bookings" page** `/guest/bookings` — list past + upcoming reservations (currently 404)
+- **Guest "My Bookings" page** `/guest/bookings` — list past + upcoming reservations (currently 404). Backend `/api/bookings/guest/my-bookings` already returns the data. The "View my bookings" button on confirmation already routes here.
 - **Property Listing Creation Flow (Host)**: subscription select + ₹500 registration fee modal, multi-step form, image upload
 - **Property Verification Workflow (real)**: Broker physical visit submission → RM remote review → Admin final approval
+- **Notification triggers**: send WhatsApp/Email to host on confirmed booking; soft-lock-expiring nudge to guest at minute 8 (MSG91/SendGrid layer already exists, mocked)
 
 ### P2 — Future
 - Super Admin Account section: real transactions, Razorpay payouts, refunds
