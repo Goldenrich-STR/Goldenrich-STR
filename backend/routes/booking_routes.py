@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pydantic import BaseModel
 from typing import List
 from models.booking import Booking, BookingCreate, BookingResponse, BookingStatus
 from models.property import PropertyStatus
@@ -10,6 +11,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
+
+
+class ConfirmPaymentRequest(BaseModel):
+    booking_id: str
+    razorpay_payment_id: str
+    razorpay_order_id: str
+    razorpay_signature: str
+
 
 async def get_db():
     from server import db_instance
@@ -164,15 +173,17 @@ async def create_booking(
 
 @router.post("/confirm-payment")
 async def confirm_payment(
-    booking_id: str,
-    razorpay_payment_id: str,
-    razorpay_order_id: str,
-    razorpay_signature: str,
+    payload: ConfirmPaymentRequest,
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Confirm payment and convert soft lock to confirmed booking."""
     try:
+        booking_id = payload.booking_id
+        razorpay_order_id = payload.razorpay_order_id
+        razorpay_payment_id = payload.razorpay_payment_id
+        razorpay_signature = payload.razorpay_signature
+
         # Get booking
         booking_dict = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
         
@@ -324,3 +335,106 @@ async def get_booking_details(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch booking"
         )
+
+
+@router.get("/payment/config")
+async def payment_config():
+    """Public payment gateway config so the frontend knows whether to load real or mock checkout."""
+    return {
+        "provider": "razorpay",
+        "key_id": razorpay_service.key_id,
+        "is_mock": razorpay_service.is_mock,
+        "currency": "INR",
+    }
+
+
+@router.post("/{booking_id}/mock-pay")
+async def mock_pay(
+    booking_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Demo-only: complete a mock payment for a soft-locked booking.
+
+    Available only when razorpay_service.is_mock is True (no live keys configured).
+    Generates a deterministic mock signature and runs the same confirm-payment flow
+    so the resulting booking + blocked-date entry are identical to a real flow.
+    """
+    if not razorpay_service.is_mock:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mock payment is only available in demo mode. Use Razorpay checkout instead.",
+        )
+
+    booking_dict = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not booking_dict:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+    if booking_dict["guest_id"] != current_user["user_id"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if booking_dict.get("booking_status") == BookingStatus.CONFIRMED.value:
+        return {"message": "Booking already confirmed", "booking_id": booking_id}
+    if booking_dict.get("booking_status") != BookingStatus.SOFT_LOCK.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Booking is not in soft_lock state (current: {booking_dict.get('booking_status')})",
+        )
+
+    order_id = booking_dict.get("razorpay_order_id")
+    if not order_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Booking has no razorpay_order_id",
+        )
+
+    mock = razorpay_service.mock_complete_payment(order_id)
+    if not mock.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=mock.get("error", "Mock payment failed"),
+        )
+
+    await db.bookings.update_one(
+        {"booking_id": booking_id},
+        {
+            "$set": {
+                "booking_status": BookingStatus.CONFIRMED.value,
+                "payment_status": "paid",
+                "razorpay_payment_id": mock["razorpay_payment_id"],
+                "confirmed_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+            }
+        },
+    )
+
+    # Mirror the confirm-payment side-effect: create a booking-source blocked date
+    try:
+        await db.blocked_dates.update_one(
+            {"blocked_date_id": f"booking_{booking_id}"},
+            {
+                "$set": {
+                    "blocked_date_id": f"booking_{booking_id}",
+                    "property_id": booking_dict["property_id"],
+                    "owner_id": booking_dict["host_id"],
+                    "start_date": booking_dict["check_in_date"],
+                    "end_date": booking_dict["check_out_date"],
+                    "source": "booking",
+                    "source_id": booking_id,
+                    "reason": f"Booking {booking_id[:8]}",
+                    "updated_at": datetime.utcnow(),
+                },
+                "$setOnInsert": {"created_at": datetime.utcnow()},
+            },
+            upsert=True,
+        )
+    except Exception as block_err:
+        logger.warning(f"Failed to create booking blocked-date entry: {block_err}")
+
+    logger.info(f"[MOCK] Booking confirmed via mock-pay: {booking_id}")
+    return {
+        "message": "Booking confirmed via mock payment",
+        "booking_id": booking_id,
+        "razorpay_payment_id": mock["razorpay_payment_id"],
+        "razorpay_order_id": order_id,
+        "razorpay_signature": mock["razorpay_signature"],
+        "mock": True,
+    }

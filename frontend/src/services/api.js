@@ -63,6 +63,12 @@ export const bookingAPI = {
   confirmPayment: (data) =>
     apiClient.post('/bookings/confirm-payment', data),
   
+  mockPay: (bookingId) =>
+    apiClient.post(`/bookings/${bookingId}/mock-pay`),
+
+  getPaymentConfig: () =>
+    apiClient.get('/bookings/payment/config'),
+
   getGuestBookings: () =>
     apiClient.get('/bookings/guest/my-bookings'),
   
