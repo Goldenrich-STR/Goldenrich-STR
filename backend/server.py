@@ -85,6 +85,9 @@ async def startup_db_indexes():
         await db_instance.users.create_index("email", unique=True)
         await db_instance.blocked_dates.create_index("blocked_date_id", unique=True)
         await db_instance.external_calendars.create_index("calendar_id", unique=True)
+        # Phase 14: verification id uniqueness
+        await db_instance.property_verifications.create_index("verification_id", unique=True)
+        await db_instance.property_verifications.create_index("property_id")
         # Compound index for availability queries
         await db_instance.bookings.create_index([("property_id", 1), ("check_in_date", 1), ("check_out_date", 1)])
         await db_instance.blocked_dates.create_index([("property_id", 1), ("start_date", 1), ("end_date", 1)])

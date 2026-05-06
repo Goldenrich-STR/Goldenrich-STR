@@ -101,6 +101,12 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 - Hooked into `server.py` startup: indexes ensured + recovery + reaper loop. Added compound index `(booking_status, soft_lock_expires_at)` for fast reaper scans.
 - 100% green: 9/9 phase 12 + 86/86 overall (test report iteration_8). Suite `test_phase12_reaper.py`.
 
+### Phase 14 — Property Verification Workflow Real Wiring (Complete — May 2026)
+- **Backend** `services/verification_workflow.py` finalized: `assign_broker` (lowest-load, city-preferred) + `on_host_submit` / `on_broker_submit` / `on_rm_decision` / `on_admin_decision` notification fan-outs (in-app + WhatsApp + email via existing services). Admin approve enforces `rm_approved=true`. Admin approve is now idempotent on `status=live` (no double-fire). Employee/Admin approve & reject endpoints accept Pydantic JSON bodies (`RMReviewRequest`, `RMRejectRequest`, `AdminRejectRequest`). `verification_id` factory switched from `int(timestamp())` to `uuid4().hex[:14].upper()` (same fix family as booking_id and notification_id). New unique index `property_verifications.verification_id` + secondary index on `property_id` added in `startup_db_indexes`.
+- **Frontend** new centralized `verificationAPI` namespace in `services/api.js` so every dashboard sends JSON bodies (no more query-string drift). `AdminDashboard` `PropertyModeration` rewritten — defaults to **Awaiting Final Approval** queue (calls `/api/admin/properties/awaiting-final-approval`), shows RM-APPROVED chip, surfaces approve/reject for both `under_review` and `pending_verification` (broker queue) lists. `EmployeeDashboard` `VerificationReviewSection` migrated to `verificationAPI.rmApprove/rmReject`. `BrokerDashboard` `VerificationsSection` was a static placeholder — now a full queue with a `SubmitVerificationModal` (checklist toggles, geo-tagged photo URL+lat+lng add-list, video URL, remarks, validation: at least one geo-tagged photo required).
+- **Docs** new `services/VERIFICATION_WORKFLOW.md` documenting every state transition, payload, server-side guard, and notification trigger.
+- 100% green: 8/8 phase 14 backend tests + frontend smoke (status-filter default, broker submit-modal validation, verificationAPI consumption check). Test report `iteration_10.json`. Suite `test_phase14_verification.py`.
+
 ### Phase 13 — Host Property Listing Creation Flow (Complete — May 2026)
 - **Backend**:
   - `POST /api/upload/image` (auth required) — saves file to `/app/backend/uploads/<uuid>.<ext>`, validates ext + 8MB cap, returns `{filename, url, size, content_type}`.
@@ -141,25 +147,21 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 ## Pending Backlog
 
 ### P1 — Next Up
-- **Property Verification Workflow (real)**: Broker physical visit submission → RM remote review → Admin final approval. RM/Admin dashboards already exist; just need the real state-machine wiring.
+- **Super Admin Account section** — real transactions, Razorpay payouts, refunds.
+- **Idempotent registration-fee guard**: `confirm-registration-fee` currently silently overwrites payment_id when already paid; return 200 'already paid' instead.
+- **Magic-byte file validation** in upload_routes (currently only filename ext check).
 - **Refactor Phase 8 test fixture** to use a free-window search (eliminate 4 pre-existing setup errors).
 - **Refactor `_finalize_confirmed_booking` helper** (~60 lines duplicated across confirm-payment and mock-pay).
+- **Broker re-assignment on host resubmit**: when RM rejects → host edits → resubmits, currently the old verification row stays orphaned if a new broker is picked (Phase 14 test feedback).
 
 ### P2 — Future
-- **Idempotent registration-fee guard**: confirm-registration-fee currently silently overwrites payment_id when already paid (testing flagged); make it return 200 'already paid' instead.
-- **Magic-byte file validation** in upload_routes (currently only filename ext check).
-- **Reviews & ratings** system, real iCal background sync, Super Admin transactions/payouts/refunds, AI features.
-
-### P2 — Future
-- Super Admin Account section: real transactions, Razorpay payouts, refunds
-- Reviews & Ratings system (5-star + sub-categories, 14-day window)
-- Map view in search results
-- Real iCal sync as background cron/Celery job (currently sync is inline + best-effort)
-- BackgroundTasks for external sync to avoid blocking POST
-- Switch `requests` → `httpx.AsyncClient` in calendar sync
-- MongoDB indexes on `blocked_dates(property_id, start_date, end_date)` and `external_calendars(property_id, owner_id)`
-- Image upload to cloud storage
-- AI: smart property descriptions, chatbot
+- **Reviews & ratings** system (5-star + sub-categories, 14-day window).
+- Real iCal background sync (cron/Celery) instead of inline best-effort.
+- AI features (smart property descriptions, chatbot).
+- BackgroundTasks for external sync to avoid blocking POST.
+- Switch `requests` → `httpx.AsyncClient` in calendar sync.
+- Image upload to cloud storage.
+- Tie-break broker auto-assignment with `random.choice(min_load_candidates)` for true cold-start fairness.
 
 ---
 

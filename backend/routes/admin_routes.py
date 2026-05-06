@@ -300,6 +300,10 @@ async def approve_property(
                 detail="Property not found"
             )
 
+        # Idempotency guard: don't re-fire approval notifications on already-LIVE listings
+        if property_data.get("status") == PropertyStatus.LIVE.value:
+            return {"message": "Property is already live", "property_id": property_id}
+
         verification = await db.property_verifications.find_one({"property_id": property_id})
         if not verification or not verification.get("rm_approved"):
             raise HTTPException(
