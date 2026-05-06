@@ -99,8 +99,12 @@ async def verify_otp(request: VerifyOTPRequest):
             detail="Verification error"
         )
 
+async def get_db():
+    from server import db_instance
+    return db_instance
+
 @router.post("/register", response_model=TokenResponse)
-async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends()):
+async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
     """Register a new user."""
     try:
         # Check if user already exists
@@ -175,7 +179,7 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends()):
         )
 
 @router.post("/login", response_model=TokenResponse)
-async def login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends()):
+async def login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends(get_db)):
     """Login user and return JWT token."""
     try:
         # Find user by email

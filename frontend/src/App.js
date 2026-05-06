@@ -8,6 +8,7 @@ import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
 import GuestBrowse from "./pages/GuestBrowse";
 import HostDashboard from "./pages/HostDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -124,19 +125,12 @@ function App() {
               }
             />
 
-            {/* Admin Routes - Placeholder */}
+            {/* Admin Routes */}
             <Route
               path="/admin/dashboard"
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
-                  <div className="min-h-screen bg-sand-50 flex items-center justify-center">
-                    <div className="text-center">
-                      <h1 className="text-4xl font-extrabold text-charcoal mb-4">
-                        Admin Dashboard
-                      </h1>
-                      <p className="text-charcoal-light">Coming soon...</p>
-                    </div>
-                  </div>
+                  <AdminDashboard />
                 </ProtectedRoute>
               }
             />

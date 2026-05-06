@@ -30,9 +30,12 @@ async def get_db() -> AsyncIOMotorDatabase:
 from routes.auth_routes import router as auth_router
 from routes.property_routes import router as property_router
 from routes.booking_routes import router as booking_router
+from routes.admin_routes import router as admin_router
+from routes.cms_routes import router as cms_router
+from routes.subscription_routes import router as subscription_router
 
 # Override Depends() in routes with get_db
-for route in [auth_router, property_router, booking_router]:
+for route in [auth_router, property_router, booking_router, admin_router, cms_router, subscription_router]:
     for r in route.routes:
         for idx, depends in enumerate(r.dependencies):
             if depends.dependency is Depends():
@@ -42,6 +45,9 @@ for route in [auth_router, property_router, booking_router]:
 app.include_router(auth_router, prefix="/api")
 app.include_router(property_router, prefix="/api")
 app.include_router(booking_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
+app.include_router(cms_router, prefix="/api")
+app.include_router(subscription_router, prefix="/api")
 
 # CORS middleware
 app.add_middleware(
