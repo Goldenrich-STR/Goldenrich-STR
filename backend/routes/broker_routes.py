@@ -8,6 +8,7 @@ from models.user import UserRole
 from middleware.auth_middleware import get_current_user
 from datetime import datetime
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/broker", tags=["Broker"])
@@ -374,7 +375,18 @@ async def submit_verification(
                 "updated_at": datetime.utcnow()
             }}
         )
-        
+
+        # Notify RMs and host that broker visit is complete
+        try:
+            from services.verification_workflow import on_broker_submit
+            verification_doc = await db.property_verifications.find_one(
+                {"verification_id": verification_id}, {"_id": 0}
+            )
+            if verification_doc:
+                asyncio.create_task(on_broker_submit(db, verification_doc))
+        except Exception as wf_err:
+            logger.warning(f"Verification workflow trigger (broker submit) failed: {wf_err}")
+
         logger.info(f"Verification submitted: {verification_id} for property {property_id}")
         return {
             "message": "Verification submitted successfully",

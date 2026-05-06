@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pydantic import BaseModel
 from typing import List, Optional
 from models.user import UserRole
 from models.verification import VerificationStatus
@@ -9,9 +10,18 @@ from datetime import datetime, date, timedelta
 import logging
 import io
 import csv
+import asyncio
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/employee", tags=["Employee"])
+
+
+class RMReviewRequest(BaseModel):
+    remarks: Optional[str] = None
+
+
+class RMRejectRequest(BaseModel):
+    reason: str
 
 async def require_employee(current_user: dict = Depends(get_current_user)):
     """Dependency to check if user is employee."""
@@ -182,12 +192,13 @@ async def get_verification_details(
 @router.post("/verifications/{verification_id}/approve")
 async def approve_verification(
     verification_id: str,
-    remarks: Optional[str] = None,
+    payload: Optional[RMReviewRequest] = None,
     current_user: dict = Depends(require_employee),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Approve verification and forward to admin."""
     try:
+        remarks = payload.remarks if payload else None
         verification = await db.property_verifications.find_one(
             {"verification_id": verification_id}
         )
@@ -212,7 +223,17 @@ async def approve_verification(
         )
         
         # Property stays in under_review - awaiting admin final approval
-        
+
+        # Notify admins + host
+        try:
+            from services.verification_workflow import on_rm_decision
+            verification_doc = await db.property_verifications.find_one(
+                {"verification_id": verification_id}, {"_id": 0}
+            )
+            asyncio.create_task(on_rm_decision(db, verification_doc, approved=True, remarks=remarks or ""))
+        except Exception as wf_err:
+            logger.warning(f"on_rm_decision (approve) trigger failed: {wf_err}")
+
         logger.info(f"Verification {verification_id} approved by RM {current_user['user_id']}")
         return {
             "message": "Verification approved. Forwarded to admin for final approval.",
@@ -231,12 +252,13 @@ async def approve_verification(
 @router.post("/verifications/{verification_id}/reject")
 async def reject_verification(
     verification_id: str,
-    reason: str,
+    payload: RMRejectRequest,
     current_user: dict = Depends(require_employee),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Reject verification and send back to host."""
     try:
+        reason = payload.reason
         verification = await db.property_verifications.find_one(
             {"verification_id": verification_id}
         )
@@ -270,7 +292,17 @@ async def reject_verification(
                 "updated_at": datetime.utcnow()
             }}
         )
-        
+
+        # Notify host that the listing needs revision
+        try:
+            from services.verification_workflow import on_rm_decision
+            verification_doc = await db.property_verifications.find_one(
+                {"verification_id": verification_id}, {"_id": 0}
+            )
+            asyncio.create_task(on_rm_decision(db, verification_doc, approved=False, remarks=reason))
+        except Exception as wf_err:
+            logger.warning(f"on_rm_decision (reject) trigger failed: {wf_err}")
+
         logger.info(f"Verification {verification_id} rejected by RM {current_user['user_id']}")
         return {
             "message": "Verification rejected. Host will be notified to resubmit.",

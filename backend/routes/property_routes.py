@@ -298,7 +298,7 @@ async def submit_for_verification(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Submit property for verification (Host only)."""
+    """Submit property for verification (Host only). Auto-assigns a broker + fires notifications."""
     try:
         # Check property ownership
         property_dict = await db.properties.find_one({"property_id": property_id})
@@ -324,9 +324,18 @@ async def submit_for_verification(
                 "updated_at": datetime.utcnow()
             }}
         )
-        
-        logger.info(f"Property submitted for verification: {property_id}")
-        return {"message": "Property submitted for verification"}
+
+        # Trigger workflow: broker auto-assignment + notifications
+        try:
+            from services.verification_workflow import on_host_submit
+            updated = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+            broker_id = await on_host_submit(db, updated)
+        except Exception as wf_err:
+            logger.warning(f"Verification workflow trigger failed: {wf_err}")
+            broker_id = None
+
+        logger.info(f"Property submitted for verification: {property_id} (broker={broker_id})")
+        return {"message": "Property submitted for verification", "broker_id": broker_id}
     
     except HTTPException:
         raise

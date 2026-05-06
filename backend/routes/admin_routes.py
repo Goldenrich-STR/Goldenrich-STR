@@ -1,14 +1,20 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pydantic import BaseModel
 from typing import List, Optional
 from models.user import User, UserRole, KYCStatus
 from models.property import PropertyStatus
 from middleware.auth_middleware import get_current_user
 from datetime import datetime
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["Admin"])
+
+
+class AdminRejectRequest(BaseModel):
+    reason: str
 
 async def get_db():
     from server import db_instance
@@ -247,15 +253,61 @@ async def get_pending_verifications(
             detail="Failed to fetch pending verifications"
         )
 
+@router.get("/properties/awaiting-final-approval")
+async def get_awaiting_final_approval(
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Properties already approved by RM and awaiting admin's final call."""
+    try:
+        approved_verifications = await db.property_verifications.find(
+            {"rm_approved": True}, {"_id": 0, "property_id": 1}
+        ).to_list(length=200)
+        approved_ids = [v["property_id"] for v in approved_verifications]
+        if not approved_ids:
+            return {"properties": [], "total": 0}
+
+        cursor = db.properties.find(
+            {
+                "property_id": {"$in": approved_ids},
+                "status": PropertyStatus.UNDER_REVIEW.value,
+            },
+            {"_id": 0},
+        )
+        properties = await cursor.to_list(length=200)
+        return {"properties": properties, "total": len(properties)}
+
+    except Exception as e:
+        logger.error(f"Error fetching awaiting-final-approval list: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch list",
+        )
+
+
 @router.post("/properties/{property_id}/approve")
 async def approve_property(
     property_id: str,
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Approve property listing (final approval)."""
+    """Approve property listing (final approval). Property must have RM approval first."""
     try:
-        result = await db.properties.update_one(
+        property_data = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+        if not property_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Property not found"
+            )
+
+        verification = await db.property_verifications.find_one({"property_id": property_id})
+        if not verification or not verification.get("rm_approved"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Property must be approved by RM before admin final approval",
+            )
+
+        await db.properties.update_one(
             {"property_id": property_id},
             {"$set": {
                 "status": PropertyStatus.LIVE.value,
@@ -263,13 +315,25 @@ async def approve_property(
                 "updated_at": datetime.utcnow()
             }}
         )
-        
-        if result.matched_count == 0:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Property not found"
-            )
-        
+        await db.property_verifications.update_one(
+            {"property_id": property_id},
+            {"$set": {
+                "admin_reviewed": True,
+                "admin_approved": True,
+                "admin_id": current_user["user_id"],
+                "admin_reviewed_at": datetime.utcnow(),
+                "status": "approved",
+                "updated_at": datetime.utcnow(),
+            }},
+        )
+
+        # Notify host
+        try:
+            from services.verification_workflow import on_admin_decision
+            asyncio.create_task(on_admin_decision(db, property_data, approved=True))
+        except Exception as wf_err:
+            logger.warning(f"on_admin_decision (approve) trigger failed: {wf_err}")
+
         logger.info(f"Property {property_id} approved by admin {current_user['user_id']}")
         return {"message": "Property approved successfully"}
     
@@ -282,30 +346,51 @@ async def approve_property(
             detail="Failed to approve property"
         )
 
+
 @router.post("/properties/{property_id}/reject")
 async def reject_property(
     property_id: str,
-    reason: str,
+    payload: AdminRejectRequest,
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Reject property listing."""
+    """Reject property listing (final)."""
     try:
-        result = await db.properties.update_one(
-            {"property_id": property_id},
-            {"$set": {
-                "status": PropertyStatus.REJECTED.value,
-                "verification_remarks": reason,
-                "updated_at": datetime.utcnow()
-            }}
-        )
-        
-        if result.matched_count == 0:
+        property_data = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+        if not property_data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Property not found"
             )
-        
+
+        await db.properties.update_one(
+            {"property_id": property_id},
+            {"$set": {
+                "status": PropertyStatus.REJECTED.value,
+                "verification_remarks": payload.reason,
+                "updated_at": datetime.utcnow()
+            }}
+        )
+        await db.property_verifications.update_one(
+            {"property_id": property_id},
+            {"$set": {
+                "admin_reviewed": True,
+                "admin_approved": False,
+                "admin_remarks": payload.reason,
+                "admin_id": current_user["user_id"],
+                "admin_reviewed_at": datetime.utcnow(),
+                "status": "rejected",
+                "updated_at": datetime.utcnow(),
+            }},
+        )
+
+        # Notify host
+        try:
+            from services.verification_workflow import on_admin_decision
+            asyncio.create_task(on_admin_decision(db, property_data, approved=False, reason=payload.reason))
+        except Exception as wf_err:
+            logger.warning(f"on_admin_decision (reject) trigger failed: {wf_err}")
+
         logger.info(f"Property {property_id} rejected by admin {current_user['user_id']}")
         return {"message": "Property rejected successfully"}
     
