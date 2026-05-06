@@ -1,0 +1,177 @@
+{
+  "project_name": "PropNest STR Platform",
+  "theme_and_archetype": {
+    "theme": "LIGHT",
+    "archetype": "1_organic_and_earthy",
+    "rationale": "For a Short Term Renting (STR) platform handling residential, commercial, and event spaces, we need to establish trust, warmth, and a sensory experience. Archetype 1 provides a grounded, inviting look that balances professional dashboard functionality with the emotional resonance required for high-end property rentals."
+  },
+  "typography": {
+    "headings": {
+      "font_family": "Manrope",
+      "weights": ["light", "bold", "extrabold"],
+      "tracking": "tracking-tight",
+      "classes": "font-sans font-extrabold tracking-tight text-charcoal",
+      "h1_max_size": "text-5xl lg:text-6xl"
+    },
+    "body": {
+      "font_family": "Manrope",
+      "weights": ["regular", "medium", "semibold"],
+      "tracking": "tracking-normal",
+      "classes": "font-sans text-base leading-relaxed text-charcoal-light"
+    },
+    "labels": {
+      "classes": "text-xs font-bold uppercase tracking-[0.2em] text-sage-dark"
+    },
+    "imports": [
+      "@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap');"
+    ]
+  },
+  "colors": {
+    "background": {
+      "default": "#FDFCF8",
+      "stone": "#F5F5F0",
+      "white": "#FFFFFF"
+    },
+    "foreground": {
+      "default": "#2C2C2C",
+      "muted": "#5C5C5C",
+      "light": "#8C8C8C"
+    },
+    "primary": {
+      "default": "#C05C4F",
+      "hover": "#A94E42",
+      "foreground": "#FFFFFF"
+    },
+    "secondary": {
+      "default": "#788574",
+      "hover": "#647160",
+      "foreground": "#FFFFFF"
+    },
+    "border": "#E5E5DF",
+    "surface": {
+      "card": "#FFFFFF",
+      "input": "#F5F5F0"
+    },
+    "tailwind_config_extension": {
+      "colors": {
+        "sand": {
+          "50": "#FDFCF8",
+          "100": "#FBF9F2",
+          "200": "#F5F2E6",
+          "300": "#EBE5D3",
+          "400": "#DCD3B9",
+          "500": "#CCBE9E",
+          "600": "#BAA783",
+          "700": "#A28D67",
+          "800": "#857355",
+          "900": "#6C5E47"
+        },
+        "charcoal": {
+          "DEFAULT": "#2C2C2C",
+          "light": "#5C5C5C",
+          "muted": "#8C8C8C"
+        },
+        "terracotta": {
+          "DEFAULT": "#C05C4F",
+          "hover": "#A94E42",
+          "light": "#D8897E"
+        },
+        "sage": {
+          "DEFAULT": "#788574",
+          "dark": "#525C4F",
+          "light": "#9FAB9C"
+        },
+        "stone": "#F5F5F0"
+      }
+    }
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous spacing. Internal padding must prevent text collision.",
+    "container_padding": "p-6 md:p-8 lg:p-12",
+    "grids": {
+      "dashboard": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
+      "marketing_hero": "grid grid-cols-1 md:grid-cols-12 gap-8"
+    },
+    "card_radius": "rounded-xl",
+    "button_radius": "rounded-lg",
+    "input_radius": "rounded-lg"
+  },
+  "surfaces_and_shadows": {
+    "dashboard_cards": {
+      "background": "bg-white",
+      "border": "border border-stone",
+      "shadow": "shadow-sm",
+      "hover": "hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+    },
+    "headers": {
+      "glass": "bg-white/80 backdrop-blur-xl border-b border-stone",
+      "solid": "bg-white border-b border-stone"
+    }
+  },
+  "components_strategy": {
+    "buttons": "Flat design. Primary uses Terracotta. Secondary uses Sage or transparent with border. Minimal shadows. Text must be readable (min 4.5:1).",
+    "inputs": "Filled background (stone) rather than heavily bordered. Soft borders on focus (focus:ring-terracotta).",
+    "charts": "Recharts or Shadcn Charts. Use Sage and Terracotta variants for data representation. Keep grids light (stone).",
+    "tables": "Clean, flat. No vertical borders. Generous row padding (py-4).",
+    "navigation": "Clear hierarchy. Active states use Terracotta text or underline. Top navigation with white/glass background."
+  },
+  "icons_and_assets": {
+    "library": "lucide-react",
+    "stroke_width": "1.5",
+    "style": "clean, consistent sizing"
+  },
+  "media_urls": {
+    "hero_marketing": [
+      {
+        "url": "https://static.prod-images.emergentagent.com/jobs/e7e29ee1-e615-4698-8be7-44fe5cb0ced0/images/7d9ef7248722c4a3a84b1cccacca4662dd8320cc1f76a512224be8fa721bd210.png",
+        "category": "Hero Background - Modern Indian Villa",
+        "description": "High-end real estate wide shot for main landing page hero background."
+      },
+      {
+        "url": "https://static.prod-images.emergentagent.com/jobs/e7e29ee1-e615-4698-8be7-44fe5cb0ced0/images/c6dc85aeeb49b225c5af2df7703181f6eddd0fd551972705cba2e03ee18d293f.png",
+        "category": "Hero Background - Event Venue",
+        "description": "Premium event venue space for alternative hero or event category sections."
+      }
+    ],
+    "property_listings": [
+      {
+        "url": "https://images.unsplash.com/photo-1503174971373-b1f69850bded?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBob3VzZSUyMGludGVyaW9yfGVufDB8fHx8MTc3ODA2MjA2Nnww&ixlib=rb-4.1.0&q=85",
+        "category": "Residential Listing",
+        "description": "Modern interior living space."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1633975846872-2bed7fd995f9?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHwzfHxjb21tZXJjaWFsJTIwb2ZmaWNlJTIwc3BhY2V8ZW58MHx8fHwxNzc4MDYyMDY2fDA&ixlib=rb-4.1.0&q=85",
+        "category": "Commercial Listing",
+        "description": "Commercial office space."
+      }
+    ],
+    "avatars": [
+      {
+        "url": "https://images.unsplash.com/photo-1655249493799-9cee4fe983bb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBwcm9maWxlJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzc4MDYyMDg1fDA&ixlib=rb-4.1.0&q=85",
+        "category": "User Profile",
+        "description": "Host/Renter/Broker profile picture placeholder."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1655249481446-25d575f1c054?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBwcm9maWxlJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzc4MDYyMDg1fDA&ixlib=rb-4.1.0&q=85",
+        "category": "User Profile",
+        "description": "Employee/Admin profile picture placeholder."
+      }
+    ],
+    "logos": [
+      {
+        "url": "https://images.unsplash.com/photo-1769984867572-10dea95bd4f1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODl8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwY29tcGFueSUyMGxvZ298ZW58MHx8fHwxNzc4MDYyMDg1fDA&ixlib=rb-4.1.0&q=85",
+        "category": "Partner Logo",
+        "description": "Placeholder for corporate/partner logos."
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Use Manrope for both headings and body font. Load from Google Fonts in index.css.",
+    "Do NOT use pure white background globally, use the #FDFCF8 (sand-50) or #F5F5F0 (stone) for dashboard backgrounds to reduce eye strain, and plain white #FFFFFF for cards.",
+    "All interactive elements must have data-testid attributes for testing.",
+    "Dashboard layout must have a sticky sidebar navigation and a top header with glassmorphism.",
+    "Implement clear visual hierarchies using the tailwind color variables provided.",
+    "Incorporate Shadcn components (tables, calendars, inputs) but override their default border and radius styles to match these guidelines.",
+    "Do NOT use placeholder text or dummy image URLs. ALWAYS use the images provided in media_urls."
+  ]
+}
