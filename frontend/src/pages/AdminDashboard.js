@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import apiClient from '../services/api';
+import apiClient, { verificationAPI } from '../services/api';
 import { 
   Users, Building2, Calendar, DollarSign, CheckCircle, 
   XCircle, Clock, TrendingUp, BarChart3, LogOut 
@@ -323,19 +323,41 @@ const UserManagement = () => {
 const PropertyModeration = () => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('pending_verification');
+  // Default to the highest-priority queue: properties RM has approved and
+  // are sitting on the admin's desk for the final call.
+  const [statusFilter, setStatusFilter] = useState('awaiting_final_approval');
 
   useEffect(() => {
-    if (statusFilter === 'pending_verification') {
+    setLoading(true);
+    if (statusFilter === 'awaiting_final_approval') {
+      fetchAwaitingFinalApproval();
+    } else if (statusFilter === 'pending_verification') {
       fetchPendingProperties();
     } else {
       fetchAllProperties();
     }
   }, [statusFilter]);
 
+  const refresh = () => {
+    if (statusFilter === 'awaiting_final_approval') fetchAwaitingFinalApproval();
+    else if (statusFilter === 'pending_verification') fetchPendingProperties();
+    else fetchAllProperties();
+  };
+
+  const fetchAwaitingFinalApproval = async () => {
+    try {
+      const response = await verificationAPI.listAwaitingFinalApproval();
+      setProperties(response.data.properties || []);
+    } catch (error) {
+      console.error('Error fetching awaiting-final-approval:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchPendingProperties = async () => {
     try {
-      const response = await apiClient.get('/admin/properties/pending-verification');
+      const response = await verificationAPI.listPendingForAdmin();
       setProperties(response.data.properties || []);
     } catch (error) {
       console.error('Error fetching pending properties:', error);
@@ -358,12 +380,13 @@ const PropertyModeration = () => {
 
   const approveProperty = async (propertyId) => {
     try {
-      await apiClient.post(`/admin/properties/${propertyId}/approve`);
-      alert('Property approved successfully!');
-      fetchPendingProperties();
+      await verificationAPI.adminApprove(propertyId);
+      alert('Property approved and is now LIVE!');
+      refresh();
     } catch (error) {
       console.error('Error approving property:', error);
-      alert('Failed to approve property');
+      const msg = error?.response?.data?.detail || 'Failed to approve property';
+      alert(msg);
     }
   };
 
@@ -372,13 +395,22 @@ const PropertyModeration = () => {
     if (!reason) return;
 
     try {
-      await apiClient.post(`/admin/properties/${propertyId}/reject`, { reason });
+      await verificationAPI.adminReject(propertyId, reason);
       alert('Property rejected');
-      fetchPendingProperties();
+      refresh();
     } catch (error) {
       console.error('Error rejecting property:', error);
-      alert('Failed to reject property');
+      const msg = error?.response?.data?.detail || 'Failed to reject property';
+      alert(msg);
     }
+  };
+
+  // Admin can only act when status is `under_review` AND RM has approved
+  // (server enforces this). On the awaiting-final-approval queue the entire
+  // list is already filtered, so always show buttons there.
+  const canActOn = (property) => {
+    if (statusFilter === 'awaiting_final_approval') return true;
+    return property.status === 'under_review';
   };
 
   return (
@@ -389,15 +421,23 @@ const PropertyModeration = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="input-field w-56"
+            className="input-field w-64"
             data-testid="status-filter"
           >
-            <option value="pending_verification">Pending Verification</option>
+            <option value="awaiting_final_approval">Awaiting Final Approval (RM-approved)</option>
+            <option value="pending_verification">Pending Verification (broker queue)</option>
             <option value="all">All Properties</option>
             <option value="live">Live</option>
             <option value="rejected">Rejected</option>
           </select>
         </div>
+        {statusFilter === 'awaiting_final_approval' && (
+          <p className="text-sm text-charcoal-light" data-testid="queue-description">
+            These properties have been physically inspected by the broker and remotely
+            reviewed by an RM. Approve to take them LIVE, or reject with a reason to
+            send them back to the host.
+          </p>
+        )}
       </div>
 
       {loading ? (
@@ -411,7 +451,7 @@ const PropertyModeration = () => {
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4 flex-1">
                   <img
-                    src={property.images[0] || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
+                    src={property.images?.[0] || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                     alt={property.title}
                     className="w-24 h-24 rounded-lg object-cover"
                   />
@@ -421,13 +461,30 @@ const PropertyModeration = () => {
                       {property.city} | {property.bhk_type} | {property.category}
                     </p>
                     <p className="text-sm text-charcoal-muted mt-2">{property.description?.substring(0, 100)}...</p>
-                    <div className="flex items-center space-x-2 mt-3">
+                    <div className="flex items-center space-x-2 mt-3 flex-wrap gap-y-2">
                       <span className="text-lg font-bold text-terracotta">₹{property.price_per_night}</span>
                       <span className="text-sm text-charcoal-light">/night</span>
+                      <span
+                        className={`inline-block px-2 py-1 text-xs font-semibold rounded ml-2 ${
+                          property.status === 'live' ? 'bg-green-100 text-green-700' :
+                          property.status === 'under_review' ? 'bg-blue-100 text-blue-700' :
+                          property.status === 'pending_verification' ? 'bg-yellow-100 text-yellow-700' :
+                          property.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}
+                        data-testid={`status-badge-${property.property_id}`}
+                      >
+                        {property.status.replace('_', ' ').toUpperCase()}
+                      </span>
+                      {statusFilter === 'awaiting_final_approval' && (
+                        <span className="inline-block px-2 py-1 text-xs font-semibold rounded bg-sage-light text-sage-dark">
+                          RM APPROVED
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-                {property.status === 'pending_verification' && (
+                {canActOn(property) && (
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => approveProperty(property.property_id)}
@@ -452,9 +509,9 @@ const PropertyModeration = () => {
           ))}
         </div>
       ) : (
-        <div className="dashboard-card text-center py-12">
+        <div className="dashboard-card text-center py-12" data-testid="properties-empty">
           <Building2 className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
-          <p className="text-charcoal-light">No properties found</p>
+          <p className="text-charcoal-light">No properties in this queue</p>
         </div>
       )}
     </div>

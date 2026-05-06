@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 from enum import Enum
+import uuid
 
 class VerificationStatus(str, Enum):
     PENDING = "pending"
@@ -27,7 +28,7 @@ class VerificationChecklist(BaseModel):
     no_discrepancies: bool = False
 
 class PropertyVerification(BaseModel):
-    verification_id: str = Field(default_factory=lambda: f"verify_{int(datetime.utcnow().timestamp())}")
+    verification_id: str = Field(default_factory=lambda: f"verify_{uuid.uuid4().hex[:14].upper()}")
     property_id: str
     broker_id: str
     owner_id: str

@@ -1,0 +1,33 @@
+{
+  "summary": "Phase 14 — Property Verification Workflow regression. Backend: 8/8 pytest in test_phase14_verification.py PASS — covers full happy-path E2E (host submit → broker auto-assigned + property_verifications row created with status=pending → broker submit JSON body flips property to under_review/verification.completed → RM approve JSON body sets rm_approved=true → admin awaiting-final-approval list returns it → admin approve flips to live), RM rejection branch (property→draft, verification→rejected), admin rejection branch after RM approval (property→rejected, verification.admin_approved=false), admin approve guard (400 when rm_approved is false), JSON body enforcement (POST /employee/verifications/{id}/reject without body → 422; POST /admin/properties/{id}/reject without body → 422), verification_id uniqueness across 5 rapid host submits (all unique verify_<14hex> uuid4 ids), broker auto-assignment fairness (with 2 brokers, lower-load broker gets ≥2 of 4 properties — load balancer working). Frontend smoke (Playwright): AdminDashboard logged in → Properties tab → status-filter default value = 'awaiting_final_approval' confirmed, options exactly ['awaiting_final_approval','pending_verification','all','live','rejected'] confirmed. BrokerDashboard logged in → Verifications tab → [data-testid=verifications-list] present, 1 active task, [data-testid=open-submit-{id}] click → [data-testid=submit-verification-modal] opens → submitting without photos shows 'At least one geo-tagged photo is required' validation. EmployeeDashboard logged in → Pending Reviews tab loads cleanly with empty-state 'No verifications pending review' (expected since no in-flight broker submissions at test time). verificationAPI helper namespace is exported from /app/frontend/src/services/api.js and all three dashboards (Admin/Employee/Broker) consume it — no direct apiClient.post/get calls to verification endpoints elsewhere.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase14_verification.py",
+    "/app/test_reports/pytest/phase14_results.xml"
+  ],
+  "action_items": [
+    "Pre-existing regression failures in older suites (NOT Phase 14): test_phase7_search.py::test_property_type_villa & test_max_price_5000 are off by one duplicate row each (likely accumulated TEST_ seed data over previous iterations); test_phase11_notifications.py::test_host_my_notifications_increases_after_confirmed_booking saw 50→50 because the user has hit the in-app notification cap of 50; test_phase8 booking flow has 4 collection errors due to a fixture (likely host registration_fee state). Recommend a one-time DB cleanup of TEST_-prefixed leftover properties and a notification trim to <50 for host before re-running phase7/phase8/phase11 — Phase 14 itself is clean."
+  ],
+  "critical_code_review_comments": [
+    "verification_workflow.assign_broker computes loads with asyncio.gather then min(loads) — picks first occurrence on tie. With 2 fresh brokers and equal loads the same broker will always win until its load increases. Acceptable for now but consider tie-break by random.choice(candidates with min load) for true fairness on cold starts.",
+    "broker_routes.submit_verification: if a verification record already exists (pre-created by assign_broker), the upsert path uses {property_id, broker_id} compound match. If the host re-submits and a NEW broker is auto-assigned (e.g. after RM rejected and back to draft), the old verification stays orphaned. Consider matching by property_id only and updating broker_id, or deleting prior rejected rows on resubmission.",
+    "employee_routes.approve_verification: payload is Optional[RMReviewRequest]=None — works but means an empty POST is accepted (200) and remarks=None. Slightly inconsistent with reject which requires a body. Minor; current FE always passes a body.",
+    "admin_routes.approve_property silently 200s if called twice (no idempotency guard on already-live status). Consider rejecting if property.status == 'live' to avoid double-firing on_admin_decision notifications.",
+    "verification.py: verification_id is uuid4 hex[:14].upper() — matches booking_id/notification_id family. Good. property_verifications has no unique index on verification_id; recommend adding one in startup_db_indexes for parity with property_id and booking_id.",
+    "verification_workflow.on_host_submit awaits assign_broker (which inserts the pending verification doc) but does not handle the case where 0 brokers exist — assign_broker returns None and the property is left in pending_verification with no broker_id and no verification doc. Edge case in production with deactivated brokers."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase14_verification.py (new — 8 tests, all passing)"
+  ],
+  "success_rate": {"backend": "100% (8/8 phase14 tests)", "frontend": "100% on the three Phase 14 dashboards smoke-tested"},
+  "test_credentials": "host@propnest.com/host123, broker@propnest.com/broker123, employee@propnest.com/employee123, admin@propnest.com/admin123 — all working. Test seeds an ephemeral 2nd broker (TEST_broker2_phase14) for fairness test and tears it down.",
+  "seed_data_creation": "All 8 phase14 tests create ephemeral TEST_p14 properties + verification docs and delete them in finally blocks. The fairness test temporarily seeds + removes TEST_broker2_phase14 user. No persistent test data left behind by Phase 14 tests.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Phase 14 fully signed off. PropertyCreate model requires fields {category in ['residential','commercial','event_venue'], pin_code, area_sqft} — older test files (phase8/phase9/etc.) may still reference old field names; that's a separate cleanup. Login button text is 'Login' (not 'Sign in') and there are TWO buttons named 'Login' on /login (the Login tab button + the form submit button) — use page.locator('button[type=\"submit\"]').first to disambiguate. The verificationAPI namespace lives at /app/frontend/src/services/api.js:172-200 and is consumed by AdminDashboard.js (lines 349/360/383/398), EmployeeDashboard.js (214/226/242), BrokerDashboard.js (369/546). Admin status-filter default 'awaiting_final_approval' confirmed at runtime. Broker submit modal validation: empty photos → toast 'At least one geo-tagged photo is required' renders inside the modal."
+}

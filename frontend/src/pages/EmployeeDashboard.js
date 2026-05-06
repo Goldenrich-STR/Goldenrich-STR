@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import apiClient from '../services/api';
+import apiClient, { verificationAPI } from '../services/api';
 import { 
   Users, Building2, FileCheck, AlertCircle, CheckCircle, 
   XCircle, Download, FileText, BarChart3, LogOut, Eye
@@ -211,7 +211,7 @@ const VerificationReviewSection = () => {
 
   const fetchPendingVerifications = async () => {
     try {
-      const response = await apiClient.get('/employee/verifications/pending');
+      const response = await verificationAPI.listPendingReviews();
       setVerifications(response.data.verifications || []);
     } catch (error) {
       console.error('Error fetching verifications:', error);
@@ -221,15 +221,16 @@ const VerificationReviewSection = () => {
   };
 
   const handleApprove = async (verificationId) => {
-    const remarks = prompt('Add remarks (optional):');
+    const remarks = prompt('Add remarks (optional):') || '';
     try {
-      await apiClient.post(`/employee/verifications/${verificationId}/approve`, { remarks });
+      await verificationAPI.rmApprove(verificationId, remarks);
       alert('Verification approved! Forwarded to admin for final approval.');
       fetchPendingVerifications();
       setSelectedVerification(null);
     } catch (error) {
       console.error('Error approving verification:', error);
-      alert('Failed to approve verification');
+      const msg = error?.response?.data?.detail || 'Failed to approve verification';
+      alert(msg);
     }
   };
 
@@ -238,13 +239,14 @@ const VerificationReviewSection = () => {
     if (!reason) return;
 
     try {
-      await apiClient.post(`/employee/verifications/${verificationId}/reject`, { reason });
+      await verificationAPI.rmReject(verificationId, reason);
       alert('Verification rejected. Host will be notified.');
       fetchPendingVerifications();
       setSelectedVerification(null);
     } catch (error) {
       console.error('Error rejecting verification:', error);
-      alert('Failed to reject verification');
+      const msg = error?.response?.data?.detail || 'Failed to reject verification';
+      alert(msg);
     }
   };
 

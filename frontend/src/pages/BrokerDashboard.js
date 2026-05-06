@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import apiClient from '../services/api';
+import apiClient, { verificationAPI } from '../services/api';
 import { 
   Users, Building2, FileCheck, Target, DollarSign, 
   AlertCircle, Plus, CheckCircle, XCircle, Clock, 
@@ -353,39 +353,364 @@ const PropertiesSection = () => {
   );
 };
 
-// Verifications Section
+// Verifications Section — broker physical-visit queue + submission form
 const VerificationsSection = () => {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTask, setActiveTask] = useState(null);
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const res = await verificationAPI.listBrokerTasks();
+      setTasks(res.data.verifications || []);
+    } catch (e) {
+      console.error('Error fetching verification tasks:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="dashboard-card" data-testid="verifications-section">
-      <h3 className="text-2xl font-bold text-charcoal mb-4">Property Verifications</h3>
-      <p className="text-charcoal-light mb-4">Complete property verification with geo-tagged photos</p>
-      <div className="bg-sand-50 p-6 rounded-lg">
-        <h4 className="font-bold text-charcoal mb-3">Verification Checklist:</h4>
-        <ul className="space-y-2 text-charcoal-light">
-          <li className="flex items-center space-x-2">
-            <CheckCircle className="w-4 h-4 text-sage" />
-            <span>Property address matches GPS location</span>
-          </li>
-          <li className="flex items-center space-x-2">
-            <CheckCircle className="w-4 h-4 text-sage" />
-            <span>Structural condition assessment</span>
-          </li>
-          <li className="flex items-center space-x-2">
-            <CheckCircle className="w-4 h-4 text-sage" />
-            <span>Amenities verification</span>
-          </li>
-          <li className="flex items-center space-x-2">
-            <Camera className="w-4 h-4 text-terracotta" />
-            <span>Geo-tagged photos (auto GPS stamp)</span>
-          </li>
-          <li className="flex items-center space-x-2">
-            <CheckCircle className="w-4 h-4 text-sage" />
-            <span>Video walkthrough</span>
-          </li>
-        </ul>
-        <p className="text-sm text-charcoal-muted mt-4">
-          Full verification interface coming soon - complete with mobile photo upload and GPS auto-tagging
+    <div data-testid="verifications-section">
+      <div className="dashboard-card mb-6">
+        <h3 className="text-2xl font-bold text-charcoal mb-2">Property Verifications</h3>
+        <p className="text-charcoal-light">
+          Visit each assigned property, complete the checklist, upload geo-tagged photos
+          and submit for RM remote review.
         </p>
+      </div>
+
+      {loading ? (
+        <div className="dashboard-card text-center py-12">
+          <p className="text-charcoal-light">Loading verification tasks...</p>
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="dashboard-card text-center py-12" data-testid="verifications-empty">
+          <FileCheck className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
+          <p className="text-charcoal-light">No verification tasks assigned</p>
+        </div>
+      ) : (
+        <div className="space-y-4" data-testid="verifications-list">
+          {tasks.map((task) => {
+            const pd = task.property_details || {};
+            const isOpen = task.status === 'pending' || task.status === 'in_progress';
+            return (
+              <div
+                key={task.verification_id}
+                className="dashboard-card"
+                data-testid={`verification-task-${task.property_id}`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-4 flex-1">
+                    <img
+                      src={pd.images?.[0] || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
+                      alt={pd.title}
+                      className="w-24 h-24 rounded-lg object-cover"
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-bold text-charcoal text-lg">{pd.title || 'Property'}</h4>
+                      <p className="text-sm text-charcoal-light mt-1">
+                        {pd.city}{pd.address ? ` · ${pd.address}` : ''}
+                      </p>
+                      <div className="flex items-center space-x-2 mt-3">
+                        <span
+                          className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
+                            task.status === 'pending'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : task.status === 'in_progress'
+                              ? 'bg-blue-100 text-blue-700'
+                              : task.status === 'completed'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}
+                          data-testid={`task-status-${task.property_id}`}
+                        >
+                          {task.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                        {task.rm_reviewed && (
+                          <span
+                            className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
+                              task.rm_approved
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-red-100 text-red-700'
+                            }`}
+                          >
+                            RM {task.rm_approved ? 'APPROVED' : 'REJECTED'}
+                          </span>
+                        )}
+                      </div>
+                      {task.broker_remarks && (
+                        <p className="text-sm text-charcoal-muted mt-2 italic">
+                          Your remarks: "{task.broker_remarks}"
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {isOpen && (
+                    <button
+                      onClick={() => setActiveTask(task)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-terracotta text-white rounded-lg hover:bg-terracotta-dark transition font-semibold"
+                      data-testid={`open-submit-${task.property_id}`}
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>Submit Visit</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {activeTask && (
+        <SubmitVerificationModal
+          task={activeTask}
+          onClose={() => setActiveTask(null)}
+          onSubmitted={() => {
+            setActiveTask(null);
+            fetchTasks();
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+// Modal: broker fills checklist + photos and submits site visit
+const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
+  const initialChecklist = {
+    address_matches_gps: false,
+    structural_condition_good: false,
+    amenities_verified: false,
+    compliance_docs_present: false,
+    all_rooms_photographed: false,
+    entrance_photographed: false,
+    video_walkthrough_uploaded: false,
+    no_discrepancies: false,
+  };
+  const [checklist, setChecklist] = useState(initialChecklist);
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoLat, setPhotoLat] = useState('');
+  const [photoLng, setPhotoLng] = useState('');
+  const [photos, setPhotos] = useState([]);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [remarks, setRemarks] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const toggle = (k) => setChecklist({ ...checklist, [k]: !checklist[k] });
+
+  const addPhoto = () => {
+    setError('');
+    if (!photoUrl) {
+      setError('Photo URL is required');
+      return;
+    }
+    const lat = parseFloat(photoLat);
+    const lng = parseFloat(photoLng);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) {
+      setError('Valid latitude and longitude required for geo-tag');
+      return;
+    }
+    setPhotos([
+      ...photos,
+      {
+        photo_url: photoUrl,
+        latitude: lat,
+        longitude: lng,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+    setPhotoUrl('');
+    setPhotoLat('');
+    setPhotoLng('');
+  };
+
+  const removePhoto = (idx) =>
+    setPhotos(photos.filter((_, i) => i !== idx));
+
+  const submit = async () => {
+    setError('');
+    if (photos.length === 0) {
+      setError('At least one geo-tagged photo is required');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await verificationAPI.submitVisit(task.property_id, {
+        checklist,
+        geo_tagged_photos: photos,
+        video_url: videoUrl || null,
+        broker_remarks: remarks || null,
+      });
+      alert('Verification submitted. RM will review remotely.');
+      onSubmitted();
+    } catch (e) {
+      console.error('submit verification failed', e);
+      setError(e?.response?.data?.detail || 'Failed to submit verification');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      data-testid="submit-verification-modal"
+    >
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-sand-200 px-6 py-4 flex items-center justify-between">
+          <h3 className="text-xl font-bold text-charcoal">
+            Submit Visit — {task.property_details?.title || 'Property'}
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-charcoal-light hover:text-charcoal"
+            data-testid="modal-close"
+          >
+            <XCircle className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {/* Checklist */}
+          <div>
+            <h4 className="font-bold text-charcoal mb-3">Inspection Checklist</h4>
+            <div className="space-y-2" data-testid="checklist">
+              {Object.entries(checklist).map(([key, val]) => (
+                <label key={key} className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={val}
+                    onChange={() => toggle(key)}
+                    className="w-4 h-4"
+                    data-testid={`check-${key}`}
+                  />
+                  <span className="text-sm text-charcoal capitalize">
+                    {key.replaceAll('_', ' ')}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Photos */}
+          <div>
+            <h4 className="font-bold text-charcoal mb-3">Geo-tagged Photos</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
+              <input
+                type="text"
+                placeholder="Photo URL"
+                value={photoUrl}
+                onChange={(e) => setPhotoUrl(e.target.value)}
+                className="input-field"
+                data-testid="photo-url-input"
+              />
+              <input
+                type="text"
+                placeholder="Latitude"
+                value={photoLat}
+                onChange={(e) => setPhotoLat(e.target.value)}
+                className="input-field"
+                data-testid="photo-lat-input"
+              />
+              <input
+                type="text"
+                placeholder="Longitude"
+                value={photoLng}
+                onChange={(e) => setPhotoLng(e.target.value)}
+                className="input-field"
+                data-testid="photo-lng-input"
+              />
+            </div>
+            <button
+              onClick={addPhoto}
+              className="text-sm text-terracotta font-semibold hover:underline"
+              data-testid="add-photo-btn"
+            >
+              + Add photo
+            </button>
+
+            {photos.length > 0 && (
+              <ul className="mt-3 space-y-1" data-testid="photos-list">
+                {photos.map((p, idx) => (
+                  <li
+                    key={idx}
+                    className="flex items-center justify-between bg-sand-50 px-3 py-2 rounded text-sm"
+                    data-testid={`photo-item-${idx}`}
+                  >
+                    <span className="truncate">
+                      {p.photo_url} ({p.latitude.toFixed(4)}, {p.longitude.toFixed(4)})
+                    </span>
+                    <button
+                      onClick={() => removePhoto(idx)}
+                      className="text-red-600 hover:underline"
+                      data-testid={`remove-photo-${idx}`}
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Video + remarks */}
+          <div>
+            <label className="block text-sm font-semibold text-charcoal mb-1">
+              Video walkthrough URL (optional)
+            </label>
+            <input
+              type="text"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              className="input-field"
+              data-testid="video-url-input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-charcoal mb-1">
+              Broker remarks (optional)
+            </label>
+            <textarea
+              value={remarks}
+              onChange={(e) => setRemarks(e.target.value)}
+              rows={3}
+              className="input-field"
+              data-testid="remarks-input"
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-600" data-testid="modal-error">
+              {error}
+            </p>
+          )}
+        </div>
+
+        <div className="sticky bottom-0 bg-white border-t border-sand-200 px-6 py-4 flex items-center justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-sand-300 text-charcoal hover:bg-sand-50"
+            data-testid="modal-cancel"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            disabled={submitting}
+            className="px-4 py-2 rounded-lg bg-terracotta text-white hover:bg-terracotta-dark font-semibold disabled:opacity-60"
+            data-testid="modal-submit"
+          >
+            {submitting ? 'Submitting...' : 'Submit Verification'}
+          </button>
+        </div>
       </div>
     </div>
   );

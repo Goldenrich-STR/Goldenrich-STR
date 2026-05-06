@@ -162,4 +162,46 @@ export const calendarAPI = {
   },
 };
 
+// Verification Workflow API — Phase 14
+// Centralized so every dashboard sends JSON bodies (never query strings).
+// State machine:
+//   draft -> pending_verification (host submitForVerification)
+//   pending_verification -> under_review (broker submitVisit)
+//   under_review (rm_approved=true) -> live (admin approve)
+//   under_review -> rejected (admin reject) | draft (rm reject -> resubmit)
+export const verificationAPI = {
+  // Broker
+  listBrokerTasks: (status_filter) =>
+    apiClient.get('/broker/verifications', {
+      params: status_filter ? { status_filter } : {},
+    }),
+
+  submitVisit: (propertyId, payload) =>
+    apiClient.post(`/broker/verifications/${propertyId}/submit`, payload),
+
+  // Employee (RM)
+  listPendingReviews: () => apiClient.get('/employee/verifications/pending'),
+
+  getVerificationDetails: (verificationId) =>
+    apiClient.get(`/employee/verifications/${verificationId}`),
+
+  rmApprove: (verificationId, remarks = '') =>
+    apiClient.post(`/employee/verifications/${verificationId}/approve`, { remarks }),
+
+  rmReject: (verificationId, reason) =>
+    apiClient.post(`/employee/verifications/${verificationId}/reject`, { reason }),
+
+  // Admin (final approval)
+  listAwaitingFinalApproval: () =>
+    apiClient.get('/admin/properties/awaiting-final-approval'),
+
+  listPendingForAdmin: () => apiClient.get('/admin/properties/pending-verification'),
+
+  adminApprove: (propertyId) =>
+    apiClient.post(`/admin/properties/${propertyId}/approve`),
+
+  adminReject: (propertyId, reason) =>
+    apiClient.post(`/admin/properties/${propertyId}/reject`, { reason }),
+};
+
 export default apiClient;
