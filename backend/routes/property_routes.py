@@ -10,11 +10,15 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/properties", tags=["Properties"])
 
+async def get_db():
+    from server import db_instance
+    return db_instance
+
 @router.post("/", response_model=Property)
 async def create_property(
     property_data: PropertyCreate,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Create a new property listing (Host only)."""
     try:
@@ -58,7 +62,7 @@ async def search_properties(
     instant_booking: Optional[bool] = None,
     limit: int = 20,
     skip: int = 0,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Search properties with filters (public endpoint)."""
     try:
@@ -115,7 +119,7 @@ async def search_properties(
 @router.get("/{property_id}")
 async def get_property(
     property_id: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get property details by ID (public endpoint)."""
     try:
@@ -141,7 +145,7 @@ async def get_property(
 @router.get("/host/my-properties")
 async def get_host_properties(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all properties owned by the current host."""
     try:
@@ -165,7 +169,7 @@ async def update_property(
     property_id: str,
     property_update: PropertyUpdate,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Update property details (Host only)."""
     try:
@@ -209,7 +213,7 @@ async def update_property(
 async def submit_for_verification(
     property_id: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Submit property for verification (Host only)."""
     try:

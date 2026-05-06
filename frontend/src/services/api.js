@@ -73,4 +73,49 @@ export const bookingAPI = {
     apiClient.get(`/bookings/${bookingId}`),
 };
 
+// Calendar API
+export const calendarAPI = {
+  getBlockedDates: (propertyId, params = {}) =>
+    apiClient.get(`/calendar/properties/${propertyId}/blocked-dates`, { params }),
+
+  blockDates: (propertyId, payload) =>
+    apiClient.post(`/calendar/properties/${propertyId}/block-dates`, payload),
+
+  unblockDates: (blockedDateId) =>
+    apiClient.delete(`/calendar/blocked-dates/${blockedDateId}`),
+
+  getUnifiedView: (propertyId, month, year) =>
+    apiClient.get(`/calendar/properties/${propertyId}/unified-view`, {
+      params: { month, year },
+    }),
+
+  listExternalCalendars: (propertyId) =>
+    apiClient.get(`/calendar/properties/${propertyId}/external-calendars`),
+
+  addExternalCalendar: (propertyId, payload) =>
+    apiClient.post(`/calendar/properties/${propertyId}/external-calendars`, payload),
+
+  syncExternalCalendar: (calendarId) =>
+    apiClient.post(`/calendar/external-calendars/${calendarId}/sync`),
+
+  removeExternalCalendar: (calendarId) =>
+    apiClient.delete(`/calendar/external-calendars/${calendarId}`),
+
+  getICalExportUrl: (propertyId) => {
+    const token = localStorage.getItem('propnest_token');
+    return {
+      url: `${BACKEND_URL}/api/calendar/properties/${propertyId}/ical-export`,
+      token,
+    };
+  },
+
+  downloadICal: async (propertyId) => {
+    const response = await apiClient.get(
+      `/calendar/properties/${propertyId}/ical-export`,
+      { responseType: 'blob' }
+    );
+    return response;
+  },
+};
+
 export default apiClient;

@@ -10,6 +10,10 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
+async def get_db():
+    from server import db_instance
+    return db_instance
+
 async def require_admin(current_user: dict = Depends(get_current_user)):
     """Dependency to check if user is admin."""
     if current_user["role"] != UserRole.ADMIN.value:
@@ -28,7 +32,7 @@ async def get_all_users(
     limit: int = 50,
     skip: int = 0,
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all users with filters."""
     try:
@@ -66,7 +70,7 @@ async def get_all_users(
 async def get_user_details(
     user_id: str,
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get detailed user information."""
     try:
@@ -108,7 +112,7 @@ async def update_user_status(
     user_id: str,
     is_active: bool,
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Activate or deactivate user account."""
     try:
@@ -144,7 +148,7 @@ async def update_kyc_status(
     kyc_status: KYCStatus,
     remarks: Optional[str] = None,
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Approve or reject user KYC."""
     try:
@@ -188,7 +192,7 @@ async def get_all_properties(
     limit: int = 50,
     skip: int = 0,
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all properties with filters."""
     try:
@@ -221,7 +225,7 @@ async def get_all_properties(
 @router.get("/properties/pending-verification")
 async def get_pending_verifications(
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all properties pending verification."""
     try:
@@ -247,7 +251,7 @@ async def get_pending_verifications(
 async def approve_property(
     property_id: str,
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Approve property listing (final approval)."""
     try:
@@ -283,7 +287,7 @@ async def reject_property(
     property_id: str,
     reason: str,
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Reject property listing."""
     try:
@@ -319,7 +323,7 @@ async def reject_property(
 @router.get("/dashboard/stats")
 async def get_dashboard_stats(
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get dashboard statistics."""
     try:
@@ -380,7 +384,7 @@ async def get_all_bookings(
     limit: int = 50,
     skip: int = 0,
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all bookings with filters."""
     try:

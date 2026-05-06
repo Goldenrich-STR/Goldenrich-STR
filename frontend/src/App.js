@@ -8,6 +8,7 @@ import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";
 import GuestBrowse from "./pages/GuestBrowse";
 import HostDashboard from "./pages/HostDashboard";
+import HostCalendar from "./pages/HostCalendar";
 import AdminDashboard from "./pages/AdminDashboard";
 import BrokerDashboard from "./pages/BrokerDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
@@ -89,6 +90,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["host"]}>
                   <HostDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/host/calendar"
+              element={
+                <ProtectedRoute allowedRoles={["host"]}>
+                  <HostCalendar />
                 </ProtectedRoute>
               }
             />

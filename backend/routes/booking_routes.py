@@ -11,11 +11,15 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
+async def get_db():
+    from server import db_instance
+    return db_instance
+
 @router.post("/", response_model=dict)
 async def create_booking(
     booking_data: BookingCreate,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Create a new booking (soft lock) and return Razorpay order."""
     try:
@@ -71,6 +75,19 @@ async def create_booking(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Property is already booked for selected dates"
+            )
+        
+        # Check for blocked dates (manual or external calendar)
+        blocked_conflict = await db.blocked_dates.find_one({
+            "property_id": booking_data.property_id,
+            "start_date": {"$lte": check_out.isoformat()},
+            "end_date": {"$gte": check_in.isoformat()}
+        })
+        
+        if blocked_conflict:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Property is unavailable for selected dates (blocked by host)"
             )
         
         # Calculate pricing
@@ -152,7 +169,7 @@ async def confirm_payment(
     razorpay_order_id: str,
     razorpay_signature: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Confirm payment and convert soft lock to confirmed booking."""
     try:
@@ -196,6 +213,23 @@ async def confirm_payment(
             }}
         )
         
+        # Create a booking-sourced blocked date entry (for calendar sync/iCal export)
+        try:
+            await db.blocked_dates.insert_one({
+                "blocked_date_id": f"booking_{booking_id}",
+                "property_id": booking_dict["property_id"],
+                "owner_id": booking_dict["host_id"],
+                "start_date": booking_dict["check_in_date"],
+                "end_date": booking_dict["check_out_date"],
+                "source": "booking",
+                "source_id": booking_id,
+                "reason": f"Booking {booking_id[:8]}",
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+            })
+        except Exception as block_err:
+            logger.warning(f"Failed to create booking blocked-date entry: {block_err}")
+        
         logger.info(f"Booking confirmed: {booking_id}")
         
         return {
@@ -215,7 +249,7 @@ async def confirm_payment(
 @router.get("/guest/my-bookings")
 async def get_guest_bookings(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all bookings made by the current guest."""
     try:
@@ -237,7 +271,7 @@ async def get_guest_bookings(
 @router.get("/host/my-bookings")
 async def get_host_bookings(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all bookings for properties owned by the current host."""
     try:
@@ -260,7 +294,7 @@ async def get_host_bookings(
 async def get_booking_details(
     booking_id: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get booking details."""
     try:

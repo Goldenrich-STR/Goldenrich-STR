@@ -9,6 +9,10 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/cms", tags=["CMS"])
 
+async def get_db():
+    from server import db_instance
+    return db_instance
+
 async def require_admin(current_user: dict = Depends(get_current_user)):
     """Dependency to check if user is admin."""
     if current_user["role"] != "admin":
@@ -22,7 +26,7 @@ async def require_admin(current_user: dict = Depends(get_current_user)):
 
 @router.get("/landing-page")
 async def get_landing_page_content(
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all active landing page content (public)."""
     try:
@@ -53,7 +57,7 @@ async def get_landing_page_content(
 async def get_all_cms_content(
     page: Optional[str] = None,
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all CMS content (admin)."""
     try:
@@ -83,7 +87,7 @@ async def create_cms_content(
     content_type: str,
     content_data: dict,
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Create new CMS content."""
     try:
@@ -117,7 +121,7 @@ async def update_cms_content(
     content_id: str,
     update_data: CMSUpdate,
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Update CMS content."""
     try:
@@ -156,7 +160,7 @@ async def update_cms_content(
 async def delete_cms_content(
     content_id: str,
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Delete CMS content."""
     try:
@@ -185,7 +189,7 @@ async def delete_cms_content(
 @router.get("/admin/featured-properties")
 async def get_featured_properties(
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get featured properties list."""
     try:
@@ -210,7 +214,7 @@ async def get_featured_properties(
 async def set_featured_properties(
     property_ids: List[str],
     current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Set featured properties for landing page."""
     try:

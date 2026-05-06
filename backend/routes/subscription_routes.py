@@ -12,6 +12,10 @@ import os
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
 
+async def get_db():
+    from server import db_instance
+    return db_instance
+
 REGISTRATION_FEE_AMOUNT = int(os.getenv("REGISTRATION_FEE_AMOUNT", "50000"))  # ₹500 in paise
 
 # ========== SUBSCRIPTION PLANS (PUBLIC) ==========
@@ -19,7 +23,7 @@ REGISTRATION_FEE_AMOUNT = int(os.getenv("REGISTRATION_FEE_AMOUNT", "50000"))  # 
 @router.get("/plans")
 async def get_subscription_plans(
     plan_type: Optional[SubscriptionPlanType] = None,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all active subscription plans."""
     try:
@@ -46,7 +50,7 @@ async def get_subscription_plans(
 @router.get("/plans/{plan_id}")
 async def get_plan_details(
     plan_id: str,
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get subscription plan details."""
     try:
@@ -75,7 +79,7 @@ async def get_plan_details(
 async def create_subscription(
     subscription_data: SubscriptionCreate,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Create a new subscription for user."""
     try:
@@ -166,7 +170,7 @@ async def confirm_subscription_payment(
     razorpay_order_id: str,
     razorpay_signature: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Confirm subscription payment."""
     try:
@@ -237,7 +241,7 @@ async def confirm_subscription_payment(
 @router.get("/my-subscriptions")
 async def get_user_subscriptions(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all subscriptions for current user."""
     try:
@@ -261,7 +265,7 @@ async def get_user_subscriptions(
 @router.post("/registration-fee")
 async def create_registration_fee_order(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Create Razorpay order for host registration fee."""
     try:
@@ -309,7 +313,7 @@ async def confirm_registration_fee_payment(
     razorpay_order_id: str,
     razorpay_signature: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Confirm registration fee payment."""
     try:
@@ -363,7 +367,7 @@ async def create_subscription_plan(
     price_annual: float,
     description: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends()
+    db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Create new subscription plan (Admin only)."""
     try:

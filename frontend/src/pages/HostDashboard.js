@@ -45,6 +45,13 @@ const HostDashboard = () => {
             <NotificationBell />
             <span className="text-charcoal-light">Welcome, {user?.full_name}</span>
             <button
+              onClick={() => navigate('/host/calendar')}
+              className="text-charcoal-light hover:text-terracotta"
+              data-testid="nav-calendar-btn"
+            >
+              Calendar
+            </button>
+            <button
               onClick={() => navigate('/guest/bookings')}
               className="text-charcoal-light hover:text-terracotta"
             >
@@ -112,6 +119,13 @@ const HostDashboard = () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
+                    <button
+                      onClick={() => navigate('/host/calendar')}
+                      className="btn-secondary"
+                      data-testid={`property-calendar-${property.property_id}`}
+                    >
+                      Calendar
+                    </button>
                     <button
                       onClick={() => navigate(`/host/property/${property.property_id}`)}
                       className="btn-secondary"
