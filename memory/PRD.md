@@ -85,28 +85,36 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 - **Critical bug fix surfaced + resolved**: booking_id was generated as `BK{int(timestamp())}` (second-resolution) → collisions when multiple bookings created in same second → `find_one(booking_id)` returned arbitrary docs, breaking cancel/confirm-payment, and triggered React duplicate-key warnings. Fixed by switching to `BK{uuid4().hex[:14].upper()}`. Also added MongoDB unique indexes on `bookings.booking_id`, `properties.property_id`, `users.user_id|email`, `blocked_dates.blocked_date_id`, `external_calendars.calendar_id` + compound indexes for availability queries (`bookings(property_id,check_in,check_out)`, `blocked_dates(property_id,start,end)`). Existing duplicate booking_ids and blocked_dates de-duped in place.
 - 100% green: 12/12 phase 10, 3/3 uniqueness, 12/12 phase 9 regression, phases 6/7 also pass (test reports iteration_5 + iteration_6).
 
+### Phase 11 — Booking Notification Triggers (Complete — May 2026)
+- **New** `services/booking_notifications.py`: `notify_host_booking_confirmed(db, booking)` fans out to host (in-app + WhatsApp + SMS via MSG91 DEMO + bespoke HTML email via EmailService MOCK) and sends a confirmation receipt to the guest (in-app + email). `_soft_lock_reminder_task(db, booking_id, delay_seconds)` is scheduled at booking creation via `asyncio.create_task` — fires 2 min before the 10-min soft-lock expires (i.e. minute 8) only when the booking is still in `soft_lock` state and the lock hasn't expired; sends a "hold expiring" reminder to the guest with a deep-link to `/guest/booking-confirmation?booking_id=…`.
+- Wired into `booking_routes.py` at three points: `create-booking` schedules the reminder; `confirm-payment` and `mock-pay` both fire `notify_host_booking_confirmed` via background task (non-blocking).
+- Added new `NotificationType.NEW_BOOKING_RECEIVED` and `BOOKING_PENDING_PAYMENT`. Switched `notification_id` factory to uuid4 (fixed same second-collision class bug as booking_id had).
+- All sends are mocked but inspectable: log lines `[DEMO] WhatsApp to … / [DEMO] SMS to … / [MOCK EMAIL] To: … Subject: …` + DB rows in `notifications` collection.
+- 100% green: 7/7 phase 11 + 64/64 regression. Test report iteration_7. Suite `test_phase11_notifications.py`.
+
 ---
 
-## Test Status (Iteration 6, May 6 2026)
-- Phase 6 backend: 20/20 pass — `test_phase6_calendar.py`
-- Phase 7 backend: 20/20 pass — `test_phase7_search.py`
-- Phase 8 backend: 15/19 pass (4 pre-existing fixture date warnings — non-blocking)
-- Phase 9 backend: 12/12 pass — `test_phase9_payment.py`
-- Phase 10 backend: 12/12 pass — `test_phase10_my_bookings.py`
-- booking_id uniqueness: 3/3 pass — `test_booking_id_uniqueness.py`
+## Test Status (Iteration 7, May 6 2026)
+- Phase 6 backend: 20/20 — `test_phase6_calendar.py`
+- Phase 7 backend: 20/20 — `test_phase7_search.py`
+- Phase 8 backend: 15/19 (4 pre-existing fixture date warnings — non-blocking)
+- Phase 9 backend: 12/12 — `test_phase9_payment.py`
+- Phase 10 backend: 12/12 — `test_phase10_my_bookings.py`
+- booking_id uniqueness: 3/3 — `test_booking_id_uniqueness.py`
+- Phase 11 backend: 7/7 — `test_phase11_notifications.py`
 - Frontend: 100% on critical flows; zero React duplicate-key warnings
-- DB: unique indexes on booking_id, property_id, user_id, email, blocked_date_id, calendar_id; compound indexes on availability queries
-- Mocked: Razorpay (deterministic HMAC + mock-pay endpoint), MSG91, Email, SendGrid
+- DB: unique + compound indexes on hot collections
+- Mocked: Razorpay (deterministic HMAC), MSG91 SMS+WhatsApp DEMO, EmailService MOCK
 
 ---
 
 ## Pending Backlog
 
 ### P1 — Next Up
-- **Notification triggers**: send WhatsApp/Email to host on confirmed booking; soft-lock-expiring nudge to guest at minute 8 (MSG91/SendGrid layer already exists, mocked)
-- **Soft-lock reaper**: TTL index or scheduled cleanup for stale soft_lock bookings past `soft_lock_expires_at` (currently they persist and continue to block calendar)
-- **Property Listing Creation Flow (Host)**: subscription select + ₹500 registration fee modal, multi-step form, image upload
-- **Property Verification Workflow (real)**: Broker physical visit submission → RM remote review → Admin final approval
+- **Soft-lock reaper**: TTL index or scheduled cleanup for stale soft_lock bookings past `soft_lock_expires_at` (testing agent flagged: process-local asyncio task is dropped on worker restart).
+- **Property Listing Creation Flow (Host)**: subscription select + ₹500 registration fee modal, multi-step form, image upload.
+- **Property Verification Workflow (real)**: Broker physical visit submission → RM remote review → Admin final approval.
+- **In-app notification email read receipts** + retry/DLQ on real-channel failures (when MSG91/SendGrid keys go live).
 
 ### P2 — Future
 - Super Admin Account section: real transactions, Razorpay payouts, refunds

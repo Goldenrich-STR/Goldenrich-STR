@@ -11,6 +11,7 @@ from services.booking_notifications import (
     schedule_soft_lock_reminder,
 )
 from datetime import datetime, timedelta
+import asyncio
 import logging
 
 logger = logging.getLogger(__name__)
@@ -254,7 +255,6 @@ async def confirm_payment(
         try:
             confirmed_booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
             if confirmed_booking:
-                import asyncio
                 asyncio.create_task(notify_host_booking_confirmed(db, confirmed_booking))
         except Exception as notify_err:
             logger.warning(f"Failed to schedule confirmed-booking notifications: {notify_err}")
@@ -533,7 +533,6 @@ async def mock_pay(
     try:
         confirmed_booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
         if confirmed_booking:
-            import asyncio
             asyncio.create_task(notify_host_booking_confirmed(db, confirmed_booking))
     except Exception as notify_err:
         logger.warning(f"Failed to schedule confirmed-booking notifications: {notify_err}")
