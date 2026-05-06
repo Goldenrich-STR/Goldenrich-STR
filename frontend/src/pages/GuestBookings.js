@@ -182,7 +182,7 @@ const GuestBookings = () => {
           </div>
         ) : (
           <div className="space-y-4" data-testid="bookings-list">
-            {visible.map((b) => {
+            {visible.map((b, idx) => {
               const statusKey = b.booking_status === 'confirmed' && b.check_out_date < today
                 ? 'completed'
                 : b.booking_status;
@@ -195,7 +195,7 @@ const GuestBookings = () => {
 
               return (
                 <div
-                  key={b.booking_id}
+                  key={`${b.booking_id}-${idx}`}
                   className="dashboard-card flex flex-col sm:flex-row gap-4"
                   data-testid={`booking-${b.booking_id}`}
                 >

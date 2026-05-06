@@ -43,10 +43,8 @@ def _auth(t):
 
 
 def _create_future_booking(token, attempts=30):
-    """Create a fresh soft-lock booking in 2027 window. Try multiple windows/properties."""
-    # Sleep briefly to ensure unique BK{timestamp_sec} booking_id when called back-to-back
-    import time as _t
-    _t.sleep(1.05)
+    """Create a fresh soft-lock booking in 2027 window. Try multiple windows/properties.
+    booking_id is now uuid4-based, no sleep needed for uniqueness."""
     # 2027 is ~year+ out from 2026-05-06 container date, we offset heavily
     today = date.today()
     base_offset = 500  # well into 2027

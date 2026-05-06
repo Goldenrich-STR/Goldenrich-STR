@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime, date
 from enum import Enum
+from uuid import uuid4
 
 class BookingStatus(str, Enum):
     PENDING = "pending"
@@ -17,7 +18,7 @@ class CancellationPolicy(str, Enum):
     NON_REFUNDABLE = "non_refundable"
 
 class Booking(BaseModel):
-    booking_id: str = Field(default_factory=lambda: f"BK{int(datetime.utcnow().timestamp())}")
+    booking_id: str = Field(default_factory=lambda: f"BK{uuid4().hex[:14].upper()}")
     property_id: str
     guest_id: str
     host_id: str

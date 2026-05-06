@@ -52,10 +52,10 @@ def _find_free_window(property_id, start_offset_days=400, length=2, attempts=40)
     return None, None
 
 
-def _create_booking(token, property_id, attempts=10):
+def _create_booking(token, property_id, attempts=60):
     """Create a soft-lock booking on a free window. Retries forward on 409."""
     today = date.today()
-    base_offset = 400
+    base_offset = 1100  # deep into 2029 to avoid accumulated test bookings
     for i in range(attempts):
         ci = today + timedelta(days=base_offset + i * 5)
         co = ci + timedelta(days=2)

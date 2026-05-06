@@ -1,0 +1,53 @@
+{
+  "summary": "Iteration 6 — Re-validated booking_id collision fix. All Phase 10 + new uniqueness tests pass (12/12). Backend startup logs 'MongoDB indexes ensured'. Rapid-fire 5 POST /api/bookings/ produced 5 distinct booking_ids matching ^BK[0-9A-F]{14}$ (sample: BKF748F7FB509F40, BK023B1D26D07544, BK42B269BDD8F944). GET /bookings/{id} returns the exact created doc (deterministic find_one). Cancel flow now mutates the SAME booking — verified end-to-end via UI (created BK42B269BDD8F944, cancelled via UI, GET returns same booking_id with status='cancelled'). Frontend /guest/bookings: ZERO 'Encountered two children with the same key' warnings (down from many in iter 5). Phase 6/7/9 regressions all pass. Phase 8 still has 4 pre-existing setup ERRORs from hardcoded date 2026-12-01 already-booked (not caused by booking_id and not caused by current fix; flagged in iter 5). Removed time.sleep(1.05) workaround from test_phase10_my_bookings.py. Refactored test_phase9_payment.py _create_booking to use a deeper free window (offset 1100, 60 attempts) — phase 9 now 12/12 green.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "tests/test_phase8_property_detail.py::TestBookingFlow setup",
+        "issue": "Pre-existing flakiness (already documented iter 5): module-scoped fixture uses hardcoded check_in 2026-12-01..04 which was consumed by prior runs → 4 setup errors with 409 'already booked'. Not a regression; not related to booking_id fix. Suggest mirror phase 9/10 retry helper that searches forward for a free window."
+      },
+      {
+        "endpoint": "/api/bookings/* (soft_lock TTL)",
+        "issue": "Carry-over from iter 5: soft_lock has no background reaper. Stale soft_lock bookings continue blocking dates past soft_lock_expires_at. Consider TTL index or scheduled cleanup."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase10_my_bookings.py",
+    "/app/backend/tests/test_booking_id_uniqueness.py",
+    "/app/backend/tests/test_phase9_payment.py",
+    "/app/test_reports/pytest/iter6_phase10.xml",
+    "/app/test_reports/pytest/iter6_regression.xml"
+  ],
+  "action_items": [
+    "(Optional) Refactor test_phase8_property_detail.py soft_lock_booking fixture to use a free-window search (like phase 9/10) to eliminate the 4 setup errors. Pre-existing, low priority.",
+    "(Optional) Add background reaper or TTL index on bookings.soft_lock_expires_at so expired soft_lock bookings stop blocking calendar."
+  ],
+  "critical_code_review_comments": [
+    "models/booking.py: booking_id factory now uuid4().hex[:14].upper() — correct; collision probability negligible. uuid4 entropy is 128 bits; truncating to 56 bits still yields ~1e-8 collision risk per million bookings, which is acceptable. Unique index in Mongo guarantees safety.",
+    "server.py startup: indexes are created with unique=True on booking_id, property_id, user_id, email, blocked_date_id, calendar_id + 2 compound indexes — confirmed via 'MongoDB indexes ensured' log. Existing duplicate de-dup was successful (no E11000 on startup).",
+    "GuestBookings.js: composite key {booking_id}-{idx} mitigates duplicate-key warnings even if old duplicate IDs remain in DB (defense-in-depth).",
+    "Soft-lock reaper still missing — pre-existing concern, not in scope of this fix."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase10_my_bookings.py (removed time.sleep(1.05))",
+    "/app/backend/tests/test_phase9_payment.py (deeper free-window search; offset 1100, 60 attempts)",
+    "/app/backend/tests/test_booking_id_uniqueness.py (new — rapid-fire uniqueness + deterministic GET/cancel)"
+  ],
+  "success_rate": {
+    "backend": "100% phase 10 (12/12) + 100% uniqueness (3/3) + 100% phase 9 (12/12) + phases 6,7 pass; phase 8 4 pre-existing setup errors (not a regression)",
+    "frontend": "100% — /guest/bookings renders 86 cards with zero React duplicate-key warnings, new BK[A-F0-9]{14} format visible on all freshly created bookings, cancel flow updates the SAME booking deterministically"
+  },
+  "test_credentials": "guest@propnest.com/guest123, host@propnest.com/host123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Created several transient soft_lock bookings on prop_demo_3..8 with check_in offsets 800-1900 days from 2026-05-06; all cancelled in test cleanup or remain as cancelled rows. No persistent state pollution beyond what was needed for verification.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "booking_id uniqueness fix is fully validated. All future bookings get BK + 14 hex uppercase via uuid4. MongoDB unique index live. Phase 8 setup errors are pre-existing flakiness (hardcoded dates) — only fix if main agent decides to refactor that fixture. The phase 9 helper has been rewritten to search deeper windows; phase 10 already uses retry pattern. Container date 2026-05-06; free booking windows continue 2027+; old format BKxxxxxxxxxx (10 digits) bookings remain in history but cause no issues thanks to composite React key + dedupe of previous duplicates done in iter 5 fix.",
+  "rca of the issue": "Already RCA'd in iter 5 (timestamp-second factory). Iter 6 confirms fix: booking_id factory replaced with f'BK{uuid4().hex[:14].upper()}' + Mongo unique indexes ensure uniqueness at write time. Verified by (a) 5 rapid-fire POSTs returning 5 distinct ids, (b) deterministic GET/cancel returning the exact created doc, (c) zero React duplicate-key warnings on /guest/bookings."
+}
