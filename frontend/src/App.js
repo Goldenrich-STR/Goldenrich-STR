@@ -9,6 +9,7 @@ import AuthPage from "./pages/AuthPage";
 import GuestBrowse from "./pages/GuestBrowse";
 import HostDashboard from "./pages/HostDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import BrokerDashboard from "./pages/BrokerDashboard";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -91,19 +92,12 @@ function App() {
               }
             />
 
-            {/* Broker Routes - Placeholder */}
+            {/* Broker Routes */}
             <Route
               path="/broker/dashboard"
               element={
                 <ProtectedRoute allowedRoles={["broker"]}>
-                  <div className="min-h-screen bg-sand-50 flex items-center justify-center">
-                    <div className="text-center">
-                      <h1 className="text-4xl font-extrabold text-charcoal mb-4">
-                        Broker Dashboard
-                      </h1>
-                      <p className="text-charcoal-light">Coming soon...</p>
-                    </div>
-                  </div>
+                  <BrokerDashboard />
                 </ProtectedRoute>
               }
             />
