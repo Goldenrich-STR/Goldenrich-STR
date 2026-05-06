@@ -92,9 +92,19 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 - All sends are mocked but inspectable: log lines `[DEMO] WhatsApp to … / [DEMO] SMS to … / [MOCK EMAIL] To: … Subject: …` + DB rows in `notifications` collection.
 - 100% green: 7/7 phase 11 + 64/64 regression. Test report iteration_7. Suite `test_phase11_notifications.py`.
 
+### Phase 12 — Soft-lock Reaper + Reminder Recovery (Complete — May 2026)
+- **New** `services/soft_lock_reaper.py`:
+  - `reap_expired_soft_locks(db)` — finds soft_lock bookings with past `soft_lock_expires_at`, marks them `cancelled` with `cancellation_reason="soft_lock_expired"`, removes the booking-source blocked-date entries to free the calendar.
+  - `start_soft_lock_reaper(db, interval_seconds)` — runs the periodic sweep on the FastAPI event loop (default 30s, env-overridable via `SOFT_LOCK_REAPER_INTERVAL`).
+  - `recover_pending_reminders(db)` — at startup, re-schedules reminders for live soft_lock bookings that haven't been notified yet (addresses the "process-local asyncio task dropped on worker restart" concern).
+- **Reminder dedup**: `_soft_lock_reminder_task` now atomically claims the booking via `find_one_and_update` setting `soft_lock_reminder_sent=True`, so duplicate restart-recoveries or worker races never produce duplicate sends.
+- Hooked into `server.py` startup: indexes ensured + recovery + reaper loop. Added compound index `(booking_status, soft_lock_expires_at)` for fast reaper scans.
+- Live invariant: zero soft_lock bookings with past expiry persist for >30s.
+- 100% green: 9/9 phase 12 + 86/86 overall (4 pre-existing Phase-8 fixture warnings unchanged). Test report iteration_8. Suite `test_phase12_reaper.py`.
+
 ---
 
-## Test Status (Iteration 7, May 6 2026)
+## Test Status (Iteration 8, May 6 2026)
 - Phase 6 backend: 20/20 — `test_phase6_calendar.py`
 - Phase 7 backend: 20/20 — `test_phase7_search.py`
 - Phase 8 backend: 15/19 (4 pre-existing fixture date warnings — non-blocking)
@@ -102,19 +112,22 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 - Phase 10 backend: 12/12 — `test_phase10_my_bookings.py`
 - booking_id uniqueness: 3/3 — `test_booking_id_uniqueness.py`
 - Phase 11 backend: 7/7 — `test_phase11_notifications.py`
+- Phase 12 backend: 9/9 — `test_phase12_reaper.py`
 - Frontend: 100% on critical flows; zero React duplicate-key warnings
-- DB: unique + compound indexes on hot collections
+- DB: unique + compound indexes on hot collections; reaper-friendly index on (booking_status, soft_lock_expires_at)
 - Mocked: Razorpay (deterministic HMAC), MSG91 SMS+WhatsApp DEMO, EmailService MOCK
+- Background jobs: soft-lock reaper (30s) + reminder recovery on startup
 
 ---
 
 ## Pending Backlog
 
 ### P1 — Next Up
-- **Soft-lock reaper**: TTL index or scheduled cleanup for stale soft_lock bookings past `soft_lock_expires_at` (testing agent flagged: process-local asyncio task is dropped on worker restart).
 - **Property Listing Creation Flow (Host)**: subscription select + ₹500 registration fee modal, multi-step form, image upload.
 - **Property Verification Workflow (real)**: Broker physical visit submission → RM remote review → Admin final approval.
-- **In-app notification email read receipts** + retry/DLQ on real-channel failures (when MSG91/SendGrid keys go live).
+- **Refactor Phase 8 test fixture** (4 setup errors) — use a free-window search like Phases 9/10/11 instead of hardcoded dates.
+- **Refactor `_finalize_confirmed_booking` helper** (~60 lines duplicated across confirm-payment and mock-pay).
+- **Retry/DLQ + read receipts** when real MSG91/SendGrid keys go live.
 
 ### P2 — Future
 - Super Admin Account section: real transactions, Razorpay payouts, refunds

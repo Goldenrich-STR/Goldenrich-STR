@@ -43,6 +43,9 @@ async def reap_expired_soft_locks(db: AsyncIOMotorDatabase) -> int:
     if not expired:
         return 0
 
+    if len(expired) >= 500:
+        logger.warning("Reaper hit batch cap (500); more expired locks may remain for next sweep")
+
     booking_ids = [b["booking_id"] for b in expired]
 
     await db.bookings.update_many(
@@ -71,6 +74,9 @@ async def _reaper_loop(db: AsyncIOMotorDatabase, interval_seconds: int):
     while True:
         try:
             await reap_expired_soft_locks(db)
+        except asyncio.CancelledError:
+            logger.info("Soft-lock reaper loop cancelled (shutdown)")
+            raise
         except Exception as e:
             logger.error(f"reaper_loop iteration failed: {e}")
         await asyncio.sleep(interval_seconds)
