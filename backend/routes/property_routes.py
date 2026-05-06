@@ -195,7 +195,7 @@ async def get_property(
     property_id: str,
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Get property details by ID (public endpoint)."""
+    """Get property details by ID (public endpoint). Includes safe host info."""
     try:
         property_dict = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
         
@@ -204,7 +204,16 @@ async def get_property(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Property not found"
             )
-        
+
+        # Attach safe host profile (no email/phone/password)
+        host = await db.users.find_one(
+            {"user_id": property_dict.get("owner_id")},
+            {"_id": 0, "user_id": 1, "full_name": 1, "city": 1, "profile_image": 1, "created_at": 1, "kyc_status": 1, "role": 1},
+        )
+        if host:
+            host["created_at"] = host["created_at"].isoformat() if host.get("created_at") else None
+        property_dict["host"] = host or None
+
         return property_dict
     
     except HTTPException:

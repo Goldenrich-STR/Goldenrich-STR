@@ -9,6 +9,8 @@ import AuthPage from "./pages/AuthPage";
 import GuestBrowse from "./pages/GuestBrowse";
 import HostDashboard from "./pages/HostDashboard";
 import HostCalendar from "./pages/HostCalendar";
+import PropertyDetail from "./pages/PropertyDetail";
+import BookingConfirmation from "./pages/BookingConfirmation";
 import AdminDashboard from "./pages/AdminDashboard";
 import BrokerDashboard from "./pages/BrokerDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
@@ -70,6 +72,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<AuthPage />} />
             <Route path="/register" element={<AuthPage />} />
+            <Route path="/property/:id" element={<PropertyDetail />} />
 
             {/* Role-based Dashboard Redirect */}
             <Route path="/dashboard" element={<RoleBasedRedirect />} />
@@ -80,6 +83,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["guest"]}>
                   <GuestBrowse />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/guest/booking-confirmation"
+              element={
+                <ProtectedRoute allowedRoles={["guest"]}>
+                  <BookingConfirmation />
                 </ProtectedRoute>
               }
             />
