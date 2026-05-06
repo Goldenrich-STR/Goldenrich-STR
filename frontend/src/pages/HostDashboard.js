@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI } from '../services/api';
 import { Building2, Plus, Calendar, DollarSign, Eye } from 'lucide-react';
+import { NotificationBell } from '../components/NotificationCenter';
 
 const HostDashboard = () => {
   const navigate = useNavigate();
@@ -41,7 +42,14 @@ const HostDashboard = () => {
             <h1 className="text-xl font-bold text-charcoal">PropNest - Host Dashboard</h1>
           </div>
           <div className="flex items-center space-x-4">
+            <NotificationBell />
             <span className="text-charcoal-light">Welcome, {user?.full_name}</span>
+            <button
+              onClick={() => navigate('/guest/bookings')}
+              className="text-charcoal-light hover:text-terracotta"
+            >
+              My Bookings
+            </button>
             <button onClick={logout} className="text-terracotta hover:underline">
               Logout
             </button>

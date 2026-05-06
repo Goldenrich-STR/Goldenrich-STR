@@ -35,9 +35,10 @@ from routes.cms_routes import router as cms_router
 from routes.subscription_routes import router as subscription_router
 from routes.broker_routes import router as broker_router
 from routes.employee_routes import router as employee_router
+from routes.notification_routes import router as notification_router
 
 # Override Depends() in routes with get_db
-for route in [auth_router, property_router, booking_router, admin_router, cms_router, subscription_router, broker_router, employee_router]:
+for route in [auth_router, property_router, booking_router, admin_router, cms_router, subscription_router, broker_router, employee_router, notification_router]:
     for r in route.routes:
         for idx, depends in enumerate(r.dependencies):
             if depends.dependency is Depends():
@@ -52,6 +53,7 @@ app.include_router(cms_router, prefix="/api")
 app.include_router(subscription_router, prefix="/api")
 app.include_router(broker_router, prefix="/api")
 app.include_router(employee_router, prefix="/api")
+app.include_router(notification_router, prefix="/api")
 
 # CORS middleware
 app.add_middleware(
