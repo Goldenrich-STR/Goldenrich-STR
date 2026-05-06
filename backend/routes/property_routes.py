@@ -55,12 +55,18 @@ async def create_property(
 async def search_properties(
     category: Optional[PropertyCategory] = None,
     city: Optional[str] = None,
+    property_type: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
     bhk_type: Optional[str] = None,
     amenities: Optional[str] = Query(None, description="Comma-separated amenities"),
     instant_booking: Optional[bool] = None,
-    limit: int = 20,
+    pet_friendly: Optional[bool] = None,
+    check_in: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
+    check_out: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
+    bbox: Optional[str] = Query(None, description="min_lat,min_lng,max_lat,max_lng for map viewport"),
+    sort: Optional[str] = Query("recommended", description="recommended | price_asc | price_desc | newest"),
+    limit: int = 50,
     skip: int = 0,
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -68,52 +74,120 @@ async def search_properties(
     try:
         # Build query
         query = {"status": PropertyStatus.LIVE.value}
-        
+
         if category:
             query["category"] = category.value
-        
+
         if city:
             query["city"] = {"$regex": city, "$options": "i"}
-        
+
+        if property_type:
+            query["property_type"] = property_type
+
         if bhk_type:
             query["bhk_type"] = bhk_type
-        
+
         if instant_booking is not None:
             query["instant_booking"] = instant_booking
-        
+
+        if pet_friendly is not None:
+            query["pet_friendly"] = pet_friendly
+
         # Price filter
-        if min_price or max_price:
+        if min_price is not None or max_price is not None:
             price_query = {}
-            if min_price:
+            if min_price is not None:
                 price_query["$gte"] = min_price
-            if max_price:
+            if max_price is not None:
                 price_query["$lte"] = max_price
             query["price_per_night"] = price_query
-        
+
         # Amenities filter
         if amenities:
-            amenity_list = [a.strip() for a in amenities.split(",")]
-            query["amenities"] = {"$all": amenity_list}
-        
-        # Execute query
-        cursor = db.properties.find(query, {"_id": 0}).skip(skip).limit(limit)
+            amenity_list = [a.strip() for a in amenities.split(",") if a.strip()]
+            if amenity_list:
+                query["amenities"] = {"$all": amenity_list}
+
+        # Map viewport (bbox) filter
+        if bbox:
+            try:
+                parts = [float(x) for x in bbox.split(",")]
+                if len(parts) == 4:
+                    min_lat, min_lng, max_lat, max_lng = parts
+                    query["latitude"] = {"$gte": min_lat, "$lte": max_lat}
+                    query["longitude"] = {"$gte": min_lng, "$lte": max_lng}
+            except ValueError:
+                pass
+
+        # Date availability filter — exclude properties with overlapping confirmed/soft-locked bookings or blocked dates
+        if check_in and check_out:
+            if check_in >= check_out:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="check_out must be after check_in",
+                )
+
+            booked_props = await db.bookings.distinct(
+                "property_id",
+                {
+                    "booking_status": {"$in": ["confirmed", "soft_lock"]},
+                    "check_in_date": {"$lt": check_out},
+                    "check_out_date": {"$gt": check_in},
+                },
+            )
+            blocked_props = await db.blocked_dates.distinct(
+                "property_id",
+                {
+                    "start_date": {"$lte": check_out},
+                    "end_date": {"$gte": check_in},
+                },
+            )
+            unavailable = list(set(booked_props) | set(blocked_props))
+            if unavailable:
+                query["property_id"] = {"$nin": unavailable}
+
+        # Sort
+        sort_map = {
+            "price_asc": [("price_per_night", 1)],
+            "price_desc": [("price_per_night", -1)],
+            "newest": [("created_at", -1)],
+            "recommended": [("instant_booking", -1), ("created_at", -1)],
+        }
+        sort_spec = sort_map.get(sort, sort_map["recommended"])
+
+        cursor = db.properties.find(query, {"_id": 0}).sort(sort_spec).skip(skip).limit(limit)
         properties = await cursor.to_list(length=limit)
-        
-        # Get total count
+
         total = await db.properties.count_documents(query)
-        
+
         return {
             "properties": properties,
             "total": total,
             "limit": limit,
-            "skip": skip
+            "skip": skip,
+            "filters_applied": {
+                "category": category.value if category else None,
+                "city": city,
+                "property_type": property_type,
+                "bhk_type": bhk_type,
+                "min_price": min_price,
+                "max_price": max_price,
+                "amenities": amenities,
+                "instant_booking": instant_booking,
+                "pet_friendly": pet_friendly,
+                "check_in": check_in,
+                "check_out": check_out,
+                "sort": sort,
+            },
         }
-    
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error searching properties: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to search properties"
+            detail="Failed to search properties",
         )
 
 @router.get("/{property_id}")
