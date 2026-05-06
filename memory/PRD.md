@@ -99,35 +99,56 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
   - `recover_pending_reminders(db)` — at startup, re-schedules reminders for live soft_lock bookings that haven't been notified yet (addresses the "process-local asyncio task dropped on worker restart" concern).
 - **Reminder dedup**: `_soft_lock_reminder_task` now atomically claims the booking via `find_one_and_update` setting `soft_lock_reminder_sent=True`, so duplicate restart-recoveries or worker races never produce duplicate sends.
 - Hooked into `server.py` startup: indexes ensured + recovery + reaper loop. Added compound index `(booking_status, soft_lock_expires_at)` for fast reaper scans.
-- Live invariant: zero soft_lock bookings with past expiry persist for >30s.
-- 100% green: 9/9 phase 12 + 86/86 overall (4 pre-existing Phase-8 fixture warnings unchanged). Test report iteration_8. Suite `test_phase12_reaper.py`.
+- 100% green: 9/9 phase 12 + 86/86 overall (test report iteration_8). Suite `test_phase12_reaper.py`.
+
+### Phase 13 — Host Property Listing Creation Flow (Complete — May 2026)
+- **Backend**:
+  - `POST /api/upload/image` (auth required) — saves file to `/app/backend/uploads/<uuid>.<ext>`, validates ext + 8MB cap, returns `{filename, url, size, content_type}`.
+  - `GET /api/uploads/<filename>` — StaticFiles serving (mounted at `/api/uploads` after the upload router).
+  - `GET /api/auth/me` — returns latest user profile minus `password_hash` and `registration_fee_payment_id`. Used by AuthContext to keep `registration_fee_paid` in sync.
+  - `POST /api/subscriptions/confirm-registration-fee` refactored to Pydantic `ConfirmRegistrationFeeRequest` body; new `POST /api/subscriptions/registration-fee/mock-pay` for demo mode.
+  - `Property.property_id` factory switched from timestamp to uuid4.
+- **Frontend** new `/host/list-property` (`HostListProperty.js`):
+  - 7-step form: Basics → Location → Pricing & Rules → Amenities → Photos → Subscription → Review & Pay.
+  - Step indicator with check-marked completion, terracotta active step, sage-dark done steps.
+  - Per-step validation (title length, area min, pin format, price min, amenities required, photos required, plan required).
+  - Photos: device upload via `/api/upload/image` AND URL paste fallback; cover badge on first; trash-icon delete; preview grid.
+  - Subscription: BHK-matching plans surface first.
+  - Review: full data summary, fee card with demo-mode banner, adaptive submit label ("Pay ₹500 & submit" vs "Submit listing" based on `registration_fee_paid`).
+  - On submit: creates property as DRAFT → pays ₹500 fee (mock-pay if `is_mock`, real Razorpay SDK otherwise) → submit-for-verification → success page.
+- **AuthContext** now exposes `refreshUser()` that calls `/api/auth/me`. Listing form invokes it on mount so registration-fee state is always fresh.
+- 100% green: 10/10 phase 13 backend + 100% frontend E2E (test report iteration_9). Suite `test_phase13_listing.py`.
 
 ---
 
-## Test Status (Iteration 8, May 6 2026)
-- Phase 6 backend: 20/20 — `test_phase6_calendar.py`
-- Phase 7 backend: 20/20 — `test_phase7_search.py`
-- Phase 8 backend: 15/19 (4 pre-existing fixture date warnings — non-blocking)
-- Phase 9 backend: 12/12 — `test_phase9_payment.py`
-- Phase 10 backend: 12/12 — `test_phase10_my_bookings.py`
-- booking_id uniqueness: 3/3 — `test_booking_id_uniqueness.py`
-- Phase 11 backend: 7/7 — `test_phase11_notifications.py`
-- Phase 12 backend: 9/9 — `test_phase12_reaper.py`
-- Frontend: 100% on critical flows; zero React duplicate-key warnings
-- DB: unique + compound indexes on hot collections; reaper-friendly index on (booking_status, soft_lock_expires_at)
-- Mocked: Razorpay (deterministic HMAC), MSG91 SMS+WhatsApp DEMO, EmailService MOCK
+## Test Status (Iteration 9, May 6 2026)
+- Phase 6: 20/20 — `test_phase6_calendar.py`
+- Phase 7: 20/20 — `test_phase7_search.py`
+- Phase 8: 15/19 (4 pre-existing fixture date warnings — non-blocking)
+- Phase 9: 12/12 — `test_phase9_payment.py`
+- Phase 10: 12/12 — `test_phase10_my_bookings.py`
+- booking_id uniqueness: 3/3
+- Phase 11: 7/7 — `test_phase11_notifications.py`
+- Phase 12: 9/9 — `test_phase12_reaper.py`
+- Phase 13: 10/10 — `test_phase13_listing.py`
+- Frontend: 100% on critical flows (host calendar, guest browse + detail + booking + payment, my bookings, host listing creation 7-step)
+- DB: unique + compound indexes on hot collections
 - Background jobs: soft-lock reaper (30s) + reminder recovery on startup
+- Mocked: Razorpay (deterministic HMAC + 2 mock-pay endpoints), MSG91 SMS+WhatsApp DEMO, EmailService MOCK
 
 ---
 
 ## Pending Backlog
 
 ### P1 — Next Up
-- **Property Listing Creation Flow (Host)**: subscription select + ₹500 registration fee modal, multi-step form, image upload.
-- **Property Verification Workflow (real)**: Broker physical visit submission → RM remote review → Admin final approval.
-- **Refactor Phase 8 test fixture** (4 setup errors) — use a free-window search like Phases 9/10/11 instead of hardcoded dates.
+- **Property Verification Workflow (real)**: Broker physical visit submission → RM remote review → Admin final approval. RM/Admin dashboards already exist; just need the real state-machine wiring.
+- **Refactor Phase 8 test fixture** to use a free-window search (eliminate 4 pre-existing setup errors).
 - **Refactor `_finalize_confirmed_booking` helper** (~60 lines duplicated across confirm-payment and mock-pay).
-- **Retry/DLQ + read receipts** when real MSG91/SendGrid keys go live.
+
+### P2 — Future
+- **Idempotent registration-fee guard**: confirm-registration-fee currently silently overwrites payment_id when already paid (testing flagged); make it return 200 'already paid' instead.
+- **Magic-byte file validation** in upload_routes (currently only filename ext check).
+- **Reviews & ratings** system, real iCal background sync, Super Admin transactions/payouts/refunds, AI features.
 
 ### P2 — Future
 - Super Admin Account section: real transactions, Razorpay payouts, refunds

@@ -537,7 +537,7 @@ const HostListProperty = () => {
               <p className="text-sm text-charcoal-light">
                 A 90-day free trial starts today. You'll only be billed if you continue after the trial.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="plan-list">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="plan-list-container">
                 {matchingPlans.map((p) => {
                   const active = form.subscription_plan_id === p.plan_id;
                   return (
