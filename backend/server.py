@@ -79,9 +79,28 @@ async def startup_db_indexes():
         # Compound index for availability queries
         await db_instance.bookings.create_index([("property_id", 1), ("check_in_date", 1), ("check_out_date", 1)])
         await db_instance.blocked_dates.create_index([("property_id", 1), ("start_date", 1), ("end_date", 1)])
+        # Reaper-friendly index
+        await db_instance.bookings.create_index([("booking_status", 1), ("soft_lock_expires_at", 1)])
         logger.info("MongoDB indexes ensured")
     except Exception as e:
         logger.error(f"Failed to create indexes: {e}")
+
+
+@app.on_event("startup")
+async def startup_background_jobs():
+    """Start the soft-lock reaper and recover any pending soft-lock reminders."""
+    try:
+        from services.soft_lock_reaper import (
+            start_soft_lock_reaper,
+            recover_pending_reminders,
+        )
+        # Recover dropped reminders from a previous worker restart
+        await recover_pending_reminders(db_instance)
+        # Start periodic reaper
+        reaper_interval = int(os.environ.get("SOFT_LOCK_REAPER_INTERVAL", "30"))
+        start_soft_lock_reaper(db_instance, interval_seconds=reaper_interval)
+    except Exception as e:
+        logger.error(f"Failed to start background jobs: {e}")
 
 
 @app.on_event("shutdown")

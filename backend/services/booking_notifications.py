@@ -173,16 +173,24 @@ async def _soft_lock_reminder_task(db: AsyncIOMotorDatabase, booking_id: str, de
     try:
         await asyncio.sleep(delay_seconds)
 
-        booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
-        if not booking:
-            return
-        if booking.get("booking_status") != "soft_lock":
-            return  # already paid or cancelled
-        # Don't ping if the lock already expired
-        lock_exp = booking.get("soft_lock_expires_at")
-        if lock_exp and lock_exp < datetime.utcnow():
-            return
+        # Atomic claim: only proceed if reminder hasn't been sent yet
+        claim = await db.bookings.find_one_and_update(
+            {
+                "booking_id": booking_id,
+                "booking_status": "soft_lock",
+                "soft_lock_expires_at": {"$gt": datetime.utcnow()},
+                "$or": [
+                    {"soft_lock_reminder_sent": {"$exists": False}},
+                    {"soft_lock_reminder_sent": False},
+                ],
+            },
+            {"$set": {"soft_lock_reminder_sent": True, "soft_lock_reminder_sent_at": datetime.utcnow()}},
+            projection={"_id": 0},
+        )
+        if not claim:
+            return  # already paid, cancelled, expired, or another worker fired it
 
+        booking = claim
         guest = await db.users.find_one({"user_id": booking["guest_id"]}, {"_id": 0})
         prop = await db.properties.find_one({"property_id": booking["property_id"]}, {"_id": 0})
         if not guest:

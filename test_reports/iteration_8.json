@@ -1,0 +1,56 @@
+{
+  "summary": "Phase 12 — soft-lock reaper + reminder recovery tested end-to-end. 9/9 new pytest cases in test_phase12_reaper.py pass: startup log markers, reap_expired_soft_locks() helper (cancels + sets cancellation_reason='soft_lock_expired' + deletes booking-source blocked_dates), safety (future locks / confirmed / cancelled bookings untouched), recover_pending_reminders(), reminder dedup via atomic find_one_and_update + soft_lock_reminder_sent flag, and a live invariant that no soft_lock with past expiry remains in DB. Regression: 86/86 passing across phases 6/7/9/10/11 + booking_id_uniqueness. 4 errors in test_phase8_property_detail.py are pre-existing test-fixture data pollution (hardcoded 2026-12-01 window already booked on demo property) — NOT a Phase 12 regression.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "tests/test_phase8_property_detail.py::TestBookingFlow", "issue": "Module-scope `soft_lock_booking` fixture uses hardcoded check_in='2026-12-01' / check_out='2026-12-04'; that window is now occupied on prop_demo_3 from prior runs, so 4 dependent tests error at setup with HTTP 409 'Property is already booked for selected dates'. Pre-existing brittleness, unrelated to Phase 12. Recommend converting to a deep-future dynamic date offset (today+1500d) like Phase 11 does."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_phase12_reaper.py",
+    "/app/test_reports/pytest/phase12_results.xml",
+    "/app/test_reports/pytest/iter8_all_results.xml"
+  ],
+  "action_items": [
+    "Optional: refactor /app/backend/tests/test_phase8_property_detail.py soft_lock_booking fixture to use a dynamic future date (offset today+1500d) instead of hardcoded 2026-12-01; otherwise window will keep colliding as the demo DB accumulates bookings.",
+    "Optional (already noted in iter7): consider extracting a _finalize_confirmed_booking helper to dedupe post-confirm logic across booking_routes.py."
+  ],
+  "critical_code_review_comments": [
+    "soft_lock_reaper.reap_expired_soft_locks uses to_list(length=500) — if more than 500 soft_locks expire in a single 30s window the rest will wait for the next sweep. Acceptable, but worth a TODO/log warn when len==500.",
+    "recover_pending_reminders also caps at 500 documents on startup — same caveat.",
+    "schedule_soft_lock_reminder is called from reaper recovery while no FastAPI request loop is running yet; fine because startup runs inside the same event loop, but worth a comment so future maintainers don't move recovery outside of @app.on_event('startup').",
+    "Atomic dedup via find_one_and_update is the correct pattern. soft_lock_reminder_sent_at is set but never indexed; not needed yet but worth a note for analytics queries.",
+    "server.py duplicates @app.on_event('startup') hooks (startup_db_indexes + startup_background_jobs). Both work, but consolidating into one lifespan handler would be cleaner under FastAPI ≥0.93 lifespan API.",
+    "Reaper loop catches Exception broadly and only logs — a CancelledError from shutdown will be swallowed silently; consider re-raising CancelledError so the event loop can clean up gracefully on uvicorn shutdown."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase12_reaper.py (new — 9 tests)"
+  ],
+  "success_rate": {
+    "backend": "Phase 12: 100% (9/9). Overall suite: 95/99 (4 Phase-8 setup errors are pre-existing fixture-date collisions, NOT regressions).",
+    "frontend": "skipped per request"
+  },
+  "test_credentials": "guest@propnest.com / guest123, host@propnest.com / host123 (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "Test inserts curated booking docs with booking_id prefix 'TESTBK' directly into db.bookings (and a single TEST blocked_dates row), then deletes them in a try/finally cleanup block at the end of every test. No persistent test data left behind.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Phase 12 reaper + reminder recovery is fully verified. The pytest file injects bookings directly into Mongo (skipping the regular POST /bookings flow) so soft_lock_expires_at can be set arbitrarily in the past or future. All 9 cases run in <1s because they bypass the live 30s sweep — they call reap_expired_soft_locks(db) and recover_pending_reminders(db) directly. The dedup test calls services.booking_notifications._soft_lock_reminder_task(db, booking_id, 0) twice and asserts the second call is a no-op via DB row counts plus the soft_lock_reminder_sent flag. Live invariant test waits up to 35s to give the running reaper grace before asserting count_documents({booking_status:'soft_lock', soft_lock_expires_at:{$lte:now}}) == 0. Backend was restarted once during this iteration; startup logs confirmed: 'MongoDB indexes ensured', 'Soft-lock reminders recovered for 11 pending bookings' followed later by 'recovered for 5', 'Soft-lock reaper started (interval=30s)', and 'Soft-lock reaper: cancelled 32 expired bookings'. The Phase 8 fixture brittleness is a known test-data issue, not a code bug.",
+  "verified_log_lines_after_restart": [
+    "server - INFO - MongoDB indexes ensured",
+    "services.soft_lock_reaper - INFO - Soft-lock reminders recovered for 11 pending bookings",
+    "services.soft_lock_reaper - INFO - Soft-lock reaper started (interval=30s)",
+    "services.soft_lock_reaper - INFO - Soft-lock reaper: cancelled 32 expired bookings",
+    "services.booking_notifications - INFO - Soft-lock reminder sent for booking BK..."
+  ],
+  "verified_db_state": {
+    "soft_locks_with_past_expiry_after_reap": 0,
+    "TESTBK bookings cancelled by reap_expired_soft_locks": "3/3 with cancellation_reason='soft_lock_expired'",
+    "TESTBK booking-source blocked_dates after reap": 0,
+    "soft_lock_reminder_sent flag toggled True after first dedup call": true,
+    "second _soft_lock_reminder_task invocation produced 0 new notifications": true,
+    "future soft_lock untouched by reaper": true,
+    "confirmed booking untouched by reaper": true,
+    "cancelled booking untouched (cancellation_reason preserved)": true
+  }
+}
