@@ -61,6 +61,7 @@ const HostCalendar = () => {
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [year, setYear] = useState(today.getFullYear());
   const [events, setEvents] = useState([]);
+  const [allManualBlocks, setAllManualBlocks] = useState([]);
   const [externalCalendars, setExternalCalendars] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -83,6 +84,7 @@ const HostCalendar = () => {
   useEffect(() => {
     if (selectedPropertyId) {
       fetchUnifiedView();
+      fetchAllManualBlocks();
       fetchExternalCalendars();
     }
   }, [selectedPropertyId, month, year]);
@@ -124,6 +126,23 @@ const HostCalendar = () => {
     }
   };
 
+  const fetchAllManualBlocks = async () => {
+    try {
+      // Fetch a wide future window so the side list shows all upcoming manual blocks
+      const todayISO = toISO(new Date());
+      const farFuture = `${new Date().getFullYear() + 5}-12-31`;
+      const res = await calendarAPI.getBlockedDates(selectedPropertyId, {
+        start_date: todayISO,
+        end_date: farFuture,
+      });
+      const list = (res.data.blocked_dates || []).filter((b) => b.source === 'manual');
+      list.sort((a, b) => a.start_date.localeCompare(b.start_date));
+      setAllManualBlocks(list);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleBlockDates = async (e) => {
     e.preventDefault();
     if (!blockStart || !blockEnd) return;
@@ -135,11 +154,16 @@ const HostCalendar = () => {
         end_date: blockEnd,
         reason: blockReason || null,
       });
+      // Jump calendar to the month of the new block so user sees it immediately
+      const [yr, mo] = blockStart.split('-').map((n) => parseInt(n, 10));
       setBlockStart('');
       setBlockEnd('');
       setBlockReason('');
       setShowBlockForm(false);
-      await fetchUnifiedView();
+      setMonth(mo);
+      setYear(yr);
+      await fetchAllManualBlocks();
+      // fetchUnifiedView will run via useEffect on month/year change
     } catch (e) {
       setError(e.response?.data?.detail || 'Failed to block dates');
     } finally {
@@ -151,8 +175,9 @@ const HostCalendar = () => {
     if (event.source !== 'manual') return;
     if (!window.confirm('Unblock these dates?')) return;
     try {
-      await calendarAPI.unblockDates(event.event_id);
+      await calendarAPI.unblockDates(event.event_id || event.blocked_date_id);
       await fetchUnifiedView();
+      await fetchAllManualBlocks();
     } catch (e) {
       setError(e.response?.data?.detail || 'Failed to unblock');
     }
@@ -470,28 +495,37 @@ const HostCalendar = () => {
                 )}
 
                 <div className="mt-4 space-y-2 max-h-64 overflow-y-auto" data-testid="blocked-dates-list">
-                  {events.filter((e) => e.source === 'manual').length === 0 && (
+                  {allManualBlocks.length === 0 && (
                     <p className="text-sm text-charcoal-light">No manual blocks yet.</p>
                   )}
-                  {events.filter((e) => e.source === 'manual').map((ev) => (
+                  {allManualBlocks.map((blk) => (
                     <div
-                      key={ev.event_id}
+                      key={blk.blocked_date_id}
                       className="flex items-center justify-between border border-sand-200 rounded-lg p-2"
-                      data-testid={`blocked-${ev.event_id}`}
+                      data-testid={`blocked-${blk.blocked_date_id}`}
                     >
-                      <div className="text-sm">
-                        <div className="font-semibold text-charcoal">
-                          {ev.start_date} → {ev.end_date}
-                        </div>
-                        {ev.details?.reason && (
-                          <div className="text-xs text-charcoal-light">{ev.details.reason}</div>
-                        )}
-                      </div>
                       <button
-                        onClick={() => handleUnblock(ev)}
+                        type="button"
+                        className="text-sm text-left flex-1"
+                        onClick={() => {
+                          const [yr, mo] = blk.start_date.split('-').map((n) => parseInt(n, 10));
+                          setMonth(mo);
+                          setYear(yr);
+                        }}
+                        title="Jump to this month"
+                      >
+                        <div className="font-semibold text-charcoal">
+                          {blk.start_date} → {blk.end_date}
+                        </div>
+                        {blk.reason && (
+                          <div className="text-xs text-charcoal-light">{blk.reason}</div>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleUnblock({ source: 'manual', blocked_date_id: blk.blocked_date_id })}
                         className="p-1 text-red-600 hover:bg-red-50 rounded"
                         title="Unblock"
-                        data-testid={`unblock-${ev.event_id}`}
+                        data-testid={`unblock-${blk.blocked_date_id}`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

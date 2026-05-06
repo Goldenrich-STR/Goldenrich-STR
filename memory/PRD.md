@@ -9,271 +9,128 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 - **Framework**: FastAPI (Python)
 - **Database**: MongoDB (Motor async driver)
 - **Authentication**: JWT tokens with bcrypt password hashing
-- **Payment**: Razorpay (test mode configured)
-- **OTP/SMS**: MSG91 (configured, mocked for development)
-- **Cache**: Redis (for OTP storage)
-- **AI**: OpenAI GPT-5.2 via Emergent LLM Key
+- **Payment**: Razorpay (test/mock mode)
+- **OTP/SMS**: MSG91 (DEMO mode — no real send)
+- **Email**: SendGrid/SES adapter (mock)
+- **Cache**: Redis (with in-memory fallback)
+- **AI**: OpenAI GPT-5.2 via Emergent LLM Key (configured)
+- **iCal**: `icalendar` library for export + sync
 
 ### Frontend
-- **Framework**: React.js
+- **Framework**: React.js (CRA)
 - **Routing**: React Router v7
-- **Styling**: Tailwind CSS + Custom design system
-- **UI Components**: Shadcn/UI (available)
-- **State Management**: React Context API
-- **HTTP Client**: Axios
+- **Styling**: Tailwind CSS + custom design system
+- **HTTP**: Axios
+- **State**: Context API
 
 ### Design System
-- **Theme**: Light, Organic & Earthy archetype
-- **Primary Color**: Terracotta (#C05C4F)
-- **Secondary Color**: Sage (#788574)
-- **Background**: Warm Sand (#FDFCF8)
-- **Typography**: Manrope (all weights)
+- Theme: Light, Organic & Earthy
+- Primary: Terracotta (#C05C4F), Secondary: Sage (#788574)
+- Background: Warm Sand (#FDFCF8)
+- Typography: Manrope
 
-## Implemented Features (Phase 1)
+---
 
-### 1. Authentication & User Management
-- [x] User Registration with phone OTP verification
-- [x] Login with email/password
-- [x] JWT-based authentication
-- [x] Role-based access control (Guest, Host, Broker, Employee, Admin)
-- [x] Protected routes based on user role
-- [x] Context-based auth state management
+## Implemented Features
 
-### 2. User Roles Implemented
-- [x] Guest/Renter - Browse properties, make bookings
-- [x] Host/Owner - List properties, manage bookings
-- [x] Broker - (Dashboard placeholder created)
-- [x] Employee/RM - (Dashboard placeholder created)
-- [x] Admin - (Dashboard placeholder created)
+### Phase 1 — Core (Complete)
+- JWT auth, role-based access (guest, host, broker, employee, admin)
+- Phone OTP registration, login
+- Property CRUD, search, host listings
+- Booking system with soft lock (10-min) → hard lock on payment confirm
+- Razorpay order creation + signature verification (mock)
 
-### 3. Property Management
-- [x] Property listing creation (Host)
-- [x] Property search with filters (category, city, price, BHK, amenities)
-- [x] Property details view
-- [x] Property status management (draft, pending_verification, live, rejected)
-- [x] Host can view all their properties
-- [x] Submit property for verification
+### Phase 2 — Admin & CMS (Complete)
+- Admin dashboard, user management, KYC approval, property moderation
+- Landing page CMS endpoints
+- Subscription plan management
 
-### 4. Booking System
-- [x] Create booking with date selection
-- [x] Soft lock (10-minute hold on property)
-- [x] Hard lock after payment confirmation
-- [x] Booking overlap prevention (double-booking protection)
-- [x] Pricing calculation (base + service fee + taxes)
-- [x] Guest can view their bookings
-- [x] Host can view bookings for their properties
+### Phase 3 — Subscription System (Complete)
+- BHK-wise subscription plans seeded
+- Subscription purchase + renewal endpoints
 
-### 5. Payment Integration (Razorpay)
-- [x] Create Razorpay order for bookings
-- [x] Payment signature verification
-- [x] Payment confirmation flow
-- [x] Test mode configuration
+### Phase 4 — Broker Dashboard (Complete)
+- Mocked GRP SSO, leads, verification status, commission view (read-only)
 
-### 6. OTP Service
-- [x] Generate and store OTP in Redis (with fallback to in-memory)
-- [x] Send OTP for phone verification
-- [x] Verify OTP with attempt tracking
-- [x] OTP expiry and rate limiting
+### Phase 5 — Employee/RM Dashboard (Complete)
+- Verification review queue, approve/reject flow
+- Reports UI (PDF/CSV mock export)
 
-### 7. UI/UX Implementation
-- [x] Beautiful landing page with hero section
-- [x] Featured properties display
-- [x] Category exploration
-- [x] Professional authentication page with login/register
-- [x] Guest property browse page with search
-- [x] Host dashboard with property management
-- [x] Responsive design (mobile-first)
-- [x] Design system with Manrope font and terracotta/sage colors
+### Phase 6 — Notifications + Calendar (Complete — Feb/May 2026)
+- **Notifications**: MSG91 SMS/WhatsApp + Email service layer (DEMO), in-app NotificationCenter, NotificationBell badge.
+- **Calendar Management** (just shipped):
+  - `BlockedDate`, `ExternalCalendar`, `CalendarEvent` models
+  - Block/unblock manual dates with conflict checks (active booking, overlap, past-date, range validation)
+  - Unified host calendar view (bookings + manual blocks + external feeds), color-coded
+  - iCal `.ics` export per property (downloadable)
+  - External iCal source CRUD + manual sync trigger
+  - Booking creation now respects blocked-dates collection (409 on conflict)
+  - Confirmed bookings auto-create a `BOOKING`-source blocked-date entry (so iCal export reflects them)
+  - Frontend `/host/calendar` page: month-grid UI, property selector, side panels for manual blocks (all upcoming) + external calendars, auto-jump to month of newly created block, iCal download
+- **DI bug fix (regression)**: All routes that used `db: AsyncIOMotorDatabase = Depends()` (booking, property, subscription, cms, admin) were patched to use a local `get_db` helper. Previously these endpoints returned 422 with "missing client/name/kwargs" — now fixed and verified.
 
-## Pending Features (Phase 2)
+---
 
-### Property Management
-- [ ] Property image upload to cloud storage
-- [ ] Property calendar management with blocked dates
-- [ ] iCal sync for external calendars
-- [ ] Property editing and updates
-- [ ] 360° virtual tour integration
-- [ ] Amenities checklist expansion
+## Test Status (Iteration 1, May 6 2026)
+- Backend: 20/20 pytest cases pass — `/app/backend/tests/test_phase6_calendar.py`
+- Frontend: 100% on critical flows tested (host login, calendar load, block/unblock, external CRUD, iCal export)
+- Mocked: Razorpay, MSG91, Email, SendGrid
 
-### Subscription System
-- [ ] BHK-wise subscription plans (Studio, 1BHK, 2BHK, 3BHK, etc.)
-- [ ] 3-month free trial activation
-- [ ] Subscription payment via Razorpay
-- [ ] Renewal reminders (5 days before expiry)
-- [ ] Auto-renewal with Razorpay subscriptions
+---
 
-### Host Registration Fee
-- [ ] ₹500 registration fee pop-up after registration
-- [ ] Payment via Razorpay
-- [ ] Fee refund if property not approved within 30 days
+## Pending Backlog
 
-### Broker Dashboard (Golden Rich Properties)
-- [ ] SSO integration with GRP portal
-- [ ] View all assigned owners
-- [ ] Property verification tasks
-- [ ] Physical site visit checklist
-- [ ] Geo-tagged photo upload
-- [ ] Leads management
-- [ ] Commission tracking (view only)
-- [ ] Subscription alerts
+### P1 — Next Up
+- **Guest Search & Discovery**: unified search bar, location/map search (Google Maps), advanced filters
+- **Booking Flow (frontend)**: date picker tied to availability API, soft-lock countdown, Razorpay checkout modal
+- **Property Listing Creation Flow (Host)**: subscription select + ₹500 registration fee modal, multi-step form, image upload
+- **Property Verification Workflow (real)**: Broker physical visit submission → RM remote review → Admin final approval
 
-### Employee (RM) Dashboard
-- [ ] Remote property verification review
-- [ ] View verification checklist and geo-tagged photos
-- [ ] Approve/Reject properties
-- [ ] Broker oversight
-- [ ] Reports generation (Properties Not Booked, etc.)
-- [ ] Export reports to PDF/CSV
+### P2 — Future
+- Super Admin Account section: real transactions, Razorpay payouts, refunds
+- Reviews & Ratings system (5-star + sub-categories, 14-day window)
+- Map view in search results
+- Real iCal sync as background cron/Celery job (currently sync is inline + best-effort)
+- BackgroundTasks for external sync to avoid blocking POST
+- Switch `requests` → `httpx.AsyncClient` in calendar sync
+- MongoDB indexes on `blocked_dates(property_id, start_date, end_date)` and `external_calendars(property_id, owner_id)`
+- Image upload to cloud storage
+- AI: smart property descriptions, chatbot
 
-### Admin Panel
-- [ ] User management (view, edit, suspend, delete)
-- [ ] KYC approval/rejection
-- [ ] Property listing moderation
-- [ ] Final approve/reject authority
-- [ ] Booking management
-- [ ] Account section (payments, subscriptions, payouts, commissions)
-- [ ] Landing page CMS
-- [ ] Analytics & reporting dashboard
-- [ ] Subscription plan management
-- [ ] Pricing configuration
-
-### Notifications
-- [ ] MSG91 SMS integration
-- [ ] MSG91 WhatsApp integration
-- [ ] Email notifications (mocked for now)
-- [ ] In-app notification center
-- [ ] Booking confirmation notifications
-- [ ] Subscription reminder notifications
-
-### Calendar & Availability
-- [ ] Interactive calendar on property page
-- [ ] Blocked dates visualization
-- [ ] iCal import/export
-- [ ] Unified calendar view for hosts
-- [ ] Booking overlap prevention (already implemented at DB level)
-
-### Reviews & Ratings
-- [ ] 5-star rating system
-- [ ] Sub-category scores (Cleanliness, Communication, Location, Value)
-- [ ] 14-day review window after checkout
-- [ ] Reviews display on property page
-
-### Advanced Features
-- [ ] OpenAI GPT-5.2 integration for smart property descriptions
-- [ ] AI-powered search recommendations
-- [ ] Chatbot support
-- [ ] Google Maps integration for property location
-- [ ] Search with map view
-- [ ] Razorpay Payout API for host payouts
+---
 
 ## Database Collections
 
-### users
-- user_id, email, phone, password_hash, full_name, role
-- city, profile_image
-- lg_code, broker_id (for hosts)
-- region (for brokers)
-- employee_region (for employees)
-- kyc_status, kyc_documents
-- registration_fee_paid, terms_accepted
-- is_active, is_email_verified, is_phone_verified
-- created_at, updated_at
+- `users`, `properties`, `bookings`, `subscriptions`, `subscription_plans`
+- `notifications`, `blocked_dates`, `external_calendars` (Phase 6)
+- `leads`, `commissions`, `verifications` (broker/employee)
+- `cms_content`
 
-### properties
-- property_id, owner_id, broker_id
-- title, description, property_type, category, bhk_type
-- address, city, state, pin_code, latitude, longitude
-- area_sqft
-- price_per_night, price_per_week, price_per_month, minimum_stay_days
-- amenities[], images[], virtual_tour_link
-- house_rules, pet_friendly, smoking_allowed, instant_booking
-- status, verification_remarks
-- blocked_dates[]
-- subscription_id, subscription_status
-- created_at, updated_at, submitted_at, approved_at
+---
 
-### bookings
-- booking_id, property_id, guest_id, host_id
-- check_in_date, check_out_date, number_of_guests
-- base_amount, service_fee, taxes, total_amount
-- payment_status, razorpay_order_id, razorpay_payment_id
-- booking_status, cancellation_policy
-- security_deposit, security_deposit_refunded
-- created_at, updated_at, confirmed_at, cancelled_at, soft_lock_expires_at
+## API Endpoints (Phase 6 additions)
 
-### subscriptions
-- subscription_id, user_id, property_id, plan_id
-- plan_type, billing_cycle, amount
-- status, start_date, end_date, trial_end_date
-- razorpay_subscription_id, auto_renewal
-- created_at, updated_at, cancelled_at
+### Calendar
+- `GET  /api/calendar/properties/{id}/blocked-dates` — public
+- `POST /api/calendar/properties/{id}/block-dates` — host, with validation
+- `DELETE /api/calendar/blocked-dates/{id}` — host
+- `GET  /api/calendar/properties/{id}/unified-view?month&year` — host
+- `GET  /api/calendar/properties/{id}/ical-export` — host (.ics download)
+- `GET  /api/calendar/properties/{id}/external-calendars` — host
+- `POST /api/calendar/properties/{id}/external-calendars` — host
+- `POST /api/calendar/external-calendars/{id}/sync` — host
+- `DELETE /api/calendar/external-calendars/{id}` — host
 
-### subscription_plans
-- plan_id, plan_type, plan_name
-- price_monthly, price_annual, description
-- is_active, created_at
+---
 
-## API Endpoints Implemented
+## Environment Variables
+- Backend `.env`: `MONGO_URL`, `DB_NAME`, `JWT_SECRET_KEY`, `RAZORPAY_KEY_ID/SECRET` (test), `MSG91_AUTHKEY/SENDER_ID`, `EMERGENT_LLM_KEY`, `REDIS_URL`, `REGISTRATION_FEE_AMOUNT`
+- Frontend `.env`: `REACT_APP_BACKEND_URL`
 
-### Authentication
-- POST /api/auth/send-otp - Send OTP to phone
-- POST /api/auth/verify-otp - Verify OTP
-- POST /api/auth/register - Register new user
-- POST /api/auth/login - Login user
+## Test Credentials
+See `/app/memory/test_credentials.md` (all 5 roles seeded and verified).
 
-### Properties
-- POST /api/properties/ - Create property (Host)
-- GET /api/properties/search - Search properties (public)
-- GET /api/properties/{property_id} - Get property details
-- GET /api/properties/host/my-properties - Get host's properties
-- PATCH /api/properties/{property_id} - Update property
-- POST /api/properties/{property_id}/submit-verification - Submit for verification
-
-### Bookings
-- POST /api/bookings/ - Create booking (with Razorpay order)
-- POST /api/bookings/confirm-payment - Confirm payment
-- GET /api/bookings/guest/my-bookings - Get guest's bookings
-- GET /api/bookings/host/my-bookings - Get host's bookings
-- GET /api/bookings/{booking_id} - Get booking details
-
-### Health
-- GET /api/health - Health check
-- GET /api/ - API info
-
-## Environment Configuration
-
-### Backend (.env)
-- MONGO_URL - MongoDB connection string
-- DB_NAME - Database name
-- JWT_SECRET_KEY - JWT signing key
-- RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET - Payment gateway
-- MSG91_AUTHKEY, MSG91_SENDER_ID - SMS/WhatsApp
-- EMERGENT_LLM_KEY - OpenAI access
-- REDIS_URL - Cache storage
-- REGISTRATION_FEE_AMOUNT - Host registration fee (in paise)
-
-### Frontend (.env)
-- REACT_APP_BACKEND_URL - Backend API URL
-
-## Next Steps
-
-1. **Complete Admin Panel** - Full implementation with CMS and analytics
-2. **Broker Workflow** - SSO, verification tasks, leads management
-3. **Employee Dashboard** - Verification review, reports, broker oversight
-4. **Subscription System** - Plans, payments, renewals
-5. **Notification System** - MSG91 SMS/WhatsApp integration
-6. **Calendar Integration** - iCal sync, availability management
-7. **Review System** - Ratings, reviews, feedback
-8. **Advanced Search** - Map integration, filters enhancement
-9. **AI Features** - Smart descriptions, chatbot, recommendations
-10. **Testing** - Comprehensive testing of all flows
-
-## Current Status
-- ✅ Core authentication and authorization complete
-- ✅ Property management foundation ready
-- ✅ Booking system with payment integration working
-- ✅ Beautiful UI with design system implemented
-- ✅ Guest and Host roles functional
-- ⏳ Admin, Broker, Employee dashboards need full implementation
-- ⏳ Notification system needs real integration
-- ⏳ Subscription system needs implementation
+## Known Limitations
+- Razorpay/MSG91/SendGrid in mock/test mode — wire real keys in env when ready (no code refactor needed).
+- iCal external sync is inline (not a background job); slow URLs may delay POST. Acceptable for MVP.
+- `GET /api/properties/` (root) returns 307 redirect; canonical listing endpoint is `/api/properties/search`.
