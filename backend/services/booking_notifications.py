@@ -32,10 +32,10 @@ def _host_booking_html(payload: dict) -> str:
             <p style="margin:4px 0;"><strong>Guests:</strong> {payload.get('number_of_guests')}</p>
             <p style="margin:4px 0;"><strong>Payout (estimated):</strong> ₹{payload.get('payout_amount', 0):,.0f}</p>
           </div>
-          <p>Get the property ready and welcome them warmly. Payment has been received and held with PropNest.</p>
+          <p>Get the property ready and welcome them warmly. Payment has been received and held with Golden-X-Host.</p>
         </div>
         <div style="text-align:center;color:#8C8C8C;font-size:12px;padding-top:14px;">
-          &copy; 2026 PropNest STR
+          &copy; 2026 Golden-X-Host STR
         </div>
       </div>
     </body></html>
@@ -84,7 +84,7 @@ def _send_soft_lock_reminder_email(to_email: str, payload: dict):
     html = _soft_lock_reminder_html(payload)
     return email_service.send_email(
         to_email,
-        f"Hold expiring soon · {payload.get('property_title', 'PropNest')}",
+        f"Hold expiring soon · {payload.get('property_title', 'Golden-X-Host')}",
         html,
     )
 
@@ -107,7 +107,7 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
         payout = (booking.get("base_amount", 0) or 0) - (booking.get("service_fee", 0) or 0)
 
         message = (
-            f"PropNest: New booking by {guest_name} for {property_title} "
+            f"Golden-X-Host: New booking by {guest_name} for {property_title} "
             f"({booking.get('check_in_date')} → {booking.get('check_out_date')}). "
             f"Booking ID {booking.get('booking_id')}."
         )
@@ -148,7 +148,7 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
         # Also send a confirmation receipt to the guest (in-app + email)
         if guest:
             guest_msg = (
-                f"PropNest: Your booking for {property_title} is confirmed! "
+                f"Golden-X-Host: Your booking for {property_title} is confirmed! "
                 f"{booking.get('check_in_date')} → {booking.get('check_out_date')}."
             )
             await send_multi_channel_notification(
@@ -198,7 +198,7 @@ async def _soft_lock_reminder_task(db: AsyncIOMotorDatabase, booking_id: str, de
 
         property_title = (prop or {}).get("title", "your selected property")
         message = (
-            f"PropNest: Your hold on {property_title} expires in 2 minutes. "
+            f"Golden-X-Host: Your hold on {property_title} expires in 2 minutes. "
             f"Complete payment now to lock in {booking['check_in_date']} → {booking['check_out_date']}. "
             f"Booking {booking_id}."
         )

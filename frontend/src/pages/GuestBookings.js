@@ -95,7 +95,7 @@ const GuestBookings = () => {
         <div className="max-w-5xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Building2 className="w-6 h-6 text-terracotta" />
-            <h1 className="text-xl font-bold text-charcoal">PropNest</h1>
+            <h1 className="text-xl font-bold text-charcoal">Golden-X-Host</h1>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-charcoal-light hidden sm:inline">Welcome, {user?.full_name}</span>

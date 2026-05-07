@@ -243,7 +243,7 @@ const PropertyDetail = () => {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Building2 className="w-6 h-6 text-terracotta" />
-            <span className="text-xl font-bold text-charcoal">PropNest</span>
+            <span className="text-xl font-bold text-charcoal">Golden-X-Host</span>
           </div>
           <div className="flex items-center space-x-4">
             <button

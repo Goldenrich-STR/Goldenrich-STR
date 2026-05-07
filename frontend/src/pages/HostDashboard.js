@@ -39,7 +39,7 @@ const HostDashboard = () => {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Building2 className="w-6 h-6 text-terracotta" />
-            <h1 className="text-xl font-bold text-charcoal">PropNest - Host Dashboard</h1>
+            <h1 className="text-xl font-bold text-charcoal">Golden-X-Host - Host Dashboard</h1>
           </div>
           <div className="flex items-center space-x-4">
             <NotificationBell />

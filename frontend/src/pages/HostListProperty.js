@@ -262,7 +262,7 @@ const HostListProperty = () => {
                 key: order.razorpay_key_id,
                 amount: order.amount,
                 currency: order.currency,
-                name: 'PropNest',
+                name: 'Golden-X-Host',
                 description: order.description,
                 order_id: order.razorpay_order_id,
                 prefill: {
@@ -659,7 +659,7 @@ const Header = ({ user, logout, navigate }) => (
     <div className="max-w-4xl mx-auto flex justify-between items-center">
       <div className="flex items-center space-x-2">
         <Building2 className="w-6 h-6 text-terracotta" />
-        <span className="text-xl font-bold text-charcoal">PropNest</span>
+        <span className="text-xl font-bold text-charcoal">Golden-X-Host</span>
       </div>
       <div className="flex items-center space-x-4">
         <button onClick={() => navigate('/host/dashboard')} className="text-charcoal-light hover:text-terracotta">

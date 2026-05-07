@@ -18,7 +18,7 @@ db_instance = client[os.environ['DB_NAME']]
 
 # Create the main app
 app = FastAPI(
-    title="PropNest STR API",
+    title="Golden-X-Host STR API",
     description="Short Term Renting Platform API",
     version="1.0.0"
 )
@@ -163,7 +163,7 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "service": "PropNest STR API",
+        "service": "Golden-X-Host STR API",
         "version": "1.0.0"
     }
 
@@ -171,7 +171,7 @@ async def health_check():
 async def root():
     """Root API endpoint."""
     return {
-        "message": "PropNest STR API",
+        "message": "Golden-X-Host STR API",
         "version": "1.0.0",
         "docs": "/docs"
     }

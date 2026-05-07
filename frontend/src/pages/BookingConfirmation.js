@@ -80,7 +80,7 @@ const BookingConfirmation = () => {
       key: paymentConfig.key_id,
       amount: Math.round((booking.total_amount || 0) * 100),
       currency: paymentConfig.currency || 'INR',
-      name: 'PropNest',
+      name: 'Golden-X-Host',
       description: property?.title || `Booking ${booking.booking_id}`,
       order_id: booking.razorpay_order_id,
       prefill: {
@@ -172,7 +172,7 @@ const BookingConfirmation = () => {
         <div className="max-w-3xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Building2 className="w-6 h-6 text-terracotta" />
-            <span className="text-xl font-bold text-charcoal">PropNest</span>
+            <span className="text-xl font-bold text-charcoal">Golden-X-Host</span>
           </div>
           <button onClick={() => navigate('/guest/browse')} className="text-charcoal-light hover:text-terracotta">
             Browse more

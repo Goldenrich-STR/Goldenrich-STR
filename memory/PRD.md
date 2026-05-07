@@ -1,7 +1,7 @@
-# PropNest STR Platform - Product Requirements Document (PRD)
+# Golden-X-Host STR Platform - Product Requirements Document (PRD)
 
 ## Project Overview
-PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian market, connecting Property Owners (Hosts), Guests (Renters), Brokers, and Employees (Relationship Managers) under a unified system managed by Super Admin.
+Golden-X-Host is a comprehensive Short-Term Rental (STR) platform for the Indian market, connecting Property Owners (Hosts), Guests (Renters), Brokers, and Employees (Relationship Managers) under a unified system managed by Super Admin. (Product was initially named "PropNest" and rebranded to Golden-X-Host in May 2026.)
 
 ## Technology Stack
 
@@ -100,6 +100,12 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 - **Reminder dedup**: `_soft_lock_reminder_task` now atomically claims the booking via `find_one_and_update` setting `soft_lock_reminder_sent=True`, so duplicate restart-recoveries or worker races never produce duplicate sends.
 - Hooked into `server.py` startup: indexes ensured + recovery + reaper loop. Added compound index `(booking_status, soft_lock_expires_at)` for fast reaper scans.
 - 100% green: 9/9 phase 12 + 86/86 overall (test report iteration_8). Suite `test_phase12_reaper.py`.
+
+### Phase 16 — Rebrand + OTP Resilience (Complete — May 2026)
+- **Rebrand**: Global replacement of `PropNest` → `Golden-X-Host` across 27 code and doc files (frontend UI, backend responses, emails, SMS templates, notifications, transaction screens, booking/payment pages, subscription plans, seed data, design guidelines, test suite titles). Protected DB name `propnest_db` and seed email credentials (`admin@propnest.com` etc.) intentionally preserved to avoid breaking deployed data + auth. HTML title and meta description updated. Verified with global grep — **zero `PropNest` strings remaining** in the codebase.
+- **Currency standardisation**: Audit confirmed no literal `$` currency symbols in the UI — all money displays already use `₹` + `Intl.NumberFormat('en-IN', { currency: 'INR' })`. Existing `$` occurrences are exclusively JS template-literal interpolations (`${variable}`) which are not currency.
+- **OTP bug fix**: Root cause was `redis.from_url()` being lazy — connection failures only surfaced on first write, crashing `generate_and_store_otp`. Refactored `services/otp_service.py` to ping Redis on init and gracefully fall back to a process-local, TTL-aware in-memory store. Individual Redis operations (set/get/delete) are now also try-guarded with per-call downgrade to in-memory so a mid-flight Redis outage never 500s the auth flow. Frontend `AuthPage.js` surfaces backend's specific error message instead of the generic "Failed to send OTP".
+- **Testing**: 28/28 backend regression (Phase 14 + 15) + OTP end-to-end curl (send → verify → reject-wrong-code) + live frontend screenshot showing Register → Send OTP → "OTP sent" success banner.
 
 ### Phase 15 — Super Admin Account: Ledger, Payouts & Refunds (Complete — May 2026)
 - **Backend** new models (`models/transaction.py`): `Transaction` (ledger row — any money movement), `Payout` (host payout), `Refund`, `HostPayoutPreference`. All amounts in PAISE per Razorpay convention. New service `services/account_service.py` owns: `record_transaction` (idempotent on booking_id+payment_id), `compute_refund_tier` (100% ≥7d · 50% 2–7d · 0% <48h), `initiate_refund` (policy-driven or admin-override, calls Razorpay refund API), `mark_booking_payout_eligible` (10% platform fee, 90% net), `process_payout` (RazorpayX Payouts with mock fallback), `sweep_payout_eligibility` (background sweep every hour + manual trigger).

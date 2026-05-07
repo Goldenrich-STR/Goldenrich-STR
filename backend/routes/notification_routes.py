@@ -150,7 +150,7 @@ async def send_test_notification(
             notification_type=NotificationType.BOOKING_CONFIRMED,
             channels=channels,
             title="Test Notification",
-            message="This is a test notification from PropNest.",
+            message="This is a test notification from Golden-X-Host.",
             data={"test": True}
         )
         

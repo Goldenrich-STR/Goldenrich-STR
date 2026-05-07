@@ -67,10 +67,10 @@ const AuthPage = () => {
       setError('Please enter phone number');
       return;
     }
-    
+
     setError('');
     setLoading(true);
-    
+
     try {
       const response = await authAPI.sendOTP(registerData.phone, 'registration');
       if (response.data) {
@@ -79,16 +79,17 @@ const AuthPage = () => {
         setSuccess(`OTP sent to ${registerData.phone}. OTP: ${response.data.otp}`);
       }
     } catch (err) {
-      setError('Failed to send OTP');
+      const detail = err?.response?.data?.detail;
+      setError(detail || 'Failed to send OTP. Please try again in a moment.');
     }
-    
+
     setLoading(false);
   };
 
   const verifyOTP = async () => {
     setError('');
     setLoading(true);
-    
+
     try {
       const response = await authAPI.verifyOTP(registerData.phone, otp, 'registration');
       if (response.data.verified) {
@@ -96,7 +97,8 @@ const AuthPage = () => {
         handleRegistration();
       }
     } catch (err) {
-      setError('Invalid OTP. Please try again.');
+      const detail = err?.response?.data?.detail;
+      setError(detail || 'Invalid OTP. Please try again.');
       setLoading(false);
     }
   };
@@ -127,7 +129,7 @@ const AuthPage = () => {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center space-x-2 mb-2">
             <Building2 className="w-10 h-10 text-terracotta" />
-            <h1 className="text-3xl font-extrabold text-charcoal">PropNest</h1>
+            <h1 className="text-3xl font-extrabold text-charcoal">Golden-X-Host</h1>
           </div>
           <p className="text-charcoal-light">Short Term Rentals Platform</p>
         </div>

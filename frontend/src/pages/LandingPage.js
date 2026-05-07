@@ -40,7 +40,7 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Building2 className="w-8 h-8 text-terracotta" />
-            <h1 className="text-2xl font-extrabold text-charcoal">PropNest</h1>
+            <h1 className="text-2xl font-extrabold text-charcoal">Golden-X-Host</h1>
           </div>
           <nav className="flex items-center space-x-6">
             <button
@@ -191,7 +191,7 @@ const LandingPage = () => {
       <section className="bg-terracotta py-16">
         <div className="max-w-4xl mx-auto text-center px-6">
           <h3 className="text-4xl font-extrabold text-white mb-4">
-            List Your Property on PropNest
+            List Your Property on Golden-X-Host
           </h3>
           <p className="text-white/90 text-lg mb-8">
             Reach thousands of renters and maximize your property's potential
@@ -213,7 +213,7 @@ const LandingPage = () => {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <Building2 className="w-6 h-6" />
-                <h4 className="text-xl font-bold">PropNest</h4>
+                <h4 className="text-xl font-bold">Golden-X-Host</h4>
               </div>
               <p className="text-white/70">Your trusted partner for short-term rentals across India.</p>
             </div>
@@ -243,7 +243,7 @@ const LandingPage = () => {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t border-white/20 text-center text-white/70">
-            <p>&copy; 2026 PropNest STR. All rights reserved.</p>
+            <p>&copy; 2026 Golden-X-Host STR. All rights reserved.</p>
           </div>
         </div>
       </footer>

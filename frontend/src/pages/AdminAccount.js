@@ -47,7 +47,7 @@ const AdminAccount = () => {
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
-            <h1 className="text-xl font-bold text-charcoal">PropNest · Admin Account</h1>
+            <h1 className="text-xl font-bold text-charcoal">Golden-X-Host · Admin Account</h1>
           </div>
           <button
             onClick={logout}

@@ -67,7 +67,7 @@ const AdminDashboard = () => {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Building2 className="w-6 h-6 text-terracotta" />
-            <h1 className="text-xl font-bold text-charcoal">PropNest - Admin Panel</h1>
+            <h1 className="text-xl font-bold text-charcoal">Golden-X-Host - Admin Panel</h1>
           </div>
           <div className="flex items-center space-x-6">
             <span className="text-charcoal-light">Admin: {user?.full_name}</span>
