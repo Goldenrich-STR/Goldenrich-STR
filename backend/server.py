@@ -41,6 +41,7 @@ from routes.calendar_routes import router as calendar_router
 from routes.upload_routes import router as upload_router
 from routes.admin_account_routes import router as admin_account_router
 from routes.host_account_routes import router as host_account_router
+from routes.review_routes import router as review_router
 
 # Include routers with /api prefix
 app.include_router(auth_router, prefix="/api")
@@ -56,6 +57,7 @@ app.include_router(calendar_router, prefix="/api")
 app.include_router(upload_router, prefix="/api")
 app.include_router(admin_account_router, prefix="/api")
 app.include_router(host_account_router, prefix="/api")
+app.include_router(review_router, prefix="/api")
 
 # Static files: serve uploaded property images
 from pathlib import Path as _Path
@@ -102,6 +104,12 @@ async def startup_db_indexes():
         await db_instance.payouts.create_index([("status", 1), ("eligible_at", -1)])
         await db_instance.refunds.create_index("refund_id", unique=True)
         await db_instance.refunds.create_index("booking_id")
+        # Phase 18: reviews
+        await db_instance.reviews.create_index("review_id", unique=True)
+        await db_instance.reviews.create_index("booking_id", unique=True)
+        await db_instance.reviews.create_index([("property_id", 1), ("created_at", -1)])
+        await db_instance.reviews.create_index("host_id")
+        await db_instance.reviews.create_index("guest_id")
         # Compound index for availability queries
         await db_instance.bookings.create_index([("property_id", 1), ("check_in_date", 1), ("check_out_date", 1)])
         await db_instance.blocked_dates.create_index([("property_id", 1), ("start_date", 1), ("end_date", 1)])

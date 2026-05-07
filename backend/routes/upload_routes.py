@@ -1,7 +1,9 @@
 """Simple image upload endpoint for property listings.
 
 Stores files under /app/backend/uploads/ and serves them publicly via StaticFiles
-mounted at /api/uploads/. Validates type + size, generates uuid filenames.
+mounted at /api/uploads/. Validates type + size, and verifies the file's actual
+magic-byte signature matches the claimed extension to reject spoofed uploads
+(e.g. an .exe renamed to .png).
 """
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, status
 from middleware.auth_middleware import get_current_user
@@ -18,6 +20,30 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXT = {"png", "jpg", "jpeg", "webp", "gif"}
 MAX_BYTES = 8 * 1024 * 1024  # 8 MB
+
+
+def _detect_image_kind(data: bytes) -> str | None:
+    """Return the image kind as one of {'png','jpg','webp','gif'} or None.
+
+    Uses magic-byte signatures rather than the filename or the client-supplied
+    Content-Type header, which can both be spoofed. Mirrors the lightweight
+    detection used by Pillow/imghdr without pulling in a dependency.
+    """
+    if not data or len(data) < 12:
+        return None
+    # PNG: 89 50 4E 47 0D 0A 1A 0A
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    # JPEG: FF D8 FF
+    if data[:3] == b"\xff\xd8\xff":
+        return "jpg"
+    # GIF: 'GIF87a' or 'GIF89a'
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "gif"
+    # WebP: 'RIFF' .... 'WEBP'
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "webp"
+    return None
 
 
 def _public_url(filename: str) -> str:
@@ -48,15 +74,38 @@ async def upload_image(
             detail=f"File too large (max {MAX_BYTES // (1024*1024)} MB)",
         )
 
+    # Magic-byte verification — defends against spoofed extensions
+    detected = _detect_image_kind(contents)
+    if detected is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File content does not match any supported image format (png, jpg, webp, gif)",
+        )
+
+    # Allow .jpg/.jpeg to share the same JPEG payload signature
+    normalized_claim = "jpg" if ext in ("jpg", "jpeg") else ext
+    if detected != normalized_claim:
+        logger.warning(
+            f"Upload spoof rejected by {current_user['user_id']}: "
+            f"claimed=.{ext} detected={detected}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File content (.{detected}) does not match the .{ext} extension",
+        )
+
     filename = f"{uuid4().hex}.{ext}"
     target = UPLOAD_DIR / filename
     target.write_bytes(contents)
 
-    logger.info(f"Image uploaded by {current_user['user_id']}: {filename} ({len(contents)} bytes)")
+    logger.info(
+        f"Image uploaded by {current_user['user_id']}: {filename} ({len(contents)} bytes, kind={detected})"
+    )
 
     return {
         "filename": filename,
         "url": _public_url(filename),
         "size": len(contents),
         "content_type": file.content_type,
+        "detected_kind": detected,
     }

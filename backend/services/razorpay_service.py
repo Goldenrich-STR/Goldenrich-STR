@@ -177,40 +177,69 @@ class RazorpayService:
                 },
             }
 
-        # Live path — requires RazorpayX account + X_ACCOUNT_NUMBER env var.
-        # We keep this best-effort; for now we surface a clear error if called
-        # in live mode without further configuration.
+        # Live RazorpayX path — requires X account + RAZORPAYX_ACCOUNT_NUMBER env var.
+        # Real flow: ensure a Contact exists for this host → ensure a FundAccount
+        # exists pointing at their UPI/bank → call payout.create on it.
         try:
             account_number = os.getenv("RAZORPAYX_ACCOUNT_NUMBER")
             if not account_number:
                 return {"success": False, "error": "RAZORPAYX_ACCOUNT_NUMBER not configured"}
 
-            fund_payload = {
+            host_id = (notes or {}).get("host_id") or "host"
+            host_name = account_holder or (notes or {}).get("host_name") or "Host"
+            host_email = (notes or {}).get("host_email")
+            host_phone = (notes or {}).get("host_phone")
+
+            # 1) Contact (idempotent on reference_id = host_id)
+            contact_payload = {
+                "name": host_name[:50],
+                "type": "vendor",
+                "reference_id": host_id,
+            }
+            if host_email:
+                contact_payload["email"] = host_email
+            if host_phone:
+                contact_payload["contact"] = host_phone
+            contact = self.client.contact.create(data=contact_payload)
+            contact_id = contact["id"]
+
+            # 2) FundAccount on that Contact
+            fa_payload: Dict = {
+                "contact_id": contact_id,
                 "account_type": "vpa" if destination_type == "upi" else "bank_account",
-                "contact_id": notes.get("contact_id") if notes else None,
             }
             if destination_type == "upi":
-                fund_payload["vpa"] = {"address": destination_ref}
+                fa_payload["vpa"] = {"address": destination_ref}
             else:
-                fund_payload["bank_account"] = {
-                    "name": account_holder or "Host",
-                    "ifsc": ifsc or "",
+                if not ifsc:
+                    return {"success": False, "error": "Bank IFSC required for bank payouts"}
+                fa_payload["bank_account"] = {
+                    "name": host_name[:120],
+                    "ifsc": ifsc,
                     "account_number": destination_ref,
                 }
+            fund_account = self.client.fund_account.create(data=fa_payload)
+            fund_account_id = fund_account["id"]
 
+            # 3) Payout
             payout_payload = {
                 "account_number": account_number,
+                "fund_account_id": fund_account_id,
                 "amount": amount,
                 "currency": "INR",
                 "mode": "UPI" if destination_type == "upi" else "IMPS",
                 "purpose": purpose,
                 "queue_if_low_balance": True,
+                "reference_id": (notes or {}).get("booking_id") or f"po_{uuid.uuid4().hex[:12]}",
             }
             if notes:
                 payout_payload["notes"] = notes
 
-            # NOTE: production wiring requires creating a Contact + FundAccount first.
             payout = self.client.payout.create(data=payout_payload)
+            logger.info(
+                f"RazorpayX payout created: {payout.get('id')} "
+                f"→ contact={contact_id} fa={fund_account_id} amount={amount}"
+            )
             return {"success": True, "payout": payout}
         except Exception as e:
             logger.error(f"Razorpay payout failed: {str(e)}")

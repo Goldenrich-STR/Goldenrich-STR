@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { bookingAPI } from '../services/api';
+import { bookingAPI, reviewAPI } from '../services/api';
+import ReviewModal from '../components/ReviewModal';
 import {
   Building2,
   CalendarDays,
@@ -11,6 +12,7 @@ import {
   XCircle,
   CreditCard,
   AlertCircle,
+  Star,
 } from 'lucide-react';
 
 const TABS = [
@@ -38,10 +40,22 @@ const GuestBookings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(null);
+  const [reviewBooking, setReviewBooking] = useState(null);
+  const [reviewedIds, setReviewedIds] = useState(new Set());
 
   useEffect(() => {
     fetchBookings();
+    fetchMyReviews();
   }, []);
+
+  const fetchMyReviews = async () => {
+    try {
+      const res = await reviewAPI.listMyReviews();
+      setReviewedIds(new Set((res.data.reviews || []).map((r) => r.booking_id)));
+    } catch (e) {
+      // non-blocking — empty set just hides the "Reviewed" tag
+    }
+  };
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -272,13 +286,32 @@ const GuestBookings = () => {
                           </button>
                         )}
                         {tab === 'past' && (
-                          <button
-                            onClick={() => property.property_id && navigate(`/property/${property.property_id}`)}
-                            className="btn-secondary text-sm"
-                            data-testid={`book-again-${b.booking_id}`}
-                          >
-                            Book again
-                          </button>
+                          <>
+                            {reviewedIds.has(b.booking_id) ? (
+                              <span
+                                className="text-xs flex items-center px-2 py-1 rounded-full bg-sage/20 text-sage-dark"
+                                data-testid={`reviewed-tag-${b.booking_id}`}
+                              >
+                                <Star className="w-3 h-3 mr-1 fill-sage-dark" /> Reviewed
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => setReviewBooking(b)}
+                                className="btn-secondary text-sm flex items-center space-x-1"
+                                data-testid={`review-btn-${b.booking_id}`}
+                              >
+                                <Star className="w-4 h-4" />
+                                <span>Leave a review</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => property.property_id && navigate(`/property/${property.property_id}`)}
+                              className="btn-secondary text-sm"
+                              data-testid={`book-again-${b.booking_id}`}
+                            >
+                              Book again
+                            </button>
+                          </>
                         )}
                       </div>
                     </div>
@@ -289,6 +322,17 @@ const GuestBookings = () => {
           </div>
         )}
       </div>
+
+      {reviewBooking && (
+        <ReviewModal
+          booking={reviewBooking}
+          onClose={() => setReviewBooking(null)}
+          onSubmitted={() => {
+            setReviewedIds((s) => new Set([...s, reviewBooking.booking_id]));
+            setReviewBooking(null);
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -252,4 +252,18 @@ export const accountAPI = {
     }),
 };
 
+// Reviews & Ratings — Phase 18
+export const reviewAPI = {
+  listForProperty: (propertyId, params = {}) =>
+    apiClient.get(`/properties/${propertyId}/reviews`, { params }),
+  eligibility: (bookingId) =>
+    apiClient.get(`/bookings/${bookingId}/review-eligibility`),
+  submit: (bookingId, payload) =>
+    apiClient.post(`/bookings/${bookingId}/review`, payload),
+  hostRespond: (reviewId, response) =>
+    apiClient.post(`/reviews/${reviewId}/host-response`, { response }),
+  listHostReviews: () => apiClient.get('/host/reviews'),
+  listMyReviews: () => apiClient.get('/guest/my-reviews'),
+};
+
 export default apiClient;

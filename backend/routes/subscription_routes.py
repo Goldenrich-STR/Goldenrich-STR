@@ -295,18 +295,23 @@ async def create_registration_fee_order(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Create Razorpay order for host registration fee."""
+    """Create Razorpay order for host registration fee.
+
+    Idempotent on already-paid hosts — returns 200 with `already_paid: true`
+    instead of erroring so the frontend can short-circuit cleanly without
+    spurious "Failed to create order" messages on repeat clicks.
+    """
     try:
-        # Check if already paid
         user = await db.users.find_one({"user_id": current_user["user_id"]})
-        
-        if user.get("registration_fee_paid", False):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Registration fee already paid"
-            )
-        
-        # Create Razorpay order
+
+        if user and user.get("registration_fee_paid", False):
+            return {
+                "already_paid": True,
+                "message": "Registration fee already paid",
+                "trial_activated": True,
+                "registration_fee_payment_id": user.get("registration_fee_payment_id"),
+            }
+
         razorpay_result = razorpay_service.create_order(
             amount=REGISTRATION_FEE_AMOUNT,
             receipt=f"reg_fee_{current_user['user_id']}"
@@ -342,8 +347,26 @@ async def confirm_registration_fee_payment(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Confirm registration fee payment."""
+    """Confirm registration fee payment.
+
+    Idempotent: if the user has already paid, returns 200 'already paid' without
+    overwriting their existing payment_id or duplicating the ledger row.
+    """
     try:
+        # Idempotency guard — short-circuit if already paid
+        user = await db.users.find_one(
+            {"user_id": current_user["user_id"]},
+            {"_id": 0, "registration_fee_paid": 1, "registration_fee_payment_id": 1},
+        )
+        if user and user.get("registration_fee_paid", False):
+            return {
+                "already_paid": True,
+                "message": "Registration fee already paid",
+                "trial_activated": True,
+                "trial_period_days": 90,
+                "registration_fee_payment_id": user.get("registration_fee_payment_id"),
+            }
+
         # Verify payment signature
         is_valid = razorpay_service.verify_payment_signature(
             payload.razorpay_order_id,

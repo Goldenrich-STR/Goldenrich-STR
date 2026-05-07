@@ -326,7 +326,14 @@ async def process_payout(
         destination_ref=dest_ref,
         amount=payout.net_amount,
         purpose="booking_payout",
-        notes={"booking_id": payout.booking_id, "admin_id": admin_id},
+        notes={
+            "booking_id": payout.booking_id,
+            "admin_id": admin_id,
+            "host_id": payout.host_id,
+            "host_name": (host or {}).get("full_name"),
+            "host_email": (host or {}).get("email"),
+            "host_phone": (host or {}).get("phone"),
+        },
         account_holder=pref.get("bank_account_holder"),
         ifsc=pref.get("bank_ifsc"),
     )

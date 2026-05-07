@@ -101,6 +101,18 @@ Golden-X-Host is a comprehensive Short-Term Rental (STR) platform for the Indian
 - Hooked into `server.py` startup: indexes ensured + recovery + reaper loop. Added compound index `(booking_status, soft_lock_expires_at)` for fast reaper scans.
 - 100% green: 9/9 phase 12 + 86/86 overall (test report iteration_8). Suite `test_phase12_reaper.py`.
 
+### Phase 18 — Reviews, Idempotent Reg-fee, Magic-byte Uploads, Live RazorpayX (Complete — May 2026)
+
+**(a) Idempotent registration-fee guard (P1)** — `/api/subscriptions/registration-fee` and `/api/subscriptions/confirm-registration-fee` no longer 400 on already-paid hosts; both short-circuit to a 200 response with `already_paid: true` and the existing `registration_fee_payment_id`. The signature-verification + ledger write only run when payment is actually new, so duplicate clicks can't corrupt the user record or duplicate Transaction rows.
+
+**(b) Magic-byte upload validation (P1)** — `routes/upload_routes.py` now reads the first 12 bytes of every uploaded file and matches them against PNG / JPEG / GIF / WebP signatures, rejecting any extension/MIME spoof with 400 `File content (.<actual>) does not match the .<claimed> extension`. Verified against `echo 'not a png' > spoof.png` (rejected) and a real PNG (accepted, returns `detected_kind: png`).
+
+**(c) Reviews & Ratings (P2 → done)** — new `models/review.py` (overall + 6 sub-categories: cleanliness, communication, check-in, accuracy, location, value; 1–5 conint; optional 2000-char comment). New `routes/review_routes.py` exposes `/properties/{id}/reviews` (public listing + summary), `/bookings/{id}/review-eligibility` (server-authoritative check including 14-day window), `/bookings/{id}/review` (one-per-booking, 14-day window enforced), `/reviews/{id}/host-response` (host-only, single response), `/host/reviews`, `/guest/my-reviews`. Aggregate `(rating_avg, rating_count, sub_avgs)` is denormalized onto the property doc on every write so search results render stars without joins. Unique indexes on `review_id` and `booking_id`; secondary indexes on `(property_id, created_at desc)`, `host_id`, `guest_id`. Frontend: `ReviewModal` component (interactive star rows for overall + 6 subs + char-counter comment), wired into `GuestBookings` "Past" tab (Star icon → modal; "Reviewed" badge after submit). `PropertyDetail` now renders a public reviews block — overall summary header, 6 sub-category mini-cards, full review list with host responses (left-border styled). Backend: 7/7 phase 18 pytest passing; private guest emails are stripped — only "First L." display name is exposed.
+
+**(d) Real RazorpayX live-mode payouts** — `services/razorpay_service.create_payout` was a stub; now implements the full live flow: create Contact (typed `vendor` with `reference_id=host_id` for idempotency), create FundAccount on that contact (UPI VPA or bank+IFSC), create Payout against the FundAccount with `reference_id=booking_id` and `queue_if_low_balance=true`. Activates only when `RAZORPAYX_ACCOUNT_NUMBER` env var is set; otherwise stays in deterministic mock mode. `account_service.process_payout` now passes the host's name/email/phone in `notes` so the live path can populate the Razorpay Contact properly.
+
+**Tests**: 7/7 phase 18 + 28/28 phase 14+15 regression green. End-to-end curl verified for (a), (b), (c). (d) live path requires real RazorpayX keys to fully exercise — production-ready as soon as the env var is provided.
+
 ### Phase 17 — Soft-Lock Reservation Expiry Bug Fix (Complete — May 2026)
 - **P0 bug**: After selecting dates, users saw "Reservation expired" instantly with the booking stuck in Soft Lock state. Root cause traced to **timezone serialization mismatch**: backend stored `soft_lock_expires_at` via naive `datetime.utcnow()`, FastAPI serialized it as `"2026-05-07T05:40:14.312"` (no `Z` suffix, no offset), and the browser's `new Date(...)` parses naive ISO strings as **local time** (IST = UTC+5:30) — so the expiry timestamp ended up 5h30m in the past, instantly triggering the expired UI.
 - **Fix (3-layer)**:
@@ -177,18 +189,19 @@ Golden-X-Host is a comprehensive Short-Term Rental (STR) platform for the Indian
 ## Pending Backlog
 
 ### P1 — Next Up
-- **Idempotent registration-fee guard**: `confirm-registration-fee` currently silently overwrites payment_id when already paid; return 200 'already paid' instead.
-- **Magic-byte file validation** in upload_routes (currently only filename ext check).
+- **Refactor Phase 8 fixture** — eliminate the 4 pre-existing `test_phase8_property_detail` setup errors (free-window date search).
+- **Migrate remaining `datetime.utcnow()` → `datetime.now(timezone.utc)`** across all routes/services for consistency with the Phase 17 fix.
 
 ### P2 — Future
-- **Reviews & ratings** system (5-star + sub-categories, 14-day window).
 - Real iCal background sync (cron/Celery) instead of inline best-effort.
-- Real RazorpayX live-mode payouts — production requires creating Razorpay Contact + FundAccount for each host before `create_payout` (stub is in `razorpay_service.create_payout`, only activates when `RAZORPAYX_ACCOUNT_NUMBER` env var is set).
+- BackgroundTasks for external sync to avoid blocking POST.
+- Switch `requests` → `httpx.AsyncClient` in calendar sync.
 - AI features (smart property descriptions, chatbot).
-- Refactor Phase 8 test fixture date-window; extract `_finalize_confirmed_booking` helper.
+- Image upload to cloud storage (S3/GCS).
+- Compound ledger index `(host_id, type, status)` once transactions exceed ~100k rows.
+- Refactor `_finalize_confirmed_booking` helper (~60 dup lines across confirm-payment & mock-pay).
 - Broker re-assignment on host resubmit; `random.choice` tie-break for broker fairness.
-- Image upload to cloud storage.
-- Compound ledger index `(host_id, type, status)` for top-hosts aggregation once transactions table exceeds ~100k rows.
+- Verified-stay badge on reviews; ability for guest to upload one photo with their review.
 
 ---
 

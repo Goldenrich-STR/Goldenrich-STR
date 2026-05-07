@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { propertyAPI, calendarAPI, bookingAPI } from '../services/api';
+import { propertyAPI, calendarAPI, bookingAPI, reviewAPI } from '../services/api';
 import {
   ArrowLeft,
   Building2,
@@ -86,11 +86,25 @@ const PropertyDetail = () => {
   const [booking, setBooking] = useState(false);
   const [bookingError, setBookingError] = useState('');
 
+  const [reviews, setReviews] = useState([]);
+  const [reviewSummary, setReviewSummary] = useState({ rating_avg: 0, rating_count: 0, sub_avgs: {} });
+
   useEffect(() => {
     fetchProperty();
     fetchBlockedDates();
+    fetchReviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const fetchReviews = async () => {
+    try {
+      const res = await reviewAPI.listForProperty(id, { limit: 12 });
+      setReviews(res.data.reviews || []);
+      setReviewSummary(res.data.summary || { rating_avg: 0, rating_count: 0, sub_avgs: {} });
+    } catch {
+      // non-blocking
+    }
+  };
 
   const fetchProperty = async () => {
     try {
@@ -393,6 +407,75 @@ const PropertyDetail = () => {
                 <p className="text-charcoal-light whitespace-pre-line">{property.house_rules}</p>
               </div>
             )}
+
+            {/* Reviews */}
+            <div data-testid="reviews-block">
+              <div className="flex items-end justify-between mb-3 flex-wrap gap-2">
+                <h2 className="text-xl font-bold text-charcoal flex items-center">
+                  <Star className="w-5 h-5 mr-2 fill-terracotta text-terracotta" />
+                  {reviewSummary.rating_count > 0
+                    ? `${reviewSummary.rating_avg} · ${reviewSummary.rating_count} review${reviewSummary.rating_count === 1 ? '' : 's'}`
+                    : 'No reviews yet'}
+                </h2>
+              </div>
+
+              {reviewSummary.rating_count > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4" data-testid="review-sub-avgs">
+                  {Object.entries(reviewSummary.sub_avgs || {}).map(([k, v]) =>
+                    v == null ? null : (
+                      <div key={k} className="flex items-center justify-between text-sm border border-sand-200 rounded-lg px-3 py-2">
+                        <span className="text-charcoal-muted capitalize">{k.replace('_', ' ')}</span>
+                        <span className="font-bold text-charcoal flex items-center">
+                          <Star className="w-3 h-3 mr-1 fill-terracotta text-terracotta" />
+                          {Number(v).toFixed(1)}
+                        </span>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+
+              {reviews.length === 0 ? (
+                <p className="text-charcoal-light text-sm" data-testid="reviews-empty">
+                  Be the first to leave a review after your stay.
+                </p>
+              ) : (
+                <div className="space-y-3" data-testid="reviews-list">
+                  {reviews.map((r) => (
+                    <div key={r.review_id} className="dashboard-card" data-testid={`review-${r.review_id}`}>
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 rounded-full bg-terracotta text-white flex items-center justify-center text-xs font-bold">
+                            {(r.guest_display_name || 'G')[0]}
+                          </div>
+                          <span className="font-semibold text-charcoal">{r.guest_display_name || 'Guest'}</span>
+                        </div>
+                        <div className="flex items-center text-sm">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <Star
+                              key={n}
+                              className={`w-4 h-4 ${n <= r.overall_rating ? 'fill-terracotta text-terracotta' : 'text-charcoal-light'}`}
+                            />
+                          ))}
+                          <span className="ml-2 text-xs text-charcoal-light">
+                            {new Date(r.created_at).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+                      {r.comment && (
+                        <p className="text-charcoal mt-2 whitespace-pre-line">{r.comment}</p>
+                      )}
+                      {r.host_response && (
+                        <div className="mt-3 pl-3 border-l-2 border-sage" data-testid={`host-response-${r.review_id}`}>
+                          <p className="text-xs font-semibold text-sage-dark mb-1">Host's response</p>
+                          <p className="text-sm text-charcoal-muted whitespace-pre-line">{r.host_response}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Availability calendar */}
             <div>
