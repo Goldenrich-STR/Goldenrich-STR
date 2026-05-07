@@ -28,7 +28,9 @@ async def require_host(current_user: dict = Depends(get_current_user)):
 
 
 def _sanitise(pref: dict) -> dict:
-    """Strip internal flags; mask account number for any client rendering."""
+    """Strip internal flags; expose a masked account number alongside the raw one.
+    The raw value is still included because the host needs it to pre-fill the
+    edit form on their own page."""
     out = dict(pref)
     if out.get("bank_account_number"):
         bn = out["bank_account_number"]
@@ -57,7 +59,9 @@ async def update_payout_preference(
     current_user: dict = Depends(require_host),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    # Basic validation per preferred destination
+    # Strict validation per preferred destination — host must re-send all fields
+    # for the chosen channel every time they save, so the backend never silently
+    # reuses stale data.
     if payload.preferred == PayoutDestinationType.UPI:
         if not payload.upi_vpa or "@" not in payload.upi_vpa:
             raise HTTPException(400, detail="A valid UPI VPA (e.g. name@bank) is required")

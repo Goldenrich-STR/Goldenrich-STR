@@ -101,6 +101,20 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 - Hooked into `server.py` startup: indexes ensured + recovery + reaper loop. Added compound index `(booking_status, soft_lock_expires_at)` for fast reaper scans.
 - 100% green: 9/9 phase 12 + 86/86 overall (test report iteration_8). Suite `test_phase12_reaper.py`.
 
+### Phase 15 — Super Admin Account: Ledger, Payouts & Refunds (Complete — May 2026)
+- **Backend** new models (`models/transaction.py`): `Transaction` (ledger row — any money movement), `Payout` (host payout), `Refund`, `HostPayoutPreference`. All amounts in PAISE per Razorpay convention. New service `services/account_service.py` owns: `record_transaction` (idempotent on booking_id+payment_id), `compute_refund_tier` (100% ≥7d · 50% 2–7d · 0% <48h), `initiate_refund` (policy-driven or admin-override, calls Razorpay refund API), `mark_booking_payout_eligible` (10% platform fee, 90% net), `process_payout` (RazorpayX Payouts with mock fallback), `sweep_payout_eligibility` (background sweep every hour + manual trigger).
+- **Razorpay service** extended: `create_refund()` + `create_payout()` with deterministic mock IDs (`rfnd_mock_<hex>`, `pout_mock_<hex>`).
+- **Admin routes** `/api/admin/account/*`: `overview`, `mrr-chart?months=N`, `top-hosts?limit=N`, `transactions` (filter by type/status/date/search + pagination), `transactions/export-csv`, `payouts` (eligible/processing/paid/failed), `payouts/{id}/process`, `payouts/process-eligible` (batch), `payouts/sweep-eligibility`, `refunds`, `refunds/{booking_id}` (tier auto or override_percent/amount), `refunds/policy-preview`. All admin-guarded.
+- **Host routes** `/api/host/*`: `payout-preference` GET/PUT (UPI or bank; strict validation; masked echo), `payouts` (host's own payouts only).
+- **Ledger hooks**: `confirm-payment`, `mock-pay`, `confirm-registration-fee`, `registration-fee/mock-pay`, `confirm-subscription` all write Transaction rows. Guest cancel on a confirmed booking auto-refunds per policy tier and also writes a Refund + Transaction row.
+- **Backfill**: `backend/backfill_transactions.py` — idempotent script that re-creates Transaction rows for pre-existing paid bookings / registration fees / active subscriptions. Already ran: 45 booking payments (₹14,01,984 gross) + 6 registration fees (₹3,000) recorded.
+- **Indexes**: `transactions.transaction_id` (unique), `(type, created_at desc)`, `booking_id`, `host_id`; `payouts.payout_id` (unique), `payouts.booking_id` (unique), `(status, eligible_at desc)`; `refunds.refund_id` (unique), `refunds.booking_id`.
+- **Background job**: payout eligibility sweeper on 1-hour interval (env: `PAYOUT_SWEEP_INTERVAL`).
+- **Frontend** new `/admin/account` page (`AdminAccount.js`) with 5 tabs (Overview / Transactions / Payouts / Refunds / Top Hosts). Overview: 8 stat tiles (Total Gross, Platform Take, MRR, Pending Payouts, Booking Payments, Registration Fees, Subscriptions, Refunds) + 6-month revenue line chart (recharts: inflow / refunds / net). Transactions: type+status+date+search filters, CSV export, paginated table. Payouts: status filter, "Auto-process all" batch, "Pay out" per row, failure reason surfaced. Refunds: initiate modal (auto-tier or override_percent), history table. Top Hosts: ranked bar list with gross + platform-take. New `/host/payouts` page (`HostPayouts.js`) with UPI/bank radio form + masked account display + payouts history.
+- **Nav**: `nav-account-btn` in Admin header; `nav-payouts-btn` in Host header.
+- **API**: new `accountAPI` namespace in `services/api.js` — all admin + host endpoints.
+- **Tests**: 20/20 backend pytest (`test_phase15_account.py`) + 27/27 regression (Phase 12–14) + Admin Account frontend smoke 100%. Critical bug found by testing agent (enum-coercion in `process_payout`) fixed + re-verified. Test report `iteration_11.json`.
+
 ### Phase 14 — Property Verification Workflow Real Wiring (Complete — May 2026)
 - **Backend** `services/verification_workflow.py` finalized: `assign_broker` (lowest-load, city-preferred) + `on_host_submit` / `on_broker_submit` / `on_rm_decision` / `on_admin_decision` notification fan-outs (in-app + WhatsApp + email via existing services). Admin approve enforces `rm_approved=true`. Admin approve is now idempotent on `status=live` (no double-fire). Employee/Admin approve & reject endpoints accept Pydantic JSON bodies (`RMReviewRequest`, `RMRejectRequest`, `AdminRejectRequest`). `verification_id` factory switched from `int(timestamp())` to `uuid4().hex[:14].upper()` (same fix family as booking_id and notification_id). New unique index `property_verifications.verification_id` + secondary index on `property_id` added in `startup_db_indexes`.
 - **Frontend** new centralized `verificationAPI` namespace in `services/api.js` so every dashboard sends JSON bodies (no more query-string drift). `AdminDashboard` `PropertyModeration` rewritten — defaults to **Awaiting Final Approval** queue (calls `/api/admin/properties/awaiting-final-approval`), shows RM-APPROVED chip, surfaces approve/reject for both `under_review` and `pending_verification` (broker queue) lists. `EmployeeDashboard` `VerificationReviewSection` migrated to `verificationAPI.rmApprove/rmReject`. `BrokerDashboard` `VerificationsSection` was a static placeholder — now a full queue with a `SubmitVerificationModal` (checklist toggles, geo-tagged photo URL+lat+lng add-list, video URL, remarks, validation: at least one geo-tagged photo required).
@@ -147,21 +161,18 @@ PropNest is a comprehensive Short-Term Rental (STR) platform for the Indian mark
 ## Pending Backlog
 
 ### P1 — Next Up
-- **Super Admin Account section** — real transactions, Razorpay payouts, refunds.
 - **Idempotent registration-fee guard**: `confirm-registration-fee` currently silently overwrites payment_id when already paid; return 200 'already paid' instead.
 - **Magic-byte file validation** in upload_routes (currently only filename ext check).
-- **Refactor Phase 8 test fixture** to use a free-window search (eliminate 4 pre-existing setup errors).
-- **Refactor `_finalize_confirmed_booking` helper** (~60 lines duplicated across confirm-payment and mock-pay).
-- **Broker re-assignment on host resubmit**: when RM rejects → host edits → resubmits, currently the old verification row stays orphaned if a new broker is picked (Phase 14 test feedback).
 
 ### P2 — Future
 - **Reviews & ratings** system (5-star + sub-categories, 14-day window).
 - Real iCal background sync (cron/Celery) instead of inline best-effort.
+- Real RazorpayX live-mode payouts — production requires creating Razorpay Contact + FundAccount for each host before `create_payout` (stub is in `razorpay_service.create_payout`, only activates when `RAZORPAYX_ACCOUNT_NUMBER` env var is set).
 - AI features (smart property descriptions, chatbot).
-- BackgroundTasks for external sync to avoid blocking POST.
-- Switch `requests` → `httpx.AsyncClient` in calendar sync.
+- Refactor Phase 8 test fixture date-window; extract `_finalize_confirmed_booking` helper.
+- Broker re-assignment on host resubmit; `random.choice` tie-break for broker fairness.
 - Image upload to cloud storage.
-- Tie-break broker auto-assignment with `random.choice(min_load_candidates)` for true cold-start fairness.
+- Compound ledger index `(host_id, type, status)` for top-hosts aggregation once transactions table exceeds ~100k rows.
 
 ---
 

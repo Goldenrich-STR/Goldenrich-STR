@@ -22,6 +22,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from models.transaction import (
     Payout,
+    PayoutDestinationType,
     PayoutStatus,
     Refund,
     RefundStatus,
@@ -295,8 +296,16 @@ async def process_payout(
     # Pull fresh host preference (in case host updated UPI/bank after eligibility)
     host = await db.users.find_one({"user_id": payout.host_id})
     pref = (host or {}).get("payout_preference") or {}
-    dest_type = pref.get("preferred", payout.destination_type)
-    dest_ref = pref.get("upi_vpa") if dest_type == "upi" else pref.get("bank_account_number")
+    # Coerce raw-string from mongo into the PayoutDestinationType enum
+    raw_pref = pref.get("preferred")
+    if raw_pref:
+        try:
+            dest_type = PayoutDestinationType(raw_pref)
+        except ValueError:
+            dest_type = payout.destination_type
+    else:
+        dest_type = payout.destination_type
+    dest_ref = pref.get("upi_vpa") if dest_type == PayoutDestinationType.UPI else pref.get("bank_account_number")
     if not dest_ref:
         payout.status = PayoutStatus.FAILED
         payout.failure_reason = "Host has not configured payout destination"
@@ -313,7 +322,7 @@ async def process_payout(
     )
 
     result = razorpay_service.create_payout(
-        destination_type=dest_type,
+        destination_type=dest_type.value,
         destination_ref=dest_ref,
         amount=payout.net_amount,
         purpose="booking_payout",

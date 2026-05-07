@@ -455,6 +455,7 @@ async def process_eligible(
             else:
                 failed += 1
         except Exception:
+            logger.exception(f"process_payout failed for {p.get('payout_id')}")
             failed += 1
     return {"processed": processed, "failed": failed, "total": len(payouts)}
 
@@ -493,7 +494,12 @@ async def create_refund(
     booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not booking:
         raise HTTPException(404, detail="Booking not found")
-    if booking.get("booking_status") == "cancelled" and booking.get("refund_status") == "processed":
+    # Strict idempotency: if any refund row exists with status in {pending,processed}, block.
+    dup = await db.refunds.find_one({
+        "booking_id": booking_id,
+        "status": {"$in": [RefundStatus.PROCESSED.value, RefundStatus.PENDING.value]},
+    })
+    if dup:
         raise HTTPException(400, detail="Refund already processed for this booking")
 
     rfd = await initiate_refund(
