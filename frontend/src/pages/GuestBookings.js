@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { bookingAPI, reviewAPI } from '../services/api';
 import ReviewModal from '../components/ReviewModal';
@@ -35,6 +35,7 @@ function todayISO() {
 const GuestBookings = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState('upcoming');
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +48,29 @@ const GuestBookings = () => {
     fetchBookings();
     fetchMyReviews();
   }, []);
+
+  // Auto-open the review modal when arriving via the deep-link from a
+  // review-request notification (e.g. /guest/bookings?review=BK123…).
+  useEffect(() => {
+    const reviewId = searchParams.get('review');
+    if (!reviewId || bookings.length === 0) return;
+    if (reviewedIds.has(reviewId)) {
+      // Already reviewed — clear the param so we don't show a stale modal hint.
+      const next = new URLSearchParams(searchParams);
+      next.delete('review');
+      setSearchParams(next, { replace: true });
+      return;
+    }
+    const target = bookings.find((b) => b.booking_id === reviewId);
+    if (target) {
+      setTab('past');
+      setReviewBooking(target);
+      const next = new URLSearchParams(searchParams);
+      next.delete('review');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookings, reviewedIds, searchParams]);
 
   const fetchMyReviews = async () => {
     try {

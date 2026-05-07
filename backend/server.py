@@ -140,6 +140,16 @@ async def startup_background_jobs():
 
 
 @app.on_event("startup")
+async def startup_review_reminder():
+    """Phase 20 — periodically nudge guests to review their completed stays."""
+    try:
+        from services.review_reminder import start_review_reminder
+        start_review_reminder(db_instance)
+    except Exception as e:
+        logger.error(f"Failed to start review reminder: {e}")
+
+
+@app.on_event("startup")
 async def startup_ical_sweeper():
     """Phase 18 — periodically pull every external calendar feed."""
     try:

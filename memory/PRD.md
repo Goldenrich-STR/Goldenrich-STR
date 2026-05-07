@@ -101,6 +101,15 @@ Golden-X-Host is a comprehensive Short-Term Rental (STR) platform for the Indian
 - Hooked into `server.py` startup: indexes ensured + recovery + reaper loop. Added compound index `(booking_status, soft_lock_expires_at)` for fast reaper scans.
 - 100% green: 9/9 phase 12 + 86/86 overall (test report iteration_8). Suite `test_phase12_reaper.py`.
 
+### Phase 20 — Auto Review-Request Notification (Complete — May 2026)
+
+- **New service** `services/review_reminder.py` — hourly asyncio sweep (matches existing soft-lock-reaper / iCal-sync pattern; one `@celery_app.task` away from a Celery beat migration). Eligibility: `confirmed` + `paid` + `check_out_date` in `[today - delay - lookback, today - delay]` (default 1d delay, 5d safety lookback) + no existing review + no prior reminder. Per-booking idempotency via `review_reminder_sent_at` flag.
+- **Multi-channel fan-out** via existing `send_multi_channel_notification`: in-app + WhatsApp + email. Carries a deep-link `${PUBLIC_URL}/guest/bookings?review={booking_id}`.
+- **NotificationType** `REVIEW_REQUEST` added to enum.
+- **Admin manual trigger** `POST /api/admin/reviews/run-reminder-sweep` — admin-only; returns `{total, sent, skipped, failed}` for ops/post-deploy verification.
+- **Frontend deep-link** `GuestBookings` reads `?review=<booking_id>`, auto-switches to "Past" tab, opens the `ReviewModal` for that booking, then strips the param so the URL stays clean. Already-reviewed bookings just clear the param without showing the modal.
+- **Verified end-to-end**: sweep with one back-dated unreviewed booking → `sent: 1`; immediate re-sweep → `total: 0` (idempotent); non-admin → 403; 35/35 regression green; all 3 background sweepers (soft-lock reaper, iCal sync, review reminder) running concurrently.
+
 ### Phase 19 — Test Hardening, TZ-Aware Sweep, Verified Stays, iCal Sync (Complete — May 2026)
 
 **(a) Phase 8 fixture refactor (P1)** — replaced fixed-date fixtures (`2026-12-01`/`2026-12-04`) with a dynamic `_free_future_window()` helper that walks 7-day jumps starting 400-490 days in the future (per-process random offset) and verifies non-overlap against `/calendar/properties/{id}/blocked-dates`. Also fixed the `confirm-payment` test that was POSTing query params instead of the new JSON body. **All 19 phase 8 tests now pass** (previously 15/19 with 4 setup errors).
@@ -201,10 +210,9 @@ Golden-X-Host is a comprehensive Short-Term Rental (STR) platform for the Indian
 ## Pending Backlog
 
 ### P2 — Future
-- Auto review-request notification (24h after check-out) — WhatsApp/email with deep-link to review modal.
 - AI features: smart property descriptions, chatbot.
 - Image upload to cloud storage (S3/GCS) once DAU > ~5k or cumulative storage > 10 GB.
-- Migrate iCal sweeper from in-process asyncio to Celery beat + workers when external feed count > ~500 / regional rollout.
+- Migrate iCal sweeper + review-reminder from in-process asyncio to Celery beat + workers when external feed count > ~500 or daily reminder volume > ~1k.
 - Compound ledger index `(host_id, type, status)` once transactions exceed ~100k rows.
 - Refactor `_finalize_confirmed_booking` helper (~60 dup lines across confirm-payment & mock-pay).
 - Broker re-assignment on host resubmit; `random.choice` tie-break for broker fairness.

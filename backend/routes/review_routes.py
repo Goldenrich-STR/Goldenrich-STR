@@ -263,3 +263,19 @@ async def list_my_reviews(
     )
     items = await cursor.to_list(length=200)
     return {"reviews": items, "total": len(items)}
+
+
+@router.post("/admin/reviews/run-reminder-sweep")
+async def run_review_reminder_sweep(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin-only — manually fire the review-reminder sweep without waiting
+    for the hourly background loop. Useful for ops + post-deploy verification."""
+    from models.user import UserRole
+    if current_user["role"] != UserRole.ADMIN.value:
+        raise HTTPException(403, detail="Admin access required")
+
+    from services.review_reminder import sweep_once
+    result = await sweep_once(db)
+    return {"message": "Review reminder sweep complete", **result}
