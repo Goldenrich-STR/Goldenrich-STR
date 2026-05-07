@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -54,7 +54,7 @@ async def assign_broker(db: AsyncIOMotorDatabase, property_id: str, city: str) -
 
         await db.properties.update_one(
             {"property_id": property_id},
-            {"$set": {"broker_id": chosen["user_id"], "updated_at": datetime.utcnow()}},
+            {"$set": {"broker_id": chosen["user_id"], "updated_at": datetime.now(timezone.utc)}},
         )
         # Pre-create a PENDING verification record so it shows in broker queue
         from models.verification import PropertyVerification, VerificationStatus

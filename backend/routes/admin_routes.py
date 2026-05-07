@@ -5,7 +5,7 @@ from typing import List, Optional
 from models.user import User, UserRole, KYCStatus
 from models.property import PropertyStatus
 from middleware.auth_middleware import get_current_user
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import asyncio
 
@@ -126,7 +126,7 @@ async def update_user_status(
             {"user_id": user_id},
             {"$set": {
                 "is_active": is_active,
-                "updated_at": datetime.utcnow()
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
         
@@ -160,7 +160,7 @@ async def update_kyc_status(
     try:
         update_data = {
             "kyc_status": kyc_status.value,
-            "updated_at": datetime.utcnow()
+            "updated_at": datetime.now(timezone.utc)
         }
         
         if remarks:
@@ -315,8 +315,8 @@ async def approve_property(
             {"property_id": property_id},
             {"$set": {
                 "status": PropertyStatus.LIVE.value,
-                "approved_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "approved_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
         await db.property_verifications.update_one(
@@ -325,9 +325,9 @@ async def approve_property(
                 "admin_reviewed": True,
                 "admin_approved": True,
                 "admin_id": current_user["user_id"],
-                "admin_reviewed_at": datetime.utcnow(),
+                "admin_reviewed_at": datetime.now(timezone.utc),
                 "status": "approved",
-                "updated_at": datetime.utcnow(),
+                "updated_at": datetime.now(timezone.utc),
             }},
         )
 
@@ -372,7 +372,7 @@ async def reject_property(
             {"$set": {
                 "status": PropertyStatus.REJECTED.value,
                 "verification_remarks": payload.reason,
-                "updated_at": datetime.utcnow()
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
         await db.property_verifications.update_one(
@@ -382,9 +382,9 @@ async def reject_property(
                 "admin_approved": False,
                 "admin_remarks": payload.reason,
                 "admin_id": current_user["user_id"],
-                "admin_reviewed_at": datetime.utcnow(),
+                "admin_reviewed_at": datetime.now(timezone.utc),
                 "status": "rejected",
-                "updated_at": datetime.utcnow(),
+                "updated_at": datetime.now(timezone.utc),
             }},
         )
 

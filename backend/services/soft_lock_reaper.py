@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 async def reap_expired_soft_locks(db: AsyncIOMotorDatabase) -> int:
     """Cancel soft-lock bookings whose hold has expired. Returns count cancelled."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     cursor = db.bookings.find(
         {
@@ -105,7 +105,7 @@ async def recover_pending_reminders(db: AsyncIOMotorDatabase) -> int:
 
     Returns count rescheduled.
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     cursor = db.bookings.find(
         {
             "booking_status": BookingStatus.SOFT_LOCK.value,

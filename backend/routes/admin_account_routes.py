@@ -4,7 +4,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -364,7 +364,7 @@ async def export_transactions_csv(
             ),
         })
     buf.seek(0)
-    filename = f"transactions_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    filename = f"transactions_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
     return StreamingResponse(
         iter([buf.getvalue()]),
         media_type="text/csv",

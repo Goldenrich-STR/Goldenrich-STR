@@ -200,10 +200,10 @@ class TestRegistrationFee:
         )
         assert r3.status_code == 200, r3.text
 
-        # 5. create-order now 400 (already paid)
+        # 5. create-order now returns 200 with already_paid:true (idempotent — Phase 18)
         r4 = requests.post(f"{API}/subscriptions/registration-fee", headers=host_headers, timeout=15)
-        assert r4.status_code == 400, r4.text
-        assert "already" in r4.text.lower()
+        assert r4.status_code == 200, r4.text
+        assert r4.json().get("already_paid") is True
 
     def test_confirm_registration_fee_with_pydantic_body(self, host_headers):
         # reset flag
@@ -243,7 +243,9 @@ class TestRegistrationFee:
         me = requests.get(f"{API}/auth/me", headers=host_headers, timeout=15).json()
         assert me["registration_fee_paid"] is True
 
-        # invalid signature -> 400
+        # invalid signature -> 400 (reset flag first since prior confirm flipped it true,
+        # which would otherwise trigger the idempotent already_paid short-circuit)
+        db.users.update_one({"email": HOST_EMAIL}, {"$set": {"registration_fee_paid": False}})
         bad = {
             "razorpay_order_id": order_id,
             "razorpay_payment_id": "pay_bogus",

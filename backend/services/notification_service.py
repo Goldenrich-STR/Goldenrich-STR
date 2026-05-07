@@ -2,7 +2,7 @@ from models.notification import Notification, NotificationType, NotificationChan
 from services.msg91_service import msg91_service
 from services.email_service import email_service
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -95,7 +95,7 @@ class NotificationService:
             status=NotificationStatus.SENT if result["success"] else NotificationStatus.FAILED,
             provider_message_id=result.get("message_id"),
             provider_response=result,
-            sent_at=datetime.utcnow() if result["success"] else None
+            sent_at=datetime.now(timezone.utc) if result["success"] else None
         )
         
         await self.db.notifications.insert_one(notification.model_dump())
@@ -123,7 +123,7 @@ class NotificationService:
             status=NotificationStatus.SENT if result["success"] else NotificationStatus.FAILED,
             provider_message_id=result.get("message_id"),
             provider_response=result,
-            sent_at=datetime.utcnow() if result["success"] else None
+            sent_at=datetime.now(timezone.utc) if result["success"] else None
         )
         
         await self.db.notifications.insert_one(notification.model_dump())
@@ -159,7 +159,7 @@ class NotificationService:
             status=NotificationStatus.SENT if result["success"] else NotificationStatus.FAILED,
             provider_message_id=result.get("message_id"),
             provider_response=result,
-            sent_at=datetime.utcnow() if result["success"] else None
+            sent_at=datetime.now(timezone.utc) if result["success"] else None
         )
         
         await self.db.notifications.insert_one(notification.model_dump())
@@ -178,7 +178,7 @@ class NotificationService:
             recipient=user["user_id"],
             data=data or {},
             status=NotificationStatus.SENT,
-            sent_at=datetime.utcnow()
+            sent_at=datetime.now(timezone.utc)
         )
         
         await self.db.notifications.insert_one(notification.model_dump())
@@ -192,7 +192,7 @@ class NotificationService:
                 {"notification_id": notification_id, "user_id": user_id},
                 {"$set": {
                     "status": NotificationStatus.READ.value,
-                    "read_at": datetime.utcnow()
+                    "read_at": datetime.now(timezone.utc)
                 }}
             )
             return result.modified_count > 0

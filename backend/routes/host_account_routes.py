@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -73,10 +73,10 @@ async def update_payout_preference(
             )
 
     pref_doc = payload.model_dump()
-    pref_doc["updated_at"] = datetime.utcnow()
+    pref_doc["updated_at"] = datetime.now(timezone.utc)
     await db.users.update_one(
         {"user_id": current_user["user_id"]},
-        {"$set": {"payout_preference": pref_doc, "updated_at": datetime.utcnow()}},
+        {"$set": {"payout_preference": pref_doc, "updated_at": datetime.now(timezone.utc)}},
     )
     return {"message": "Payout preference updated", "payout_preference": _sanitise(pref_doc)}
 

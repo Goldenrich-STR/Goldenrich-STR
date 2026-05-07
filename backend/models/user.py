@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 class UserRole(str, Enum):
@@ -18,10 +18,10 @@ class KYCStatus(str, Enum):
 class KYCDocument(BaseModel):
     document_type: str
     document_url: str
-    uploaded_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class User(BaseModel):
-    user_id: str = Field(default_factory=lambda: f"user_{datetime.utcnow().timestamp()}")
+    user_id: str = Field(default_factory=lambda: f"user_{datetime.now(timezone.utc).timestamp()}")
     email: EmailStr
     phone: str
     password_hash: str
@@ -50,8 +50,8 @@ class User(BaseModel):
     is_phone_verified: bool = False
     registration_fee_paid: bool = False
     terms_accepted: bool = False
-    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
-    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserCreate(BaseModel):
     email: EmailStr

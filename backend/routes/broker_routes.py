@@ -6,7 +6,7 @@ from models.verification import PropertyVerification, VerificationSubmit, Verifi
 from models.commission import Commission
 from models.user import UserRole
 from middleware.auth_middleware import get_current_user
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import asyncio
 
@@ -241,14 +241,14 @@ async def update_lead(
                 detail="Lead not found"
             )
         
-        update_data = {"updated_at": datetime.utcnow()}
+        update_data = {"updated_at": datetime.now(timezone.utc)}
         
         if lead_update.status:
             update_data["status"] = lead_update.status.value
             if lead_update.status == LeadStatus.CONTACTED:
-                update_data["contacted_at"] = datetime.utcnow()
+                update_data["contacted_at"] = datetime.now(timezone.utc)
             elif lead_update.status == LeadStatus.CONVERTED:
-                update_data["converted_at"] = datetime.utcnow()
+                update_data["converted_at"] = datetime.now(timezone.utc)
         
         if lead_update.notes is not None:
             update_data["notes"] = lead_update.notes
@@ -345,8 +345,8 @@ async def submit_verification(
                     "video_url": verification_data.video_url,
                     "broker_remarks": verification_data.broker_remarks,
                     "status": VerificationStatus.COMPLETED.value,
-                    "completed_at": datetime.utcnow(),
-                    "updated_at": datetime.utcnow()
+                    "completed_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc)
                 }}
             )
             verification_id = existing["verification_id"]
@@ -372,7 +372,7 @@ async def submit_verification(
             {"property_id": property_id},
             {"$set": {
                 "status": "under_review",
-                "updated_at": datetime.utcnow()
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
 

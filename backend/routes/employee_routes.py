@@ -6,7 +6,7 @@ from typing import List, Optional
 from models.user import UserRole
 from models.verification import VerificationStatus
 from middleware.auth_middleware import get_current_user
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 import logging
 import io
 import csv
@@ -217,8 +217,8 @@ async def approve_verification(
                 "rm_approved": True,
                 "rm_remarks": remarks,
                 "rm_id": current_user["user_id"],
-                "reviewed_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "reviewed_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
         
@@ -278,8 +278,8 @@ async def reject_verification(
                 "rm_remarks": reason,
                 "rm_id": current_user["user_id"],
                 "status": VerificationStatus.REJECTED.value,
-                "reviewed_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "reviewed_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
         
@@ -289,7 +289,7 @@ async def reject_verification(
             {"$set": {
                 "status": "draft",
                 "verification_remarks": reason,
-                "updated_at": datetime.utcnow()
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
 
@@ -466,7 +466,7 @@ async def get_properties_not_booked_report(
         
         return {
             "report_type": "properties_not_booked",
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "filters": {
                 "broker_id": broker_id,
                 "start_date": start_date,
@@ -545,7 +545,7 @@ async def export_properties_not_booked_csv(
             iter([output.getvalue()]),
             media_type="text/csv",
             headers={
-                "Content-Disposition": f"attachment; filename=properties_not_booked_{datetime.utcnow().strftime('%Y%m%d')}.csv"
+                "Content-Disposition": f"attachment; filename=properties_not_booked_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"
             }
         )
     
@@ -588,7 +588,7 @@ async def get_broker_portfolio_summary(
         
         return {
             "report_type": "broker_portfolio_summary",
-            "generated_at": datetime.utcnow().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "brokers": summary,
             "total": len(summary)
         }

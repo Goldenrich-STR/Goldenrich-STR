@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from enum import Enum
 
 class SubscriptionPlanType(str, Enum):
@@ -19,17 +19,17 @@ class SubscriptionStatus(str, Enum):
     CANCELLED = "cancelled"
 
 class SubscriptionPlan(BaseModel):
-    plan_id: str = Field(default_factory=lambda: f"plan_{datetime.utcnow().timestamp()}")
+    plan_id: str = Field(default_factory=lambda: f"plan_{datetime.now(timezone.utc).timestamp()}")
     plan_type: SubscriptionPlanType
     plan_name: str
     price_monthly: float
     price_annual: float
     description: str
     is_active: bool = True
-    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Subscription(BaseModel):
-    subscription_id: str = Field(default_factory=lambda: f"sub_{datetime.utcnow().timestamp()}")
+    subscription_id: str = Field(default_factory=lambda: f"sub_{datetime.now(timezone.utc).timestamp()}")
     user_id: str
     property_id: Optional[str] = None
     plan_id: str
@@ -52,8 +52,8 @@ class Subscription(BaseModel):
     auto_renewal: bool = True
     
     # Timestamps
-    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
-    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     cancelled_at: Optional[datetime] = None
 
 class SubscriptionCreate(BaseModel):

@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from enum import Enum
 
 class BlockedDateSource(str, Enum):
@@ -9,7 +9,7 @@ class BlockedDateSource(str, Enum):
     EXTERNAL = "external"  # From external calendar (iCal)
 
 class BlockedDate(BaseModel):
-    blocked_date_id: str = Field(default_factory=lambda: f"blocked_{int(datetime.utcnow().timestamp())}")
+    blocked_date_id: str = Field(default_factory=lambda: f"blocked_{int(datetime.now(timezone.utc).timestamp())}")
     property_id: str
     owner_id: str
     
@@ -25,8 +25,8 @@ class BlockedDate(BaseModel):
     reason: Optional[str] = None
     
     # Timestamps
-    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
-    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class BlockDateRequest(BaseModel):
     start_date: date
@@ -34,7 +34,7 @@ class BlockDateRequest(BaseModel):
     reason: Optional[str] = None
 
 class ExternalCalendar(BaseModel):
-    calendar_id: str = Field(default_factory=lambda: f"cal_{int(datetime.utcnow().timestamp())}")
+    calendar_id: str = Field(default_factory=lambda: f"cal_{int(datetime.now(timezone.utc).timestamp())}")
     property_id: str
     owner_id: str
     
@@ -50,8 +50,8 @@ class ExternalCalendar(BaseModel):
     sync_error: Optional[str] = None
     
     # Timestamps
-    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
-    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class CalendarEvent(BaseModel):
     event_id: str

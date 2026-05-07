@@ -241,8 +241,8 @@ async def confirm_payment(
                 "booking_status": BookingStatus.CONFIRMED.value,
                 "payment_status": "paid",
                 "razorpay_payment_id": razorpay_payment_id,
-                "confirmed_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "confirmed_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
         
@@ -257,8 +257,8 @@ async def confirm_payment(
                 "source": "booking",
                 "source_id": booking_id,
                 "reason": f"Booking {booking_id[:8]}",
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
             })
         except Exception as block_err:
             logger.warning(f"Failed to create booking blocked-date entry: {block_err}")
@@ -438,7 +438,7 @@ async def cancel_booking(
             )
 
         # Past check-in: block cancellation (in real app you'd allow with penalty)
-        if booking_dict.get("check_in_date") and booking_dict["check_in_date"] < datetime.utcnow().date().isoformat():
+        if booking_dict.get("check_in_date") and booking_dict["check_in_date"] < datetime.now(timezone.utc).date().isoformat():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Cannot cancel a booking whose check-in has already passed",
@@ -449,8 +449,8 @@ async def cancel_booking(
             {
                 "$set": {
                     "booking_status": BookingStatus.CANCELLED.value,
-                    "cancelled_at": datetime.utcnow(),
-                    "updated_at": datetime.utcnow(),
+                    "cancelled_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc),
                 }
             },
         )
@@ -566,8 +566,8 @@ async def mock_pay(
                 "booking_status": BookingStatus.CONFIRMED.value,
                 "payment_status": "paid",
                 "razorpay_payment_id": mock["razorpay_payment_id"],
-                "confirmed_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow(),
+                "confirmed_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
             }
         },
     )
@@ -586,9 +586,9 @@ async def mock_pay(
                     "source": "booking",
                     "source_id": booking_id,
                     "reason": f"Booking {booking_id[:8]}",
-                    "updated_at": datetime.utcnow(),
+                    "updated_at": datetime.now(timezone.utc),
                 },
-                "$setOnInsert": {"created_at": datetime.utcnow()},
+                "$setOnInsert": {"created_at": datetime.now(timezone.utc)},
             },
             upsert=True,
         )

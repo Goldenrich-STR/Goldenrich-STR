@@ -12,7 +12,7 @@ the property document so search/listings can render stars without joining.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -217,7 +217,7 @@ async def respond_to_review(
     if review.get("host_response"):
         raise HTTPException(400, detail="You have already responded to this review")
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     await db.reviews.update_one(
         {"review_id": review_id},
         {"$set": {

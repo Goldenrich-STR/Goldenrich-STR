@@ -3,7 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List, Optional
 from models.cms import CMSContent, CMSUpdate, HeroSection
 from middleware.auth_middleware import get_current_user
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ async def create_cms_content(
 ):
     """Create new CMS content."""
     try:
-        content_id = f"cms_{int(datetime.utcnow().timestamp())}"
+        content_id = f"cms_{int(datetime.now(timezone.utc).timestamp())}"
         
         cms_content = {
             "content_id": content_id,
@@ -100,8 +100,8 @@ async def create_cms_content(
             "content_type": content_type,
             "content_data": content_data,
             "is_active": True,
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
         }
         
         await db.cms_content.insert_one(cms_content)
@@ -125,7 +125,7 @@ async def update_cms_content(
 ):
     """Update CMS content."""
     try:
-        update_fields = {"updated_at": datetime.utcnow()}
+        update_fields = {"updated_at": datetime.now(timezone.utc)}
         
         if update_data.content_data:
             update_fields["content_data"] = update_data.content_data
@@ -229,20 +229,20 @@ async def set_featured_properties(
                 {"page": "landing", "section": "featured_properties"},
                 {"$set": {
                     "content_data": {"property_ids": property_ids},
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(timezone.utc)
                 }}
             )
         else:
             # Create
             await db.cms_content.insert_one({
-                "content_id": f"cms_{int(datetime.utcnow().timestamp())}",
+                "content_id": f"cms_{int(datetime.now(timezone.utc).timestamp())}",
                 "page": "landing",
                 "section": "featured_properties",
                 "content_type": "list",
                 "content_data": {"property_ids": property_ids},
                 "is_active": True,
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "created_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
             })
         
         logger.info(f"Featured properties updated: {len(property_ids)} properties")

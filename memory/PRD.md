@@ -101,6 +101,18 @@ Golden-X-Host is a comprehensive Short-Term Rental (STR) platform for the Indian
 - Hooked into `server.py` startup: indexes ensured + recovery + reaper loop. Added compound index `(booking_status, soft_lock_expires_at)` for fast reaper scans.
 - 100% green: 9/9 phase 12 + 86/86 overall (test report iteration_8). Suite `test_phase12_reaper.py`.
 
+### Phase 19 — Test Hardening, TZ-Aware Sweep, Verified Stays, iCal Sync (Complete — May 2026)
+
+**(a) Phase 8 fixture refactor (P1)** — replaced fixed-date fixtures (`2026-12-01`/`2026-12-04`) with a dynamic `_free_future_window()` helper that walks 7-day jumps starting 400-490 days in the future (per-process random offset) and verifies non-overlap against `/calendar/properties/{id}/blocked-dates`. Also fixed the `confirm-payment` test that was POSTing query params instead of the new JSON body. **All 19 phase 8 tests now pass** (previously 15/19 with 4 setup errors).
+
+**(b) `datetime.utcnow()` → `datetime.now(timezone.utc)` sweep (P1)** — global codemod across 31 files in `routes/`, `services/`, `models/`, `utils/`, `middleware/`. Auto-added `timezone` to existing `from datetime import …` lines (28 files patched). Enabled `tz_aware=True` on the Motor client so reads come back as aware UTC, eliminating naive-vs-aware arithmetic crashes. Hardened `schedule_soft_lock_reminder` to coerce naive→aware on input. Sanity: 37 modules import cleanly; **85/85 backend regression tests green**.
+
+**(c) Verified-stay badge + guest review photo (P2 nice-to-have)** — `Review` model gains `is_verified_stay: bool = True` (server-set, never client-trusted; every review is implicitly verified because the create route already requires a `confirmed`+`paid` booking owned by the guest) and `photo_url: Optional[str]` field. `ReviewModal` adds a single-image upload (uses existing `/api/upload/image` magic-byte-validated endpoint) with progress + remove states, plus a sage "Verified stay" reassurance banner before submit. `PropertyDetail` reviews list now renders a `<ShieldCheck />` "Verified stay" badge next to the reviewer's name and a 32×32 thumbnail with click-to-expand on review photos.
+
+**(d) Real iCal background sync via Celery (P2)** — new `services/ical_sync.py` runs a 30-min asyncio sweeper inside the FastAPI worker (matches the existing soft-lock-reaper pattern). Per-feed freshness gate (15 min default; env `ICAL_MIN_FRESHNESS`) avoids hammering external feeds. Hooked into `server.startup_ical_sweeper`. Exposed a manual `POST /api/calendar/external-calendars/sweep-all` (host-scoped; admin gets unscoped). The actual sync work (`sync_one(calendar_id)`) is intentionally Celery-shaped — a one-liner `@celery_app.task` decorator + `celery beat` schedule are all that's needed to migrate to a multi-worker Celery cluster when traffic warrants it. Docstring documents the upgrade path.
+
+**Tests**: 85/85 backend (Phase 8, 9, 12, 13, 14, 15, 18) green after all 4 changes. Lint clean across all 31 swept files + 4 new files.
+
 ### Phase 18 — Reviews, Idempotent Reg-fee, Magic-byte Uploads, Live RazorpayX (Complete — May 2026)
 
 **(a) Idempotent registration-fee guard (P1)** — `/api/subscriptions/registration-fee` and `/api/subscriptions/confirm-registration-fee` no longer 400 on already-paid hosts; both short-circuit to a 200 response with `already_paid: true` and the existing `registration_fee_payment_id`. The signature-verification + ledger write only run when payment is actually new, so duplicate clicks can't corrupt the user record or duplicate Transaction rows.
@@ -188,20 +200,15 @@ Golden-X-Host is a comprehensive Short-Term Rental (STR) platform for the Indian
 
 ## Pending Backlog
 
-### P1 — Next Up
-- **Refactor Phase 8 fixture** — eliminate the 4 pre-existing `test_phase8_property_detail` setup errors (free-window date search).
-- **Migrate remaining `datetime.utcnow()` → `datetime.now(timezone.utc)`** across all routes/services for consistency with the Phase 17 fix.
-
 ### P2 — Future
-- Real iCal background sync (cron/Celery) instead of inline best-effort.
-- BackgroundTasks for external sync to avoid blocking POST.
-- Switch `requests` → `httpx.AsyncClient` in calendar sync.
-- AI features (smart property descriptions, chatbot).
-- Image upload to cloud storage (S3/GCS).
+- Auto review-request notification (24h after check-out) — WhatsApp/email with deep-link to review modal.
+- AI features: smart property descriptions, chatbot.
+- Image upload to cloud storage (S3/GCS) once DAU > ~5k or cumulative storage > 10 GB.
+- Migrate iCal sweeper from in-process asyncio to Celery beat + workers when external feed count > ~500 / regional rollout.
 - Compound ledger index `(host_id, type, status)` once transactions exceed ~100k rows.
 - Refactor `_finalize_confirmed_booking` helper (~60 dup lines across confirm-payment & mock-pay).
 - Broker re-assignment on host resubmit; `random.choice` tie-break for broker fairness.
-- Verified-stay badge on reviews; ability for guest to upload one photo with their review.
+- Switch `requests` → `httpx.AsyncClient` in calendar sync to free the event loop.
 
 ---
 

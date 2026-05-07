@@ -15,7 +15,7 @@ Platform fee = 10% of total_amount. Host receives the remaining 90%.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -158,7 +158,7 @@ async def initiate_refund(
     # Zero-value refund — just record it
     if refund_paise == 0 or not rfd.razorpay_payment_id:
         rfd.status = RefundStatus.PROCESSED
-        rfd.processed_at = datetime.utcnow()
+        rfd.processed_at = datetime.now(timezone.utc)
         await db.refunds.insert_one(rfd.model_dump())
         await record_transaction(
             db,
@@ -188,7 +188,7 @@ async def initiate_refund(
     if result.get("success"):
         rfd.razorpay_refund_id = result["refund"]["id"]
         rfd.status = RefundStatus.PROCESSED
-        rfd.processed_at = datetime.utcnow()
+        rfd.processed_at = datetime.now(timezone.utc)
     else:
         rfd.status = RefundStatus.FAILED
         rfd.failure_reason = result.get("error", "unknown")
@@ -309,7 +309,7 @@ async def process_payout(
     if not dest_ref:
         payout.status = PayoutStatus.FAILED
         payout.failure_reason = "Host has not configured payout destination"
-        payout.updated_at = datetime.utcnow()
+        payout.updated_at = datetime.now(timezone.utc)
         await db.payouts.update_one(
             {"payout_id": payout_id}, {"$set": payout.model_dump()}
         )
@@ -318,7 +318,7 @@ async def process_payout(
     # Mark processing
     await db.payouts.update_one(
         {"payout_id": payout_id},
-        {"$set": {"status": PayoutStatus.PROCESSING.value, "updated_at": datetime.utcnow()}},
+        {"$set": {"status": PayoutStatus.PROCESSING.value, "updated_at": datetime.now(timezone.utc)}},
     )
 
     result = razorpay_service.create_payout(
@@ -341,7 +341,7 @@ async def process_payout(
     if result.get("success"):
         payout.razorpay_payout_id = result["payout"]["id"]
         payout.status = PayoutStatus.PAID
-        payout.processed_at = datetime.utcnow()
+        payout.processed_at = datetime.now(timezone.utc)
         payout.is_mock = razorpay_service.is_mock
         payout.destination_ref = _mask_account(dest_ref)
         payout.destination_type = dest_type
@@ -349,7 +349,7 @@ async def process_payout(
         payout.status = PayoutStatus.FAILED
         payout.failure_reason = result.get("error", "unknown")
 
-    payout.updated_at = datetime.utcnow()
+    payout.updated_at = datetime.now(timezone.utc)
     await db.payouts.update_one(
         {"payout_id": payout_id}, {"$set": payout.model_dump()}
     )

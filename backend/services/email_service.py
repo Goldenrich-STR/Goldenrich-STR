@@ -1,7 +1,7 @@
 import os
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class EmailService:
             
             return {
                 "success": True,
-                "message_id": f"mock_email_{int(datetime.utcnow().timestamp())}",
+                "message_id": f"mock_email_{int(datetime.now(timezone.utc).timestamp())}",
                 "mock_mode": True
             }
         

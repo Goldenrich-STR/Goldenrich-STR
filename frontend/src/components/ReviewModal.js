@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Star, XCircle } from 'lucide-react';
+import { Star, XCircle, Camera, ShieldCheck } from 'lucide-react';
 import { reviewAPI } from '../services/api';
+import apiClient from '../services/api';
 
 const SUB_FIELDS = [
   { key: 'cleanliness',   label: 'Cleanliness'   },
@@ -36,10 +37,31 @@ const ReviewModal = ({ booking, onClose, onSubmitted }) => {
   const [overall, setOverall] = useState(0);
   const [subs, setSubs] = useState({});
   const [comment, setComment] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const setSub = (key, value) => setSubs({ ...subs, [key]: value });
+
+  const handlePhoto = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setError('');
+    setPhotoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', f);
+      const res = await apiClient.post('/upload/image', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setPhotoUrl(res.data.url);
+    } catch (err) {
+      setError(err?.response?.data?.detail || 'Photo upload failed');
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
 
   const submit = async () => {
     setError('');
@@ -49,7 +71,12 @@ const ReviewModal = ({ booking, onClose, onSubmitted }) => {
     }
     setSubmitting(true);
     try {
-      const payload = { overall_rating: overall, comment: comment || undefined, ...subs };
+      const payload = {
+        overall_rating: overall,
+        comment: comment || undefined,
+        photo_url: photoUrl || undefined,
+        ...subs,
+      };
       await reviewAPI.submit(booking.booking_id, payload);
       onSubmitted();
     } catch (e) {
@@ -112,6 +139,45 @@ const ReviewModal = ({ booking, onClose, onSubmitted }) => {
               data-testid="review-comment"
             />
             <p className="text-xs text-charcoal-light mt-1">{comment.length}/2000</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-charcoal mb-1 flex items-center">
+              <Camera className="w-4 h-4 mr-2" />
+              Photo <span className="text-charcoal-muted font-normal ml-1">(optional)</span>
+            </label>
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              onChange={handlePhoto}
+              disabled={photoUploading || submitting}
+              className="text-sm"
+              data-testid="review-photo-input"
+            />
+            {photoUploading && (
+              <p className="text-xs text-charcoal-muted mt-1" data-testid="review-photo-uploading">Uploading…</p>
+            )}
+            {photoUrl && (
+              <div className="mt-2 flex items-start space-x-2" data-testid="review-photo-preview">
+                <img src={photoUrl} alt="Review preview" className="w-24 h-24 rounded-lg object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setPhotoUrl('')}
+                  className="text-xs text-red-600 hover:underline"
+                  data-testid="review-photo-remove"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center text-xs text-sage-dark bg-sage/10 rounded-lg px-3 py-2">
+            <ShieldCheck className="w-4 h-4 mr-2 flex-shrink-0" />
+            <span>
+              This will be published as a <strong>Verified stay</strong> review,
+              tied to your confirmed booking.
+            </span>
           </div>
 
           {error && (

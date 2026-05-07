@@ -7,7 +7,7 @@ overall rating plus optional sub-category ratings, all on a 1-5 scale. The
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import BaseModel, Field, conint
@@ -22,6 +22,12 @@ class ReviewCreate(BaseModel):
     location: Optional[conint(ge=1, le=5)] = None
     value: Optional[conint(ge=1, le=5)] = None
     comment: Optional[str] = Field(default=None, max_length=2000)
+    photo_url: Optional[str] = Field(
+        default=None,
+        max_length=2048,
+        description="Optional reviewer photo (one image URL — typically the upload URL "
+                    "returned by /api/upload/image).",
+    )
 
 
 class HostResponse(BaseModel):
@@ -43,11 +49,16 @@ class Review(BaseModel):
     location: Optional[int] = None
     value: Optional[int] = None
     comment: Optional[str] = None
+    photo_url: Optional[str] = None
+    # Server-set: a review whose underlying booking was paid + confirmed is a
+    # "verified stay". Set on the server during create — never trusted from the
+    # client. Used to render a public badge that boosts trust.
+    is_verified_stay: bool = True
 
     # Host can post a single response after the review is published
     host_response: Optional[str] = None
     host_response_at: Optional[datetime] = None
 
     is_published: bool = True
-    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
-    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

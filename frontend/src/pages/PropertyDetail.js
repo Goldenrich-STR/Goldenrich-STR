@@ -18,6 +18,7 @@ import {
   Coffee,
   Printer,
   Shield,
+  ShieldCheck,
   CheckCircle2,
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -449,6 +450,16 @@ const PropertyDetail = () => {
                             {(r.guest_display_name || 'G')[0]}
                           </div>
                           <span className="font-semibold text-charcoal">{r.guest_display_name || 'Guest'}</span>
+                          {r.is_verified_stay && (
+                            <span
+                              className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full bg-sage/15 text-sage-dark"
+                              data-testid={`verified-stay-${r.review_id}`}
+                              title="The reviewer's booking was confirmed and paid through Golden-X-Host"
+                            >
+                              <ShieldCheck className="w-3 h-3 mr-1" />
+                              Verified stay
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center text-sm">
                           {[1, 2, 3, 4, 5].map((n) => (
@@ -464,6 +475,21 @@ const PropertyDetail = () => {
                       </div>
                       {r.comment && (
                         <p className="text-charcoal mt-2 whitespace-pre-line">{r.comment}</p>
+                      )}
+                      {r.photo_url && (
+                        <a
+                          href={r.photo_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block mt-2"
+                          data-testid={`review-photo-${r.review_id}`}
+                        >
+                          <img
+                            src={r.photo_url}
+                            alt="Review"
+                            className="w-32 h-32 object-cover rounded-lg border border-sand-200 hover:opacity-90 transition"
+                          />
+                        </a>
                       )}
                       {r.host_response && (
                         <div className="mt-3 pl-3 border-l-2 border-sage" data-testid={`host-response-${r.review_id}`}>

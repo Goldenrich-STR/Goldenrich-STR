@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from enum import Enum
 from uuid import uuid4
 
@@ -95,8 +95,8 @@ class Property(BaseModel):
     subscription_status: str = "trial"  # trial, active, expired
     
     # Timestamps
-    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
-    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     submitted_at: Optional[datetime] = None
     approved_at: Optional[datetime] = None
 

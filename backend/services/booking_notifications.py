@@ -178,13 +178,13 @@ async def _soft_lock_reminder_task(db: AsyncIOMotorDatabase, booking_id: str, de
             {
                 "booking_id": booking_id,
                 "booking_status": "soft_lock",
-                "soft_lock_expires_at": {"$gt": datetime.utcnow()},
+                "soft_lock_expires_at": {"$gt": datetime.now(timezone.utc)},
                 "$or": [
                     {"soft_lock_reminder_sent": {"$exists": False}},
                     {"soft_lock_reminder_sent": False},
                 ],
             },
-            {"$set": {"soft_lock_reminder_sent": True, "soft_lock_reminder_sent_at": datetime.utcnow()}},
+            {"$set": {"soft_lock_reminder_sent": True, "soft_lock_reminder_sent_at": datetime.now(timezone.utc)}},
             projection={"_id": 0},
         )
         if not claim:
@@ -242,13 +242,11 @@ async def _soft_lock_reminder_task(db: AsyncIOMotorDatabase, booking_id: str, de
 def schedule_soft_lock_reminder(db: AsyncIOMotorDatabase, booking_id: str, expires_at: datetime) -> None:
     """Fire-and-forget: schedule a guest reminder 2 minutes before soft-lock expiry."""
     try:
-        # Normalize: a naive expires_at is UTC by convention. Strip any tzinfo
-        # so we can subtract from a naive utcnow() without errors. Mongo stores
-        # BSON datetimes as naive UTC, but the booking-create flow now passes
-        # a timezone-aware UTC datetime — both must work.
-        if expires_at.tzinfo is not None:
-            expires_at = expires_at.astimezone(timezone.utc).replace(tzinfo=None)
-        delay = (expires_at - datetime.utcnow()).total_seconds() - 120
+        # Normalize to timezone-aware UTC for safe arithmetic. Older naive rows
+        # from MongoDB are treated as UTC (BSON convention).
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        delay = (expires_at - datetime.now(timezone.utc)).total_seconds() - 120
         if delay <= 0:
             logger.info(f"Soft-lock reminder skipped (expiry too close) for {booking_id}")
             return

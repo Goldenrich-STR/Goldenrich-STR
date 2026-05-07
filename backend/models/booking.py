@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from enum import Enum
 from uuid import uuid4
 
@@ -48,8 +48,8 @@ class Booking(BaseModel):
     security_deposit_refunded: bool = False
     
     # Timestamps
-    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
-    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     confirmed_at: Optional[datetime] = None
     cancelled_at: Optional[datetime] = None
     soft_lock_expires_at: Optional[datetime] = None

@@ -35,7 +35,7 @@ class MSG91Service:
                 logger.info(f"[DEMO] SMS to {phone}: {message}")
                 return {
                     "success": True,
-                    "message_id": f"demo_sms_{int(datetime.utcnow().timestamp())}",
+                    "message_id": f"demo_sms_{int(datetime.now(timezone.utc).timestamp())}",
                     "demo_mode": True
                 }
             
@@ -98,7 +98,7 @@ class MSG91Service:
                 logger.info(f"[DEMO] WhatsApp to {phone}: {message}")
                 return {
                     "success": True,
-                    "message_id": f"demo_wa_{int(datetime.utcnow().timestamp())}",
+                    "message_id": f"demo_wa_{int(datetime.now(timezone.utc).timestamp())}",
                     "demo_mode": True
                 }
             
@@ -178,5 +178,5 @@ class MSG91Service:
         message = f"Your Golden-X-Host OTP is {otp}. Valid for 5 minutes."
         return self.send_whatsapp(phone, message)
 
-from datetime import datetime
+from datetime import datetime, timezone
 msg91_service = MSG91Service()

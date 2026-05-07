@@ -11,7 +11,7 @@ from models.calendar import (
     CalendarEvent,
 )
 from middleware.auth_middleware import get_current_user
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 import logging
 import requests
 from icalendar import Calendar as iCalendar, Event as iCalEvent
@@ -495,6 +495,35 @@ async def trigger_external_sync(
         )
 
 
+@router.post("/external-calendars/sweep-all")
+async def sweep_all_external_calendars(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Force-refresh every external calendar belonging to the caller (host).
+
+    Lets a host see updated availability without waiting for the periodic
+    background sweep. Admin users get an unscoped sweep across the whole DB.
+    """
+    from services.ical_sync import sync_one
+    from models.user import UserRole
+
+    query = {}
+    if current_user["role"] != UserRole.ADMIN.value:
+        query["owner_id"] = current_user["user_id"]
+
+    cals = await db.external_calendars.find(query, {"_id": 0}).to_list(length=500)
+    synced, failed = 0, 0
+    for cal in cals:
+        try:
+            await sync_one(cal["calendar_id"], db)
+            synced += 1
+        except Exception as e:
+            logger.warning(f"sweep-all: failed for {cal['calendar_id']}: {e}")
+            failed += 1
+    return {"total": len(cals), "synced": synced, "failed": failed}
+
+
 @router.delete("/external-calendars/{calendar_id}")
 async def remove_external_calendar(
     calendar_id: str,
@@ -574,7 +603,7 @@ async def export_ical(
             co = booking["check_out_date"]
             event.add("dtstart", date.fromisoformat(ci) if isinstance(ci, str) else ci)
             event.add("dtend", date.fromisoformat(co) if isinstance(co, str) else co)
-            event.add("dtstamp", datetime.utcnow())
+            event.add("dtstamp", datetime.now(timezone.utc))
             event.add("status", "CONFIRMED")
             cal.add_component(event)
 
@@ -595,7 +624,7 @@ async def export_ical(
             ed = blocked["end_date"]
             event.add("dtstart", date.fromisoformat(sd) if isinstance(sd, str) else sd)
             event.add("dtend", date.fromisoformat(ed) if isinstance(ed, str) else ed)
-            event.add("dtstamp", datetime.utcnow())
+            event.add("dtstamp", datetime.now(timezone.utc))
             event.add("status", "CONFIRMED")
             if blocked.get("reason"):
                 event.add("description", blocked["reason"])
@@ -641,7 +670,7 @@ async def sync_external_calendar(calendar_id: str, db: AsyncIOMotorDatabase):
                     "$set": {
                         "sync_status": "failed",
                         "sync_error": f"HTTP {response.status_code}",
-                        "updated_at": datetime.utcnow(),
+                        "updated_at": datetime.now(timezone.utc),
                     }
                 },
             )
@@ -694,8 +723,8 @@ async def sync_external_calendar(calendar_id: str, db: AsyncIOMotorDatabase):
                 "$set": {
                     "sync_status": "success",
                     "sync_error": None,
-                    "last_synced_at": datetime.utcnow(),
-                    "updated_at": datetime.utcnow(),
+                    "last_synced_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc),
                 }
             },
         )
@@ -709,7 +738,7 @@ async def sync_external_calendar(calendar_id: str, db: AsyncIOMotorDatabase):
                 "$set": {
                     "sync_status": "failed",
                     "sync_error": str(e),
-                    "updated_at": datetime.utcnow(),
+                    "updated_at": datetime.now(timezone.utc),
                 }
             },
         )

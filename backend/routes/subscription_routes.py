@@ -6,7 +6,7 @@ from models.subscription import SubscriptionPlan, Subscription, SubscriptionCrea
 from models.user import UserRole
 from middleware.auth_middleware import get_current_user
 from services.razorpay_service import razorpay_service
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 import logging
 import os
 
@@ -215,7 +215,7 @@ async def confirm_subscription_payment(
             {"$set": {
                 "status": SubscriptionStatus.ACTIVE.value,
                 "razorpay_subscription_id": razorpay_payment_id,
-                "updated_at": datetime.utcnow()
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
         
@@ -386,7 +386,7 @@ async def confirm_registration_fee_payment(
             {"$set": {
                 "registration_fee_paid": True,
                 "registration_fee_payment_id": payload.razorpay_payment_id,
-                "updated_at": datetime.utcnow()
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
         
@@ -453,7 +453,7 @@ async def mock_pay_registration_fee(
         {"$set": {
             "registration_fee_paid": True,
             "registration_fee_payment_id": mock["razorpay_payment_id"],
-            "updated_at": datetime.utcnow(),
+            "updated_at": datetime.now(timezone.utc),
         }},
     )
     logger.info(f"[MOCK] Registration fee paid: {current_user['user_id']}")

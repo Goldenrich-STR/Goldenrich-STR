@@ -4,6 +4,7 @@ from typing import List, Optional
 from models.notification import NotificationType, NotificationChannel
 from services.notification_service import NotificationService
 from middleware.auth_middleware import get_current_user
+from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -111,7 +112,7 @@ async def mark_all_notifications_read(
             },
             {"$set": {
                 "status": NotificationStatus.READ.value,
-                "read_at": datetime.utcnow()
+                "read_at": datetime.now(timezone.utc)
             }}
         )
         

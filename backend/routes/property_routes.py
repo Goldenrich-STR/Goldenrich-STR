@@ -4,7 +4,7 @@ from typing import List, Optional
 from models.property import Property, PropertyCreate, PropertyUpdate, PropertyStatus, PropertyCategory
 from models.user import UserRole
 from middleware.auth_middleware import get_current_user, require_role
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -273,7 +273,7 @@ async def update_property(
         
         # Update property
         update_data = property_update.model_dump(exclude_unset=True)
-        update_data["updated_at"] = datetime.utcnow()
+        update_data["updated_at"] = datetime.now(timezone.utc)
         
         await db.properties.update_one(
             {"property_id": property_id},
@@ -320,8 +320,8 @@ async def submit_for_verification(
             {"property_id": property_id},
             {"$set": {
                 "status": PropertyStatus.PENDING_VERIFICATION.value,
-                "submitted_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "submitted_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc)
             }}
         )
 

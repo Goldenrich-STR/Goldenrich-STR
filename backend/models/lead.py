@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 class LeadStatus(str, Enum):
@@ -10,7 +10,7 @@ class LeadStatus(str, Enum):
     LOST = "lost"
 
 class Lead(BaseModel):
-    lead_id: str = Field(default_factory=lambda: f"lead_{int(datetime.utcnow().timestamp())}")
+    lead_id: str = Field(default_factory=lambda: f"lead_{int(datetime.now(timezone.utc).timestamp())}")
     broker_id: str
     
     # Lead details
@@ -25,8 +25,8 @@ class Lead(BaseModel):
     notes: Optional[str] = None
     
     # Timestamps
-    created_at: datetime = Field(default_factory=lambda: datetime.utcnow())
-    updated_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     contacted_at: Optional[datetime] = None
     converted_at: Optional[datetime] = None
 

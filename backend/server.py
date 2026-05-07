@@ -13,7 +13,9 @@ load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+# tz_aware=True so every datetime read back from Mongo carries UTC tzinfo,
+# matching the timezone-aware writes we now produce throughout the codebase.
+client = AsyncIOMotorClient(mongo_url, tz_aware=True)
 db_instance = client[os.environ['DB_NAME']]
 
 # Create the main app
@@ -135,6 +137,16 @@ async def startup_background_jobs():
         start_soft_lock_reaper(db_instance, interval_seconds=reaper_interval)
     except Exception as e:
         logger.error(f"Failed to start background jobs: {e}")
+
+
+@app.on_event("startup")
+async def startup_ical_sweeper():
+    """Phase 18 — periodically pull every external calendar feed."""
+    try:
+        from services.ical_sync import start_ical_sync
+        start_ical_sync(db_instance)
+    except Exception as e:
+        logger.error(f"Failed to start iCal sweeper: {e}")
 
 
 @app.on_event("startup")
