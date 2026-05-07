@@ -61,8 +61,12 @@ class TestFilters:
 
     def test_property_type_villa(self, session):
         data = _search(session, property_type="villa")
-        assert len(data["properties"]) == 1
-        assert data["properties"][0]["title"] == "Sea Breeze Villa, Anjuna"
+        # Demo data may include host-created villas; assert the filter contract
+        # (every result is a villa, and at least the seeded one is present).
+        titles = [p["title"] for p in data["properties"]]
+        assert "Sea Breeze Villa, Anjuna" in titles
+        for p in data["properties"]:
+            assert p["property_type"] == "villa"
 
     def test_city_mumbai_regex(self, session):
         data = _search(session, city="Mumbai")
@@ -77,11 +81,14 @@ class TestFilters:
             assert p["price_per_night"] >= 10000
 
     def test_max_price_5000(self, session):
-        # Expect 4500 (Tech Park), 4800 (Hill Cottage), 3200 (Skyline) — Powai 5500 excluded
+        # Filter contract: every result must be ≤ 5000. Seeded fixtures include
+        # 3200, 4500 and 4800; demo data may add others — that's fine.
         data = _search(session, max_price=5000)
-        prices = sorted(p["price_per_night"] for p in data["properties"])
-        assert prices == [3200, 4500, 4800]
-        assert len(data["properties"]) == 3
+        prices = [p["price_per_night"] for p in data["properties"]]
+        assert len(prices) >= 3
+        assert all(p <= 5000 for p in prices)
+        for required in (3200, 4500, 4800):
+            assert any(abs(p - required) < 0.01 for p in prices), f"missing seeded price {required}"
 
     def test_amenities_wifi_ac(self, session):
         data = _search(session, amenities="wifi,ac")
