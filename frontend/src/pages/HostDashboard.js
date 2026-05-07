@@ -52,6 +52,13 @@ const HostDashboard = () => {
               Calendar
             </button>
             <button
+              onClick={() => navigate('/host/payouts')}
+              className="text-charcoal-light hover:text-terracotta"
+              data-testid="nav-payouts-btn"
+            >
+              Payouts
+            </button>
+            <button
               onClick={() => navigate('/guest/bookings')}
               className="text-charcoal-light hover:text-terracotta"
             >

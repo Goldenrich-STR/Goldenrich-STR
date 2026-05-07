@@ -108,5 +108,113 @@ class RazorpayService:
             "mock": True,
         }
 
+    # --------------- Refunds ----------------
+
+    def create_refund(
+        self,
+        payment_id: str,
+        amount: int,
+        notes: Optional[Dict] = None,
+    ) -> Dict:
+        """Initiate a refund against a payment. Falls back to deterministic mock in DEMO."""
+        if self.is_mock:
+            refund_id = f"rfnd_mock_{uuid.uuid4().hex[:20]}"
+            logger.info(f"[MOCK] Razorpay refund created: {refund_id} for {payment_id} amount={amount}")
+            return {
+                "success": True,
+                "refund": {
+                    "id": refund_id,
+                    "payment_id": payment_id,
+                    "amount": amount,
+                    "status": "processed",
+                    "mock": True,
+                },
+            }
+
+        try:
+            payload = {"amount": amount}
+            if notes:
+                payload["notes"] = notes
+            refund = self.client.payment.refund(payment_id, payload)
+            logger.info(f"Razorpay refund created: {refund.get('id')}")
+            return {"success": True, "refund": refund}
+        except Exception as e:
+            logger.error(f"Razorpay refund failed: {str(e)}")
+            return {"success": False, "error": str(e)}
+
+    # --------------- Payouts (RazorpayX) ----------------
+
+    def create_payout(
+        self,
+        destination_type: str,
+        destination_ref: str,
+        amount: int,
+        purpose: str = "payout",
+        notes: Optional[Dict] = None,
+        account_holder: Optional[str] = None,
+        ifsc: Optional[str] = None,
+    ) -> Dict:
+        """Create a RazorpayX payout. Demo mode returns a mock payout id.
+
+        destination_type: 'upi' or 'bank'
+        destination_ref: VPA string (upi) or account number (bank)
+        """
+        if self.is_mock:
+            payout_id = f"pout_mock_{uuid.uuid4().hex[:20]}"
+            logger.info(
+                f"[MOCK] RazorpayX payout created: {payout_id} "
+                f"→ {destination_type}:{destination_ref} amount={amount}"
+            )
+            return {
+                "success": True,
+                "payout": {
+                    "id": payout_id,
+                    "amount": amount,
+                    "status": "processed",
+                    "mode": destination_type.upper(),
+                    "destination": destination_ref,
+                    "mock": True,
+                },
+            }
+
+        # Live path — requires RazorpayX account + X_ACCOUNT_NUMBER env var.
+        # We keep this best-effort; for now we surface a clear error if called
+        # in live mode without further configuration.
+        try:
+            account_number = os.getenv("RAZORPAYX_ACCOUNT_NUMBER")
+            if not account_number:
+                return {"success": False, "error": "RAZORPAYX_ACCOUNT_NUMBER not configured"}
+
+            fund_payload = {
+                "account_type": "vpa" if destination_type == "upi" else "bank_account",
+                "contact_id": notes.get("contact_id") if notes else None,
+            }
+            if destination_type == "upi":
+                fund_payload["vpa"] = {"address": destination_ref}
+            else:
+                fund_payload["bank_account"] = {
+                    "name": account_holder or "Host",
+                    "ifsc": ifsc or "",
+                    "account_number": destination_ref,
+                }
+
+            payout_payload = {
+                "account_number": account_number,
+                "amount": amount,
+                "currency": "INR",
+                "mode": "UPI" if destination_type == "upi" else "IMPS",
+                "purpose": purpose,
+                "queue_if_low_balance": True,
+            }
+            if notes:
+                payout_payload["notes"] = notes
+
+            # NOTE: production wiring requires creating a Contact + FundAccount first.
+            payout = self.client.payout.create(data=payout_payload)
+            return {"success": True, "payout": payout}
+        except Exception as e:
+            logger.error(f"Razorpay payout failed: {str(e)}")
+            return {"success": False, "error": str(e)}
+
 
 razorpay_service = RazorpayService()

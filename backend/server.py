@@ -39,6 +39,8 @@ from routes.employee_routes import router as employee_router
 from routes.notification_routes import router as notification_router
 from routes.calendar_routes import router as calendar_router
 from routes.upload_routes import router as upload_router
+from routes.admin_account_routes import router as admin_account_router
+from routes.host_account_routes import router as host_account_router
 
 # Include routers with /api prefix
 app.include_router(auth_router, prefix="/api")
@@ -52,6 +54,8 @@ app.include_router(employee_router, prefix="/api")
 app.include_router(notification_router, prefix="/api")
 app.include_router(calendar_router, prefix="/api")
 app.include_router(upload_router, prefix="/api")
+app.include_router(admin_account_router, prefix="/api")
+app.include_router(host_account_router, prefix="/api")
 
 # Static files: serve uploaded property images
 from pathlib import Path as _Path
@@ -88,6 +92,16 @@ async def startup_db_indexes():
         # Phase 14: verification id uniqueness
         await db_instance.property_verifications.create_index("verification_id", unique=True)
         await db_instance.property_verifications.create_index("property_id")
+        # Phase 15: ledger / payouts / refunds
+        await db_instance.transactions.create_index("transaction_id", unique=True)
+        await db_instance.transactions.create_index([("type", 1), ("created_at", -1)])
+        await db_instance.transactions.create_index("booking_id")
+        await db_instance.transactions.create_index("host_id")
+        await db_instance.payouts.create_index("payout_id", unique=True)
+        await db_instance.payouts.create_index("booking_id", unique=True)
+        await db_instance.payouts.create_index([("status", 1), ("eligible_at", -1)])
+        await db_instance.refunds.create_index("refund_id", unique=True)
+        await db_instance.refunds.create_index("booking_id")
         # Compound index for availability queries
         await db_instance.bookings.create_index([("property_id", 1), ("check_in_date", 1), ("check_out_date", 1)])
         await db_instance.blocked_dates.create_index([("property_id", 1), ("start_date", 1), ("end_date", 1)])
@@ -113,6 +127,31 @@ async def startup_background_jobs():
         start_soft_lock_reaper(db_instance, interval_seconds=reaper_interval)
     except Exception as e:
         logger.error(f"Failed to start background jobs: {e}")
+
+
+@app.on_event("startup")
+async def startup_payout_sweeper():
+    """Phase 15 — periodically mark completed bookings as payout-eligible."""
+    import asyncio
+    from services.account_service import sweep_payout_eligibility
+
+    interval = int(os.environ.get("PAYOUT_SWEEP_INTERVAL", "3600"))  # 1 hour
+
+    async def _loop():
+        # initial sweep shortly after boot
+        await asyncio.sleep(10)
+        while True:
+            try:
+                await sweep_payout_eligibility(db_instance)
+            except Exception as e:
+                logger.warning(f"payout sweep failed: {e}")
+            await asyncio.sleep(interval)
+
+    try:
+        asyncio.create_task(_loop())
+        logger.info(f"Payout eligibility sweeper started (interval={interval}s)")
+    except Exception as e:
+        logger.error(f"Failed to start payout sweeper: {e}")
 
 
 @app.on_event("shutdown")

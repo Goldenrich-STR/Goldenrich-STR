@@ -251,6 +251,24 @@ async def confirm_payment(
         
         logger.info(f"Booking confirmed: {booking_id}")
 
+        # Phase 15 — ledger row + platform-take tracking
+        try:
+            from models.transaction import TransactionType
+            from services.account_service import record_transaction
+            await record_transaction(
+                db,
+                type=TransactionType.BOOKING_PAYMENT,
+                amount=int(round(booking_dict.get("total_amount", 0) * 100)),
+                razorpay_order_id=razorpay_order_id,
+                razorpay_payment_id=razorpay_payment_id,
+                user_id=booking_dict["guest_id"],
+                host_id=booking_dict["host_id"],
+                booking_id=booking_id,
+                is_mock=razorpay_service.is_mock,
+            )
+        except Exception as txn_err:
+            logger.warning(f"Failed to record booking transaction: {txn_err}")
+
         # Notify host (and guest) of confirmed booking — non-blocking via background task
         try:
             confirmed_booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
@@ -422,8 +440,35 @@ async def cancel_booking(
         except Exception as block_err:
             logger.warning(f"Failed to remove booking blocked-date entry: {block_err}")
 
+        # Phase 15 — auto-refund on cancel of a confirmed booking, per policy tier
+        refund_info = None
+        if current_status == BookingStatus.CONFIRMED.value and booking_dict.get("payment_status") == "paid":
+            try:
+                from services.account_service import initiate_refund
+                booking_dict["payment_id"] = booking_dict.get("razorpay_payment_id")
+                rfd = await initiate_refund(
+                    db,
+                    booking=booking_dict,
+                    reason="Guest cancellation",
+                    initiated_by=current_user["user_id"],
+                    initiated_by_role="guest",
+                )
+                refund_info = {
+                    "refund_id": rfd.refund_id,
+                    "tier": rfd.policy_tier,
+                    "percent": rfd.refund_percent,
+                    "refund_paise": rfd.refund_amount,
+                    "status": rfd.status.value,
+                }
+            except Exception as rf_err:
+                logger.warning(f"Auto-refund on cancel failed: {rf_err}")
+
         logger.info(f"Booking cancelled: {booking_id} by guest {current_user['user_id']}")
-        return {"message": "Booking cancelled", "booking_id": booking_id}
+        return {
+            "message": "Booking cancelled",
+            "booking_id": booking_id,
+            "refund": refund_info,
+        }
 
     except HTTPException:
         raise
@@ -528,6 +573,24 @@ async def mock_pay(
         logger.warning(f"Failed to create booking blocked-date entry: {block_err}")
 
     logger.info(f"[MOCK] Booking confirmed via mock-pay: {booking_id}")
+
+    # Phase 15 — ledger row
+    try:
+        from models.transaction import TransactionType
+        from services.account_service import record_transaction
+        await record_transaction(
+            db,
+            type=TransactionType.BOOKING_PAYMENT,
+            amount=int(round(booking_dict.get("total_amount", 0) * 100)),
+            razorpay_order_id=order_id,
+            razorpay_payment_id=mock["razorpay_payment_id"],
+            user_id=booking_dict["guest_id"],
+            host_id=booking_dict["host_id"],
+            booking_id=booking_id,
+            is_mock=True,
+        )
+    except Exception as txn_err:
+        logger.warning(f"Failed to record mock-pay transaction: {txn_err}")
 
     # Notify host (and guest) — same triggers as the live confirm-payment path
     try:

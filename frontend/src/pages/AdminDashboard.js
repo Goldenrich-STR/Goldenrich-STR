@@ -72,6 +72,14 @@ const AdminDashboard = () => {
           <div className="flex items-center space-x-6">
             <span className="text-charcoal-light">Admin: {user?.full_name}</span>
             <button
+              onClick={() => navigate('/admin/account')}
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-terracotta text-white font-semibold hover:bg-terracotta-dark transition text-sm"
+              data-testid="nav-account-btn"
+            >
+              <DollarSign className="w-4 h-4" />
+              <span>Account</span>
+            </button>
+            <button
               onClick={logout}
               className="flex items-center space-x-2 text-terracotta hover:underline"
               data-testid="logout-btn"

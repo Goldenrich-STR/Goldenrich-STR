@@ -230,7 +230,28 @@ async def confirm_subscription_payment(
             )
         
         logger.info(f"Subscription confirmed: {subscription_id}")
-        
+
+        # Phase 15 — subscription revenue ledger
+        try:
+            from models.transaction import TransactionType
+            from services.account_service import record_transaction
+            sub_plan = await db.subscription_plans.find_one(
+                {"plan_id": subscription.get("plan_id")}, {"_id": 0, "price": 1}
+            )
+            sub_amount = int(round((sub_plan or {}).get("price", 0) * 100))
+            await record_transaction(
+                db,
+                type=TransactionType.SUBSCRIPTION,
+                amount=sub_amount,
+                razorpay_order_id=razorpay_order_id,
+                razorpay_payment_id=razorpay_payment_id,
+                user_id=subscription["user_id"],
+                subscription_id=subscription_id,
+                is_mock=razorpay_service.is_mock,
+            )
+        except Exception as txn_err:
+            logger.warning(f"Failed to record subscription transaction: {txn_err}")
+
         return {
             "message": "Subscription activated successfully",
             "subscription_id": subscription_id
@@ -347,7 +368,23 @@ async def confirm_registration_fee_payment(
         )
         
         logger.info(f"Registration fee paid: {current_user['user_id']}")
-        
+
+        # Phase 15 — registration fee ledger
+        try:
+            from models.transaction import TransactionType
+            from services.account_service import record_transaction
+            await record_transaction(
+                db,
+                type=TransactionType.REGISTRATION_FEE,
+                amount=int(REGISTRATION_FEE_AMOUNT),
+                razorpay_order_id=payload.razorpay_order_id,
+                razorpay_payment_id=payload.razorpay_payment_id,
+                user_id=current_user["user_id"],
+                is_mock=razorpay_service.is_mock,
+            )
+        except Exception as txn_err:
+            logger.warning(f"Failed to record registration-fee transaction: {txn_err}")
+
         return {
             "message": "Registration fee paid successfully",
             "trial_activated": True,
@@ -397,6 +434,23 @@ async def mock_pay_registration_fee(
         }},
     )
     logger.info(f"[MOCK] Registration fee paid: {current_user['user_id']}")
+
+    # Phase 15 — registration fee ledger
+    try:
+        from models.transaction import TransactionType
+        from services.account_service import record_transaction
+        await record_transaction(
+            db,
+            type=TransactionType.REGISTRATION_FEE,
+            amount=int(REGISTRATION_FEE_AMOUNT),
+            razorpay_order_id=razorpay_order_id,
+            razorpay_payment_id=mock["razorpay_payment_id"],
+            user_id=current_user["user_id"],
+            is_mock=True,
+        )
+    except Exception as txn_err:
+        logger.warning(f"Failed to record mock registration-fee transaction: {txn_err}")
+
     return {
         "message": "Registration fee paid (mock)",
         "trial_activated": True,

@@ -204,4 +204,52 @@ export const verificationAPI = {
     apiClient.post(`/admin/properties/${propertyId}/reject`, { reason }),
 };
 
+// Account / Ledger / Payouts / Refunds — Phase 15
+export const accountAPI = {
+  // Admin
+  overview: () => apiClient.get('/admin/account/overview'),
+  mrrChart: (months = 6) =>
+    apiClient.get('/admin/account/mrr-chart', { params: { months } }),
+  topHosts: (limit = 10) =>
+    apiClient.get('/admin/account/top-hosts', { params: { limit } }),
+  listTransactions: (params = {}) =>
+    apiClient.get('/admin/account/transactions', { params }),
+  exportTransactionsCsvUrl: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return `${BACKEND_URL}/api/admin/account/transactions/export-csv${qs ? `?${qs}` : ''}`;
+  },
+  downloadTransactionsCsv: async (params = {}) => {
+    const res = await apiClient.get('/admin/account/transactions/export-csv', {
+      params,
+      responseType: 'blob',
+    });
+    return res;
+  },
+  listPayouts: (params = {}) =>
+    apiClient.get('/admin/account/payouts', { params }),
+  processPayout: (payoutId) =>
+    apiClient.post(`/admin/account/payouts/${payoutId}/process`, {}),
+  processAllEligible: () =>
+    apiClient.post('/admin/account/payouts/process-eligible'),
+  sweepEligibility: () =>
+    apiClient.post('/admin/account/payouts/sweep-eligibility'),
+  listRefunds: (params = {}) =>
+    apiClient.get('/admin/account/refunds', { params }),
+  initiateRefund: (bookingId, payload) =>
+    apiClient.post(`/admin/account/refunds/${bookingId}`, payload),
+  refundPolicyPreview: (checkInDate, totalAmount) =>
+    apiClient.get('/admin/account/refunds/policy-preview', {
+      params: { check_in_date: checkInDate, total_amount: totalAmount },
+    }),
+
+  // Host
+  getHostPayoutPreference: () => apiClient.get('/host/payout-preference'),
+  updateHostPayoutPreference: (payload) =>
+    apiClient.put('/host/payout-preference', payload),
+  listMyPayouts: (payoutStatus) =>
+    apiClient.get('/host/payouts', {
+      params: payoutStatus ? { payout_status: payoutStatus } : {},
+    }),
+};
+
 export default apiClient;

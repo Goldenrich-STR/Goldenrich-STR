@@ -14,8 +14,10 @@ import HostListProperty from "./pages/HostListProperty";
 import PropertyDetail from "./pages/PropertyDetail";
 import BookingConfirmation from "./pages/BookingConfirmation";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminAccount from "./pages/AdminAccount";
 import BrokerDashboard from "./pages/BrokerDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
+import HostPayouts from "./pages/HostPayouts";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -130,6 +132,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/host/payouts"
+              element={
+                <ProtectedRoute allowedRoles={["host"]}>
+                  <HostPayouts />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Broker Routes */}
             <Route
@@ -157,6 +167,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["admin"]}>
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/account"
+              element={
+                <ProtectedRoute allowedRoles={["admin"]}>
+                  <AdminAccount />
                 </ProtectedRoute>
               }
             />
