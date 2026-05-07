@@ -1,7 +1,7 @@
 """Booking-specific notification triggers and the soft-lock reminder scheduler."""
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -242,6 +242,12 @@ async def _soft_lock_reminder_task(db: AsyncIOMotorDatabase, booking_id: str, de
 def schedule_soft_lock_reminder(db: AsyncIOMotorDatabase, booking_id: str, expires_at: datetime) -> None:
     """Fire-and-forget: schedule a guest reminder 2 minutes before soft-lock expiry."""
     try:
+        # Normalize: a naive expires_at is UTC by convention. Strip any tzinfo
+        # so we can subtract from a naive utcnow() without errors. Mongo stores
+        # BSON datetimes as naive UTC, but the booking-create flow now passes
+        # a timezone-aware UTC datetime — both must work.
+        if expires_at.tzinfo is not None:
+            expires_at = expires_at.astimezone(timezone.utc).replace(tzinfo=None)
         delay = (expires_at - datetime.utcnow()).total_seconds() - 120
         if delay <= 0:
             logger.info(f"Soft-lock reminder skipped (expiry too close) for {booking_id}")

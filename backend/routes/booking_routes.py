@@ -10,7 +10,7 @@ from services.booking_notifications import (
     notify_host_booking_confirmed,
     schedule_soft_lock_reminder,
 )
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import asyncio
 import logging
 
@@ -112,6 +112,11 @@ async def create_booking(
         total_amount = base_amount + service_fee + taxes
         
         # Create booking with soft lock
+        # Soft-lock window — 10 minutes. Stored as timezone-aware UTC so that
+        # FastAPI serializes it as ISO-8601 with a `+00:00` offset, which the
+        # browser then parses unambiguously (rather than as local time).
+        soft_lock_window_minutes = 10
+        now_utc = datetime.now(timezone.utc)
         booking = Booking(
             property_id=booking_data.property_id,
             guest_id=current_user["user_id"],
@@ -124,14 +129,23 @@ async def create_booking(
             taxes=taxes,
             total_amount=total_amount,
             booking_status=BookingStatus.SOFT_LOCK,
-            soft_lock_expires_at=datetime.utcnow() + timedelta(minutes=10)
+            soft_lock_expires_at=now_utc + timedelta(minutes=soft_lock_window_minutes),
         )
-        
+
         # Insert booking into database
         booking_dict = booking.model_dump()
         booking_dict["check_in_date"] = booking_dict["check_in_date"].isoformat()
         booking_dict["check_out_date"] = booking_dict["check_out_date"].isoformat()
         await db.bookings.insert_one(booking_dict)
+
+        logger.info(
+            "Soft-lock created booking_id=%s guest=%s property=%s expires_at=%s (window=%dm)",
+            booking.booking_id,
+            current_user["user_id"],
+            booking_data.property_id,
+            booking.soft_lock_expires_at.isoformat(),
+            soft_lock_window_minutes,
+        )
         
         # Create Razorpay order
         razorpay_result = razorpay_service.create_order(
@@ -378,7 +392,16 @@ async def get_booking_details(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not authorized"
             )
-        
+
+        # Ensure all UTC datetime fields carry a timezone offset in the JSON
+        # response so the browser parses them unambiguously. Older rows may
+        # have been stored as naive UTC.
+        for ts_field in ("soft_lock_expires_at", "created_at", "updated_at",
+                         "confirmed_at", "cancelled_at"):
+            ts = booking_dict.get(ts_field)
+            if isinstance(ts, datetime) and ts.tzinfo is None:
+                booking_dict[ts_field] = ts.replace(tzinfo=timezone.utc)
+
         return booking_dict
     
     except HTTPException:

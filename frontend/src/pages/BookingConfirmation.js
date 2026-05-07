@@ -60,9 +60,18 @@ const BookingConfirmation = () => {
     }
   };
 
-  const lockExpiresAt = booking?.soft_lock_expires_at
-    ? new Date(booking.soft_lock_expires_at).getTime()
-    : null;
+  // Defensive parse: backend timestamps without an explicit offset are
+  // treated as UTC. This covers older rows persisted before the timezone-aware
+  // fix landed (Phase 17), where the server returned naive ISO strings that
+  // browsers would otherwise interpret as local time.
+  const parseUtc = (value) => {
+    if (!value) return null;
+    const s = String(value);
+    const hasOffset = /Z$|[+-]\d{2}:?\d{2}$/.test(s);
+    return new Date(hasOffset ? s : `${s}Z`).getTime();
+  };
+
+  const lockExpiresAt = parseUtc(booking?.soft_lock_expires_at);
   const remainingMs = lockExpiresAt ? lockExpiresAt - now : 0;
   const remainingMin = Math.max(0, Math.floor(remainingMs / 60000));
   const remainingSec = Math.max(0, Math.floor((remainingMs / 1000) % 60));
