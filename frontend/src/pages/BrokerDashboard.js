@@ -495,21 +495,43 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
     no_discrepancies: false,
   };
   const [checklist, setChecklist] = useState(initialChecklist);
-  const [photoUrl, setPhotoUrl] = useState('');
+  const [photoFile, setPhotoFile] = useState(null);
   const [photoLat, setPhotoLat] = useState('');
   const [photoLng, setPhotoLng] = useState('');
   const [photos, setPhotos] = useState([]);
   const [videoUrl, setVideoUrl] = useState('');
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
   const toggle = (k) => setChecklist({ ...checklist, [k]: !checklist[k] });
 
-  const addPhoto = () => {
+  // Try to auto-prefill lat/lng from the browser's geolocation so brokers
+  // don't have to type coordinates manually. Best-effort — silent if denied.
+  const tryFillCoordinates = () => {
+    if (!navigator.geolocation || photoLat || photoLng) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPhotoLat(pos.coords.latitude.toFixed(6));
+        setPhotoLng(pos.coords.longitude.toFixed(6));
+      },
+      () => { /* permission denied — leave fields blank for manual entry */ },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+    );
+  };
+
+  const onPhotoFileChange = (e) => {
+    const f = e.target.files?.[0];
     setError('');
-    if (!photoUrl) {
-      setError('Photo URL is required');
+    if (f) tryFillCoordinates();
+    setPhotoFile(f || null);
+  };
+
+  const addPhoto = async () => {
+    setError('');
+    if (!photoFile) {
+      setError('Please choose a photo to upload');
       return;
     }
     const lat = parseFloat(photoLat);
@@ -518,18 +540,38 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
       setError('Valid latitude and longitude required for geo-tag');
       return;
     }
-    setPhotos([
-      ...photos,
-      {
-        photo_url: photoUrl,
-        latitude: lat,
-        longitude: lng,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
-    setPhotoUrl('');
-    setPhotoLat('');
-    setPhotoLng('');
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', photoFile);
+      const res = await apiClient.post('/upload/image', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const url = res.data?.url;
+      if (!url) {
+        setError('Upload succeeded but server returned no URL');
+        return;
+      }
+      setPhotos([
+        ...photos,
+        {
+          photo_url: url,
+          latitude: lat,
+          longitude: lng,
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+      setPhotoFile(null);
+      setPhotoLat('');
+      setPhotoLng('');
+      // Reset the file input so the same file can be picked again if needed
+      const input = document.querySelector('[data-testid="photo-file-input"]');
+      if (input) input.value = '';
+    } catch (e) {
+      setError(e?.response?.data?.detail || 'Photo upload failed');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const removePhoto = (idx) =>
@@ -603,51 +645,74 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
           {/* Photos */}
           <div>
             <h4 className="font-bold text-charcoal mb-3">Geo-tagged Photos</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2">
-              <input
-                type="text"
-                placeholder="Photo URL"
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                className="input-field"
-                data-testid="photo-url-input"
-              />
-              <input
-                type="text"
-                placeholder="Latitude"
-                value={photoLat}
-                onChange={(e) => setPhotoLat(e.target.value)}
-                className="input-field"
-                data-testid="photo-lat-input"
-              />
-              <input
-                type="text"
-                placeholder="Longitude"
-                value={photoLng}
-                onChange={(e) => setPhotoLng(e.target.value)}
-                className="input-field"
-                data-testid="photo-lng-input"
-              />
+            <div className="space-y-3 mb-2">
+              <div>
+                <label className="block text-xs font-semibold text-charcoal-muted mb-1">
+                  Photo
+                </label>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  onChange={onPhotoFileChange}
+                  disabled={uploading || submitting}
+                  className="block w-full text-sm text-charcoal file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-terracotta file:text-white hover:file:bg-terracotta-dark file:cursor-pointer"
+                  data-testid="photo-file-input"
+                />
+                {photoFile && (
+                  <p className="text-xs text-charcoal-muted mt-1" data-testid="photo-file-name">
+                    Selected: {photoFile.name} ({Math.round(photoFile.size / 1024)} KB)
+                  </p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  placeholder="Latitude"
+                  value={photoLat}
+                  onChange={(e) => setPhotoLat(e.target.value)}
+                  className="input-field"
+                  data-testid="photo-lat-input"
+                />
+                <input
+                  type="text"
+                  placeholder="Longitude"
+                  value={photoLng}
+                  onChange={(e) => setPhotoLng(e.target.value)}
+                  className="input-field"
+                  data-testid="photo-lng-input"
+                />
+              </div>
+              <p className="text-xs text-charcoal-light">
+                Tip: allow location access when prompted — we auto-fill coordinates from your device GPS.
+              </p>
             </div>
             <button
               onClick={addPhoto}
-              className="text-sm text-terracotta font-semibold hover:underline"
+              disabled={uploading || submitting}
+              className="text-sm text-terracotta font-semibold hover:underline disabled:opacity-60 disabled:no-underline"
               data-testid="add-photo-btn"
             >
-              + Add photo
+              {uploading ? 'Uploading…' : '+ Add photo'}
             </button>
 
             {photos.length > 0 && (
-              <ul className="mt-3 space-y-1" data-testid="photos-list">
+              <ul className="mt-3 space-y-2" data-testid="photos-list">
                 {photos.map((p, idx) => (
                   <li
                     key={idx}
                     className="flex items-center justify-between bg-sand-50 px-3 py-2 rounded text-sm"
                     data-testid={`photo-item-${idx}`}
                   >
-                    <span className="truncate">
-                      {p.photo_url} ({p.latitude.toFixed(4)}, {p.longitude.toFixed(4)})
-                    </span>
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <img
+                        src={p.photo_url}
+                        alt={`Geo-tagged ${idx + 1}`}
+                        className="w-12 h-12 rounded object-cover flex-shrink-0 border border-sand-200"
+                      />
+                      <span className="text-xs text-charcoal-muted truncate">
+                        ({p.latitude.toFixed(4)}, {p.longitude.toFixed(4)})
+                      </span>
+                    </div>
                     <button
                       onClick={() => removePhoto(idx)}
                       className="text-red-600 hover:underline"
