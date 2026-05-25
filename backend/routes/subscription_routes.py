@@ -236,9 +236,10 @@ async def confirm_subscription_payment(
             from models.transaction import TransactionType
             from services.account_service import record_transaction
             sub_plan = await db.subscription_plans.find_one(
-                {"plan_id": subscription.get("plan_id")}, {"_id": 0, "price": 1}
+                {"plan_id": subscription.get("plan_id")}, {"_id": 0, "price_monthly": 1}
             )
-            sub_amount = int(round((sub_plan or {}).get("price", 0) * 100))
+            # amount was stored in subscription object
+            sub_amount = int(round(subscription.get("amount", 0) * 100))
             await record_transaction(
                 db,
                 type=TransactionType.SUBSCRIPTION,
@@ -265,6 +266,76 @@ async def confirm_subscription_payment(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to confirm subscription"
         )
+
+@router.post("/subscribe/mock-pay")
+async def mock_pay_subscription(
+    subscription_id: str,
+    razorpay_order_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Demo-only: simulate subscription payment in mock mode."""
+    if not razorpay_service.is_mock:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mock payment is only available in demo mode.",
+        )
+    
+    subscription = await db.subscriptions.find_one({"subscription_id": subscription_id})
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+        
+    if subscription["user_id"] != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+
+    mock = razorpay_service.mock_complete_payment(razorpay_order_id)
+    if not mock.get("success"):
+        raise HTTPException(status_code=500, detail="Mock payment failed")
+
+    # Reuse confirmation logic via manual update (DRY)
+    await db.subscriptions.update_one(
+        {"subscription_id": subscription_id},
+        {"$set": {
+            "status": SubscriptionStatus.ACTIVE.value,
+            "razorpay_subscription_id": mock["razorpay_payment_id"],
+            "updated_at": datetime.now(timezone.utc)
+        }}
+    )
+
+    if subscription.get("property_id"):
+        await db.properties.update_one(
+            {"property_id": subscription["property_id"]},
+            {"$set": {
+                "subscription_id": subscription_id,
+                "subscription_status": "active"
+            }}
+        )
+
+    # Ledger
+    try:
+        from models.transaction import TransactionType
+        from services.account_service import record_transaction
+        sub_amount = int(round(subscription.get("amount", 0) * 100))
+        await record_transaction(
+            db,
+            type=TransactionType.SUBSCRIPTION,
+            amount=sub_amount,
+            razorpay_order_id=razorpay_order_id,
+            razorpay_payment_id=mock["razorpay_payment_id"],
+            user_id=subscription["user_id"],
+            subscription_id=subscription_id,
+            is_mock=True,
+        )
+    except Exception as txn_err:
+        logger.warning(f"Failed to record mock subscription transaction: {txn_err}")
+
+    return {
+        "message": "Subscription activated (mock)",
+        "subscription_id": subscription_id,
+        "razorpay_payment_id": mock["razorpay_payment_id"],
+        "razorpay_order_id": razorpay_order_id,
+        "razorpay_signature": mock["razorpay_signature"],
+    }
 
 @router.get("/my-subscriptions")
 async def get_user_subscriptions(
@@ -525,4 +596,92 @@ async def create_subscription_plan(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create subscription plan"
+        )
+@router.delete("/admin/plans/{plan_id}")
+async def delete_subscription_plan(
+    plan_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Deactivate a subscription plan (Admin only)."""
+    try:
+        if current_user["role"] != UserRole.ADMIN.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required"
+            )
+        
+        result = await db.subscription_plans.update_one(
+            {"plan_id": plan_id},
+            {"$set": {"is_active": False}}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Plan not found"
+            )
+        
+        logger.info(f"Subscription plan deactivated: {plan_id}")
+        return {"message": "Subscription plan deactivated successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deactivating subscription plan: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to deactivate subscription plan"
+        )
+
+@router.put("/admin/plans/{plan_id}")
+async def update_subscription_plan(
+    plan_id: str,
+    plan_name: Optional[str] = None,
+    plan_type: Optional[SubscriptionPlanType] = None,
+    price_monthly: Optional[float] = None,
+    price_annual: Optional[float] = None,
+    description: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Update an existing subscription plan (Admin only)."""
+    try:
+        if current_user["role"] != UserRole.ADMIN.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required"
+            )
+        
+        update_data = {}
+        if plan_name: update_data["plan_name"] = plan_name
+        if plan_type: update_data["plan_type"] = plan_type.value
+        if price_monthly is not None: update_data["price_monthly"] = price_monthly
+        if price_annual is not None: update_data["price_annual"] = price_annual
+        if description: update_data["description"] = description
+        
+        if not update_data:
+            return {"message": "No changes provided"}
+            
+        result = await db.subscription_plans.update_one(
+            {"plan_id": plan_id},
+            {"$set": update_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Plan not found"
+            )
+        
+        logger.info(f"Subscription plan updated: {plan_id}")
+        return {"message": "Subscription plan updated successfully"}
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating subscription plan: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update subscription plan"
         )

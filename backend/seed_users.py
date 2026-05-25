@@ -16,9 +16,10 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 async def create_users():
     """Create admin and test users."""
-    mongo_url = os.environ['MONGO_URL']
-    client = AsyncIOMotorClient(mongo_url)
-    db = client[os.environ['DB_NAME']]
+    from server import db_instance
+    if os.environ.get('DATABASE_TYPE') == 'postgres':
+        await db_instance.connect()
+    db = db_instance
     
     users = [
         {
@@ -82,13 +83,14 @@ async def create_users():
         existing = await db.users.find_one({"email": user["email"]})
         
         if existing:
-            print(f"⚠️  User {user['email']} already exists. Skipping.")
+            print(f"User {user['email']} already exists. Skipping.")
         else:
             await db.users.insert_one(user)
-            print(f"✅ Created user: {user['email']} (Role: {user['role']})")
+            print(f"Created user: {user['email']} (Role: {user['role']})")
     
-    client.close()
-    print("\n📝 Test credentials saved in /app/memory/test_credentials.md")
+    if hasattr(db, 'close'):
+        await db.close()
+    print("\nTest credentials saved in /app/memory/test_credentials.md")
 
 if __name__ == "__main__":
     asyncio.run(create_users())

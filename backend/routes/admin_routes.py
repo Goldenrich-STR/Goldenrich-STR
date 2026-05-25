@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 from typing import List, Optional
-from models.user import User, UserRole, KYCStatus
+from models.user import User, UserRole, KYCStatus, UserCreate, UserUpdate
 from models.property import PropertyStatus
 from middleware.auth_middleware import get_current_user
 from datetime import datetime, timezone
@@ -15,6 +15,10 @@ router = APIRouter(prefix="/admin", tags=["Admin"])
 
 class AdminRejectRequest(BaseModel):
     reason: str
+
+
+class AdminApproveRequest(BaseModel):
+    checklist: Optional[dict] = None
 
 async def get_db():
     from server import db_instance
@@ -148,6 +152,188 @@ async def update_user_status(
             detail="Failed to update user status"
         )
 
+@router.post("/users", status_code=status.HTTP_201_CREATED)
+async def create_user(
+    user_data: UserCreate,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Admin creates a new user."""
+    try:
+        # Check if user already exists
+        existing_user = await db.users.find_one({"$or": [{"email": user_data.email}, {"phone": user_data.phone}]})
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User with this email or phone already exists"
+            )
+        
+        from utils.auth import hash_password
+        import uuid
+        
+        # Determine the user_id (UID) to save
+        uid_val = user_data.uid or f"user_{uuid.uuid4().hex[:8]}"
+        
+        # If user is a broker, set their lg_code to their UID
+        lg_code_val = uid_val if user_data.role.value == "broker" else user_data.lg_code
+        
+        new_user_args = {
+            "user_id": uid_val,
+            "email": user_data.email,
+            "phone": user_data.phone,
+            "password_hash": hash_password(user_data.password),
+            "full_name": user_data.full_name,
+            "role": user_data.role,
+            "city": user_data.city,
+            "state": user_data.state,
+            "franchise": user_data.franchise,
+            "branch": user_data.branch,
+            "birthdate": user_data.birthdate,
+            "uid": uid_val,
+            "lg_code": lg_code_val,
+            "terms_accepted": True,
+            "is_active": True,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc)
+        }
+        if user_data.profile_image:
+            new_user_args["profile_image"] = user_data.profile_image
+            
+        new_user = User(**new_user_args)
+        
+        await db.users.insert_one(new_user.model_dump())
+        logger.info(f"Admin {current_user['user_id']} created user {new_user.user_id}")
+        return {"message": "User created successfully", "user_id": new_user.user_id}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating user: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create user"
+        )
+
+@router.patch("/users/{user_id}", response_model=dict)
+async def update_user(
+    user_id: str,
+    user_data: UserUpdate,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Admin updates an existing user's information."""
+    try:
+        # Find existing user
+        user = await db.users.find_one({"user_id": user_id})
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+            
+        update_fields = {}
+        
+        # Check if email is updated and is unique
+        if user_data.email is not None and user_data.email != user["email"]:
+            existing_email = await db.users.find_one({"email": user_data.email})
+            if existing_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email already registered by another user"
+                )
+            update_fields["email"] = user_data.email
+            
+        # Check if phone is updated and is unique
+        if user_data.phone is not None and user_data.phone != user["phone"]:
+            existing_phone = await db.users.find_one({"phone": user_data.phone})
+            if existing_phone:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Phone number already registered by another user"
+                )
+            update_fields["phone"] = user_data.phone
+
+        # Optional password update (if admin wants to reset password)
+        if user_data.password is not None and user_data.password.strip():
+            from utils.auth import hash_password
+            update_fields["password_hash"] = hash_password(user_data.password)
+
+        # Other profile fields
+        for field in ["full_name", "role", "city", "state", "franchise", "branch", "birthdate", "profile_image", "is_active"]:
+            val = getattr(user_data, field)
+            if val is not None:
+                # If role changed, set lg_code appropriately
+                if field == "role":
+                    update_fields["role"] = val.value if hasattr(val, "value") else str(val)
+                else:
+                    update_fields[field] = val
+                    
+        # Update host lg_code
+        if user_data.lg_code is not None:
+            update_fields["lg_code"] = user_data.lg_code
+            
+        # Update broker_id
+        if user_data.broker_id is not None:
+            update_fields["broker_id"] = user_data.broker_id
+
+        # Update rm_id
+        if user_data.rm_id is not None:
+            update_fields["rm_id"] = user_data.rm_id
+            
+        # Add updated_at timestamp
+        if update_fields:
+            update_fields["updated_at"] = datetime.now(timezone.utc)
+            
+            # Execute update
+            await db.users.update_one(
+                {"user_id": user_id},
+                {"$set": update_fields}
+            )
+            
+        logger.info(f"Admin {current_user['user_id']} updated user {user_id}")
+        return {"message": "User updated successfully", "user_id": user_id}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating user: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update user"
+        )
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Permanently delete a user."""
+    try:
+        # Prevent admin from deleting themselves
+        if user_id == current_user["user_id"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You cannot delete your own account"
+            )
+            
+        result = await db.users.delete_one({"user_id": user_id})
+        
+        # Also cleanup properties/bookings if needed, but for now just the user
+        # In a real app, you might want to soft delete or cascade
+        
+        logger.info(f"Admin {current_user['user_id']} deleted user {user_id}")
+        return {"message": "User deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting user: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete user"
+        )
+
 @router.patch("/users/{user_id}/kyc")
 async def update_kyc_status(
     user_id: str,
@@ -260,21 +446,42 @@ async def get_awaiting_final_approval(
 ):
     """Properties already approved by RM and awaiting admin's final call."""
     try:
-        approved_verifications = await db.property_verifications.find(
-            {"rm_approved": True}, {"_id": 0, "property_id": 1}
-        ).to_list(length=200)
-        approved_ids = [v["property_id"] for v in approved_verifications]
-        if not approved_ids:
+        # 1. Find all verifications that are RM-approved but not yet admin-finalized
+        cursor_v = db.property_verifications.find(
+            {"rm_approved": True, "admin_reviewed": {"$ne": True}}, 
+            {"_id": 0}
+        )
+        verifications = await cursor_v.to_list(length=200)
+        
+        if not verifications:
             return {"properties": [], "total": 0}
 
-        cursor = db.properties.find(
+        # 2. Get the properties corresponding to these verifications
+        property_ids = [v["property_id"] for v in verifications]
+        cursor_p = db.properties.find(
             {
-                "property_id": {"$in": approved_ids},
+                "property_id": {"$in": property_ids},
                 "status": PropertyStatus.UNDER_REVIEW.value,
             },
             {"_id": 0},
         )
-        properties = await cursor.to_list(length=200)
+        properties = await cursor_p.to_list(length=200)
+
+        # 3. Enrich properties with RM remarks and checklist from verification record
+        v_map = {v["property_id"]: v for v in verifications}
+        for prop in properties:
+            v_data = v_map.get(prop["property_id"])
+            if v_data:
+                prop["rm_remarks"] = v_data.get("rm_remarks")
+                prop["rm_id"] = v_data.get("rm_id")
+                prop["rm_reviewed_at"] = v_data.get("reviewed_at")
+                prop["checklist"] = v_data.get("checklist")
+                prop["geo_tagged_photos"] = v_data.get("geo_tagged_photos")
+                prop["video_url"] = v_data.get("video_url")
+                prop["broker_remarks"] = v_data.get("broker_remarks")
+                prop["broker_id"] = v_data.get("broker_id")
+                prop["verification_id"] = v_data.get("verification_id")
+
         return {"properties": properties, "total": len(properties)}
 
     except Exception as e:
@@ -288,6 +495,7 @@ async def get_awaiting_final_approval(
 @router.post("/properties/{property_id}/approve")
 async def approve_property(
     property_id: str,
+    payload: Optional[AdminApproveRequest] = None,
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -319,16 +527,21 @@ async def approve_property(
                 "updated_at": datetime.now(timezone.utc)
             }}
         )
+
+        v_update = {
+            "admin_reviewed": True,
+            "admin_approved": True,
+            "admin_id": current_user["user_id"],
+            "admin_reviewed_at": datetime.now(timezone.utc),
+            "status": "approved",
+            "updated_at": datetime.now(timezone.utc),
+        }
+        if payload and payload.checklist:
+            v_update["checklist"] = payload.checklist
+
         await db.property_verifications.update_one(
             {"property_id": property_id},
-            {"$set": {
-                "admin_reviewed": True,
-                "admin_approved": True,
-                "admin_id": current_user["user_id"],
-                "admin_reviewed_at": datetime.now(timezone.utc),
-                "status": "approved",
-                "updated_at": datetime.now(timezone.utc),
-            }},
+            {"$set": v_update},
         )
 
         # Notify host
@@ -417,9 +630,10 @@ async def get_dashboard_stats(
     """Get dashboard statistics."""
     try:
         # User stats
-        total_users = await db.users.count_documents({})
+        total_users = await db.users.count_documents({"role": {"$in": ["host", "guest"]}})
         total_hosts = await db.users.count_documents({"role": "host"})
         total_guests = await db.users.count_documents({"role": "guest"})
+        pending_kyc = await db.users.count_documents({"role": "host", "kyc_status": "pending"})
         
         # Property stats
         total_properties = await db.properties.count_documents({})
@@ -434,14 +648,15 @@ async def get_dashboard_stats(
         
         # Revenue calculation
         booking_cursor = db.bookings.find({"payment_status": "paid"}, {"total_amount": 1})
-        bookings = await booking_cursor.to_list(length=10000)
-        total_revenue = sum(b.get("total_amount", 0) for b in bookings)
+        bookings = await booking_cursor.to_list(length=None)
+        total_revenue = int(sum(b.get("total_amount", 0) for b in bookings) * 100)
         
         return {
             "users": {
                 "total": total_users,
                 "hosts": total_hosts,
-                "guests": total_guests
+                "guests": total_guests,
+                "pending_kyc": pending_kyc
             },
             "properties": {
                 "total": total_properties,
@@ -486,6 +701,33 @@ async def get_all_bookings(
         bookings = await cursor.to_list(length=limit)
         total = await db.bookings.count_documents(query)
         
+        # Enrich bookings with Property, Host, and Guest details
+        property_ids = list({b.get("property_id") for b in bookings if b.get("property_id")})
+        guest_ids = list({b.get("guest_id") for b in bookings if b.get("guest_id")})
+        host_ids = list({b.get("host_id") for b in bookings if b.get("host_id")})
+        
+        properties_map = {}
+        if property_ids:
+            props = await db.properties.find(
+                {"property_id": {"$in": property_ids}},
+                {"_id": 0, "property_id": 1, "title": 1, "city": 1, "images": 1, "price_per_night": 1, "bhk_type": 1, "category": 1}
+            ).to_list(length=len(property_ids))
+            properties_map = {p["property_id"]: p for p in props}
+            
+        users_map = {}
+        all_user_ids = list(set(guest_ids + host_ids))
+        if all_user_ids:
+            users = await db.users.find(
+                {"user_id": {"$in": all_user_ids}},
+                {"_id": 0, "user_id": 1, "full_name": 1, "email": 1, "phone": 1}
+            ).to_list(length=len(all_user_ids))
+            users_map = {u["user_id"]: u for u in users}
+            
+        for b in bookings:
+            b["property"] = properties_map.get(b.get("property_id"))
+            b["guest"] = users_map.get(b.get("guest_id"))
+            b["host"] = users_map.get(b.get("host_id"))
+            
         return {
             "bookings": bookings,
             "total": total,

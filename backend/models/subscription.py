@@ -8,7 +8,7 @@ class SubscriptionPlanType(str, Enum):
     ONE_BHK = "1bhk"
     TWO_BHK = "2bhk"
     THREE_BHK = "3bhk"
-    FOUR_BHK = "4bhk_plus"
+    FOUR_BHK = "4bhk"
     COMMERCIAL = "commercial"
     BANQUET = "banquet"
 

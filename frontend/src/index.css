@@ -12,13 +12,14 @@
 }
 
 body {
-  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #FDFCF8;
   color: #2C2C2C;
+  scroll-behavior: smooth;
 }
 
 code {
@@ -30,51 +31,95 @@ code {
   min-height: 100vh;
 }
 
+/* Glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-dark {
+  background: rgba(44, 44, 44, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #F5F5F0;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #C05C4F;
-  border-radius: 4px;
+  border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #A94E42;
 }
 
-/* Button transitions */
-button {
-  transition: all 0.2s ease;
+/* Modern Button System */
+.btn-premium {
+  @apply relative overflow-hidden px-6 py-3 rounded-lg font-semibold transition-all duration-300;
+  background: linear-gradient(135deg, #C05C4F 0%, #A94E42 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(192, 92, 79, 0.3);
 }
 
-button:hover {
-  transform: translateY(-2px);
+.btn-premium:hover {
+  @apply -translate-y-0.5;
+  box-shadow: 0 8px 25px rgba(192, 92, 79, 0.4);
 }
 
-button:active {
-  transform: translateY(0);
+.btn-premium:active {
+  @apply translate-y-0 scale-95;
 }
 
-/* Input focus */
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  ring: 2px;
-  ring-color: #C05C4F;
+.btn-premium-outline {
+  @apply relative overflow-hidden px-6 py-3 rounded-lg font-semibold transition-all duration-300 border-2 border-terracotta text-terracotta;
 }
 
-/* Card hover effects */
-.card-hover {
-  transition: all 0.2s ease;
+.btn-premium-outline:hover {
+  @apply bg-terracotta text-white -translate-y-0.5 shadow-lg;
 }
 
-.card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+/* Premium Card */
+.card-premium {
+  @apply bg-white rounded-xl shadow-premium border border-sand-200 transition-all duration-500 overflow-hidden;
 }
+
+.card-premium:hover {
+  @apply -translate-y-2 shadow-elevated border-terracotta/20;
+}
+
+/* Gradients */
+.bg-gradient-sand {
+  background: radial-gradient(circle at top left, #FDFCF8 0%, #F5F2E6 100%);
+}
+
+/* Page Transitions */
+.page-enter {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Input Styles */
+input, textarea, select {
+  @apply transition-all duration-200 border-sand-300 focus:border-terracotta focus:ring-4 focus:ring-terracotta/10;
+}
+

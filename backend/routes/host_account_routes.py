@@ -99,3 +99,75 @@ async def list_my_payouts(
         )
         p["property"] = prop
     return {"payouts": items, "total": len(items)}
+
+
+from pydantic import BaseModel
+
+class HostVerificationSubmit(BaseModel):
+    aadhar_card: str
+    property_proof: str
+    cancelled_cheque: str
+    gst_certificate: Optional[str] = None
+    gst_number: Optional[str] = None
+    agreement_owner_name: str
+    agreement_owner_address: str
+    agreement_signature: str
+
+
+@router.post("/submit-verification")
+async def submit_host_verification(
+    payload: HostVerificationSubmit,
+    current_user: dict = Depends(require_host),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    docs = [
+        {"document_type": "aadhar_card", "document_url": payload.aadhar_card},
+        {"document_type": "property_proof", "document_url": payload.property_proof},
+        {"document_type": "cancelled_cheque", "document_url": payload.cancelled_cheque},
+    ]
+    if payload.gst_certificate:
+        docs.append({"document_type": "gst_certificate", "document_url": payload.gst_certificate})
+    if payload.gst_number:
+        docs.append({"document_type": "gst_number", "document_url": payload.gst_number})
+
+    await db.users.update_one(
+        {"user_id": current_user["user_id"]},
+        {
+            "$set": {
+                "kyc_status": "pending",
+                "kyc_documents": docs,
+                "agreement_owner_name": payload.agreement_owner_name,
+                "agreement_owner_address": payload.agreement_owner_address,
+                "agreement_signature": payload.agreement_signature,
+                "agreement_signed_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+    )
+
+    try:
+        from services.notification_service import NotificationService
+        from models.notification import NotificationType, NotificationChannel
+        
+        # Find all admins
+        admins_cursor = db.users.find({"role": "admin"})
+        admins = await admins_cursor.to_list(length=100)
+        
+        notification_service = NotificationService(db)
+        for admin in admins:
+            await notification_service.send_notification(
+                user_id=admin["user_id"],
+                notification_type=NotificationType.VERIFICATION_SUBMITTED,
+                channels=[NotificationChannel.IN_APP],
+                title="New Host Document Verification Request",
+                message=f"Host {current_user.get('full_name', 'Unknown')} has submitted documents for verification.",
+                data={
+                    "host_id": current_user["user_id"],
+                    "host_name": current_user.get("full_name"),
+                    "request_type": "host_verification"
+                }
+            )
+    except Exception as n_err:
+        logger.warning(f"Failed to notify admins of host verification: {n_err}")
+
+    return {"message": "Verification documents submitted successfully"}

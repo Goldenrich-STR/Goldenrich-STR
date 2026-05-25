@@ -38,8 +38,22 @@ class BHKType(str, Enum):
     TWO_BHK = "2bhk"
     THREE_BHK = "3bhk"
     FOUR_BHK = "4bhk"
+    FIVE_BHK = "5bhk"
     COMMERCIAL = "commercial"
     BANQUET = "banquet"
+    
+    # Commercial sizes
+    SMALL = "small"
+    MEDIUM = "medium"
+    LARGE = "large"
+    EXTRA_LARGE = "extra_large"
+    CUSTOM = "custom"
+    
+    # Event sizes
+    SMALL_EVENT = "small_event"
+    MEDIUM_EVENT = "medium_event"
+    LARGE_EVENT = "large_event"
+    MEGA_EVENT = "mega_event"
 
 class Property(BaseModel):
     property_id: str = Field(default_factory=lambda: f"prop_{uuid4().hex[:14]}")
@@ -60,12 +74,15 @@ class Property(BaseModel):
     pin_code: str
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    google_maps_url: Optional[str] = None
+    nearby_places: List[str] = []
     
     # Property details
     area_sqft: int
     
     # Pricing
     price_per_night: Optional[float] = None
+    pricing_cycle: Optional[str] = "day"
     price_per_week: Optional[float] = None
     price_per_month: Optional[float] = None
     minimum_stay_days: int = 1
@@ -94,6 +111,16 @@ class Property(BaseModel):
     subscription_id: Optional[str] = None
     subscription_status: str = "trial"  # trial, active, expired
     
+    # Rating
+    rating: float = 0.0
+    review_count: int = 0
+    
+    # Event Venue Specific
+    veg_price: Optional[float] = None
+    non_veg_price: Optional[float] = None
+    guest_size: Optional[int] = None
+    packages: Optional[List[dict]] = None
+    
     # Timestamps
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -110,8 +137,13 @@ class PropertyCreate(BaseModel):
     city: str
     state: str
     pin_code: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    google_maps_url: Optional[str] = None
+    nearby_places: List[str] = []
     area_sqft: int
     price_per_night: Optional[float] = None
+    pricing_cycle: Optional[str] = "day"
     price_per_week: Optional[float] = None
     price_per_month: Optional[float] = None
     minimum_stay_days: int = 1
@@ -121,14 +153,41 @@ class PropertyCreate(BaseModel):
     pet_friendly: bool = False
     smoking_allowed: bool = False
     instant_booking: bool = False
+    veg_price: Optional[float] = None
+    non_veg_price: Optional[float] = None
+    guest_size: Optional[int] = None
+    packages: Optional[list] = None
+    subscription_id: Optional[str] = None
 
 class PropertyUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    property_type: Optional[PropertyType] = None
+    category: Optional[PropertyCategory] = None
+    bhk_type: Optional[BHKType] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pin_code: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    google_maps_url: Optional[str] = None
+    nearby_places: Optional[List[str]] = None
+    area_sqft: Optional[int] = None
     price_per_night: Optional[float] = None
+    pricing_cycle: Optional[str] = None
     price_per_week: Optional[float] = None
     price_per_month: Optional[float] = None
+    minimum_stay_days: Optional[int] = None
     amenities: Optional[List[str]] = None
     images: Optional[List[str]] = None
-    blocked_dates: Optional[List[str]] = None
+    house_rules: Optional[str] = None
+    pet_friendly: Optional[bool] = None
+    smoking_allowed: Optional[bool] = None
     instant_booking: Optional[bool] = None
+    veg_price: Optional[float] = None
+    non_veg_price: Optional[float] = None
+    guest_size: Optional[int] = None
+    packages: Optional[list] = None
+    subscription_id: Optional[str] = None
+    blocked_dates: Optional[List[str]] = None

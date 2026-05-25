@@ -10,8 +10,10 @@ from motor.motor_asyncio import AsyncIOMotorClient
 ROOT = Path(__file__).parent
 load_dotenv(ROOT / ".env")
 
-MONGO_URL = os.environ["MONGO_URL"]
-DB_NAME = os.environ["DB_NAME"]
+MONGO_URL = os.environ.get("MONGO_URL")
+DB_NAME = os.environ.get("DB_NAME")
+DATABASE_TYPE = os.environ.get("DATABASE_TYPE", "mongo")
+POSTGRES_URL = os.environ.get("POSTGRES_URL")
 
 
 DEMO_PROPERTIES = [
@@ -188,8 +190,16 @@ DEMO_PROPERTIES = [
 
 
 async def seed():
-    client = AsyncIOMotorClient(MONGO_URL)
-    db = client[DB_NAME]
+    if DATABASE_TYPE == 'postgres':
+        from utils.pg_adapter import PGAdapter
+        db = PGAdapter(POSTGRES_URL)
+        await db.connect()
+        await db.ensure_table("users")
+        await db.ensure_table("properties")
+        client = None
+    else:
+        client = AsyncIOMotorClient(MONGO_URL)
+        db = client[DB_NAME]
 
     host = await db.users.find_one({"email": "host@propnest.com"}, {"_id": 0})
     if not host:
@@ -250,7 +260,10 @@ async def seed():
         print(f"  + {data['title']} ({prop_id})")
 
     print(f"\nDone. Inserted {inserted}, skipped {skipped} (already exist).")
-    client.close()
+    if client:
+        client.close()
+    if hasattr(db, 'pool') and db.pool:
+        await db.pool.close()
 
 
 if __name__ == "__main__":

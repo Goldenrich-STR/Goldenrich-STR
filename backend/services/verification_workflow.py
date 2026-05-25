@@ -33,6 +33,31 @@ async def assign_broker(db: AsyncIOMotorDatabase, property_id: str, city: str) -
     Returns the broker user_id assigned (or None if no broker found).
     """
     try:
+        # First, check if the host has a specific broker assigned during registration (via LG Code)
+        property_data = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+        if property_data and property_data.get("owner_id"):
+            owner = await db.users.find_one({"user_id": property_data["owner_id"]})
+            if owner and owner.get("broker_id"):
+                chosen_broker = await db.users.find_one({"user_id": owner["broker_id"], "role": "broker", "is_active": True})
+                if chosen_broker:
+                    await db.properties.update_one(
+                        {"property_id": property_id},
+                        {"$set": {"broker_id": chosen_broker["user_id"], "updated_at": datetime.now(timezone.utc)}},
+                    )
+                    from models.verification import PropertyVerification, VerificationStatus
+                    existing = await db.property_verifications.find_one({"property_id": property_id})
+                    if not existing:
+                        verification = PropertyVerification(
+                            property_id=property_id,
+                            broker_id=chosen_broker["user_id"],
+                            owner_id=property_data["owner_id"],
+                            status=VerificationStatus.PENDING,
+                        )
+                        await db.property_verifications.insert_one(verification.model_dump())
+                    logger.info(f"Host's registered broker {chosen_broker['user_id']} assigned directly to property {property_id}")
+                    return chosen_broker["user_id"]
+
+        # Fallback to load-balanced city-based auto-assignment
         brokers = await db.users.find(
             {"role": "broker", "is_active": True}, {"_id": 0}
         ).to_list(length=200)
@@ -142,15 +167,28 @@ async def on_host_submit(db: AsyncIOMotorDatabase, property_data: dict) -> Optio
 
 
 async def on_broker_submit(db: AsyncIOMotorDatabase, verification: dict) -> None:
-    """Broker submitted site-visit data. Notify all RMs (employees)."""
+    """Broker submitted site-visit data. Notify assigned RM or all RMs (employees)."""
     property_id = verification["property_id"]
     property_data = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
     if not property_data:
         return
 
-    rms = await db.users.find(
-        {"role": "employee", "is_active": True}, {"_id": 0, "user_id": 1}
-    ).to_list(length=50)
+    # Check if broker has an assigned RM
+    broker_id = verification.get("broker_id")
+    target_rms = []
+    
+    if broker_id:
+        broker_data = await db.users.find_one({"user_id": broker_id, "role": "broker"})
+        if broker_data and broker_data.get("rm_id"):
+            rm_data = await db.users.find_one({"user_id": broker_data["rm_id"], "role": "employee", "is_active": True})
+            if rm_data:
+                target_rms.append(rm_data)
+
+    # Fallback to all RMs if no specific RM assigned
+    if not target_rms:
+        target_rms = await db.users.find(
+            {"role": "employee", "is_active": True}, {"_id": 0, "user_id": 1}
+        ).to_list(length=50)
 
     title = "Verification ready for review"
     message = (
@@ -162,7 +200,7 @@ async def on_broker_submit(db: AsyncIOMotorDatabase, verification: dict) -> None
         "property_id": property_id,
         "property_title": property_data.get("title"),
     }
-    for rm in rms:
+    for rm in target_rms:
         await _notify(
             db, rm["user_id"], NotificationType.VERIFICATION_SUBMITTED, title, message, data,
             channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL],

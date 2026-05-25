@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import apiClient, { verificationAPI } from '../services/api';
+import apiClient, { verificationAPI, getImageUrl } from '../services/api';
+import { createPortal } from 'react-dom';
 import { 
   Users, Building2, FileCheck, Target, DollarSign, 
   AlertCircle, Plus, CheckCircle, XCircle, Clock, 
-  MapPin, Camera, LogOut, Bell
+  MapPin, Camera, LogOut, Bell, ChevronRight, ChevronLeft
 } from 'lucide-react';
 
 const BrokerDashboard = () => {
@@ -60,137 +61,171 @@ const BrokerDashboard = () => {
   ] : [];
 
   return (
-    <div className="min-h-screen bg-sand-50">
+    <div className="min-h-screen bg-sand-50 selection:bg-terracotta selection:text-white">
       {/* Header */}
-      <header className="header-glass px-6 py-4" data-testid="broker-header">
+      <header className="glass px-8 py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <Building2 className="w-6 h-6 text-terracotta" />
-            <h1 className="text-xl font-bold text-charcoal">Golden-X-Host - Broker Panel</h1>
+          <div 
+            className="flex items-center space-x-3 cursor-pointer group" 
+            onClick={() => navigate('/')}
+          >
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="w-10 h-10 object-contain transition-transform duration-300 group-hover:scale-110"
+            />
+            <h1 className="text-xl font-black text-charcoal tracking-tighter">
+              BROKER<span className="text-terracotta">PORTAL</span>
+            </h1>
           </div>
           <div className="flex items-center space-x-6">
-            <span className="text-charcoal-light">Broker: {user?.full_name}</span>
+            <div className="flex items-center space-x-4 px-4 py-2 bg-white/50 border border-sand-200 rounded-full shadow-sm">
+               <div className="w-7 h-7 rounded-full bg-sage flex items-center justify-center text-[10px] font-black text-white">
+                  {user?.full_name?.[0]}
+               </div>
+               <span className="text-[10px] font-black text-charcoal uppercase tracking-widest">{user?.full_name}</span>
+            </div>
             <button
-              onClick={logout}
-              className="flex items-center space-x-2 text-terracotta hover:underline"
+              onClick={() => {
+                navigate('/');
+                setTimeout(() => {
+                  logout();
+                }, 50);
+              }}
+              className="flex items-center space-x-2 text-[10px] font-black text-terracotta uppercase tracking-[0.2em] hover:underline transition-all"
               data-testid="logout-btn"
             >
               <LogOut className="w-4 h-4" />
-              <span>Logout</span>
+              <span>Sign Out</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-4xl font-extrabold text-charcoal" data-testid="dashboard-title">
-            Broker Dashboard
-          </h2>
+      <div className="max-w-7xl mx-auto px-8 py-10">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12 animate-fade-in">
+          <div>
+            <h2 className="text-4xl font-black text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
+              Operational Command
+            </h2>
+            <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Global overview of your owner network and properties</p>
+          </div>
+          <div className="flex items-center space-x-4">
+             <div className="p-3 bg-white border border-sand-200 rounded-2xl shadow-sm cursor-pointer hover:shadow-premium transition-all">
+                <Bell className="w-5 h-5 text-charcoal" />
+             </div>
+             <button className="btn-premium px-8 py-4 shadow-premium">
+                <Plus className="w-5 h-5 mr-2" />
+                <span className="text-sm font-black uppercase tracking-widest">New Verification</span>
+             </button>
+          </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex space-x-2 mb-8 border-b border-stone" data-testid="broker-tabs">
+        {/* Modern Navigation Tabs */}
+        <div className="flex space-x-4 mb-10 overflow-x-auto pb-4 scrollbar-hide no-scrollbar" data-testid="broker-tabs">
           {[
-            { id: 'overview', label: 'Overview', icon: Building2 },
-            { id: 'owners', label: 'My Owners', icon: Users },
-            { id: 'properties', label: 'Properties', icon: Building2 },
-            { id: 'verifications', label: 'Verifications', icon: FileCheck },
-            { id: 'leads', label: 'Leads', icon: Target },
-            { id: 'commissions', label: 'Commissions', icon: DollarSign },
+            { id: 'overview', label: 'OVERVIEW', icon: Building2 },
+            { id: 'owners', label: 'MY OWNERS', icon: Users },
+            { id: 'properties', label: 'PROPERTIES', icon: Building2 },
+            { id: 'verifications', label: 'VERIFICATIONS', icon: FileCheck },
+            { id: 'leads', label: 'LEADS', icon: Target },
+            { id: 'commissions', label: 'COMMISSIONS', icon: DollarSign },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-4 py-3 font-semibold transition ${
+              className={`flex items-center space-x-3 px-6 py-4 rounded-2xl font-black text-[10px] tracking-widest transition-all duration-300 ${
                 activeTab === tab.id
-                  ? 'text-terracotta border-b-2 border-terracotta'
-                  : 'text-charcoal-light hover:text-charcoal'
+                  ? 'bg-charcoal text-white shadow-elevated'
+                  : 'bg-white text-charcoal-muted border border-sand-200 hover:border-terracotta'
               }`}
               data-testid={`tab-${tab.id}`}
             >
-              <tab.icon className="w-4 h-4" />
+              <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-terracotta' : ''}`} />
               <span>{tab.label}</span>
             </button>
           ))}
-        </div>
-
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
-          <div data-testid="overview-section">
-            {loading ? (
-              <div className="text-center py-12">
-                <p className="text-charcoal-light">Loading statistics...</p>
-              </div>
-            ) : (
-              <>
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" data-testid="stats-grid">
-                  {statCards.map((stat, idx) => (
-                    <div key={idx} className="dashboard-card" data-testid={`stat-card-${idx}`}>
-                      <stat.icon className={`w-8 h-8 text-${stat.color} mb-3`} />
-                      <p className="text-3xl font-bold text-charcoal">{stat.value}</p>
-                      <p className="text-sm font-semibold text-charcoal-light mt-1">{stat.label}</p>
-                      {stat.subtext && <p className="text-xs text-charcoal-muted mt-2">{stat.subtext}</p>}
-                    </div>
-                  ))}
+        </div>        {/* Tab Content Section */}
+        <div className="transition-all duration-500">
+          {/* Overview Tab */}
+          {activeTab === 'overview' && (
+            <div data-testid="overview-section" className="animate-slide-up">
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                   {[1,2,3,4].map(i => <div key={i} className="h-32 bg-white rounded-3xl animate-pulse"></div>)}
                 </div>
+              ) : (
+                <>
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12" data-testid="stats-grid">
+                    {statCards.map((stat, idx) => (
+                      <div key={idx} className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium group hover:border-terracotta transition-all duration-500" data-testid={`stat-card-${idx}`}>
+                        <div className="bg-sand-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-terracotta/5 transition-colors">
+                           <stat.icon className="w-6 h-6 text-terracotta" />
+                        </div>
+                        <p className="text-3xl font-black text-charcoal tracking-tighter mb-1">{stat.value}</p>
+                        <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em]">{stat.label}</p>
+                        {stat.subtext && (
+                          <div className="mt-4 pt-4 border-t border-sand-100 flex items-center justify-between">
+                             <span className="text-[9px] font-black text-sage-dark bg-sage/10 px-2 py-0.5 rounded-full">{stat.subtext}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
 
-                {/* Pending Verifications Alert */}
-                {stats && stats.verifications.pending > 0 && (
-                  <div className="dashboard-card bg-yellow-50 border-l-4 border-yellow-500 mb-8" data-testid="pending-alert">
-                    <div className="flex items-center space-x-3">
-                      <Clock className="w-6 h-6 text-yellow-600" />
-                      <div>
-                        <p className="font-bold text-charcoal">
-                          {stats.verifications.pending} Properties Pending Verification
-                        </p>
-                        <p className="text-sm text-charcoal-light">Complete site visits and submit verification reports</p>
+                  {/* Pending Verifications Alert */}
+                  {stats && stats.verifications.pending > 0 && (
+                    <div className="bg-white rounded-3xl p-8 border-l-8 border-terracotta shadow-premium mb-12 flex flex-col md:flex-row items-center justify-between gap-6" data-testid="pending-alert">
+                      <div className="flex items-center space-x-6">
+                        <div className="bg-terracotta/10 p-4 rounded-2xl animate-pulse">
+                           <Clock className="w-8 h-8 text-terracotta" />
+                        </div>
+                        <div>
+                          <p className="text-xl font-black text-charcoal tracking-tight mb-1">
+                            {stats.verifications.pending} Physical Inspections Required
+                          </p>
+                          <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Site visits must be completed for remote RM review</p>
+                        </div>
                       </div>
                       <button
                         onClick={() => setActiveTab('verifications')}
-                        className="btn-primary ml-auto"
+                        className="btn-premium px-8 py-4 shadow-premium whitespace-nowrap"
                       >
-                        View Tasks
+                        Action Queue
                       </button>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Quick Actions */}
-                <div className="dashboard-card" data-testid="quick-actions">
-                  <h3 className="text-xl font-bold text-charcoal mb-4">Quick Actions</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <button
-                      onClick={() => setActiveTab('leads')}
-                      className="flex items-center space-x-3 p-4 bg-sand-50 rounded-lg hover:bg-sand-100 transition"
-                      data-testid="action-add-lead"
-                    >
-                      <Target className="w-6 h-6 text-terracotta" />
-                      <span className="font-semibold text-charcoal">Add New Lead</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('verifications')}
-                      className="flex items-center space-x-3 p-4 bg-sand-50 rounded-lg hover:bg-sand-100 transition"
-                      data-testid="action-verify"
-                    >
-                      <FileCheck className="w-6 h-6 text-sage" />
-                      <span className="font-semibold text-charcoal">Complete Verification</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveTab('owners')}
-                      className="flex items-center space-x-3 p-4 bg-sand-50 rounded-lg hover:bg-sand-100 transition"
-                      data-testid="action-view-owners"
-                    >
-                      <Users className="w-6 h-6 text-terracotta" />
-                      <span className="font-semibold text-charcoal">View My Owners</span>
-                    </button>
+                  {/* Quick Actions */}
+                  <div className="bg-charcoal rounded-[2.5rem] p-10 shadow-elevated" data-testid="quick-actions">
+                    <h3 className="text-xl font-black text-white tracking-tight mb-8">System Shortcuts</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {[
+                        { id: 'leads', label: 'GENERATE LEAD', icon: Target, color: 'text-terracotta' },
+                        { id: 'verifications', label: 'SITE INSPECTION', icon: FileCheck, color: 'text-sage' },
+                        { id: 'owners', label: 'NETWORK VIEW', icon: Users, color: 'text-white' }
+                      ].map(action => (
+                        <button
+                          key={action.id}
+                          onClick={() => setActiveTab(action.id)}
+                          className="flex items-center justify-between p-6 bg-white/5 border border-white/10 rounded-3xl hover:bg-white hover:border-white transition-all group"
+                          data-testid={`action-${action.id}`}
+                        >
+                          <div className="flex items-center space-x-4">
+                             <action.icon className={`w-6 h-6 ${action.color}`} />
+                             <span className="text-[10px] font-black text-white/80 group-hover:text-charcoal uppercase tracking-[0.2em]">{action.label}</span>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-charcoal group-hover:translate-x-1 transition-all" />
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-        )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* My Owners Tab */}
         {activeTab === 'owners' && <MyOwnersSection />}
@@ -232,38 +267,64 @@ const MyOwnersSection = () => {
   };
 
   return (
-    <div data-testid="owners-section">
-      <div className="dashboard-card mb-6">
-        <h3 className="text-2xl font-bold text-charcoal mb-2">My Property Owners</h3>
-        <p className="text-charcoal-light">View all property owners assigned to you</p>
+    <div data-testid="owners-section" className="animate-slide-up">
+      <div className="flex items-center mb-8">
+         <h3 className="text-2xl font-black text-charcoal tracking-tight">Owner Network</h3>
+         <div className="ml-4 h-px flex-1 bg-sand-200"></div>
       </div>
 
       {loading ? (
-        <div className="text-center py-12">
-          <p className="text-charcoal-light">Loading owners...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+           {[1,2,3,4].map(i => <div key={i} className="h-40 bg-white rounded-3xl animate-pulse"></div>)}
         </div>
       ) : owners.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="owners-list">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6" data-testid="owners-list">
           {owners.map((owner) => (
-            <div key={owner.user_id} className="dashboard-card" data-testid={`owner-${owner.user_id}`}>
-              <div className="flex items-center space-x-4">
-                <img
-                  src={owner.profile_image}
-                  alt={owner.full_name}
-                  className="w-16 h-16 rounded-full object-cover"
-                />
-                <div className="flex-1">
-                  <h4 className="font-bold text-charcoal">{owner.full_name}</h4>
-                  <p className="text-sm text-charcoal-light">{owner.email}</p>
-                  <p className="text-sm text-charcoal-light">{owner.phone}</p>
-                  <div className="flex items-center space-x-2 mt-2">
-                    <span className="inline-block px-2 py-1 bg-terracotta/10 text-terracotta text-xs font-semibold rounded">
-                      {owner.property_count} Properties
-                    </span>
-                    <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
-                      owner.kyc_status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+            <div key={owner.user_id} className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium hover:border-terracotta transition-all duration-300 group" data-testid={`owner-${owner.user_id}`}>
+              <div className="flex items-start space-x-6">
+                <div className="relative flex-shrink-0">
+                   <div className="absolute inset-0 bg-terracotta blur-xl opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                   <img
+                     src={owner.profile_image || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e'}
+                     alt={owner.full_name}
+                     className="relative w-20 h-20 rounded-2xl object-cover border-2 border-white shadow-sm"
+                   />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
+                    <h4 className="text-lg font-black text-charcoal truncate">{owner.full_name}</h4>
+                    <span className={`inline-flex px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full ${
+                      owner.kyc_status === 'approved' ? 'bg-sage/10 text-sage-dark' : 'bg-amber-100 text-amber-700'
                     }`}>
                       KYC: {owner.kyc_status}
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-1">{owner.email}</p>
+                  <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-3">{owner.phone}</p>
+                  
+                  <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-sand-200">
+                    <div>
+                      <p className="text-[8px] font-black text-charcoal-muted uppercase tracking-wider">City / Location</p>
+                      <p className="text-xs font-bold text-charcoal mt-0.5">{owner.city || 'Not Specified'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-black text-charcoal-muted uppercase tracking-wider">Registration Payment</p>
+                      <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded mt-0.5 ${
+                        owner.registration_fee_paid ? 'bg-sage/20 text-sage-dark' : 'bg-red-50 text-red-600'
+                      }`}>
+                        {owner.registration_fee_paid ? 'PAID' : 'UNPAID'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-sand-200">
+                    <span className="inline-flex px-3 py-1 bg-sand-50 text-terracotta text-[9px] font-black uppercase tracking-widest rounded-full border border-sand-200">
+                      {owner.property_count || 0} Assets
+                    </span>
+                    <span className="text-[9px] text-charcoal-muted font-bold">
+                      📅 Registered: {new Date(owner.created_at || owner.timestamp || Date.now()).toLocaleDateString('en-IN', {
+                        day: 'numeric', month: 'short', year: 'numeric'
+                      })}
                     </span>
                   </div>
                 </div>
@@ -272,19 +333,23 @@ const MyOwnersSection = () => {
           ))}
         </div>
       ) : (
-        <div className="dashboard-card text-center py-12">
-          <Users className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
-          <p className="text-charcoal-light">No owners assigned yet</p>
+        <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-sand-300">
+          <Users className="w-16 h-16 text-sand-200 mx-auto mb-6" />
+          <h4 className="text-xl font-black text-charcoal mb-2">No Owners Assigned</h4>
+          <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">You haven't been assigned any property owners yet.</p>
         </div>
       )}
     </div>
   );
 };
 
+
 // Properties Section
 const PropertiesSection = () => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     fetchProperties();
@@ -302,51 +367,89 @@ const PropertiesSection = () => {
   };
 
   return (
-    <div data-testid="properties-section">
-      <div className="dashboard-card mb-6">
-        <h3 className="text-2xl font-bold text-charcoal mb-2">STR Properties</h3>
-        <p className="text-charcoal-light">All properties under your management</p>
+    <div data-testid="properties-section" className="animate-slide-up">
+      <div className="flex items-center mb-8">
+         <h3 className="text-2xl font-black text-charcoal tracking-tight">STR Inventory</h3>
+         <div className="ml-4 h-px flex-1 bg-sand-200"></div>
       </div>
 
       {loading ? (
-        <div className="text-center py-12">
-          <p className="text-charcoal-light">Loading properties...</p>
+        <div className="space-y-4">
+           {[1,2,3].map(i => <div key={i} className="h-32 bg-white rounded-3xl animate-pulse"></div>)}
         </div>
       ) : properties.length > 0 ? (
-        <div className="space-y-4" data-testid="properties-list">
-          {properties.map((property) => (
-            <div key={property.property_id} className="dashboard-card" data-testid={`property-${property.property_id}`}>
-              <div className="flex items-start space-x-4">
-                <img
-                  src={property.images[0] || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
-                  alt={property.title}
-                  className="w-24 h-24 rounded-lg object-cover"
-                />
-                <div className="flex-1">
-                  <h4 className="font-bold text-charcoal text-lg">{property.title}</h4>
-                  <p className="text-sm text-charcoal-light mt-1">
-                    {property.city} | {property.bhk_type} | {property.category}
-                  </p>
-                  <div className="flex items-center space-x-2 mt-3">
-                    <span className="text-lg font-bold text-terracotta">₹{property.price_per_night}</span>
-                    <span className="text-sm text-charcoal-light">/night</span>
-                    <span className={`inline-block px-2 py-1 text-xs font-semibold rounded ml-4 ${
-                      property.status === 'live' ? 'bg-green-100 text-green-700' :
-                      property.status === 'pending_verification' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {property.status.replace('_', ' ').toUpperCase()}
-                    </span>
+        <div data-testid="properties-list">
+          <div className="space-y-4">
+            {[...properties]
+              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+              .map((property) => (
+              <div key={property.property_id} className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium group hover:border-terracotta transition-all duration-300" data-testid={`property-${property.property_id}`}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="flex items-center space-x-6">
+                    <div className="relative overflow-hidden w-24 h-24 rounded-2xl">
+                      <img
+                        src={getImageUrl(property.images[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
+                        alt={property.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                      <div className="absolute inset-0 bg-charcoal/10"></div>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-black text-charcoal mb-1">{property.title}</h4>
+                      <div className="flex items-center space-x-3 text-charcoal-muted mb-3">
+                         <MapPin className="w-3 h-3" />
+                         <span className="text-[10px] font-bold uppercase tracking-widest">{property.city} · {property.category}</span>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                         <span className="text-lg font-black text-terracotta tracking-tight">₹{property.price_per_night} <span className="text-[10px] text-charcoal-muted uppercase">
+                           {property.category === 'commercial' || property.category === 'event_venue'
+                             ? (property.pricing_cycle === 'hourly' ? '/hr' : property.pricing_cycle === 'weekly' ? '/week' : property.pricing_cycle === 'monthly' ? '/month' : '/day')
+                             : '/night'}
+                         </span></span>
+                         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                           property.status === 'live' ? 'bg-sage/10 text-sage-dark' :
+                           property.status === 'pending_verification' ? 'bg-amber-100 text-amber-700' :
+                           'bg-sand-100 text-charcoal-muted'
+                         }`}>
+                           {property.status.replace('_', ' ')}
+                         </span>
+                      </div>
+                    </div>
                   </div>
+                  <button className="px-6 py-3 bg-charcoal text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium">
+                     View Details
+                  </button>
                 </div>
               </div>
+            ))}
+          </div>
+          {properties.length > itemsPerPage && (
+            <div className="mt-8 flex justify-center items-center space-x-4">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <span className="text-xs font-black text-charcoal uppercase tracking-widest">
+                Page {currentPage} of {Math.ceil(properties.length / itemsPerPage)}
+              </span>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(Math.ceil(properties.length / itemsPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(properties.length / itemsPerPage)}
+                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </div>
-          ))}
+          )}
         </div>
       ) : (
-        <div className="dashboard-card text-center py-12">
-          <Building2 className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
-          <p className="text-charcoal-light">No properties found</p>
+        <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-sand-300">
+          <Building2 className="w-16 h-16 text-sand-200 mx-auto mb-6" />
+          <h4 className="text-xl font-black text-charcoal mb-2">No Properties Registered</h4>
+          <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Global inventory is currently empty.</p>
         </div>
       )}
     </div>
@@ -358,6 +461,8 @@ const VerificationsSection = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTask, setActiveTask] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     fetchTasks();
@@ -376,95 +481,121 @@ const VerificationsSection = () => {
   };
 
   return (
-    <div data-testid="verifications-section">
-      <div className="dashboard-card mb-6">
-        <h3 className="text-2xl font-bold text-charcoal mb-2">Property Verifications</h3>
-        <p className="text-charcoal-light">
-          Visit each assigned property, complete the checklist, upload geo-tagged photos
-          and submit for RM remote review.
-        </p>
+    <div data-testid="verifications-section" className="animate-slide-up">
+      <div className="flex items-center mb-8">
+         <h3 className="text-2xl font-black text-charcoal tracking-tight">Inspection Queue</h3>
+         <div className="ml-4 h-px flex-1 bg-sand-200"></div>
       </div>
 
       {loading ? (
-        <div className="dashboard-card text-center py-12">
-          <p className="text-charcoal-light">Loading verification tasks...</p>
+        <div className="space-y-4">
+           {[1,2].map(i => <div key={i} className="h-40 bg-white rounded-3xl animate-pulse"></div>)}
         </div>
       ) : tasks.length === 0 ? (
-        <div className="dashboard-card text-center py-12" data-testid="verifications-empty">
-          <FileCheck className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
-          <p className="text-charcoal-light">No verification tasks assigned</p>
+        <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-sand-300" data-testid="verifications-empty">
+          <FileCheck className="w-16 h-16 text-sand-200 mx-auto mb-6" />
+          <h4 className="text-xl font-black text-charcoal mb-2">Queue Clear</h4>
+          <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">No pending physical site inspections assigned.</p>
         </div>
       ) : (
-        <div className="space-y-4" data-testid="verifications-list">
-          {tasks.map((task) => {
-            const pd = task.property_details || {};
-            const isOpen = task.status === 'pending' || task.status === 'in_progress';
-            return (
-              <div
-                key={task.verification_id}
-                className="dashboard-card"
-                data-testid={`verification-task-${task.property_id}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4 flex-1">
-                    <img
-                      src={pd.images?.[0] || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
-                      alt={pd.title}
-                      className="w-24 h-24 rounded-lg object-cover"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-bold text-charcoal text-lg">{pd.title || 'Property'}</h4>
-                      <p className="text-sm text-charcoal-light mt-1">
-                        {pd.city}{pd.address ? ` · ${pd.address}` : ''}
-                      </p>
-                      <div className="flex items-center space-x-2 mt-3">
-                        <span
-                          className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
-                            task.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-700'
-                              : task.status === 'in_progress'
-                              ? 'bg-blue-100 text-blue-700'
-                              : task.status === 'completed'
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-red-100 text-red-700'
-                          }`}
-                          data-testid={`task-status-${task.property_id}`}
-                        >
-                          {task.status.replace('_', ' ').toUpperCase()}
-                        </span>
-                        {task.rm_reviewed && (
+        <div data-testid="verifications-list">
+          <div className="space-y-6">
+            {[...tasks]
+              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+              .map((task) => {
+              const pd = task.property_details || {};
+              const isOpen = task.status === 'pending' || task.status === 'in_progress' || task.status === 'rejected' || (task.rm_reviewed && !task.rm_approved);
+              return (
+                <div
+                  key={task.verification_id}
+                  className="bg-white rounded-[2rem] p-8 border border-sand-200 shadow-premium hover:border-terracotta transition-all duration-300 group"
+                  data-testid={`verification-task-${task.property_id}`}
+                >
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+                    <div className="flex items-center space-x-6">
+                      <div className="relative overflow-hidden w-24 h-24 rounded-2xl shadow-sm">
+                        <img
+                          src={getImageUrl(pd.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
+                          alt={pd.title}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
+                        <div className="absolute inset-0 bg-charcoal/10"></div>
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-black text-charcoal mb-1">{pd.title || 'Property'}</h4>
+                        <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-4">
+                          {pd.city}{pd.address ? ` · ${pd.address}` : ''}
+                        </p>
+                        <div className="flex items-center space-x-3">
                           <span
-                            className={`inline-block px-2 py-1 text-xs font-semibold rounded ${
-                              task.rm_approved
-                                ? 'bg-green-100 text-green-700'
+                            className={`px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full ${
+                              task.status === 'pending'
+                                ? 'bg-amber-100 text-amber-700'
+                                : task.status === 'in_progress'
+                                ? 'bg-blue-100 text-blue-700'
+                                : task.status === 'completed'
+                                ? 'bg-sage/10 text-sage-dark'
                                 : 'bg-red-100 text-red-700'
                             }`}
+                            data-testid={`task-status-${task.property_id}`}
                           >
-                            RM {task.rm_approved ? 'APPROVED' : 'REJECTED'}
+                            {task.status.replace('_', ' ')}
                           </span>
+                          {task.rm_reviewed && (
+                            <span
+                              className={`px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full ${
+                                task.rm_approved
+                                  ? 'bg-sage/20 text-sage-dark'
+                                  : 'bg-terracotta/20 text-terracotta'
+                              }`}
+                            >
+                              RM {task.rm_approved ? 'APPROVED' : 'REJECTED'}
+                            </span>
+                          )}
+                        </div>
+                        {task.broker_remarks && (
+                          <p className="text-[10px] text-charcoal-muted mt-4 italic font-bold">
+                            REMARKS: "{task.broker_remarks}"
+                          </p>
                         )}
                       </div>
-                      {task.broker_remarks && (
-                        <p className="text-sm text-charcoal-muted mt-2 italic">
-                          Your remarks: "{task.broker_remarks}"
-                        </p>
-                      )}
                     </div>
+                    {isOpen && (
+                      <button
+                        onClick={() => setActiveTask(task)}
+                        className="btn-premium px-8 py-4 shadow-premium whitespace-nowrap"
+                        data-testid={`open-submit-${task.property_id}`}
+                      >
+                        <Camera className="w-5 h-5 mr-3" />
+                        <span>{task.status === 'rejected' || (task.rm_reviewed && !task.rm_approved) ? 'RE-VERIFY' : 'SUBMIT VISIT'}</span>
+                      </button>
+                    )}
                   </div>
-                  {isOpen && (
-                    <button
-                      onClick={() => setActiveTask(task)}
-                      className="flex items-center space-x-2 px-4 py-2 bg-terracotta text-white rounded-lg hover:bg-terracotta-dark transition font-semibold"
-                      data-testid={`open-submit-${task.property_id}`}
-                    >
-                      <Camera className="w-4 h-4" />
-                      <span>Submit Visit</span>
-                    </button>
-                  )}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          {tasks.length > itemsPerPage && (
+            <div className="mt-8 flex justify-center items-center space-x-4">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <span className="text-xs font-black text-charcoal uppercase tracking-widest">
+                Page {currentPage} of {Math.ceil(tasks.length / itemsPerPage)}
+              </span>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(Math.ceil(tasks.length / itemsPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(tasks.length / itemsPerPage)}
+                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -495,6 +626,16 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
     no_discrepancies: false,
   };
   const [checklist, setChecklist] = useState(initialChecklist);
+  const [checklistReasons, setChecklistReasons] = useState({
+    address_matches_gps: '',
+    structural_condition_good: '',
+    amenities_verified: '',
+    compliance_docs_present: '',
+    all_rooms_photographed: '',
+    entrance_photographed: '',
+    video_walkthrough_uploaded: '',
+    no_discrepancies: '',
+  });
   const [photoFile, setPhotoFile] = useState(null);
   const [photoLat, setPhotoLat] = useState('');
   const [photoLng, setPhotoLng] = useState('');
@@ -505,19 +646,95 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const videoRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [cameraStream]);
+
+  const startCamera = async () => {
+    setError('');
+    tryFillCoordinates();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      setCameraStream(stream);
+      setIsCameraOpen(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (err) {
+      console.error("Camera access denied or unavailable", err);
+      setError("Could not access camera. Please allow permissions or use 'Choose File'.");
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+    }
+    setCameraStream(null);
+    setIsCameraOpen(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        setPhotoFile(file);
+        tryFillCoordinates();
+        stopCamera();
+      }
+    }, 'image/jpeg', 0.8);
+  };
+
   const toggle = (k) => setChecklist({ ...checklist, [k]: !checklist[k] });
+  const updateReason = (k, v) => setChecklistReasons({ ...checklistReasons, [k]: v });
+
+  const fetchIPLocation = async () => {
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      const data = await res.json();
+      if (data && data.latitude && data.longitude) {
+        setPhotoLat(data.latitude.toFixed(6));
+        setPhotoLng(data.longitude.toFixed(6));
+      }
+    } catch (e) {
+      console.warn('IP Location fallback failed', e);
+    }
+  };
 
   // Try to auto-prefill lat/lng from the browser's geolocation so brokers
   // don't have to type coordinates manually. Best-effort — silent if denied.
-  const tryFillCoordinates = () => {
-    if (!navigator.geolocation || photoLat || photoLng) return;
+  function tryFillCoordinates() {
+    if (!navigator.geolocation) {
+      fetchIPLocation();
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setPhotoLat(pos.coords.latitude.toFixed(6));
         setPhotoLng(pos.coords.longitude.toFixed(6));
       },
-      () => { /* permission denied — leave fields blank for manual entry */ },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+      (err) => { 
+        console.warn('Geolocation error:', err);
+        fetchIPLocation();
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 0 }
     );
   };
 
@@ -534,12 +751,8 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
       setError('Please choose a photo to upload');
       return;
     }
-    const lat = parseFloat(photoLat);
-    const lng = parseFloat(photoLng);
-    if (Number.isNaN(lat) || Number.isNaN(lng)) {
-      setError('Valid latitude and longitude required for geo-tag');
-      return;
-    }
+    const lat = parseFloat(photoLat) || 0.0;
+    const lng = parseFloat(photoLng) || 0.0;
     setUploading(true);
     try {
       const fd = new FormData();
@@ -579,17 +792,69 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
 
   const submit = async () => {
     setError('');
-    if (photos.length === 0) {
-      setError('At least one geo-tagged photo is required');
+    
+    // Auto-add the currently selected photo if the list is empty but a file is picked
+    let finalPhotos = [...photos];
+    if (finalPhotos.length === 0 && photoFile) {
+      setUploading(true);
+      try {
+        const fd = new FormData();
+        fd.append('file', photoFile);
+        const res = await apiClient.post('/upload/image', fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        const url = res.data?.url;
+        if (url) {
+          const newPhoto = {
+            photo_url: url,
+            latitude: parseFloat(photoLat) || 0.0,
+            longitude: parseFloat(photoLng) || 0.0,
+            timestamp: new Date().toISOString(),
+          };
+          finalPhotos = [newPhoto];
+          setPhotos(finalPhotos);
+        }
+      } catch (e) {
+        setError('Auto-upload failed. Please click "+ Add photo" manually.');
+        setUploading(false);
+        return;
+      } finally {
+        setUploading(false);
+      }
+    }
+
+    if (finalPhotos.length === 0) {
+      setError('Add One geo-tagged photo');
       return;
     }
+
+    // Validate that unchecked items have a reason
+    let missingReason = false;
+    let appendedRemarks = '';
+    for (const key of Object.keys(checklist)) {
+      if (!checklist[key]) {
+        if (!checklistReasons[key].trim()) {
+          missingReason = true;
+          break;
+        }
+        appendedRemarks += `\n- ${key.replaceAll('_', ' ')}: ${checklistReasons[key].trim()}`;
+      }
+    }
+
+    if (missingReason) {
+      setError('Please provide a reason for all unchecked checklist items.');
+      return;
+    }
+
+    const finalRemarks = remarks.trim() ? `${remarks}\n\nUnchecked Items Reasons:${appendedRemarks}` : `Unchecked Items Reasons:${appendedRemarks}`;
+
     setSubmitting(true);
     try {
       await verificationAPI.submitVisit(task.property_id, {
         checklist,
-        geo_tagged_photos: photos,
+        geo_tagged_photos: finalPhotos,
         video_url: videoUrl || null,
-        broker_remarks: remarks || null,
+        broker_remarks: finalRemarks || null,
       });
       alert('Verification submitted. RM will review remotely.');
       onSubmitted();
@@ -601,16 +866,19 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
     }
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4"
       data-testid="submit-verification-modal"
     >
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="sticky top-0 bg-white border-b border-sand-200 px-6 py-4 flex items-center justify-between">
-          <h3 className="text-xl font-bold text-charcoal">
-            Submit Visit — {task.property_details?.title || 'Property'}
-          </h3>
+          <div>
+            <h3 className="text-xl font-bold text-charcoal">
+              Submit Visit — {task.property_details?.title || 'Property'}
+            </h3>
+            <p className="text-xs text-charcoal-light font-mono mt-1">Property ID: {task.property_id}</p>
+          </div>
           <button
             onClick={onClose}
             className="text-charcoal-light hover:text-charcoal"
@@ -624,20 +892,34 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
           {/* Checklist */}
           <div>
             <h4 className="font-bold text-charcoal mb-3">Inspection Checklist</h4>
-            <div className="space-y-2" data-testid="checklist">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="checklist">
               {Object.entries(checklist).map(([key, val]) => (
-                <label key={key} className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={val}
-                    onChange={() => toggle(key)}
-                    className="w-4 h-4"
-                    data-testid={`check-${key}`}
-                  />
-                  <span className="text-sm text-charcoal capitalize">
-                    {key.replaceAll('_', ' ')}
-                  </span>
-                </label>
+                <div key={key} className={`flex flex-col p-3 rounded-xl border-2 transition-colors ${val ? 'bg-green-50 border-green-200' : 'bg-sand-50 border-sand-200 hover:border-sand-300'}`}>
+                  <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={val}
+                      onChange={() => toggle(key)}
+                      className="w-5 h-5 text-terracotta border-sand-300 rounded focus:ring-terracotta cursor-pointer"
+                      data-testid={`check-${key}`}
+                    />
+                    <span className={`text-sm font-bold capitalize ${val ? 'text-green-800' : 'text-charcoal'}`}>
+                      {key.replaceAll('_', ' ')}
+                    </span>
+                  </label>
+                  {!val && (
+                    <div className="mt-3">
+                      <input
+                        type="text"
+                        placeholder="Reason for not checking..."
+                        value={checklistReasons[key]}
+                        onChange={(e) => updateReason(key, e.target.value)}
+                        className="w-full text-xs py-2 px-3 border border-red-200 bg-red-50 focus:bg-white focus:border-red-400 focus:ring-1 focus:ring-red-400 rounded outline-none transition-colors"
+                        required
+                      />
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
@@ -648,17 +930,60 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
             <div className="space-y-3 mb-2">
               <div>
                 <label className="block text-xs font-semibold text-charcoal-muted mb-1">
-                  Photo
+                  Photo <span className="text-terracotta ml-2 font-black uppercase tracking-widest text-[9px]">(Add One geo-tagged photo)</span>
                 </label>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/gif"
-                  onChange={onPhotoFileChange}
-                  disabled={uploading || submitting}
-                  className="block w-full text-sm text-charcoal file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-terracotta file:text-white hover:file:bg-terracotta-dark file:cursor-pointer"
-                  data-testid="photo-file-input"
-                />
-                {photoFile && (
+                <div className="flex items-center space-x-4">
+                  <label className="flex-1 text-center py-3 px-4 rounded-xl border-2 border-sand-200 text-sm font-bold text-charcoal hover:bg-sand-100 cursor-pointer transition-colors">
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      onChange={onPhotoFileChange}
+                      disabled={uploading || submitting}
+                      className="hidden"
+                      data-testid="photo-file-input"
+                    />
+                    Choose File
+                  </label>
+                  <button 
+                    onClick={startCamera} 
+                    type="button"
+                    disabled={uploading || submitting || isCameraOpen}
+                    className="flex-1 text-center py-3 px-4 rounded-xl bg-terracotta text-white text-sm font-bold hover:bg-terracotta-dark cursor-pointer transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Camera className="w-5 h-5" />
+                    <span>Open Camera</span>
+                  </button>
+                </div>
+                
+                {isCameraOpen && (
+                  <div className="mt-4 p-4 bg-charcoal rounded-xl flex flex-col items-center">
+                    <video 
+                      ref={videoRef} 
+                      autoPlay 
+                      playsInline 
+                      className="w-full max-h-[60vh] object-contain rounded-lg bg-black"
+                    ></video>
+                    <div className="flex space-x-4 mt-4 w-full">
+                      <button 
+                        type="button"
+                        onClick={stopCamera}
+                        className="flex-1 py-3 bg-sand-100 text-charcoal font-bold rounded-lg hover:bg-sand-200 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={capturePhoto}
+                        className="flex-1 py-3 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600 transition-colors flex items-center justify-center space-x-2"
+                      >
+                        <Camera className="w-5 h-5" />
+                        <span>Capture</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {photoFile && !isCameraOpen && (
                   <p className="text-xs text-charcoal-muted mt-1" data-testid="photo-file-name">
                     Selected: {photoFile.name} ({Math.round(photoFile.size / 1024)} KB)
                   </p>
@@ -689,10 +1014,10 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
             <button
               onClick={addPhoto}
               disabled={uploading || submitting}
-              className="text-sm text-terracotta font-semibold hover:underline disabled:opacity-60 disabled:no-underline"
+              className="mt-4 flex items-center justify-center px-6 py-3 bg-terracotta/10 text-terracotta border-2 border-terracotta/20 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-terracotta hover:text-white transition-all disabled:opacity-50"
               data-testid="add-photo-btn"
             >
-              {uploading ? 'Uploading…' : '+ Add photo'}
+              {uploading ? 'UPLOADING...' : '+ Add photo to list'}
             </button>
 
             {photos.length > 0 && (
@@ -729,7 +1054,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
           {/* Video + remarks */}
           <div>
             <label className="block text-sm font-semibold text-charcoal mb-1">
-              Video walkthrough URL (optional)
+              Video walkthrough URL (If Applicable)
             </label>
             <input
               type="text"
@@ -741,7 +1066,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
           </div>
           <div>
             <label className="block text-sm font-semibold text-charcoal mb-1">
-              Broker remarks (optional)
+              Broker remarks (If Applicable)
             </label>
             <textarea
               value={remarks}
@@ -777,18 +1102,35 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
 // Leads Section
 const LeadsSection = () => {
   const [leads, setLeads] = useState([]);
+  const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState({
+    full_name: '',
+    phone: '',
+    email: '',
+    city: '',
+    property_type: 'residential',
+    from_date: '',
+    to_date: '',
+    property_id: '',
+    property_title: '',
+    notes: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     fetchLeads();
+    fetchProperties();
   }, []);
 
   const fetchLeads = async () => {
@@ -802,70 +1144,296 @@ const LeadsSection = () => {
     }
   };
 
+  const fetchProperties = async () => {
+    try {
+      const response = await apiClient.get('/broker/properties');
+      setProperties(response.data.properties || []);
+    } catch (error) {
+      console.error('Error fetching properties for lead form:', error);
+    }
+  };
+
+  const handlePropertyChange = (e) => {
+    const selectedId = e.target.value;
+    if (!selectedId) {
+      setFormData(prev => ({ ...prev, property_id: '', property_title: '' }));
+      return;
+    }
+    const selectedProp = properties.find(p => p.property_id === selectedId);
+    setFormData(prev => ({
+      ...prev,
+      property_id: selectedId,
+      property_title: selectedProp ? selectedProp.title : ''
+    }));
+  };
+
+  const handleCreateLead = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      await apiClient.post('/broker/leads', {
+        full_name: formData.full_name,
+        phone: formData.phone,
+        email: formData.email || null,
+        city: formData.city,
+        property_type: formData.property_type,
+        from_date: formData.from_date || null,
+        to_date: formData.to_date || null,
+        property_id: formData.property_id || null,
+        property_title: formData.property_title || null,
+        notes: formData.notes || null
+      });
+      setFormData({
+        full_name: '',
+        phone: '',
+        email: '',
+        city: '',
+        property_type: 'residential',
+        from_date: '',
+        to_date: '',
+        property_id: '',
+        property_title: '',
+        notes: ''
+      });
+      setShowAddForm(false);
+      fetchLeads();
+      alert('Lead added successfully!');
+    } catch (err) {
+      console.error('Error creating lead:', err);
+      setError(err?.response?.data?.detail || 'Failed to create lead. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <div data-testid="leads-section">
-      <div className="dashboard-card mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-2xl font-bold text-charcoal mb-2">Leads Management</h3>
-            <p className="text-charcoal-light">Track and convert STR property leads</p>
-          </div>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="btn-primary flex items-center space-x-2"
-            data-testid="add-lead-btn"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Lead</span>
-          </button>
+    <div data-testid="leads-section" className="animate-slide-up">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+        <div className="flex items-center flex-1">
+           <h3 className="text-2xl font-black text-charcoal tracking-tight">Lead Pipeline</h3>
+           <div className="ml-4 h-px flex-1 bg-sand-200"></div>
         </div>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="btn-premium px-8 py-4 shadow-premium"
+          data-testid="add-lead-btn"
+        >
+          <Plus className="w-5 h-5 mr-3" />
+          <span>{showAddForm ? 'Close Portal' : 'Add Lead'}</span>
+        </button>
       </div>
 
       {showAddForm && (
-        <div className="dashboard-card mb-6 bg-sand-50" data-testid="add-lead-form">
-          <h4 className="font-bold text-charcoal mb-4">Add New Lead</h4>
-          <p className="text-sm text-charcoal-light">Lead creation form coming soon</p>
+        <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium mb-12 animate-slide-down" data-testid="add-lead-form">
+          <h4 className="text-xl font-black text-charcoal tracking-tight mb-6">Add New Lead</h4>
+          <form onSubmit={handleCreateLead} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  placeholder="e.g. Ramesh Kumar"
+                  className="input-field w-full"
+                  data-testid="lead-name-input"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Phone Number *</label>
+                <input
+                  type="tel"
+                  required
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="e.g. +91 9876543210"
+                  className="input-field w-full"
+                  data-testid="lead-phone-input"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Email Address</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="e.g. ramesh@example.com"
+                  className="input-field w-full"
+                  data-testid="lead-email-input"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">City *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  placeholder="e.g. Mumbai"
+                  className="input-field w-full"
+                  data-testid="lead-city-input"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Property Type *</label>
+                <select
+                  value={formData.property_type}
+                  onChange={(e) => setFormData({ ...formData, property_type: e.target.value })}
+                  className="input-field w-full"
+                  data-testid="lead-property-type"
+                >
+                  <option value="residential">Residential</option>
+                  <option value="commercial">Commercial</option>
+                  <option value="event_venue">Event Venue</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">From Date</label>
+                <input
+                  type="date"
+                  value={formData.from_date}
+                  onChange={(e) => setFormData({ ...formData, from_date: e.target.value })}
+                  className="input-field w-full text-charcoal"
+                  data-testid="lead-from-date-input"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">To Date</label>
+                <input
+                  type="date"
+                  value={formData.to_date}
+                  onChange={(e) => setFormData({ ...formData, to_date: e.target.value })}
+                  className="input-field w-full text-charcoal"
+                  data-testid="lead-to-date-input"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Selected Property</label>
+                <select
+                  value={formData.property_id}
+                  onChange={handlePropertyChange}
+                  className="input-field w-full"
+                  data-testid="lead-property-select"
+                >
+                  <option value="">No Specific Property / General Lead</option>
+                  {properties.map(p => (
+                    <option key={p.property_id} value={p.property_id}>
+                      {p.title} ({p.city})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Lead Notes</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Add any specific details, budget, or preferences..."
+                rows={3}
+                className="input-field w-full"
+                data-testid="lead-notes-input"
+              />
+            </div>
+
+            {error && (
+              <p className="text-xs font-bold text-red-600 uppercase tracking-wider" data-testid="lead-form-error">{error}</p>
+            )}
+
+            <div className="flex justify-end space-x-4 pt-4 border-t border-sand-100">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddForm(false);
+                  setError('');
+                }}
+                className="px-6 py-3 border border-sand-300 text-charcoal rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-sand-50 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-premium px-8 py-3 shadow-premium"
+                data-testid="lead-form-submit"
+              >
+                {submitting ? 'Adding...' : 'Add Lead'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
       {loading ? (
-        <div className="text-center py-12">
-          <p className="text-charcoal-light">Loading leads...</p>
+        <div className="space-y-4">
+           {[1,2,3].map(i => <div key={i} className="h-24 bg-white rounded-3xl animate-pulse"></div>)}
         </div>
       ) : leads.length > 0 ? (
-        <div className="space-y-4" data-testid="leads-list">
+        <div className="grid grid-cols-1 gap-4" data-testid="leads-list">
           {leads.map((lead) => (
-            <div key={lead.lead_id} className="dashboard-card" data-testid={`lead-${lead.lead_id}`}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="font-bold text-charcoal">{lead.full_name}</h4>
-                  <p className="text-sm text-charcoal-light">{lead.phone} | {lead.email}</p>
-                  <p className="text-sm text-charcoal-light mt-1">
-                    <MapPin className="w-3 h-3 inline mr-1" />
-                    {lead.city} | {lead.property_type}
-                  </p>
-                  {lead.notes && (
-                    <p className="text-sm text-charcoal-muted mt-2 italic">{lead.notes}</p>
-                  )}
+            <div key={lead.lead_id} className="bg-white rounded-2xl p-6 border border-sand-200 shadow-premium hover:border-terracotta transition-all duration-300 group" data-testid={`lead-${lead.lead_id}`}>
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                <div className="flex items-center space-x-6">
+                   <div className="w-12 h-12 rounded-xl bg-sand-50 flex items-center justify-center text-terracotta group-hover:bg-terracotta group-hover:text-white transition-all">
+                      <Target className="w-6 h-6" />
+                   </div>
+                   <div>
+                      <h4 className="text-lg font-black text-charcoal mb-0.5">{lead.full_name}</h4>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                         <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">{lead.phone} · {lead.email}</p>
+                         <div className="flex items-center space-x-2 text-[10px] font-bold text-terracotta">
+                            <MapPin className="w-3 h-3" />
+                            <span className="uppercase tracking-widest">{lead.city} · {lead.property_type}</span>
+                         </div>
+                         {lead.from_date && lead.to_date && (
+                            <div className="flex items-center space-x-1 text-[9px] font-black text-sage-dark bg-sage/10 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                               <span>📅 {(() => {
+                                  const fDate = new Date(lead.from_date);
+                                  const tDate = new Date(lead.to_date);
+                                  if (!isNaN(fDate) && !isNaN(tDate)) {
+                                     return `${fDate.toLocaleDateString('en-IN', {day: 'numeric', month: 'short', year: 'numeric'})} - ${tDate.toLocaleDateString('en-IN', {day: 'numeric', month: 'short', year: 'numeric'})}`;
+                                  }
+                                  return `${lead.from_date} to ${lead.to_date}`;
+                               })()}</span>
+                            </div>
+                         )}
+                         {lead.property_title && (
+                            <div className="flex items-center space-x-1 text-[9px] font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full uppercase tracking-widest border border-amber-100">
+                               <span>🏠 {lead.property_title}</span>
+                            </div>
+                         )}
+                      </div>
+                   </div>
                 </div>
-                <span className={`inline-block px-3 py-1 text-xs font-semibold rounded ${
-                  lead.status === 'converted' ? 'bg-green-100 text-green-700' :
-                  lead.status === 'contacted' ? 'bg-blue-100 text-blue-700' :
-                  lead.status === 'lost' ? 'bg-red-100 text-red-700' :
-                  'bg-yellow-100 text-yellow-700'
-                }`}>
-                  {lead.status.toUpperCase()}
-                </span>
+                <div className="flex items-center space-x-4">
+                   <span className={`px-4 py-2 text-[9px] font-black uppercase tracking-[0.1em] rounded-full ${
+                     lead.status === 'converted' ? 'bg-sage/10 text-sage-dark' :
+                     lead.status === 'contacted' ? 'bg-blue-100 text-blue-700' :
+                     lead.status === 'lost' ? 'bg-red-50 text-terracotta' :
+                     'bg-amber-100 text-amber-700'
+                   }`}>
+                     {lead.status}
+                   </span>
+                   <ChevronRight className="w-4 h-4 text-sand-300 group-hover:text-charcoal transition-all" />
+                </div>
               </div>
+              {lead.notes && (
+                <div className="mt-4 pt-4 border-t border-sand-100">
+                   <p className="text-[10px] text-charcoal-muted font-bold italic leading-relaxed">"{lead.notes}"</p>
+                </div>
+              )}
             </div>
           ))}
         </div>
       ) : (
-        <div className="dashboard-card text-center py-12">
-          <Target className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
-          <p className="text-charcoal-light mb-4">No leads yet</p>
-          <button onClick={() => setShowAddForm(true)} className="btn-primary">
-            Add Your First Lead
+        <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-sand-300">
+          <Target className="w-16 h-16 text-sand-200 mx-auto mb-6" />
+          <h4 className="text-xl font-black text-charcoal mb-2">No Active Leads</h4>
+          <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest mb-8">Start your outreach to populate your pipeline.</p>
+          <button onClick={() => setShowAddForm(true)} className="btn-premium px-10 py-4 shadow-premium">
+            Generate First Lead
           </button>
         </div>
       )}
@@ -896,66 +1464,80 @@ const CommissionsSection = () => {
   };
 
   return (
-    <div data-testid="commissions-section">
-      <div className="dashboard-card mb-6">
-        <h3 className="text-2xl font-bold text-charcoal mb-2">Commission Tracking</h3>
-        <p className="text-charcoal-light">View-only commission history (managed by admin)</p>
+    <div data-testid="commissions-section" className="animate-slide-up">
+      <div className="flex items-center mb-10">
+         <h3 className="text-2xl font-black text-charcoal tracking-tight">Financial Performance</h3>
+         <div className="ml-4 h-px flex-1 bg-sand-200"></div>
       </div>
 
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="dashboard-card bg-green-50">
-            <DollarSign className="w-8 h-8 text-green-600 mb-2" />
-            <p className="text-2xl font-bold text-green-700">₹{(summary.total_earned / 100).toLocaleString('en-IN')}</p>
-            <p className="text-sm text-green-600">Total Earned</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium">
+            <div className="w-12 h-12 bg-sage/10 rounded-2xl flex items-center justify-center mb-6">
+               <DollarSign className="w-6 h-6 text-sage-dark" />
+            </div>
+            <p className="text-3xl font-black text-charcoal tracking-tighter mb-1">₹{(summary.total_earned / 100).toLocaleString('en-IN')}</p>
+            <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Total Revenue</p>
           </div>
-          <div className="dashboard-card bg-blue-50">
-            <CheckCircle className="w-8 h-8 text-blue-600 mb-2" />
-            <p className="text-2xl font-bold text-blue-700">₹{(summary.paid / 100).toLocaleString('en-IN')}</p>
-            <p className="text-sm text-blue-600">Paid</p>
+          <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium">
+            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-6">
+               <CheckCircle className="w-6 h-6 text-blue-600" />
+            </div>
+            <p className="text-3xl font-black text-charcoal tracking-tighter mb-1">₹{(summary.paid / 100).toLocaleString('en-IN')}</p>
+            <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Settled</p>
           </div>
-          <div className="dashboard-card bg-yellow-50">
-            <Clock className="w-8 h-8 text-yellow-600 mb-2" />
-            <p className="text-2xl font-bold text-yellow-700">₹{(summary.pending / 100).toLocaleString('en-IN')}</p>
-            <p className="text-sm text-yellow-600">Pending</p>
+          <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium">
+            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-6">
+               <Clock className="w-6 h-6 text-amber-600" />
+            </div>
+            <p className="text-3xl font-black text-charcoal tracking-tighter mb-1">₹{(summary.pending / 100).toLocaleString('en-IN')}</p>
+            <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Pending Settlement</p>
           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="text-center py-12">
-          <p className="text-charcoal-light">Loading commissions...</p>
+        <div className="space-y-4">
+           {[1,2,3].map(i => <div key={i} className="h-20 bg-white rounded-3xl animate-pulse"></div>)}
         </div>
       ) : commissions.length > 0 ? (
-        <div className="space-y-4" data-testid="commissions-list">
-          {commissions.map((commission) => (
-            <div key={commission.commission_id} className="dashboard-card">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-charcoal">
-                    Booking: {commission.booking_id}
-                  </p>
-                  <p className="text-sm text-charcoal-light mt-1">
-                    Commission: ₹{(commission.commission_amount / 100).toFixed(2)} 
-                    ({commission.commission_percentage}% of ₹{(commission.booking_amount / 100).toFixed(2)})
-                  </p>
-                  <p className="text-xs text-charcoal-muted mt-1">
-                    Source: {commission.booking_source}
-                  </p>
-                </div>
-                <span className={`inline-block px-3 py-1 text-xs font-semibold rounded ${
-                  commission.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                }`}>
-                  {commission.payment_status.toUpperCase()}
-                </span>
-              </div>
-            </div>
-          ))}
+        <div className="bg-white rounded-[2.5rem] overflow-hidden border border-sand-200 shadow-premium" data-testid="commissions-list">
+           <table className="w-full text-left border-collapse">
+              <thead>
+                 <tr className="bg-sand-50 border-b border-sand-200">
+                    <th className="px-8 py-5 text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Transaction ID</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Yield</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-charcoal-muted uppercase tracking-widest text-right">Status</th>
+                 </tr>
+              </thead>
+              <tbody>
+                 {commissions.map((commission) => (
+                    <tr key={commission.commission_id} className="border-b border-sand-100 hover:bg-sand-50/50 transition-colors">
+                       <td className="px-8 py-6">
+                          <p className="text-sm font-black text-charcoal mb-0.5">{commission.booking_id}</p>
+                          <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Source: {commission.booking_source}</p>
+                       </td>
+                       <td className="px-8 py-6">
+                          <p className="text-sm font-black text-terracotta mb-0.5">₹{(commission.commission_amount / 100).toFixed(2)}</p>
+                          <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{commission.commission_percentage}% of ₹{(commission.booking_amount / 100).toFixed(2)}</p>
+                       </td>
+                       <td className="px-8 py-6 text-right">
+                          <span className={`inline-flex px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-full ${
+                             commission.payment_status === 'paid' ? 'bg-sage/10 text-sage-dark' : 'bg-amber-100 text-amber-700'
+                          }`}>
+                             {commission.payment_status}
+                          </span>
+                       </td>
+                    </tr>
+                 ))}
+              </tbody>
+           </table>
         </div>
       ) : (
-        <div className="dashboard-card text-center py-12">
-          <DollarSign className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
-          <p className="text-charcoal-light">No commissions yet</p>
+        <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-sand-300">
+          <DollarSign className="w-16 h-16 text-sand-200 mx-auto mb-6" />
+          <h4 className="text-xl font-black text-charcoal mb-2">No Commissions Yet</h4>
+          <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Earnings will appear here as bookings are finalized.</p>
         </div>
       )}
     </div>

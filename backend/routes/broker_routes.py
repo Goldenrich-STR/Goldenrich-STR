@@ -65,7 +65,7 @@ async def get_broker_dashboard_stats(
         
         # Commission earnings
         commission_cursor = db.commissions.find({"broker_id": broker_id})
-        commissions = await commission_cursor.to_list(length=1000)
+        commissions = await commission_cursor.to_list(length=None)
         total_commission = sum(c.get("commission_amount", 0) for c in commissions)
         paid_commission = sum(c.get("commission_amount", 0) for c in commissions if c.get("payment_status") == "paid")
         
@@ -345,6 +345,8 @@ async def submit_verification(
                     "video_url": verification_data.video_url,
                     "broker_remarks": verification_data.broker_remarks,
                     "status": VerificationStatus.COMPLETED.value,
+                    "rm_reviewed": False,
+                    "rm_approved": None,
                     "completed_at": datetime.now(timezone.utc),
                     "updated_at": datetime.now(timezone.utc)
                 }}

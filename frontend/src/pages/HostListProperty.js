@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { propertyAPI, subscriptionAPI, uploadAPI, bookingAPI } from '../services/api';
+import { propertyAPI, subscriptionAPI, uploadAPI, bookingAPI, getImageUrl } from '../services/api';
 import {
   Building2,
   ArrowLeft,
@@ -17,30 +17,61 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 
-const PROPERTY_TYPES = [
-  { value: 'apartment', label: 'Apartment' },
-  { value: 'villa', label: 'Villa' },
-  { value: 'studio', label: 'Studio' },
-  { value: 'independent_house', label: 'Independent House' },
-  { value: 'pg', label: 'PG' },
-  { value: 'co_living', label: 'Co-living' },
-  { value: 'private_office', label: 'Private Office' },
-  { value: 'co_working', label: 'Co-working' },
-  { value: 'meeting_room', label: 'Meeting Room' },
-  { value: 'banquet_hall', label: 'Banquet Hall' },
-  { value: 'farmhouse', label: 'Farmhouse' },
-  { value: 'rooftop', label: 'Rooftop' },
-  { value: 'hotel_ballroom', label: 'Hotel Ballroom' },
-];
+const CATEGORY_DATA = {
+  residential: {
+    propertyTypes: [
+      { value: 'apartment', label: 'Apartment' },
+      { value: 'villa', label: 'Villa' },
+      { value: 'studio', label: 'Studio' },
+      { value: 'independent_house', label: 'Independent House' },
+      { value: 'pg', label: 'PG' },
+      { value: 'co_living', label: 'Co-living' },
+      { value: 'farmhouse', label: 'Farmhouse' },
+    ],
+    bhkTypes: [
+      { value: 'studio', label: 'Studio' },
+      { value: '1bhk', label: '1 BHK' },
+      { value: '2bhk', label: '2 BHK' },
+      { value: '3bhk', label: '3 BHK' },
+      { value: '4bhk', label: '4 BHK' },
+      { value: '5bhk', label: '5+ BHK' },
+    ]
+  },
+  commercial: {
+    propertyTypes: [
+      { value: 'private_office', label: 'Private Office' },
+      { value: 'co_working', label: 'Co-working' },
+      { value: 'meeting_room', label: 'Meeting Room' },
+      { value: 'shop', label: 'Shop/Showroom' },
+      { value: 'warehouse', label: 'Warehouse' },
+    ],
+    bhkTypes: [
+      { value: 'small', label: 'Small (under 500 sqft)' },
+      { value: 'medium', label: 'Medium (500-2000 sqft)' },
+      { value: 'large', label: 'Large (2000-5000 sqft)' },
+      { value: 'extra_large', label: 'Extra Large (5000+ sqft)' },
+      { value: 'custom', label: 'Custom Size' },
+    ]
+  },
+  event_venue: {
+    propertyTypes: [
+      { value: 'banquet_hall', label: 'Banquet Hall' },
+      { value: 'rooftop', label: 'Rooftop' },
+      { value: 'hotel_ballroom', label: 'Hotel Ballroom' },
+      { value: 'garden', label: 'Garden/Lawn' },
+      { value: 'party_plot', label: 'Party Plot' },
+    ],
+    bhkTypes: [
+      { value: 'small_event', label: 'Mini (up to 50 guests)' },
+      { value: 'medium_event', label: 'Standard (50-200 guests)' },
+      { value: 'large_event', label: 'Grand (200-500 guests)' },
+      { value: 'mega_event', label: 'Mega (500+ guests)' },
+    ]
+  }
+};
 
-const BHK_TYPES = [
-  { value: 'studio', label: 'Studio' },
-  { value: '1bhk', label: '1 BHK' },
-  { value: '2bhk', label: '2 BHK' },
-  { value: '3bhk', label: '3 BHK' },
-  { value: '4bhk', label: '4 BHK' },
-  { value: 'commercial', label: 'Commercial' },
-  { value: 'banquet', label: 'Banquet' },
+const PHOTO_CATEGORIES = [
+  'Living area', 'Bedroom', 'Kitchen', 'Bathroom', 'Balcony', 'Exterior', 'Other'
 ];
 
 const COMMON_AMENITIES = [
@@ -48,6 +79,45 @@ const COMMON_AMENITIES = [
   'fireplace', 'rooftop', 'bar', 'av_system', 'stage', 'catering',
   'coffee', 'printer', 'restrooms', 'washer', 'heating', 'workspace',
 ];
+
+const CATEGORY_AMENITIES = {
+  residential: [
+    { value: 'wifi', label: 'WiFi' },
+    { value: 'ac', label: 'Air Conditioning' },
+    { value: 'parking', label: 'Parking Space' },
+    { value: 'kitchen', label: 'Fully-Equipped Kitchen' },
+    { value: 'pool', label: 'Swimming Pool' },
+    { value: 'gym', label: 'Fitness Center/Gym' },
+    { value: 'tv', label: 'Smart TV' },
+    { value: 'washer', label: 'Washing Machine' },
+    { value: 'heating', label: 'Heating System' },
+    { value: 'fireplace', label: 'Indoor Fireplace' },
+  ],
+  commercial: [
+    { value: 'wifi', label: 'Enterprise High-speed WiFi' },
+    { value: 'ac', label: 'Centralized AC / Air Conditioning' },
+    { value: 'parking', label: 'Reserved Business Parking' },
+    { value: 'printer', label: 'High-speed Printer & Scanner' },
+    { value: 'coffee', label: 'Coffee & Tea Station' },
+    { value: 'restrooms', label: 'Executive Restrooms' },
+    { value: 'workspace', label: 'Dedicated Workstations' },
+    { value: 'projector', label: 'HD Projector & Screen' },
+    { value: 'whiteboard', label: 'Collaboration Whiteboards' },
+    { value: 'power_backup', label: '24/7 Power Generator Backup' },
+  ],
+  event_venue: [
+    { value: 'wifi', label: 'High-capacity Guest WiFi' },
+    { value: 'ac', label: 'Banquet Hall AC' },
+    { value: 'parking', label: 'Valet & Guest Parking' },
+    { value: 'av_system', label: 'Professional Sound & AV System' },
+    { value: 'stage', label: 'Performance Stage / Podium' },
+    { value: 'catering', label: 'Catering Prep Kitchen' },
+    { value: 'bar', label: 'Premium Bar Lounge Setup' },
+    { value: 'rooftop', label: 'Scenic Rooftop Access' },
+    { value: 'changing_rooms', label: 'VIP/Green Changing Rooms' },
+    { value: 'security', label: 'Professional Event Security' },
+  ]
+};
 
 const STEPS = [
   { key: 'basics', label: 'Basics' },
@@ -57,6 +127,24 @@ const STEPS = [
   { key: 'photos', label: 'Photos' },
   { key: 'subscription', label: 'Subscription' },
   { key: 'review', label: 'Review & Pay' },
+];
+
+const PRICING_CYCLE_OPTIONS = [
+  { value: 'hourly', label: 'Hourly' },
+  { value: 'day', label: 'Per day' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' }
+];
+
+const VEG_ITEMS = [
+  'Chaat Counter', 'Welcome Drinks', 'Soups', 'Veg Starter', 'Veg Main Courses', 
+  'Salads', 'Raita', 'Dal', 'Rice/Biryani', 'Assorted Breads/Rotis', 'Desserts'
+];
+
+const NON_VEG_ITEMS = [
+  'Chaat Counter', 'Welcome Drinks', 'Soups', 'Veg Starter', 'Non-Veg Starter', 
+  'Veg Main Courses', 'Salads', 'Non-Veg Main Courses', 'Raita', 'Dal', 
+  'Rice/Biryani', 'Assorted Breads/Rotis', 'Desserts'
 ];
 
 const initialForm = {
@@ -71,8 +159,11 @@ const initialForm = {
   pin_code: '',
   latitude: '',
   longitude: '',
+  google_maps_url: '',
+  nearby_places: [],
   area_sqft: '',
   price_per_night: '',
+  pricing_cycle: 'day',
   minimum_stay_days: 1,
   amenities: [],
   images: [],
@@ -81,21 +172,144 @@ const initialForm = {
   smoking_allowed: false,
   instant_booking: false,
   subscription_plan_id: '',
+  veg_price: '',
+  non_veg_price: '',
+  guest_size: '',
+  packages: [],
+};
+
+// Helper to format error details (strings, arrays of validation errors, or objects) into a readable string
+const formatError = (error, defaultMsg = 'An error occurred') => {
+  if (error.response?.data?.detail) {
+    const detail = error.response.data.detail;
+    if (typeof detail === 'string') {
+      return detail;
+    }
+    if (Array.isArray(detail)) {
+      return detail.map(err => {
+        const field = err.loc ? err.loc[err.loc.length - 1] : 'field';
+        return `${field}: ${err.msg}`;
+      }).join('\n');
+    }
+    if (typeof detail === 'object') {
+      return JSON.stringify(detail);
+    }
+  }
+  return error.message || defaultMsg;
 };
 
 const HostListProperty = () => {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useAuth();
-  const [step, setStep] = useState(0);
-  const [form, setForm] = useState(initialForm);
+  
+  const location = useLocation();
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const editPropertyId = location.state?.editPropertyId || queryParams.get('edit');
+
+  const [step, setStep] = useState(() => {
+    const editId = new URLSearchParams(window.location.search).get('edit') || window.history.state?.usr?.editPropertyId;
+    if (editId) {
+      const savedStep = localStorage.getItem(`list_property_step_${editId}`);
+      return savedStep ? parseInt(savedStep, 10) : 0;
+    }
+    return 0;
+  });
+
+  const [form, setForm] = useState(() => {
+    const editId = new URLSearchParams(window.location.search).get('edit') || window.history.state?.usr?.editPropertyId;
+    if (editId) {
+      const savedForm = localStorage.getItem(`list_property_form_${editId}`);
+      if (savedForm) {
+        try {
+          return JSON.parse(savedForm);
+        } catch (e) {
+          console.error('Error parsing saved draft form from localStorage', e);
+        }
+      }
+    }
+    return initialForm;
+  });
+
   const [plans, setPlans] = useState([]);
   const [paymentConfig, setPaymentConfig] = useState(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [createdPropertyId, setCreatedPropertyId] = useState(null);
+  const [mockPayment, setMockPayment] = useState({ isOpen: false, amount: 0, title: '', onConfirm: null });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+
+  useEffect(() => {
+    if (editPropertyId) {
+      localStorage.setItem(`list_property_step_${editPropertyId}`, String(step));
+    }
+  }, [step, editPropertyId]);
+
+  useEffect(() => {
+    if (editPropertyId && form !== initialForm) {
+      localStorage.setItem(`list_property_form_${editPropertyId}`, JSON.stringify(form));
+    }
+  }, [form, editPropertyId]);
+
+  useEffect(() => {
+    if (editPropertyId) {
+      setCreatedPropertyId(editPropertyId);
+      propertyAPI.getProperty(editPropertyId)
+        .then((res) => {
+          const p = res.data;
+          if (p.status === 'live') {
+            setError('Approved properties cannot be edited.');
+            setTimeout(() => {
+              navigate('/host/dashboard');
+            }, 2000);
+            return;
+          }
+          if (p.subscription_id && p.subscription_status === 'active') {
+            setHasActiveSubscription(true);
+          }
+          const backendForm = {
+            title: p.title || '',
+            description: p.description || '',
+            property_type: p.property_type || 'apartment',
+            category: p.category || 'residential',
+            bhk_type: p.bhk_type || '2bhk',
+            address: p.address || '',
+            city: p.city || '',
+            state: p.state || '',
+            pin_code: p.pin_code || '',
+            latitude: p.latitude !== null && p.latitude !== undefined ? String(p.latitude) : '',
+            longitude: p.longitude !== null && p.longitude !== undefined ? String(p.longitude) : '',
+            google_maps_url: p.google_maps_url || '',
+            nearby_places: p.nearby_places || [],
+            area_sqft: p.area_sqft !== null && p.area_sqft !== undefined ? String(p.area_sqft) : '',
+            price_per_night: p.price_per_night !== null && p.price_per_night !== undefined ? String(p.price_per_night) : '',
+            pricing_cycle: p.pricing_cycle || 'day',
+            minimum_stay_days: p.minimum_stay_days || 1,
+            amenities: p.amenities || [],
+            images: p.images || [],
+            house_rules: p.house_rules || '',
+            pet_friendly: !!p.pet_friendly,
+            smoking_allowed: !!p.smoking_allowed,
+            instant_booking: !!p.instant_booking,
+            subscription_plan_id: p.subscription_id || '',
+            veg_price: p.veg_price !== null && p.veg_price !== undefined ? String(p.veg_price) : '',
+            non_veg_price: p.non_veg_price !== null && p.non_veg_price !== undefined ? String(p.non_veg_price) : '',
+            guest_size: p.guest_size !== null && p.guest_size !== undefined ? String(p.guest_size) : '',
+            packages: p.packages || [],
+          };
+          
+          // Only overwrite form with backend data if there was no local form in localStorage
+          if (!localStorage.getItem(`list_property_form_${editPropertyId}`)) {
+            setForm(backendForm);
+          }
+        })
+        .catch((err) => {
+          setError(formatError(err, 'Failed to load draft property details'));
+        });
+    }
+  }, [editPropertyId]);
 
   useEffect(() => {
     bookingAPI.getPaymentConfig().then((r) => setPaymentConfig(r.data)).catch(() => {});
@@ -103,12 +317,168 @@ const HostListProperty = () => {
     if (refreshUser) refreshUser();
   }, [refreshUser]);
 
+  // Auto-detect and remove duplicates with a popup
+  useEffect(() => {
+    const pureUrls = form.images.map(img => img.split('#')[0]);
+    const seen = new Set();
+    let duplicateIndex = -1;
+    
+    for (let i = 0; i < pureUrls.length; i++) {
+      if (seen.has(pureUrls[i])) {
+        duplicateIndex = i;
+        break;
+      }
+      seen.add(pureUrls[i]);
+    }
+
+    if (duplicateIndex !== -1) {
+      window.alert('Removed the duplicate image! Please use unique photos.');
+      const newImages = [...form.images];
+      newImages.splice(duplicateIndex, 1);
+      update({ images: newImages });
+    }
+  }, [form.images]);
+
   const update = (patch) => setForm((f) => ({ ...f, ...patch }));
+
+  const getPackageValue = (type, item) => {
+    const typePkg = (form.packages || []).find((p) => p.type === type);
+    return typePkg?.items?.[item] || '';
+  };
+
+  const handlePackageUpdate = (type, item, value) => {
+    const pkgs = [...(form.packages || [])];
+    let typePkgIndex = pkgs.findIndex((p) => p.type === type);
+    if (typePkgIndex === -1) {
+      pkgs.push({ type, items: { [item]: value } });
+    } else {
+      pkgs[typePkgIndex] = { 
+        ...pkgs[typePkgIndex], 
+        items: { ...pkgs[typePkgIndex].items, [item]: value } 
+      };
+    }
+    update({ packages: pkgs });
+  };
+
+  const getVenuePolicies = () => {
+    try {
+      if (form.house_rules && form.house_rules.startsWith('{')) {
+        return JSON.parse(form.house_rules);
+      }
+    } catch (e) {}
+    return {};
+  };
+
+  const handleVenuePolicyChange = (key, value) => {
+    const policies = getVenuePolicies();
+    policies[key] = value;
+    update({ house_rules: JSON.stringify(policies) });
+  };
+
+  const fetchNearbyPlaces = async (lat, lng) => {
+    if (!lat || !lng) return;
+    try {
+      const placesRes = await propertyAPI.getNearbyPlaces(Number(lat), Number(lng));
+      if (placesRes.data && placesRes.data.places) {
+        update({ nearby_places: placesRes.data.places });
+      }
+    } catch (err) {
+      console.error("Failed to fetch nearby places:", err);
+    }
+  };
+
+  const handleMapUrlChange = async (url) => {
+    update({ google_maps_url: url });
+    if (!url) return;
+    
+    let processUrl = url;
+    if (url.includes('goo.gl') || url.includes('maps.app.goo.gl')) {
+      try {
+        const res = await propertyAPI.expandUrl(url);
+        if (res.data && res.data.url) {
+          processUrl = res.data.url;
+        }
+      } catch (err) {
+        console.error("Failed to expand short URL", err);
+      }
+    }
+
+    // Extract coordinates from URL
+    // Pattern 1: @18.5245649,73.8055681
+    let match = processUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+    if (!match) {
+      // Pattern 2: q=18.5245649,73.8055681
+      match = processUrl.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    }
+    if (!match) {
+      // Pattern 3: !3d18.5245649!4d73.8055681
+      match = processUrl.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+    }
+    
+    if (match) {
+      const lat = match[1];
+      const lng = match[2];
+
+      let newCity = form.city;
+      let newState = form.state;
+      let newPin = form.pin_code;
+      
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+        const data = await res.json();
+        if (data && data.address) {
+          newCity = data.address.city || data.address.town || data.address.village || data.address.county || newCity;
+          newState = data.address.state || newState;
+          newPin = data.address.postcode || newPin;
+        }
+      } catch (err) {
+        console.error("Reverse geocoding failed", err);
+      }
+
+      update({ latitude: lat, longitude: lng, city: newCity, state: newState, pin_code: newPin });
+      await fetchNearbyPlaces(lat, lng);
+    }
+  };
+
+  const handleLatChange = async (val) => {
+    update({ latitude: val });
+    if (val && form.longitude) {
+      await fetchNearbyPlaces(val, form.longitude);
+    }
+  };
+
+  const handleLngChange = async (val) => {
+    update({ longitude: val });
+    if (form.latitude && val) {
+      await fetchNearbyPlaces(form.latitude, val);
+    }
+  };
 
   const matchingPlans = useMemo(() => {
     if (!plans.length) return [];
-    // Suggest plans whose plan_type matches the BHK
-    const map = { studio: 'studio', '1bhk': '1bhk', '2bhk': '2bhk', '3bhk': '3bhk', '4bhk': '4bhk' };
+    // Suggest plans whose plan_type matches the BHK / Sizing configuration
+    const map = { 
+      // Residential
+      studio: 'studio', 
+      '1bhk': '1bhk', 
+      '2bhk': '2bhk', 
+      '3bhk': '3bhk', 
+      '4bhk': '4bhk_plus',
+      '5bhk': '4bhk_plus',
+
+      // Commercial
+      small: 'commercial',
+      medium: 'commercial',
+      large: 'commercial',
+      extra_large: 'commercial',
+      custom: 'commercial',
+
+      // Event venue
+      small_event: 'banquet',
+      medium_event: 'banquet',
+      large_event: 'banquet',
+      mega_event: 'banquet'
+    };
     const target = map[form.bhk_type];
     if (target) {
       const filtered = plans.filter((p) => p.plan_type === target);
@@ -132,16 +502,37 @@ const HostListProperty = () => {
       if (!form.pin_code || !/^\d{6}$/.test(form.pin_code)) return 'Pin code must be 6 digits';
     }
     if (k === 'pricing') {
-      if (!form.price_per_night || Number(form.price_per_night) < 100) return 'Minimum price is ₹100/night';
-      if (!form.minimum_stay_days || form.minimum_stay_days < 1) return 'Minimum stay must be at least 1 night';
+      if (form.category === 'event_venue') {
+        if (!form.veg_price || Number(form.veg_price) < 50) return 'Minimum Veg price is ₹50/plate';
+        if (!form.non_veg_price || Number(form.non_veg_price) < 50) return 'Minimum Non-Veg price is ₹50/plate';
+        if (!form.price_per_night || Number(form.price_per_night) < 100) return 'Minimum Venue Price is ₹100/day';
+      } else {
+        const minPrice = form.pricing_cycle === 'hourly' ? 10 : 100;
+        const rateUnit = form.pricing_cycle === 'hourly' ? 'hour' : form.pricing_cycle === 'weekly' ? 'week' : form.pricing_cycle === 'monthly' ? 'month' : 'day';
+        if (!form.price_per_night || Number(form.price_per_night) < minPrice) {
+          return `Minimum price is ₹${minPrice}/${form.category === 'residential' ? 'night' : rateUnit}`;
+        }
+        if (!form.minimum_stay_days || form.minimum_stay_days < 1) {
+          return `Minimum duration must be at least 1 ${form.category === 'residential' ? 'night' : rateUnit}`;
+        }
+      }
     }
     if (k === 'amenities' && form.amenities.length === 0) {
       return 'Select at least one amenity';
     }
-    if (k === 'photos' && form.images.length === 0) {
-      return 'Add at least 1 photo';
+    if (k === 'photos') {
+      if (form.images.length < 3) return 'Add at least 3 photos';
+      if (form.images.length > 15) return 'Maximum 15 photos allowed';
+      
+      const pureUrls = form.images.map(img => img.split('#')[0]);
+      const hasDuplicates = pureUrls.some((url, idx) => pureUrls.indexOf(url) !== idx);
+      
+      if (hasDuplicates) {
+        window.alert('Removed the duplicate image! Please ensure all photos are unique before proceeding.');
+        return 'Duplicate images detected. Please remove them.';
+      }
     }
-    if (k === 'subscription' && !form.subscription_plan_id) {
+    if (k === 'subscription' && !form.subscription_plan_id && !hasActiveSubscription) {
       return 'Select a subscription plan';
     }
     return '';
@@ -172,13 +563,44 @@ const HostListProperty = () => {
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    if (form.images.length >= 15) {
+      setError('Maximum 15 photos allowed');
+      return;
+    }
+
     setUploadingPhoto(true);
     setError('');
+
+    // Pre-upload check: Check if an image with the same filename already exists
+    const isDuplicateFile = form.images.some(img => {
+      const existingUrl = img.split('#')[0];
+      const existingFilename = existingUrl.split('/').pop().split('?')[0]; // handle query params if any
+      return existingFilename === file.name;
+    });
+
+    if (isDuplicateFile) {
+      setError(`Image "${file.name}" is already uploaded. Duplicate ignored.`);
+      setUploadingPhoto(false);
+      e.target.value = '';
+      return;
+    }
+
     try {
       const data = await uploadAPI.uploadImage(file);
-      update({ images: [...form.images, data.url] });
+      const url = data.url;
+      
+      // Check for duplicates (ignoring hashes)
+      const pureUrl = url.split('#')[0];
+      if (form.images.some(img => img.split('#')[0] === pureUrl)) {
+        setError('This image is already uploaded');
+        return;
+      }
+
+      // Default category 'Other'
+      update({ images: [...form.images, `${url}#Other`] });
     } catch (err) {
-      setError(err.response?.data?.detail || 'Image upload failed');
+      setError(formatError(err, 'Image upload failed'));
     } finally {
       setUploadingPhoto(false);
       e.target.value = '';
@@ -192,111 +614,150 @@ const HostListProperty = () => {
       setError('URL must start with http:// or https://');
       return;
     }
-    update({ images: [...form.images, url] });
+    
+    if (form.images.length >= 15) {
+      setError('Maximum 15 photos allowed');
+      return;
+    }
+
+    const pureUrl = url.split('#')[0];
+    if (form.images.some(img => img.split('#')[0] === pureUrl)) {
+      setError('This image is already uploaded');
+      return;
+    }
+
+    update({ images: [...form.images, `${url}#Other`] });
   };
 
   const removeImage = (idx) => {
     update({ images: form.images.filter((_, i) => i !== idx) });
   };
 
-  const buildPropertyPayload = () => ({
-    title: form.title,
-    description: form.description,
-    property_type: form.property_type,
-    category: form.category,
-    bhk_type: form.bhk_type,
-    address: form.address,
-    city: form.city,
-    state: form.state,
-    pin_code: form.pin_code,
-    latitude: form.latitude ? Number(form.latitude) : null,
-    longitude: form.longitude ? Number(form.longitude) : null,
-    area_sqft: Number(form.area_sqft),
-    price_per_night: Number(form.price_per_night),
-    minimum_stay_days: Number(form.minimum_stay_days),
-    amenities: form.amenities,
-    images: form.images,
-    house_rules: form.house_rules || null,
-    pet_friendly: form.pet_friendly,
-    smoking_allowed: form.smoking_allowed,
-    instant_booking: form.instant_booking,
-    subscription_id: form.subscription_plan_id,
-  });
+  /* Helper to build payload */
+  const buildPropertyPayload = () => {
+    return {
+      title: form.title,
+      description: form.description,
+      property_type: form.property_type,
+      category: form.category,
+      bhk_type: form.bhk_type,
+      address: form.address,
+      city: form.city,
+      state: form.state,
+      pin_code: form.pin_code,
+      latitude: form.latitude ? Number(form.latitude) : null,
+      longitude: form.longitude ? Number(form.longitude) : null,
+      google_maps_url: form.google_maps_url || null,
+      nearby_places: form.nearby_places || [],
+      area_sqft: Number(form.area_sqft),
+      price_per_night: Number(form.price_per_night),
+      pricing_cycle: form.pricing_cycle || 'day',
+      minimum_stay_days: Number(form.minimum_stay_days),
+      amenities: form.amenities,
+      images: form.images,
+      house_rules: form.house_rules || null,
+      pet_friendly: form.pet_friendly,
+      smoking_allowed: form.smoking_allowed,
+      instant_booking: form.instant_booking,
+      subscription_id: form.subscription_plan_id,
+      veg_price: form.veg_price ? Number(form.veg_price) : null,
+      non_veg_price: form.non_veg_price ? Number(form.non_veg_price) : null,
+      guest_size: form.guest_size ? Number(form.guest_size) : null,
+      packages: form.packages || [],
+    };
+  };
 
   const submitListing = async () => {
     setSubmitting(true);
     setError('');
     try {
-      // 1. Create the property as DRAFT
+      // 1. Create or update the property as DRAFT
       let propertyId = createdPropertyId;
       if (!propertyId) {
         const propRes = await propertyAPI.createProperty(buildPropertyPayload());
         propertyId = propRes.data.property_id;
         setCreatedPropertyId(propertyId);
+      } else {
+        await propertyAPI.updateProperty(propertyId, buildPropertyPayload());
       }
 
-      // 2. Pay the registration fee (if not already paid by user)
-      if (!user?.registration_fee_paid) {
+      // 2. Pay the subscription fee (Registration fee skipped)
+      if (form.subscription_plan_id && !hasActiveSubscription) {
         setPaying(true);
-        let order;
-        try {
-          const orderRes = await subscriptionAPI.createRegistrationFeeOrder();
-          order = orderRes.data;
-        } catch (orderErr) {
-          // If backend says "already paid", treat as success and skip payment step
-          const detail = orderErr.response?.data?.detail || '';
-          if (orderErr.response?.status === 400 && /already paid/i.test(detail)) {
-            order = null; // skip
-          } else {
-            throw orderErr;
-          }
-        }
+        const subRes = await subscriptionAPI.subscribe({
+          plan_id: form.subscription_plan_id,
+          property_id: propertyId
+        });
+        const subOrder = subRes.data;
 
-        if (order) {
-          if (order.is_mock) {
-            await subscriptionAPI.mockPayRegistrationFee(order.razorpay_order_id);
-          } else {
-            await new Promise((resolve, reject) => {
-              if (!window.Razorpay) return reject(new Error('Razorpay SDK not loaded'));
-              const rzp = new window.Razorpay({
-                key: order.razorpay_key_id,
-                amount: order.amount,
-                currency: order.currency,
-                name: 'Golden-X-Host',
-                description: order.description,
-                order_id: order.razorpay_order_id,
-                prefill: {
-                  name: user?.full_name,
-                  email: user?.email,
-                  contact: user?.phone,
-                },
-                theme: { color: '#C05C4F' },
-                handler: async (resp) => {
-                  try {
-                    await subscriptionAPI.confirmRegistrationFee({
-                      razorpay_payment_id: resp.razorpay_payment_id,
-                      razorpay_order_id: resp.razorpay_order_id,
-                      razorpay_signature: resp.razorpay_signature,
-                    });
-                    resolve();
-                  } catch (err) {
-                    reject(err);
-                  }
-                },
-                modal: { ondismiss: () => reject(new Error('Payment cancelled')) },
-              });
-              rzp.open();
+        if (paymentConfig?.is_mock) {
+          // Show Mock Modal for subscription
+          const plan = plans.find(p => p.plan_id === form.subscription_plan_id);
+          await new Promise((resolve, reject) => {
+            setMockPayment({
+              isOpen: true,
+              amount: plan?.price_monthly || 0,
+              title: `${plan?.plan_name || 'Subscription'} Plan`,
+              onConfirm: async () => {
+                try {
+                  await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
+                  setMockPayment(prev => ({ ...prev, isOpen: false }));
+                  resolve();
+                } catch (err) {
+                  setMockPayment(prev => ({ ...prev, isOpen: false }));
+                  reject(err);
+                }
+              },
+              onCancel: () => {
+                setMockPayment(prev => ({ ...prev, isOpen: false }));
+                reject(new Error('Payment cancelled'));
+              }
             });
-          }
+          });
+        } else {
+          await new Promise((resolve, reject) => {
+            if (!window.Razorpay) return reject(new Error('Razorpay SDK not loaded'));
+            const rzp = new window.Razorpay({
+              key: subOrder.razorpay_key_id,
+              amount: subOrder.amount,
+              currency: subOrder.currency,
+              name: 'Golden-X-Host',
+              description: `Subscription: ${subOrder.plan_name}`,
+              order_id: subOrder.razorpay_order_id,
+              prefill: {
+                name: user?.full_name,
+                email: user?.email,
+                contact: user?.phone,
+              },
+              theme: { color: '#C05C4F' },
+              handler: async (resp) => {
+                try {
+                  await subscriptionAPI.confirmSubscription({
+                    subscription_id: subOrder.subscription_id,
+                    razorpay_payment_id: resp.razorpay_payment_id,
+                    razorpay_order_id: resp.razorpay_order_id,
+                    razorpay_signature: resp.razorpay_signature,
+                  });
+                  resolve();
+                } catch (err) {
+                  reject(err);
+                }
+              },
+              modal: { ondismiss: () => reject(new Error('Subscription payment cancelled')) },
+            });
+            rzp.open();
+          });
         }
         setPaying(false);
       }
 
-      // 3. Submit property for verification
+      // 4. Submit property for verification
       await propertyAPI.submitForVerification(propertyId);
+      localStorage.removeItem(`list_property_form_${propertyId}`);
+      localStorage.removeItem(`list_property_step_${propertyId}`);
       setSuccess(true);
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'Failed to submit listing');
+      setError(formatError(err, 'Failed to submit listing'));
       setPaying(false);
     } finally {
       setSubmitting(false);
@@ -404,14 +865,38 @@ const HostListProperty = () => {
               <h2 className="text-xl font-bold text-charcoal mb-2">Tell us about your place</h2>
               <Input label="Title" testid="basics-title" value={form.title} onChange={(v) => update({ title: v })} placeholder="Cozy 2BHK with a sunset view" />
               <Textarea label="Description" testid="basics-description" value={form.description} onChange={(v) => update({ description: v })} placeholder="Describe your space, neighbourhood, what makes it special…" rows={5} />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Select label="Category" testid="basics-category" value={form.category} onChange={(v) => update({ category: v })} options={[
-                  { value: 'residential', label: 'Residential' },
-                  { value: 'commercial', label: 'Commercial' },
-                  { value: 'event_venue', label: 'Event Venue' },
-                ]} />
-                <Select label="Property type" testid="basics-property-type" value={form.property_type} onChange={(v) => update({ property_type: v })} options={PROPERTY_TYPES} />
-                <Select label="BHK / Size" testid="basics-bhk-type" value={form.bhk_type} onChange={(v) => update({ bhk_type: v })} options={BHK_TYPES} />
+              <div className={`grid grid-cols-1 ${form.category === 'event_venue' ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-4`}>
+                <Select 
+                  label="Category" 
+                  testid="basics-category" 
+                  value={form.category} 
+                  onChange={(v) => {
+                    const firstType = CATEGORY_DATA[v].propertyTypes[0].value;
+                    const firstBhk = CATEGORY_DATA[v].bhkTypes[0].value;
+                    update({ category: v, property_type: firstType, bhk_type: firstBhk });
+                  }} 
+                  options={[
+                    { value: 'residential', label: 'Residential' },
+                    { value: 'commercial', label: 'Commercial' },
+                    { value: 'event_venue', label: 'Event Venue' },
+                  ]} 
+                />
+                <Select 
+                  label="Property type" 
+                  testid="basics-property-type" 
+                  value={form.property_type} 
+                  onChange={(v) => update({ property_type: v })} 
+                  options={CATEGORY_DATA[form.category].propertyTypes} 
+                />
+                {form.category !== 'event_venue' && (
+                  <Select 
+                    label="BHK / Size" 
+                    testid="basics-bhk-type" 
+                    value={form.bhk_type} 
+                    onChange={(v) => update({ bhk_type: v })} 
+                    options={CATEGORY_DATA[form.category].bhkTypes} 
+                  />
+                )}
               </div>
               <Input type="number" label="Area (sq.ft)" testid="basics-area" value={form.area_sqft} onChange={(v) => update({ area_sqft: v })} placeholder="950" />
             </div>
@@ -420,6 +905,15 @@ const HostListProperty = () => {
           {currentStep === 'location' && (
             <div className="space-y-4" data-testid="step-location-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">Where is it?</h2>
+              
+              <Input 
+                label="Google Maps URL" 
+                testid="location-map-url" 
+                value={form.google_maps_url || ''} 
+                onChange={handleMapUrlChange} 
+                placeholder="https://www.google.com/maps/place/..." 
+              />
+              
               <Input label="Street address" testid="location-address" value={form.address} onChange={(v) => update({ address: v })} placeholder="123 Beach Road" />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Input label="City" testid="location-city" value={form.city} onChange={(v) => update({ city: v })} />
@@ -427,28 +921,177 @@ const HostListProperty = () => {
                 <Input label="Pin code" testid="location-pin" value={form.pin_code} onChange={(v) => update({ pin_code: v })} placeholder="403001" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input type="number" label="Latitude (optional)" testid="location-lat" value={form.latitude} onChange={(v) => update({ latitude: v })} placeholder="15.5736" />
-                <Input type="number" label="Longitude (optional)" testid="location-lng" value={form.longitude} onChange={(v) => update({ longitude: v })} placeholder="73.7407" />
+                <Input type="number" label="Latitude (If Applicable)" testid="location-lat" value={form.latitude} onChange={handleLatChange} placeholder="15.5736" />
+                <Input type="number" label="Longitude (If Applicable)" testid="location-lng" value={form.longitude} onChange={handleLngChange} placeholder="73.7407" />
               </div>
+
+              {form.nearby_places && form.nearby_places.length > 0 && (
+                <div className="mt-4 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                  <h3 className="text-xs font-bold text-emerald-700 mb-2 flex items-center gap-2 uppercase tracking-wider">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
+                    Nearby Famous Places
+                  </h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {form.nearby_places.map((place, idx) => (
+                      <span key={idx} className="px-2.5 py-1 bg-white text-charcoal border border-charcoal/10 text-xs font-semibold rounded-full shadow-sm">
+                        {place}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <p className="text-xs text-charcoal-light">
-                Lat/lng helps your listing show up in map view. Look up coordinates on Google Maps if you're not sure.
+                Lat/lng helps your listing show up in map view. Pasting a Google Maps URL extracts the coordinates and finds famous landmarks automatically!
               </p>
             </div>
           )}
 
           {currentStep === 'pricing' && (
             <div className="space-y-4" data-testid="step-pricing-content">
-              <h2 className="text-xl font-bold text-charcoal mb-2">Pricing & house rules</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input type="number" label="Price per night (₹)" testid="pricing-price" value={form.price_per_night} onChange={(v) => update({ price_per_night: v })} placeholder="3500" />
-                <Input type="number" label="Minimum stay (nights)" testid="pricing-min-stay" value={form.minimum_stay_days} onChange={(v) => update({ minimum_stay_days: v })} />
-              </div>
-              <Textarea label="House rules (optional)" testid="pricing-rules" value={form.house_rules} onChange={(v) => update({ house_rules: v })} rows={3} placeholder="Quiet hours after 10 PM, no parties, etc." />
-              <div className="flex flex-wrap gap-4 pt-2">
-                <Toggle label="Instant booking" testid="pricing-instant" checked={form.instant_booking} onChange={(v) => update({ instant_booking: v })} />
-                <Toggle label="Pet-friendly" testid="pricing-pet" checked={form.pet_friendly} onChange={(v) => update({ pet_friendly: v })} />
-                <Toggle label="Smoking allowed" testid="pricing-smoking" checked={form.smoking_allowed} onChange={(v) => update({ smoking_allowed: v })} />
-              </div>
+              <h2 className="text-xl font-bold text-charcoal mb-2">Pricing & rules</h2>
+              
+              {form.category === 'event_venue' ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <Input 
+                      type="number" 
+                      label="Veg Price (per plate ₹)" 
+                      testid="pricing-veg-price"
+                      value={form.veg_price} 
+                      onChange={(v) => update({ veg_price: v })} 
+                      placeholder="1200" 
+                    />
+                    <Input 
+                      type="number" 
+                      label="Non-Veg Price (per plate ₹)" 
+                      testid="pricing-nonveg-price"
+                      value={form.non_veg_price} 
+                      onChange={(v) => update({ non_veg_price: v })} 
+                      placeholder="1500" 
+                    />
+                    <Input 
+                      type="number" 
+                      label="Venue Price per day (₹)" 
+                      testid="pricing-venue-price"
+                      value={form.price_per_night} 
+                      onChange={(v) => update({ price_per_night: v })} 
+                      placeholder="15000" 
+                    />
+                  </div>
+                  <div className="mt-6">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-3">
+                      Package Details (Veg & Non-Veg Inclusions)
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {/* Veg Column */}
+                      <div className="bg-white rounded-xl border border-sand-300 overflow-hidden shadow-sm">
+                        <div className="flex items-center px-4 py-3 bg-green-50 border-b border-green-200">
+                          <div className="w-3 h-3 bg-green-500 rounded-sm mr-2 border border-green-700"></div>
+                          <span className="font-bold text-green-900 text-sm tracking-wide">Vegetarian</span>
+                        </div>
+                        <div className="flex items-center justify-between px-4 py-2 bg-sand-50/50 border-b border-sand-200">
+                          <span className="text-xs font-black text-charcoal">Food items</span>
+                          <div className="text-right">
+                            <span className="text-xs font-black text-charcoal block">Package</span>
+                            <span className="text-[10px] font-bold text-charcoal-muted line-through">₹{form.veg_price || '1200'}/Plate</span>
+                          </div>
+                        </div>
+                        <div className="divide-y divide-sand-100">
+                          {VEG_ITEMS.map((item) => (
+                            <div key={`veg-${item}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-sand-50/30 transition-colors">
+                              <span className="text-sm font-medium text-charcoal-muted">{item}</span>
+                              <input 
+                                type="number" 
+                                min="0"
+                                value={getPackageValue('veg', item)}
+                                onChange={(e) => handlePackageUpdate('veg', item, e.target.value)}
+                                className="w-12 text-center bg-transparent border-none text-charcoal font-bold text-sm outline-none focus:ring-0 p-0"
+                                placeholder="0"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Non-Veg Column */}
+                      <div className="bg-white rounded-xl border border-sand-300 overflow-hidden shadow-sm">
+                        <div className="flex items-center px-4 py-3 bg-red-50 border-b border-red-200">
+                          <div className="w-3 h-3 bg-red-500 rounded-full mr-2 border border-red-700"></div>
+                          <span className="font-bold text-red-900 text-sm tracking-wide">Non Vegetarian</span>
+                        </div>
+                        <div className="flex items-center justify-between px-4 py-2 bg-sand-50/50 border-b border-sand-200">
+                          <span className="text-xs font-black text-charcoal">Food items</span>
+                          <div className="text-right">
+                            <span className="text-xs font-black text-charcoal block">Package</span>
+                            <span className="text-[10px] font-bold text-charcoal-muted line-through">₹{form.non_veg_price || '1500'}/Plate</span>
+                          </div>
+                        </div>
+                        <div className="divide-y divide-sand-100">
+                          {NON_VEG_ITEMS.map((item) => (
+                            <div key={`nonveg-${item}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-sand-50/30 transition-colors">
+                              <span className="text-sm font-medium text-charcoal-muted">{item}</span>
+                              <input 
+                                type="number" 
+                                min="0"
+                                value={getPackageValue('non_veg', item)}
+                                onChange={(e) => handlePackageUpdate('non_veg', item, e.target.value)}
+                                className="w-12 text-center bg-transparent border-none text-charcoal font-bold text-sm outline-none focus:ring-0 p-0"
+                                placeholder="0"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className={`grid grid-cols-1 ${form.category === 'residential' ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-4`}>
+                    <Input 
+                      type="number" 
+                      label={
+                        form.category === 'commercial' 
+                          ? (form.pricing_cycle === 'hourly' ? 'Price per hour (₹)' : form.pricing_cycle === 'weekly' ? 'Price per week (₹)' : form.pricing_cycle === 'monthly' ? 'Price per month (₹)' : 'Price per day (₹)')
+                          : 'Price per night (₹)'
+                      } 
+                      testid="pricing-price" 
+                      value={form.price_per_night} 
+                      onChange={(v) => update({ price_per_night: v })} 
+                      placeholder={
+                        form.pricing_cycle === 'hourly' ? '500' : form.pricing_cycle === 'weekly' ? '25000' : form.pricing_cycle === 'monthly' ? '90000' : (form.category === 'commercial' ? '5000' : '3500')
+                      } 
+                    />
+                    {form.category === 'commercial' && (
+                      <Select
+                        label="Pricing unit"
+                        testid="pricing-cycle"
+                        value={form.pricing_cycle || 'day'}
+                        onChange={(v) => update({ pricing_cycle: v })}
+                        options={PRICING_CYCLE_OPTIONS}
+                      />
+                    )}
+                    <Input 
+                      type="number" 
+                      label={
+                        form.category === 'commercial'
+                          ? `Minimum duration (${form.pricing_cycle === 'hourly' ? 'hours' : form.pricing_cycle === 'weekly' ? 'weeks' : form.pricing_cycle === 'monthly' ? 'months' : 'days'})`
+                          : 'Minimum stay (nights)'
+                      } 
+                      testid="pricing-min-stay" 
+                      value={form.minimum_stay_days} 
+                      onChange={(v) => update({ minimum_stay_days: v })} 
+                    />
+                  </div>
+                  <Textarea label="House rules (If Applicable)" testid="pricing-rules" value={form.house_rules} onChange={(v) => update({ house_rules: v })} rows={3} placeholder="Quiet hours after 10 PM, no parties, etc." />
+                  <div className="flex flex-wrap gap-4 pt-2">
+                    <Toggle label="Instant booking" testid="pricing-instant" checked={form.instant_booking} onChange={(v) => update({ instant_booking: v })} />
+                    <Toggle label="Pet-friendly" testid="pricing-pet" checked={form.pet_friendly} onChange={(v) => update({ pet_friendly: v })} />
+                    <Toggle label="Smoking allowed" testid="pricing-smoking" checked={form.smoking_allowed} onChange={(v) => update({ smoking_allowed: v })} />
+                  </div>
+                </>
+              )}
             </div>
           )}
 
@@ -456,26 +1099,115 @@ const HostListProperty = () => {
             <div className="space-y-4" data-testid="step-amenities-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">What amenities do you offer?</h2>
               <p className="text-sm text-charcoal-light">Pick all that apply. You can edit this later.</p>
-              <div className="flex flex-wrap gap-2" data-testid="amenities-pills">
-                {COMMON_AMENITIES.map((a) => {
-                  const active = form.amenities.includes(a);
+              <div className="flex flex-wrap gap-2 mb-6" data-testid="amenities-pills">
+                {(CATEGORY_AMENITIES[form.category] || CATEGORY_AMENITIES.residential).map((a) => {
+                  const active = form.amenities.includes(a.value);
                   return (
                     <button
-                      key={a}
+                      key={a.value}
                       type="button"
-                      onClick={() => toggleAmenity(a)}
+                      onClick={() => toggleAmenity(a.value)}
                       className={`text-sm px-4 py-2 rounded-full border transition ${
                         active
                           ? 'bg-terracotta text-white border-terracotta'
                           : 'bg-white text-charcoal border-sand-300 hover:border-terracotta'
                       }`}
-                      data-testid={`amenity-${a}`}
+                      data-testid={`amenity-${a.value}`}
                     >
-                      {a.replace('_', ' ')}
+                      {a.label}
                     </button>
                   );
                 })}
               </div>
+
+              {form.category === 'event_venue' && (
+                <div className="mt-8 border-t border-sand-200 pt-6">
+                  <h2 className="text-xl font-bold text-charcoal mb-6">Venue policies</h2>
+                  
+                  <div className="space-y-6">
+                    {/* Timings */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-sand-50/50 p-4 rounded-xl border border-sand-200">
+                        <label className="text-xs font-black uppercase tracking-wider text-charcoal block mb-3">Morning Timing</label>
+                        <div className="flex items-center space-x-2">
+                          <input type="time" className="flex-1 bg-white border border-sand-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-terracotta transition-all" value={getVenuePolicies().timings_morning_start || ''} onChange={(e) => handleVenuePolicyChange('timings_morning_start', e.target.value)} />
+                          <span className="text-charcoal-light font-bold text-sm">to</span>
+                          <input type="time" className="flex-1 bg-white border border-sand-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-terracotta transition-all" value={getVenuePolicies().timings_morning_end || ''} onChange={(e) => handleVenuePolicyChange('timings_morning_end', e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="bg-sand-50/50 p-4 rounded-xl border border-sand-200">
+                        <label className="text-xs font-black uppercase tracking-wider text-charcoal block mb-3">Evening Timing</label>
+                        <div className="flex items-center space-x-2">
+                          <input type="time" className="flex-1 bg-white border border-sand-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-terracotta transition-all" value={getVenuePolicies().timings_evening_start || ''} onChange={(e) => handleVenuePolicyChange('timings_evening_start', e.target.value)} />
+                          <span className="text-charcoal-light font-bold text-sm">to</span>
+                          <input type="time" className="flex-1 bg-white border border-sand-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-terracotta transition-all" value={getVenuePolicies().timings_evening_end || ''} onChange={(e) => handleVenuePolicyChange('timings_evening_end', e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Taxes & Advance */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-2">Taxes (%)</label>
+                        <input type="text" className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all" placeholder="18.00" value={getVenuePolicies().taxes || ''} onChange={(e) => handleVenuePolicyChange('taxes', e.target.value)} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-2">Advance Booking (%) (If Applicable)</label>
+                        <input type="text" className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all" placeholder="20" value={getVenuePolicies().advance || ''} onChange={(e) => handleVenuePolicyChange('advance', e.target.value)} />
+                      </div>
+                    </div>
+
+                    {/* Lodging & Rooms */}
+                    <div>
+                      <h3 className="text-sm font-bold text-charcoal mb-3">Lodging & Rooms</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                         <div className="flex items-center">
+                           <Toggle label="Rooms Available" checked={getVenuePolicies().rooms_available || false} onChange={(v) => handleVenuePolicyChange('rooms_available', v)} />
+                         </div>
+                         <input type="number" className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all" placeholder="No. of rooms" value={getVenuePolicies().rooms_count || ''} onChange={(e) => handleVenuePolicyChange('rooms_count', e.target.value)} />
+                         <input type="number" className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all" placeholder="Avg price per room (₹)" value={getVenuePolicies().room_price || ''} onChange={(e) => handleVenuePolicyChange('room_price', e.target.value)} />
+                      </div>
+                    </div>
+
+                    {/* Food & Alcohol */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       <div>
+                         <h3 className="text-sm font-bold text-charcoal mb-3">Food & Decor</h3>
+                         <div className="space-y-3">
+                           <Toggle label="Food provided by venue" checked={getVenuePolicies().food_venue || false} onChange={(v) => handleVenuePolicyChange('food_venue', v)} />
+                           <Toggle label="No outside food allowed" checked={getVenuePolicies().food_outside || false} onChange={(v) => handleVenuePolicyChange('food_outside', v)} />
+                           <Toggle label="Non-Veg allowed" checked={getVenuePolicies().food_nonveg || false} onChange={(v) => handleVenuePolicyChange('food_nonveg', v)} />
+                           <Toggle label="Decor provided by venue" checked={getVenuePolicies().decor_venue || false} onChange={(v) => handleVenuePolicyChange('decor_venue', v)} />
+                           <Toggle label="Outside decorators allowed" checked={getVenuePolicies().decor_outside || false} onChange={(v) => handleVenuePolicyChange('decor_outside', v)} />
+                         </div>
+                       </div>
+                       <div>
+                         <h3 className="text-sm font-bold text-charcoal mb-3">Alcohol & Parking</h3>
+                         <div className="space-y-3">
+                           <Toggle label="Alcohol allowed" checked={getVenuePolicies().alcohol_allowed || false} onChange={(v) => handleVenuePolicyChange('alcohol_allowed', v)} />
+                           <Toggle label="Outside alcohol allowed" checked={getVenuePolicies().alcohol_outside || false} onChange={(v) => handleVenuePolicyChange('alcohol_outside', v)} />
+                           <Toggle label="Valet parking provided" checked={getVenuePolicies().parking_valet || false} onChange={(v) => handleVenuePolicyChange('parking_valet', v)} />
+                         </div>
+                         <input type="text" className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm mt-4 outline-none focus:border-terracotta transition-all" placeholder="Parking space (e.g. 200 vehicles)" value={getVenuePolicies().parking_space || ''} onChange={(e) => handleVenuePolicyChange('parking_space', e.target.value)} />
+                       </div>
+                    </div>
+
+                    {/* Other Policies */}
+                    <div>
+                      <h3 className="text-sm font-bold text-charcoal mb-3">Other Policies</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <Toggle label="Changing Room A/C" checked={getVenuePolicies().changing_room_ac || false} onChange={(v) => handleVenuePolicyChange('changing_room_ac', v)} />
+                        <Toggle label="Music allowed late" checked={getVenuePolicies().other_music || false} onChange={(v) => handleVenuePolicyChange('other_music', v)} />
+                        <Toggle label="Halls are air conditioned" checked={getVenuePolicies().other_ac || false} onChange={(v) => handleVenuePolicyChange('other_ac', v)} />
+                        <Toggle label="Baarat allowed" checked={getVenuePolicies().other_baarat || false} onChange={(v) => handleVenuePolicyChange('other_baarat', v)} />
+                        <Toggle label="Fire crackers allowed" checked={getVenuePolicies().other_firecrackers || false} onChange={(v) => handleVenuePolicyChange('other_firecrackers', v)} />
+                        <Toggle label="Hawan allowed" checked={getVenuePolicies().other_hawan || false} onChange={(v) => handleVenuePolicyChange('other_hawan', v)} />
+                        <Toggle label="Overnight wedding allowed" checked={getVenuePolicies().other_overnight || false} onChange={(v) => handleVenuePolicyChange('other_overnight', v)} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -503,25 +1235,46 @@ const HostListProperty = () => {
                   <span>Paste URL</span>
                 </button>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4" data-testid="photos-grid">
-                {form.images.map((src, idx) => (
-                  <div key={src + idx} className="relative group">
-                    <img src={src} alt={`Photo ${idx + 1}`} className="w-full h-32 object-cover rounded-lg" />
-                    {idx === 0 && (
-                      <span className="absolute top-1 left-1 text-[10px] bg-terracotta text-white px-2 py-0.5 rounded font-bold">
-                        COVER
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => removeImage(idx)}
-                      className="absolute top-1 right-1 bg-white/90 text-red-600 rounded p-1 opacity-0 group-hover:opacity-100 transition"
-                      data-testid={`remove-photo-${idx}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6" data-testid="photos-grid">
+                {form.images.map((src, idx) => {
+                  const [url, category] = src.split('#');
+                  return (
+                    <div key={src + idx} className="relative group bg-white rounded-2xl border border-sand-200 overflow-hidden shadow-sm transition-all hover:shadow-premium">
+                      <div className="relative h-48">
+                        <img src={getImageUrl(url)} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                        {idx === 0 && (
+                          <span className="absolute top-2 left-2 text-[10px] bg-terracotta text-white px-2 py-0.5 rounded-full font-black uppercase tracking-widest">
+                            COVER
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeImage(idx)}
+                          className="absolute top-2 right-2 bg-white/90 text-red-600 rounded-full p-2 opacity-0 group-hover:opacity-100 transition shadow-sm hover:bg-red-50"
+                          data-testid={`remove-photo-${idx}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="p-4 bg-sand-50/50">
+                        <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1 block">Photo Category</label>
+                        <select
+                          value={category || 'Other'}
+                          onChange={(e) => {
+                            const newImages = [...form.images];
+                            newImages[idx] = `${url}#${e.target.value}`;
+                            update({ images: newImages });
+                          }}
+                          className="w-full text-xs font-bold text-charcoal bg-white border border-sand-200 rounded-lg p-2 outline-none focus:border-terracotta transition-colors"
+                        >
+                          {PHOTO_CATEGORIES.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  );
+                })}
                 {form.images.length === 0 && (
                   <div className="col-span-full border-2 border-dashed border-sand-300 rounded-lg p-8 text-center text-charcoal-light">
                     No photos yet
@@ -534,94 +1287,104 @@ const HostListProperty = () => {
           {currentStep === 'subscription' && (
             <div className="space-y-4" data-testid="step-subscription-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">Choose your subscription</h2>
-              <p className="text-sm text-charcoal-light">
-                A 90-day free trial starts today. You'll only be billed if you continue after the trial.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="plan-list-container">
-                {matchingPlans.map((p) => {
-                  const active = form.subscription_plan_id === p.plan_id;
-                  return (
-                    <button
-                      key={p.plan_id}
-                      type="button"
-                      onClick={() => update({ subscription_plan_id: p.plan_id })}
-                      className={`text-left p-4 rounded-lg border-2 transition ${
-                        active ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 hover:border-terracotta/50'
-                      }`}
-                      data-testid={`plan-${p.plan_id}`}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-bold text-charcoal">{p.plan_name}</h3>
-                          <p className="text-xs text-charcoal-light mt-0.5">{p.description}</p>
-                        </div>
-                        {active && <Check className="w-5 h-5 text-terracotta" />}
-                      </div>
-                      <div className="mt-3">
-                        <span className="text-xl font-bold text-terracotta">
-                          ₹{p.price_monthly?.toLocaleString('en-IN') || '—'}
-                        </span>
-                        <span className="text-xs text-charcoal-light"> /month</span>
-                        <span className="text-xs text-charcoal-light ml-2">
-                          (₹{p.price_annual?.toLocaleString('en-IN') || '—'} annual)
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              {hasActiveSubscription ? (
+                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 text-center space-y-3">
+                  <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
+                  <h3 className="font-bold text-charcoal text-lg">Active Subscription Found</h3>
+                  <p className="text-sm text-charcoal-light max-w-md mx-auto">
+                    This property already has an active subscription. No further payment or plan selection is required. Click <strong>Next</strong> to review and submit your changes.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-charcoal-light">
+                    A 90-day free trial starts today. You'll only be billed if you continue after the trial.
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="plan-list-container">
+                    {matchingPlans.map((p) => {
+                      const active = form.subscription_plan_id === p.plan_id;
+                      return (
+                        <button
+                          key={p.plan_id}
+                          type="button"
+                          onClick={() => update({ subscription_plan_id: p.plan_id })}
+                          className={`text-left p-4 rounded-lg border-2 transition ${
+                            active ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 hover:border-terracotta/50'
+                          }`}
+                          data-testid={`plan-${p.plan_id}`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-bold text-charcoal">{p.plan_name}</h3>
+                              <p className="text-xs text-charcoal-light mt-0.5">{p.description}</p>
+                            </div>
+                            {active && <Check className="w-5 h-5 text-terracotta" />}
+                          </div>
+                          <div className="mt-3">
+                            <span className="text-xl font-bold text-terracotta">
+                              ₹{p.price_monthly?.toLocaleString('en-IN') || '—'}
+                            </span>
+                            <span className="text-xs text-charcoal-light"> /month</span>
+                            <span className="text-xs text-charcoal-light ml-2">
+                              (₹{p.price_annual?.toLocaleString('en-IN') || '—'} annual)
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           )}
-
+          
           {currentStep === 'review' && (
             <div className="space-y-4" data-testid="step-review-content">
-              <h2 className="text-xl font-bold text-charcoal mb-2">Review & pay registration fee</h2>
+              <h2 className="text-xl font-bold text-charcoal mb-2">Review & Submit</h2>
               <ReviewBlock label="Title" value={form.title} />
-              <ReviewBlock label="Type" value={`${form.category} · ${form.property_type} · ${form.bhk_type}`} />
+              <ReviewBlock 
+                label="Type" 
+                value={`${form.category === 'residential' ? 'Residential' : form.category === 'commercial' ? 'Commercial' : 'Event Venue'} · ${
+                  CATEGORY_DATA[form.category]?.propertyTypes.find(p => p.value === form.property_type)?.label || form.property_type
+                } · ${
+                  CATEGORY_DATA[form.category]?.bhkTypes.find(b => b.value === form.bhk_type)?.label || form.bhk_type
+                }`} 
+              />
               <ReviewBlock label="Location" value={`${form.address}, ${form.city}, ${form.state} ${form.pin_code}`} />
-              <ReviewBlock label="Price" value={`₹${form.price_per_night}/night · min ${form.minimum_stay_days} night(s)`} />
-              <ReviewBlock label="Amenities" value={form.amenities.join(', ') || '—'} />
+              <ReviewBlock 
+                label="Price" 
+                value={
+                  form.category === 'commercial' || form.category === 'event_venue'
+                    ? `₹${form.price_per_night}/${form.pricing_cycle === 'hourly' ? 'hr' : form.pricing_cycle === 'weekly' ? 'week' : form.pricing_cycle === 'monthly' ? 'month' : 'day'} · min ${form.minimum_stay_days} ${form.pricing_cycle === 'hourly' ? 'hour(s)' : form.pricing_cycle === 'weekly' ? 'week(s)' : form.pricing_cycle === 'monthly' ? 'month(s)' : 'day(s)'}`
+                    : `₹${form.price_per_night}/night · min ${form.minimum_stay_days} night(s)`
+                } 
+              />
+              <ReviewBlock 
+                label="Amenities" 
+                value={
+                  form.amenities.map(val => {
+                    const found = (CATEGORY_AMENITIES[form.category] || CATEGORY_AMENITIES.residential).find(item => item.value === val);
+                    return found ? found.label : val;
+                  }).join(', ') || '—'
+                } 
+              />
               <ReviewBlock label="Photos" value={`${form.images.length} uploaded`} />
-              <ReviewBlock label="Plan" value={plans.find((p) => p.plan_id === form.subscription_plan_id)?.plan_name || '—'} />
-
-              <div className="dashboard-card border-l-4 border-terracotta mt-6" data-testid="fee-card">
-                <h3 className="font-bold text-charcoal mb-2 flex items-center">
-                  <CreditCard className="w-5 h-5 mr-2 text-terracotta" />
-                  One-time registration fee
-                </h3>
-                <p className="text-sm text-charcoal-light mb-3">
-                  ₹500 · refundable if your listing isn't approved within 48 hrs.
-                </p>
-                {user?.registration_fee_paid && (
-                  <p className="text-sm text-sage-dark flex items-center">
-                    <CheckCircle2 className="w-4 h-4 mr-1" />
-                    Already paid · only listing submission needed
-                  </p>
-                )}
-                {paymentConfig?.is_mock && !user?.registration_fee_paid && (
-                  <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded p-2 mb-3">
-                    <strong>Demo mode:</strong> clicking submit will simulate the ₹500 payment with a mock signature.
-                  </div>
-                )}
-              </div>
+              <ReviewBlock label="Plan" value={hasActiveSubscription ? 'Active Subscription' : (plans.find((p) => p.plan_id === form.subscription_plan_id)?.plan_name || '—')} />
 
               <button
                 onClick={submitListing}
                 disabled={submitting || paying}
-                className="btn-primary w-full mt-4 flex items-center justify-center space-x-2 disabled:opacity-50"
+                className="btn-primary w-full mt-8 flex items-center justify-center space-x-2 disabled:opacity-50"
                 data-testid="submit-listing-btn"
               >
                 {submitting || paying ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
-                ) : user?.registration_fee_paid ? (
-                  <Sparkles className="w-5 h-5" />
                 ) : (
-                  <CreditCard className="w-5 h-5" />
+                  <Sparkles className="w-5 h-5" />
                 )}
                 <span>
                   {paying ? 'Processing payment…' :
-                   submitting ? 'Submitting…' :
-                   user?.registration_fee_paid ? 'Submit listing' : 'Pay ₹500 & submit'}
+                   submitting ? 'Submitting…' : 'Submit listing'}
                 </span>
               </button>
             </div>
@@ -650,6 +1413,42 @@ const HostListProperty = () => {
           )}
         </div>
       </div>
+
+      {/* Mock Payment Modal */}
+      {mockPayment.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 bg-terracotta/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CreditCard className="w-10 h-10 text-terracotta" />
+              </div>
+              <h3 className="text-2xl font-bold text-charcoal mb-2">Demo Payment</h3>
+              <p className="text-charcoal-light mb-8">
+                This is a simulation for <strong>{mockPayment.title}</strong>.<br/>
+                Amount: <span className="text-lg font-semibold text-charcoal">₹{mockPayment.amount}</span>
+              </p>
+              
+              <button
+                onClick={mockPayment.onConfirm}
+                className="w-full py-4 bg-terracotta text-white rounded-2xl font-bold text-lg hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-lg shadow-terracotta/20 mb-4"
+              >
+                Confirm Demo Payment
+              </button>
+              <button
+                onClick={mockPayment.onCancel}
+                className="w-full py-3 text-charcoal-light font-semibold hover:text-charcoal transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+            <div className="bg-sand-50 p-4 text-center border-t border-sand-100">
+              <p className="text-sm text-sand-500 flex items-center justify-center gap-2">
+                <CheckCircle2 className="w-4 h-4" /> Secured Mock Transaction
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -11,6 +11,7 @@ class UserRole(str, Enum):
     ADMIN = "admin"
 
 class KYCStatus(str, Enum):
+    UNVERIFIED = "unverified"
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
@@ -30,16 +31,28 @@ class User(BaseModel):
     
     # Profile fields
     city: Optional[str] = None
-    profile_image: Optional[str] = "https://images.unsplash.com/photo-1655249493799-9cee4fe983bb?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NjZ8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBwcm9maWxlJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzc4MDYyMDg1fDA&ixlib=rb-4.1.0&q=85"
+    state: Optional[str] = None
+    franchise: Optional[str] = None
+    branch: Optional[str] = None
+    birthdate: Optional[str] = None
+    uid: Optional[str] = None
+    profile_image: Optional[str] = None
     
     # Host-specific fields
     lg_code: Optional[str] = None  # Broker LG Code
     broker_id: Optional[str] = None  # Assigned broker user_id
-    kyc_status: KYCStatus = KYCStatus.PENDING
+    kyc_status: KYCStatus = KYCStatus.UNVERIFIED
     kyc_documents: List[KYCDocument] = []
+    
+    # Agreement fields
+    agreement_owner_name: Optional[str] = None
+    agreement_owner_address: Optional[str] = None
+    agreement_signature: Optional[str] = None
+    agreement_signed_at: Optional[str] = None
     
     # Broker-specific fields
     region: Optional[str] = None
+    rm_id: Optional[str] = None
     
     # Employee-specific fields
     employee_region: Optional[str] = None
@@ -60,11 +73,34 @@ class UserCreate(BaseModel):
     full_name: str
     role: UserRole
     city: Optional[str] = None
+    state: Optional[str] = None
+    franchise: Optional[str] = None
+    branch: Optional[str] = None
+    birthdate: Optional[str] = None
+    uid: Optional[str] = None
     lg_code: Optional[str] = None
+    profile_image: Optional[str] = None
     terms_accepted: bool = False
 
+class UserUpdate(BaseModel):
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    password: Optional[str] = None
+    full_name: Optional[str] = None
+    role: Optional[UserRole] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    franchise: Optional[str] = None
+    branch: Optional[str] = None
+    birthdate: Optional[str] = None
+    lg_code: Optional[str] = None
+    broker_id: Optional[str] = None
+    rm_id: Optional[str] = None
+    profile_image: Optional[str] = None
+    is_active: Optional[bool] = None
+
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 class UserResponse(BaseModel):

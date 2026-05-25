@@ -151,7 +151,7 @@ async def initiate_refund(
         reason=reason,
         initiated_by=initiated_by,
         initiated_by_role=initiated_by_role,
-        razorpay_payment_id=booking.get("payment_id"),
+        razorpay_payment_id=booking.get("payment_id") or booking.get("razorpay_payment_id"),
         is_mock=razorpay_service.is_mock,
     )
 
@@ -177,6 +177,12 @@ async def initiate_refund(
             {"booking_id": rfd.booking_id},
             {"$set": {"refund_status": "processed", "refund_amount": refund_paise}},
         )
+        try:
+            import asyncio
+            from services.booking_notifications import notify_guest_refund_processed
+            asyncio.create_task(notify_guest_refund_processed(db, rfd.model_dump()))
+        except Exception as err:
+            logger.warning(f"Failed to start refund notification task: {err}")
         return rfd
 
     result = razorpay_service.create_refund(
@@ -217,6 +223,13 @@ async def initiate_refund(
             "refund_amount": refund_paise,
         }},
     )
+    if rfd.status == RefundStatus.PROCESSED:
+        try:
+            import asyncio
+            from services.booking_notifications import notify_guest_refund_processed
+            asyncio.create_task(notify_guest_refund_processed(db, rfd.model_dump()))
+        except Exception as err:
+            logger.warning(f"Failed to start refund notification task: {err}")
     return rfd
 
 

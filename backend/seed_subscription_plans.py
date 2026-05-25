@@ -13,9 +13,10 @@ load_dotenv(ROOT_DIR / '.env')
 
 async def seed_plans():
     """Seed default subscription plans."""
-    mongo_url = os.environ['MONGO_URL']
-    client = AsyncIOMotorClient(mongo_url)
-    db = client[os.environ['DB_NAME']]
+    from server import db_instance
+    if os.environ.get('DATABASE_TYPE') == 'postgres':
+        await db_instance.connect()
+    db = db_instance
     
     plans = [
         {
@@ -96,13 +97,14 @@ async def seed_plans():
     if existing_count > 0:
         print(f"Subscription plans already exist ({existing_count} plans). Skipping seed.")
     else:
-        result = await db.subscription_plans.insert_many(plans)
-        print(f"✅ Seeded {len(result.inserted_ids)} subscription plans successfully!")
+        await db.subscription_plans.insert_many(plans)
+        print(f"Seeded {len(plans)} subscription plans successfully!")
         
         for plan in plans:
             print(f"  - {plan['plan_name']}: ₹{plan['price_monthly']}/month")
     
-    client.close()
+    if hasattr(db, 'close'):
+        await db.close()
 
 if __name__ == "__main__":
     asyncio.run(seed_plans())

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI } from '../services/api';
 import {
@@ -53,10 +53,13 @@ function dateInRange(d, startISO, endISO) {
 
 const HostCalendar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
 
   const [properties, setProperties] = useState([]);
-  const [selectedPropertyId, setSelectedPropertyId] = useState('');
+  const searchParams = new URLSearchParams(location.search);
+  const initialPropertyId = searchParams.get('property');
+  const [selectedPropertyId, setSelectedPropertyId] = useState(initialPropertyId || '');
   const today = new Date();
   const [month, setMonth] = useState(today.getMonth() + 1);
   const [year, setYear] = useState(today.getFullYear());
@@ -94,8 +97,12 @@ const HostCalendar = () => {
       const res = await propertyAPI.getHostProperties();
       const list = res.data.properties || [];
       setProperties(list);
-      if (list.length && !selectedPropertyId) {
-        setSelectedPropertyId(list[0].property_id);
+      if (list.length) {
+        if (initialPropertyId && list.some(p => p.property_id === initialPropertyId)) {
+          setSelectedPropertyId(initialPropertyId);
+        } else if (!selectedPropertyId) {
+          setSelectedPropertyId(list[0].property_id);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -186,12 +193,16 @@ const HostCalendar = () => {
   const handleAddExternal = async (e) => {
     e.preventDefault();
     if (!extName || !extUrl) return;
+    let url = extUrl.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
     setSubmitting(true);
     setError('');
     try {
       await calendarAPI.addExternalCalendar(selectedPropertyId, {
         name: extName,
-        ical_url: extUrl,
+        ical_url: url,
         color: extColor,
       });
       setExtName('');
@@ -307,29 +318,34 @@ const HostCalendar = () => {
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <select
-              value={selectedPropertyId}
-              onChange={(e) => setSelectedPropertyId(e.target.value)}
-              className="border rounded-lg px-3 py-2 bg-white"
-              data-testid="property-selector"
-            >
-              {properties.length === 0 && (
-                <option value="">No properties</option>
-              )}
-              {properties.map((p) => (
-                <option key={p.property_id} value={p.property_id}>
-                  {p.title} - {p.city}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+              <select
+                value={selectedPropertyId}
+                onChange={(e) => setSelectedPropertyId(e.target.value)}
+                className="appearance-none border border-sand-200 rounded-xl px-4 py-2.5 pr-10 bg-white font-bold text-sm text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20 transition-all shadow-sm cursor-pointer"
+                data-testid="property-selector"
+              >
+                {properties.length === 0 && (
+                  <option value="">No properties</option>
+                )}
+                {properties.map((p) => (
+                  <option key={p.property_id} value={p.property_id}>
+                    {p.title} - {p.city}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-charcoal-light">
+                <ChevronRight className="w-4 h-4 rotate-90" />
+              </div>
+            </div>
             <button
               onClick={handleExportICal}
               disabled={!selectedPropertyId}
-              className="btn-secondary flex items-center justify-center space-x-2 disabled:opacity-50"
+              className="px-5 py-2.5 bg-white border border-sand-200 rounded-xl font-bold text-sm text-charcoal hover:text-terracotta hover:border-terracotta flex items-center justify-center gap-2 transition-all shadow-sm active:scale-98 disabled:opacity-50 disabled:pointer-events-none"
               data-testid="export-ical-btn"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4 text-terracotta" />
               <span>Export iCal</span>
             </button>
           </div>
@@ -358,63 +374,89 @@ const HostCalendar = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Calendar Grid */}
-            <div className="lg:col-span-2 dashboard-card">
-              <div className="flex items-center justify-between mb-4">
+            <div className="lg:col-span-2 dashboard-card p-6 bg-white rounded-3xl border border-sand-200/80 shadow-sm">
+              <div className="flex items-center justify-between mb-6 bg-sand-50/50 p-2 rounded-2xl border border-sand-100">
                 <button
                   onClick={goPrev}
-                  className="p-2 rounded-lg hover:bg-sand-100"
+                  className="p-2.5 rounded-xl hover:bg-white hover:shadow-sm transition-all text-charcoal hover:text-terracotta active:scale-95"
                   data-testid="cal-prev-month"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <h3 className="text-2xl font-bold text-charcoal" data-testid="cal-month-label">
+                <h3 className="text-xl font-black text-charcoal tracking-wide flex items-center gap-2" data-testid="cal-month-label">
+                  <CalendarIcon className="w-5 h-5 text-terracotta/70" />
                   {MONTH_NAMES[month - 1]} {year}
                 </h3>
                 <button
                   onClick={goNext}
-                  className="p-2 rounded-lg hover:bg-sand-100"
+                  className="p-2.5 rounded-xl hover:bg-white hover:shadow-sm transition-all text-charcoal hover:text-terracotta active:scale-95"
                   data-testid="cal-next-month"
                 >
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-charcoal-light mb-2">
+              <div className="grid grid-cols-7 gap-2.5 text-center text-xs font-black uppercase tracking-wider text-charcoal-light mb-3">
                 {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d) => (
                   <div key={d} className="py-2">{d}</div>
                 ))}
               </div>
 
               {loading ? (
-                <div className="py-12 text-center text-charcoal-light">Loading…</div>
+                <div className="py-24 text-center text-charcoal-light flex flex-col items-center justify-center gap-3">
+                  <RefreshCw className="w-8 h-8 text-terracotta animate-spin" />
+                  <span className="font-bold text-sm">Loading availability details…</span>
+                </div>
               ) : (
-                <div className="grid grid-cols-7 gap-1" data-testid="calendar-grid">
+                <div className="grid grid-cols-7 gap-2.5" data-testid="calendar-grid">
                   {cells.map((d, idx) => {
-                    if (!d) return <div key={idx} className="h-20" />;
+                    if (!d) return (
+                      <div key={idx} className="h-24 bg-sand-100/30 border border-sand-100/50 rounded-xl relative overflow-hidden" />
+                    );
                     const dayEvents = eventsForDay(d);
                     const isToday = toISO(d) === toISO(new Date());
                     return (
                       <div
                         key={idx}
-                        className={`h-20 border rounded-md p-1 text-left flex flex-col ${
-                          isToday ? 'border-terracotta border-2' : 'border-sand-200'
+                        className={`h-24 border rounded-xl p-2 text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] hover:shadow-md bg-white ${
+                          isToday 
+                            ? 'border-terracotta ring-2 ring-terracotta/20 shadow-sm shadow-terracotta/10' 
+                            : 'border-sand-200/85 hover:border-terracotta/40'
                         }`}
                         data-testid={`day-${toISO(d)}`}
                       >
-                        <div className="text-xs font-bold text-charcoal">{d.getDate()}</div>
-                        <div className="flex-1 overflow-hidden mt-1 space-y-0.5">
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs font-black ${
+                            isToday 
+                              ? 'bg-terracotta text-white w-6 h-6 rounded-full flex items-center justify-center font-extrabold shadow-sm shadow-terracotta/20' 
+                              : 'text-charcoal'
+                          }`}>
+                            {d.getDate()}
+                          </span>
+                          {isToday && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-terracotta animate-ping" />
+                          )}
+                        </div>
+                        <div className="flex-1 overflow-hidden mt-1.5 space-y-1">
                           {dayEvents.slice(0, 2).map((ev) => (
                             <div
                               key={ev.event_id + toISO(d)}
-                              className="text-[10px] px-1 py-0.5 rounded truncate"
-                              style={{ backgroundColor: ev.color + '33', color: ev.color }}
+                              className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg truncate transition-all duration-200 hover:brightness-95 flex items-center gap-1 shadow-sm"
+                              style={{ 
+                                backgroundColor: ev.color + '22', 
+                                color: ev.color, 
+                                borderLeft: `3px solid ${ev.color}`
+                              }}
                               title={`${SOURCE_LABELS[ev.source]?.label}: ${ev.start_date} → ${ev.end_date}`}
                             >
+                              <span className="w-1 h-1 rounded-full" style={{ backgroundColor: ev.color }} />
                               {SOURCE_LABELS[ev.source]?.label || ev.title}
                             </div>
                           ))}
                           {dayEvents.length > 2 && (
-                            <div className="text-[10px] text-charcoal-light">+{dayEvents.length - 2}</div>
+                            <div className="text-[9px] font-bold text-terracotta/80 pl-1">
+                              +{dayEvents.length - 2} more
+                            </div>
                           )}
                         </div>
                       </div>
@@ -423,70 +465,77 @@ const HostCalendar = () => {
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-3 mt-4 text-xs text-charcoal-light">
-                <span className="flex items-center"><span className="w-3 h-3 rounded mr-1.5 bg-green-500" />Booked</span>
-                <span className="flex items-center"><span className="w-3 h-3 rounded mr-1.5 bg-red-500" />Manually Blocked</span>
-                <span className="flex items-center"><span className="w-3 h-3 rounded mr-1.5 bg-amber-500" />External Calendar</span>
+              <div className="flex flex-wrap items-center gap-4 mt-6 p-4 bg-sand-50/50 rounded-xl border border-sand-100/50 text-xs text-charcoal-light">
+                <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md bg-green-500 shadow-sm shadow-green-500/20" />Booked</span>
+                <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md bg-red-500 shadow-sm shadow-red-500/20" />Manually Blocked</span>
+                <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md bg-amber-500 shadow-sm shadow-amber-500/20" />External Calendar</span>
               </div>
             </div>
 
             {/* Side Panel */}
             <div className="space-y-6">
               {/* Block Dates */}
-              <div className="dashboard-card">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-bold text-charcoal">Block Dates</h3>
+              <div className="bg-white rounded-3xl p-6 border border-sand-200/80 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-black text-charcoal">Block Dates</h3>
+                    <p className="text-xs text-charcoal-light">Prevent bookings on specific days</p>
+                  </div>
                   <button
                     onClick={() => setShowBlockForm((v) => !v)}
-                    className="btn-primary text-sm flex items-center space-x-1"
+                    className={`p-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center ${
+                      showBlockForm 
+                        ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                        : 'bg-terracotta/10 text-terracotta hover:bg-terracotta/20'
+                    }`}
                     data-testid="toggle-block-form-btn"
+                    title={showBlockForm ? 'Cancel' : 'Block new dates'}
                   >
-                    <Plus className="w-4 h-4" />
-                    <span>{showBlockForm ? 'Cancel' : 'New'}</span>
+                    <Plus className={`w-5 h-5 transition-transform duration-300 ${showBlockForm ? 'rotate-45' : ''}`} />
                   </button>
                 </div>
 
                 {showBlockForm && (
-                  <form onSubmit={handleBlockDates} className="space-y-3" data-testid="block-form">
+                  <form onSubmit={handleBlockDates} className="space-y-4 p-4 bg-sand-50/50 rounded-2xl border border-sand-100 mb-4 animate-in slide-in-from-top-4 duration-200" data-testid="block-form">
                     <div>
-                      <label className="text-xs text-charcoal-light">Start Date</label>
+                      <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-1">Start Date</label>
                       <input
                         type="date"
                         value={blockStart}
                         onChange={(e) => setBlockStart(e.target.value)}
                         min={minDateStr}
                         required
-                        className="w-full border rounded-lg px-3 py-2 mt-1"
+                        className="w-full border border-sand-200 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
                         data-testid="block-start-input"
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-charcoal-light">End Date</label>
+                      <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-1">End Date</label>
                       <input
                         type="date"
                         value={blockEnd}
                         onChange={(e) => setBlockEnd(e.target.value)}
                         min={blockStart || minDateStr}
                         required
-                        className="w-full border rounded-lg px-3 py-2 mt-1"
+                        className="w-full border border-sand-200 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
                         data-testid="block-end-input"
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-charcoal-light">Reason (optional)</label>
+                      <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-1">Reason (If Applicable)</label>
                       <input
                         type="text"
                         value={blockReason}
                         onChange={(e) => setBlockReason(e.target.value)}
                         placeholder="Maintenance, personal use, etc."
-                        className="w-full border rounded-lg px-3 py-2 mt-1"
+                        className="w-full border border-sand-200 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
                         data-testid="block-reason-input"
                       />
                     </div>
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="btn-primary w-full disabled:opacity-50"
+                      className="w-full py-3 bg-terracotta text-white rounded-xl font-bold text-sm hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-md shadow-terracotta/15 disabled:opacity-50"
                       data-testid="submit-block-btn"
                     >
                       {submitting ? 'Blocking…' : 'Block Dates'}
@@ -494,19 +543,21 @@ const HostCalendar = () => {
                   </form>
                 )}
 
-                <div className="mt-4 space-y-2 max-h-64 overflow-y-auto" data-testid="blocked-dates-list">
+                <div className="mt-4 space-y-2.5 max-h-64 overflow-y-auto pr-1" data-testid="blocked-dates-list">
                   {allManualBlocks.length === 0 && (
-                    <p className="text-sm text-charcoal-light">No manual blocks yet.</p>
+                    <div className="text-center py-6 bg-sand-50/50 rounded-2xl border border-dashed border-sand-200">
+                      <p className="text-xs text-charcoal-light">No manual blocks yet.</p>
+                    </div>
                   )}
                   {allManualBlocks.map((blk) => (
                     <div
                       key={blk.blocked_date_id}
-                      className="flex items-center justify-between border border-sand-200 rounded-lg p-2"
+                      className="flex items-center justify-between border border-sand-100 rounded-2xl p-3 bg-sand-50/30 hover:bg-sand-50 transition-colors group"
                       data-testid={`blocked-${blk.blocked_date_id}`}
                     >
                       <button
                         type="button"
-                        className="text-sm text-left flex-1"
+                        className="text-left flex-1"
                         onClick={() => {
                           const [yr, mo] = blk.start_date.split('-').map((n) => parseInt(n, 10));
                           setMonth(mo);
@@ -514,16 +565,16 @@ const HostCalendar = () => {
                         }}
                         title="Jump to this month"
                       >
-                        <div className="font-semibold text-charcoal">
+                        <div className="font-bold text-sm text-charcoal group-hover:text-terracotta transition-colors">
                           {blk.start_date} → {blk.end_date}
                         </div>
                         {blk.reason && (
-                          <div className="text-xs text-charcoal-light">{blk.reason}</div>
+                          <div className="text-xs text-charcoal-light mt-0.5">{blk.reason}</div>
                         )}
                       </button>
                       <button
                         onClick={() => handleUnblock({ source: 'manual', blocked_date_id: blk.blocked_date_id })}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors active:scale-95 opacity-0 group-hover:opacity-100 focus:opacity-100"
                         title="Unblock"
                         data-testid={`unblock-${blk.blocked_date_id}`}
                       >
@@ -535,50 +586,60 @@ const HostCalendar = () => {
               </div>
 
               {/* External Calendars */}
-              <div className="dashboard-card">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-lg font-bold text-charcoal">External Calendars (iCal)</h3>
+              <div className="bg-white rounded-3xl p-6 border border-sand-200/80 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-black text-charcoal">External Calendars (iCal)</h3>
+                    <p className="text-xs text-charcoal-light">Sync with Airbnb, Vrbo, etc.</p>
+                  </div>
                   <button
                     onClick={() => setShowExternalForm((v) => !v)}
-                    className="btn-secondary text-sm flex items-center space-x-1"
+                    className={`p-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center ${
+                      showExternalForm 
+                        ? 'bg-red-50 text-red-600 hover:bg-red-100' 
+                        : 'bg-sand-100 text-charcoal hover:bg-sand-200'
+                    }`}
                     data-testid="toggle-external-form-btn"
+                    title={showExternalForm ? 'Cancel' : 'Add Calendar'}
                   >
-                    <LinkIcon className="w-4 h-4" />
-                    <span>{showExternalForm ? 'Cancel' : 'Add'}</span>
+                    <LinkIcon className={`w-5 h-5 transition-transform duration-300 ${showExternalForm ? 'rotate-45' : ''}`} />
                   </button>
                 </div>
 
                 {showExternalForm && (
-                  <form onSubmit={handleAddExternal} className="space-y-3" data-testid="external-form">
+                  <form onSubmit={handleAddExternal} className="space-y-4 p-4 bg-sand-50/50 rounded-2xl border border-sand-100 mb-4 animate-in slide-in-from-top-4 duration-200" data-testid="external-form">
                     <input
                       type="text"
                       value={extName}
                       onChange={(e) => setExtName(e.target.value)}
                       placeholder="Source name (e.g. Airbnb)"
                       required
-                      className="w-full border rounded-lg px-3 py-2"
+                      className="w-full border border-sand-200 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
                       data-testid="ext-name-input"
                     />
                     <input
-                      type="url"
+                      type="text"
                       value={extUrl}
                       onChange={(e) => setExtUrl(e.target.value)}
                       placeholder="https://… .ics URL"
                       required
-                      className="w-full border rounded-lg px-3 py-2"
+                      className="w-full border border-sand-200 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
                       data-testid="ext-url-input"
                     />
-                    <input
-                      type="color"
-                      value={extColor}
-                      onChange={(e) => setExtColor(e.target.value)}
-                      className="w-full h-10 border rounded-lg cursor-pointer"
-                      data-testid="ext-color-input"
-                    />
+                    <div>
+                      <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-1">Calendar Color</label>
+                      <input
+                        type="color"
+                        value={extColor}
+                        onChange={(e) => setExtColor(e.target.value)}
+                        className="w-full h-10 border border-sand-200 rounded-xl cursor-pointer bg-white"
+                        data-testid="ext-color-input"
+                      />
+                    </div>
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="btn-primary w-full disabled:opacity-50"
+                      className="w-full py-3 bg-terracotta text-white rounded-xl font-bold text-sm hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-md shadow-terracotta/15 disabled:opacity-50"
                       data-testid="submit-external-btn"
                     >
                       {submitting ? 'Adding…' : 'Add Calendar'}
@@ -586,63 +647,65 @@ const HostCalendar = () => {
                   </form>
                 )}
 
-                <div className="mt-4 space-y-2" data-testid="external-list">
+                <div className="mt-4 space-y-3" data-testid="external-list">
                   {externalCalendars.length === 0 && (
-                    <p className="text-sm text-charcoal-light">No external calendars added.</p>
+                    <div className="text-center py-6 bg-sand-50/50 rounded-2xl border border-dashed border-sand-200">
+                      <p className="text-xs text-charcoal-light">No external calendars added.</p>
+                    </div>
                   )}
                   {externalCalendars.map((c) => (
                     <div
                       key={c.calendar_id}
-                      className="border border-sand-200 rounded-lg p-2"
+                      className="border border-sand-150 rounded-2xl p-4 bg-sand-50/30 hover:bg-sand-50 transition-colors group"
                       data-testid={`ext-cal-${c.calendar_id}`}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2.5">
                           <span
-                            className="w-3 h-3 rounded"
+                            className="w-3.5 h-3.5 rounded-md shadow-sm"
                             style={{ backgroundColor: c.color }}
                           />
-                          <span className="text-sm font-semibold text-charcoal">{c.name}</span>
+                          <span className="text-sm font-bold text-charcoal">{c.name}</span>
                         </div>
-                        <div className="flex items-center space-x-1">
+                        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => handleSyncExternal(c.calendar_id)}
-                            className="p-1 text-charcoal-light hover:bg-sand-100 rounded"
+                            className="p-1.5 text-charcoal-light hover:text-terracotta hover:bg-white rounded-lg shadow-sm transition-colors active:scale-95"
                             title="Sync now"
                             data-testid={`sync-${c.calendar_id}`}
                           >
-                            <RefreshCw className="w-4 h-4" />
+                            <RefreshCw className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleRemoveExternal(c.calendar_id)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors active:scale-95"
                             title="Remove"
                             data-testid={`remove-${c.calendar_id}`}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </div>
-                      <div className="mt-1 text-xs flex items-center space-x-2">
+                      <div className="mt-2 text-[10px] font-black uppercase tracking-wider flex items-center space-x-2">
                         <span
-                          className={`px-2 py-0.5 rounded ${
+                          className={`px-2.5 py-0.5 rounded-full ${
                             c.sync_status === 'success'
-                              ? 'bg-green-100 text-green-700'
+                              ? 'bg-green-50 text-green-700 border border-green-100'
                               : c.sync_status === 'failed'
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-yellow-100 text-yellow-700'
+                              ? 'bg-red-50 text-red-700 border border-red-100'
+                              : 'bg-yellow-50 text-yellow-700 border border-yellow-100'
                           }`}
                         >
                           {c.sync_status}
                         </span>
                         {c.last_synced_at && (
-                          <span className="text-charcoal-light">
-                            {new Date(c.last_synced_at).toLocaleString()}
+                          <span className="text-charcoal-light font-medium normal-case tracking-normal">
+                            Synced {new Date(c.last_synced_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}
                       </div>
                       {c.sync_error && (
-                        <div className="text-xs text-red-600 mt-1 truncate" title={c.sync_error}>
+                        <div className="text-[10px] text-red-600 mt-1.5 bg-red-50/50 p-1.5 rounded-lg truncate border border-red-50" title={c.sync_error}>
                           {c.sync_error}
                         </div>
                       )}

@@ -38,6 +38,8 @@ class Booking(BaseModel):
     payment_status: str = "pending"  # pending, paid, failed, refunded
     razorpay_order_id: Optional[str] = None
     razorpay_payment_id: Optional[str] = None
+    coupon_code: Optional[str] = None
+    discount_amount: float = 0.0
     
     # Status
     booking_status: BookingStatus = BookingStatus.PENDING

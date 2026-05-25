@@ -23,6 +23,7 @@ class NotificationType(str, Enum):
     OWNER_ASSIGNED = "owner_assigned"
     DISPUTE_RAISED = "dispute_raised"
     REVIEW_REQUEST = "review_request"
+    REFUND_RECEIVED = "refund_received"
 
 class NotificationChannel(str, Enum):
     SMS = "sms"

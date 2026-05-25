@@ -15,7 +15,9 @@ import os
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/upload", tags=["Uploads"])
 
-UPLOAD_DIR = Path("/app/backend/uploads")
+# Use relative path from the backend root (same as server.py)
+ROOT_DIR = Path(__file__).parent.parent
+UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXT = {"png", "jpg", "jpeg", "webp", "gif"}

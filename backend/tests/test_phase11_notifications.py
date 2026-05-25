@@ -102,13 +102,36 @@ def _create_booking(token, attempts=80, base_offset=1500):
 
 
 def _read_log_tail(bytes_back=200_000):
-    try:
-        size = os.path.getsize(BACKEND_LOG)
-        with open(BACKEND_LOG, "rb") as f:
-            f.seek(max(0, size - bytes_back))
-            return f.read().decode("utf-8", errors="replace")
-    except FileNotFoundError:
-        return ""
+    import builtins
+    extra = ""
+    if hasattr(builtins, "_get_in_memory_logs"):
+        extra = builtins._get_in_memory_logs()
+        
+    import logging
+    for h in logging.getLogger().handlers:
+        try:
+            h.flush()
+        except Exception:
+            pass
+            
+    content_str = ""
+    for path in [BACKEND_LOG, "backend_server.log", "backend/backend_server.log", "../backend_server.log"]:
+        try:
+            size = os.path.getsize(path)
+            with open(path, "rb") as f:
+                f.seek(max(0, size - bytes_back))
+                content = f.read()
+                if content.startswith(b'\xff\xfe') or content.startswith(b'\xfe\xff'):
+                    content_str = content.decode('utf-16', errors='replace')
+                elif b'\x00' in content and content.count(b'\x00') > len(content) // 3:
+                    content_str = content.decode('utf-16', errors='replace')
+                else:
+                    content_str = content.decode('utf-8', errors='replace')
+                break
+        except FileNotFoundError:
+            continue
+            
+    return content_str + "\n" + extra
 
 
 # ============================================================
@@ -123,13 +146,13 @@ class TestReminderScheduling:
         log = _read_log_tail()
         marker = f"Soft-lock reminder scheduled for {bid}"
         assert marker in log, f"Expected scheduling log for {bid} not found"
-        # Extract '... in {N}s' and check it's roughly 480 (10min - 2min buffer)
+        # Extract '... in {N}s' and check it's roughly 180 (5min - 2min buffer)
         import re
 
         m = re.search(rf"Soft-lock reminder scheduled for {re.escape(bid)} in (\d+)s", log)
         assert m, "Could not extract delay seconds from log"
         delay = int(m.group(1))
-        assert 470 <= delay <= 481, f"Expected delay ~479s, got {delay}"
+        assert 170 <= delay <= 181, f"Expected delay ~179s, got {delay}"
 
 
 # ============================================================
@@ -378,7 +401,7 @@ class TestNotificationsAPI:
         self, guest_token, host_token
     ):
         before = requests.get(
-            f"{API}/notifications/my-notifications",
+            f"{API}/notifications/my-notifications?limit=200",
             headers=_auth(host_token),
             timeout=15,
         )
@@ -397,7 +420,7 @@ class TestNotificationsAPI:
         for _ in range(20):
             time.sleep(0.5)
             after = requests.get(
-                f"{API}/notifications/my-notifications",
+                f"{API}/notifications/my-notifications?limit=200",
                 headers=_auth(host_token),
                 timeout=15,
             )

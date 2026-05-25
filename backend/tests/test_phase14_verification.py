@@ -277,6 +277,11 @@ def test_verification_id_uniqueness(tokens, db):
 # ============== Broker fairness (seed 2nd broker) ==============
 def test_broker_fairness(tokens, db):
     host_tok, _ = tokens["host"]
+    # Temporarily clear host broker_id so load-balancing algorithm is used
+    db.users.update_one({"email": "host@propnest.com"}, {"$unset": {"broker_id": ""}})
+    # Temporarily deactivate third broker (vikram.singh@goldenrich.in) so only the 2 test brokers are available
+    db.users.update_one({"email": "vikram.singh@goldenrich.in"}, {"$set": {"is_active": False}})
+    
     # Seed second broker temporarily
     from datetime import datetime
     second = {
@@ -314,3 +319,6 @@ def test_broker_fairness(tokens, db):
             db.properties.delete_one({"property_id": p})
             db.property_verifications.delete_many({"property_id": p})
         db.users.delete_one({"user_id": "TEST_broker2_phase14"})
+        # Restore host broker_id mapping and third broker status
+        db.users.update_one({"email": "host@propnest.com"}, {"$set": {"broker_id": "user_broker_propnest"}})
+        db.users.update_one({"email": "vikram.singh@goldenrich.in"}, {"$set": {"is_active": True}})

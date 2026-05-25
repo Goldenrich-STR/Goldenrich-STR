@@ -6,6 +6,7 @@ import {
 import {
   ArrowLeft, Download, DollarSign, TrendingUp, Wallet, Users,
   RefreshCcw, CheckCircle, XCircle, AlertCircle, Clock,
+  Search, Share2, FileText, Mail, MessageSquare, Printer, Check
 } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -122,9 +123,9 @@ const OverviewTab = () => {
   const rev = data.revenue;
   const cards = [
     { label: 'Total Gross Revenue',     value: fmtINR(rev.total_gross_paise),       icon: DollarSign, testid: 'stat-total-gross' },
-    { label: 'Platform Take (10%)',     value: fmtINR(rev.platform_take_paise),     icon: TrendingUp, testid: 'stat-platform-take' },
-    { label: 'Pending Payouts',         value: fmtINR(data.pending_payouts.amount_paise), icon: Wallet,   testid: 'stat-pending-payouts', sub: `${data.pending_payouts.count} queued` },
-    { label: 'MRR',                     value: fmtINR(data.mrr_paise),              icon: RefreshCcw, testid: 'stat-mrr' },
+    { label: 'Platform Fee',            value: fmtINR(rev.platform_take_paise),     icon: TrendingUp, testid: 'stat-platform-take' },
+    { label: 'Host Payouts',            value: fmtINR(rev.payouts_paid_paise),      icon: Wallet,   testid: 'stat-pending-payouts', sub: `${data.pending_payouts.count} pending payout`, pendingValue: fmtINR(data.pending_payouts.amount_paise) },
+    { label: 'Tax',                     value: fmtINR(rev.total_tax_paise),         icon: RefreshCcw, testid: 'stat-tax' },
     { label: 'Booking Payments',        value: fmtINR(rev.booking_payments_paise),  icon: DollarSign, testid: 'stat-booking-payments', sub: `${data.counts.booking_payments} bookings` },
     { label: 'Registration Fees',       value: fmtINR(rev.registration_fees_paise), icon: CheckCircle, testid: 'stat-registration-fees', sub: `${data.counts.registration_fees} hosts` },
     { label: 'Subscription Revenue',    value: fmtINR(rev.subscriptions_paise),     icon: RefreshCcw, testid: 'stat-subscriptions', sub: `${data.counts.subscriptions} subs` },
@@ -135,14 +136,28 @@ const OverviewTab = () => {
     <div className="space-y-6" data-testid="overview-tab">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => (
-          <div key={c.label} className="dashboard-card" data-testid={c.testid}>
+          <div key={c.label} className="dashboard-card border border-sand-200 shadow-sm hover:shadow transition bg-white p-5 rounded-2xl" data-testid={c.testid}>
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs uppercase tracking-wider text-charcoal-muted">{c.label}</p>
-                <p className="text-2xl font-bold text-charcoal mt-1">{c.value}</p>
-                {c.sub && <p className="text-xs text-charcoal-light mt-1">{c.sub}</p>}
+                <p className="text-xs uppercase tracking-wider text-charcoal-muted font-bold">{c.label}</p>
+                {c.paidValue && (
+                  <p className="text-xs text-charcoal-light mt-1.5 flex items-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5"></span>
+                    Paid: <span className="font-semibold text-green-700 ml-1">{c.paidValue}</span>
+                  </p>
+                )}
+                {c.pendingValue && (
+                  <p className="text-xs text-charcoal-light mt-1.5 flex items-center">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mr-1.5"></span>
+                    Pending: <span className="font-semibold text-yellow-700 ml-1">{c.pendingValue}</span>
+                  </p>
+                )}
+                <p className="text-2xl font-black text-charcoal mt-2">{c.value}</p>
+                {c.sub && <p className="text-xs text-charcoal-light mt-1.5 font-medium">{c.sub}</p>}
               </div>
-              <c.icon className="w-5 h-5 text-terracotta" />
+              <div className="p-2.5 rounded-xl bg-sand-50 border border-sand-100">
+                <c.icon className="w-5 h-5 text-terracotta" />
+              </div>
             </div>
           </div>
         ))}
@@ -182,12 +197,23 @@ const TransactionsTab = () => {
   const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState({ type: '', status: '', q: '', start: '', end: '' });
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const LIMIT = 10;
+
+  // Custom states for Invoice & Share Actions
+  const [selectedInvoiceTxn, setSelectedInvoiceTxn] = useState(null);
+  const [activeShareId, setActiveShareId] = useState(null);
+  const [sharingStatus, setSharingStatus] = useState(null);
 
   const load = async () => {
     setLoading(true);
     try {
       const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
-      const res = await accountAPI.listTransactions({ ...params, limit: 100 });
+      const res = await accountAPI.listTransactions({
+        ...params,
+        limit: LIMIT,
+        skip: (page - 1) * LIMIT,
+      });
       setItems(res.data.transactions || []);
       setTotal(res.data.total || 0);
     } finally {
@@ -195,7 +221,17 @@ const TransactionsTab = () => {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [filters]);
+  // Trigger load when filters or page changes
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line
+  }, [filters, page]);
+
+  // Helper to update filters and reset page to 1
+  const handleFilterChange = (newFilters) => {
+    setPage(1);
+    setFilters(newFilters);
+  };
 
   const downloadCsv = async () => {
     const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
@@ -210,27 +246,55 @@ const TransactionsTab = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleShareInvoice = async (txnId, channel) => {
+    setActiveShareId(null);
+    try {
+      setSharingStatus({ id: txnId, type: 'loading', message: `Sending via ${channel === 'whatsapp' ? 'WhatsApp' : 'Email'}...` });
+      const res = await accountAPI.shareInvoice(txnId, channel);
+      setSharingStatus({ id: txnId, type: 'success', message: res.data.message || `Shared successfully via ${channel.toUpperCase()}!` });
+      setTimeout(() => setSharingStatus(null), 4000);
+    } catch (e) {
+      setSharingStatus({ id: txnId, type: 'error', message: e?.response?.data?.detail || 'Failed to share invoice.' });
+      setTimeout(() => setSharingStatus(null), 4000);
+    }
+  };
+
   return (
-    <div className="space-y-4" data-testid="transactions-tab">
-      <div className="dashboard-card">
-        <div className="flex flex-wrap items-center gap-3">
+    <div className="space-y-6" data-testid="transactions-tab">
+      <div className="dashboard-card border border-sand-200 shadow-sm rounded-2xl bg-white p-5">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex-1 min-w-[280px] relative">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <Search className="h-4.5 w-4.5 text-charcoal-muted" />
+            </span>
+            <input
+              type="text"
+              placeholder="Search Customer Name / Phone / Email / Booking / Payment ID..."
+              value={filters.q}
+              onChange={(e) => handleFilterChange({ ...filters, q: e.target.value })}
+              className="input-field pl-11 w-full bg-sand-50/50 focus:bg-white border border-sand-300 focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 rounded-xl transition text-sm py-2.5"
+              data-testid="filter-q"
+            />
+          </div>
+
           <select
             value={filters.type}
-            onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-            className="input-field w-48"
+            onChange={(e) => handleFilterChange({ ...filters, type: e.target.value })}
+            className="input-field w-52 bg-white border border-sand-300 rounded-xl py-2.5 text-sm"
             data-testid="filter-type"
           >
-            <option value="">All types</option>
+            <option value="">All transaction types</option>
             <option value="booking_payment">Booking payments</option>
             <option value="registration_fee">Registration fees</option>
             <option value="subscription">Subscriptions</option>
             <option value="refund">Refunds</option>
             <option value="payout">Payouts</option>
           </select>
+
           <select
             value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="input-field w-40"
+            onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })}
+            className="input-field w-44 bg-white border border-sand-300 rounded-xl py-2.5 text-sm"
             data-testid="filter-status"
           >
             <option value="">All statuses</option>
@@ -238,31 +302,28 @@ const TransactionsTab = () => {
             <option value="pending">Pending</option>
             <option value="failed">Failed</option>
           </select>
-          <input
-            type="date"
-            value={filters.start}
-            onChange={(e) => setFilters({ ...filters, start: e.target.value })}
-            className="input-field w-40"
-            data-testid="filter-start"
-          />
-          <input
-            type="date"
-            value={filters.end}
-            onChange={(e) => setFilters({ ...filters, end: e.target.value })}
-            className="input-field w-40"
-            data-testid="filter-end"
-          />
-          <input
-            type="text"
-            placeholder="Search id / payment / booking"
-            value={filters.q}
-            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-            className="input-field flex-1 min-w-[220px]"
-            data-testid="filter-q"
-          />
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="date"
+              value={filters.start}
+              onChange={(e) => handleFilterChange({ ...filters, start: e.target.value })}
+              className="input-field w-40 bg-white border border-sand-300 rounded-xl py-2 text-sm"
+              data-testid="filter-start"
+            />
+            <span className="text-charcoal-muted text-xs font-bold">to</span>
+            <input
+              type="date"
+              value={filters.end}
+              onChange={(e) => handleFilterChange({ ...filters, end: e.target.value })}
+              className="input-field w-40 bg-white border border-sand-300 rounded-xl py-2 text-sm"
+              data-testid="filter-end"
+            />
+          </div>
+
           <button
             onClick={downloadCsv}
-            className="px-4 py-2 rounded-lg bg-sage text-white font-semibold hover:bg-sage-dark flex items-center space-x-2"
+            className="px-5 py-2.5 rounded-xl bg-sage hover:bg-sage-dark text-white font-bold transition flex items-center space-x-2 text-sm shadow-sm"
             data-testid="export-csv-btn"
           >
             <Download className="w-4 h-4" />
@@ -271,64 +332,214 @@ const TransactionsTab = () => {
         </div>
       </div>
 
-      <div className="dashboard-card overflow-x-auto">
-        <p className="text-sm text-charcoal-light mb-2" data-testid="transactions-count">
-          {loading ? 'Loading…' : `${total} transactions`}
-        </p>
+      <div className="dashboard-card border border-sand-200 shadow-sm rounded-2xl bg-white p-6 overflow-hidden">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-bold text-charcoal" data-testid="transactions-count">
+            {loading ? 'Syncing transactions...' : `${total} Transactions Found`}
+          </p>
+        </div>
+
+        {loading && <div className="text-center py-12 text-charcoal-light" data-testid="transactions-loading">Loading transactions…</div>}
         {!loading && items.length === 0 && (
-          <p className="text-charcoal-light py-6 text-center" data-testid="transactions-empty">
-            No matching transactions
+          <p className="text-charcoal-light py-12 text-center" data-testid="transactions-empty">
+            No matching transactions found. Try adjusting your search query or filters.
           </p>
         )}
-        {items.length > 0 && (
-          <table className="w-full text-sm" data-testid="transactions-table">
-            <thead className="text-left text-charcoal-muted uppercase text-xs tracking-wider">
-              <tr className="border-b border-sand-200">
-                <th className="py-2 pr-3">Date</th>
-                <th className="py-2 pr-3">Type</th>
-                <th className="py-2 pr-3">Amount</th>
-                <th className="py-2 pr-3">Status</th>
-                <th className="py-2 pr-3">Booking</th>
-                <th className="py-2 pr-3">Payment ID</th>
-                <th className="py-2 pr-3">Mock</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((t) => (
-                <tr
-                  key={t.transaction_id}
-                  className="border-b border-sand-100"
-                  data-testid={`txn-${t.transaction_id}`}
+
+        {!loading && items.length > 0 && (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left border-collapse" data-testid="transactions-table">
+                <thead>
+                  <tr className="border-b border-sand-200 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-sand-50/50">
+                    <th className="py-3 px-4 rounded-l-xl">Date & Time</th>
+                    <th className="py-3 px-4">Customer Details</th>
+                    <th className="py-3 px-4">Type</th>
+                    <th className="py-3 px-4">Amount</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Booking ID</th>
+                    <th className="py-3 px-4">Payment ID</th>
+                    <th className="py-3 px-4 text-center rounded-r-xl no-print">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-sand-100">
+                  {items.map((t) => (
+                    <tr
+                      key={t.transaction_id}
+                      className="hover:bg-sand-50/30 transition text-charcoal"
+                      data-testid={`txn-${t.transaction_id}`}
+                    >
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-medium text-charcoal-light">
+                        {new Date(t.created_at).toLocaleString('en-IN', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short'
+                        })}
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="font-bold text-charcoal text-sm">{t.user?.full_name || '—'}</div>
+                        <div className="text-xs text-charcoal-muted mt-0.5">{t.user?.email || '—'}</div>
+                        <div className="text-xs text-charcoal-light mt-0.5">{t.user?.phone || '—'}</div>
+                      </td>
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <span className="px-2.5 py-1 rounded-lg bg-sand-100 text-charcoal text-xs font-bold uppercase tracking-wider">
+                          {t.type.replaceAll('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 font-black text-sm text-charcoal whitespace-nowrap">
+                        {fmtINR(t.amount)}
+                      </td>
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold uppercase tracking-wide ${
+                          t.status === 'success' ? 'bg-green-100 text-green-700' :
+                          t.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>{t.status}</span>
+                      </td>
+                      <td className="py-4 px-4 font-semibold text-xs text-charcoal-muted whitespace-nowrap">
+                        {t.booking_id || '—'}
+                      </td>
+                      <td className="py-4 px-4 text-charcoal-light text-xs font-mono whitespace-nowrap">
+                        {t.razorpay_payment_id || t.razorpay_payout_id || t.razorpay_refund_id || '—'}
+                      </td>
+                      <td className="py-4 px-4 whitespace-nowrap text-center no-print">
+                        <div className="flex items-center justify-center space-x-2">
+                          {/* Invoice Button */}
+                          <button
+                            onClick={() => setSelectedInvoiceTxn(t)}
+                            className="px-3 py-2 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 flex items-center space-x-1.5 transition text-xs font-bold shadow-sm"
+                            title="View & Print Invoice"
+                          >
+                            <FileText className="w-4 h-4 text-terracotta" />
+                            <span>Invoice</span>
+                          </button>
+
+                          {/* Share Button Dropdown */}
+                          <div className="relative inline-block text-left">
+                            <button
+                              onClick={() => setActiveShareId(activeShareId === t.transaction_id ? null : t.transaction_id)}
+                              className="px-3 py-2 rounded-xl border border-sand-300 hover:border-sage text-charcoal hover:bg-sand-50 flex items-center space-x-1.5 transition text-xs font-bold shadow-sm"
+                              title="Share Invoice with Customer"
+                            >
+                              <Share2 className="w-4 h-4 text-sage" />
+                              <span>Share</span>
+                            </button>
+
+                            {activeShareId === t.transaction_id && (
+                              <div className="absolute right-0 mt-1.5 w-40 rounded-xl bg-white border border-sand-200 shadow-xl z-20 overflow-hidden divide-y divide-sand-100 animate-in fade-in slide-in-from-top-1 duration-150">
+                                <button
+                                  onClick={() => handleShareInvoice(t.transaction_id, 'whatsapp')}
+                                  className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-sand-50 flex items-center space-x-2.5 transition font-bold"
+                                >
+                                  <MessageSquare className="w-4 h-4 text-green-600" />
+                                  <span>via WhatsApp</span>
+                                </button>
+                                <button
+                                  onClick={() => handleShareInvoice(t.transaction_id, 'email')}
+                                  className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-sand-50 flex items-center space-x-2.5 transition font-bold"
+                                >
+                                  <Mail className="w-4 h-4 text-blue-600" />
+                                  <span>via Email</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Mini inline status bubble for sharing operations */}
+                        {sharingStatus && sharingStatus.id === t.transaction_id && (
+                          <div className="mt-2 text-center">
+                            <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm border ${
+                              sharingStatus.type === 'loading' ? 'bg-sand-100 text-charcoal border-sand-200' :
+                              sharingStatus.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' :
+                              'bg-red-50 text-red-700 border-red-200'
+                            }`}>
+                              {sharingStatus.message}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-sand-100 no-print" data-testid="transactions-pagination">
+              <p className="text-xs text-charcoal-muted font-semibold">
+                Showing <span className="font-extrabold text-charcoal">{(page - 1) * LIMIT + 1}</span> to{' '}
+                <span className="font-extrabold text-charcoal">{Math.min(page * LIMIT, total)}</span> of{' '}
+                <span className="font-extrabold text-charcoal">{total}</span> transactions
+              </p>
+              
+              <div className="flex items-center space-x-1.5">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-sand-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  data-testid="pagination-prev"
                 >
-                  <td className="py-2 pr-3 whitespace-nowrap">
-                    {new Date(t.created_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
-                  </td>
-                  <td className="py-2 pr-3">
-                    <span className="px-2 py-0.5 rounded bg-sand-100 text-xs font-semibold">
-                      {t.type.replaceAll('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-3 font-semibold">{fmtINR(t.amount)}</td>
-                  <td className="py-2 pr-3">
-                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                      t.status === 'success' ? 'bg-green-100 text-green-700' :
-                      t.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>{t.status}</span>
-                  </td>
-                  <td className="py-2 pr-3 text-charcoal-muted">{t.booking_id || '—'}</td>
-                  <td className="py-2 pr-3 text-charcoal-muted text-xs">
-                    {t.razorpay_payment_id || t.razorpay_payout_id || t.razorpay_refund_id || '—'}
-                  </td>
-                  <td className="py-2 pr-3">
-                    {t.is_mock ? <span className="text-xs text-charcoal-muted">demo</span> : <span className="text-xs">live</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  <span>Previous</span>
+                </button>
+                
+                {Array.from({ length: Math.max(1, Math.ceil(total / LIMIT)) }, (_, i) => i + 1)
+                  .filter((p) => {
+                    const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+                    if (totalPages <= 5) return true;
+                    return Math.abs(p - page) <= 1 || p === 1 || p === totalPages;
+                  })
+                  .reduce((acc, p, index, arr) => {
+                    if (index > 0 && p - arr[index - 1] > 1) {
+                      acc.push('...');
+                    }
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, idx) => {
+                    if (p === '...') {
+                      return (
+                        <span key={`ellipse-${idx}`} className="px-2 text-xs text-charcoal-muted font-bold select-none">
+                          ...
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        key={`page-${p}`}
+                        onClick={() => setPage(p)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition shadow-sm ${
+                          page === p
+                            ? 'bg-terracotta text-white'
+                            : 'border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50'
+                        }`}
+                        data-testid={`pagination-page-${p}`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                
+                <button
+                  onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / LIMIT)), p + 1))}
+                  disabled={page * LIMIT >= total}
+                  className="px-3 py-1.5 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-sand-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  data-testid="pagination-next"
+                >
+                  <span>Next</span>
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
+
+      {/* Invoice modal rendering */}
+      {selectedInvoiceTxn && (
+        <InvoiceModal
+          transaction={selectedInvoiceTxn}
+          onClose={() => setSelectedInvoiceTxn(null)}
+        />
+      )}
     </div>
   );
 };
@@ -340,18 +551,35 @@ const PayoutsTab = () => {
   const [status, setStatus] = useState('eligible');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const LIMIT = 10;
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await accountAPI.listPayouts(status ? { status } : {});
+      const res = await accountAPI.listPayouts({
+        ...(status ? { status } : {}),
+        limit: LIMIT,
+        skip: (page - 1) * LIMIT,
+      });
       setItems(res.data.payouts || []);
+      setTotal(res.data.total || 0);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [status]);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line
+  }, [status, page]);
+
+  // Reset page to 1 on status change
+  const handleStatusChange = (val) => {
+    setPage(1);
+    setStatus(val);
+  };
 
   const processOne = async (pid) => {
     setBusy(true);
@@ -393,7 +621,7 @@ const PayoutsTab = () => {
       <div className="dashboard-card flex flex-wrap items-center gap-3">
         <select
           value={status}
-          onChange={(e) => setStatus(e.target.value)}
+          onChange={(e) => handleStatusChange(e.target.value)}
           className="input-field w-48"
           data-testid="payout-status-filter"
         >
@@ -431,68 +659,136 @@ const PayoutsTab = () => {
           </p>
         )}
         {items.length > 0 && (
-          <table className="w-full text-sm" data-testid="payouts-table">
-            <thead className="text-left text-charcoal-muted uppercase text-xs tracking-wider">
-              <tr className="border-b border-sand-200">
-                <th className="py-2 pr-3">Host</th>
-                <th className="py-2 pr-3">Property</th>
-                <th className="py-2 pr-3">Gross</th>
-                <th className="py-2 pr-3">Fee</th>
-                <th className="py-2 pr-3">Net</th>
-                <th className="py-2 pr-3">Destination</th>
-                <th className="py-2 pr-3">Status</th>
-                <th className="py-2 pr-3">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((p) => (
-                <tr
-                  key={p.payout_id}
-                  className="border-b border-sand-100"
-                  data-testid={`payout-row-${p.payout_id}`}
-                >
-                  <td className="py-2 pr-3">
-                    <div className="font-semibold text-charcoal">{p.host?.full_name || p.host_id}</div>
-                    <div className="text-xs text-charcoal-muted">{p.host?.email}</div>
-                  </td>
-                  <td className="py-2 pr-3">
-                    <div className="font-semibold text-charcoal">{p.property?.title || p.property_id}</div>
-                    <div className="text-xs text-charcoal-muted">{p.property?.city}</div>
-                  </td>
-                  <td className="py-2 pr-3">{fmtINR(p.gross_amount)}</td>
-                  <td className="py-2 pr-3 text-charcoal-muted">{fmtINR(p.platform_fee)}</td>
-                  <td className="py-2 pr-3 font-bold">{fmtINR(p.net_amount)}</td>
-                  <td className="py-2 pr-3 text-xs">
-                    <div>{p.destination_type?.toUpperCase()}</div>
-                    <div className="text-charcoal-muted">{p.destination_ref || '—'}</div>
-                  </td>
-                  <td className="py-2 pr-3">
-                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                      p.status === 'paid' ? 'bg-green-100 text-green-700' :
-                      p.status === 'eligible' ? 'bg-yellow-100 text-yellow-700' :
-                      p.status === 'processing' ? 'bg-blue-100 text-blue-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>{p.status}</span>
-                    {p.failure_reason && (
-                      <div className="text-xs text-red-600 mt-1">{p.failure_reason}</div>
-                    )}
-                  </td>
-                  <td className="py-2 pr-3">
-                    {p.status === 'eligible' && (
-                      <button
-                        onClick={() => processOne(p.payout_id)}
-                        disabled={busy}
-                        className="px-3 py-1 rounded bg-sage text-white text-xs font-semibold hover:bg-sage-dark disabled:opacity-60"
-                        data-testid={`pay-${p.payout_id}`}
-                      >
-                        Pay out
-                      </button>
-                    )}
-                  </td>
+          <>
+            <table className="w-full text-sm" data-testid="payouts-table">
+              <thead className="text-left text-charcoal-muted uppercase text-xs tracking-wider">
+                <tr className="border-b border-sand-200">
+                  <th className="py-2 pr-3">Host</th>
+                  <th className="py-2 pr-3">Property</th>
+                  <th className="py-2 pr-3">Gross</th>
+                  <th className="py-2 pr-3">Fee</th>
+                  <th className="py-2 pr-3">Net</th>
+                  <th className="py-2 pr-3">Destination</th>
+                  <th className="py-2 pr-3">Status</th>
+                  <th className="py-2 pr-3">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map((p) => (
+                  <tr
+                    key={p.payout_id}
+                    className="border-b border-sand-100"
+                    data-testid={`payout-row-${p.payout_id}`}
+                  >
+                    <td className="py-2 pr-3">
+                      <div className="font-semibold text-charcoal">{p.host?.full_name || p.host_id}</div>
+                      <div className="text-xs text-charcoal-muted">{p.host?.email}</div>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <div className="font-semibold text-charcoal">{p.property?.title || p.property_id}</div>
+                      <div className="text-xs text-charcoal-muted">{p.property?.city}</div>
+                    </td>
+                    <td className="py-2 pr-3">{fmtINR(p.gross_amount)}</td>
+                    <td className="py-2 pr-3 text-charcoal-muted">{fmtINR(p.platform_fee)}</td>
+                    <td className="py-2 pr-3 font-bold">{fmtINR(p.net_amount)}</td>
+                    <td className="py-2 pr-3 text-xs">
+                      <div>{p.destination_type?.toUpperCase()}</div>
+                      <div className="text-charcoal-muted">{p.destination_ref || '—'}</div>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                        p.status === 'paid' ? 'bg-green-100 text-green-700' :
+                        p.status === 'eligible' ? 'bg-yellow-100 text-yellow-700' :
+                        p.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>{p.status}</span>
+                      {p.failure_reason && (
+                        <div className="text-xs text-red-600 mt-1">{p.failure_reason}</div>
+                      )}
+                    </td>
+                    <td className="py-2 pr-3">
+                      {p.status === 'eligible' && (
+                        <button
+                          onClick={() => processOne(p.payout_id)}
+                          disabled={busy}
+                          className="px-3 py-1 rounded bg-sage text-white text-xs font-semibold hover:bg-sage-dark disabled:opacity-60"
+                          data-testid={`pay-${p.payout_id}`}
+                        >
+                          Pay out
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-sand-100 no-print" data-testid="payouts-pagination">
+              <p className="text-xs text-charcoal-muted font-semibold">
+                Showing <span className="font-extrabold text-charcoal">{(page - 1) * LIMIT + 1}</span> to{' '}
+                <span className="font-extrabold text-charcoal">{Math.min(page * LIMIT, total)}</span> of{' '}
+                <span className="font-extrabold text-charcoal">{total}</span> payouts
+              </p>
+              
+              <div className="flex items-center space-x-1.5">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-sand-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  data-testid="payouts-pagination-prev"
+                >
+                  <span>Previous</span>
+                </button>
+                
+                {Array.from({ length: Math.max(1, Math.ceil(total / LIMIT)) }, (_, i) => i + 1)
+                  .filter((p) => {
+                    const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+                    if (totalPages <= 5) return true;
+                    return Math.abs(p - page) <= 1 || p === 1 || p === totalPages;
+                  })
+                  .reduce((acc, p, index, arr) => {
+                    if (index > 0 && p - arr[index - 1] > 1) {
+                      acc.push('...');
+                    }
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, idx) => {
+                    if (p === '...') {
+                      return (
+                        <span key={`ellipse-${idx}`} className="px-2 text-xs text-charcoal-muted font-bold select-none">
+                          ...
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        key={`page-${p}`}
+                        onClick={() => setPage(p)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition shadow-sm ${
+                          page === p
+                            ? 'bg-terracotta text-white'
+                            : 'border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50'
+                        }`}
+                        data-testid={`payouts-pagination-page-${p}`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                
+                <button
+                  onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / LIMIT)), p + 1))}
+                  disabled={page * LIMIT >= total}
+                  className="px-3 py-1.5 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-sand-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  data-testid="payouts-pagination-next"
+                >
+                  <span>Next</span>
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -505,18 +801,28 @@ const RefundsTab = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const LIMIT = 10;
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await accountAPI.listRefunds({});
+      const res = await accountAPI.listRefunds({
+        limit: LIMIT,
+        skip: (page - 1) * LIMIT,
+      });
       setItems(res.data.refunds || []);
+      setTotal(res.data.total || 0);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line
+  }, [page]);
 
   return (
     <div className="space-y-4" data-testid="refunds-tab">
@@ -539,50 +845,128 @@ const RefundsTab = () => {
           </p>
         )}
         {items.length > 0 && (
-          <table className="w-full text-sm" data-testid="refunds-table">
-            <thead className="text-left text-charcoal-muted uppercase text-xs tracking-wider">
-              <tr className="border-b border-sand-200">
-                <th className="py-2 pr-3">Date</th>
-                <th className="py-2 pr-3">Booking</th>
-                <th className="py-2 pr-3">Guest</th>
-                <th className="py-2 pr-3">Original</th>
-                <th className="py-2 pr-3">Refund</th>
-                <th className="py-2 pr-3">Tier</th>
-                <th className="py-2 pr-3">Status</th>
-                <th className="py-2 pr-3">Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((r) => (
-                <tr
-                  key={r.refund_id}
-                  className="border-b border-sand-100"
-                  data-testid={`refund-row-${r.refund_id}`}
-                >
-                  <td className="py-2 pr-3 whitespace-nowrap">
-                    {new Date(r.created_at).toLocaleDateString('en-IN')}
-                  </td>
-                  <td className="py-2 pr-3 text-charcoal-muted text-xs">{r.booking_id}</td>
-                  <td className="py-2 pr-3 text-charcoal-muted text-xs">{r.guest_id}</td>
-                  <td className="py-2 pr-3">{fmtINR(r.original_amount)}</td>
-                  <td className="py-2 pr-3 font-bold">{fmtINR(r.refund_amount)}</td>
-                  <td className="py-2 pr-3 text-xs">
-                    <span className="px-2 py-0.5 rounded bg-sand-100 font-semibold">
-                      {r.policy_tier} · {r.refund_percent}%
-                    </span>
-                  </td>
-                  <td className="py-2 pr-3">
-                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                      r.status === 'processed' ? 'bg-green-100 text-green-700' :
-                      r.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>{r.status}</span>
-                  </td>
-                  <td className="py-2 pr-3 text-charcoal-muted text-xs max-w-xs truncate">{r.reason}</td>
+          <>
+            <table className="w-full text-sm" data-testid="refunds-table">
+              <thead className="text-left text-charcoal-muted uppercase text-xs tracking-wider">
+                <tr className="border-b border-sand-200">
+                  <th className="py-2 pr-3">Date</th>
+                  <th className="py-2 pr-3">Booking</th>
+                  <th className="py-2 pr-3">Guest</th>
+                  <th className="py-2 pr-3">Original</th>
+                  <th className="py-2 pr-3">Refund</th>
+                  <th className="py-2 pr-3">Tier</th>
+                  <th className="py-2 pr-3">Status</th>
+                  <th className="py-2 pr-3">Reason</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map((r) => (
+                  <tr
+                    key={r.refund_id}
+                    className="border-b border-sand-100"
+                    data-testid={`refund-row-${r.refund_id}`}
+                  >
+                    <td className="py-2 pr-3 whitespace-nowrap">
+                      {new Date(r.created_at).toLocaleDateString('en-IN')}
+                    </td>
+                    <td className="py-2 pr-3 text-charcoal-muted text-xs">
+                      <div className="font-semibold text-charcoal">{r.booking_id}</div>
+                      {r.host && (
+                        <div className="text-[10px] text-charcoal-light">
+                          Host: {r.host.full_name || r.host_id}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-2 pr-3 text-charcoal-muted text-xs animate-fade-in">
+                      <div className="font-semibold text-charcoal">{r.guest?.full_name || r.guest_id}</div>
+                      <div className="text-[10px] text-charcoal-light">{r.guest?.email}</div>
+                    </td>
+                    <td className="py-2 pr-3">{fmtINR(r.original_amount)}</td>
+                    <td className="py-2 pr-3 font-bold">{fmtINR(r.refund_amount)}</td>
+                    <td className="py-2 pr-3 text-xs">
+                      <span className="px-2 py-0.5 rounded bg-sand-100 font-semibold">
+                        {r.policy_tier} · {r.refund_percent}%
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                        r.status === 'processed' ? 'bg-green-100 text-green-700' :
+                        r.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>{r.status}</span>
+                    </td>
+                    <td className="py-2 pr-3 text-charcoal-muted text-xs max-w-xs truncate">{r.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-sand-100 no-print" data-testid="refunds-pagination">
+              <p className="text-xs text-charcoal-muted font-semibold">
+                Showing <span className="font-extrabold text-charcoal">{(page - 1) * LIMIT + 1}</span> to{' '}
+                <span className="font-extrabold text-charcoal">{Math.min(page * LIMIT, total)}</span> of{' '}
+                <span className="font-extrabold text-charcoal">{total}</span> refunds
+              </p>
+              
+              <div className="flex items-center space-x-1.5">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1.5 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-sand-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  data-testid="refunds-pagination-prev"
+                >
+                  <span>Previous</span>
+                </button>
+                
+                {Array.from({ length: Math.max(1, Math.ceil(total / LIMIT)) }, (_, i) => i + 1)
+                  .filter((p) => {
+                    const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+                    if (totalPages <= 5) return true;
+                    return Math.abs(p - page) <= 1 || p === 1 || p === totalPages;
+                  })
+                  .reduce((acc, p, index, arr) => {
+                    if (index > 0 && p - arr[index - 1] > 1) {
+                      acc.push('...');
+                    }
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, idx) => {
+                    if (p === '...') {
+                      return (
+                        <span key={`ellipse-${idx}`} className="px-2 text-xs text-charcoal-muted font-bold select-none">
+                          ...
+                        </span>
+                      );
+                    }
+                    return (
+                      <button
+                        key={`page-${p}`}
+                        onClick={() => setPage(p)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition shadow-sm ${
+                          page === p
+                            ? 'bg-terracotta text-white'
+                            : 'border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50'
+                        }`}
+                        data-testid={`refunds-pagination-page-${p}`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                
+                <button
+                  onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / LIMIT)), p + 1))}
+                  disabled={page * LIMIT >= total}
+                  className="px-3 py-1.5 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-sand-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  data-testid="refunds-pagination-next"
+                >
+                  <span>Next</span>
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -649,7 +1033,7 @@ const InitiateRefundModal = ({ onClose, onDone }) => {
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-charcoal mb-1">Override percent (optional)</label>
+            <label className="block text-sm font-semibold text-charcoal mb-1">Override percent (If Applicable)</label>
             <input
               type="number"
               value={overridePct}
@@ -741,6 +1125,169 @@ const TopHostsTab = () => {
           </li>
         ))}
       </ol>
+    </div>
+  );
+};
+
+// ---------------- Invoice Modal Component ----------------
+
+const InvoiceModal = ({ transaction, onClose }) => {
+  const t = transaction;
+  const user = t.user || {};
+  const amountINR = (t.amount || 0) / 100;
+  
+  // 18% GST calculation (GST included in all user payments)
+  const gstRate = 0.18;
+  const baseAmount = amountINR / (1 + gstRate);
+  const totalGst = amountINR - baseAmount;
+  const cgst = totalGst / 2;
+  const sgst = totalGst / 2;
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white" data-testid="invoice-modal">
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #printable-invoice, #printable-invoice * {
+            visibility: visible;
+          }
+          #printable-invoice {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 20px !important;
+            margin: 0 !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+        }
+      `}</style>
+      
+      <div id="printable-invoice" className="bg-white rounded-2xl max-w-lg w-full border border-sand-200 shadow-2xl p-6 relative overflow-hidden flex flex-col">
+        {/* Close Button */}
+        <button 
+          onClick={onClose} 
+          className="absolute top-4 right-4 text-charcoal-light hover:text-charcoal no-print"
+        >
+          <XCircle className="w-6 h-6" />
+        </button>
+
+        {/* Invoice Header */}
+        <div className="text-center pb-6 border-b border-dashed border-sand-300">
+          <div className="text-xs uppercase tracking-widest text-terracotta font-extrabold mb-1">Tax Invoice</div>
+          <h2 className="text-2xl font-black text-charcoal tracking-tight">GOLDEN-X-HOST</h2>
+          <p className="text-xs text-charcoal-muted mt-1">Short-Term Rentals Platform · India</p>
+          <p className="text-xs text-charcoal-light">GSTIN: 27AAAAA1111A1Z1</p>
+        </div>
+
+        {/* Invoice Info */}
+        <div className="grid grid-cols-2 gap-4 py-6 text-xs border-b border-dashed border-sand-300">
+          <div>
+            <div className="text-charcoal-muted uppercase font-bold tracking-wider mb-1">Customer Details</div>
+            <div className="font-bold text-charcoal text-sm">{user.full_name || '—'}</div>
+            <div className="text-charcoal-light mt-0.5">{user.email || '—'}</div>
+            <div className="text-charcoal-light">{user.phone || '—'}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-charcoal-muted uppercase font-bold tracking-wider mb-1">Invoice Details</div>
+            <div><span className="font-semibold text-charcoal-light">Invoice #:</span> <span className="font-bold text-charcoal">{t.transaction_id}</span></div>
+            <div><span className="font-semibold text-charcoal-light">Date:</span> {new Date(t.created_at).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</div>
+            <div><span className="font-semibold text-charcoal-light">Type:</span> <span className="capitalize font-medium text-terracotta">{t.type.replaceAll('_', ' ')}</span></div>
+          </div>
+        </div>
+
+        {/* Transaction/Bill details Table */}
+        <div className="py-6 flex-1">
+          <div className="text-xs text-charcoal-muted uppercase font-bold tracking-wider mb-3">Itemized Details</div>
+          <table className="w-full text-xs text-left">
+            <thead>
+              <tr className="border-b border-sand-200 text-charcoal-muted font-bold">
+                <th className="py-2">Description</th>
+                <th className="py-2 text-right">Taxable Val.</th>
+                <th className="py-2 text-right">GST (18%)</th>
+                <th className="py-2 text-right">Total (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-sand-100 text-charcoal">
+                <td className="py-3 font-semibold text-sm">
+                  {t.type === 'booking_payment' ? `Booking Accommodation Fee (${t.booking_id || '—'})` :
+                   t.type === 'registration_fee' ? 'Host Registration Fee' :
+                   t.type === 'subscription' ? 'Host Subscription Premium Plan' :
+                   t.type === 'refund' ? `Accommodation Refund Processed (${t.booking_id || '—'})` :
+                   'Platform Service Transaction'}
+                </td>
+                <td className="py-3 text-right">₹{baseAmount.toFixed(2)}</td>
+                <td className="py-3 text-right">₹{totalGst.toFixed(2)}</td>
+                <td className="py-3 text-right font-bold text-sm">₹{amountINR.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* GST breakdown table */}
+          <div className="mt-6 bg-sand-50/50 rounded-xl p-4 border border-sand-100 text-xs">
+            <div className="font-bold text-charcoal-muted uppercase tracking-wider mb-2 text-[10px]">Tax Breakdown</div>
+            <div className="flex justify-between py-1 border-b border-sand-200/60">
+              <span className="text-charcoal-light">CGST (9%)</span>
+              <span className="font-medium text-charcoal">₹{cgst.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between py-1 border-b border-sand-200/60">
+              <span className="text-charcoal-light">SGST (9%)</span>
+              <span className="font-medium text-charcoal">₹{sgst.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between py-1 font-bold text-charcoal">
+              <span>Total GST Paid</span>
+              <span>₹{totalGst.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Invoice Footer Details */}
+        <div className="border-t border-dashed border-sand-300 pt-6">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-charcoal font-black text-sm uppercase tracking-wider">Total Amount Paid</span>
+            <span className="text-2xl font-black text-terracotta">₹{amountINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+          </div>
+
+          <div className="bg-sand-50 rounded-xl p-3 text-[11px] text-charcoal-muted flex items-center justify-between">
+            <div>
+              <div><span className="font-semibold">Payment Method:</span> Razorpay Online Gateway</div>
+              <div><span className="font-semibold">Payment Status:</span> SUCCESS</div>
+              {t.razorpay_payment_id && <div><span className="font-semibold">Razorpay ID:</span> {t.razorpay_payment_id}</div>}
+            </div>
+            <div className="text-right">
+              <span className="inline-block px-2.5 py-1 bg-green-100 text-green-800 rounded-full font-bold text-[10px] uppercase">Paid</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="mt-6 flex justify-end space-x-3 no-print">
+          <button 
+            onClick={onClose}
+            className="px-4 py-2 border border-sand-300 text-charcoal rounded-xl text-xs font-semibold hover:bg-sand-100 transition"
+          >
+            Close
+          </button>
+          <button 
+            onClick={handlePrint}
+            className="px-4 py-2 bg-terracotta text-white rounded-xl text-xs font-semibold hover:bg-terracotta-dark transition flex items-center space-x-1.5 shadow-sm hover:shadow"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print Invoice</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

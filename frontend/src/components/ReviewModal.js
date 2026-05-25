@@ -127,7 +127,7 @@ const ReviewModal = ({ booking, onClose, onSubmitted }) => {
 
           <div>
             <label className="block text-sm font-semibold text-charcoal mb-1">
-              Comment <span className="text-charcoal-muted font-normal">(optional)</span>
+              Comment <span className="text-charcoal-muted font-normal">(If Applicable)</span>
             </label>
             <textarea
               value={comment}
@@ -144,7 +144,7 @@ const ReviewModal = ({ booking, onClose, onSubmitted }) => {
           <div>
             <label className="block text-sm font-semibold text-charcoal mb-1 flex items-center">
               <Camera className="w-4 h-4 mr-2" />
-              Photo <span className="text-charcoal-muted font-normal ml-1">(optional)</span>
+              Photo <span className="text-charcoal-muted font-normal ml-1">(If Applicable)</span>
             </label>
             <input
               type="file"

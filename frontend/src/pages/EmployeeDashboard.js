@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import apiClient, { verificationAPI } from '../services/api';
+import apiClient, { verificationAPI, getImageUrl } from '../services/api';
 import { 
   Users, Building2, FileCheck, AlertCircle, CheckCircle, 
-  XCircle, Download, FileText, BarChart3, LogOut, Eye
+  XCircle, Download, FileText, BarChart3, LogOut, Eye, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 const EmployeeDashboard = () => {
@@ -61,14 +61,26 @@ const EmployeeDashboard = () => {
       {/* Header */}
       <header className="header-glass px-6 py-4" data-testid="employee-header">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <Building2 className="w-6 h-6 text-terracotta" />
+          <div 
+            className="flex items-center space-x-3 cursor-pointer group"
+            onClick={() => navigate('/')}
+          >
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="w-10 h-10 object-contain transition-transform duration-300 group-hover:scale-110"
+            />
             <h1 className="text-xl font-bold text-charcoal">Golden-X-Host - RM Panel</h1>
           </div>
           <div className="flex items-center space-x-6">
             <span className="text-charcoal-light">RM: {user?.full_name}</span>
             <button
-              onClick={logout}
+              onClick={() => {
+                navigate('/');
+                setTimeout(() => {
+                  logout();
+                }, 50);
+              }}
               className="flex items-center space-x-2 text-terracotta hover:underline"
               data-testid="logout-btn"
             >
@@ -201,9 +213,14 @@ const EmployeeDashboard = () => {
 
 // Verification Review Section
 const VerificationReviewSection = () => {
+  const navigate = useNavigate();
   const [verifications, setVerifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState(null);
+  const [showRejectReasonModal, setShowRejectReasonModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
     fetchPendingVerifications();
@@ -221,7 +238,7 @@ const VerificationReviewSection = () => {
   };
 
   const handleApprove = async (verificationId) => {
-    const remarks = prompt('Add remarks (optional):') || '';
+    const remarks = prompt('Add remarks (If Applicable):') || '';
     try {
       await verificationAPI.rmApprove(verificationId, remarks);
       alert('Verification approved! Forwarded to admin for final approval.');
@@ -234,19 +251,39 @@ const VerificationReviewSection = () => {
     }
   };
 
-  const handleReject = async (verificationId) => {
-    const reason = prompt('Enter rejection reason (required):');
-    if (!reason) return;
+  const handleReject = async () => {
+    if (!rejectReason.trim()) {
+      alert('Please enter a rejection reason');
+      return;
+    }
 
     try {
-      await verificationAPI.rmReject(verificationId, reason);
+      await verificationAPI.rmReject(selectedVerification.verification_id, rejectReason);
       alert('Verification rejected. Host will be notified.');
-      fetchPendingVerifications();
+      setShowRejectReasonModal(false);
+      setRejectReason('');
       setSelectedVerification(null);
+      fetchPendingVerifications();
     } catch (error) {
       console.error('Error rejecting verification:', error);
       const msg = error?.response?.data?.detail || 'Failed to reject verification';
       alert(msg);
+    }
+  };
+
+  const handleExportReport = async (verificationId) => {
+    try {
+      const response = await verificationAPI.exportVerificationReport(verificationId);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `verification_report_${verificationId}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      alert('Failed to export verification report');
     }
   };
 
@@ -262,86 +299,326 @@ const VerificationReviewSection = () => {
           <p className="text-charcoal-light">Loading verifications...</p>
         </div>
       ) : verifications.length > 0 ? (
-        <div className="space-y-4" data-testid="verifications-list">
-          {verifications.map((verification) => (
-            <div key={verification.verification_id} className="dashboard-card" data-testid={`verification-${verification.verification_id}`}>
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-4 flex-1">
-                  {verification.property_details && (
-                    <img
-                      src={verification.property_details.images?.[0] || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
-                      alt={verification.property_details.title}
-                      className="w-24 h-24 rounded-lg object-cover"
-                    />
-                  )}
-                  <div className="flex-1">
-                    <h4 className="font-bold text-charcoal text-lg">
-                      {verification.property_details?.title || 'Property'}
-                    </h4>
-                    <p className="text-sm text-charcoal-light mt-1">
-                      {verification.property_details?.city} | {verification.property_details?.bhk_type}
-                    </p>
-                    <p className="text-sm text-charcoal-muted mt-2">
-                      Broker: {verification.broker_details?.full_name} ({verification.broker_details?.lg_code})
-                    </p>
-                    
-                    {/* Checklist Summary */}
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      {Object.entries(verification.checklist || {}).map(([key, value]) => (
-                        <div key={key} className="flex items-center space-x-2 text-xs">
-                          {value ? (
-                            <CheckCircle className="w-3 h-3 text-green-600" />
-                          ) : (
-                            <XCircle className="w-3 h-3 text-red-600" />
-                          )}
-                          <span className="text-charcoal-light">{key.replace(/_/g, ' ')}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Geo-tagged Photos Count */}
-                    {verification.geo_tagged_photos && verification.geo_tagged_photos.length > 0 && (
-                      <p className="text-sm text-sage mt-3">
-                        📸 {verification.geo_tagged_photos.length} geo-tagged photos
-                      </p>
+        <div data-testid="verifications-list">
+          <div className="space-y-4">
+            {[...verifications]
+              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+              .map((verification) => (
+              <div key={verification.verification_id} className="dashboard-card" data-testid={`verification-${verification.verification_id}`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-4 flex-1">
+                    {verification.property_details && (
+                      <img
+                        src={getImageUrl(verification.property_details.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
+                        alt={verification.property_details.title}
+                        className="w-24 h-24 rounded-lg object-cover"
+                      />
                     )}
+                    <div className="flex-1">
+                      <h4 className="font-bold text-charcoal text-lg">
+                        {verification.property_details?.title || 'Property'}
+                      </h4>
+                      <p className="text-sm text-charcoal-light mt-1">
+                        {verification.property_details?.city} | {verification.property_details?.bhk_type}
+                      </p>
+                      <p className="text-sm text-charcoal-muted mt-2">
+                        Broker: {verification.broker_details?.full_name} ({verification.broker_details?.lg_code})
+                      </p>
+                      
+                      {/* Checklist Summary */}
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        {Object.entries(verification.checklist || {}).map(([key, value]) => (
+                          <div key={key} className="flex items-center space-x-2 text-xs">
+                            {value ? (
+                              <CheckCircle className="w-3 h-3 text-green-600" />
+                            ) : (
+                              <XCircle className="w-3 h-3 text-red-600" />
+                            )}
+                            <span className="text-charcoal-light">{key.replace(/_/g, ' ')}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Geo-tagged Photos Count */}
+                      {verification.geo_tagged_photos && verification.geo_tagged_photos.length > 0 && (
+                        <p className="text-sm text-sage mt-3">
+                          📸 {verification.geo_tagged_photos.length} geo-tagged photos
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setSelectedVerification(verification)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold"
+                      data-testid={`view-details-${verification.verification_id}`}
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>View Details</span>
+                    </button>
+                    <button
+                      onClick={() => handleApprove(verification.verification_id)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition font-semibold"
+                      data-testid={`approve-${verification.verification_id}`}
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Approve</span>
+                    </button>
+                    <button
+                      onClick={() => handleReject(verification.verification_id)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold"
+                      data-testid={`reject-${verification.verification_id}`}
+                    >
+                      <XCircle className="w-4 h-4" />
+                      <span>Reject</span>
+                    </button>
                   </div>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setSelectedVerification(verification)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold"
-                    data-testid={`view-details-${verification.verification_id}`}
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>View Details</span>
-                  </button>
-                  <button
-                    onClick={() => handleApprove(verification.verification_id)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition font-semibold"
-                    data-testid={`approve-${verification.verification_id}`}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Approve</span>
-                  </button>
-                  <button
-                    onClick={() => handleReject(verification.verification_id)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold"
-                    data-testid={`reject-${verification.verification_id}`}
-                  >
-                    <XCircle className="w-4 h-4" />
-                    <span>Reject</span>
-                  </button>
-                </div>
               </div>
+            ))}
+          </div>
+          {verifications.length > itemsPerPage && (
+            <div className="mt-8 flex justify-center items-center space-x-4">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <span className="text-sm font-semibold text-charcoal">
+                Page {currentPage} of {Math.ceil(verifications.length / itemsPerPage)}
+              </span>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(Math.ceil(verifications.length / itemsPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(verifications.length / itemsPerPage)}
+                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </div>
-          ))}
+          )}
         </div>
       ) : (
         <div className="dashboard-card text-center py-12">
           <FileCheck className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
           <p className="text-charcoal-light">No verifications pending review</p>
+        </div>
+      )}
+
+      {/* Verification Details Modal */}
+      {selectedVerification && (
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-premium animate-slide-up max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-2xl font-black text-charcoal">Verification Report</h3>
+                <p className="text-charcoal-light">
+                  {selectedVerification.property_details?.title} | {selectedVerification.property_details?.city}
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => handleExportReport(selectedVerification.verification_id)}
+                  className="flex items-center space-x-2 px-3 py-2 bg-sand-100 text-charcoal-light hover:text-terracotta rounded-xl transition font-bold text-xs"
+                  title="Export Professional Report"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Export Report</span>
+                </button>
+                <button 
+                  onClick={() => setSelectedVerification(null)}
+                  className="p-2 hover:bg-sand-100 rounded-full transition"
+                >
+                  <XCircle className="w-6 h-6 text-charcoal-muted" />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              {/* Info grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-sand-50 rounded-2xl">
+                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Property Details</p>
+                  <p className="font-bold text-charcoal truncate">ID: {selectedVerification.property_id || 'N/A'}</p>
+                  <p className="text-xs text-charcoal-light mt-1 truncate">Host: {selectedVerification.owner_id || 'N/A'}</p>
+                </div>
+                <div className="p-4 bg-sand-50 rounded-2xl">
+                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Assigned Broker</p>
+                  <p className="font-bold text-charcoal truncate">{selectedVerification.broker_details?.full_name}</p>
+                  <p className="text-xs text-charcoal-light mt-1 truncate">ID: {selectedVerification.broker_id || 'N/A'}</p>
+                </div>
+                <div className="p-4 bg-sand-50 rounded-2xl">
+                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Visit Date</p>
+                  <p className="font-bold text-charcoal">
+                    {new Date(selectedVerification.completed_at || selectedVerification.created_at).toLocaleDateString('en-IN', {
+                      day: 'numeric', month: 'long', year: 'numeric'
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Checklist */}
+              <div>
+                <h4 className="text-sm font-black text-charcoal uppercase tracking-widest mb-4">Verification Checklist Audit</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries(selectedVerification.checklist || {}).map(([key, value]) => (
+                    <div key={key} className="flex flex-col p-4 bg-white border border-sand-200 rounded-2xl hover:shadow-md transition">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-bold text-charcoal capitalize">{key.replace(/_/g, ' ')}</span>
+                        {value ? (
+                          <div className="flex items-center space-x-1 text-green-600">
+                            <CheckCircle className="w-3 h-3" />
+                            <span className="text-[8px] font-black uppercase">Broker Verified</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1 text-red-600">
+                            <XCircle className="w-3 h-3" />
+                            <span className="text-[8px] font-black uppercase">Broker Failed</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={() => {
+                            // In a real audit, this might update a local state, 
+                            // but for now we just show a success toast or similar
+                            alert(`Confirmed: ${key.replace(/_/g, ' ')} is approved.`);
+                          }}
+                          className="flex-1 py-2 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-green-100 transition flex items-center justify-center space-x-1"
+                        >
+                          <CheckCircle className="w-3 h-3" />
+                          <span>Approve</span>
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setRejectReason(`Rejected Point: ${key.replace(/_/g, ' ').toUpperCase()} - `);
+                            setShowRejectReasonModal(true);
+                          }}
+                          className="flex-1 py-2 bg-red-50 text-red-700 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-red-100 transition flex items-center justify-center space-x-1"
+                        >
+                          <XCircle className="w-3 h-3" />
+                          <span>Reject</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Broker Remarks */}
+              {selectedVerification.broker_remarks && (
+                <div className="p-6 bg-terracotta/5 rounded-2xl border border-terracotta/10">
+                  <h4 className="text-sm font-black text-terracotta uppercase tracking-widest mb-2">Broker Remarks</h4>
+                  <p className="text-charcoal leading-relaxed italic">"{selectedVerification.broker_remarks}"</p>
+                </div>
+              )}
+
+              {/* Geo-tagged Photos */}
+              {selectedVerification.geo_tagged_photos && selectedVerification.geo_tagged_photos.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-black text-charcoal uppercase tracking-widest mb-4">
+                    Geo-tagged Evidence ({selectedVerification.geo_tagged_photos.length})
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    {selectedVerification.geo_tagged_photos.map((photo, idx) => (
+                      <div 
+                        key={idx} 
+                        onClick={() => window.open(getImageUrl(photo.photo_url || photo.url), '_blank')}
+                        className="group relative aspect-square rounded-xl overflow-hidden bg-sand-100 cursor-pointer hover:ring-4 hover:ring-terracotta/20 transition"
+                      >
+                        <img 
+                          src={getImageUrl(photo.photo_url || photo.url)} 
+                          alt="Evidence" 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-charcoal/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center p-2 text-center">
+                          <p className="text-[8px] text-white font-mono break-all">Lat: {photo.latitude || photo.lat}</p>
+                          <p className="text-[8px] text-white font-mono break-all">Lng: {photo.longitude || photo.lng}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Video Link */}
+              {selectedVerification.video_url && (
+                <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                  <h4 className="text-sm font-black text-blue-800 uppercase tracking-widest mb-2">Property Video Tour</h4>
+                  <a 
+                    href={selectedVerification.video_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 font-bold hover:underline flex items-center space-x-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>Watch Video Walkthrough</span>
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex space-x-4 mt-8 pt-8 border-t border-sand-200">
+              <button 
+                onClick={() => setShowRejectReasonModal(true)}
+                className="flex-1 py-4 bg-red-50 text-red-600 font-black uppercase tracking-widest rounded-2xl hover:bg-red-100 transition flex items-center justify-center space-x-2"
+              >
+                <XCircle className="w-5 h-5" />
+                <span>Reject Report</span>
+              </button>
+              <button 
+                onClick={() => handleApprove(selectedVerification.verification_id)}
+                className="flex-1 py-4 bg-green-600 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-green-700 shadow-lg shadow-green-200 transition flex items-center justify-center space-x-2"
+              >
+                <CheckCircle className="w-5 h-5" />
+                <span>Approve Report</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Rejection Reason Modal */}
+      {showRejectReasonModal && (
+        <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[110] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <h3 className="text-2xl font-black text-charcoal">Rejection Reason</h3>
+              <p className="text-charcoal-light text-sm mt-1">Please provide a detailed reason for rejecting this verification report.</p>
+            </div>
+            
+            <textarea
+              className="w-full border-2 border-sand-200 rounded-2xl p-4 focus:border-red-500 outline-none transition min-h-[120px] text-charcoal font-medium"
+              placeholder="e.g. Geo-tagged photos do not match property location..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+            />
+            
+            <div className="flex space-x-3 mt-8">
+              <button 
+                onClick={() => {
+                  setShowRejectReasonModal(false);
+                  setRejectReason('');
+                }}
+                className="flex-1 py-4 font-bold text-charcoal-muted hover:text-charcoal transition"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleReject}
+                className="flex-1 py-4 bg-red-600 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-red-700 shadow-lg shadow-red-200 transition"
+              >
+                Confirm Reject
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -352,6 +629,9 @@ const VerificationReviewSection = () => {
 const BrokersSection = () => {
   const [brokers, setBrokers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBrokerForOwners, setSelectedBrokerForOwners] = useState(null);
+  const [brokerOwners, setBrokerOwners] = useState([]);
+  const [loadingOwners, setLoadingOwners] = useState(false);
 
   useEffect(() => {
     fetchBrokers();
@@ -365,6 +645,20 @@ const BrokersSection = () => {
       console.error('Error fetching brokers:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleShowOwners = async (broker) => {
+    setSelectedBrokerForOwners(broker);
+    setLoadingOwners(true);
+    try {
+      const response = await apiClient.get(`/employee/brokers/${broker.user_id}/portfolio`);
+      setBrokerOwners(response.data.owners || []);
+    } catch (error) {
+      console.error('Error fetching broker owners:', error);
+      setBrokerOwners([]);
+    } finally {
+      setLoadingOwners(false);
     }
   };
 
@@ -396,9 +690,13 @@ const BrokersSection = () => {
                   
                   {broker.stats && (
                     <div className="grid grid-cols-3 gap-2 mt-3">
-                      <div className="text-center p-2 bg-sand-50 rounded">
+                      <div 
+                        onClick={() => handleShowOwners(broker)}
+                        className="text-center p-2 bg-sand-50 rounded hover:bg-sand-100 hover:shadow-sm cursor-pointer transition-all duration-300 border border-transparent hover:border-terracotta/20"
+                        title="Click to view assigned Owners"
+                      >
                         <p className="text-lg font-bold text-terracotta">{broker.stats.owners}</p>
-                        <p className="text-xs text-charcoal-light">Owners</p>
+                        <p className="text-xs text-charcoal-light hover:text-terracotta transition-colors">Owners</p>
                       </div>
                       <div className="text-center p-2 bg-sand-50 rounded">
                         <p className="text-lg font-bold text-sage">{broker.stats.properties}</p>
@@ -419,6 +717,91 @@ const BrokersSection = () => {
         <div className="dashboard-card text-center py-12">
           <Users className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
           <p className="text-charcoal-light">No brokers found</p>
+        </div>
+      )}
+
+      {/* Assigned Owners Details Modal */}
+      {selectedBrokerForOwners && (
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-premium animate-slide-up max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-2xl font-black text-charcoal">Assigned Owners</h3>
+                <p className="text-charcoal-light text-xs font-bold uppercase tracking-widest mt-1">
+                  Portfolio of Broker: {selectedBrokerForOwners.full_name} ({selectedBrokerForOwners.lg_code || 'N/A'})
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  setSelectedBrokerForOwners(null);
+                  setBrokerOwners([]);
+                }}
+                className="p-2 hover:bg-sand-100 rounded-full transition"
+              >
+                <XCircle className="w-6 h-6 text-charcoal-muted" />
+              </button>
+            </div>
+
+            {loadingOwners ? (
+              <div className="text-center py-12">
+                <p className="text-charcoal-light font-bold">Fetching owners network...</p>
+              </div>
+            ) : brokerOwners.length > 0 ? (
+              <div className="space-y-4">
+                {brokerOwners.map((owner) => (
+                  <div key={owner.user_id} className="p-6 bg-sand-50 rounded-2xl border border-sand-200 hover:border-terracotta transition-all duration-300">
+                    <div className="flex items-start space-x-4">
+                      <img
+                        src={owner.profile_image || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e'}
+                        alt={owner.full_name}
+                        className="w-16 h-16 rounded-2xl object-cover border border-sand-200 shadow-sm"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <h4 className="font-bold text-charcoal text-lg truncate">{owner.full_name}</h4>
+                          <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                            owner.kyc_status === 'approved' ? 'bg-green-100 text-green-800' :
+                            owner.kyc_status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            KYC: {owner.kyc_status || 'pending'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-charcoal-light font-medium mt-1">{owner.email}</p>
+                        <p className="text-xs text-charcoal-light font-medium">{owner.phone}</p>
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-sand-200">
+                          <div>
+                            <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">City / Location</p>
+                            <p className="text-xs font-bold text-charcoal mt-0.5">{owner.city || 'Not Specified'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Reg. Fee Payment</p>
+                            <span className={`inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded mt-0.5 ${
+                              owner.registration_fee_paid ? 'bg-sage/20 text-sage-dark' : 'bg-red-50 text-red-600'
+                            }`}>
+                              {owner.registration_fee_paid ? 'PAID' : 'UNPAID'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 text-[10px] text-charcoal-muted font-bold">
+                          📅 Registered on: {new Date(owner.created_at || owner.timestamp || Date.now()).toLocaleDateString('en-IN', {
+                            day: 'numeric', month: 'short', year: 'numeric'
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-sand-50 rounded-2xl border-2 border-dashed border-sand-200">
+                <Users className="w-12 h-12 text-charcoal-light mx-auto mb-3" />
+                <p className="text-charcoal-light font-bold">No Owners assigned to this broker yet.</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -524,7 +907,11 @@ const ReportsSection = () => {
                   <div key={property.property_id} className="p-4 bg-sand-50 rounded-lg">
                     <h5 className="font-semibold text-charcoal">{property.title}</h5>
                     <p className="text-sm text-charcoal-light">
-                      {property.city} | {property.bhk_type} | ₹{property.price_per_night}/night
+                      {property.city} | {property.bhk_type} | ₹{property.price_per_night}{
+                        property.category === 'commercial' || property.category === 'event_venue'
+                          ? (property.pricing_cycle === 'hourly' ? '/hr' : property.pricing_cycle === 'weekly' ? '/week' : property.pricing_cycle === 'monthly' ? '/month' : '/day')
+                          : '/night'
+                      }
                     </p>
                     <p className="text-xs text-charcoal-muted mt-1">
                       Broker: {property.broker_name} ({property.broker_lg_code})

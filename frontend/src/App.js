@@ -76,20 +76,15 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<AuthPage />} />
             <Route path="/register" element={<AuthPage />} />
+            <Route path="/admin" element={<AuthPage isAdminLogin={true} />} />
+            <Route path="/admin/login" element={<AuthPage isAdminLogin={true} />} />
             <Route path="/property/:id" element={<PropertyDetail />} />
 
             {/* Role-based Dashboard Redirect */}
             <Route path="/dashboard" element={<RoleBasedRedirect />} />
 
             {/* Guest Routes */}
-            <Route
-              path="/guest/browse"
-              element={
-                <ProtectedRoute allowedRoles={["guest"]}>
-                  <GuestBrowse />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/guest/browse" element={<GuestBrowse />} />
             <Route
               path="/guest/booking-confirmation"
               element={

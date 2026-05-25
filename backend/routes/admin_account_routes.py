@@ -6,6 +6,7 @@ import io
 import logging
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
+from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -106,6 +107,7 @@ async def overview(
                 "subscriptions_paise": sub_rev["amount_paise"],
                 "refunds_paise": refunds["amount_paise"],
                 "payouts_paid_paise": payouts["amount_paise"],
+                "total_tax_paise": int(round(booking_rev["amount_paise"] * (0.18 / 1.28))),
             },
             "counts": {
                 "booking_payments": booking_rev["count"],
@@ -254,7 +256,8 @@ async def top_hosts(
 
 # --------------- Transactions ledger ----------------
 
-def _txn_query(
+async def _txn_query_async(
+    db: AsyncIOMotorDatabase,
     type: Optional[str],
     status: Optional[str],
     start: Optional[str],
@@ -271,19 +274,34 @@ def _txn_query(
         if start:
             created["$gte"] = datetime.fromisoformat(start)
         if end:
-            # inclusive end-of-day
             created["$lt"] = datetime.fromisoformat(end) + timedelta(days=1)
         query["created_at"] = created
     if q:
-        query["$or"] = [
+        # Search the users table for full_name, email, or phone matching query
+        user_ids = []
+        user_cursor = db.users.find({
+            "$or": [
+                {"full_name": {"$regex": q, "$options": "i"}},
+                {"email": {"$regex": q, "$options": "i"}},
+                {"phone": {"$regex": q, "$options": "i"}},
+            ]
+        }, {"user_id": 1, "_id": 0})
+        async for u in user_cursor:
+            user_ids.append(u["user_id"])
+            
+        or_conditions = [
             {"booking_id": {"$regex": q, "$options": "i"}},
             {"razorpay_payment_id": {"$regex": q, "$options": "i"}},
             {"razorpay_payout_id": {"$regex": q, "$options": "i"}},
             {"razorpay_refund_id": {"$regex": q, "$options": "i"}},
-            {"user_id": {"$regex": q, "$options": "i"}},
-            {"host_id": {"$regex": q, "$options": "i"}},
             {"transaction_id": {"$regex": q, "$options": "i"}},
         ]
+        
+        if user_ids:
+            or_conditions.append({"user_id": {"$in": user_ids}})
+            or_conditions.append({"host_id": {"$in": user_ids}})
+            
+        query["$or"] = or_conditions
     return query
 
 
@@ -300,7 +318,7 @@ async def list_transactions(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     try:
-        query = _txn_query(type, status, start, end, q)
+        query = await _txn_query_async(db, type, status, start, end, q)
         cursor = (
             db.transactions.find(query, {"_id": 0})
             .sort("created_at", -1)
@@ -309,6 +327,18 @@ async def list_transactions(
         )
         items = await cursor.to_list(length=limit)
         total = await db.transactions.count_documents(query)
+        
+        # Enrich transactions with customer user details
+        for t in items:
+            uid = t.get("user_id") or t.get("host_id")
+            user_info = None
+            if uid:
+                user_info = await db.users.find_one(
+                    {"user_id": uid},
+                    {"_id": 0, "full_name": 1, "email": 1, "phone": 1}
+                )
+            t["user"] = user_info
+            
         return {"transactions": items, "total": total, "limit": limit, "skip": skip}
     except Exception as e:
         logger.exception("list_transactions failed")
@@ -325,7 +355,7 @@ async def export_transactions_csv(
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    query = _txn_query(type, status, start, end, q)
+    query = await _txn_query_async(db, type, status, start, end, q)
     cursor = db.transactions.find(query, {"_id": 0}).sort("created_at", -1)
     items = await cursor.to_list(length=10000)
 
@@ -370,6 +400,88 @@ async def export_transactions_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+# --------------- Invoice Sharing ----------------
+
+class ShareInvoiceRequest(BaseModel):
+    channel: str # whatsapp or email
+
+
+@router.post("/transactions/{transaction_id}/share-invoice")
+async def share_transaction_invoice(
+    transaction_id: str,
+    payload: ShareInvoiceRequest,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    try:
+        # Fetch transaction
+        txn = await db.transactions.find_one({"transaction_id": transaction_id}, {"_id": 0})
+        if not txn:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+        
+        # Get customer user details
+        uid = txn.get("user_id") or txn.get("host_id")
+        user_info = None
+        if uid:
+            user_info = await db.users.find_one(
+                {"user_id": uid},
+                {"_id": 0, "full_name": 1, "email": 1, "phone": 1}
+            )
+        
+        if not user_info:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Customer not found for this transaction")
+        
+        channel_name = payload.channel.lower()
+        amount_inr = round((txn.get("amount") or 0) / 100, 2)
+        
+        title = f"Invoice for Transaction {transaction_id}"
+        message = (
+            f"Dear {user_info.get('full_name', 'Valued Customer')},\n\n"
+            f"Your invoice of INR {amount_inr} for transaction ID {transaction_id} is generated and ready.\n"
+            f"Type: {txn.get('type').replace('_', ' ').title()}\n"
+            f"Status: SUCCESS\n\n"
+            f"Thank you for choosing Golden-X-Host!"
+        )
+        
+        from services.notification_service import send_multi_channel_notification
+        from models.notification import NotificationChannel, NotificationType
+        
+        chosen_channels = []
+        if channel_name == "whatsapp":
+            chosen_channels = [NotificationChannel.WHATSAPP]
+        elif channel_name == "email":
+            chosen_channels = [NotificationChannel.EMAIL]
+        else:
+            raise HTTPException(400, detail="Invalid share channel. Choose 'whatsapp' or 'email'")
+        
+        # Trigger sending via notification helper
+        await send_multi_channel_notification(
+            db=db,
+            user_id=uid,
+            notification_type=NotificationType.BOOKING_CONFIRMED,
+            title=title,
+            message=message,
+            channels=chosen_channels,
+            data={
+                "amount": amount_inr,
+                "transaction_id": transaction_id,
+                "created_at": str(txn.get("created_at")),
+                "full_name": user_info.get("full_name")
+            }
+        )
+        
+        return {
+            "success": True,
+            "message": f"Invoice successfully shared via {channel_name.upper()} with {user_info.get('full_name')}",
+            "recipient": user_info.get("email") if channel_name == "email" else user_info.get("phone")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("share_transaction_invoice failed")
+        raise HTTPException(500, detail=f"Failed to share invoice: {e}")
 
 
 # --------------- Payouts ----------------
@@ -480,6 +592,11 @@ async def list_refunds(
         .limit(limit)
     )
     items = await cursor.to_list(length=limit)
+    for r in items:
+        guest = await db.users.find_one({"user_id": r["guest_id"]}, {"_id": 0, "full_name": 1, "email": 1})
+        host = await db.users.find_one({"user_id": r["host_id"]}, {"_id": 0, "full_name": 1, "email": 1})
+        r["guest"] = guest
+        r["host"] = host
     total = await db.refunds.count_documents(query)
     return {"refunds": items, "total": total}
 

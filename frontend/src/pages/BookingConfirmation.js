@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { bookingAPI, propertyAPI } from '../services/api';
+import { bookingAPI, propertyAPI, couponAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import {
   CheckCircle2,
@@ -25,6 +25,10 @@ const BookingConfirmation = () => {
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(Date.now());
+  const [couponCode, setCouponCode] = useState('');
+  const [couponError, setCouponError] = useState('');
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState([]);
 
   useEffect(() => {
     if (!bookingId) {
@@ -50,6 +54,13 @@ const BookingConfirmation = () => {
       try {
         const propRes = await propertyAPI.getProperty(bookingRes.data.property_id);
         setProperty(propRes.data);
+      } catch (e) {
+        // non-fatal
+      }
+      // Fetch available coupons
+      try {
+        const couponRes = await couponAPI.getPropertyCoupons(bookingRes.data.property_id);
+        setAvailableCoupons(couponRes.data.coupons || []);
       } catch (e) {
         // non-fatal
       }
@@ -131,6 +142,25 @@ const BookingConfirmation = () => {
     }
   };
 
+  const handleApplyCoupon = async (codeToApply) => {
+    const finalCode = (codeToApply || couponCode).trim().toUpperCase();
+    if (!finalCode) {
+      setCouponError('Please enter a coupon code');
+      return;
+    }
+    setApplyingCoupon(true);
+    setCouponError('');
+    try {
+      await bookingAPI.applyCoupon(booking.booking_id, finalCode);
+      await loadAll();
+      setCouponCode('');
+    } catch (e) {
+      setCouponError(e.response?.data?.detail || 'Failed to apply coupon');
+    } finally {
+      setApplyingCoupon(false);
+    }
+  };
+
   const handleMockPay = async () => {
     setPaying(true);
     setError('');
@@ -173,56 +203,72 @@ const BookingConfirmation = () => {
         </div>
       </div>
     );
-  }
-
-  return (
-    <div className="min-h-screen bg-sand-50">
-      <header className="header-glass px-6 py-4">
+  }  return (
+    <div className="min-h-screen bg-sand-50 selection:bg-terracotta selection:text-white">
+      <header className="glass px-8 py-4">
         <div className="max-w-3xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <Building2 className="w-6 h-6 text-terracotta" />
-            <span className="text-xl font-bold text-charcoal">Golden-X-Host</span>
+          <div 
+            className="flex items-center space-x-3 cursor-pointer group" 
+            onClick={() => navigate('/')}
+          >
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="w-10 h-10 object-contain transition-transform duration-300 group-hover:scale-110"
+            />
+            <h1 className="text-xl font-black text-charcoal tracking-tighter">
+              GOLDEN<span className="text-terracotta">-X-</span>HOST
+            </h1>
           </div>
-          <button onClick={() => navigate('/guest/browse')} className="text-charcoal-light hover:text-terracotta">
-            Browse more
+          <button 
+            onClick={() => navigate('/guest/browse')} 
+            className="text-xs font-black text-charcoal-muted hover:text-terracotta uppercase tracking-widest transition-colors"
+          >
+            Browse
           </button>
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-6 py-10">
-        <div className="dashboard-card text-center mb-6" data-testid="booking-success-card">
-          <CheckCircle2
-            className={`w-16 h-16 mx-auto mb-3 ${isConfirmed ? 'text-sage-dark' : 'text-terracotta'}`}
-          />
-          <h1 className="text-2xl font-extrabold text-charcoal mb-1" data-testid="booking-title">
+      <div className="max-w-3xl mx-auto px-8 py-12">
+        <div className="bg-white rounded-3xl p-10 border border-sand-200 shadow-premium text-center mb-8 animate-slide-up" data-testid="booking-success-card">
+          <div className="relative inline-block mb-6">
+             <div className={`absolute inset-0 blur-2xl opacity-20 rounded-full ${isConfirmed ? 'bg-sage' : 'bg-terracotta'}`}></div>
+             <CheckCircle2
+               className={`relative w-20 h-20 mx-auto ${isConfirmed ? 'text-sage-dark' : 'text-terracotta'} animate-float`}
+             />
+          </div>
+          <h1 className="text-3xl font-black text-charcoal tracking-tight mb-2" data-testid="booking-title">
             {isConfirmed
-              ? 'Booking confirmed!'
+              ? 'Booking Confirmed'
               : isExpired
-              ? 'Reservation expired'
-              : 'Reservation held'}
+              ? 'Reservation Expired'
+              : 'Reservation Held'}
           </h1>
-          <p className="text-charcoal-light text-sm">
-            Booking ID: <span className="font-mono" data-testid="booking-id">{booking.booking_id}</span>
+          <p className="text-charcoal-muted font-bold text-xs uppercase tracking-[0.2em]">
+            Booking ID: <span className="text-charcoal font-black" data-testid="booking-id">{booking.booking_id}</span>
           </p>
           {property && (
-            <p className="text-charcoal mt-2 font-medium">
-              {property.title} · {property.city}
-            </p>
+            <div className="mt-6 inline-flex items-center space-x-3 px-4 py-2 bg-sand-50 rounded-xl border border-sand-200">
+               <Building2 className="w-4 h-4 text-terracotta" />
+               <span className="text-sm font-black text-charcoal">{property.title}</span>
+            </div>
           )}
         </div>
 
         {!isConfirmed && !isExpired && lockExpiresAt && (
-          <div className="dashboard-card mb-6 border-l-4 border-terracotta" data-testid="soft-lock-card">
-            <div className="flex items-start space-x-3">
-              <Clock className="w-6 h-6 text-terracotta flex-shrink-0" />
+          <div className="bg-white rounded-2xl p-6 border-l-4 border-terracotta shadow-premium mb-8 animate-fade-in" data-testid="soft-lock-card">
+            <div className="flex items-center space-x-5">
+              <div className="bg-terracotta/10 p-3 rounded-xl animate-pulse">
+                 <Clock className="w-6 h-6 text-terracotta flex-shrink-0" />
+              </div>
               <div className="flex-1">
-                <h2 className="font-bold text-charcoal mb-1">Soft hold active</h2>
-                <p className="text-sm text-charcoal-light">
-                  Your dates are locked for{' '}
-                  <span className="font-bold text-terracotta" data-testid="lock-countdown">
+                <h2 className="font-black text-charcoal text-sm uppercase tracking-widest mb-1">Temporary Hold Active</h2>
+                <p className="text-sm font-medium text-charcoal-muted leading-relaxed">
+                  We're holding your dates for{' '}
+                  <span className="font-black text-terracotta tabular-nums" data-testid="lock-countdown">
                     {String(remainingMin).padStart(2, '0')}:{String(remainingSec).padStart(2, '0')}
                   </span>
-                  . Complete payment below to confirm your booking.
+                  . Please complete payment to finalize your stay.
                 </p>
               </div>
             </div>
@@ -230,13 +276,15 @@ const BookingConfirmation = () => {
         )}
 
         {isExpired && (
-          <div className="dashboard-card mb-6 border-l-4 border-red-500" data-testid="expired-card">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
+          <div className="bg-white rounded-2xl p-6 border-l-4 border-red-500 shadow-premium mb-8 animate-fade-in" data-testid="expired-card">
+            <div className="flex items-center space-x-5">
+              <div className="bg-red-50 p-3 rounded-xl">
+                 <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0" />
+              </div>
               <div>
-                <h2 className="font-bold text-charcoal mb-1">Reservation expired</h2>
-                <p className="text-sm text-charcoal-light">
-                  Your soft-hold ran out before payment. Please start a new booking.
+                <h2 className="font-black text-charcoal text-sm uppercase tracking-widest mb-1">Reservation Expired</h2>
+                <p className="text-sm font-medium text-charcoal-muted leading-relaxed">
+                  Your soft-hold ran out before payment. Please start a new booking process.
                 </p>
               </div>
             </div>
@@ -244,124 +292,238 @@ const BookingConfirmation = () => {
         )}
 
         {isConfirmed && (
-          <div className="dashboard-card mb-6 border-l-4 border-sage-dark" data-testid="confirmed-card">
-            <div className="flex items-start space-x-3">
-              <Sparkles className="w-6 h-6 text-sage-dark flex-shrink-0" />
+          <div className="bg-white rounded-2xl p-6 border-l-4 border-sage shadow-premium mb-8 animate-fade-in" data-testid="confirmed-card">
+            <div className="flex items-center space-x-5">
+              <div className="bg-sage/10 p-3 rounded-xl">
+                 <Sparkles className="w-6 h-6 text-sage-dark flex-shrink-0" />
+              </div>
               <div>
-                <h2 className="font-bold text-charcoal mb-1">Payment received</h2>
-                <p className="text-sm text-charcoal-light">
-                  Payment ID: <span className="font-mono">{booking.razorpay_payment_id}</span>
+                <h2 className="font-black text-charcoal text-sm uppercase tracking-widest mb-1">Payment Successful</h2>
+                <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-1">
+                  ID: {booking.razorpay_payment_id}
                 </p>
-                <p className="text-sm text-charcoal-light mt-1">
-                  We've notified the host. Get ready for your stay!
+                <p className="text-sm font-medium text-charcoal-muted leading-relaxed">
+                  Your host has been notified. Get ready for an exceptional stay!
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        <div className="dashboard-card space-y-3 mb-6" data-testid="booking-summary">
-          <h2 className="font-bold text-charcoal mb-2">Trip details</h2>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <p className="text-xs text-charcoal-light">Check-in</p>
-              <p className="font-semibold text-charcoal">{booking.check_in_date}</p>
+        <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium mb-8 animate-slide-up" style={{ animationDelay: '200ms' }} data-testid="booking-summary">
+          <h2 className="text-lg font-black text-charcoal tracking-tight mb-8 flex items-center">
+             Itinerary Summary
+             <div className="ml-4 h-[1px] flex-1 bg-sand-100"></div>
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Check-in</p>
+              <p className="text-sm font-black text-charcoal">{booking.check_in_date}</p>
             </div>
-            <div>
-              <p className="text-xs text-charcoal-light">Check-out</p>
-              <p className="font-semibold text-charcoal">{booking.check_out_date}</p>
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Check-out</p>
+              <p className="text-sm font-black text-charcoal">{booking.check_out_date}</p>
             </div>
-            <div>
-              <p className="text-xs text-charcoal-light">Guests</p>
-              <p className="font-semibold text-charcoal">{booking.number_of_guests}</p>
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Total Guests</p>
+              <p className="text-sm font-black text-charcoal">{booking.number_of_guests}</p>
             </div>
-            <div>
-              <p className="text-xs text-charcoal-light">Status</p>
-              <p className="font-semibold text-charcoal capitalize">{booking.booking_status?.replace('_', ' ')}</p>
+            <div className="space-y-1">
+              <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Booking Status</p>
+              <p className="text-sm font-black text-terracotta uppercase">{booking.booking_status?.replace('_', ' ')}</p>
             </div>
           </div>
-          <div className="border-t border-sand-200 pt-3 mt-3 space-y-1 text-sm">
-            <div className="flex justify-between">
-              <span className="text-charcoal-light">Base amount</span>
-              <span>₹{booking.base_amount?.toLocaleString('en-IN')}</span>
+          
+          <div className="bg-sand-50/50 rounded-2xl p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Base Amount</span>
+              <span className="text-sm font-black text-charcoal">₹{booking.base_amount?.toLocaleString('en-IN')}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-charcoal-light">Service fee</span>
-              <span>₹{Math.round(booking.service_fee || 0).toLocaleString('en-IN')}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Service Fee</span>
+              <span className="text-sm font-black text-charcoal">₹{Math.round(booking.service_fee || 0).toLocaleString('en-IN')}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-charcoal-light">GST</span>
-              <span>₹{Math.round(booking.taxes || 0).toLocaleString('en-IN')}</span>
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Taxes & GST</span>
+              <span className="text-sm font-black text-charcoal">₹{Math.round(booking.taxes || 0).toLocaleString('en-IN')}</span>
             </div>
-            <div className="flex justify-between font-bold text-charcoal pt-2 border-t border-sand-200">
-              <span>Total</span>
-              <span data-testid="confirmation-total">
+            {booking.coupon_code && (
+              <div className="flex justify-between items-center text-emerald-600 font-bold">
+                <span className="text-xs uppercase tracking-widest">Coupon Applied ({booking.coupon_code})</span>
+                <span className="text-sm font-black">-₹{Math.round(booking.discount_amount || 0).toLocaleString('en-IN')}</span>
+              </div>
+            )}
+            <div className="border-t-2 border-white pt-4 flex justify-between items-center">
+              <span className="text-base font-black text-charcoal tracking-tight uppercase">Total Paid</span>
+              <span className="text-2xl font-black text-terracotta" data-testid="confirmation-total">
                 ₹{Math.round(booking.total_amount || 0).toLocaleString('en-IN')}
               </span>
             </div>
           </div>
         </div>
 
+        {/* Coupon Code Section */}
+        {!isConfirmed && !isExpired && (
+          <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium mb-8 animate-slide-up" style={{ animationDelay: '300ms' }}>
+            <h2 className="text-lg font-black text-charcoal tracking-tight mb-6 flex items-center">
+              Available Coupons
+              <div className="ml-4 h-[1px] flex-1 bg-sand-100"></div>
+            </h2>
+            
+            {booking.coupon_code ? (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center">
+                <Sparkles className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+                <p className="text-sm font-black text-emerald-700">Coupon Applied: {booking.coupon_code}</p>
+                <p className="text-xs text-charcoal-muted mt-1">You saved ₹{Math.round(booking.discount_amount || 0).toLocaleString('en-IN')} on this booking!</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {availableCoupons.length > 0 ? availableCoupons.map((c) => (
+                    <div 
+                      key={c.code}
+                      onClick={() => handleApplyCoupon(c.code)}
+                      className="group cursor-pointer bg-sand-50/50 hover:bg-white border-2 border-sand-200 hover:border-terracotta rounded-2xl p-5 transition-all duration-300 transform hover:-translate-y-1 shadow-sm hover:shadow-md flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="inline-block bg-terracotta/10 text-terracotta text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg mb-3 group-hover:bg-terracotta group-hover:text-white transition-colors">
+                          {c.code}
+                        </div>
+                        <p className="text-base font-black text-charcoal tracking-tight mb-1">
+                          {c.discount_type === 'percentage' ? `${c.discount_value}% OFF` : `₹${c.discount_value} OFF`}
+                        </p>
+                        <p className="text-xs text-charcoal-muted leading-relaxed">
+                          {c.discount_type === 'percentage' ? `Get ${c.discount_value}% off your total booking amount.` : `Flat ₹${c.discount_value} off on your booking.`}
+                        </p>
+                      </div>
+                      <div className="mt-4 text-[10px] font-black text-terracotta uppercase tracking-wider group-hover:translate-x-1 transition-transform inline-flex items-center">
+                        Apply Coupon →
+                      </div>
+                    </div>
+                  )) : (
+                    <p className="text-sm text-charcoal-muted md:col-span-3 text-center py-4">
+                      No active coupons available for this property right now.
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                  <input
+                    type="text"
+                    placeholder="ENTER COUPON CODE"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    className="flex-1 px-5 py-4 bg-sand-50 border-2 border-sand-200 rounded-2xl text-xs font-black tracking-wider uppercase focus:outline-none focus:border-charcoal transition-colors"
+                  />
+                  <button
+                    onClick={() => handleApplyCoupon()}
+                    disabled={applyingCoupon}
+                    className="px-8 py-4 bg-charcoal text-white hover:bg-terracotta rounded-2xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                  >
+                    {applyingCoupon ? 'Applying...' : 'Apply Coupon'}
+                  </button>
+                </div>
+                
+                {couponError && (
+                  <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mt-2">
+                    {couponError}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Payment Action Section */}
         {!isConfirmed && !isExpired && (
-          <div className="dashboard-card mb-6" data-testid="payment-section">
+          <div className="bg-charcoal rounded-3xl p-8 shadow-elevated mb-8 animate-slide-up" style={{ animationDelay: '400ms' }} data-testid="payment-section">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-2 mb-3" data-testid="payment-error">
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black uppercase tracking-widest rounded-xl p-3 mb-6 animate-shake">
                 {error}
               </div>
             )}
 
             {paymentConfig?.is_mock ? (
-              <>
-                <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg p-3 mb-3">
-                  <strong>Demo mode:</strong> Razorpay live keys not configured. Clicking
-                  &ldquo;Complete demo payment&rdquo; will simulate a successful charge using a
-                  deterministic mock signature.
+              <div className="space-y-6">
+                <div className="flex items-start space-x-3 p-4 bg-white/5 rounded-2xl border border-white/10">
+                  <div className="bg-amber-500/20 p-2 rounded-lg">
+                     <AlertCircle className="w-4 h-4 text-amber-500" />
+                  </div>
+                  <p className="text-[10px] font-medium text-white/60 leading-relaxed">
+                    <strong className="text-white block mb-1">Development Environment:</strong> 
+                    Real payment gateway is disabled. Click below to simulate a successful charge using our secure mock protocol.
+                  </p>
                 </div>
                 <button
                   onClick={handlePay}
                   disabled={paying}
-                  className="btn-primary w-full flex items-center justify-center space-x-2 disabled:opacity-50"
+                  className="btn-premium w-full bg-white text-charcoal hover:bg-sand-50 py-5"
                   data-testid="pay-now-btn"
                 >
-                  {paying ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-                  <span>{paying ? 'Processing…' : 'Complete demo payment'}</span>
+                  {paying ? (
+                     <div className="flex items-center justify-center space-x-3">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span className="font-black uppercase tracking-widest">Authorizing...</span>
+                     </div>
+                  ) : (
+                     <div className="flex items-center justify-center space-x-3">
+                        <Sparkles className="w-5 h-5" />
+                        <span className="font-black uppercase tracking-widest">Execute Demo Payment</span>
+                     </div>
+                  )}
                 </button>
-              </>
+              </div>
             ) : (
-              <>
-                <p className="text-xs text-charcoal-light mb-3">
-                  Pay securely with Razorpay (UPI, cards, net banking, wallets).
-                </p>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                   <div className="flex items-center space-x-3">
+                      <CreditCard className="w-5 h-5 text-white/40" />
+                      <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">Secure Checkout via Razorpay</span>
+                   </div>
+                   <div className="flex space-x-2">
+                      <div className="w-8 h-5 bg-white/10 rounded"></div>
+                      <div className="w-8 h-5 bg-white/10 rounded"></div>
+                      <div className="w-8 h-5 bg-white/10 rounded"></div>
+                   </div>
+                </div>
                 <button
                   onClick={handlePay}
                   disabled={paying}
-                  className="btn-primary w-full flex items-center justify-center space-x-2 disabled:opacity-50"
+                  className="btn-premium w-full bg-white text-charcoal hover:bg-sand-50 py-5"
                   data-testid="pay-now-btn"
                 >
-                  {paying ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
-                  <span>{paying ? 'Opening Razorpay…' : `Pay ₹${Math.round(booking.total_amount || 0).toLocaleString('en-IN')}`}</span>
+                  {paying ? (
+                     <div className="flex items-center justify-center space-x-3">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span className="font-black uppercase tracking-widest">Connecting...</span>
+                     </div>
+                  ) : (
+                     <div className="flex items-center justify-center space-x-3">
+                        <CreditCard className="w-5 h-5" />
+                        <span className="font-black uppercase tracking-widest">Pay ₹{Math.round(booking.total_amount || 0).toLocaleString('en-IN')}</span>
+                     </div>
+                  )}
                 </button>
-              </>
+              </div>
             )}
           </div>
         )}
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-4 animate-fade-in" style={{ animationDelay: '600ms' }}>
           <button
             onClick={() => navigate('/guest/browse')}
-            className="btn-secondary flex-1"
+            className="flex-1 px-6 py-4 rounded-2xl border-2 border-sand-200 text-sm font-black text-charcoal uppercase tracking-widest hover:border-sand-400 transition-all text-center"
             data-testid="back-to-search-btn"
           >
-            Back to search
+            Back to Search
           </button>
           {isConfirmed && (
             <button
               onClick={() => navigate('/guest/bookings')}
-              className="btn-primary flex-1"
+              className="flex-1 px-6 py-4 rounded-2xl bg-charcoal text-white text-sm font-black uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium text-center"
               data-testid="view-bookings-btn"
             >
-              View my bookings
+              My Bookings
             </button>
           )}
         </div>

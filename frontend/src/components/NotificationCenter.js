@@ -3,6 +3,28 @@ import { useAuth } from '../contexts/AuthContext';
 import apiClient from '../services/api';
 import { Bell, Check, CheckCheck, X } from 'lucide-react';
 
+export const getNotificationIcon = (type) => {
+  const icons = {
+    booking_confirmed: '🎉',
+    booking_cancelled: '❌',
+    property_approved: '✅',
+    property_rejected: '⛔',
+    kyc_approved: '✓',
+    kyc_rejected: '✗',
+    subscription_expiring: '⚠️',
+    subscription_expired: '⏰',
+    verification_assigned: '📋',
+    verification_submitted: '📤',
+    verification_reviewed: '👁️',
+    payout_processed: '💰',
+    new_lead: '🎯',
+    owner_assigned: '👥',
+    dispute_raised: '⚖️',
+    refund_received: '💸',
+  };
+  return icons[type] || '🔔';
+};
+
 const NotificationCenter = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
@@ -44,27 +66,6 @@ const NotificationCenter = ({ isOpen, onClose }) => {
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
-  };
-
-  const getNotificationIcon = (type) => {
-    const icons = {
-      booking_confirmed: '🎉',
-      booking_cancelled: '❌',
-      property_approved: '✅',
-      property_rejected: '⛔',
-      kyc_approved: '✓',
-      kyc_rejected: '✗',
-      subscription_expiring: '⚠️',
-      subscription_expired: '⏰',
-      verification_assigned: '📋',
-      verification_submitted: '📤',
-      verification_reviewed: '👁️',
-      payout_processed: '💰',
-      new_lead: '🎯',
-      owner_assigned: '👥',
-      dispute_raised: '⚖️',
-    };
-    return icons[type] || '🔔';
   };
 
   const getRelativeTime = (dateString) => {
@@ -201,21 +202,114 @@ const NotificationCenter = ({ isOpen, onClose }) => {
 export const NotificationBell = () => {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [prevCount, setPrevCount] = useState(-1);
+  const [activeToast, setActiveToast] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [playedSoundIds] = useState(new Set());
 
   useEffect(() => {
     if (user) {
       fetchUnreadCount();
-      // Poll for new notifications every 30 seconds
-      const interval = setInterval(fetchUnreadCount, 30000);
+      // Poll for new notifications every 15 seconds
+      const interval = setInterval(fetchUnreadCount, 15000);
       return () => clearInterval(interval);
     }
   }, [user]);
 
+  const playNotificationSound = () => {
+    try {
+      // Create oscillator synthesis as robust local fallback
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) {
+        const ctx = new AudioContext();
+        const now = ctx.currentTime;
+        
+        // Osc 1: high chime
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(880, now); // A5
+        osc1.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+        gain1.gain.setValueAtTime(0.15, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.45);
+        
+        // Osc 2: quick secondary beep for chime beauty
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(1046.50, now + 0.12); // C6
+        gain2.gain.setValueAtTime(0.1, now + 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.12);
+        osc2.stop(now + 0.55);
+      }
+    } catch (e) {
+      console.warn('AudioContext playback blocked or not supported:', e);
+    }
+    
+    // Also try to play Mixkit audio chime
+    try {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav');
+      audio.volume = 0.4;
+      audio.play().catch(() => {});
+    } catch (err) {
+      // silently absorb network/cors block
+    }
+  };
+
   const fetchUnreadCount = async () => {
     try {
       const response = await apiClient.get('/notifications/unread-count');
-      setUnreadCount(response.data.unread_count || 0);
+      const count = response.data.unread_count || 0;
+      setUnreadCount(count);
+
+      // Play sound and trigger popup if there are new unread notifications
+      if (prevCount !== -1 && count > prevCount) {
+        playNotificationSound();
+        try {
+          const res = await apiClient.get('/notifications/my-notifications');
+          const list = res.data.notifications || [];
+          const unreadNotifs = list.filter(n => n.status !== 'read');
+          if (unreadNotifs.length > 0) {
+            const latestNotif = unreadNotifs[0];
+            setActiveToast({
+              title: latestNotif.title,
+              message: latestNotif.message,
+              type: latestNotif.type
+            });
+            setTimeout(() => {
+              setActiveToast(null);
+            }, 6000);
+          }
+        } catch (err) {
+          console.error("Error fetching newest notification for toast:", err);
+        }
+      }
+      setPrevCount(count);
+
+      // If admin, check if there are any new verification_submitted notifications
+      if (user?.role === 'admin' && count > 0) {
+        const res = await apiClient.get('/notifications/my-notifications');
+        const list = res.data.notifications || [];
+        const unreadSubmitted = list.filter(n => n.status !== 'read' && n.type === 'verification_submitted');
+        
+        let playedNew = false;
+        unreadSubmitted.forEach(n => {
+          if (!playedSoundIds.has(n.notification_id)) {
+            playedSoundIds.add(n.notification_id);
+            playedNew = true;
+          }
+        });
+        if (playedNew) {
+          playNotificationSound();
+        }
+      }
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
@@ -230,11 +324,38 @@ export const NotificationBell = () => {
       >
         <Bell className="w-5 h-5 text-charcoal-light" />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 w-5 h-5 bg-terracotta text-white text-xs font-bold rounded-full flex items-center justify-center">
+          <span className="absolute top-0 right-0 w-5 h-5 bg-terracotta text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
+
+      {activeToast && (
+        <>
+          <style>{`
+            @keyframes slideUp {
+              from { transform: translateY(100%); opacity: 0; }
+              to { transform: translateY(0); opacity: 1; }
+            }
+          `}</style>
+          <div 
+            className="fixed bottom-5 right-5 z-[9999] max-w-sm w-full bg-white border border-sand-200 rounded-2xl shadow-2xl p-4 flex items-start space-x-3"
+            style={{ animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
+          >
+            <span className="text-2xl mt-0.5">{getNotificationIcon(activeToast.type)}</span>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-bold text-charcoal text-sm">{activeToast.title}</h4>
+              <p className="text-xs text-charcoal-light mt-1 leading-relaxed">{activeToast.message}</p>
+            </div>
+            <button 
+              onClick={() => setActiveToast(null)} 
+              className="p-1 hover:bg-sand-50 rounded-full transition-colors flex-shrink-0"
+            >
+              <X className="w-4 h-4 text-charcoal-light" />
+            </button>
+          </div>
+        </>
+      )}
 
       <NotificationCenter
         isOpen={isOpen}

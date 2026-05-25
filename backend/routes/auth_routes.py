@@ -127,6 +127,22 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
         # Hash password
         hashed_password = hash_password(user_data.password)
         
+        # Resolve broker if lg_code is provided for a host
+        broker_id = None
+        role_str = user_data.role.value if hasattr(user_data.role, "value") else str(user_data.role)
+        if role_str.lower() == "host" and user_data.lg_code and user_data.lg_code.strip():
+            lg_code_clean = user_data.lg_code.strip()
+            broker = await db.users.find_one({
+                "role": "broker",
+                "lg_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}
+            })
+            if not broker:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid LG Code. No broker found with this code."
+                )
+            broker_id = broker["user_id"]
+        
         # Create user object
         user = User(
             email=user_data.email,
@@ -135,7 +151,8 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
             full_name=user_data.full_name,
             role=user_data.role,
             city=user_data.city,
-            lg_code=user_data.lg_code,
+            lg_code=user_data.lg_code.strip().upper() if user_data.lg_code else None,
+            broker_id=broker_id,
             terms_accepted=user_data.terms_accepted,
             is_phone_verified=True  # Assuming OTP was verified before registration
         )

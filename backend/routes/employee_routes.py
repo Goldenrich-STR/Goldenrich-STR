@@ -11,6 +11,8 @@ import logging
 import io
 import csv
 import asyncio
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/employee", tags=["Employee"])
@@ -187,6 +189,185 @@ async def get_verification_details(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch verification details"
+        )
+
+@router.get("/verifications/{verification_id}/export-report")
+async def export_verification_report_xlsx(
+    verification_id: str,
+    current_user: dict = Depends(require_employee),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Export a single verification report as a Luxury Premium XLSX."""
+    print(f"DEBUG: Generating Luxury Report for {verification_id}")
+    try:
+        # Get full verification details
+        verification = await db.property_verifications.find_one(
+            {"verification_id": verification_id},
+            {"_id": 0}
+        )
+        
+        if not verification:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Verification not found"
+            )
+        
+        # Enrich with property, broker and owner
+        property_data = await db.properties.find_one({"property_id": verification["property_id"]}, {"_id": 0})
+        broker_data = await db.users.find_one({"user_id": verification["broker_id"]}, {"_id": 0, "full_name": 1, "lg_code": 1})
+        owner_data = await db.users.find_one({"user_id": verification["owner_id"]}, {"_id": 0, "full_name": 1})
+
+        # Create Styled Excel Workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Executive Audit"
+        ws.sheet_view.showGridLines = False
+
+        # Luxury Noir Palette (Black & Gold)
+        noir = "1A1A1A"
+        gold = "D4AF37"
+        platinum = "E5E4E2"
+        white = "FFFFFF"
+        
+        # Styles
+        title_font = Font(name='Georgia', size=24, bold=True, color=gold)
+        header_font = Font(name='Georgia', size=14, bold=True, color=gold)
+        label_font = Font(name='Arial', size=11, bold=True, color=platinum)
+        value_font = Font(name='Arial', size=11, color=white)
+        
+        bg_fill = PatternFill(start_color=noir, end_color=noir, fill_type="solid")
+        
+        gold_side = Side(style='thin', color=gold)
+        gold_border = Border(left=gold_side, right=gold_side, top=gold_side, bottom=gold_side)
+        
+        # Fill background
+        for r in range(1, 100):
+            for c in range(1, 10):
+                ws.cell(row=r, column=c).fill = bg_fill
+
+        # Set Column Widths
+        ws.column_dimensions['A'].width = 40
+        ws.column_dimensions['B'].width = 60
+        ws.column_dimensions['C'].width = 30
+
+        # 1. Luxury Header
+        ws.merge_cells('A1:C3')
+        cell = ws['A1']
+        cell.value = "GOLDEN-X-HOST | ELITE AUDIT"
+        cell.font = title_font
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.border = Border(left=gold_side, right=gold_side, top=gold_side, bottom=gold_side)
+
+        curr_row = 5
+        
+        # 2. Property Hero
+        ws.merge_cells(f'A{curr_row}:C{curr_row+1}')
+        hero = ws[f'A{curr_row}']
+        hero.value = property_data.get("title", "N/A").upper()
+        hero.font = Font(name='Arial', size=16, bold=True, color=white)
+        hero.alignment = Alignment(horizontal='center', vertical='center')
+        hero.border = gold_border
+        curr_row += 4
+
+        # 3. Status Badge
+        ws[f'A{curr_row}'] = "AUDIT STATUS"
+        ws[f'B{curr_row}'] = "CERTIFIED" if verification.get("rm_approved") else "UNDER REVIEW"
+        ws[f'A{curr_row}'].font = label_font
+        ws[f'B{curr_row}'].font = Font(name='Arial', size=12, bold=True, color=noir)
+        ws[f'B{curr_row}'].fill = PatternFill(start_color=gold, end_color=gold, fill_type="solid")
+        ws[f'B{curr_row}'].alignment = Alignment(horizontal='center')
+        ws[f'A{curr_row}'].border = gold_border
+        ws[f'B{curr_row}'].border = gold_border
+        curr_row += 3
+
+        # 4. Details Section
+        ws.merge_cells(f'A{curr_row}:C{curr_row}')
+        ws[f'A{curr_row}'] = "I. METADATA & AUTHENTICATION"
+        ws[f'A{curr_row}'].font = header_font
+        ws[f'A{curr_row}'].fill = PatternFill(start_color="333333", end_color="333333", fill_type="solid")
+        curr_row += 1
+
+        details = [
+            ("Verification ID", verification["verification_id"]),
+            ("Audit Reference", datetime.now(timezone.utc).strftime('%d %B %Y')),
+            ("Lead Auditor", current_user.get("full_name", "N/A")),
+            ("Field Intelligence", broker_data.get("full_name", "N/A"))
+        ]
+
+        for label, val in details:
+            ws[f'A{curr_row}'] = label
+            ws[f'B{curr_row}'] = val
+            ws[f'A{curr_row}'].font = label_font
+            ws[f'B{curr_row}'].font = value_font
+            ws[f'A{curr_row}'].border = gold_border
+            ws[f'B{curr_row}'].border = gold_border
+            curr_row += 1
+        
+        curr_row += 2
+
+        # 5. Checklist Section
+        ws.merge_cells(f'A{curr_row}:C{curr_row}')
+        cell = ws[f'A{curr_row}']
+        cell.value = "II. COMPLIANCE CHECKLIST"
+        cell.font = header_font
+        cell.fill = PatternFill(start_color="333333", end_color="333333", fill_type="solid")
+        curr_row += 1
+
+        checklist = verification.get("checklist", {})
+        for key, value in checklist.items():
+            ws[f'A{curr_row}'] = key.replace("_", " ").title()
+            ws[f'B{curr_row}'] = "✔ COMPLIANT" if value else "✘ DEFICIENT"
+            ws[f'A{curr_row}'].font = value_font
+            ws[f'B{curr_row}'].font = Font(name='Arial', size=11, bold=True, color="27AE60" if value else "C0392B")
+            ws[f'A{curr_row}'].border = gold_border
+            ws[f'B{curr_row}'].border = gold_border
+            curr_row += 1
+
+        # Footer
+        curr_row += 3
+        ws[f'A{curr_row}'] = "OFFICIAL ELECTRONIC RECORD"
+        ws[f'A{curr_row}'].font = Font(size=8, color=gold)
+        ws[f'C{curr_row}'] = "SECURE DOCUMENT"
+        ws[f'C{curr_row}'].font = Font(size=8, italic=True, color=gold)
+        ws[f'C{curr_row}'].alignment = Alignment(horizontal='right')
+
+        # Save to IO
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        # Use a timestamp to prevent browser caching
+        ts = datetime.now().strftime('%H%M%S')
+        filename = f"Elite_Report_{verification_id}_{ts}.xlsx"
+        
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+
+        # Save to IO
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        filename = f"Verification_Report_{verification_id}.xlsx"
+        
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error exporting verification XLSX: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to export report: {str(e)}"
         )
 
 @router.post("/verifications/{verification_id}/approve")

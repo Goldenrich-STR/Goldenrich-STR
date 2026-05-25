@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
 const API = `${BACKEND_URL}/api`;
 
 const apiClient = axios.create({
@@ -12,6 +12,15 @@ const apiClient = axios.create({
 
 export { apiClient };
 
+export const getImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/api/')) return `${BACKEND_URL}${url}`;
+  if (url.startsWith('uploads/')) return `${BACKEND_URL}/api/${url}`;
+  return url;
+};
+
+
 // Add auth token to requests
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('propnest_token');
@@ -20,6 +29,20 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Handle token expiration (401 Unauthorized)
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const isAuthAttempt = error.config?.url?.startsWith('/auth/');
+    if (error.response && error.response.status === 401 && !isAuthAttempt) {
+      localStorage.removeItem('propnest_token');
+      localStorage.removeItem('propnest_user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Auth API
 export const authAPI = {
@@ -55,6 +78,12 @@ export const propertyAPI = {
   
   submitForVerification: (propertyId) =>
     apiClient.post(`/properties/${propertyId}/submit-verification`),
+
+  getNearbyPlaces: (lat, lng) =>
+    apiClient.get('/properties/nearby-places', { params: { latitude: lat, longitude: lng } }),
+
+  expandUrl: (url) =>
+    apiClient.get('/properties/expand-url', { params: { url } }),
 };
 
 // Subscription API
@@ -72,6 +101,33 @@ export const subscriptionAPI = {
     apiClient.post('/subscriptions/registration-fee/mock-pay', null, {
       params: { razorpay_order_id: orderId },
     }),
+
+  subscribe: (data) =>
+    apiClient.post('/subscriptions/subscribe', data),
+
+  confirmSubscription: (data) =>
+    apiClient.post('/subscriptions/confirm-subscription', null, { params: data }),
+
+  mockPaySubscription: (subscriptionId, orderId) =>
+    apiClient.post('/subscriptions/subscribe/mock-pay', null, {
+      params: { subscription_id: subscriptionId, razorpay_order_id: orderId },
+    }),
+
+  getUserSubscriptions: () =>
+    apiClient.get('/subscriptions/my-subscriptions'),
+
+  getPaymentConfig: () =>
+    apiClient.get('/bookings/payment/config'),
+
+  // Admin
+  createPlan: (planData) =>
+    apiClient.post('/subscriptions/admin/plans', null, { params: planData }),
+
+  updatePlan: (planId, planData) =>
+    apiClient.put(`/subscriptions/admin/plans/${planId}`, null, { params: planData }),
+
+  deletePlan: (planId) =>
+    apiClient.delete(`/subscriptions/admin/plans/${planId}`),
 };
 
 // Upload API
@@ -82,13 +138,13 @@ export const uploadAPI = {
     const res = await apiClient.post('/upload/image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    // Convert relative /api/uploads/... to absolute URL using BACKEND_URL
     return {
       ...res.data,
-      url: res.data.url.startsWith('http') ? res.data.url : `${BACKEND_URL}${res.data.url}`,
+      url: getImageUrl(res.data.url),
     };
   },
 };
+
 
 // Booking API
 export const bookingAPI = {
@@ -100,6 +156,9 @@ export const bookingAPI = {
   
   mockPay: (bookingId) =>
     apiClient.post(`/bookings/${bookingId}/mock-pay`),
+
+  applyCoupon: (bookingId, couponCode) =>
+    apiClient.post(`/bookings/${bookingId}/apply-coupon`, { coupon_code: couponCode }),
 
   getPaymentConfig: () =>
     apiClient.get('/bookings/payment/config'),
@@ -115,6 +174,9 @@ export const bookingAPI = {
 
   cancelBooking: (bookingId) =>
     apiClient.post(`/bookings/${bookingId}/cancel`),
+
+  adminGetBookings: (params = {}) =>
+    apiClient.get('/admin/bookings', { params }),
 };
 
 // Calendar API
@@ -191,14 +253,19 @@ export const verificationAPI = {
   rmReject: (verificationId, reason) =>
     apiClient.post(`/employee/verifications/${verificationId}/reject`, { reason }),
 
+  exportVerificationReport: (verificationId) =>
+    apiClient.get(`/employee/verifications/${verificationId}/export-report`, {
+      responseType: 'blob'
+    }),
+
   // Admin (final approval)
   listAwaitingFinalApproval: () =>
     apiClient.get('/admin/properties/awaiting-final-approval'),
 
   listPendingForAdmin: () => apiClient.get('/admin/properties/pending-verification'),
 
-  adminApprove: (propertyId) =>
-    apiClient.post(`/admin/properties/${propertyId}/approve`),
+  adminApprove: (propertyId, payload) =>
+    apiClient.post(`/admin/properties/${propertyId}/approve`, payload),
 
   adminReject: (propertyId, reason) =>
     apiClient.post(`/admin/properties/${propertyId}/reject`, { reason }),
@@ -214,6 +281,8 @@ export const accountAPI = {
     apiClient.get('/admin/account/top-hosts', { params: { limit } }),
   listTransactions: (params = {}) =>
     apiClient.get('/admin/account/transactions', { params }),
+  shareInvoice: (transactionId, channel) =>
+    apiClient.post(`/admin/account/transactions/${transactionId}/share-invoice`, { channel }),
   exportTransactionsCsvUrl: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return `${BACKEND_URL}/api/admin/account/transactions/export-csv${qs ? `?${qs}` : ''}`;
@@ -250,6 +319,8 @@ export const accountAPI = {
     apiClient.get('/host/payouts', {
       params: payoutStatus ? { payout_status: payoutStatus } : {},
     }),
+  submitHostVerification: (payload) =>
+    apiClient.post('/host/submit-verification', payload),
 };
 
 // Reviews & Ratings — Phase 18
@@ -264,6 +335,22 @@ export const reviewAPI = {
     apiClient.post(`/reviews/${reviewId}/host-response`, { response }),
   listHostReviews: () => apiClient.get('/host/reviews'),
   listMyReviews: () => apiClient.get('/guest/my-reviews'),
+};
+
+// CMS API
+export const cmsAPI = {
+  getLandingPage: () => apiClient.get('/cms/landing-page'),
+  getAdminContent: (page) => apiClient.get('/cms/admin/content', { params: page ? { page } : {} }),
+  updateContent: (contentId, payload) => apiClient.patch(`/cms/admin/content/${contentId}`, payload),
+  createContent: (payload) => apiClient.post('/cms/admin/content', payload),
+  deleteContent: (contentId) => apiClient.delete(`/cms/admin/content/${contentId}`),
+};
+
+// Coupon API
+export const couponAPI = {
+  createCoupon: (data) => apiClient.post('/coupons/', data),
+  listCoupons: () => apiClient.get('/coupons/'),
+  getPropertyCoupons: (propertyId) => apiClient.get(`/coupons/property/${propertyId}`),
 };
 
 export default apiClient;

@@ -121,6 +121,8 @@ def _ensure_property():
         "state": "Goa",
         "country": "India",
         "pincode": "403001",
+        "pin_code": "403001",
+        "area_sqft": 1200,
         "max_guests": 6,
         "bedrooms": 3,
         "bathrooms": 2,

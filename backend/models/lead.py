@@ -19,6 +19,10 @@ class Lead(BaseModel):
     email: Optional[str] = None
     city: str
     property_type: str  # residential, commercial, event_venue
+    from_date: Optional[str] = None
+    to_date: Optional[str] = None
+    property_id: Optional[str] = None
+    property_title: Optional[str] = None
     
     # Status
     status: LeadStatus = LeadStatus.NEW
@@ -36,8 +40,16 @@ class LeadCreate(BaseModel):
     email: Optional[str] = None
     city: str
     property_type: str
+    from_date: Optional[str] = None
+    to_date: Optional[str] = None
+    property_id: Optional[str] = None
+    property_title: Optional[str] = None
     notes: Optional[str] = None
 
 class LeadUpdate(BaseModel):
     status: Optional[LeadStatus] = None
     notes: Optional[str] = None
+    from_date: Optional[str] = None
+    to_date: Optional[str] = None
+    property_id: Optional[str] = None
+    property_title: Optional[str] = None

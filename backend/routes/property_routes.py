@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List, Optional
+from pydantic import BaseModel
 from models.property import Property, PropertyCreate, PropertyUpdate, PropertyStatus, PropertyCategory
 from models.user import UserRole
 from middleware.auth_middleware import get_current_user, require_role
@@ -29,9 +30,14 @@ async def create_property(
                 detail="Only hosts can create property listings"
             )
         
+        # Fetch the host's profile to retrieve their registered broker_id (from LG Code registration)
+        host_user = await db.users.find_one({"user_id": current_user["user_id"]})
+        host_broker_id = host_user.get("broker_id") if host_user else None
+        
         # Create property object
         property_obj = Property(
             owner_id=current_user["user_id"],
+            broker_id=host_broker_id,
             **property_data.model_dump()
         )
         
@@ -39,7 +45,7 @@ async def create_property(
         property_dict = property_obj.model_dump()
         await db.properties.insert_one(property_dict)
         
-        logger.info(f"Property created: {property_obj.property_id} by {current_user['user_id']}")
+        logger.info(f"Property created: {property_obj.property_id} by {current_user['user_id']} (broker assigned: {host_broker_id})")
         return property_obj
     
     except HTTPException:
@@ -152,6 +158,7 @@ async def search_properties(
             "price_desc": [("price_per_night", -1)],
             "newest": [("created_at", -1)],
             "recommended": [("instant_booking", -1), ("created_at", -1)],
+            "rating_desc": [("rating", -1), ("review_count", -1)],
         }
         sort_spec = sort_map.get(sort, sort_map["recommended"])
 
@@ -211,7 +218,8 @@ async def get_property(
             {"_id": 0, "user_id": 1, "full_name": 1, "city": 1, "profile_image": 1, "created_at": 1, "kyc_status": 1, "role": 1},
         )
         if host:
-            host["created_at"] = host["created_at"].isoformat() if host.get("created_at") else None
+            created_at = host.get("created_at")
+            host["created_at"] = created_at.isoformat() if hasattr(created_at, "isoformat") else created_at
         property_dict["host"] = host or None
 
         return property_dict
@@ -345,3 +353,154 @@ async def submit_for_verification(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to submit property"
         )
+
+@router.get("/expand-url")
+async def expand_url(url: str = Query(...)):
+    """Resolve short URLs (like maps.app.goo.gl) to their full URL."""
+    try:
+        import urllib.request
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        res = urllib.request.urlopen(req, timeout=10)
+        return {"url": res.geturl()}
+    except Exception as e:
+        logger.error(f"Failed to expand URL: {str(e)}")
+        return {"url": url}
+
+
+
+@router.get("/nearby-places")
+async def get_nearby_places(
+    latitude: float = Query(..., description="Latitude of the property"),
+    longitude: float = Query(..., description="Longitude of the property"),
+):
+    """Retrieve or generate famous landmarks near the given latitude and longitude coordinates."""
+    places = []
+    
+    # 1. Mumbai region
+    if 18.8 <= latitude <= 19.4 and 72.6 <= longitude <= 73.1:
+        places = [
+            "Gateway of India",
+            "Marine Drive Promenade",
+            "Juhu Beach",
+            "Siddhivinayak Temple",
+            "Bandra-Worli Sea Link",
+            "Chhatrapati Shivaji Maharaj Terminus",
+            "Colaba Causeway Shopping Market",
+            "Sanjay Gandhi National Park",
+        ]
+    # 2. Pune region
+    elif 18.3 <= latitude <= 18.7 and 73.6 <= longitude <= 74.1:
+        places = [
+            "Shaniwar Wada Palace",
+            "Aga Khan Palace",
+            "Sinhagad Fort View Point",
+            "Osho Meditation Resort",
+            "Dagadusheth Halwai Ganpati Temple",
+            "Vetal Tekdi Hilltop View",
+            "Phoenix Marketcity Viman Nagar",
+            "FC Road Street Shopping",
+        ]
+    # 3. Goa region
+    elif 14.8 <= latitude <= 15.9 and 73.5 <= longitude <= 74.3:
+        places = [
+            "Calangute Beach Coastline",
+            "Historic Fort Aguada & Lighthouse",
+            "Basilica of Bom Jesus (Old Goa)",
+            "Dudhsagar Waterfalls Trail",
+            "Anjuna Flea Market Ground",
+            "Panaji Church & Latin Quarter",
+            "Baga Beach Clubs & Nightlife",
+            "Dona Paula View Point",
+        ]
+    # 4. Delhi region
+    elif 28.3 <= latitude <= 28.9 and 76.9 <= longitude <= 77.4:
+        places = [
+            "Red Fort Heritage Monument",
+            "Qutub Minar Complex",
+            "India Gate War Memorial",
+            "Lotus Temple Garden",
+            "Humayun's Tomb",
+            "Akshardham Temple",
+            "Connaught Place Shopping Circle",
+            "Chandni Chowk Food Street",
+        ]
+    # 5. Bangalore region
+    elif 12.7 <= latitude <= 13.2 and 77.3 <= longitude <= 77.9:
+        places = [
+            "Lalbagh Botanical Garden",
+            "Bangalore Palace",
+            "Cubbon Park Walking Trail",
+            "Bannerghatta Biological Park",
+            "Nandi Hills Sunrise View",
+            "Visvesvaraya Industrial Museum",
+            "UB City Luxury Mall",
+            "Commercial Street Bazaar",
+        ]
+    # Generic fallback: generate dynamic nearby landmarks using standard categories
+    else:
+        seed = int(abs(latitude * 1000) + abs(longitude * 1000))
+        adjectives = ["Scenic", "Historic", "Central", "Popular", "Famous", "Golden", "Royal", "Sunset"]
+        nouns = ["Park", "Marketplace", "View Point", "Lake Promenade", "Museum", "Heritage Site", "Metro Station", "Shopping Plaza"]
+        
+        import random
+        r = random.Random(seed)
+        
+        places = []
+        for i in range(5):
+            if not adjectives or not nouns:
+                break
+            adj = r.choice(adjectives)
+            noun = r.choice(nouns)
+            adjectives.remove(adj)
+            nouns.remove(noun)
+            places.append(f"{adj} {noun}")
+            
+    return {"latitude": latitude, "longitude": longitude, "places": places}
+
+class ReviewSubmit(BaseModel):
+    rating: float
+    comment: Optional[str] = None
+
+@router.post("/{property_id}/reviews")
+async def submit_review(
+    property_id: str,
+    review_data: ReviewSubmit,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Submit a review for a property after checkout."""
+    try:
+        property_obj = await db.properties.find_one({"property_id": property_id})
+        if not property_obj:
+            raise HTTPException(status_code=404, detail="Property not found")
+            
+        old_rating = property_obj.get("rating", 0.0)
+        old_count = property_obj.get("review_count", 0)
+        
+        new_count = old_count + 1
+        new_rating = ((old_rating * old_count) + review_data.rating) / new_count
+        new_rating = round(new_rating, 1)
+        
+        import uuid
+        review_doc = {
+            "review_id": str(uuid.uuid4()),
+            "property_id": property_id,
+            "guest_id": current_user["user_id"],
+            "overall_rating": review_data.rating,
+            "comment": review_data.comment,
+            "is_published": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.reviews.insert_one(review_doc)
+        
+        await db.properties.update_one(
+            {"property_id": property_id},
+            {"$set": {"rating": new_rating, "review_count": new_count}}
+        )
+        
+        return {"success": True, "new_rating": new_rating, "review_count": new_count}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error submitting review: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to submit review")

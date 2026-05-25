@@ -254,3 +254,38 @@ def schedule_soft_lock_reminder(db: AsyncIOMotorDatabase, booking_id: str, expir
         logger.info(f"Soft-lock reminder scheduled for {booking_id} in {int(delay)}s")
     except Exception as e:
         logger.error(f"Failed to schedule soft-lock reminder: {e}")
+
+
+async def notify_guest_refund_processed(db: AsyncIOMotorDatabase, refund_dict: dict) -> None:
+    """Send In-App + Email notification to guest when a refund is processed successfully."""
+    try:
+        guest = await db.users.find_one({"user_id": refund_dict["guest_id"]}, {"_id": 0})
+        booking = await db.bookings.find_one({"booking_id": refund_dict["booking_id"]}, {"_id": 0})
+        if not guest:
+            logger.warning(f"Guest not found for refund notification: {refund_dict.get('refund_id')}")
+            return
+
+        refund_amt_inr = round(refund_dict.get("refund_amount", 0) / 100)
+        message = (
+            f"Golden-X-Host: Your refund of ₹{refund_amt_inr:,} has been successfully received/processed. "
+            f"Booking ID: {refund_dict['booking_id']}."
+        )
+
+        await send_multi_channel_notification(
+            db=db,
+            user_id=refund_dict["guest_id"],
+            notification_type=NotificationType.REFUND_RECEIVED,
+            title="Refund Received",
+            message=message,
+            channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+            data={
+                "booking_id": refund_dict["booking_id"],
+                "refund_id": refund_dict.get("refund_id"),
+                "refund_amount": refund_dict.get("refund_amount"),
+                "refund_percent": refund_dict.get("refund_percent"),
+            },
+        )
+        logger.info(f"Refund notification triggered for booking {refund_dict['booking_id']}")
+    except Exception as e:
+        logger.error(f"notify_guest_refund_processed failed: {e}")
+
