@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, subscriptionAPI, uploadAPI, getImageUrl, bookingAPI, cmsAPI } from '../services/api';
 import { 
   Users, Building2, Calendar, DollarSign, CheckCircle, 
-  XCircle, Clock, TrendingUp, BarChart3, LogOut, Plus, Trash, Zap,
+  X, XCircle, Clock, TrendingUp, BarChart3, LogOut, Plus, Trash, Zap,
   Edit, Eye as EyeIcon, Shield, ChevronLeft, ChevronRight, Tag
 } from 'lucide-react';
 import CouponManagement from '../components/admin/CouponManagement';
@@ -239,6 +239,7 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [roleFilter, setRoleFilter] = useState('');
 
   useEffect(() => {
     fetchDashboardStats();
@@ -300,7 +301,7 @@ const AdminDashboard = () => {
               alt="Logo" 
               className="w-10 h-10 object-contain transition-transform duration-300 group-hover:scale-110"
             />
-            <h1 className="text-xl font-bold text-charcoal">Golden-X-Host - Admin Panel</h1>
+            <h1 className="text-xl font-bold text-charcoal">Golden Rich Stay - Admin Panel</h1>
           </div>
           <div className="flex items-center space-x-6">
             <span className="text-charcoal-light">Admin: {user?.full_name}</span>
@@ -464,7 +465,7 @@ const AdminDashboard = () => {
 
         {/* Users Tab */}
         {activeTab === 'users' && (
-          <UserManagement />
+          <UserManagement roleFilter={roleFilter} setRoleFilter={setRoleFilter} />
         )}
 
         {/* Properties Tab */}
@@ -519,10 +520,12 @@ const formatError = (error, defaultMsg = 'An error occurred') => {
 };
 
 // User Management Component
-const UserManagement = () => {
+const UserManagement = ({ roleFilter, setRoleFilter }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [roleFilter, setRoleFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [usersPerPage] = useState(10);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewUser, setViewUser] = useState(null);
   const [newUser, setNewUser] = useState({
@@ -542,6 +545,28 @@ const UserManagement = () => {
   const [uploading, setUploading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
+  const [allBrokers, setAllBrokers] = useState([]);
+  const [allEmployees, setAllEmployees] = useState([]);
+  const [rejectDocState, setRejectDocState] = useState(null);
+
+  const fetchBrokersAndEmployees = async () => {
+    try {
+      const brokerParams = { role: 'broker', limit: 1000 };
+      const brokerRes = await apiClient.get('/admin/users', { params: brokerParams });
+      setAllBrokers(brokerRes.data.users || []);
+
+      const employeeParams = { role: 'employee', limit: 1000 };
+      const employeeRes = await apiClient.get('/admin/users', { params: employeeParams });
+      setAllEmployees(employeeRes.data.users || []);
+    } catch (error) {
+      console.error('Error fetching brokers/employees:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchBrokersAndEmployees();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const startEditUser = (user) => {
     setEditUser({
@@ -586,8 +611,12 @@ const UserManagement = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
+    setCurrentPage(1);
   }, [roleFilter]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [roleFilter, currentPage]);
 
   useEffect(() => {
     const generateUID = () => {
@@ -643,9 +672,14 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const params = roleFilter ? { role: roleFilter } : {};
+      const params = {
+        limit: usersPerPage,
+        skip: (currentPage - 1) * usersPerPage,
+        ...(roleFilter ? { role: roleFilter } : {})
+      };
       const response = await apiClient.get('/admin/users', { params });
       setUsers(response.data.users || []);
+      setTotalUsers(response.data.total || 0);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -673,6 +707,7 @@ const UserManagement = () => {
         profile_image: ''
       });
       fetchUsers();
+      fetchBrokersAndEmployees();
       alert('User created successfully');
     } catch (error) {
       alert(formatError(error, 'Failed to create user'));
@@ -707,6 +742,7 @@ const UserManagement = () => {
       setShowEditModal(false);
       setEditUser(null);
       fetchUsers();
+      fetchBrokersAndEmployees();
       alert('User updated successfully');
     } catch (error) {
       console.error('Error updating user:', error);
@@ -719,6 +755,7 @@ const UserManagement = () => {
     try {
       await apiClient.delete(`/admin/users/${userId}`);
       fetchUsers();
+      fetchBrokersAndEmployees();
       alert('User deleted successfully');
     } catch (error) {
       alert(formatError(error, 'Failed to delete user'));
@@ -768,6 +805,40 @@ const UserManagement = () => {
     }
   };
 
+  const handleUpdateDocumentStatus = async (userId, documentType, status, reason = '') => {
+    try {
+      const payload = {
+        document_type: documentType,
+        status: status,
+        rejection_reason: reason || null
+      };
+      const response = await apiClient.patch(`/admin/users/${userId}/kyc/documents`, payload);
+      alert(`Document ${status} successfully!`);
+      
+      setViewUser(prev => {
+        if (prev && prev.user_id === userId) {
+          return {
+            ...prev,
+            kyc_documents: response.data.kyc_documents
+          };
+        }
+        return prev;
+      });
+      
+      setUsers(prevUsers => prevUsers.map(u => {
+        if (u.user_id === userId) {
+          return {
+            ...u,
+            kyc_documents: response.data.kyc_documents
+          };
+        }
+        return u;
+      }));
+    } catch (error) {
+      alert('Failed to update document status: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
   const handleAssignBroker = async (userId, brokerId) => {
     try {
       await apiClient.patch(`/admin/users/${userId}`, { broker_id: brokerId });
@@ -787,6 +858,24 @@ const UserManagement = () => {
       fetchUsers();
     } catch (error) {
       alert('Failed to assign RM: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const formatUserDate = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (e) {
+      return '';
     }
   };
 
@@ -869,6 +958,12 @@ const UserManagement = () => {
                       {user.city && (
                         <span className="text-xs text-charcoal-muted">in {user.city}</span>
                       )}
+                      {user.created_at && (
+                        <span className="inline-block px-2 py-0.5 bg-sand-100 text-charcoal-muted text-[10px] font-medium rounded flex items-center">
+                          <Clock className="w-3 h-3 mr-1 text-charcoal-muted/70" />
+                          Registered: {formatUserDate(user.created_at)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -908,6 +1003,68 @@ const UserManagement = () => {
               </div>
             </div>
           ))}
+          
+          {/* Pagination Controls */}
+          {totalUsers > usersPerPage && (
+            <div className="flex justify-between items-center bg-white px-6 py-4 rounded-[2rem] border border-sand-200 mt-6 flex-wrap gap-4">
+              <p className="text-xs text-charcoal-muted">
+                Showing <span className="font-bold text-charcoal">{(currentPage - 1) * usersPerPage + 1}</span> to{' '}
+                <span className="font-bold text-charcoal">
+                  {Math.min(currentPage * usersPerPage, totalUsers)}
+                </span>{' '}
+                of <span className="font-bold text-charcoal">{totalUsers}</span> users
+              </p>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-xl border border-sand-200 text-charcoal-light hover:bg-sand-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                {Array.from({ length: Math.ceil(totalUsers / usersPerPage) }).map((_, idx) => {
+                  const pageNum = idx + 1;
+                  const totalPages = Math.ceil(totalUsers / usersPerPage);
+                  if (
+                    pageNum === 1 ||
+                    pageNum === totalPages ||
+                    Math.abs(pageNum - currentPage) <= 1
+                  ) {
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`w-8 h-8 rounded-xl text-xs font-black transition-colors ${
+                          currentPage === pageNum
+                            ? 'bg-terracotta text-white font-bold'
+                            : 'border border-sand-200 text-charcoal hover:bg-sand-50'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  }
+                  if (
+                    pageNum === 2 ||
+                    pageNum === totalPages - 1
+                  ) {
+                    return <span key={pageNum} className="text-charcoal-muted px-1">...</span>;
+                  }
+                  return null;
+                })}
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(totalUsers / usersPerPage)))}
+                  disabled={currentPage === Math.ceil(totalUsers / usersPerPage)}
+                  className="p-2 rounded-xl border border-sand-200 text-charcoal-light hover:bg-sand-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1340,7 +1497,7 @@ const UserManagement = () => {
                     </div>
                   </div>
                   
-                  <div>
+                  <div className="flex items-center space-x-3">
                     {viewUser.kyc_status === 'approved' ? (
                       <span className="px-4 py-2 bg-green-50 text-green-600 rounded-full font-black text-xs uppercase tracking-widest border border-green-200">Approved</span>
                     ) : viewUser.kyc_status === 'rejected' ? (
@@ -1350,6 +1507,14 @@ const UserManagement = () => {
                     ) : (
                       <span className="px-4 py-2 bg-sand-100 text-charcoal-light rounded-full font-black text-xs uppercase tracking-widest border border-sand-200">Unverified</span>
                     )}
+                    
+                    <button
+                      onClick={() => setViewUser(null)}
+                      className="p-2 hover:bg-sand-100 rounded-full text-charcoal-light hover:text-charcoal transition-colors border border-sand-200 flex items-center justify-center"
+                      title="Back to List"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
 
@@ -1397,7 +1562,7 @@ const UserManagement = () => {
                             onChange={(e) => handleAssignBroker(viewUser.user_id, e.target.value)}
                           >
                             <option value="">-- Assign a Broker --</option>
-                            {users.filter(u => u.role === 'broker').map(b => (
+                            {allBrokers.map(b => (
                               <option key={b.user_id} value={b.user_id}>
                                 {b.full_name} ({b.lg_code || b.user_id})
                               </option>
@@ -1422,7 +1587,7 @@ const UserManagement = () => {
                             onChange={(e) => handleAssignRM(viewUser.user_id, e.target.value)}
                           >
                             <option value="">-- Assign an RM --</option>
-                            {users.filter(u => u.role === 'employee').map(rm => (
+                            {allEmployees.map(rm => (
                               <option key={rm.user_id} value={rm.user_id}>
                                 {rm.full_name} ({rm.user_id})
                               </option>
@@ -1461,11 +1626,27 @@ const UserManagement = () => {
                     {viewUser.kyc_documents && viewUser.kyc_documents.length > 0 ? (
                       <div className="grid grid-cols-2 gap-4">
                         {viewUser.kyc_documents.map((doc, idx) => (
-                          <div key={idx} className="p-4 bg-sand-50/50 border border-sand-200 rounded-2xl flex flex-col justify-between h-36">
-                            <div>
-                              <span className="text-[9px] font-black text-terracotta uppercase tracking-wider">Document</span>
-                              <h5 className="font-bold text-charcoal text-xs mt-1 capitalize">{doc.document_type.replace('_', ' ')}</h5>
+                          <div key={idx} className="p-4 bg-sand-50/50 border border-sand-200 rounded-2xl flex flex-col justify-between space-y-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <span className="text-[9px] font-black text-terracotta uppercase tracking-wider">Document</span>
+                                <h5 className="font-bold text-charcoal text-xs mt-0.5 capitalize">{doc.document_type.replace('_', ' ')}</h5>
+                              </div>
+                              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                                doc.status === 'approved' ? 'bg-green-50 text-green-600 border border-green-200' :
+                                doc.status === 'rejected' ? 'bg-red-50 text-red-600 border border-red-200' :
+                                'bg-amber-50 text-amber-600 border border-amber-200 animate-pulse'
+                              }`}>
+                                {doc.status || 'pending'}
+                              </span>
                             </div>
+                            
+                            {doc.status === 'rejected' && doc.rejection_reason && (
+                              <div className="text-[10px] text-red-600 bg-red-50/50 p-2 rounded-xl border border-red-100 leading-normal">
+                                <span className="font-black uppercase tracking-wider text-[8px] block mb-0.5">Reason:</span>
+                                {doc.rejection_reason}
+                              </div>
+                            )}
                             
                             {doc.document_type === 'gst_number' ? (
                               <p className="text-xs font-mono bg-white p-2 rounded-xl border border-sand-200 text-center font-bold text-charcoal">{doc.document_url}</p>
@@ -1474,11 +1655,38 @@ const UserManagement = () => {
                                 href={getImageUrl(doc.document_url)}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="w-full py-2 bg-charcoal hover:bg-terracotta text-white rounded-xl text-[9px] font-black uppercase tracking-widest text-center transition-colors"
+                                className="w-full py-2 bg-charcoal hover:bg-terracotta text-white rounded-xl text-[9px] font-black uppercase tracking-widest text-center transition-colors block"
                               >
                                 View File
                               </a>
                             )}
+
+                            <div className="flex gap-2 pt-2 border-t border-sand-100">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateDocumentStatus(viewUser.user_id, doc.document_type, 'approved')}
+                                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                                  doc.status === 'approved'
+                                    ? 'bg-green-600 text-white cursor-default'
+                                    : 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-200'
+                                }`}
+                                disabled={doc.status === 'approved'}
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRejectDocState({ userId: viewUser.user_id, documentType: doc.document_type, reason: '' })}
+                                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                                  doc.status === 'rejected'
+                                    ? 'bg-red-600 text-white cursor-default'
+                                    : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                                }`}
+                                disabled={doc.status === 'rejected'}
+                              >
+                                Reject
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1544,6 +1752,15 @@ const UserManagement = () => {
             ) : (
               // Standard Guest / Broker / Admin Detail View
               <div>
+                <div className="flex justify-end mb-2">
+                  <button
+                    onClick={() => setViewUser(null)}
+                    className="p-2 hover:bg-sand-100 rounded-full text-charcoal-light hover:text-charcoal transition-colors border border-sand-200 flex items-center justify-center"
+                    title="Close"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
                 <div className="flex flex-col items-center mb-6">
                   {viewUser.profile_image ? (
                     <img
@@ -1601,6 +1818,64 @@ const UserManagement = () => {
                 <button onClick={() => setViewUser(null)} className="w-full btn-premium py-4">Close Details</button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Reject KYC Document Reason Modal */}
+      {rejectDocState && (
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-premium animate-slide-up">
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-sand-200">
+              <h4 className="text-lg font-black text-charcoal">Reject Document</h4>
+              <button 
+                onClick={() => setRejectDocState(null)} 
+                className="p-1.5 hover:bg-sand-100 rounded-lg text-charcoal-light hover:text-charcoal transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <p className="text-xs text-charcoal-muted mb-4">
+              Please specify a reason for rejecting the <strong className="capitalize">{rejectDocState.documentType.replace('_', ' ')}</strong> document.
+            </p>
+            
+            <textarea
+              required
+              placeholder="e.g. Document is blurred or expired"
+              className="w-full border-2 border-sand-200 rounded-xl px-3 py-2 text-sm focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300 min-h-[80px]"
+              value={rejectDocState.reason || ''}
+              onChange={e => setRejectDocState({ ...rejectDocState, reason: e.target.value })}
+            />
+            
+            <div className="flex space-x-3 mt-5">
+              <button 
+                type="button" 
+                onClick={() => setRejectDocState(null)} 
+                className="flex-1 py-3 font-black text-[10px] text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={async () => {
+                  if (!rejectDocState.reason || !rejectDocState.reason.trim()) {
+                    alert('Rejection reason is required.');
+                    return;
+                  }
+                  await handleUpdateDocumentStatus(
+                    rejectDocState.userId,
+                    rejectDocState.documentType,
+                    'rejected',
+                    rejectDocState.reason
+                  );
+                  setRejectDocState(null);
+                }}
+                className="flex-1 btn-premium bg-red-600 hover:bg-red-700 border-red-600 py-3 shadow-elevated text-white font-black text-[10px] uppercase tracking-widest"
+              >
+                Reject Document
+              </button>
+            </div>
           </div>
         </div>
       )}

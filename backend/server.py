@@ -27,7 +27,7 @@ else:
 
 # Create the main app
 app = FastAPI(
-    title="Golden-X-Host STR API",
+    title="Golden Rich Stay STR API",
     description="Short Term Renting Platform API",
     version="1.0.0"
 )
@@ -227,7 +227,7 @@ async def health_check():
     """Health check endpoint."""
     return {
         "status": "healthy",
-        "service": "Golden-X-Host STR API",
+        "service": "Golden Rich Stay STR API",
         "version": "1.0.0"
     }
 
@@ -235,7 +235,7 @@ async def health_check():
 async def root():
     """Root API endpoint."""
     return {
-        "message": "Golden-X-Host STR API",
+        "message": "Golden Rich Stay STR API",
         "version": "1.0.0",
         "docs": "/docs"
     }

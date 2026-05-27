@@ -37,9 +37,9 @@ async def create_missing_users(db=None):
     
     from datetime import timezone
     now = datetime.now(timezone.utc)
-    admin_email = os.environ.get("ADMIN_EMAIL", "admin@golden-x-host")
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin@goldenrichstay.com")
     admin_password = os.environ.get("ADMIN_PASSWORD", "admin@123")
-    admin_name = os.environ.get("ADMIN_NAME", "Goldensky Admin")
+    admin_name = os.environ.get("ADMIN_NAME", "Golden Rich Stay Admin")
     
     users = [
         {
@@ -61,7 +61,7 @@ async def create_missing_users(db=None):
         },
         {
             "user_id": "user_host_rajesh",
-            "email": "rajesh.patel@golden-x-host.com",
+            "email": "rajesh.patel@goldenrichstay.com",
             "phone": "+919820061122",
             "password_hash": pwd_context.hash("Host@2026!"),
             "full_name": "Rajesh Patel",
@@ -112,7 +112,7 @@ async def create_missing_users(db=None):
         },
         {
             "user_id": "user_rm_neha",
-            "email": "neha.kapoor@golden-x-host.com",
+            "email": "neha.kapoor@goldenrichstay.com",
             "phone": "+919901223344",
             "password_hash": pwd_context.hash("Rm@2026!"),
             "full_name": "Neha Kapoor",

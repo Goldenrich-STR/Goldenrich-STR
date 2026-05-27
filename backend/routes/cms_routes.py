@@ -136,7 +136,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                             "name": "Ananya Sen",
                             "role": "Consultant & Remote Worker",
                             "rating": 5,
-                            "comment": "Golden-X-Host spaces are absolutely stunning. The Wi-Fi is blazing fast and the locations are perfect for work-cations.",
+                            "comment": "Golden Rich Stay spaces are absolutely stunning. The Wi-Fi is blazing fast and the locations are perfect for work-cations.",
                             "avatar_url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"
                         },
                         {

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight } from 'lucide-react';
+import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ChatbotWidget from '../components/ChatbotWidget';
@@ -54,7 +54,7 @@ const TRANSLATIONS = {
     learnFees: 'Learn about our fees →',
     guestStories: 'Guest Stories',
     lovedByGuests: 'Loved by Guests & Hosts',
-    testimonialsSub: 'Hear from our community members about their experience with Golden-X-Host.',
+    testimonialsSub: 'Hear from our community members about their experience with Golden Rich Stay.',
     ourJournal: 'Our Journal',
     latestBlog: 'Latest from the Blog',
     blogSub: 'Insights and tips on property hosting, travel destinations, and short-term rental trends.',
@@ -73,10 +73,10 @@ const TRANSLATIONS = {
     privacy: 'Privacy',
     terms: 'Terms',
     cookies: 'Cookies',
-    precision: '© 2026 Golden-X-Host · Made with Precision',
+    precision: '© 2026 Golden Rich Stay · Made with Precision',
     modalJourney: 'Interactive Host Onboarding Journey',
     modalTitle: 'How It Works: Step-by-Step',
-    modalDesc: 'Golden-X-Host provides a fully integrated, premium, physically verified short-term renting system. Click on the steps below to explore our interactive host pipeline.',
+    modalDesc: 'Golden Rich Stay provides a fully integrated, premium, physically verified short-term renting system. Click on the steps below to explore our interactive host pipeline.',
     activeStage: 'Active Stage {stage} of 5',
     rmInspection: 'RM Inspection Scheduled',
     auditProgress: 'Audit In-Progress',
@@ -155,6 +155,9 @@ const TRANSLATIONS = {
     heroSubtitle: 'Curated residential, commercial, and event venues designed for those who value aesthetics and seamless experiences.',
     heroRating: '4.9/5 Average',
     heroTrusted: 'Trusted by 10k+ guests across Maharashtra & Bangalore.',
+    catResidential: 'Residential',
+    catCommercial: 'Commercial',
+    catEvent: 'Event Venue',
   },
   hi: {
     discover: 'खोजें',
@@ -202,7 +205,7 @@ const TRANSLATIONS = {
     learnFees: 'हमारी फीस के बारे में जानें →',
     guestStories: 'मेहमानों की कहानियाँ',
     lovedByGuests: 'मेहमानों और मेजबानों का पसंदीदा',
-    testimonialsSub: 'गोल्डन-एक्स-होस्ट के साथ अनुभव के बारे में हमारे समुदाय के सदस्यों से सुनें।',
+    testimonialsSub: 'गोल्डन रिच स्टे के साथ अनुभव के बारे में हमारे समुदाय के सदस्यों से सुनें।',
     ourJournal: 'हमारा जर्नल',
     latestBlog: 'ब्लॉग से नवीनतम',
     blogSub: 'संपत्ति की मेजबानी, यात्रा स्थलों और शॉर्ट-टर्म रेंटल ट्रेंड पर अंतर्दृष्टि और सुझाव।',
@@ -221,10 +224,10 @@ const TRANSLATIONS = {
     privacy: 'गोपनीयता',
     terms: 'नियम और शर्तें',
     cookies: 'कुकीज़',
-    precision: '© 2026 गोल्डन-एक्स-होस्ट · पूर्णता के साथ निर्मित',
+    precision: '© 2026 गोल्डन रिच स्टे · पूर्णता के साथ निर्मित',
     modalJourney: 'इंटरएक्टिव होस्ट ऑनबोर्डिंग यात्रा',
     modalTitle: 'यह कैसे काम करता है: चरण-दर-चरण',
-    modalDesc: 'गोल्डन-एक्स-होस्ट एक पूर्णतः एकीकृत, प्रीमियम, भौतिक रूप से सत्यापित शॉर्ट-टर्म रेंटल प्रणाली प्रदान करता है। हमारे इंटरएक्टिव होस्ट पाइपलाइन का पता लगाने के लिए नीचे दिए गए चरणों पर क्लिक करें।',
+    modalDesc: 'गोल्डन रिच स्टे एक पूर्णतः एकीकृत, प्रीमियम, भौतिक रूप से सत्यापित शॉर्ट-टर्म रेंटल प्रणाली प्रदान करता है। हमारे इंटरएक्टिव होस्ट पाइपलाइन का पता लगाने के लिए नीचे दिए गए चरणों पर क्लिक करें।',
     activeStage: 'सक्रिय चरण {stage} का ५',
     rmInspection: 'आरएम निरीक्षण निर्धारित',
     auditProgress: 'ऑडिट प्रगति पर',
@@ -303,6 +306,9 @@ const TRANSLATIONS = {
     heroSubtitle: 'सौंदर्यशास्त्र और निर्बाध अनुभवों को महत्व देने वालों के लिए डिज़ाइन किए गए आवासीय, व्यावसायिक और आयोजन स्थल।',
     heroRating: '4.9/5 औसत',
     heroTrusted: 'महाराष्ट्र और बैंगलोर में 10k+ मेहमानों द्वारा विश्वसनीय।',
+    catResidential: 'आवासीय',
+    catCommercial: 'व्यावसायिक',
+    catEvent: 'आयोजन स्थल',
   },
   mr: {
     discover: 'शोधा',
@@ -350,7 +356,7 @@ const TRANSLATIONS = {
     learnFees: 'आमच्या शुल्काबद्दल जाणून घ्या →',
     guestStories: 'पाहुण्यांचे अनुभव',
     lovedByGuests: 'पाहुणे आणि होस्ट दोघांचे आवडते',
-    testimonialsSub: 'आमच्या कम्युनिटी सदस्यांकडून त्यांच्या Golden-X-Host सोबतच्या अनुभवांबद्दल जाणून घ्या.',
+    testimonialsSub: 'आमच्या कम्युनिटी सदस्यांकडून त्यांच्या Golden Rich Stay सोबतच्या अनुभवांबद्दल जाणून घ्या.',
     ourJournal: 'आमचे जर्नल',
     latestBlog: 'ब्लॉगवरील नवीनतम लेख',
     blogSub: 'प्रॉपर्टी होस्टिंग, प्रवासाची ठिकाणे आणि शॉर्ट-टर्म रेंटल ट्रेंड्सबद्दल माहिती आणि टिप्स.',
@@ -369,10 +375,10 @@ const TRANSLATIONS = {
     privacy: 'गोपनीयता',
     terms: 'अटी आणि शर्ती',
     cookies: 'कुकीज',
-    precision: '© 2026 Golden-X-Host · अचूकतेसह बनविलेले',
+    precision: '© 2026 Golden Rich Stay · अचूकतेसह बनविलेले',
     modalJourney: 'इंटरएक्टिव्ह होस्ट ऑनबोर्डिंग प्रवास',
     modalTitle: 'हे कसे कार्य करते: पायरी-दर-पायरी',
-    modalDesc: 'Golden-X-Host एक पूर्णतः एकात्मिक, premium, प्रत्यक्ष सत्यापित शॉर्ट-टर्म रेंटिंग प्रणाली प्रदान करते. आमच्या परस्परसंवादी होस्ट पाइपलाइनचा शोध घेण्यासाठी खालील पायऱ्यांवर क्लिक करा.',
+    modalDesc: 'Golden Rich Stay एक पूर्णतः एकात्मिक, premium, प्रत्यक्ष सत्यापित शॉर्ट-टर्म रेंटिंग प्रणाली प्रदान करते. आमच्या परस्परसंवादी होस्ट पाइपलाइनचा शोध घेण्यासाठी खालील पायऱ्यांवर क्लिक करा.',
     activeStage: 'सक्रिय टप्पा {stage} पैकी ५',
     rmInspection: 'आरएम तपासणी नियोजित',
     auditProgress: 'तपासणी सुरू आहे',
@@ -451,6 +457,9 @@ const TRANSLATIONS = {
     heroSubtitle: 'सौंदर्यशास्त्र आणि सुलभ अनुभवांना महत्त्व देणाऱ्यांसाठी डिझाइन केलेले निवडक निवासी, व्यावसायिक आणि इव्हेंट वेन्यू.',
     heroRating: '४.९/५ सरासरी',
     heroTrusted: 'महाराष्ट्र आणि बंगलोरमधील १० हजार+ पाहुण्यांचा विश्वास.',
+    catResidential: 'निवासी',
+    catCommercial: 'व्यावसायिक',
+    catEvent: 'इव्हेंट वेन्यू',
   }
 };
 
@@ -884,17 +893,17 @@ const LandingPage = () => {
       <header className="glass sticky top-0 z-50 px-4 md:px-8 py-4 shadow-glass transition-all duration-300">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div 
-            className="flex items-center space-x-3 cursor-pointer group mx-auto md:mx-0" 
+            className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
 
             <img 
               src="/logo.png" 
-              alt="Golden-X-Host Logo" 
-              className="w-12 h-12 object-contain transition-transform duration-300 group-hover:scale-110"
+              alt="Golden Rich Stay Logo" 
+              className="w-8 h-8 md:w-12 md:h-12 object-contain transition-transform duration-300 group-hover:scale-110"
             />
-            <h1 className="text-2xl font-black text-charcoal tracking-tighter">
-              GOLDEN<span className="text-terracotta">-X-</span>HOST
+            <h1 className="text-sm sm:text-lg md:text-2xl font-black text-charcoal tracking-tighter whitespace-nowrap">
+              GOLDEN <span className="text-terracotta">RICH</span> STAY
             </h1>
           </div>
           
@@ -1252,18 +1261,52 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-8 py-32 space-y-32">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+      {/* Category Selection Circles */}
+      <section className="relative max-w-7xl mx-auto px-4 md:px-8 pt-12 md:pt-16 pb-0 flex justify-center animate-fade-in">
+        {/* Subtle background glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] h-[110%] bg-gradient-to-r from-terracotta/5 via-sage/5 to-gold/5 blur-3xl rounded-full opacity-65 pointer-events-none"></div>
+
+        <div className="relative flex justify-center items-center gap-4 sm:gap-10 md:gap-16 w-full max-w-4xl py-6 md:py-8 px-4 md:px-6 bg-gradient-to-br from-white/95 via-sand-50/80 to-white/95 backdrop-blur-xl rounded-3xl md:rounded-[2.5rem] border border-sand-200/80 shadow-premium transition-all duration-300 hover:shadow-elevated hover:border-sand-300/80">
+          {[
+            { id: 'residential', label: t('catResidential'), icon: Home, color: 'bg-terracotta/5 text-terracotta border-terracotta/20 hover:bg-terracotta hover:text-white hover:shadow-lg hover:shadow-terracotta/25 hover:border-terracotta', hoverColor: 'group-hover:text-terracotta' },
+            { id: 'commercial', label: t('catCommercial'), icon: Briefcase, color: 'bg-sage/5 text-sage border-sage/20 hover:bg-sage hover:text-white hover:shadow-lg hover:shadow-sage/25 hover:border-sage', hoverColor: 'group-hover:text-sage' },
+            { id: 'event_venue', label: t('catEvent'), icon: PartyPopper, color: 'bg-amber-500/5 text-amber-600 border-amber-500/20 hover:bg-amber-500 hover:text-white hover:shadow-lg hover:shadow-amber-500/25 hover:border-amber-500', hoverColor: 'group-hover:text-amber-600' }
+          ].map((cat, idx) => {
+            const Icon = cat.icon;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  const totalGuests = guestCounts.adults + guestCounts.children;
+                  navigate(`/guest/browse?category=${cat.id}&city=${locationQuery}&guests=${totalGuests}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`);
+                }}
+                className="flex flex-col items-center group focus:outline-none transition-all duration-500 transform hover:-translate-y-2 animate-slide-up"
+                style={{ animationDelay: `${idx * 150}ms` }}
+              >
+                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center border transition-all duration-500 ${cat.color}`}>
+                  <Icon className="w-6 h-6 md:w-8 md:h-8 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" />
+                </div>
+                <span className={`text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] mt-4 transition-colors duration-300 ${cat.hoverColor}`}>
+                  {cat.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="max-w-7xl mx-auto px-4 md:px-8 py-16 md:py-32 space-y-16 md:space-y-32">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 md:mb-12 gap-6">
           <div>
-            <h3 className="text-5xl font-black text-charcoal tracking-tight mb-4">{t('featuredCollections')}</h3>
-            <p className="text-charcoal-light text-lg">{t('featuredSub')}</p>
+            <h3 className="text-3xl md:text-5xl font-black text-charcoal tracking-tight mb-3 md:mb-4">{t('featuredCollections')}</h3>
+            <p className="text-charcoal-light text-base md:text-lg">{t('featuredSub')}</p>
           </div>
           <button 
             onClick={() => {
               const totalGuests = guestCounts.adults + guestCounts.children;
               navigate(`/guest/browse?city=${locationQuery}&guests=${totalGuests}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`);
             }}
-            className="btn-premium-outline"
+            className="btn-premium-outline self-start md:self-auto w-full md:w-auto text-center"
           >
             {t('viewAll')}
           </button>
@@ -1275,17 +1318,17 @@ const LandingPage = () => {
           { id: 'event_venue', label: t('eventVenue'), icon: Calendar, desc: t('eventVenueSub') }
         ].map((cat) => (
           <div key={cat.id} className="animate-fade-in">
-            <div className="flex items-center space-x-4 mb-10">
-              <div className="w-12 h-12 rounded-2xl bg-terracotta/10 flex items-center justify-center text-terracotta shadow-sm">
-                <cat.icon className="w-6 h-6" />
+            <div className="flex items-center space-x-3 md:space-x-4 mb-8 md:mb-10">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-terracotta/10 flex items-center justify-center text-terracotta shadow-sm shrink-0">
+                <cat.icon className="w-5 h-5 md:w-6 md:h-6" />
               </div>
               <div>
-                <h4 className="text-3xl font-black text-charcoal tracking-tight uppercase">{cat.label}</h4>
-                <p className="text-charcoal-muted font-medium">{cat.desc}</p>
+                <h4 className="text-xl md:text-3xl font-black text-charcoal tracking-tight uppercase leading-tight">{cat.label}</h4>
+                <p className="text-xs md:text-base text-charcoal-muted font-medium mt-0.5">{cat.desc}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
               {loading ? (
                 Array(6).fill(0).map((_, i) => (
                   <div key={i} className="h-64 bg-sand-100 rounded-2xl animate-pulse"></div>
@@ -1351,12 +1394,12 @@ const LandingPage = () => {
                         const totalGuests = guestCounts.adults + guestCounts.children;
                         navigate(`/guest/browse?category=${cat.id}&city=${locationQuery}&guests=${totalGuests}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`);
                       }}
-                      className="group cursor-pointer flex flex-col justify-center items-center rounded-2xl border-2 border-transparent hover:border-sand-200 transition-all p-4 min-h-[200px]"
+                      className="group cursor-pointer flex flex-col justify-center items-center rounded-2xl border-2 border-dashed border-sand-300 hover:border-terracotta hover:bg-terracotta/5 transition-all p-6 min-h-[220px]"
                     >
-                      <div className="w-14 h-14 rounded-full border border-sand-300 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm">
-                        <ArrowRight className="w-5 h-5 text-charcoal" />
+                      <div className="w-12 h-12 rounded-full border border-sand-300 bg-white flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-terracotta group-hover:text-white group-hover:border-terracotta transition-all shadow-sm">
+                        <ArrowRight className="w-5 h-5 text-charcoal transition-colors group-hover:text-white" />
                       </div>
-                      <h4 className="text-[15px] font-bold text-charcoal underline underline-offset-4 decoration-2 decoration-transparent group-hover:decoration-charcoal transition-colors">Show all</h4>
+                      <h4 className="text-[15px] font-bold text-charcoal group-hover:text-terracotta transition-colors">{t('viewAll')}</h4>
                     </div>
                   )}
                 </>
@@ -1494,7 +1537,7 @@ const LandingPage = () => {
 
               <div className="flex items-center space-x-3 mb-8">
                 <Building2 className="w-8 h-8 text-terracotta" />
-                <h4 className="text-2xl font-black text-charcoal tracking-tighter">GOLDEN-X-HOST</h4>
+                <h4 className="text-2xl font-black text-charcoal tracking-tighter">GOLDEN RICH STAY</h4>
               </div>
               <p className="text-charcoal-light text-lg mb-8 max-w-sm">
                 {t('footerSub')}
@@ -1527,7 +1570,7 @@ const LandingPage = () => {
               <h5 className="font-black text-charcoal uppercase tracking-[0.2em] text-xs mb-8">{t('contact')}</h5>
               <ul className="space-y-4 text-charcoal-light font-medium">
                 <li><p>{t('mumbaiHQ')}</p></li>
-                <li><p>support@golden-x-host.com</p></li>
+                <li><p>support@goldenrichstay.com</p></li>
                 <li><p>+91 1800 200 4000</p></li>
               </ul>
             </div>

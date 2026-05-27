@@ -20,6 +20,8 @@ class KYCDocument(BaseModel):
     document_type: str
     document_url: str
     uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    status: Optional[str] = "pending"
+    rejection_reason: Optional[str] = None
 
 class User(BaseModel):
     user_id: str = Field(default_factory=lambda: f"user_{datetime.now(timezone.utc).timestamp()}")

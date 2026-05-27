@@ -100,7 +100,7 @@ const BookingConfirmation = () => {
       key: paymentConfig.key_id,
       amount: Math.round((booking.total_amount || 0) * 100),
       currency: paymentConfig.currency || 'INR',
-      name: 'Golden-X-Host',
+      name: 'Golden Rich Stay',
       description: property?.title || `Booking ${booking.booking_id}`,
       order_id: booking.razorpay_order_id,
       prefill: {
@@ -203,21 +203,23 @@ const BookingConfirmation = () => {
         </div>
       </div>
     );
-  }  return (
+  }
+
+  return (
     <div className="min-h-screen bg-sand-50 selection:bg-terracotta selection:text-white">
-      <header className="glass px-8 py-4">
-        <div className="max-w-3xl mx-auto flex justify-between items-center">
+      <header className="glass px-4 md:px-8 py-4">
+        <div className="max-w-3xl mx-auto flex justify-between items-center w-full gap-2">
           <div 
-            className="flex items-center space-x-3 cursor-pointer group" 
+            className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
             <img 
               src="/logo.png" 
               alt="Logo" 
-              className="w-10 h-10 object-contain transition-transform duration-300 group-hover:scale-110"
+              className="w-8 h-8 md:w-10 md:h-10 object-contain transition-transform duration-300 group-hover:scale-110"
             />
-            <h1 className="text-xl font-black text-charcoal tracking-tighter">
-              GOLDEN<span className="text-terracotta">-X-</span>HOST
+            <h1 className="text-sm sm:text-lg md:text-xl font-black text-charcoal tracking-tighter whitespace-nowrap">
+              GOLDEN <span className="text-terracotta">RICH</span> STAY
             </h1>
           </div>
           <button 

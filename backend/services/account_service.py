@@ -1,6 +1,6 @@
 """Phase 15 — ledger + refund + payout business logic.
 
-Every money movement in Golden-X-Host funnels through `record_transaction` so the
+Every money movement in Golden Rich Stay funnels through `record_transaction` so the
 admin ledger has a complete audit trail.
 
 Refund policy (tier):

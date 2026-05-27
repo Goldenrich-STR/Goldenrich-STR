@@ -229,7 +229,7 @@ class PGCursor:
         items = sort_spec.items() if isinstance(sort_spec, dict) else sort_spec
         for field, direction in items:
             dir_str = "ASC" if direction == 1 else "DESC"
-            parts.append(f"data->>'{field}' {dir_str}")
+            parts.append(f"data->>'{field}' {dir_str} NULLS LAST")
             
         return "ORDER BY " + ", ".join(parts)
 

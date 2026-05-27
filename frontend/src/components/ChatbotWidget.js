@@ -3,7 +3,7 @@ import { X, Send, Bot } from 'lucide-react';
 
 const TRANSLATIONS = {
   en: {
-    welcome: "Namaste! 🙏 Welcome to Golden-X-Host. My name is MAYUR. How can I help you find perfect stays or bootstrap your hosting business today?",
+    welcome: "Namaste! 🙏 Welcome to Golden Rich Stay. My name is MAYUR. How can I help you find perfect stays or bootstrap your hosting business today?",
     placeholder: "Ask MAYUR anything...",
     botName: "MAYUR",
     statusText: "ONLINE & HEALTHY",
@@ -27,7 +27,7 @@ const TRANSLATIONS = {
    - RM physically visits the property to audit coordinates, electrical safety, and quality checks.
 5. **Go Live:** Your listing receives the verified green trust badge and is visible in the search browse index!`,
 
-    hostText: `Listing a property on **Golden-X-Host** is simple and rewarding! Here is the summary:
+    hostText: `Listing a property on **Golden Rich Stay** is simple and rewarding! Here is the summary:
 * Fill the dynamic creation wizard in your dashboard.
 * A mandatory physical check gets scheduled instantly to ensure geo-tagging accuracy.
 * Every new host receives a **3-Month Free Trial**!`,
@@ -52,7 +52,7 @@ const TRANSLATIONS = {
 
     contactText: `Need support? Connect with our dedicated support lines:
 * **📞 Helpline:** +91 1800 200 4000 (9:00 AM - 9:00 PM)
-* **✉️ Email:** support@golden-x-host.com
+* **✉️ Email:** support@goldenrichstay.com
 * **🏢 Office:** Powai, Mumbai, Maharashtra.`,
 
     diagnosticsText: `🛠️ **MAYUR System Diagnostics & Live Website Analysis:**
@@ -67,10 +67,10 @@ const TRANSLATIONS = {
 
 💡 **MAYUR's Analysis:** The core platform functions perfectly. There are no critical errors. All database seeds, login auths, and payment verification gates are running at 100% capacity.`,
 
-    fallbackText: "I'm MAYUR, your Golden-X-Host helper. I can troubleshoot system issues, explain onboarding steps, verification procedures, or payouts. Choose one of the quick options below or ask directly!"
+    fallbackText: "I'm MAYUR, your Golden Rich Stay helper. I can troubleshoot system issues, explain onboarding steps, verification procedures, or payouts. Choose one of the quick options below or ask directly!"
   },
   hi: {
-    welcome: "नमस्ते! 🙏 गोल्डन-एक्स-होस्ट में आपका स्वागत है। मेरा नाम MAYUR (मयूर) है। आज मैं आपकी बेहतरीन स्टे खोजने या आपके होस्टिंग व्यवसाय को बढ़ाने में कैसे मदद कर सकता हूँ?",
+    welcome: "नमस्ते! 🙏 गोल्डन रिच स्टे में आपका स्वागत है। मेरा नाम MAYUR (मयूर) है। आज मैं आपकी बेहतरीन स्टे खोजने या आपके होस्टिंग व्यवसाय को बढ़ाने में कैसे मदद कर सकता हूँ?",
     placeholder: "MAYUR से कुछ भी पूछें...",
     botName: "MAYUR",
     statusText: "ऑनलाइन और सक्रिय",
@@ -94,7 +94,7 @@ const TRANSLATIONS = {
    - RM स्थल का दौरा करेगा, निर्देशांक सत्यापित करेगा, और इसे स्वीकृत करेगा।
 5. **लाइव जाएं:** आपकी संपत्ति को "भौतिक सत्यापन उत्तीर्ण" बैज मिलेगा और यह लाइव हो जाएगी!`,
 
-    hostText: `गोल्डन-एक्स-होस्ट पर संपत्ति सूचीबद्ध करना बहुत आसान है:
+    hostText: `गोल्डन रिच स्टे पर संपत्ति सूचीबद्ध करना बहुत आसान है:
 * डैशबोर्ड में उपलब्ध क्रिएशन फॉर्म को भरें।
 * स्थान की सत्यता सुनिश्चित करने के लिए एक अनिवार्य भौतिक सत्यापन तुरंत निर्धारित किया जाता है।
 * प्रत्येक नए होस्ट को **3 महीने का मुफ्त परीक्षण (Free Trial)** मिलता है!`,
@@ -119,7 +119,7 @@ const TRANSLATIONS = {
 
     contactText: `सहायता की आवश्यकता है? हमारी समर्पित सहायता लाइनों से जुड़ें:
 * **📞 हेल्पलाइन:** +91 1800 200 4000 (9:00 AM - 9:00 PM)
-* **✉️ ईमेल:** support@golden-x-host.com
+* **✉️ ईमेल:** support@goldenrichstay.com
 * **🏢 कार्यालय:** पवई, मुंबई, महाराष्ट्र।`,
 
     diagnosticsText: `🛠️ **MAYUR सिस्टम निदान और लाइव वेबसाइट विश्लेषण:**
@@ -134,10 +134,10 @@ const TRANSLATIONS = {
 
 💡 **MAYUR का विश्लेषण:** वेबसाइट पूरी तरह से सुरक्षित और स्थिर है। डेटाबेस, प्रमाणीकरण और भुगतान गेटवे पूरी क्षमता से काम कर रहे हैं।`,
 
-    fallbackText: "मैं MAYUR हूँ, आपका गोल्डन-एक्स-होस्ट सहायक। मैं सिस्टम समस्याओं को हल करने, ऑनबोर्डिंग चरणों और भुगतानों को समझाने में आपकी मदद कर सकता हूँ। नीचे दिए गए विकल्पों में से चुनें या सीधे पूछें!"
+    fallbackText: "मैं MAYUR हूँ, आपका गोल्डन रिच स्टे सहायक। मैं सिस्टम समस्याओं को हल करने, ऑनबोर्डिंग चरणों और भुगतानों को समझाने में आपकी मदद कर सकता हूँ। नीचे दिए गए विकल्पों में से चुनें या सीधे पूछें!"
   },
   mr: {
-    welcome: "नमस्ते! 🙏 गोल्डन-एक्स-होस्ट असिस्टंटमध्ये आपले स्वागत आहे. माझे नाव MAYUR (मयूर) आहे. आज मी आपल्याला सर्वोत्तम स्टे शोधण्यात किंवा आपला होस्टिंग व्यवसाय वाढवण्यास कशी मदत करू शकतो?",
+    welcome: "नमस्ते! 🙏 गोल्डन रिच स्टे असिस्टंटमध्ये आपले स्वागत आहे. माझे नाव MAYUR (मयूर) आहे. आज मी आपल्याला सर्वोत्तम स्टे शोधण्यात किंवा आपला होस्टिंग व्यवसाय वाढवण्यास कशी मदत करू शकतो?",
     placeholder: "MAYUR ला काहीही विचारा...",
     botName: "MAYUR",
     statusText: "ONLINE & HEALTHY",
@@ -161,7 +161,7 @@ const TRANSLATIONS = {
    - RM जागेवर प्रत्यक्ष भेट देऊन भौगोलिक स्थान (Geo-tagging) आणि दर्जा तपासेल.
 5. **जागा लाईव्ह करा:** व्हेरिफिकेशन पूर्ण होताच तुमच्या जागेला "Physical Verification Passed" चा शिक्का मिळेल आणि बुकिंग सुरू होईल!`,
 
-    hostText: `गोल्डन-एक्स-होस्ट वर जागा लिस्ट करणे सोपे आणि फायदेशीर आहे:
+    hostText: `गोल्डन रिच स्टे वर जागा लिस्ट करणे सोपे आणि फायदेशीर आहे:
 * तुमच्या डॅशबोर्ड मधील सोपा क्रिएशन फॉर्म भरा.
 * जागेचे स्थान अचूक व्हेरिफाय करण्यासाठी प्रत्यक्ष भेट तात्काळ शेड्युल केली जाते.
 * प्रत्येक नवीन होस्टला **३ महिन्यांची मोफत चाचणी (Free Trial)** मिळते!`,
@@ -186,7 +186,7 @@ const TRANSLATIONS = {
 
     contactText: `मदतीची गरज आहे? आमच्या अधिकृत हेल्पलाईनला संपर्क करा:
 * **📞 हेल्पलाईन:** +91 1800 200 4000 (सकाळी ९:०० ते रात्री ९:००)
-* **✉️ ईमेल:** support@golden-x-host.com
+* **✉️ ईमेल:** support@goldenrichstay.com
 * **🏢 कार्यालय:** पवई, मुंबई, महाराष्ट्र.`,
 
     diagnosticsText: `🛠️ **MAYUR वेबसाईट तपासणी आणि सिस्टीम विश्लेषण रिपोर्ट:**

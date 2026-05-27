@@ -288,7 +288,7 @@ const HostCalendar = () => {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <CalendarIcon className="w-6 h-6 text-terracotta" />
-            <h1 className="text-xl font-bold text-charcoal">Golden-X-Host - Calendar</h1>
+            <h1 className="text-xl font-bold text-charcoal">Golden Rich Stay - Calendar</h1>
           </div>
           <div className="flex items-center space-x-4">
             <button

@@ -179,19 +179,19 @@ const GuestBookings = () => {
 
   return (
     <div className="min-h-screen bg-sand-50">
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 px-8 py-4 border-b border-sand-200" data-testid="guest-header">
-        <div className="max-w-5xl mx-auto flex justify-between items-center">
+      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 px-4 md:px-8 py-4 border-b border-sand-200" data-testid="guest-header">
+        <div className="max-w-5xl mx-auto flex justify-between items-center w-full gap-2">
           <div 
-            className="flex items-center space-x-3 cursor-pointer group" 
+            className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
             <img 
               src="/logo.png" 
               alt="Logo" 
-              className="w-9 h-9 object-contain transition-transform duration-300 group-hover:scale-110"
+              className="w-8 h-8 md:w-9 md:h-9 object-contain transition-transform duration-300 group-hover:scale-110"
             />
-            <h1 className="text-lg font-black text-charcoal tracking-tighter uppercase">
-              GOLDEN<span className="text-terracotta">-X-</span>HOST
+            <h1 className="text-sm sm:text-lg font-black text-charcoal tracking-tighter uppercase whitespace-nowrap">
+              GOLDEN <span className="text-terracotta">RICH</span> STAY
             </h1>
           </div>
           <div className="flex items-center space-x-6">

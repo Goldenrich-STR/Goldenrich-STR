@@ -45,6 +45,8 @@ const HostDashboard = () => {
   // Canvas drawing states
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [penWidth, setPenWidth] = useState(3);
+  const [canvasHeight, setCanvasHeight] = useState(120);
 
   useEffect(() => {
     fetchData();
@@ -71,6 +73,19 @@ const HostDashboard = () => {
     }
   };
 
+  // Get clean filename from uploaded document URL
+  const getFileName = (url) => {
+    if (!url) return '';
+    try {
+      const decoded = decodeURIComponent(url);
+      const parts = decoded.split('/');
+      const filename = parts[parts.length - 1];
+      return filename.split('?')[0];
+    } catch (e) {
+      return 'document_file';
+    }
+  };
+
   // Doc Upload Helper
   const handleDocUpload = async (file, docType) => {
     if (!file) return;
@@ -90,16 +105,25 @@ const HostDashboard = () => {
 
   // Canvas signature helpers
   const startDrawing = (e) => {
+    if (e.cancelable) {
+      e.preventDefault();
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    ctx.lineWidth = 3;
+    ctx.lineWidth = penWidth;
     ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     ctx.strokeStyle = '#1F2937'; // charcoal-ish color
     
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
-    const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    if (clientX === undefined || clientY === undefined) return;
+    
+    const x = (clientX - rect.left) * (canvas.width / rect.width);
+    const y = (clientY - rect.top) * (canvas.height / rect.height);
     
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -108,18 +132,30 @@ const HostDashboard = () => {
 
   const draw = (e) => {
     if (!isDrawing) return;
+    if (e.cancelable) {
+      e.preventDefault();
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
+    ctx.lineWidth = penWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1F2937';
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
-    const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    if (clientX === undefined || clientY === undefined) return;
+    
+    const x = (clientX - rect.left) * (canvas.width / rect.width);
+    const y = (clientY - rect.top) * (canvas.height / rect.height);
     
     ctx.lineTo(x, y);
     ctx.stroke();
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e) => {
     setIsDrawing(false);
   };
 
@@ -245,7 +281,7 @@ const HostDashboard = () => {
           key: paymentConfig.key_id,
           amount: subOrder.amount,
           currency: 'INR',
-          name: 'Golden-X-Host',
+          name: 'Golden Rich Stay',
           description: `Plan: ${plan.plan_name} (${plan.plan_type})`,
           order_id: subOrder.razorpay_order_id,
           prefill: {
@@ -620,114 +656,137 @@ const HostDashboard = () => {
                 </button>
               </div>
 
-              <form onSubmit={handleVerifySubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Card 1: Aadhar Card */}
-                  <div className="bg-white p-6 rounded-[2rem] border border-sand-200 flex flex-col justify-between h-48 group hover:border-terracotta transition-all">
-                    <div>
-                      <div className="flex justify-between items-start mb-4">
-                        <span className="text-[10px] font-black text-terracotta uppercase tracking-widest bg-terracotta/5 px-3 py-1 rounded-full">Mandatory</span>
-                        {aadharCard && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-                      </div>
-                      <h4 className="text-lg font-black text-charcoal mb-1">Aadhar Card</h4>
-                      <p className="text-xs text-charcoal-muted font-bold">Upload front and back side in a single image or PDF.</p>
-                    </div>
-                    <div className="mt-4">
-                      <label className="w-full flex items-center justify-center px-4 py-3 bg-sand-50 hover:bg-sand-100 text-charcoal font-bold text-[10px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-sand-200">
-                        <Upload className="w-4 h-4 mr-2" />
-                        {uploadingDocs.aadhar ? 'Uploading...' : aadharCard ? 'Update File' : 'Upload File'}
-                        <input
-                          type="file"
-                          accept="image/*,application/pdf"
-                          onChange={(e) => handleDocUpload(e.target.files[0], 'aadhar')}
-                          className="hidden"
-                          disabled={uploadingDocs.aadhar}
-                        />
-                      </label>
-                    </div>
-                  </div>
+              <form onSubmit={handleVerifySubmit} className="space-y-6">                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                   {/* Card 1: Aadhar Card */}
+                   <div className="bg-white p-6 rounded-[2rem] border border-sand-200 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
+                     <div>
+                       <div className="flex justify-between items-start mb-4">
+                         <span className="text-[10px] font-black text-terracotta uppercase tracking-widest bg-terracotta/5 px-3 py-1 rounded-full">Mandatory</span>
+                         {aadharCard && <CheckCircle2 className="w-5 h-5 text-green-500" />}
+                       </div>
+                       <h4 className="text-lg font-black text-charcoal mb-1">Aadhar Card</h4>
+                       <p className="text-xs text-charcoal-muted font-bold">Upload front and back side in a single image or PDF.</p>
+                       {aadharCard && (
+                         <div className="mt-2 text-xs text-sage font-medium truncate flex items-center bg-sand-50/50 px-2 py-1 rounded-lg border border-sand-200/50">
+                           <FileText className="w-3.5 h-3.5 mr-1.5 flex-shrink-0 text-sage" />
+                           <span className="truncate" title={getFileName(aadharCard)}>{getFileName(aadharCard)}</span>
+                         </div>
+                       )}
+                     </div>
+                     <div className="mt-4">
+                       <label className="w-full flex items-center justify-center px-4 py-3 bg-sand-50 hover:bg-sand-100 text-charcoal font-bold text-[10px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-sand-200">
+                         <Upload className="w-4 h-4 mr-2" />
+                         {uploadingDocs.aadhar ? 'Uploading...' : aadharCard ? 'Update File' : 'Upload File'}
+                         <input
+                           type="file"
+                           accept="image/*,application/pdf"
+                           onChange={(e) => handleDocUpload(e.target.files[0], 'aadhar')}
+                           className="hidden"
+                           disabled={uploadingDocs.aadhar}
+                         />
+                       </label>
+                     </div>
+                   </div>
 
-                  {/* Card 2: Property Ownership Proof */}
-                  <div className="bg-white p-6 rounded-[2rem] border border-sand-200 flex flex-col justify-between h-48 group hover:border-terracotta transition-all">
-                    <div>
-                      <div className="flex justify-between items-start mb-4">
-                        <span className="text-[10px] font-black text-terracotta uppercase tracking-widest bg-terracotta/5 px-3 py-1 rounded-full">Mandatory</span>
-                        {propertyProof && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-                      </div>
-                      <h4 className="text-lg font-black text-charcoal mb-1">Property Ownership Proof</h4>
-                      <p className="text-xs text-charcoal-muted font-bold">Electricity bill, index-2, registry document, etc.</p>
-                    </div>
-                    <div className="mt-4">
-                      <label className="w-full flex items-center justify-center px-4 py-3 bg-sand-50 hover:bg-sand-100 text-charcoal font-bold text-[10px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-sand-200">
-                        <Upload className="w-4 h-4 mr-2" />
-                        {uploadingDocs.property ? 'Uploading...' : propertyProof ? 'Update File' : 'Upload File'}
-                        <input
-                          type="file"
-                          accept="image/*,application/pdf"
-                          onChange={(e) => handleDocUpload(e.target.files[0], 'property')}
-                          className="hidden"
-                          disabled={uploadingDocs.property}
-                        />
-                      </label>
-                    </div>
-                  </div>
+                   {/* Card 2: Property Ownership Proof */}
+                   <div className="bg-white p-6 rounded-[2rem] border border-sand-200 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
+                     <div>
+                       <div className="flex justify-between items-start mb-4">
+                         <span className="text-[10px] font-black text-terracotta uppercase tracking-widest bg-terracotta/5 px-3 py-1 rounded-full">Mandatory</span>
+                         {propertyProof && <CheckCircle2 className="w-5 h-5 text-green-500" />}
+                       </div>
+                       <h4 className="text-lg font-black text-charcoal mb-1">Property Ownership Proof</h4>
+                       <p className="text-xs text-charcoal-muted font-bold">Electricity bill, index-2, registry document, etc.</p>
+                       {propertyProof && (
+                         <div className="mt-2 text-xs text-sage font-medium truncate flex items-center bg-sand-50/50 px-2 py-1 rounded-lg border border-sand-200/50">
+                           <FileText className="w-3.5 h-3.5 mr-1.5 flex-shrink-0 text-sage" />
+                           <span className="truncate" title={getFileName(propertyProof)}>{getFileName(propertyProof)}</span>
+                         </div>
+                       )}
+                     </div>
+                     <div className="mt-4">
+                       <label className="w-full flex items-center justify-center px-4 py-3 bg-sand-50 hover:bg-sand-100 text-charcoal font-bold text-[10px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-sand-200">
+                         <Upload className="w-4 h-4 mr-2" />
+                         {uploadingDocs.property ? 'Uploading...' : propertyProof ? 'Update File' : 'Upload File'}
+                         <input
+                           type="file"
+                           accept="image/*,application/pdf"
+                           onChange={(e) => handleDocUpload(e.target.files[0], 'property')}
+                           className="hidden"
+                           disabled={uploadingDocs.property}
+                         />
+                       </label>
+                     </div>
+                   </div>
 
-                  {/* Card 3: Cancelled Cheque / Passbook */}
-                  <div className="bg-white p-6 rounded-[2rem] border border-sand-200 flex flex-col justify-between h-48 group hover:border-terracotta transition-all">
-                    <div>
-                      <div className="flex justify-between items-start mb-4">
-                        <span className="text-[10px] font-black text-terracotta uppercase tracking-widest bg-terracotta/5 px-3 py-1 rounded-full">Mandatory</span>
-                        {cancelledCheque && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-                      </div>
-                      <h4 className="text-lg font-black text-charcoal mb-1">Cancelled Cheque / Passbook</h4>
-                      <p className="text-xs text-charcoal-muted font-bold">To verify bank details for secure payouts.</p>
-                    </div>
-                    <div className="mt-4">
-                      <label className="w-full flex items-center justify-center px-4 py-3 bg-sand-50 hover:bg-sand-100 text-charcoal font-bold text-[10px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-sand-200">
-                        <Upload className="w-4 h-4 mr-2" />
-                        {uploadingDocs.cheque ? 'Uploading...' : cancelledCheque ? 'Update File' : 'Upload File'}
-                        <input
-                          type="file"
-                          accept="image/*,application/pdf"
-                          onChange={(e) => handleDocUpload(e.target.files[0], 'cheque')}
-                          className="hidden"
-                          disabled={uploadingDocs.cheque}
-                        />
-                      </label>
-                    </div>
-                  </div>
+                   {/* Card 3: Cancelled Cheque / Passbook */}
+                   <div className="bg-white p-6 rounded-[2rem] border border-sand-200 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
+                     <div>
+                       <div className="flex justify-between items-start mb-4">
+                         <span className="text-[10px] font-black text-terracotta uppercase tracking-widest bg-terracotta/5 px-3 py-1 rounded-full">Mandatory</span>
+                         {cancelledCheque && <CheckCircle2 className="w-5 h-5 text-green-500" />}
+                       </div>
+                       <h4 className="text-lg font-black text-charcoal mb-1">Cancelled Cheque / Passbook</h4>
+                       <p className="text-xs text-charcoal-muted font-bold">To verify bank details for secure payouts.</p>
+                       {cancelledCheque && (
+                         <div className="mt-2 text-xs text-sage font-medium truncate flex items-center bg-sand-50/50 px-2 py-1 rounded-lg border border-sand-200/50">
+                           <FileText className="w-3.5 h-3.5 mr-1.5 flex-shrink-0 text-sage" />
+                           <span className="truncate" title={getFileName(cancelledCheque)}>{getFileName(cancelledCheque)}</span>
+                         </div>
+                       )}
+                     </div>
+                     <div className="mt-4">
+                       <label className="w-full flex items-center justify-center px-4 py-3 bg-sand-50 hover:bg-sand-100 text-charcoal font-bold text-[10px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-sand-200">
+                         <Upload className="w-4 h-4 mr-2" />
+                         {uploadingDocs.cheque ? 'Uploading...' : cancelledCheque ? 'Update File' : 'Upload File'}
+                         <input
+                           type="file"
+                           accept="image/*,application/pdf"
+                           onChange={(e) => handleDocUpload(e.target.files[0], 'cheque')}
+                           className="hidden"
+                           disabled={uploadingDocs.cheque}
+                         />
+                       </label>
+                     </div>
+                   </div>
 
-                  {/* Card 4: GST Certificate or GST No */}
-                  <div className="bg-white p-6 rounded-[2rem] border border-sand-200 flex flex-col justify-between h-48 group hover:border-terracotta transition-all">
-                    <div>
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest bg-sand-50 px-3 py-1 rounded-full">If Applicable</span>
-                        {(gstCertificate || gstNumber) && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-                      </div>
-                      <h4 className="text-base font-black text-charcoal mb-1">GST Certificate / GST Number</h4>
-                      <input
-                        type="text"
-                        placeholder="Enter GST Number"
-                        value={gstNumber}
-                        onChange={(e) => setGstNumber(e.target.value)}
-                        className="w-full px-3 py-1.5 border border-sand-200 rounded-xl text-xs outline-none focus:border-terracotta mb-2"
-                      />
-                    </div>
-                    <div>
-                      <label className="w-full flex items-center justify-center px-4 py-2 bg-sand-50 hover:bg-sand-100 text-charcoal font-bold text-[9px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-sand-200">
-                        <Upload className="w-3.5 h-3.5 mr-2" />
-                        {uploadingDocs.gst ? 'Uploading...' : gstCertificate ? 'GST Certificate Uploaded' : 'Upload GST Certificate'}
-                        <input
-                          type="file"
-                          accept="image/*,application/pdf"
-                          onChange={(e) => handleDocUpload(e.target.files[0], 'gst')}
-                          className="hidden"
-                          disabled={uploadingDocs.gst}
-                        />
-                      </label>
-                    </div>
-                  </div>
-                </div>
+                   {/* Card 4: GST Certificate or GST No */}
+                   <div className="bg-white p-6 rounded-[2rem] border border-sand-200 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
+                     <div>
+                       <div className="flex justify-between items-start mb-2">
+                         <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest bg-sand-50 px-3 py-1 rounded-full">If Applicable</span>
+                         {(gstCertificate || gstNumber) && <CheckCircle2 className="w-5 h-5 text-green-500" />}
+                       </div>
+                       <h4 className="text-base font-black text-charcoal mb-1">GST Certificate / GST Number</h4>
+                       <input
+                         type="text"
+                         placeholder="Enter GST Number"
+                         value={gstNumber}
+                         onChange={(e) => setGstNumber(e.target.value)}
+                         className="w-full px-3 py-1.5 border border-sand-200 rounded-xl text-xs outline-none focus:border-terracotta mb-2"
+                       />
+                       {gstCertificate && (
+                         <div className="mt-1 mb-2 text-xs text-sage font-medium truncate flex items-center bg-sand-50/50 px-2 py-1 rounded-lg border border-sand-200/50">
+                           <FileText className="w-3.5 h-3.5 mr-1.5 flex-shrink-0 text-sage" />
+                           <span className="truncate" title={getFileName(gstCertificate)}>{getFileName(gstCertificate)}</span>
+                         </div>
+                       )}
+                     </div>
+                     <div>
+                       <label className="w-full flex items-center justify-center px-4 py-2 bg-sand-50 hover:bg-sand-100 text-charcoal font-bold text-[9px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-sand-200">
+                         <Upload className="w-3.5 h-3.5 mr-2" />
+                         {uploadingDocs.gst ? 'Uploading...' : gstCertificate ? 'GST Certificate Uploaded' : 'Upload GST Certificate'}
+                         <input
+                           type="file"
+                           accept="image/*,application/pdf"
+                           onChange={(e) => handleDocUpload(e.target.files[0], 'gst')}
+                           className="hidden"
+                           disabled={uploadingDocs.gst}
+                         />
+                       </label>
+                     </div>
+                   </div>
+                 </div>
 
                 {/* Card 5: GR & Owner Agreement */}
                 <div className="bg-white p-6 rounded-[2rem] border border-sand-200 group hover:border-terracotta transition-all mt-6">
@@ -791,7 +850,7 @@ const HostDashboard = () => {
             <div className="bg-white rounded-[3rem] p-10 max-w-2xl w-full shadow-2xl animate-scale-up max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-2xl font-black text-charcoal tracking-tight mb-1">Golden-X-Host Agreement</h3>
+                  <h3 className="text-2xl font-black text-charcoal tracking-tight mb-1">Golden Rich Stay Agreement</h3>
                   <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Review and draw signature below</span>
                 </div>
                 <button onClick={() => setShowAgreementModal(false)} className="w-8 h-8 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors">
@@ -801,10 +860,10 @@ const HostDashboard = () => {
 
               <div className="bg-sand-50 p-6 rounded-2xl text-[11px] text-charcoal-light leading-relaxed h-48 overflow-y-auto mb-6 border border-sand-200 select-none">
                 <p className="font-bold mb-2">SHORT-TERM RENTAL HOST AGREEMENT</p>
-                <p className="mb-2">This Short-Term Rental Agreement (the "Agreement") is entered into by and between the Property Owner (hereinafter referred to as the "Host") and Golden-X-Host.</p>
-                <p className="mb-2">1. Listing Permission: The Host hereby grants Golden-X-Host the non-exclusive right to list and market their verified properties on the Golden-X-Host booking application and coordinate reservations.</p>
+                <p className="mb-2">This Short-Term Rental Agreement (the "Agreement") is entered into by and between the Property Owner (hereinafter referred to as the "Host") and Golden Rich Stay.</p>
+                <p className="mb-2">1. Listing Permission: The Host hereby grants Golden Rich Stay the non-exclusive right to list and market their verified properties on the Golden Rich Stay booking application and coordinate reservations.</p>
                 <p className="mb-2">2. Compliance & Legalities: The Host guarantees that they are the legal owner or authorized representative of the property, holding all necessary local government permissions, and complies with local taxation and occupancy regulations.</p>
-                <p className="mb-2">3. Platform Services & Fees: Golden-X-Host coordinates checkout billing, handles guest verification, and processes payouts. Golden-X-Host will deduct its standard platform service fee from host payouts.</p>
+                <p className="mb-2">3. Platform Services & Fees: Golden Rich Stay coordinates checkout billing, handles guest verification, and processes payouts. Golden Rich Stay will deduct its standard platform service fee from host payouts.</p>
                 <p className="mb-2">4. Host Standards: The Host agrees to maintain properties in clean, functional, and guest-ready conditions. High hospitality standards, correct GPS geolocation, and physical representation of all amenities are mandatory.</p>
               </div>
 
@@ -835,8 +894,73 @@ const HostDashboard = () => {
                 </div>
 
                 <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest font-bold">Draw Signature</label>
+                  <div className="flex justify-between items-center mb-1.5 flex-wrap gap-2">
+                    <div className="flex items-center space-x-4 flex-wrap gap-2">
+                      <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest font-bold">Draw Signature</label>
+                      
+                      {/* Pen thickness control */}
+                      <div className="flex items-center space-x-2 bg-sand-100/80 px-2 py-0.5 rounded-lg border border-sand-200">
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Pen:</span>
+                        {[2, 3, 5, 8].map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => setPenWidth(size)}
+                            className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
+                              penWidth === size 
+                                ? 'bg-charcoal text-white font-bold' 
+                                : 'text-charcoal-light hover:bg-sand-200'
+                            }`}
+                          >
+                            <span 
+                              className="rounded-full bg-current" 
+                              style={{ 
+                                width: `${size === 2 ? 3 : size === 3 ? 5 : size === 5 ? 7 : 10}px`, 
+                                height: `${size === 2 ? 3 : size === 3 ? 5 : size === 5 ? 7 : 10}px` 
+                              }} 
+                            />
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Box height control */}
+                      <div className="flex items-center space-x-1.5 bg-sand-100/80 px-2 py-0.5 rounded-lg border border-sand-200">
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Box:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm('Changing the box size will clear your current signature. Do you want to proceed?')) {
+                              setCanvasHeight(120);
+                              clearCanvas();
+                            }
+                          }}
+                          className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all ${
+                            canvasHeight === 120 
+                              ? 'bg-charcoal text-white' 
+                              : 'text-charcoal-light hover:bg-sand-200'
+                          }`}
+                        >
+                          Standard
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm('Changing the box size will clear your current signature. Do you want to proceed?')) {
+                              setCanvasHeight(200);
+                              clearCanvas();
+                            }
+                          }}
+                          className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all ${
+                            canvasHeight === 200 
+                              ? 'bg-charcoal text-white' 
+                              : 'text-charcoal-light hover:bg-sand-200'
+                          }`}
+                        >
+                          Large
+                        </button>
+                      </div>
+                    </div>
+                    
                     <button
                       type="button"
                       onClick={clearCanvas}
@@ -849,7 +973,7 @@ const HostDashboard = () => {
                     <canvas
                       ref={canvasRef}
                       width={500}
-                      height={150}
+                      height={canvasHeight === 120 ? 150 : 250}
                       onMouseDown={startDrawing}
                       onMouseMove={draw}
                       onMouseUp={stopDrawing}
@@ -857,10 +981,11 @@ const HostDashboard = () => {
                       onTouchStart={startDrawing}
                       onTouchMove={draw}
                       onTouchEnd={stopDrawing}
-                      className="w-full bg-white rounded-xl shadow-inner border border-sand-200 cursor-crosshair h-[120px]"
+                      className="w-full bg-white rounded-xl shadow-inner border border-sand-200 cursor-crosshair touch-none transition-all duration-300"
+                      style={{ height: `${canvasHeight}px` }}
                     />
                   </div>
-                  <span className="text-[9px] text-charcoal-muted block mt-1">Draw your signature inside the box using mouse, trackpad, or touch screen.</span>
+                  <span className="text-[9px] text-charcoal-muted block mt-1">Draw your signature inside the box using mouse, trackpad, or touch screen. You can adjust the pen stroke and drawing box size using the controls above.</span>
                 </div>
               </div>
 

@@ -70,7 +70,7 @@ const EmployeeDashboard = () => {
               alt="Logo" 
               className="w-10 h-10 object-contain transition-transform duration-300 group-hover:scale-110"
             />
-            <h1 className="text-xl font-bold text-charcoal">Golden-X-Host - RM Panel</h1>
+            <h1 className="text-xl font-bold text-charcoal">Golden Rich Stay - RM Panel</h1>
           </div>
           <div className="flex items-center space-x-6">
             <span className="text-charcoal-light">RM: {user?.full_name}</span>

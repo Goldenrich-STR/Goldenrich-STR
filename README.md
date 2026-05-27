@@ -1,4 +1,4 @@
-# Golden-X-Host
+# Golden Rich Stay
 
 A multi-role short-term rental platform for the Indian market.
 

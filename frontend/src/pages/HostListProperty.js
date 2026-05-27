@@ -15,6 +15,7 @@ import {
   CreditCard,
   Sparkles,
   Image as ImageIcon,
+  MapPin,
 } from 'lucide-react';
 
 const CATEGORY_DATA = {
@@ -240,6 +241,7 @@ const HostListProperty = () => {
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [fetchingLocation, setFetchingLocation] = useState(false);
 
   useEffect(() => {
     if (editPropertyId) {
@@ -452,6 +454,75 @@ const HostListProperty = () => {
     if (form.latitude && val) {
       await fetchNearbyPlaces(form.latitude, val);
     }
+  };
+
+  const handleGetCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+    
+    setFetchingLocation(true);
+    setError('');
+    
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        
+        let newAddress = form.address;
+        let newCity = form.city;
+        let newState = form.state;
+        let newPin = form.pin_code;
+        
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+          const data = await res.json();
+          if (data) {
+            if (data.address) {
+              newCity = data.address.city || data.address.town || data.address.village || data.address.county || newCity;
+              newState = data.address.state || newState;
+              newPin = data.address.postcode || newPin;
+              
+              const parts = [];
+              if (data.address.road) parts.push(data.address.road);
+              if (data.address.suburb) parts.push(data.address.suburb);
+              if (data.address.neighbourhood) parts.push(data.address.neighbourhood);
+              if (parts.length > 0) {
+                newAddress = parts.join(', ');
+              } else if (data.display_name) {
+                newAddress = data.display_name.split(',').slice(0, 2).join(',').trim();
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Reverse geocoding failed", err);
+        }
+        
+        update({
+          latitude: String(lat),
+          longitude: String(lng),
+          address: newAddress,
+          city: newCity,
+          state: newState,
+          pin_code: newPin,
+          google_maps_url: `https://www.google.com/maps/place/${lat},${lng}`
+        });
+        
+        await fetchNearbyPlaces(lat, lng);
+        setFetchingLocation(false);
+      },
+      (err) => {
+        console.error("Error getting geolocation", err);
+        let errorMsg = "Failed to get current location. Please allow location access.";
+        if (err.code === err.PERMISSION_DENIED) {
+          errorMsg = "Location access denied. Please enable location permissions in your browser.";
+        }
+        setError(errorMsg);
+        setFetchingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const matchingPlans = useMemo(() => {
@@ -721,7 +792,7 @@ const HostListProperty = () => {
               key: subOrder.razorpay_key_id,
               amount: subOrder.amount,
               currency: subOrder.currency,
-              name: 'Golden-X-Host',
+              name: 'Golden Rich Stay',
               description: `Subscription: ${subOrder.plan_name}`,
               order_id: subOrder.razorpay_order_id,
               prefill: {
@@ -904,7 +975,22 @@ const HostListProperty = () => {
 
           {currentStep === 'location' && (
             <div className="space-y-4" data-testid="step-location-content">
-              <h2 className="text-xl font-bold text-charcoal mb-2">Where is it?</h2>
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-xl font-bold text-charcoal">Where is it?</h2>
+                <button
+                  type="button"
+                  onClick={handleGetCurrentLocation}
+                  disabled={fetchingLocation}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-terracotta text-white hover:bg-terracotta-dark active:scale-[0.98] rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                >
+                  {fetchingLocation ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <MapPin className="w-3.5 h-3.5" />
+                  )}
+                  <span>{fetchingLocation ? "Fetching Location..." : "Use Current Location"}</span>
+                </button>
+              </div>
               
               <Input 
                 label="Google Maps URL" 
@@ -1458,7 +1544,7 @@ const Header = ({ user, logout, navigate }) => (
     <div className="max-w-4xl mx-auto flex justify-between items-center">
       <div className="flex items-center space-x-2">
         <Building2 className="w-6 h-6 text-terracotta" />
-        <span className="text-xl font-bold text-charcoal">Golden-X-Host</span>
+        <span className="text-xl font-bold text-charcoal">Golden Rich Stay</span>
       </div>
       <div className="flex items-center space-x-4">
         <button onClick={() => navigate('/host/dashboard')} className="text-charcoal-light hover:text-terracotta">

@@ -349,6 +349,7 @@ const PropertiesSection = () => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedProperty, setSelectedProperty] = useState(null);
   const itemsPerPage = 5;
 
   useEffect(() => {
@@ -416,7 +417,10 @@ const PropertiesSection = () => {
                       </div>
                     </div>
                   </div>
-                  <button className="px-6 py-3 bg-charcoal text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium">
+                  <button 
+                    onClick={() => setSelectedProperty(property)}
+                    className="px-6 py-3 bg-charcoal text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
+                  >
                      View Details
                   </button>
                 </div>
@@ -451,6 +455,13 @@ const PropertiesSection = () => {
           <h4 className="text-xl font-black text-charcoal mb-2">No Properties Registered</h4>
           <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Global inventory is currently empty.</p>
         </div>
+      )}
+
+      {selectedProperty && (
+        <PropertyDetailsModal 
+          property={selectedProperty} 
+          onClose={() => setSelectedProperty(null)} 
+        />
       )}
     </div>
   );
@@ -1541,6 +1552,316 @@ const CommissionsSection = () => {
         </div>
       )}
     </div>
+  );
+};
+
+const PropertyDetailsModal = ({ property, onClose }) => {
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
+
+  if (!property) return null;
+
+  // Format images
+  const propertyImages = (property.images || []).map(img => img.split('#')[0]);
+
+  // Parse house rules if JSON (for event venues) or show as text
+  let venueRules = null;
+  let textRules = property.house_rules || '';
+  if (property.house_rules && property.house_rules.trim().startsWith('{')) {
+    try {
+      venueRules = JSON.parse(property.house_rules);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200">
+        {/* Sticky Header */}
+        <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-sand-200 px-8 py-5 flex items-center justify-between z-10">
+          <div>
+            <span className="text-[9px] font-black text-terracotta bg-terracotta/10 px-2.5 py-1 rounded-full uppercase tracking-wider">
+              {property.category} · {property.property_type.replace('_', ' ')}
+            </span>
+            <h3 className="text-xl font-black text-charcoal mt-2 tracking-tight">
+              {property.title}
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-charcoal-light hover:text-charcoal transition-colors p-1"
+          >
+            <XCircle className="w-7 h-7" />
+          </button>
+        </div>
+
+        <div className="p-8 space-y-8">
+          {/* Photo Gallery */}
+          {propertyImages.length > 0 && (
+            <div className="space-y-3">
+              <div className="relative h-96 w-full rounded-2xl overflow-hidden bg-sand-100">
+                <img
+                  src={getImageUrl(propertyImages[activeImageIdx])}
+                  alt={property.title}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              {propertyImages.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                  {propertyImages.map((img, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setActiveImageIdx(idx)}
+                      className={`relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${
+                        activeImageIdx === idx ? 'border-terracotta scale-95 shadow-md' : 'border-transparent hover:border-sand-300'
+                      }`}
+                    >
+                      <img
+                        src={getImageUrl(img)}
+                        alt={`Thumbnail ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Description & Overview Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Left/Middle Column - Details */}
+            <div className="lg:col-span-2 space-y-6">
+              <div>
+                <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider mb-2">Description</h4>
+                <p className="text-sm text-charcoal-muted leading-relaxed whitespace-pre-line">
+                  {property.description}
+                </p>
+              </div>
+
+              {/* Specifications */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 bg-sand-50 rounded-2xl border border-sand-200">
+                <div>
+                  <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider block">BHK / Size</span>
+                  <span className="text-sm font-black text-charcoal uppercase mt-1 block">{property.bhk_type || '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider block">Area (sq.ft)</span>
+                  <span className="text-sm font-black text-charcoal mt-1 block">{property.area_sqft ? `${property.area_sqft} sqft` : '—'}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider block">Pricing Mode</span>
+                  <span className="text-sm font-black text-charcoal uppercase mt-1 block">{property.pricing_cycle || 'day'}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider block">Min Stay</span>
+                  <span className="text-sm font-black text-charcoal mt-1 block">{property.minimum_stay_days || 1} {property.pricing_cycle === 'hourly' ? 'hours' : 'days'}</span>
+                </div>
+              </div>
+
+              {/* Location Detail */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider">Location Info</h4>
+                <div className="p-5 bg-white border border-sand-200 rounded-2xl space-y-3">
+                  <div className="flex items-start space-x-2">
+                    <MapPin className="w-5 h-5 text-terracotta mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-semibold text-charcoal">{property.address}</p>
+                      <p className="text-xs text-charcoal-muted">{property.city}, {property.state} - {property.pin_code}</p>
+                    </div>
+                  </div>
+                  {(property.latitude || property.longitude) && (
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-charcoal-muted pt-2 border-t border-sand-100">
+                      <span><strong>Lat:</strong> {property.latitude}</span>
+                      <span><strong>Lng:</strong> {property.longitude}</span>
+                      {property.google_maps_url && (
+                        <a
+                          href={property.google_maps_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-terracotta font-bold hover:underline ml-auto flex items-center gap-1"
+                        >
+                          View on Google Maps ↗
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Amenities */}
+              <div>
+                <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider mb-3">Amenities</h4>
+                <div className="flex flex-wrap gap-2">
+                  {property.amenities && property.amenities.length > 0 ? (
+                    property.amenities.map((amenity, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3.5 py-1.5 bg-sand-100 text-charcoal text-xs font-bold rounded-full border border-sand-200 capitalize"
+                      >
+                        {amenity.replace('_', ' ')}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-xs text-charcoal-muted italic">No amenities specified.</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Nearby Places */}
+              {property.nearby_places && property.nearby_places.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider mb-3">Nearby Famous Places</h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {property.nearby_places.map((place, idx) => (
+                      <span
+                        key={idx}
+                        className="px-3 py-1 bg-emerald-50 text-emerald-800 border border-emerald-100 text-xs font-semibold rounded-full"
+                      >
+                        📍 {place}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column - Pricing and Rules */}
+            <div className="space-y-6">
+              {/* Pricing Box */}
+              <div className="bg-charcoal text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-terracotta/10 rounded-full translate-x-8 -translate-y-8"></div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Pricing & Policy</span>
+                
+                {property.category === 'event_venue' ? (
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-white/60">Venue Rent</p>
+                      <p className="text-3xl font-black text-terracotta tracking-tight">₹{property.price_per_night?.toLocaleString('en-IN')} <span className="text-xs text-white/60">/day</span></p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 pt-3 border-t border-white/10">
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-wider text-white/60">Veg Plate</p>
+                        <p className="text-lg font-black text-white">₹{property.veg_price || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-wider text-white/60">Non-Veg Plate</p>
+                        <p className="text-lg font-black text-white">₹{property.non_veg_price || '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-white/60">Base Price</p>
+                    <p className="text-3xl font-black text-terracotta tracking-tight">
+                      ₹{property.price_per_night?.toLocaleString('en-IN')}{' '}
+                      <span className="text-xs text-white/60">
+                        /{property.pricing_cycle || 'night'}
+                      </span>
+                    </p>
+                  </div>
+                )}
+                
+                <div className="mt-6 pt-6 border-t border-white/10 space-y-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-white/60 font-bold uppercase tracking-wider">Instant Booking</span>
+                    <span className={`px-2 py-0.5 font-black uppercase tracking-wider rounded text-[9px] ${property.instant_booking ? 'bg-sage text-white' : 'bg-white/10 text-white/60'}`}>
+                      {property.instant_booking ? 'YES' : 'NO'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-white/60 font-bold uppercase tracking-wider">Pet-Friendly</span>
+                    <span className={`px-2 py-0.5 font-black uppercase tracking-wider rounded text-[9px] ${property.pet_friendly ? 'bg-sage text-white' : 'bg-white/10 text-white/60'}`}>
+                      {property.pet_friendly ? 'YES' : 'NO'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-white/60 font-bold uppercase tracking-wider">Smoking Allowed</span>
+                    <span className={`px-2 py-0.5 font-black uppercase tracking-wider rounded text-[9px] ${property.smoking_allowed ? 'bg-sage text-white' : 'bg-white/10 text-white/60'}`}>
+                      {property.smoking_allowed ? 'YES' : 'NO'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* House Rules / Venue Policies */}
+              <div className="bg-sand-50 p-6 rounded-3xl border border-sand-200">
+                <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider mb-3">
+                  {property.category === 'event_venue' ? 'Venue Inclusions / Policies' : 'House Rules'}
+                </h4>
+                {venueRules ? (
+                  <div className="space-y-4 text-xs text-charcoal-muted font-semibold">
+                    {/* Timings */}
+                    {(venueRules.timings_morning_start || venueRules.timings_evening_start) && (
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-black text-charcoal uppercase tracking-wider block">Operating Hours</span>
+                        {venueRules.timings_morning_start && (
+                          <p>Morning Slot: {venueRules.timings_morning_start} to {venueRules.timings_morning_end}</p>
+                        )}
+                        {venueRules.timings_evening_start && (
+                          <p>Evening Slot: {venueRules.timings_evening_start} to {venueRules.timings_evening_end}</p>
+                        )}
+                      </div>
+                    )}
+                    {/* Taxes & Rooms */}
+                    <div className="grid grid-cols-2 gap-4">
+                      {venueRules.taxes && (
+                        <div>
+                          <span className="text-[10px] font-black text-charcoal uppercase tracking-wider block">Taxes</span>
+                          <p>{venueRules.taxes}%</p>
+                        </div>
+                      )}
+                      {venueRules.rooms_count && (
+                        <div>
+                          <span className="text-[10px] font-black text-charcoal uppercase tracking-wider block">Rooms</span>
+                          <p>{venueRules.rooms_count} rooms (avg ₹{venueRules.room_price}/room)</p>
+                        </div>
+                      )}
+                    </div>
+                    {/* Food & Alcohol */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-black text-charcoal uppercase tracking-wider block">Restrictions</span>
+                      <p>Food provided by venue: {venueRules.food_venue ? 'Yes' : 'No'}</p>
+                      <p>Outside food allowed: {venueRules.food_outside ? 'Yes' : 'No'}</p>
+                      <p>Alcohol allowed: {venueRules.alcohol_allowed ? 'Yes' : 'No'}</p>
+                      <p>Valet parking: {venueRules.parking_valet ? 'Yes' : 'No'}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-charcoal-muted leading-relaxed whitespace-pre-line">
+                    {textRules || 'No rules specified.'}
+                  </p>
+                )}
+              </div>
+
+              {/* Package Details for Event Venues */}
+              {property.category === 'event_venue' && property.packages && property.packages.length > 0 && (
+                <div className="bg-sand-50 p-6 rounded-3xl border border-sand-200 space-y-4">
+                  <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider">
+                    Food Package Items
+                  </h4>
+                  {property.packages.map((pkg, idx) => (
+                    <div key={idx} className="space-y-2">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-charcoal block capitalize">
+                        {pkg.type === 'veg' ? '🟢 Vegetarian Package' : '🔴 Non-Vegetarian Package'}
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(pkg.items || {}).map(([item, qty], itemIdx) => (
+                          <span key={itemIdx} className="px-2 py-1 bg-white text-charcoal border border-sand-200 rounded-lg text-xs font-bold">
+                            {item}: {qty}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };
 

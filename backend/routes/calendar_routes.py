@@ -583,11 +583,11 @@ async def export_ical(
             )
 
         cal = iCalendar()
-        cal.add("prodid", "-//Golden-X-Host STR//Property Calendar//EN")
+        cal.add("prodid", "-//Golden Rich Stay STR//Property Calendar//EN")
         cal.add("version", "2.0")
         cal.add("calscale", "GREGORIAN")
         cal.add("method", "PUBLISH")
-        cal.add("x-wr-calname", f"Golden-X-Host - {property_data.get('title', property_id)}")
+        cal.add("x-wr-calname", f"Golden Rich Stay - {property_data.get('title', property_id)}")
         cal.add("x-wr-timezone", "Asia/Kolkata")
 
         booking_cursor = db.bookings.find(

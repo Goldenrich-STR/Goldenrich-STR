@@ -99,7 +99,7 @@ server {
     listen 80;
     server_name your-domain.com;
 
-    root /var/www/golden-x-host/frontend/build;
+    root /var/www/goldenrichstay/frontend/build;
     index index.html;
 
     location / {

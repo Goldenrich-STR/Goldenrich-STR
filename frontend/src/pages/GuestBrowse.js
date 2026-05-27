@@ -384,19 +384,19 @@ const GuestBrowse = () => {
   const indiaCenter = [20.5937, 78.9629];  return (
     <div className="min-h-screen bg-sand-50 flex flex-col selection:bg-terracotta selection:text-white">
       {/* Header */}
-      <header className="glass px-8 py-4 border-b border-sand-200" data-testid="guest-header">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+      <header className="glass px-4 md:px-8 py-4 border-b border-sand-200" data-testid="guest-header">
+        <div className="max-w-7xl mx-auto flex justify-between items-center w-full gap-2">
           <div 
-            className="flex items-center space-x-3 cursor-pointer group md:mx-0" 
+            className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
             <img 
               src="/logo.png" 
               alt="Logo" 
-              className="w-10 h-10 object-contain transition-transform duration-300 group-hover:scale-110"
+              className="w-8 h-8 md:w-10 md:h-10 object-contain transition-transform duration-300 group-hover:scale-110"
             />
-            <h1 className="text-xl font-black text-charcoal tracking-tighter">
-              GOLDEN<span className="text-terracotta">-X-</span>HOST
+            <h1 className="text-sm sm:text-lg md:text-xl font-black text-charcoal tracking-tighter whitespace-nowrap">
+              GOLDEN <span className="text-terracotta">RICH</span> STAY
             </h1>
           </div>
           <div className="flex items-center space-x-4 md:space-x-6">

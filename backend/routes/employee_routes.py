@@ -253,7 +253,7 @@ async def export_verification_report_xlsx(
         # 1. Luxury Header
         ws.merge_cells('A1:C3')
         cell = ws['A1']
-        cell.value = "GOLDEN-X-HOST | ELITE AUDIT"
+        cell.value = "GOLDEN RICH STAY | ELITE AUDIT"
         cell.font = title_font
         cell.alignment = Alignment(horizontal='center', vertical='center')
         cell.border = Border(left=gold_side, right=gold_side, top=gold_side, bottom=gold_side)

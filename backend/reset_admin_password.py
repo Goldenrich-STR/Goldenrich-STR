@@ -50,7 +50,7 @@ async def reset_admin_password(email: str, password: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reset an admin user's password.")
-    parser.add_argument("--email", default=os.getenv("ADMIN_EMAIL", "admin@golden-x-host"))
+    parser.add_argument("--email", default=os.getenv("ADMIN_EMAIL", "admin@goldenrichstay.com"))
     parser.add_argument("--password", default=os.getenv("ADMIN_PASSWORD"))
     args = parser.parse_args()
     if not args.password:

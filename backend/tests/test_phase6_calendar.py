@@ -1,5 +1,5 @@
 """
-Phase 6 Calendar + Auth + Regression smoke tests for Golden-X-Host STR.
+Phase 6 Calendar + Auth + Regression smoke tests for Golden Rich Stay.
 Tests run against REACT_APP_BACKEND_URL with /api prefix.
 """
 import os

@@ -58,7 +58,7 @@ async def get_all_users(
                 {"phone": {"$regex": search, "$options": "i"}}
             ]
         
-        cursor = db.users.find(query, {"_id": 0, "password_hash": 0}).skip(skip).limit(limit)
+        cursor = db.users.find(query, {"_id": 0, "password_hash": 0}).sort("created_at", -1).skip(skip).limit(limit)
         users = await cursor.to_list(length=limit)
         total = await db.users.count_documents(query)
         
@@ -373,6 +373,61 @@ async def update_kyc_status(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update KYC status"
+        )
+
+class KYCDocumentStatusUpdate(BaseModel):
+    document_type: str
+    status: str
+    rejection_reason: Optional[str] = None
+
+@router.patch("/users/{user_id}/kyc/documents")
+async def update_kyc_document_status(
+    user_id: str,
+    payload: KYCDocumentStatusUpdate,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Approve or reject a specific KYC document for a user."""
+    try:
+        user = await db.users.find_one({"user_id": user_id})
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        docs = user.get("kyc_documents", [])
+        updated = False
+        for doc in docs:
+            if doc.get("document_type") == payload.document_type:
+                doc["status"] = payload.status
+                if payload.status == "rejected":
+                    doc["rejection_reason"] = payload.rejection_reason
+                else:
+                    doc["rejection_reason"] = None
+                updated = True
+                break
+                
+        if not updated:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document of type {payload.document_type} not found"
+            )
+            
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"kyc_documents": docs, "updated_at": datetime.now(timezone.utc)}}
+        )
+        
+        logger.info(f"KYC Document {payload.document_type} status for user {user_id} updated to {payload.status}")
+        return {"message": "Document status updated successfully", "kyc_documents": docs}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating document status: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update document status"
         )
 
 # ========== PROPERTY MODERATION ==========
