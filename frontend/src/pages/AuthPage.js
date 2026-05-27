@@ -77,9 +77,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
     try {
       const response = await authAPI.sendOTP(registerData.phone, 'registration');
       if (response.data) {
-        setGeneratedOTP(response.data.otp);
+        setGeneratedOTP(response.data.otp || '');
         setShowOTPVerification(true);
-        setSuccess(`OTP sent to ${registerData.phone}. OTP: ${response.data.otp}`);
+        setSuccess(
+          response.data.otp
+            ? `OTP sent to ${registerData.phone}. OTP: ${response.data.otp}`
+            : `OTP sent to ${registerData.phone}.`
+        );
       }
     } catch (err) {
       const detail = err?.response?.data?.detail;

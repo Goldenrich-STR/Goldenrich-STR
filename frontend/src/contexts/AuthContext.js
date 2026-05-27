@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
   const refreshUser = useCallback(async () => {
     if (!localStorage.getItem('propnest_token')) return null;
     try {
-      const res = await apiClient.get('/auth/me');
+      const res = await apiClient.get('/api/auth/me');
       setUser(res.data);
       localStorage.setItem('propnest_user', JSON.stringify(res.data));
       return res.data;

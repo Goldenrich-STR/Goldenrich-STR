@@ -1,10 +1,9 @@
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
-const API = `${BACKEND_URL}/api`;
 
 const apiClient = axios.create({
-  baseURL: API,
+  baseURL: BACKEND_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -23,6 +22,10 @@ export const getImageUrl = (url) => {
 
 // Add auth token to requests
 apiClient.interceptors.request.use((config) => {
+  if (config.url && config.url.startsWith('/') && !config.url.startsWith('/api/')) {
+    config.url = `/api${config.url}`;
+  }
+
   const token = localStorage.getItem('propnest_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -34,7 +37,7 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    const isAuthAttempt = error.config?.url?.startsWith('/auth/');
+    const isAuthAttempt = error.config?.url?.startsWith('/api/auth/');
     if (error.response && error.response.status === 401 && !isAuthAttempt) {
       localStorage.removeItem('propnest_token');
       localStorage.removeItem('propnest_user');
@@ -47,16 +50,16 @@ apiClient.interceptors.response.use(
 // Auth API
 export const authAPI = {
   sendOTP: (phone, purpose = 'registration') =>
-    apiClient.post('/auth/send-otp', { phone, purpose }),
+    apiClient.post('/api/auth/send-otp', { phone, purpose }),
   
   verifyOTP: (phone, otp, purpose = 'registration') =>
-    apiClient.post('/auth/verify-otp', { phone, otp, purpose }),
+    apiClient.post('/api/auth/verify-otp', { phone, otp, purpose }),
   
   register: (userData) =>
-    apiClient.post('/auth/register', userData),
+    apiClient.post('/api/auth/register', userData),
   
   login: (email, password) =>
-    apiClient.post('/auth/login', { email, password }),
+    apiClient.post('/api/auth/login', { email, password }),
 };
 
 // Property API

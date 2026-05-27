@@ -10,13 +10,13 @@ class MSG91Service:
     
     def __init__(self):
         """Initialize MSG91 service."""
-        self.authkey = os.getenv("MSG91_AUTHKEY", "msg91_demo_key")
+        self.authkey = os.getenv("MSG91_AUTHKEY", "msg91_demo_key").strip()
         self.sender_id = os.getenv("MSG91_SENDER_ID", "PROPNT")
         self.sms_api_url = "https://api.msg91.com/api/v5/flow/"
         self.whatsapp_api_url = "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/"
         
         # Check if we're in demo mode
-        self.is_demo_mode = self.authkey == "msg91_demo_key"
+        self.is_demo_mode = not self.authkey or self.authkey == "msg91_demo_key"
         
         if self.is_demo_mode:
             logger.warning("MSG91 running in DEMO mode - no actual SMS/WhatsApp will be sent")
