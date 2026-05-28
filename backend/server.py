@@ -72,6 +72,10 @@ app.include_router(review_router, prefix="/api")
 app.include_router(webhook_router, prefix="/api")
 app.include_router(coupon_router, prefix="/api")
 
+# Backward-compatible auth aliases. Some deployed/cached frontend bundles may
+# still call /auth/*; keep those working while the canonical API remains /api/auth/*.
+app.include_router(auth_router)
+
 # Static files: serve uploaded property images
 _uploads_dir = ROOT_DIR / "uploads"
 _uploads_dir.mkdir(parents=True, exist_ok=True)

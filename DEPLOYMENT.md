@@ -36,14 +36,15 @@ PUBLIC_FRONTEND_URL=https://your-domain.com
 Create `frontend/.env` on the EC2 instance:
 
 ```env
-REACT_APP_BACKEND_URL=https://api.your-domain.com
+# Leave empty when Nginx proxies /api to the backend on the same domain/IP.
+REACT_APP_BACKEND_URL=
 ENABLE_HEALTH_CHECK=false
 ```
 
-For direct IP testing, use:
+For local development only, use:
 
 ```env
-REACT_APP_BACKEND_URL=http://YOUR_EC2_PUBLIC_IP:8001
+REACT_APP_BACKEND_URL=http://localhost:8001
 ```
 
 ## EC2 Setup
@@ -86,7 +87,7 @@ For production, run it with `systemd` or another process manager.
 
 ```bash
 cd frontend
-npm install
+npm install --legacy-peer-deps
 npm run build
 ```
 
@@ -98,6 +99,7 @@ Serve `frontend/build` through Nginx.
 server {
     listen 80;
     server_name your-domain.com;
+    client_max_body_size 20M;
 
     root /var/www/goldenrichstay/frontend/build;
     index index.html;
