@@ -8,6 +8,7 @@ import asyncpg
 import decimal
 from datetime import datetime
 
+
 logger = logging.getLogger(__name__)
 
 class PGUpdateResult(int):
