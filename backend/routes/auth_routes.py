@@ -4,8 +4,10 @@ from pydantic import BaseModel
 from models.user import UserCreate, UserLogin, UserResponse, User, UserRole
 from utils.auth import hash_password, verify_password, create_access_token
 from services.otp_service import otp_service
+from services.msg91_service import msg91_service
 from middleware.auth_middleware import get_current_user
 import phonenumbers
+from phonenumbers.phonenumberutil import NumberParseException
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,24 +31,51 @@ class VerifyOTPRequest(BaseModel):
 async def send_otp(request: SendOTPRequest):
     """Send OTP to phone number for verification."""
     try:
-        # Validate phone number
-        parsed = phonenumbers.parse(request.phone, "IN")
+        raw_phone = request.phone.strip()
+        if not raw_phone:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Phone number is required"
+            )
+
+        # Validate phone number. Accept both 10-digit Indian numbers and +91 format.
+        try:
+            parsed = phonenumbers.parse(raw_phone, "IN")
+        except NumberParseException:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid phone number"
+            )
+
         if not phonenumbers.is_valid_number(parsed):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid phone number"
             )
+
+        normalized_phone = phonenumbers.format_number(
+            parsed,
+            phonenumbers.PhoneNumberFormat.E164
+        )
         
         # Generate and store OTP
-        result = otp_service.generate_and_store_otp(request.phone, request.purpose)
+        result = otp_service.generate_and_store_otp(raw_phone, request.purpose)
         
         if result["success"]:
-            # In production, send OTP via MSG91
-            # For now, return OTP in response for testing
+            delivery = msg91_service.send_otp_sms(normalized_phone, result["otp"])
+            if not delivery.get("success"):
+                logger.error("OTP SMS delivery failed for %s: %s", normalized_phone, delivery.get("error"))
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="OTP delivery failed. Please check SMS gateway configuration."
+                )
+
             return {
                 "message": "OTP sent successfully",
-                "otp": result["otp"],  # Remove in production
-                "expires_in": result["expires_in"]
+                "otp": result["otp"] if delivery.get("demo_mode") else None,
+                "expires_in": result["expires_in"],
+                "phone": normalized_phone,
+                "demo_mode": bool(delivery.get("demo_mode"))
             }
         else:
             raise HTTPException(
@@ -57,7 +86,7 @@ async def send_otp(request: SendOTPRequest):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error sending OTP: {str(e)}")
+        logger.exception("Error sending OTP")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to send OTP"
