@@ -36,14 +36,15 @@ PUBLIC_FRONTEND_URL=https://your-domain.com
 Create `frontend/.env` on the EC2 instance:
 
 ```env
-REACT_APP_BACKEND_URL=https://api.your-domain.com
+# Leave empty when Nginx proxies /api to the backend on the same domain/IP.
+REACT_APP_BACKEND_URL=
 ENABLE_HEALTH_CHECK=false
 ```
 
-For direct IP testing, use:
+For local development only, use:
 
 ```env
-REACT_APP_BACKEND_URL=http://YOUR_EC2_PUBLIC_IP:8001
+REACT_APP_BACKEND_URL=http://localhost:8001
 ```
 
 ## EC2 Setup

@@ -1,6 +1,13 @@
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001';
+const configuredBackendUrl = (process.env.REACT_APP_BACKEND_URL || '').trim().replace(/\/$/, '');
+const isBrowser = typeof window !== 'undefined';
+const isLocalPage = isBrowser && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const pointsToLocalBackend = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredBackendUrl);
+const defaultBackendUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:8001' : '';
+const BACKEND_URL = configuredBackendUrl && !(isBrowser && !isLocalPage && pointsToLocalBackend)
+  ? configuredBackendUrl
+  : defaultBackendUrl;
 
 const apiClient = axios.create({
   baseURL: BACKEND_URL,
