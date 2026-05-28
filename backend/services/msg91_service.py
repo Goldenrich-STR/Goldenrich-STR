@@ -15,8 +15,19 @@ class MSG91Service:
         self.sms_api_url = "https://api.msg91.com/api/v5/flow/"
         self.whatsapp_api_url = "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/"
         
-        # Check if we're in demo mode
-        self.is_demo_mode = not self.authkey or self.authkey == "msg91_demo_key"
+        demo_mode = os.getenv("MSG91_DEMO_MODE", "").strip().lower()
+        demo_values = {
+            "",
+            "msg91_demo_key",
+            "demo",
+            "mock",
+            "replace-with-msg91-authkey",
+            "your-msg91-authkey",
+            "your_key_here",
+        }
+        # Check if we're in demo mode. Explicitly set MSG91_DEMO_MODE=true on
+        # staging/EC2 when real MSG91 credentials are not available yet.
+        self.is_demo_mode = demo_mode in {"1", "true", "yes", "on"} or self.authkey.lower() in demo_values
         
         if self.is_demo_mode:
             logger.warning("MSG91 running in DEMO mode - no actual SMS/WhatsApp will be sent")
