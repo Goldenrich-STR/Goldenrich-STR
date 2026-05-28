@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, subscriptionAPI, uploadAPI, getImageUrl, bookingAPI, cmsAPI } from '../services/api';
 import { 
-  Users, Building2, Calendar, DollarSign, CheckCircle, 
+  Users, Building2, Calendar, IndianRupee, CheckCircle, 
   X, XCircle, Clock, TrendingUp, BarChart3, LogOut, Plus, Trash, Zap,
   Edit, Eye as EyeIcon, Shield, ChevronLeft, ChevronRight, Tag
 } from 'lucide-react';
@@ -281,7 +281,7 @@ const AdminDashboard = () => {
     { 
       label: 'Total Revenue', 
       value: `₹${(stats.revenue.total / 100).toLocaleString('en-IN')}`, 
-      icon: DollarSign, 
+      icon: IndianRupee, 
       color: 'sage',
       subtext: 'Gross Merchandise Value'
     },
@@ -310,7 +310,7 @@ const AdminDashboard = () => {
               className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-terracotta text-white font-semibold hover:bg-terracotta-dark transition text-sm"
               data-testid="nav-account-btn"
             >
-              <DollarSign className="w-4 h-4" />
+              <IndianRupee className="w-4 h-4" />
               <span>Account</span>
             </button>
             <button
@@ -1893,6 +1893,7 @@ const PropertyModeration = () => {
   
   const [activeReviewProperty, setActiveReviewProperty] = useState(null);
   const [adminChecklist, setAdminChecklist] = useState({});
+  const [propertyRejectionState, setPropertyRejectionState] = useState(null);
 
   const CHECKLIST_LABELS = {
     address_matches_gps: "Address Matches GPS Location",
@@ -1984,13 +1985,14 @@ const PropertyModeration = () => {
     }
   };
 
-  const rejectProperty = async (propertyId) => {
-    const reason = prompt('Enter rejection reason:');
-    if (!reason) return;
+  const rejectProperty = (propertyId) => {
+    setPropertyRejectionState({ propertyId, reason: '' });
+  };
 
+  const handleRejectPropertySubmit = async (propertyId, reason) => {
     try {
       await verificationAPI.adminReject(propertyId, reason);
-      alert('Property rejected');
+      alert('Property rejected successfully');
       refresh();
       setActiveReviewProperty(null);
     } catch (error) {
@@ -2153,6 +2155,74 @@ const PropertyModeration = () => {
               </div>
             </div>
 
+            {/* Property Images Gallery */}
+            {activeReviewProperty.images && activeReviewProperty.images.length > 0 && (
+              <div className="mb-6">
+                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Property Images</p>
+                <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-sand-300">
+                  {activeReviewProperty.images.map((img, idx) => (
+                    <img 
+                      key={idx}
+                      src={getImageUrl(img)} 
+                      alt={`Property Image ${idx + 1}`} 
+                      className="w-40 h-28 object-cover rounded-xl border border-sand-200 shadow-sm flex-shrink-0"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Detailed Info */}
+            <div className="p-5 bg-sand-50/50 border border-sand-200/80 rounded-2xl mb-6">
+              <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-3">Listing Details</p>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Category</span>
+                  <span className="font-bold text-charcoal text-xs capitalize">{activeReviewProperty.category || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block">BHK Type</span>
+                  <span className="font-bold text-charcoal text-xs uppercase">{activeReviewProperty.bhk_type || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Price per Night</span>
+                  <span className="font-bold text-terracotta text-xs">₹{activeReviewProperty.price_per_night || 0}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Location</span>
+                  <span className="font-bold text-charcoal text-xs">{activeReviewProperty.city || 'N/A'}, {activeReviewProperty.state || ''}</span>
+                </div>
+              </div>
+
+              {activeReviewProperty.address && (
+                <div className="mb-3">
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Full Address</span>
+                  <span className="text-xs font-semibold text-charcoal-light">{activeReviewProperty.address}</span>
+                </div>
+              )}
+
+              {activeReviewProperty.description && (
+                <div className="mb-3">
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Description</span>
+                  <p className="text-xs text-charcoal-light leading-relaxed whitespace-pre-wrap">{activeReviewProperty.description}</p>
+                </div>
+              )}
+
+              {activeReviewProperty.amenities && activeReviewProperty.amenities.length > 0 && (
+                <div>
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Amenities</span>
+                  <div className="flex flex-wrap gap-1">
+                    {activeReviewProperty.amenities.map((amenity, idx) => (
+                      <span key={idx} className="px-2 py-0.5 bg-sand-200/50 text-charcoal text-[9px] font-semibold rounded">
+                        {amenity}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Evidence Video Link */}
             {activeReviewProperty.video_url && (
               <div className="p-4 bg-sand-50 rounded-2xl mb-6">
@@ -2266,6 +2336,62 @@ const PropertyModeration = () => {
                 className="flex-1 btn-premium py-4 shadow-elevated"
               >
                 Approve & Go Live
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Property Rejection Reason Modal */}
+      {propertyRejectionState && (
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-premium animate-slide-up">
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-sand-200">
+              <h4 className="text-lg font-black text-charcoal">Reject Property Listing</h4>
+              <button 
+                onClick={() => setPropertyRejectionState(null)} 
+                className="p-1.5 hover:bg-sand-100 rounded-lg text-charcoal-light hover:text-charcoal transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <p className="text-xs text-charcoal-muted mb-4">
+              Please specify a reason for rejecting this property listing. This reason will be shared with the broker and Relationship Manager.
+            </p>
+            
+            <textarea
+              required
+              placeholder="e.g. Incomplete verification documents or incorrect geo-coordinates"
+              className="w-full border-2 border-sand-200 rounded-xl px-3 py-2 text-sm focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300 min-h-[80px]"
+              value={propertyRejectionState.reason || ''}
+              onChange={e => setPropertyRejectionState({ ...propertyRejectionState, reason: e.target.value })}
+            />
+            
+            <div className="flex space-x-3 mt-5">
+              <button 
+                type="button" 
+                onClick={() => setPropertyRejectionState(null)} 
+                className="flex-1 py-3 font-black text-[10px] text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                onClick={async () => {
+                  if (!propertyRejectionState.reason || !propertyRejectionState.reason.trim()) {
+                    alert('Rejection reason is required.');
+                    return;
+                  }
+                  await handleRejectPropertySubmit(
+                    propertyRejectionState.propertyId,
+                    propertyRejectionState.reason
+                  );
+                  setPropertyRejectionState(null);
+                }}
+                className="flex-1 btn-premium bg-red-600 hover:bg-red-700 border-red-600 py-3 shadow-elevated text-white font-black text-[10px] uppercase tracking-widest"
+              >
+                Reject Property
               </button>
             </div>
           </div>

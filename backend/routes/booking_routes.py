@@ -116,10 +116,26 @@ async def create_booking(
         
         # Calculate pricing
         num_nights = (check_out - check_in).days
+        if property_dict.get("category") == "event_venue":
+            num_nights = max(1, num_nights + 1)
+            
         base_amount = property_dict.get("price_per_night", 0) * num_nights
+        
+        if property_dict.get("category") == "event_venue" and booking_data.food_preference:
+            food_pref = booking_data.food_preference.lower()
+            plate_price = property_dict.get("non_veg_price", 0) if food_pref == "non_veg" else property_dict.get("veg_price", 0)
+            base_amount += plate_price * booking_data.number_of_guests * num_nights
+            
         service_fee = base_amount * 0.10  # 10% service fee
         taxes = base_amount * 0.18  # 18% GST
         total_amount = base_amount + service_fee + taxes
+        
+        # Determine payment order amount
+        order_amount = total_amount
+        advance_amount = 0.0
+        if booking_data.payment_type == "advance":
+            advance_amount = round(total_amount * 0.50, 2)  # 50% advance
+            order_amount = advance_amount
         
         # Create booking with soft lock
         # Soft-lock window — 5 minutes. Stored as timezone-aware UTC so that
@@ -140,6 +156,11 @@ async def create_booking(
             total_amount=total_amount,
             booking_status=BookingStatus.SOFT_LOCK,
             soft_lock_expires_at=now_utc + timedelta(minutes=soft_lock_window_minutes),
+            selected_slot=booking_data.selected_slot,
+            food_preference=booking_data.food_preference,
+            payment_type=booking_data.payment_type or "full",
+            advance_amount=advance_amount,
+            paid_amount=0.0
         )
 
         # Insert booking into database
@@ -159,7 +180,7 @@ async def create_booking(
         
         # Create Razorpay order
         razorpay_result = razorpay_service.create_order(
-            amount=int(total_amount * 100),  # Convert to paise
+            amount=int(order_amount * 100),  # Convert to paise
             receipt=booking.booking_id[:40]
         )
         
@@ -176,7 +197,7 @@ async def create_booking(
         )
         
         logger.info(f"Booking created with soft lock: {booking.booking_id}")
-
+ 
         # Schedule soft-lock reminder 2 minutes before expiry (fire-and-forget)
         schedule_soft_lock_reminder(db, booking.booking_id, booking.soft_lock_expires_at)
         
@@ -184,12 +205,14 @@ async def create_booking(
             "booking_id": booking.booking_id,
             "razorpay_order_id": razorpay_result["order"]["id"],
             "razorpay_key_id": razorpay_service.key_id,
-            "amount": int(total_amount * 100),
+            "amount": int(order_amount * 100),
             "currency": "INR",
             "booking_details": {
                 "check_in_date": check_in.isoformat(),
                 "check_out_date": check_out.isoformat(),
                 "total_amount": total_amount,
+                "advance_amount": advance_amount,
+                "payment_type": booking.payment_type,
                 "property_title": property_dict["title"]
             }
         }
@@ -249,12 +272,18 @@ async def confirm_payment(
                 detail="Invalid payment signature"
             )
         
+        # Determine paid amount and payment status based on payment type
+        payment_type = booking_dict.get("payment_type", "full")
+        paid_amount = booking_dict.get("advance_amount", 0.0) if payment_type == "advance" else booking_dict.get("total_amount", 0.0)
+        payment_status = "partially_paid" if payment_type == "advance" else "paid"
+
         # Update booking status to confirmed
         await db.bookings.update_one(
             {"booking_id": booking_id},
             {"$set": {
                 "booking_status": BookingStatus.CONFIRMED.value,
-                "payment_status": "paid",
+                "payment_status": payment_status,
+                "paid_amount": paid_amount,
                 "razorpay_payment_id": razorpay_payment_id,
                 "confirmed_at": datetime.now(timezone.utc),
                 "updated_at": datetime.now(timezone.utc)
@@ -287,7 +316,7 @@ async def confirm_payment(
             await record_transaction(
                 db,
                 type=TransactionType.BOOKING_PAYMENT,
-                amount=int(round(booking_dict.get("total_amount", 0) * 100)),
+                amount=int(round(paid_amount * 100)),
                 razorpay_order_id=razorpay_order_id,
                 razorpay_payment_id=razorpay_payment_id,
                 user_id=booking_dict["guest_id"],
@@ -701,12 +730,18 @@ async def mock_pay(
             detail=mock.get("error", "Mock payment failed"),
         )
 
+    # Determine paid amount and payment status based on payment type
+    payment_type = booking_dict.get("payment_type", "full")
+    paid_amount = booking_dict.get("advance_amount", 0.0) if payment_type == "advance" else booking_dict.get("total_amount", 0.0)
+    payment_status = "partially_paid" if payment_type == "advance" else "paid"
+
     await db.bookings.update_one(
         {"booking_id": booking_id},
         {
             "$set": {
                 "booking_status": BookingStatus.CONFIRMED.value,
-                "payment_status": "paid",
+                "payment_status": payment_status,
+                "paid_amount": paid_amount,
                 "razorpay_payment_id": mock["razorpay_payment_id"],
                 "confirmed_at": datetime.now(timezone.utc),
                 "updated_at": datetime.now(timezone.utc),
@@ -746,7 +781,7 @@ async def mock_pay(
         await record_transaction(
             db,
             type=TransactionType.BOOKING_PAYMENT,
-            amount=int(round(booking_dict.get("total_amount", 0) * 100)),
+            amount=int(round(paid_amount * 100)),
             razorpay_order_id=order_id,
             razorpay_payment_id=mock["razorpay_payment_id"],
             user_id=booking_dict["guest_id"],

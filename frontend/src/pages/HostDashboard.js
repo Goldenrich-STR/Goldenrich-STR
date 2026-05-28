@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, getImageUrl, accountAPI, uploadAPI } from '../services/api';
-import { Building2, Plus, Calendar, DollarSign, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight } from 'lucide-react';
 import { NotificationBell } from '../components/NotificationCenter';
 
 const HostDashboard = () => {
@@ -329,7 +329,7 @@ const HostDashboard = () => {
     { label: 'Total Properties', value: properties.length, icon: Building2 },
     { label: 'Active Listings', value: properties.filter(p => p.status === 'live').length, icon: Eye },
     { label: 'Pending Review', value: properties.filter(p => p.status === 'pending_verification').length, icon: Calendar },
-    { label: 'Total Earnings', value: formattedEarnings, icon: DollarSign },
+    { label: 'Total Earnings', value: formattedEarnings, icon: IndianRupee },
   ];
 
   return (

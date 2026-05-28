@@ -4,7 +4,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
 import {
-  ArrowLeft, Download, DollarSign, TrendingUp, Wallet, Users,
+  ArrowLeft, Download, IndianRupee, TrendingUp, Wallet, Users,
   RefreshCcw, CheckCircle, XCircle, AlertCircle, Clock,
   Search, Share2, FileText, Mail, MessageSquare, Printer, Check
 } from 'lucide-react';
@@ -122,11 +122,11 @@ const OverviewTab = () => {
 
   const rev = data.revenue;
   const cards = [
-    { label: 'Total Gross Revenue',     value: fmtINR(rev.total_gross_paise),       icon: DollarSign, testid: 'stat-total-gross' },
+    { label: 'Total Gross Revenue',     value: fmtINR(rev.total_gross_paise),       icon: IndianRupee, testid: 'stat-total-gross' },
     { label: 'Platform Fee',            value: fmtINR(rev.platform_take_paise),     icon: TrendingUp, testid: 'stat-platform-take' },
     { label: 'Host Payouts',            value: fmtINR(rev.payouts_paid_paise),      icon: Wallet,   testid: 'stat-pending-payouts', sub: `${data.pending_payouts.count} pending payout`, pendingValue: fmtINR(data.pending_payouts.amount_paise) },
     { label: 'Tax',                     value: fmtINR(rev.total_tax_paise),         icon: RefreshCcw, testid: 'stat-tax' },
-    { label: 'Booking Payments',        value: fmtINR(rev.booking_payments_paise),  icon: DollarSign, testid: 'stat-booking-payments', sub: `${data.counts.booking_payments} bookings` },
+    { label: 'Booking Payments',        value: fmtINR(rev.booking_payments_paise),  icon: IndianRupee, testid: 'stat-booking-payments', sub: `${data.counts.booking_payments} bookings` },
     { label: 'Registration Fees',       value: fmtINR(rev.registration_fees_paise), icon: CheckCircle, testid: 'stat-registration-fees', sub: `${data.counts.registration_fees} hosts` },
     { label: 'Subscription Revenue',    value: fmtINR(rev.subscriptions_paise),     icon: RefreshCcw, testid: 'stat-subscriptions', sub: `${data.counts.subscriptions} subs` },
     { label: 'Refunds Issued',          value: fmtINR(rev.refunds_paise),           icon: XCircle,    testid: 'stat-refunds', sub: `${data.counts.refunds} refunds` },

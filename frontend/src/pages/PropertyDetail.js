@@ -435,6 +435,9 @@ const PropertyDetail = () => {
   const [foodPreference, setFoodPreference] = useState('veg');
   const [booking, setBooking] = useState(false);
   const [bookingError, setBookingError] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState('');
+  const [showQuotationModal, setShowQuotationModal] = useState(false);
+  const [quotationPaymentType, setQuotationPaymentType] = useState('full');
 
   const [reviews, setReviews] = useState([]);
   const [reviewSummary, setReviewSummary] = useState({ rating_avg: 0, rating_count: 0, sub_avgs: {} });
@@ -524,6 +527,44 @@ const PropertyDetail = () => {
 
   const isBlocked = (iso) =>
     blockedDates.some((b) => dateInRange(iso, b.start_date, b.end_date));
+
+  const parsedPolicies = useMemo(() => {
+    try {
+      if (property?.category === 'event_venue' && property.house_rules) {
+        return JSON.parse(property.house_rules);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return null;
+  }, [property]);
+
+  const availableSlots = useMemo(() => {
+    const slots = [];
+    if (parsedPolicies) {
+      if (parsedPolicies.timings_morning_start && parsedPolicies.timings_morning_end) {
+        slots.push({ key: 'morning', label: `Morning Slot (${parsedPolicies.timings_morning_start} to ${parsedPolicies.timings_morning_end})` });
+      }
+      if (parsedPolicies.timings_afternoon_start && parsedPolicies.timings_afternoon_end) {
+        slots.push({ key: 'afternoon', label: `Afternoon Slot (${parsedPolicies.timings_afternoon_start} to ${parsedPolicies.timings_afternoon_end})` });
+      }
+      if (parsedPolicies.timings_evening_start && parsedPolicies.timings_evening_end) {
+        slots.push({ key: 'evening', label: `Evening Slot (${parsedPolicies.timings_evening_start} to ${parsedPolicies.timings_evening_end})` });
+      }
+    }
+    if (slots.length === 0) {
+      slots.push({ key: 'morning', label: 'Morning Slot (07:00 AM to 02:00 PM)' });
+      slots.push({ key: 'afternoon', label: 'Afternoon Slot (03:00 PM to 10:00 PM)' });
+      slots.push({ key: 'evening', label: 'Evening Slot (06:00 PM to midnight)' });
+    }
+    return slots;
+  }, [parsedPolicies]);
+
+  useEffect(() => {
+    if (availableSlots.length > 0 && !selectedSlot) {
+      setSelectedSlot(availableSlots[0].key);
+    }
+  }, [availableSlots, selectedSlot]);
 
   const cells = useMemo(() => buildMonthMatrix(calYear, calMonth), [calYear, calMonth]);
   const todayISO = toISO(new Date());
@@ -632,7 +673,7 @@ const PropertyDetail = () => {
     }
   };
 
-  const handleBookNow = async () => {
+  const handleBookNow = async (e, paymentType = 'full') => {
     if (!user) {
       navigate('/login');
       return;
@@ -662,6 +703,9 @@ const PropertyDetail = () => {
         check_in_date: checkIn,
         check_out_date: checkOut,
         number_of_guests: Number(guests),
+        selected_slot: property?.category === 'event_venue' ? selectedSlot : undefined,
+        food_preference: property?.category === 'event_venue' ? foodPreference : undefined,
+        payment_type: paymentType,
       });
       // Soft lock created — show confirmation; payment integration is mocked
       navigate(`/guest/booking-confirmation?booking_id=${res.data.booking_id}`);
@@ -670,6 +714,136 @@ const PropertyDetail = () => {
     } finally {
       setBooking(false);
     }
+  };
+
+  const handleBookNowWithQuotation = () => {
+    handleBookNow(null, quotationPaymentType);
+  };
+
+  const handleDownloadQuotation = () => {
+    const qtnNo = `QTN-${Math.floor(100000 + Math.random() * 900000)}`;
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Booking Quotation - Golden Rich Stay</title>
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1c1c1c; margin: 40px; background: #ffffff; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; }
+          .title { font-size: 26px; font-weight: 900; color: #7f1d1d; letter-spacing: -0.5px; }
+          .subtitle { font-size: 11px; font-weight: 700; color: #4b5563; text-transform: uppercase; margin-top: 5px; }
+          .details-grid { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; border-radius: 16px; margin-top: 30px; }
+          .details-title { font-size: 10px; font-weight: 800; color: #6b7280; text-transform: uppercase; margin-bottom: 5px; }
+          .details-value { font-weight: 800; font-size: 14px; color: #111827; }
+          .details-sub { font-size: 12px; color: #4b5563; margin-top: 2px; }
+          .meta-grid { display: grid; grid-template-cols: 1fr 1fr 1fr; gap: 15px; margin-top: 20px; }
+          .meta-card { background-color: #f9fafb; padding: 15px; border-radius: 12px; border: 1px solid #e5e7eb; }
+          .table { width: 100%; border-collapse: collapse; margin-top: 30px; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb; }
+          .table th { background-color: #f3f4f6; text-align: left; padding: 12px 20px; font-size: 10px; font-weight: 800; color: #4b5563; text-transform: uppercase; }
+          .table td { padding: 15px 20px; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #1f2937; }
+          .table tr:last-child td { border-bottom: none; }
+          .total-row { background-color: #f9fafb; font-weight: 900; }
+          .total-price { color: #b45309; font-size: 18px; }
+          .footer-note { text-align: center; margin-top: 50px; font-size: 11px; color: #6b7280; font-weight: bold; text-transform: uppercase; }
+          @media print {
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div style="max-width: 800px; margin: 0 auto;">
+          <div class="header">
+            <div>
+              <div class="title">GOLDEN RICH STAY</div>
+              <div class="subtitle">Premium Venue Booking & Hospitality</div>
+            </div>
+            <div style="text-align: right;">
+              <div class="subtitle">Quotation No: ${qtnNo}</div>
+              <div class="subtitle">Date: ${new Date().toLocaleDateString('en-IN')}</div>
+            </div>
+          </div>
+          
+          <div class="details-grid">
+            <div>
+              <div class="details-title">Venue Details</div>
+              <div class="details-value">${property.title}</div>
+              <div class="details-sub">${property.address}, ${property.city}</div>
+            </div>
+            <div style="text-align: right;">
+              <div class="details-title">Guest Details</div>
+              <div class="details-value">${user?.full_name || 'Valued Guest'}</div>
+              <div class="details-sub">${user?.email || 'N/A'}</div>
+            </div>
+          </div>
+
+          <div class="meta-grid">
+            <div class="meta-card">
+              <div class="details-title">Duration</div>
+              <div class="details-value" style="font-size: 13px;">${nights} Day${nights > 1 ? 's' : ''}</div>
+            </div>
+            <div class="meta-card">
+              <div class="details-title">Dates</div>
+              <div class="details-value" style="font-size: 13px;">${checkIn} to ${checkOut}</div>
+            </div>
+            <div class="meta-card">
+              <div class="details-title">Selected Slot</div>
+              <div class="details-value" style="font-size: 13px; text-transform: capitalize;">${selectedSlot || 'N/A'}</div>
+            </div>
+          </div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th colspan="2">Item Description</th>
+                <th style="text-align: right;">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colspan="2">Venue Rent (₹${property.price_per_night?.toLocaleString('en-IN')} × ${nights} days)</td>
+                <td style="text-align: right; font-weight: 800;">₹${((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</td>
+              </tr>
+              ${property.category === 'event_venue' ? `
+              <tr>
+                <td colspan="2">Catering (₹${(foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price)?.toLocaleString('en-IN')} × ${guests} Guests × ${nights} days - ${foodPreference === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'})</td>
+                <td style="text-align: right; font-weight: 800;">₹${((foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) * guests * nights).toLocaleString('en-IN')}</td>
+              </tr>
+              ` : ''}
+              <tr>
+                <td colspan="2">Premium Service Fee (10%)</td>
+                <td style="text-align: right; font-weight: 800;">₹${Math.round(serviceFee).toLocaleString('en-IN')}</td>
+              </tr>
+              <tr>
+                <td colspan="2">Taxes & GST (18%)</td>
+                <td style="text-align: right; font-weight: 800;">₹${Math.round(taxes).toLocaleString('en-IN')}</td>
+              </tr>
+              <tr class="total-row">
+                <td colspan="2" style="font-size: 13px; text-transform: uppercase;">Total Estimated Cost</td>
+                <td style="text-align: right;" class="total-price">₹${Math.round(total).toLocaleString('en-IN')}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="footer-note">
+            Thank you for choosing Golden Rich Stay. Generated dynamically on booking request.
+          </div>
+          
+          <div class="no-print" style="margin-top: 40px; text-align: center;">
+            <button onclick="window.print()" style="padding: 12px 30px; background-color: #b45309; color: white; border: none; border-radius: 8px; font-weight: 800; cursor: pointer; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Print / Save PDF</button>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `GoldenRichStay_Quotation_${qtnNo}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (loading) {
@@ -952,7 +1126,32 @@ const PropertyDetail = () => {
                   {(() => {
                     try {
                       const policies = JSON.parse(property.house_rules);
-                      return Object.entries(policies).map(([key, val]) => {
+                      const groupedPolicies = [];
+                      const processedKeys = new Set();
+
+                      if (policies.timings_morning_start && policies.timings_morning_end) {
+                        groupedPolicies.push(['Morning Slot', `${policies.timings_morning_start} to ${policies.timings_morning_end}`]);
+                        processedKeys.add('timings_morning_start');
+                        processedKeys.add('timings_morning_end');
+                      }
+                      if (policies.timings_afternoon_start && policies.timings_afternoon_end) {
+                        groupedPolicies.push(['Afternoon Slot', `${policies.timings_afternoon_start} to ${policies.timings_afternoon_end}`]);
+                        processedKeys.add('timings_afternoon_start');
+                        processedKeys.add('timings_afternoon_end');
+                      }
+                      if (policies.timings_evening_start && policies.timings_evening_end) {
+                        groupedPolicies.push(['Evening Slot', `${policies.timings_evening_start} to ${policies.timings_evening_end}`]);
+                        processedKeys.add('timings_evening_start');
+                        processedKeys.add('timings_evening_end');
+                      }
+
+                      Object.entries(policies).forEach(([key, val]) => {
+                        if (!processedKeys.has(key)) {
+                          groupedPolicies.push([key, val]);
+                        }
+                      });
+
+                      return groupedPolicies.map(([key, val]) => {
                         if (!val) return null;
                         const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
                         let displayVal = val;
@@ -1388,6 +1587,27 @@ const PropertyDetail = () => {
                       </div>
                     </div>
                   )}
+                  {property.category === 'event_venue' && (
+                    <div className="w-full mt-2 pt-3 border-t border-sand-100 flex flex-col space-y-3">
+                      <label className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest block">Select Timing Slot</label>
+                      <div className="flex flex-col space-y-2">
+                        {availableSlots.map(slot => (
+                          <div 
+                            key={slot.key}
+                            onClick={() => setSelectedSlot(slot.key)}
+                            className={`flex items-center justify-between cursor-pointer hover:bg-sand-50/50 px-3 py-2.5 rounded-xl border-2 transition-all ${selectedSlot === slot.key ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 bg-white'}`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${selectedSlot === slot.key ? 'border-terracotta' : 'border-sand-300'}`}>
+                                {selectedSlot === slot.key && <div className="w-2 h-2 rounded-full bg-terracotta" />}
+                              </div>
+                              <span className="text-xs font-bold text-charcoal">{slot.label}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1486,6 +1706,16 @@ const PropertyDetail = () => {
                 )}
               </button>
 
+              {property.category === 'event_venue' && (
+                <button
+                  onClick={() => setShowQuotationModal(true)}
+                  disabled={!checkIn || !checkOut || nights === 0}
+                  className="w-full mt-3 py-3 border-2 border-charcoal text-charcoal hover:bg-charcoal hover:text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all disabled:opacity-50"
+                >
+                  Get Quotation
+                </button>
+              )}
+
               <div className="mt-6 p-4 bg-charcoal/5 rounded-2xl flex items-center space-x-3">
                  <Shield className="w-5 h-5 text-charcoal shrink-0" />
                  <p className="text-[9px] font-bold text-charcoal-muted uppercase leading-relaxed tracking-wider">
@@ -1555,6 +1785,146 @@ const PropertyDetail = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {showQuotationModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-charcoal/60 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
+          <div className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden border border-sand-200 shadow-elevated animate-in zoom-in-95 duration-300">
+            {/* Header */}
+            <div className="px-8 py-6 border-b border-sand-100 flex justify-between items-center bg-sand-50/50">
+              <div className="flex items-center space-x-3">
+                <Sparkles className="w-5 h-5 text-terracotta" />
+                <h3 className="text-xl font-black text-charcoal tracking-tight">Booking Quotation</h3>
+              </div>
+              <button 
+                onClick={() => setShowQuotationModal(false)}
+                className="w-8 h-8 rounded-full bg-sand-100 flex items-center justify-center hover:bg-sand-200 transition-colors"
+              >
+                <X className="w-5 h-5 text-charcoal" />
+              </button>
+            </div>
+            
+            {/* Content (Printable Area) */}
+            <div className="p-8 space-y-6">
+              {/* Branding Header */}
+              <div className="flex justify-between items-start border-b border-sand-100 pb-6">
+                <div>
+                  <h4 className="text-xl font-black text-charcoal tracking-tight">GOLDEN RICH STAY</h4>
+                  <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider">Premium Venue Booking & Hospitality</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-bold text-charcoal-muted uppercase tracking-wider">Quotation No: QTN-{Math.floor(100000 + Math.random() * 900000)}</p>
+                  <p className="text-xs font-bold text-charcoal-muted uppercase tracking-wider">Date: {new Date().toLocaleDateString('en-IN')}</p>
+                </div>
+              </div>
+              
+              {/* Event details */}
+              <div className="grid grid-cols-2 gap-6 bg-sand-50/80 p-5 rounded-2xl border border-sand-100 text-sm">
+                <div>
+                  <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Venue Details</p>
+                  <p className="font-black text-charcoal">{property.title}</p>
+                  <p className="text-xs text-charcoal-muted font-semibold mt-0.5">{property.address}, {property.city}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Guest Details</p>
+                  <p className="font-black text-charcoal">{user?.full_name || 'Valued Guest'}</p>
+                  <p className="text-xs text-charcoal-muted font-semibold mt-0.5">{user?.email || 'N/A'}</p>
+                </div>
+              </div>
+
+              {/* Slot & Dates */}
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div className="bg-sand-50/50 p-4 rounded-xl border border-sand-100">
+                  <p className="text-[8px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Duration</p>
+                  <p className="font-black text-charcoal">{nights} Day{nights > 1 ? 's' : ''}</p>
+                </div>
+                <div className="bg-sand-50/50 p-4 rounded-xl border border-sand-100">
+                  <p className="text-[8px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Dates</p>
+                  <p className="font-black text-charcoal">{checkIn} to {checkOut}</p>
+                </div>
+                <div className="bg-sand-50/50 p-4 rounded-xl border border-sand-100">
+                  <p className="text-[8px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Selected Slot</p>
+                  <p className="font-black text-charcoal capitalize">{selectedSlot || 'N/A'}</p>
+                </div>
+              </div>
+
+              {/* Pricing Table */}
+              <div className="border border-sand-200 rounded-2xl overflow-hidden text-sm">
+                <div className="bg-sand-50 px-5 py-3 border-b border-sand-200 grid grid-cols-3 font-black text-[9px] text-charcoal-muted uppercase tracking-widest">
+                  <span className="col-span-2">Item Description</span>
+                  <span className="text-right">Amount</span>
+                </div>
+                <div className="divide-y divide-sand-100 px-5 font-semibold text-charcoal">
+                  <div className="py-3 grid grid-cols-3">
+                    <span className="col-span-2">Venue Rent (₹{property.price_per_night?.toLocaleString('en-IN')} × {nights} days)</span>
+                    <span className="text-right font-black">₹{((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</span>
+                  </div>
+                  {property.category === 'event_venue' && (
+                    <div className="py-3 grid grid-cols-3">
+                      <span className="col-span-2">Catering (₹{(foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)).toLocaleString('en-IN')} × {guests} Guests × {nights} days - {foodPreference === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'})</span>
+                      <span className="text-right font-black">₹{(
+                        (foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)) * 
+                        guests * nights
+                      ).toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  <div className="py-3 grid grid-cols-3">
+                    <span className="col-span-2">Premium Service Fee (10%)</span>
+                    <span className="text-right font-black">₹{Math.round(serviceFee).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="py-3 grid grid-cols-3">
+                    <span className="col-span-2">Taxes & GST (18%)</span>
+                    <span className="text-right font-black">₹{Math.round(taxes).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+                <div className="bg-sand-50/80 px-5 py-4 border-t border-sand-200 grid grid-cols-3 font-black">
+                  <span className="col-span-2 text-charcoal uppercase tracking-wider text-xs">Total Estimated Cost</span>
+                  <span className="text-right text-terracotta text-lg">₹{Math.round(total).toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              {/* Payment Type Selection */}
+              <div className="bg-sand-50/40 p-5 rounded-2xl border border-sand-200 space-y-3">
+                <p className="text-[10px] font-black text-charcoal uppercase tracking-widest">Select Payment Mode</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div 
+                    onClick={() => setQuotationPaymentType('advance')}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${quotationPaymentType === 'advance' ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 hover:bg-sand-50/50 bg-white'}`}
+                  >
+                    <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest">Pay 50% Advance</span>
+                    <span className="text-xl font-black text-terracotta mt-2">₹{Math.round(total * 0.5).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div 
+                    onClick={() => setQuotationPaymentType('full')}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${quotationPaymentType === 'full' ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 hover:bg-sand-50/50 bg-white'}`}
+                  >
+                    <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest">Pay Full Amount</span>
+                    <span className="text-xl font-black text-charcoal mt-2">₹{Math.round(total).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="px-8 py-6 border-t border-sand-100 bg-sand-50/50 flex flex-col sm:flex-row gap-3">
+              <button 
+                onClick={handleDownloadQuotation}
+                className="flex-1 py-4 bg-white border-2 border-charcoal text-charcoal font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-charcoal hover:text-white transition-all flex items-center justify-center space-x-2"
+              >
+                <span>Download Quotation</span>
+              </button>
+              <button 
+                onClick={() => {
+                  setShowQuotationModal(false);
+                  handleBookNowWithQuotation();
+                }}
+                className="flex-1 py-4 bg-terracotta text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-terracotta-dark shadow-lg hover:shadow-xl transition-all"
+              >
+                Confirm & Pay ({quotationPaymentType === 'advance' ? '50% Advance' : 'Full'})
+              </button>
+            </div>
           </div>
         </div>
       )}

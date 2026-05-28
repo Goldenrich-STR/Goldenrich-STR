@@ -89,6 +89,8 @@ const BookingConfirmation = () => {
   const isConfirmed = booking?.booking_status === 'confirmed';
   const isExpired = !isConfirmed && remainingMs <= 0 && lockExpiresAt;
 
+  const amountToPay = booking?.payment_type === 'advance' ? (booking.advance_amount || Math.round(booking.total_amount * 0.5)) : booking?.total_amount;
+
   const handleRealRazorpay = () => {
     if (!window.Razorpay) {
       setError('Razorpay SDK failed to load. Please refresh and try again.');
@@ -98,7 +100,7 @@ const BookingConfirmation = () => {
     setError('');
     const options = {
       key: paymentConfig.key_id,
-      amount: Math.round((booking.total_amount || 0) * 100),
+      amount: Math.round((amountToPay || 0) * 100),
       currency: paymentConfig.currency || 'INR',
       name: 'Golden Rich Stay',
       description: property?.title || `Booking ${booking.booking_id}`,
@@ -355,12 +357,38 @@ const BookingConfirmation = () => {
                 <span className="text-sm font-black">-₹{Math.round(booking.discount_amount || 0).toLocaleString('en-IN')}</span>
               </div>
             )}
+            <div className="border-t border-sand-200 pt-4 flex justify-between items-center">
+              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Total Cost</span>
+              <span className="text-sm font-black text-charcoal">₹{Math.round(booking.total_amount || 0).toLocaleString('en-IN')}</span>
+            </div>
+            {booking.payment_type === 'advance' && (
+              <>
+                <div className="flex justify-between items-center text-amber-600">
+                  <span className="text-xs font-bold uppercase tracking-widest">Payment Mode</span>
+                  <span className="text-xs font-black uppercase">50% Advance Payment Selected</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Advance Required</span>
+                  <span className="text-sm font-black text-charcoal">₹{Math.round(booking.advance_amount || 0).toLocaleString('en-IN')}</span>
+                </div>
+              </>
+            )}
             <div className="border-t-2 border-white pt-4 flex justify-between items-center">
-              <span className="text-base font-black text-charcoal tracking-tight uppercase">Total Paid</span>
+              <span className="text-base font-black text-charcoal tracking-tight uppercase">
+                {isConfirmed ? 'Amount Paid' : 'Amount Due Now'}
+              </span>
               <span className="text-2xl font-black text-terracotta" data-testid="confirmation-total">
-                ₹{Math.round(booking.total_amount || 0).toLocaleString('en-IN')}
+                ₹{Math.round(isConfirmed ? (booking.paid_amount || amountToPay) : amountToPay).toLocaleString('en-IN')}
               </span>
             </div>
+            {isConfirmed && booking.payment_type === 'advance' && (booking.total_amount - (booking.paid_amount || amountToPay) > 0) && (
+              <div className="border-t border-dashed border-sand-200 pt-2 flex justify-between items-center text-charcoal-muted">
+                <span className="text-[10px] font-bold uppercase tracking-widest">Remaining Balance (Pay at Property)</span>
+                <span className="text-sm font-black">
+                  ₹{Math.round(booking.total_amount - (booking.paid_amount || amountToPay)).toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -502,7 +530,7 @@ const BookingConfirmation = () => {
                   ) : (
                      <div className="flex items-center justify-center space-x-3">
                         <CreditCard className="w-5 h-5" />
-                        <span className="font-black uppercase tracking-widest">Pay ₹{Math.round(booking.total_amount || 0).toLocaleString('en-IN')}</span>
+                        <span className="font-black uppercase tracking-widest">Pay ₹{Math.round(amountToPay || 0).toLocaleString('en-IN')}</span>
                      </div>
                   )}
                 </button>

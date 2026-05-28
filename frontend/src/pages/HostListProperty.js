@@ -16,6 +16,10 @@ import {
   Sparkles,
   Image as ImageIcon,
   MapPin,
+  Sun,
+  SunDim,
+  Moon,
+  Clock,
 } from 'lucide-react';
 
 const CATEGORY_DATA = {
@@ -148,6 +152,176 @@ const NON_VEG_ITEMS = [
   'Rice/Biryani', 'Assorted Breads/Rotis', 'Desserts'
 ];
 
+const DEFAULT_VEG_ITEMS_OBJ = {
+  'Chaat Counter': '0', 'Welcome Drinks': '0', 'Soups': '0', 'Veg Starter': '0', 'Veg Main Courses': '0', 
+  'Salads': '0', 'Raita': '0', 'Dal': '0', 'Rice/Biryani': '0', 'Assorted Breads/Rotis': '0', 'Desserts': '0'
+};
+
+const DEFAULT_NON_VEG_ITEMS_OBJ = {
+  'Chaat Counter': '0', 'Welcome Drinks': '0', 'Soups': '0', 'Veg Starter': '0', 'Non-Veg Starter': '0', 
+  'Veg Main Courses': '0', 'Salads': '0', 'Non-Veg Main Courses': '0', 'Raita': '0', 'Dal': '0', 
+  'Rice/Biryani': '0', 'Assorted Breads/Rotis': '0', 'Desserts': '0'
+};
+
+const mergePackagesWithDefaults = (loadedPackages) => {
+  const pkgs = [...(loadedPackages || [])];
+  
+  // Veg
+  let vegPkg = pkgs.find(p => p.type === 'veg');
+  if (!vegPkg) {
+    vegPkg = { type: 'veg', items: { ...DEFAULT_VEG_ITEMS_OBJ } };
+    pkgs.push(vegPkg);
+  } else {
+    vegPkg.items = { ...DEFAULT_VEG_ITEMS_OBJ, ...vegPkg.items };
+  }
+
+  // Non Veg
+  let nonVegPkg = pkgs.find(p => p.type === 'non_veg');
+  if (!nonVegPkg) {
+    nonVegPkg = { type: 'non_veg', items: { ...DEFAULT_NON_VEG_ITEMS_OBJ } };
+    pkgs.push(nonVegPkg);
+  } else {
+    nonVegPkg.items = { ...DEFAULT_NON_VEG_ITEMS_OBJ, ...nonVegPkg.items };
+  }
+
+  return pkgs;
+};
+
+const EditableItemName = ({ initialName, onRename }) => {
+  const [name, setName] = useState(initialName);
+
+  useEffect(() => {
+    setName(initialName);
+  }, [initialName]);
+
+  const handleBlur = () => {
+    if (name.trim() && name !== initialName) {
+      onRename(name);
+    } else {
+      setName(initialName);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      value={name}
+      onChange={(e) => setName(e.target.value)}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      className="text-sm font-medium text-charcoal-muted bg-transparent border-none hover:bg-sand-100/50 focus:bg-sand-100/80 focus:ring-0 focus:border-sand-300 rounded px-2 py-1 w-48 transition-colors outline-none"
+    />
+  );
+};
+
+const TimePicker12h = ({ value, onChange }) => {
+  let hour = '';
+  let minute = '';
+  let period = '';
+
+  if (value) {
+    const match12 = value.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (match12) {
+      hour = String(parseInt(match12[1], 10));
+      minute = match12[2];
+      period = match12[3].toUpperCase();
+    } else {
+      const match24 = value.match(/^(\d{1,2}):(\d{2})$/);
+      if (match24) {
+        let h24 = parseInt(match24[1], 10);
+        let p = 'AM';
+        if (h24 >= 12) {
+          p = 'PM';
+          if (h24 > 12) h24 -= 12;
+        }
+        if (h24 === 0) h24 = 12;
+        hour = String(h24);
+        minute = match24[2];
+        period = p;
+      }
+    }
+  }
+
+  const hours = Array.from({ length: 12 }, (_, i) => String(i + 1));
+  const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+  
+  const handleSelectChange = (h, m, p) => {
+    if (!h || !m || !p) {
+      onChange('');
+    } else {
+      const paddedHour = h.padStart(2, '0');
+      onChange(`${paddedHour}:${m} ${p}`);
+    }
+  };
+
+  return (
+    <div className="inline-flex items-center bg-white border border-sand-300 rounded-xl px-2 py-1.5 shadow-sm hover:border-terracotta/50 focus-within:border-terracotta focus-within:ring-1 focus-within:ring-terracotta/20 transition-all duration-200">
+      <Clock className="w-3.5 h-3.5 text-charcoal-light flex-shrink-0 mr-1" />
+      <div className="flex items-center space-x-0.5">
+        <select
+          value={hour}
+          onChange={(e) => handleSelectChange(e.target.value, minute || '00', period || 'AM')}
+          className="appearance-none bg-none bg-transparent border-none text-xs text-charcoal font-bold p-0 focus:ring-0 cursor-pointer outline-none text-center"
+          style={{ 
+            backgroundImage: 'none', 
+            paddingRight: 0, 
+            paddingLeft: 0, 
+            appearance: 'none', 
+            WebkitAppearance: 'none',
+            MozAppearance: 'none',
+            width: '32px'
+          }}
+        >
+          <option value="">--</option>
+          {hours.map(h => <option key={h} value={h}>{h}</option>)}
+        </select>
+        <span className="text-charcoal-light font-bold text-xs select-none">:</span>
+        <select
+          value={minute}
+          onChange={(e) => handleSelectChange(hour || '12', e.target.value, period || 'AM')}
+          className="appearance-none bg-none bg-transparent border-none text-xs text-charcoal font-bold p-0 focus:ring-0 cursor-pointer outline-none text-center"
+          style={{ 
+            backgroundImage: 'none', 
+            paddingRight: 0, 
+            paddingLeft: 0, 
+            appearance: 'none', 
+            WebkitAppearance: 'none',
+            MozAppearance: 'none',
+            width: '32px'
+          }}
+        >
+          <option value="">--</option>
+          {minutes.map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+        <select
+          value={period}
+          onChange={(e) => handleSelectChange(hour || '12', minute || '00', e.target.value)}
+          className="appearance-none bg-none bg-transparent border-none text-xs text-charcoal font-black p-0 focus:ring-0 cursor-pointer outline-none text-center ml-0.5"
+          style={{ 
+            backgroundImage: 'none', 
+            paddingRight: 0, 
+            paddingLeft: 0, 
+            appearance: 'none', 
+            WebkitAppearance: 'none',
+            MozAppearance: 'none',
+            width: '40px'
+          }}
+        >
+          <option value="">--</option>
+          <option value="AM">AM</option>
+          <option value="PM">PM</option>
+        </select>
+      </div>
+    </div>
+  );
+};
+
 const initialForm = {
   title: '',
   description: '',
@@ -176,7 +350,10 @@ const initialForm = {
   veg_price: '',
   non_veg_price: '',
   guest_size: '',
-  packages: [],
+  packages: [
+    { type: 'veg', items: { ...DEFAULT_VEG_ITEMS_OBJ } },
+    { type: 'non_veg', items: { ...DEFAULT_NON_VEG_ITEMS_OBJ } }
+  ],
 };
 
 // Helper to format error details (strings, arrays of validation errors, or objects) into a readable string
@@ -222,7 +399,11 @@ const HostListProperty = () => {
       const savedForm = localStorage.getItem(`list_property_form_${editId}`);
       if (savedForm) {
         try {
-          return JSON.parse(savedForm);
+          const parsed = JSON.parse(savedForm);
+          if (parsed.packages) {
+            parsed.packages = mergePackagesWithDefaults(parsed.packages);
+          }
+          return parsed;
         } catch (e) {
           console.error('Error parsing saved draft form from localStorage', e);
         }
@@ -299,7 +480,7 @@ const HostListProperty = () => {
             veg_price: p.veg_price !== null && p.veg_price !== undefined ? String(p.veg_price) : '',
             non_veg_price: p.non_veg_price !== null && p.non_veg_price !== undefined ? String(p.non_veg_price) : '',
             guest_size: p.guest_size !== null && p.guest_size !== undefined ? String(p.guest_size) : '',
-            packages: p.packages || [],
+            packages: mergePackagesWithDefaults(p.packages || []),
           };
           
           // Only overwrite form with backend data if there was no local form in localStorage
@@ -358,6 +539,37 @@ const HostListProperty = () => {
         ...pkgs[typePkgIndex], 
         items: { ...pkgs[typePkgIndex].items, [item]: value } 
       };
+    }
+    update({ packages: pkgs });
+  };
+
+  const vegItemsList = useMemo(() => {
+    const pkg = (form.packages || []).find(p => p.type === 'veg');
+    return pkg && pkg.items ? Object.keys(pkg.items) : VEG_ITEMS;
+  }, [form.packages]);
+
+  const nonVegItemsList = useMemo(() => {
+    const pkg = (form.packages || []).find(p => p.type === 'non_veg');
+    return pkg && pkg.items ? Object.keys(pkg.items) : NON_VEG_ITEMS;
+  }, [form.packages]);
+
+  const handleRenameItem = (type, oldName, newName) => {
+    if (!newName.trim() || oldName === newName) return;
+    const pkgs = [...(form.packages || [])];
+    let typePkgIndex = pkgs.findIndex((p) => p.type === type);
+    if (typePkgIndex === -1) {
+      pkgs.push({ type, items: { [newName]: '0' } });
+    } else {
+      const oldItems = pkgs[typePkgIndex].items || {};
+      const newItems = {};
+      Object.keys(oldItems).forEach(key => {
+        if (key === oldName) {
+          newItems[newName] = oldItems[oldName];
+        } else {
+          newItems[key] = oldItems[key];
+        }
+      });
+      pkgs[typePkgIndex] = { ...pkgs[typePkgIndex], items: newItems };
     }
     update({ packages: pkgs });
   };
@@ -1084,9 +1296,12 @@ const HostListProperty = () => {
                           </div>
                         </div>
                         <div className="divide-y divide-sand-100">
-                          {VEG_ITEMS.map((item) => (
+                          {vegItemsList.map((item) => (
                             <div key={`veg-${item}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-sand-50/30 transition-colors">
-                              <span className="text-sm font-medium text-charcoal-muted">{item}</span>
+                              <EditableItemName 
+                                initialName={item} 
+                                onRename={(newName) => handleRenameItem('veg', item, newName)} 
+                              />
                               <input 
                                 type="number" 
                                 min="0"
@@ -1114,9 +1329,12 @@ const HostListProperty = () => {
                           </div>
                         </div>
                         <div className="divide-y divide-sand-100">
-                          {NON_VEG_ITEMS.map((item) => (
+                          {nonVegItemsList.map((item) => (
                             <div key={`nonveg-${item}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-sand-50/30 transition-colors">
-                              <span className="text-sm font-medium text-charcoal-muted">{item}</span>
+                              <EditableItemName 
+                                initialName={item} 
+                                onRename={(newName) => handleRenameItem('non_veg', item, newName)} 
+                              />
                               <input 
                                 type="number" 
                                 min="0"
@@ -1212,21 +1430,59 @@ const HostListProperty = () => {
                   
                   <div className="space-y-6">
                     {/* Timings */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="bg-sand-50/50 p-4 rounded-xl border border-sand-200">
-                        <label className="text-xs font-black uppercase tracking-wider text-charcoal block mb-3">Morning Timing</label>
-                        <div className="flex items-center space-x-2">
-                          <input type="time" className="flex-1 bg-white border border-sand-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-terracotta transition-all" value={getVenuePolicies().timings_morning_start || ''} onChange={(e) => handleVenuePolicyChange('timings_morning_start', e.target.value)} />
-                          <span className="text-charcoal-light font-bold text-sm">to</span>
-                          <input type="time" className="flex-1 bg-white border border-sand-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-terracotta transition-all" value={getVenuePolicies().timings_morning_end || ''} onChange={(e) => handleVenuePolicyChange('timings_morning_end', e.target.value)} />
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                      <div className="bg-white p-4 rounded-2xl border border-sand-200 shadow-sm transition-all hover:shadow-md">
+                        <div className="flex items-center space-x-2 mb-3">
+                          <div className="p-1.5 bg-amber-50 rounded-lg text-amber-600">
+                            <Sun className="w-4 h-4" />
+                          </div>
+                          <label className="text-xs font-bold uppercase tracking-wider text-charcoal">Morning Timing</label>
+                        </div>
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-charcoal-light font-bold">Start Time</span>
+                            <TimePicker12h value={getVenuePolicies().timings_morning_start || ''} onChange={(val) => handleVenuePolicyChange('timings_morning_start', val)} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-charcoal-light font-bold">End Time</span>
+                            <TimePicker12h value={getVenuePolicies().timings_morning_end || ''} onChange={(val) => handleVenuePolicyChange('timings_morning_end', val)} />
+                          </div>
                         </div>
                       </div>
-                      <div className="bg-sand-50/50 p-4 rounded-xl border border-sand-200">
-                        <label className="text-xs font-black uppercase tracking-wider text-charcoal block mb-3">Evening Timing</label>
-                        <div className="flex items-center space-x-2">
-                          <input type="time" className="flex-1 bg-white border border-sand-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-terracotta transition-all" value={getVenuePolicies().timings_evening_start || ''} onChange={(e) => handleVenuePolicyChange('timings_evening_start', e.target.value)} />
-                          <span className="text-charcoal-light font-bold text-sm">to</span>
-                          <input type="time" className="flex-1 bg-white border border-sand-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-terracotta transition-all" value={getVenuePolicies().timings_evening_end || ''} onChange={(e) => handleVenuePolicyChange('timings_evening_end', e.target.value)} />
+                      <div className="bg-white p-4 rounded-2xl border border-sand-200 shadow-sm transition-all hover:shadow-md">
+                        <div className="flex items-center space-x-2 mb-3">
+                          <div className="p-1.5 bg-orange-50 rounded-lg text-orange-600">
+                            <SunDim className="w-4 h-4" />
+                          </div>
+                          <label className="text-xs font-bold uppercase tracking-wider text-charcoal">Afternoon Timing</label>
+                        </div>
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-charcoal-light font-bold">Start Time</span>
+                            <TimePicker12h value={getVenuePolicies().timings_afternoon_start || ''} onChange={(val) => handleVenuePolicyChange('timings_afternoon_start', val)} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-charcoal-light font-bold">End Time</span>
+                            <TimePicker12h value={getVenuePolicies().timings_afternoon_end || ''} onChange={(val) => handleVenuePolicyChange('timings_afternoon_end', val)} />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-white p-4 rounded-2xl border border-sand-200 shadow-sm transition-all hover:shadow-md">
+                        <div className="flex items-center space-x-2 mb-3">
+                          <div className="p-1.5 bg-indigo-50 rounded-lg text-indigo-600">
+                            <Moon className="w-4 h-4" />
+                          </div>
+                          <label className="text-xs font-bold uppercase tracking-wider text-charcoal">Evening Timing</label>
+                        </div>
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-charcoal-light font-bold">Start Time</span>
+                            <TimePicker12h value={getVenuePolicies().timings_evening_start || ''} onChange={(val) => handleVenuePolicyChange('timings_evening_start', val)} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-charcoal-light font-bold">End Time</span>
+                            <TimePicker12h value={getVenuePolicies().timings_evening_end || ''} onChange={(val) => handleVenuePolicyChange('timings_evening_end', val)} />
+                          </div>
                         </div>
                       </div>
                     </div>

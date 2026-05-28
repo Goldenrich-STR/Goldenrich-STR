@@ -247,6 +247,8 @@ export const verificationAPI = {
   // Employee (RM)
   listPendingReviews: () => apiClient.get('/employee/verifications/pending'),
 
+  listReviewHistory: () => apiClient.get('/employee/verifications/history'),
+
   getVerificationDetails: (verificationId) =>
     apiClient.get(`/employee/verifications/${verificationId}`),
 

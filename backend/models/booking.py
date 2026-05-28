@@ -41,6 +41,15 @@ class Booking(BaseModel):
     coupon_code: Optional[str] = None
     discount_amount: float = 0.0
     
+    # Slot and Food Preferences (For Event Venues)
+    selected_slot: Optional[str] = None
+    food_preference: Optional[str] = None
+    
+    # Advance Payment Support
+    payment_type: str = "full"  # "full" or "advance"
+    advance_amount: Optional[float] = 0.0
+    paid_amount: float = 0.0
+    
     # Status
     booking_status: BookingStatus = BookingStatus.PENDING
     cancellation_policy: CancellationPolicy = CancellationPolicy.MODERATE
@@ -61,6 +70,9 @@ class BookingCreate(BaseModel):
     check_in_date: date
     check_out_date: date
     number_of_guests: int
+    selected_slot: Optional[str] = None
+    food_preference: Optional[str] = None
+    payment_type: Optional[str] = "full"
 
 class BookingResponse(BaseModel):
     booking_id: str

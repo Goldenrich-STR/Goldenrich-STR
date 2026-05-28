@@ -140,6 +140,55 @@ async def get_pending_verifications(
             detail="Failed to fetch pending verifications"
         )
 
+@router.get("/verifications/history")
+async def get_verification_history(
+    current_user: dict = Depends(require_employee),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get all verifications reviewed by this RM or rejected by admin."""
+    try:
+        # Get all verifications where this RM reviewed it, or where status is rejected
+        cursor = db.property_verifications.find(
+            {
+                "$or": [
+                    {"rm_id": current_user["user_id"]},
+                    {"status": "rejected"},
+                    {"status": "approved"}
+                ]
+            },
+            {"_id": 0}
+        ).sort("updated_at", -1)
+        
+        verifications = await cursor.to_list(length=100)
+        
+        # Enrich with property and broker details
+        for verification in verifications:
+            property_data = await db.properties.find_one(
+                {"property_id": verification["property_id"]},
+                {"_id": 0}
+            )
+            if property_data:
+                verification["property_details"] = property_data
+            
+            broker_data = await db.users.find_one(
+                {"user_id": verification["broker_id"]},
+                {"_id": 0, "full_name": 1, "lg_code": 1, "phone": 1}
+            )
+            if broker_data:
+                verification["broker_details"] = broker_data
+        
+        return {
+            "verifications": verifications,
+            "total": len(verifications)
+        }
+    except Exception as e:
+        logger.error(f"Error fetching verification history: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch verification history"
+        )
+
+
 @router.get("/verifications/{verification_id}")
 async def get_verification_details(
     verification_id: str,

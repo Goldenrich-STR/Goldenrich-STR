@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, getImageUrl } from '../services/api';
+import { NotificationBell } from '../components/NotificationCenter';
 import { 
   Users, Building2, FileCheck, AlertCircle, CheckCircle, 
   XCircle, Download, FileText, BarChart3, LogOut, Eye, ChevronLeft, ChevronRight
@@ -74,6 +75,7 @@ const EmployeeDashboard = () => {
           </div>
           <div className="flex items-center space-x-6">
             <span className="text-charcoal-light">RM: {user?.full_name}</span>
+            <NotificationBell />
             <button
               onClick={() => {
                 navigate('/');
@@ -216,6 +218,8 @@ const VerificationReviewSection = () => {
   const navigate = useNavigate();
   const [verifications, setVerifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [historyVerifications, setHistoryVerifications] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [showRejectReasonModal, setShowRejectReasonModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -224,7 +228,20 @@ const VerificationReviewSection = () => {
 
   useEffect(() => {
     fetchPendingVerifications();
+    fetchHistoryVerifications();
   }, []);
+
+  const fetchHistoryVerifications = async () => {
+    setLoadingHistory(true);
+    try {
+      const response = await verificationAPI.listReviewHistory();
+      setHistoryVerifications(response.data.verifications || []);
+    } catch (error) {
+      console.error('Error fetching verification history:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   const handleOpenDetails = async (verification) => {
     setSelectedVerification(verification);
@@ -255,6 +272,7 @@ const VerificationReviewSection = () => {
       await verificationAPI.rmApprove(verificationId, remarks);
       alert('Verification approved! Forwarded to admin for final approval.');
       fetchPendingVerifications();
+      fetchHistoryVerifications();
       setSelectedVerification(null);
     } catch (error) {
       console.error('Error approving verification:', error);
@@ -276,6 +294,7 @@ const VerificationReviewSection = () => {
       setRejectReason('');
       setSelectedVerification(null);
       fetchPendingVerifications();
+      fetchHistoryVerifications();
     } catch (error) {
       console.error('Error rejecting verification:', error);
       const msg = error?.response?.data?.detail || 'Failed to reject verification';
@@ -418,6 +437,90 @@ const VerificationReviewSection = () => {
           <p className="text-charcoal-light">No verifications pending review</p>
         </div>
       )}
+
+      {/* Verification History Section */}
+      <div className="mt-12 pt-8 border-t border-sand-200">
+        <div className="dashboard-card mb-6">
+          <h3 className="text-2xl font-bold text-charcoal mb-2">Reviewed & Resolved Verifications</h3>
+          <p className="text-charcoal-light">History of all verification reports approved or rejected</p>
+        </div>
+
+        {loadingHistory ? (
+          <div className="text-center py-8">
+            <p className="text-charcoal-light">Loading history...</p>
+          </div>
+        ) : historyVerifications.length > 0 ? (
+          <div className="space-y-4" data-testid="verification-history-list">
+            {historyVerifications.map((verification) => (
+              <div key={verification.verification_id} className="dashboard-card bg-sand-50/50 border border-sand-200" data-testid={`history-${verification.verification_id}`}>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-4 flex-1">
+                    {verification.property_details && (
+                      <img
+                        src={getImageUrl(verification.property_details.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
+                        alt={verification.property_details.title}
+                        className="w-20 h-20 rounded-lg object-cover border border-sand-200"
+                      />
+                    )}
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <h4 className="font-bold text-charcoal text-base">
+                          {verification.property_details?.title || 'Property'}
+                        </h4>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${
+                          verification.status === 'approved' || verification.rm_approved === true ? 'bg-green-100 text-green-800' :
+                          verification.status === 'rejected' || verification.rm_approved === false ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {verification.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-charcoal-light mt-1">
+                        {verification.property_details?.city} | {verification.property_details?.bhk_type}
+                      </p>
+                      <p className="text-xs text-charcoal-muted mt-2">
+                        Broker: {verification.broker_details?.full_name} ({verification.broker_details?.lg_code})
+                      </p>
+                      
+                      {verification.rm_remarks && (
+                        <p className="text-xs text-charcoal-muted italic mt-2">
+                          RM Remarks: "{verification.rm_remarks}"
+                        </p>
+                      )}
+                      {verification.admin_remarks && (
+                        <p className="text-xs text-red-700 italic mt-1 font-semibold">
+                          Admin Remarks: "{verification.admin_remarks}"
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleOpenDetails(verification)}
+                      className="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition font-bold text-xs"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View Details</span>
+                    </button>
+                    <button
+                      onClick={() => handleExportReport(verification.verification_id)}
+                      className="flex items-center space-x-2 px-3 py-1.5 bg-sand-100 text-charcoal-light hover:text-charcoal rounded-lg transition font-bold text-xs"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Export</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="dashboard-card text-center py-8 bg-sand-50/50">
+            <p className="text-charcoal-light">No verification history found</p>
+          </div>
+        )}
+      </div>
 
       {/* Verification Details Modal */}
       {selectedVerification && (
@@ -770,6 +873,9 @@ const BrokersSection = () => {
   const [selectedBrokerForOwners, setSelectedBrokerForOwners] = useState(null);
   const [brokerOwners, setBrokerOwners] = useState([]);
   const [loadingOwners, setLoadingOwners] = useState(false);
+  const [selectedBrokerForProperties, setSelectedBrokerForProperties] = useState(null);
+  const [brokerProperties, setBrokerProperties] = useState([]);
+  const [loadingProperties, setLoadingProperties] = useState(false);
 
   useEffect(() => {
     fetchBrokers();
@@ -797,6 +903,20 @@ const BrokersSection = () => {
       setBrokerOwners([]);
     } finally {
       setLoadingOwners(false);
+    }
+  };
+
+  const handleShowProperties = async (broker) => {
+    setSelectedBrokerForProperties(broker);
+    setLoadingProperties(true);
+    try {
+      const response = await apiClient.get(`/employee/brokers/${broker.user_id}/portfolio`);
+      setBrokerProperties(response.data.properties || []);
+    } catch (error) {
+      console.error('Error fetching broker properties:', error);
+      setBrokerProperties([]);
+    } finally {
+      setLoadingProperties(false);
     }
   };
 
@@ -836,9 +956,13 @@ const BrokersSection = () => {
                         <p className="text-lg font-bold text-terracotta">{broker.stats.owners}</p>
                         <p className="text-xs text-charcoal-light hover:text-terracotta transition-colors">Owners</p>
                       </div>
-                      <div className="text-center p-2 bg-sand-50 rounded">
+                      <div 
+                        onClick={() => handleShowProperties(broker)}
+                        className="text-center p-2 bg-sand-50 rounded hover:bg-sand-100 hover:shadow-sm cursor-pointer transition-all duration-300 border border-transparent hover:border-sage/20"
+                        title="Click to view Broker's Property Portfolio"
+                      >
                         <p className="text-lg font-bold text-sage">{broker.stats.properties}</p>
-                        <p className="text-xs text-charcoal-light">Properties</p>
+                        <p className="text-xs text-charcoal-light hover:text-sage transition-colors">Properties</p>
                       </div>
                       <div className="text-center p-2 bg-sand-50 rounded">
                         <p className="text-lg font-bold text-terracotta">{broker.stats.pending_verifications}</p>
@@ -937,6 +1061,89 @@ const BrokersSection = () => {
               <div className="text-center py-12 bg-sand-50 rounded-2xl border-2 border-dashed border-sand-200">
                 <Users className="w-12 h-12 text-charcoal-light mx-auto mb-3" />
                 <p className="text-charcoal-light font-bold">No Owners assigned to this broker yet.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Broker's Property Portfolio Modal */}
+      {selectedBrokerForProperties && (
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-premium animate-slide-up max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-2xl font-black text-charcoal">Property Portfolio</h3>
+                <p className="text-charcoal-light text-xs font-bold uppercase tracking-widest mt-1">
+                  Properties of Broker: {selectedBrokerForProperties.full_name} ({selectedBrokerForProperties.lg_code || 'N/A'})
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  setSelectedBrokerForProperties(null);
+                  setBrokerProperties([]);
+                }}
+                className="p-2 hover:bg-sand-100 rounded-full transition"
+              >
+                <XCircle className="w-6 h-6 text-charcoal-muted" />
+              </button>
+            </div>
+
+            {loadingProperties ? (
+              <div className="text-center py-12">
+                <p className="text-charcoal-light font-bold">Fetching property portfolio...</p>
+              </div>
+            ) : brokerProperties.length > 0 ? (
+              <div className="space-y-4">
+                {brokerProperties.map((property) => (
+                  <div key={property.property_id} className="p-6 bg-sand-50 rounded-2xl border border-sand-200 hover:border-sage transition-all duration-300">
+                    <div className="flex items-start space-x-4">
+                      <img
+                        src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
+                        alt={property.title}
+                        className="w-24 h-24 rounded-2xl object-cover border border-sand-200 shadow-sm"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <h4 className="font-bold text-charcoal text-lg truncate">{property.title}</h4>
+                          <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                            property.status === 'live' ? 'bg-green-100 text-green-800' :
+                            property.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            property.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            Status: {property.status?.replace('_', ' ') || 'pending'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-charcoal-light font-medium mt-1">{property.city}, {property.state}</p>
+                        <p className="text-xs text-charcoal-muted font-mono mt-1">Property ID: {property.property_id}</p>
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-sand-200">
+                          <div>
+                            <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Category</p>
+                            <p className="text-xs font-bold text-charcoal mt-0.5 capitalize">{property.category || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">BHK Type</p>
+                            <p className="text-xs font-bold text-charcoal mt-0.5 uppercase">{property.bhk_type || 'N/A'}</p>
+                          </div>
+                        </div>
+
+                        {property.status === 'rejected' && property.verification_remarks && (
+                          <div className="mt-3 p-3 bg-red-50 rounded-xl border border-red-100 text-xs text-red-700">
+                            <span className="font-bold">Rejection Reason: </span>
+                            {property.verification_remarks}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 bg-sand-50 rounded-2xl border-2 border-dashed border-sand-200">
+                <Building2 className="w-12 h-12 text-charcoal-light mx-auto mb-3" />
+                <p className="text-charcoal-light font-bold">No properties assigned to this broker yet.</p>
               </div>
             )}
           </div>

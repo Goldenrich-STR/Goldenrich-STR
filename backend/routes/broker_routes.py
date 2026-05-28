@@ -293,7 +293,7 @@ async def get_verification_tasks(
         for verification in verifications:
             property_data = await db.properties.find_one(
                 {"property_id": verification["property_id"]},
-                {"_id": 0, "title": 1, "address": 1, "city": 1, "images": 1}
+                {"_id": 0}
             )
             if property_data:
                 verification["property_details"] = property_data
@@ -347,6 +347,14 @@ async def submit_verification(
                     "status": VerificationStatus.COMPLETED.value,
                     "rm_reviewed": False,
                     "rm_approved": None,
+                    "rm_remarks": None,
+                    "rm_id": None,
+                    "reviewed_at": None,
+                    "admin_reviewed": False,
+                    "admin_approved": False,
+                    "admin_remarks": None,
+                    "admin_id": None,
+                    "admin_reviewed_at": None,
                     "completed_at": datetime.now(timezone.utc),
                     "updated_at": datetime.now(timezone.utc)
                 }}

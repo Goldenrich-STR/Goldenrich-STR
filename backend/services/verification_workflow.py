@@ -54,6 +54,25 @@ async def assign_broker(db: AsyncIOMotorDatabase, property_id: str, city: str) -
                             status=VerificationStatus.PENDING,
                         )
                         await db.property_verifications.insert_one(verification.model_dump())
+                    else:
+                        await db.property_verifications.update_one(
+                            {"property_id": property_id},
+                            {"$set": {
+                                "status": VerificationStatus.PENDING.value,
+                                "rm_reviewed": False,
+                                "rm_approved": False,
+                                "rm_remarks": None,
+                                "rm_id": None,
+                                "reviewed_at": None,
+                                "admin_reviewed": False,
+                                "admin_approved": False,
+                                "admin_remarks": None,
+                                "admin_id": None,
+                                "admin_reviewed_at": None,
+                                "completed_at": None,
+                                "updated_at": datetime.now(timezone.utc)
+                            }}
+                        )
                     logger.info(f"Host's registered broker {chosen_broker['user_id']} assigned directly to property {property_id}")
                     return chosen_broker["user_id"]
 
@@ -93,6 +112,26 @@ async def assign_broker(db: AsyncIOMotorDatabase, property_id: str, city: str) -
                 status=VerificationStatus.PENDING,
             )
             await db.property_verifications.insert_one(verification.model_dump())
+        elif existing:
+            await db.property_verifications.update_one(
+                {"property_id": property_id},
+                {"$set": {
+                    "broker_id": chosen["user_id"],
+                    "status": VerificationStatus.PENDING.value,
+                    "rm_reviewed": False,
+                    "rm_approved": False,
+                    "rm_remarks": None,
+                    "rm_id": None,
+                    "reviewed_at": None,
+                    "admin_reviewed": False,
+                    "admin_approved": False,
+                    "admin_remarks": None,
+                    "admin_id": None,
+                    "admin_reviewed_at": None,
+                    "completed_at": None,
+                    "updated_at": datetime.now(timezone.utc)
+                }}
+            )
 
         logger.info(f"Broker {chosen['user_id']} assigned to property {property_id} (load={min(loads)})")
         return chosen["user_id"]
@@ -268,7 +307,7 @@ async def on_rm_decision(db: AsyncIOMotorDatabase, verification: dict, approved:
 
 
 async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, approved: bool, reason: str = "") -> None:
-    """Admin approved/rejected — notify host with the final outcome."""
+    """Admin approved/rejected — notify host, broker, and RM with the outcome."""
     if approved:
         await _notify(
             db,
@@ -288,3 +327,54 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
             f"You can update and resubmit.",
             {"property_id": property_data["property_id"], "reason": reason},
         )
+
+        # Notify broker and RM about the rejection
+        try:
+            property_id = property_data["property_id"]
+            verification = await db.property_verifications.find_one({"property_id": property_id})
+            
+            # 1. Notify Broker
+            broker_id = property_data.get("broker_id")
+            if verification and verification.get("broker_id"):
+                broker_id = verification["broker_id"]
+                
+            if broker_id:
+                await _notify(
+                    db,
+                    broker_id,
+                    NotificationType.PROPERTY_REJECTED,
+                    "Assigned Property Rejected by Admin",
+                    f"The property '{property_data.get('title')}' you verified was rejected by the admin. Rejection Reason: {reason or 'No reason provided'}",
+                    {"property_id": property_id, "reason": reason},
+                    channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL]
+                )
+                
+            # 2. Notify RM
+            rm_ids = []
+            if verification and verification.get("rm_id"):
+                rm_ids.append(verification["rm_id"])
+            elif broker_id:
+                # Fallback: check if the broker has an assigned RM
+                broker_user = await db.users.find_one({"user_id": broker_id})
+                if broker_user and broker_user.get("rm_id"):
+                    rm_ids.append(broker_user["rm_id"])
+            
+            # Fallback fallback: notify all active employees/RMs so they are aware of the decision
+            if not rm_ids:
+                active_rms = await db.users.find(
+                    {"role": "employee", "is_active": True}, {"_id": 0, "user_id": 1}
+                ).to_list(length=50)
+                rm_ids = [r["user_id"] for r in active_rms]
+                
+            for target_rm_id in rm_ids:
+                await _notify(
+                    db,
+                    target_rm_id,
+                    NotificationType.PROPERTY_REJECTED,
+                    "Assigned Property Rejected by Admin",
+                    f"The property '{property_data.get('title')}' reviewed by you was rejected by the admin. Rejection Reason: {reason or 'No reason provided'}",
+                    {"property_id": property_id, "reason": reason},
+                    channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL]
+                )
+        except Exception as notify_err:
+            logger.warning(f"Failed to notify broker/RM about admin rejection: {notify_err}")

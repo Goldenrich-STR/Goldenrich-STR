@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, getImageUrl } from '../services/api';
 import { createPortal } from 'react-dom';
 import { 
-  Users, Building2, FileCheck, Target, DollarSign, 
+  Users, Building2, FileCheck, Target, IndianRupee, 
   AlertCircle, Plus, CheckCircle, XCircle, Clock, 
   MapPin, Camera, LogOut, Bell, ChevronRight, ChevronLeft
 } from 'lucide-react';
@@ -54,7 +54,7 @@ const BrokerDashboard = () => {
     { 
       label: 'Total Commission', 
       value: `₹${(stats.commission.total / 100).toLocaleString('en-IN')}`, 
-      icon: DollarSign, 
+      icon: IndianRupee, 
       color: 'sage',
       subtext: `₹${(stats.commission.paid / 100).toLocaleString('en-IN')} Paid`
     },
@@ -129,7 +129,7 @@ const BrokerDashboard = () => {
             { id: 'properties', label: 'PROPERTIES', icon: Building2 },
             { id: 'verifications', label: 'VERIFICATIONS', icon: FileCheck },
             { id: 'leads', label: 'LEADS', icon: Target },
-            { id: 'commissions', label: 'COMMISSIONS', icon: DollarSign },
+            { id: 'commissions', label: 'COMMISSIONS', icon: IndianRupee },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -900,6 +900,75 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Property Details & Images */}
+          <div className="border border-sand-200 rounded-2xl p-4 bg-sand-50/50">
+            <h4 className="font-bold text-charcoal mb-3">Property Details</h4>
+            
+            {/* Property Images Gallery */}
+            {task.property_details?.images && task.property_details.images.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Property Images</p>
+                <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-sand-300">
+                  {task.property_details.images.map((img, idx) => (
+                    <img 
+                      key={idx}
+                      src={getImageUrl(img)} 
+                      alt={`Property Image ${idx + 1}`} 
+                      className="w-32 h-24 object-cover rounded-xl border border-sand-200 shadow-sm flex-shrink-0"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Listing Details Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+              <div>
+                <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Category</span>
+                <span className="font-bold text-charcoal text-xs capitalize">{task.property_details?.category || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-[9px] font-bold text-charcoal-muted uppercase block">BHK Type</span>
+                <span className="font-bold text-charcoal text-xs uppercase">{task.property_details?.bhk_type || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Price per Night</span>
+                <span className="font-bold text-terracotta text-xs">₹{task.property_details?.price_per_night || 0}</span>
+              </div>
+              <div>
+                <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Location</span>
+                <span className="font-bold text-charcoal text-xs">{task.property_details?.city || 'N/A'}, {task.property_details?.state || ''}</span>
+              </div>
+            </div>
+
+            {task.property_details?.address && (
+              <div className="mb-3">
+                <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Full Address</span>
+                <span className="text-xs font-semibold text-charcoal-light">{task.property_details.address}</span>
+              </div>
+            )}
+
+            {task.property_details?.description && (
+              <div className="mb-3">
+                <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Description</span>
+                <p className="text-xs text-charcoal-light leading-relaxed whitespace-pre-wrap">{task.property_details.description}</p>
+              </div>
+            )}
+
+            {task.property_details?.amenities && task.property_details.amenities.length > 0 && (
+              <div>
+                <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Amenities</span>
+                <div className="flex flex-wrap gap-1">
+                  {task.property_details.amenities.map((amenity, idx) => (
+                    <span key={idx} className="px-2 py-0.5 bg-sand-200/50 text-charcoal text-[9px] font-semibold rounded">
+                      {amenity}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Checklist */}
           <div>
             <h4 className="font-bold text-charcoal mb-3">Inspection Checklist</h4>
@@ -1485,7 +1554,7 @@ const CommissionsSection = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium">
             <div className="w-12 h-12 bg-sage/10 rounded-2xl flex items-center justify-center mb-6">
-               <DollarSign className="w-6 h-6 text-sage-dark" />
+               <IndianRupee className="w-6 h-6 text-sage-dark" />
             </div>
             <p className="text-3xl font-black text-charcoal tracking-tighter mb-1">₹{(summary.total_earned / 100).toLocaleString('en-IN')}</p>
             <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Total Revenue</p>
@@ -1546,7 +1615,7 @@ const CommissionsSection = () => {
         </div>
       ) : (
         <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-sand-300">
-          <DollarSign className="w-16 h-16 text-sand-200 mx-auto mb-6" />
+          <IndianRupee className="w-16 h-16 text-sand-200 mx-auto mb-6" />
           <h4 className="text-xl font-black text-charcoal mb-2">No Commissions Yet</h4>
           <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Earnings will appear here as bookings are finalized.</p>
         </div>
@@ -1792,11 +1861,14 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                 {venueRules ? (
                   <div className="space-y-4 text-xs text-charcoal-muted font-semibold">
                     {/* Timings */}
-                    {(venueRules.timings_morning_start || venueRules.timings_evening_start) && (
+                    {(venueRules.timings_morning_start || venueRules.timings_afternoon_start || venueRules.timings_evening_start) && (
                       <div className="space-y-1">
                         <span className="text-[10px] font-black text-charcoal uppercase tracking-wider block">Operating Hours</span>
                         {venueRules.timings_morning_start && (
                           <p>Morning Slot: {venueRules.timings_morning_start} to {venueRules.timings_morning_end}</p>
+                        )}
+                        {venueRules.timings_afternoon_start && (
+                          <p>Afternoon Slot: {venueRules.timings_afternoon_start} to {venueRules.timings_afternoon_end}</p>
                         )}
                         {venueRules.timings_evening_start && (
                           <p>Evening Slot: {venueRules.timings_evening_start} to {venueRules.timings_evening_end}</p>
