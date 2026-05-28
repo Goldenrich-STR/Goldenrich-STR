@@ -99,6 +99,7 @@ Serve `frontend/build` through Nginx.
 server {
     listen 80;
     server_name your-domain.com;
+    client_max_body_size 20M;
 
     root /var/www/goldenrichstay/frontend/build;
     index index.html;

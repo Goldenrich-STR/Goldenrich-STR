@@ -20,10 +20,73 @@ export { apiClient };
 
 export const getImageUrl = (url) => {
   if (!url) return null;
-  if (url.startsWith('http')) return url;
+  if (url.startsWith('http')) {
+    try {
+      const parsed = new URL(url);
+      const isUploadUrl = parsed.pathname.startsWith('/api/uploads/');
+      const isLocalUploadHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(parsed.hostname);
+      if (isUploadUrl && (isLocalUploadHost || !BACKEND_URL)) {
+        return parsed.pathname;
+      }
+    } catch (e) {
+      return url;
+    }
+    return url;
+  }
   if (url.startsWith('/api/')) return `${BACKEND_URL}${url}`;
   if (url.startsWith('uploads/')) return `${BACKEND_URL}/api/${url}`;
   return url;
+};
+
+const compressImageForUpload = (file) => {
+  if (!file || !file.type?.startsWith('image/') || file.type === 'image/gif') {
+    return Promise.resolve(file);
+  }
+
+  const maxBytes = 2 * 1024 * 1024;
+  const maxDimension = 1800;
+  if (file.size <= maxBytes) {
+    return Promise.resolve(file);
+  }
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onerror = () => resolve(file);
+    reader.onload = () => {
+      const image = new Image();
+      image.onerror = () => resolve(file);
+      image.onload = () => {
+        const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+        const width = Math.max(1, Math.round(image.width * scale));
+        const height = Math.max(1, Math.round(image.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(image, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            const safeName = file.name.replace(/\.[^.]+$/, '.jpg');
+            resolve(new File([blob], safeName, { type: 'image/jpeg', lastModified: Date.now() }));
+          },
+          'image/jpeg',
+          0.82
+        );
+      };
+      image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
 };
 
 
@@ -143,8 +206,9 @@ export const subscriptionAPI = {
 // Upload API
 export const uploadAPI = {
   uploadImage: async (file) => {
+    const uploadFile = await compressImageForUpload(file);
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', uploadFile);
     const res = await apiClient.post('/upload/image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
