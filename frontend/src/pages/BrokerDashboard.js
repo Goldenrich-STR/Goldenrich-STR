@@ -1793,6 +1793,48 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                   </div>
                 </div>
               )}
+
+              {/* Package Details for Event Venues */}
+              {property.category === 'event_venue' && property.packages && property.packages.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider">
+                    Food Package Items
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {property.packages.map((pkg, idx) => {
+                      const isVeg = pkg.type === 'veg';
+                      const entries = Object.entries(pkg.items || {}).filter(([k, v]) => Number(v) > 0);
+                      if (entries.length === 0) return null;
+                      
+                      return (
+                        <div key={idx} className="bg-white rounded-2xl border border-sand-200 overflow-hidden shadow-sm">
+                          <div className={`flex items-center px-5 py-4 ${isVeg ? 'bg-green-50/50' : 'bg-red-50/50'} border-b ${isVeg ? 'border-green-100' : 'border-red-100'}`}>
+                            <div className={`w-3 h-3 ${isVeg ? 'bg-green-500' : 'bg-red-500'} ${isVeg ? 'rounded-sm' : 'rounded-full'} mr-3 border ${isVeg ? 'border-green-700' : 'border-red-700'}`}></div>
+                            <h3 className={`text-sm font-black uppercase tracking-widest ${isVeg ? 'text-green-900' : 'text-red-900'}`}>
+                              {isVeg ? 'Vegetarian Package' : 'Non-Vegetarian Package'}
+                            </h3>
+                          </div>
+                          <div className="p-5">
+                            <ul className="space-y-3">
+                              {entries.map(([item, count]) => (
+                                <li key={item} className="flex justify-between items-center text-sm">
+                                  <span className="text-charcoal-muted font-medium flex items-center">
+                                    <CheckCircle className="w-4 h-4 text-emerald-500 mr-2 flex-shrink-0" />
+                                    {item}
+                                  </span>
+                                  <span className="text-xs font-black bg-sand-100 text-charcoal px-2 py-0.5 rounded-full">
+                                    x{count}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Right Column - Pricing and Rules */}
@@ -1905,29 +1947,6 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                   </p>
                 )}
               </div>
-
-              {/* Package Details for Event Venues */}
-              {property.category === 'event_venue' && property.packages && property.packages.length > 0 && (
-                <div className="bg-sand-50 p-6 rounded-3xl border border-sand-200 space-y-4">
-                  <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider">
-                    Food Package Items
-                  </h4>
-                  {property.packages.map((pkg, idx) => (
-                    <div key={idx} className="space-y-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-charcoal block capitalize">
-                        {pkg.type === 'veg' ? '🟢 Vegetarian Package' : '🔴 Non-Vegetarian Package'}
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {Object.entries(pkg.items || {}).map(([item, qty], itemIdx) => (
-                          <span key={itemIdx} className="px-2 py-1 bg-white text-charcoal border border-sand-200 rounded-lg text-xs font-bold">
-                            {item}: {qty}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </div>
