@@ -86,7 +86,7 @@ For production, run it with `systemd` or another process manager.
 
 ```bash
 cd frontend
-npm install
+npm install --legacy-peer-deps
 npm run build
 ```
 
