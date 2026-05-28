@@ -226,6 +226,18 @@ const VerificationReviewSection = () => {
     fetchPendingVerifications();
   }, []);
 
+  const handleOpenDetails = async (verification) => {
+    setSelectedVerification(verification);
+    try {
+      const response = await verificationAPI.getVerificationDetails(verification.verification_id);
+      if (response.data) {
+        setSelectedVerification(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching verification details:', error);
+    }
+  };
+
   const fetchPendingVerifications = async () => {
     try {
       const response = await verificationAPI.listPendingReviews();
@@ -350,7 +362,7 @@ const VerificationReviewSection = () => {
                   
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => setSelectedVerification(verification)}
+                      onClick={() => handleOpenDetails(verification)}
                       className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold"
                       data-testid={`view-details-${verification.verification_id}`}
                     >
@@ -458,6 +470,132 @@ const VerificationReviewSection = () => {
                   </p>
                 </div>
               </div>
+
+              {/* Property Details Info Section */}
+              {selectedVerification.property_details && (
+                <div className="p-6 bg-sand-50/50 rounded-2xl border border-sand-200/60 space-y-4">
+                  <h4 className="text-xs font-black text-charcoal uppercase tracking-widest border-b border-sand-200 pb-2">
+                    Property Specifications & Listing Info
+                  </h4>
+                  
+                  {/* Property Images Gallery */}
+                  {selectedVerification.property_details.images && selectedVerification.property_details.images.length > 0 && (
+                    <div className="w-full">
+                      <div className="flex space-x-3 overflow-x-auto py-1 scrollbar-thin scrollbar-thumb-sand-300">
+                        {selectedVerification.property_details.images.map((img, i) => {
+                          const pureUrl = img.split('#')[0];
+                          return (
+                            <img
+                              key={i}
+                              src={getImageUrl(pureUrl)}
+                              alt={`Property View ${i + 1}`}
+                              className="w-48 h-32 object-cover rounded-2xl border border-sand-200/80 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 cursor-pointer shrink-0"
+                              onClick={() => window.open(getImageUrl(pureUrl), '_blank')}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Property Type</p>
+                      <p className="font-bold text-charcoal capitalize">
+                        {selectedVerification.property_details.property_type || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Category</p>
+                      <p className="font-bold text-charcoal capitalize">
+                        {selectedVerification.property_details.category || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">BHK / Config</p>
+                      <p className="font-bold text-charcoal capitalize">
+                        {selectedVerification.property_details.bhk_type || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Area (Sqft)</p>
+                      <p className="font-bold text-charcoal">
+                        {selectedVerification.property_details.area_sqft ? `${selectedVerification.property_details.area_sqft} sqft` : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Price / Pricing Cycle</p>
+                      <p className="font-bold text-terracotta">
+                        {selectedVerification.property_details.price_per_night !== undefined 
+                          ? `₹${selectedVerification.property_details.price_per_night} / ${selectedVerification.property_details.pricing_cycle || 'night'}` 
+                          : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Location Status</p>
+                      <p className="font-bold text-charcoal truncate" title={`${selectedVerification.property_details.address}, ${selectedVerification.property_details.city}`}>
+                        {selectedVerification.property_details.city || 'N/A'}
+                      </p>
+                    </div>
+                    {selectedVerification.property_details.category === 'event_venue' && (
+                      <>
+                        <div>
+                          <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Veg Plate Price</p>
+                          <p className="font-bold text-charcoal">
+                            {selectedVerification.property_details.veg_price ? `₹${selectedVerification.property_details.veg_price}` : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Non-Veg Plate Price</p>
+                          <p className="font-bold text-charcoal">
+                            {selectedVerification.property_details.non_veg_price ? `₹${selectedVerification.property_details.non_veg_price}` : 'N/A'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Max Guest Size</p>
+                          <p className="font-bold text-charcoal">
+                            {selectedVerification.property_details.guest_size || 'N/A'}
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Detailed Description */}
+                  {selectedVerification.property_details.description && (
+                    <div className="pt-2">
+                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider mb-1">Description</p>
+                      <p className="text-xs text-charcoal-light leading-relaxed">
+                        {selectedVerification.property_details.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Full Address */}
+                  {selectedVerification.property_details.address && (
+                    <div className="pt-2">
+                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider mb-1">Full Address</p>
+                      <p className="text-xs text-charcoal-light leading-relaxed">
+                        {selectedVerification.property_details.address}, {selectedVerification.property_details.city}, {selectedVerification.property_details.state} - {selectedVerification.property_details.pin_code}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Amenities */}
+                  {selectedVerification.property_details.amenities && selectedVerification.property_details.amenities.length > 0 && (
+                    <div className="pt-2">
+                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider mb-2">Amenities</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedVerification.property_details.amenities.map((amenity, i) => (
+                          <span key={i} className="px-2 py-1 bg-white border border-sand-200 rounded-lg text-[10px] font-semibold text-charcoal capitalize">
+                            {amenity.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Checklist */}
               <div>
