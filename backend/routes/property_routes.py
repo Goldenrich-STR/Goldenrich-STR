@@ -372,10 +372,10 @@ async def _delete_property_with_reason(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error deleting property: {str(e)}")
+        logger.exception("Error deleting property %s", property_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete property"
+            detail=f"Failed to delete property: {str(e)}"
         )
 
 
