@@ -541,8 +541,15 @@ class PGAdapter:
 
     async def ensure_table(self, table_name):
         async with self.pool.acquire() as conn:
-            await conn.execute(f"CREATE TABLE IF NOT EXISTS {table_name} (id SERIAL PRIMARY KEY, data JSONB)")
-            await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_{table_name}_data ON {table_name} USING GIN (data)")
+            try:
+                await conn.execute(f"CREATE TABLE IF NOT EXISTS {table_name} (id SERIAL PRIMARY KEY, data JSONB)")
+            except (asyncpg.DuplicateTableError, asyncpg.DuplicateObjectError, asyncpg.UniqueViolationError):
+                logger.info("PGAdapter: table %s was created concurrently", table_name)
+
+            try:
+                await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_{table_name}_data ON {table_name} USING GIN (data)")
+            except (asyncpg.DuplicateTableError, asyncpg.DuplicateObjectError, asyncpg.UniqueViolationError):
+                logger.info("PGAdapter: index for %s was created concurrently", table_name)
 
     async def close(self):
         if self.pool:
