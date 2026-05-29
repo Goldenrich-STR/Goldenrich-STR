@@ -955,6 +955,13 @@ const HostListProperty = () => {
     };
   };
 
+  const canUseRazorpayTestCheckout = () => (
+    paymentConfig?.is_mock &&
+    paymentConfig?.key_id?.startsWith('rzp_test_') &&
+    paymentConfig.key_id !== 'rzp_test_demo_key' &&
+    !!window.Razorpay
+  );
+
   const submitListing = async () => {
     setSubmitting(true);
     setError('');
@@ -979,29 +986,60 @@ const HostListProperty = () => {
         const subOrder = subRes.data;
 
         if (paymentConfig?.is_mock) {
-          // Show Mock Modal for subscription
           const plan = plans.find(p => p.plan_id === form.subscription_plan_id);
-          await new Promise((resolve, reject) => {
-            setMockPayment({
-              isOpen: true,
-              amount: plan?.price_monthly || 0,
-              title: `${plan?.plan_name || 'Subscription'} Plan`,
-              onConfirm: async () => {
-                try {
-                  await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
-                  setMockPayment(prev => ({ ...prev, isOpen: false }));
-                  resolve();
-                } catch (err) {
-                  setMockPayment(prev => ({ ...prev, isOpen: false }));
-                  reject(err);
-                }
-              },
-              onCancel: () => {
-                setMockPayment(prev => ({ ...prev, isOpen: false }));
-                reject(new Error('Payment cancelled'));
-              }
+          if (canUseRazorpayTestCheckout()) {
+            await new Promise((resolve, reject) => {
+              const rzp = new window.Razorpay({
+                key: paymentConfig.key_id,
+                amount: subOrder.amount,
+                currency: subOrder.currency,
+                name: 'Golden Rich Stay',
+                description: `Subscription: ${subOrder.plan_name || plan?.plan_name || 'Plan'}`,
+                prefill: {
+                  name: user?.full_name,
+                  email: user?.email,
+                  contact: user?.phone,
+                },
+                theme: { color: '#C05C4F' },
+                handler: async () => {
+                  try {
+                    await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
+                    resolve();
+                  } catch (err) {
+                    reject(err);
+                  }
+                },
+                modal: { ondismiss: () => reject(new Error('Subscription payment cancelled')) },
+              });
+              rzp.on('payment.failed', (resp) => {
+                reject(new Error(resp?.error?.description || 'Subscription payment failed'));
+              });
+              rzp.open();
             });
-          });
+          } else {
+            // Show internal mock modal when no Razorpay test key is configured.
+            await new Promise((resolve, reject) => {
+              setMockPayment({
+                isOpen: true,
+                amount: plan?.price_monthly || 0,
+                title: `${plan?.plan_name || 'Subscription'} Plan`,
+                onConfirm: async () => {
+                  try {
+                    await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
+                    setMockPayment(prev => ({ ...prev, isOpen: false }));
+                    resolve();
+                  } catch (err) {
+                    setMockPayment(prev => ({ ...prev, isOpen: false }));
+                    reject(err);
+                  }
+                },
+                onCancel: () => {
+                  setMockPayment(prev => ({ ...prev, isOpen: false }));
+                  reject(new Error('Payment cancelled'));
+                }
+              });
+            });
+          }
         } else {
           await new Promise((resolve, reject) => {
             if (!window.Razorpay) return reject(new Error('Razorpay SDK not loaded'));

@@ -90,6 +90,10 @@ const BookingConfirmation = () => {
   const isExpired = !isConfirmed && remainingMs <= 0 && lockExpiresAt;
 
   const amountToPay = booking?.payment_type === 'advance' ? (booking.advance_amount || Math.round(booking.total_amount * 0.5)) : booking?.total_amount;
+  const canUseRazorpayTestCheckout =
+    paymentConfig?.is_mock &&
+    paymentConfig?.key_id?.startsWith('rzp_test_') &&
+    paymentConfig.key_id !== 'rzp_test_demo_key';
 
   const handleRealRazorpay = () => {
     if (!window.Razorpay) {
@@ -176,10 +180,54 @@ const BookingConfirmation = () => {
     }
   };
 
+  const handleRazorpayTestCheckout = () => {
+    if (!window.Razorpay) {
+      setError('Razorpay SDK failed to load. Please refresh and try again.');
+      return;
+    }
+    setPaying(true);
+    setError('');
+    const rzp = new window.Razorpay({
+      key: paymentConfig.key_id,
+      amount: Math.round((amountToPay || 0) * 100),
+      currency: paymentConfig.currency || 'INR',
+      name: 'Golden Rich Stay',
+      description: property?.title || `Booking ${booking.booking_id}`,
+      prefill: {
+        name: user?.full_name || '',
+        email: user?.email || '',
+        contact: user?.phone || '',
+      },
+      theme: { color: '#C05C4F' },
+      handler: async () => {
+        try {
+          await bookingAPI.mockPay(booking.booking_id);
+          await loadAll();
+        } catch (e) {
+          setError(e.response?.data?.detail || 'Payment completed but booking confirmation failed');
+        } finally {
+          setPaying(false);
+        }
+      },
+      modal: {
+        ondismiss: () => setPaying(false),
+      },
+    });
+    rzp.on('payment.failed', (resp) => {
+      setError(resp?.error?.description || 'Payment failed. Please try again.');
+      setPaying(false);
+    });
+    rzp.open();
+  };
+
   const handlePay = () => {
     if (!paymentConfig) return;
     if (paymentConfig.is_mock) {
-      handleMockPay();
+      if (canUseRazorpayTestCheckout) {
+        handleRazorpayTestCheckout();
+      } else {
+        handleMockPay();
+      }
     } else {
       handleRealRazorpay();
     }
@@ -480,8 +528,12 @@ const BookingConfirmation = () => {
                      <AlertCircle className="w-4 h-4 text-amber-500" />
                   </div>
                   <p className="text-[10px] font-medium text-white/60 leading-relaxed">
-                    <strong className="text-white block mb-1">Development Environment:</strong> 
-                    Real payment gateway is disabled. Click below to simulate a successful charge using our secure mock protocol.
+                    <strong className="text-white block mb-1">
+                      {canUseRazorpayTestCheckout ? 'Razorpay Test Checkout:' : 'Development Environment:'}
+                    </strong>
+                    {canUseRazorpayTestCheckout
+                      ? 'A Razorpay test popup will open. After successful test payment, booking confirmation uses the mock settlement path for UAT.'
+                      : 'Real payment gateway is disabled. Click below to simulate a successful charge using our secure mock protocol.'}
                   </p>
                 </div>
                 <button
@@ -497,8 +549,10 @@ const BookingConfirmation = () => {
                      </div>
                   ) : (
                      <div className="flex items-center justify-center space-x-3">
-                        <Sparkles className="w-5 h-5" />
-                        <span className="font-black uppercase tracking-widest">Execute Demo Payment</span>
+                        {canUseRazorpayTestCheckout ? <CreditCard className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
+                        <span className="font-black uppercase tracking-widest">
+                          {canUseRazorpayTestCheckout ? `Pay ₹${Math.round(amountToPay || 0).toLocaleString('en-IN')}` : 'Execute Demo Payment'}
+                        </span>
                      </div>
                   )}
                 </button>
