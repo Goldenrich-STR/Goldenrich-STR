@@ -385,7 +385,7 @@ const HostDashboard = () => {
                {[
                  { label: 'CALENDAR', path: '/host/calendar' },
                  { label: 'PAYOUTS', path: '/host/payouts' },
-                 { label: 'BOOKINGS', path: '/guest/bookings' }
+                 { label: 'BOOKINGS', path: '/host/bookings' }
                ].map((item) => (
                  <button
                    key={item.label}

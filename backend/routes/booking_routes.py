@@ -394,6 +394,24 @@ async def get_guest_bookings(
             detail="Failed to fetch bookings"
         )
 
+async def _attach_guest_info(db: AsyncIOMotorDatabase, bookings: list) -> list:
+    """Embed minimal guest info (full_name, email, phone) into each booking."""
+    if not bookings:
+        return bookings
+    guest_ids = list({b.get("guest_id") for b in bookings if b.get("guest_id")})
+    if not guest_ids:
+        return bookings
+    cursor = db.users.find(
+        {"user_id": {"$in": guest_ids}},
+        {"_id": 0, "user_id": 1, "full_name": 1, "email": 1, "phone": 1},
+    )
+    guests = await cursor.to_list(length=len(guest_ids))
+    by_id = {g["user_id"]: g for g in guests}
+    for b in bookings:
+        b["guest"] = by_id.get(b.get("guest_id"))
+    return bookings
+
+
 @router.get("/host/my-bookings")
 async def get_host_bookings(
     current_user: dict = Depends(get_current_user),
@@ -407,6 +425,7 @@ async def get_host_bookings(
         )
         bookings = await cursor.to_list(length=200)
         bookings = await _attach_property_info(db, bookings)
+        bookings = await _attach_guest_info(db, bookings)
 
         return {"bookings": bookings, "total": len(bookings)}
 
