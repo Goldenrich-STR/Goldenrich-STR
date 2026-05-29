@@ -12,10 +12,35 @@ from services.booking_notifications import (
 )
 from datetime import datetime, timedelta, timezone
 import asyncio
+import json
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
+
+
+def _event_policy_percent(property_dict: dict, key: str, default: float) -> float:
+    if property_dict.get("category") != "event_venue":
+        return default
+
+    try:
+        policies = json.loads(property_dict.get("house_rules") or "{}")
+    except (TypeError, json.JSONDecodeError):
+        policies = {}
+
+    raw = policies.get(key)
+    if raw is None or raw == "":
+        return default
+
+    try:
+        percent = float(str(raw).replace("%", "").strip())
+    except ValueError:
+        return default
+
+    if percent < 0 or percent > 100:
+        return default
+
+    return percent
 
 
 class ConfirmPaymentRequest(BaseModel):
@@ -126,15 +151,17 @@ async def create_booking(
             plate_price = property_dict.get("non_veg_price", 0) if food_pref == "non_veg" else property_dict.get("veg_price", 0)
             base_amount += plate_price * booking_data.number_of_guests * num_nights
             
+        tax_rate = _event_policy_percent(property_dict, "taxes", 18.0)
+        advance_rate = _event_policy_percent(property_dict, "advance", 50.0)
         service_fee = base_amount * 0.10  # 10% service fee
-        taxes = base_amount * 0.18  # 18% GST
+        taxes = base_amount * (tax_rate / 100)
         total_amount = base_amount + service_fee + taxes
         
         # Determine payment order amount
         order_amount = total_amount
         advance_amount = 0.0
         if booking_data.payment_type == "advance":
-            advance_amount = round(total_amount * 0.50, 2)  # 50% advance
+            advance_amount = round(total_amount * (advance_rate / 100), 2)
             order_amount = advance_amount
         
         # Create booking with soft lock

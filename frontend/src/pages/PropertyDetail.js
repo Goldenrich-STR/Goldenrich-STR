@@ -145,6 +145,12 @@ const formatVenuePolicyValue = (key, val) => {
   return val;
 };
 
+const readPercent = (value, fallback) => {
+  const parsed = Number(String(value ?? '').replace('%', '').trim());
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) return fallback;
+  return parsed;
+};
+
 const TRANSLATIONS = {
   en: {
     back: 'Back',
@@ -452,6 +458,7 @@ const PropertyDetail = () => {
   const [booking, setBooking] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
+  const [bookingPaymentType, setBookingPaymentType] = useState('full');
   const [showQuotationModal, setShowQuotationModal] = useState(false);
   const [quotationPaymentType, setQuotationPaymentType] = useState('full');
 
@@ -611,9 +618,17 @@ const PropertyDetail = () => {
     return amt;
   }, [property, nights, guests, foodPreference]);
 
+  const taxPercent = property?.category === 'event_venue'
+    ? readPercent(parsedPolicies?.taxes, 18)
+    : 18;
+  const advancePercent = property?.category === 'event_venue'
+    ? readPercent(parsedPolicies?.advance, 50)
+    : 50;
   const serviceFee = baseAmount * 0.1;
-  const taxes = baseAmount * 0.18;
+  const taxes = baseAmount * (taxPercent / 100);
   const total = baseAmount + serviceFee + taxes;
+  const advanceAmount = Math.round(total * (advancePercent / 100));
+  const amountDueNow = bookingPaymentType === 'advance' ? advanceAmount : Math.round(total);
 
   const goPrev = () => {
     if (calMonth === 1) {
@@ -1691,12 +1706,34 @@ const PropertyDetail = () => {
                     <span className="text-sm font-black text-charcoal">₹{Math.round(serviceFee).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">{t('taxesGST')}</span>
+                    <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">Taxes & GST ({taxPercent}%)</span>
                     <span className="text-sm font-black text-charcoal">₹{Math.round(taxes).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="border-t-2 border-sand-100 pt-4 flex justify-between items-center">
                     <span className="text-base font-black text-charcoal uppercase tracking-tighter">{t('totalAmount')}</span>
                     <span className="text-2xl font-black text-terracotta" data-testid="total-amount">₹{Math.round(total).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setBookingPaymentType('advance')}
+                      className={`text-left p-3 rounded-2xl border-2 transition-all ${bookingPaymentType === 'advance' ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 bg-white hover:border-sand-300'}`}
+                    >
+                      <span className="block text-[9px] font-black uppercase tracking-widest text-charcoal-muted">Pay {advancePercent}% Advance</span>
+                      <span className="block text-lg font-black text-terracotta mt-1">Rs.{advanceAmount.toLocaleString('en-IN')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBookingPaymentType('full')}
+                      className={`text-left p-3 rounded-2xl border-2 transition-all ${bookingPaymentType === 'full' ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 bg-white hover:border-sand-300'}`}
+                    >
+                      <span className="block text-[9px] font-black uppercase tracking-widest text-charcoal-muted">Pay Full Amount</span>
+                      <span className="block text-lg font-black text-charcoal mt-1">Rs.{Math.round(total).toLocaleString('en-IN')}</span>
+                    </button>
+                  </div>
+                  <div className="bg-sand-50 border border-sand-200 rounded-2xl px-4 py-3 flex justify-between items-center">
+                    <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Pay Now</span>
+                    <span className="text-xl font-black text-terracotta">Rs.{amountDueNow.toLocaleString('en-IN')}</span>
                   </div>
                   
                   {availableCoupons.length > 0 && (
@@ -1721,7 +1758,7 @@ const PropertyDetail = () => {
               )}
 
               <button
-                onClick={handleBookNow}
+                onClick={() => handleBookNow(null, bookingPaymentType)}
                 disabled={booking || !checkIn || !checkOut || nights === 0}
                 className="btn-premium w-full py-4 text-sm shadow-premium disabled:opacity-50 disabled:translate-y-0 transition-all"
               >
@@ -1731,7 +1768,7 @@ const PropertyDetail = () => {
                       <span>{t('holdingSpot')}</span>
                    </div>
                 ) : (
-                   property.instant_booking ? t('reserveNow') : t('requestBooking')
+                   `${property.instant_booking ? t('reserveNow') : t('requestBooking')} - Rs.${amountDueNow.toLocaleString('en-IN')}`
                 )}
               </button>
 
@@ -1904,7 +1941,7 @@ const PropertyDetail = () => {
                     <span className="text-right font-black">₹{Math.round(serviceFee).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="py-3 grid grid-cols-3">
-                    <span className="col-span-2">Taxes & GST (18%)</span>
+                    <span className="col-span-2">Taxes & GST ({taxPercent}%)</span>
                     <span className="text-right font-black">₹{Math.round(taxes).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
@@ -1922,8 +1959,8 @@ const PropertyDetail = () => {
                     onClick={() => setQuotationPaymentType('advance')}
                     className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${quotationPaymentType === 'advance' ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 hover:bg-sand-50/50 bg-white'}`}
                   >
-                    <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest">Pay 50% Advance</span>
-                    <span className="text-xl font-black text-terracotta mt-2">₹{Math.round(total * 0.5).toLocaleString('en-IN')}</span>
+                    <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest">Pay {advancePercent}% Advance</span>
+                    <span className="text-xl font-black text-terracotta mt-2">Rs.{advanceAmount.toLocaleString('en-IN')}</span>
                   </div>
                   <div 
                     onClick={() => setQuotationPaymentType('full')}
@@ -1951,7 +1988,7 @@ const PropertyDetail = () => {
                 }}
                 className="flex-1 py-4 bg-terracotta text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-terracotta-dark shadow-lg hover:shadow-xl transition-all"
               >
-                Confirm & Pay ({quotationPaymentType === 'advance' ? '50% Advance' : 'Full'})
+                Confirm & Pay ({quotationPaymentType === 'advance' ? `${advancePercent}% Advance` : 'Full'})
               </button>
             </div>
           </div>

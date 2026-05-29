@@ -90,6 +90,9 @@ const BookingConfirmation = () => {
   const isExpired = !isConfirmed && remainingMs <= 0 && lockExpiresAt;
 
   const amountToPay = booking?.payment_type === 'advance' ? (booking.advance_amount || Math.round(booking.total_amount * 0.5)) : booking?.total_amount;
+  const advancePercent = booking?.payment_type === 'advance' && booking?.total_amount
+    ? Math.round(((booking.advance_amount || amountToPay || 0) / booking.total_amount) * 100)
+    : 50;
   const canUseRazorpayTestCheckout =
     paymentConfig?.is_mock &&
     paymentConfig?.key_id?.startsWith('rzp_test_') &&
@@ -413,7 +416,7 @@ const BookingConfirmation = () => {
               <>
                 <div className="flex justify-between items-center text-amber-600">
                   <span className="text-xs font-bold uppercase tracking-widest">Payment Mode</span>
-                  <span className="text-xs font-black uppercase">50% Advance Payment Selected</span>
+                  <span className="text-xs font-black uppercase">{advancePercent}% Advance Payment Selected</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Advance Required</span>
