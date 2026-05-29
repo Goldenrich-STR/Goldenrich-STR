@@ -79,6 +79,7 @@ class Property(BaseModel):
     
     # Property details
     area_sqft: int
+    max_guests: int = 6
     
     # Pricing
     price_per_night: Optional[float] = None
@@ -142,6 +143,7 @@ class PropertyCreate(BaseModel):
     google_maps_url: Optional[str] = None
     nearby_places: List[str] = []
     area_sqft: int
+    max_guests: int = 6
     price_per_night: Optional[float] = None
     pricing_cycle: Optional[str] = "day"
     price_per_week: Optional[float] = None
@@ -174,6 +176,7 @@ class PropertyUpdate(BaseModel):
     google_maps_url: Optional[str] = None
     nearby_places: Optional[List[str]] = None
     area_sqft: Optional[int] = None
+    max_guests: Optional[int] = None
     price_per_night: Optional[float] = None
     pricing_cycle: Optional[str] = None
     price_per_week: Optional[float] = None

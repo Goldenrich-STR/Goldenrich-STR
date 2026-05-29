@@ -482,6 +482,7 @@ const PropertyDetail = () => {
   }, [images]);
 
   const allCategories = Object.keys(groupedImages);
+  const maxGuests = Math.max(1, Number(property?.max_guests) || 6);
 
   const fetchReviews = async () => {
     try {
@@ -691,6 +692,14 @@ const PropertyDetail = () => {
         property?.category === 'commercial' || property?.category === 'event_venue'
           ? `Minimum booking duration is ${property?.minimum_stay_days} day(s)`
           : `Minimum stay is ${property?.minimum_stay_days} night(s)`
+      );
+      return;
+    }
+    if (property?.category !== 'event_venue' && Number(guests) > maxGuests) {
+      setBookingError(
+        property?.category === 'commercial'
+          ? `Maximum staff allowed is ${maxGuests}`
+          : `Maximum guests allowed is ${maxGuests}`
       );
       return;
     }
@@ -1526,8 +1535,12 @@ const PropertyDetail = () => {
                           <input
                             type="number"
                             min="1"
+                            max={maxGuests}
                             value={guests}
-                            onChange={(e) => setGuests(e.target.value)}
+                            onChange={(e) => {
+                              const nextGuests = Math.max(1, Math.min(maxGuests, Number(e.target.value) || 1));
+                              setGuests(nextGuests);
+                            }}
                             className="w-16 text-xs font-black text-charcoal bg-transparent outline-none"
                           />
                         )}
@@ -1536,8 +1549,8 @@ const PropertyDetail = () => {
                     {property.category !== 'event_venue' && (
                       <span className="text-[10px] font-black text-terracotta uppercase tracking-widest shrink-0 ml-4">
                         {property.category === 'commercial' 
-                          ? `MAX ${property.max_guests || 6} STAFF`
-                          : t('maxGuests').replace('{count}', property.max_guests || 6)}
+                          ? `MAX ${maxGuests} STAFF`
+                          : t('maxGuests').replace('{count}', maxGuests)}
                       </span>
                     )}
                   </div>

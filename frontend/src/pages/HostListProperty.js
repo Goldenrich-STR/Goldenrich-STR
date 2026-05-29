@@ -337,6 +337,7 @@ const initialForm = {
   google_maps_url: '',
   nearby_places: [],
   area_sqft: '',
+  max_guests: 6,
   price_per_night: '',
   pricing_cycle: 'day',
   minimum_stay_days: 1,
@@ -467,6 +468,7 @@ const HostListProperty = () => {
             google_maps_url: p.google_maps_url || '',
             nearby_places: p.nearby_places || [],
             area_sqft: p.area_sqft !== null && p.area_sqft !== undefined ? String(p.area_sqft) : '',
+            max_guests: p.max_guests !== null && p.max_guests !== undefined ? String(p.max_guests) : 6,
             price_per_night: p.price_per_night !== null && p.price_per_night !== undefined ? String(p.price_per_night) : '',
             pricing_cycle: p.pricing_cycle || 'day',
             minimum_stay_days: p.minimum_stay_days || 1,
@@ -777,6 +779,8 @@ const HostListProperty = () => {
       if (!form.title || form.title.length < 8) return 'Title must be at least 8 characters';
       if (!form.description || form.description.length < 30) return 'Description must be at least 30 characters';
       if (!form.area_sqft || Number(form.area_sqft) < 50) return 'Area must be at least 50 sq.ft';
+      if (!form.max_guests || Number(form.max_guests) < 1) return 'Maximum guests must be at least 1';
+      if (Number(form.max_guests) > 1000) return 'Maximum guests cannot exceed 1000';
     }
     if (k === 'location') {
       if (!form.address) return 'Address is required';
@@ -933,6 +937,7 @@ const HostListProperty = () => {
       google_maps_url: form.google_maps_url || null,
       nearby_places: form.nearby_places || [],
       area_sqft: Number(form.area_sqft),
+      max_guests: Number(form.max_guests),
       price_per_night: Number(form.price_per_night),
       pricing_cycle: form.pricing_cycle || 'day',
       minimum_stay_days: Number(form.minimum_stay_days),
@@ -1181,7 +1186,17 @@ const HostListProperty = () => {
                   />
                 )}
               </div>
-              <Input type="number" label="Area (sq.ft)" testid="basics-area" value={form.area_sqft} onChange={(v) => update({ area_sqft: v })} placeholder="950" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input type="number" label="Area (sq.ft)" testid="basics-area" value={form.area_sqft} onChange={(v) => update({ area_sqft: v })} placeholder="950" />
+                <Input
+                  type="number"
+                  label={form.category === 'commercial' ? 'Maximum staff' : form.category === 'event_venue' ? 'Maximum guest capacity' : 'Maximum guests'}
+                  testid="basics-max-guests"
+                  value={form.max_guests}
+                  onChange={(v) => update({ max_guests: v })}
+                  placeholder={form.category === 'event_venue' ? '200' : '6'}
+                />
+              </div>
             </div>
           )}
 
