@@ -84,7 +84,7 @@ const AMENITY_LABELS = {
   security: 'Professional Event Security',
 };
 
-const getBhkTypeLabel = (category, bhkType) => {
+const getBhkTypeLabel = (category, bhkType, maxGuests) => {
   if (!bhkType) return 'N/A';
   if (category === 'commercial') {
     switch (bhkType.toLowerCase()) {
@@ -97,11 +97,13 @@ const getBhkTypeLabel = (category, bhkType) => {
     }
   }
   if (category === 'event_venue') {
+    const configuredGuests = Number(maxGuests);
+    const guestsText = configuredGuests > 0 ? `up to ${configuredGuests} guests` : null;
     switch (bhkType.toLowerCase()) {
-      case 'small_event': return 'Mini (up to 50 guests)';
-      case 'medium_event': return 'Standard (50-200 guests)';
-      case 'large_event': return 'Grand (200-500 guests)';
-      case 'mega_event': return 'Mega (500+ guests)';
+      case 'small_event': return `Mini (${guestsText || 'up to 50 guests'})`;
+      case 'medium_event': return `Standard (${guestsText || '50-200 guests'})`;
+      case 'large_event': return `Grand (${guestsText || '200-500 guests'})`;
+      case 'mega_event': return `Mega (${guestsText || '500+ guests'})`;
       default: return bhkType.toUpperCase();
     }
   }
@@ -127,6 +129,20 @@ const WEEKDAYS_LOCALIZED = {
   en: ['SUN','MON','TUE','WED','THU','FRI','SAT'],
   hi: ['रवि','सोम','मंगल','बुध','गुरु','शुक्र','शनि'],
   mr: ['रवि','सोम','मंगळ','बुध','गुरु','शुक्र','शनि']
+};
+
+const formatVenuePolicyValue = (key, val) => {
+  if (typeof val === 'boolean') return val ? 'Yes' : 'No';
+  if (val === null || val === undefined) return '';
+
+  const value = String(val).trim();
+  if (!value) return '';
+
+  if (['taxes', 'advance'].includes(key)) {
+    return value.endsWith('%') ? value : `${value}%`;
+  }
+
+  return val;
 };
 
 const TRANSLATIONS = {
@@ -1044,7 +1060,7 @@ const PropertyDetail = () => {
                {[
                  { label: t('type'), value: `${property.category === 'event_venue' ? 'EVENT VENUE' : property.category?.toUpperCase() || 'RESIDENTIAL'} · ${property.property_type?.toUpperCase()}` },
                  { label: t('area'), value: `${property.area_sqft} SQFT` },
-                 { label: t('config'), value: getBhkTypeLabel(property.category, property.bhk_type) },
+                 { label: t('config'), value: getBhkTypeLabel(property.category, property.bhk_type, property.max_guests) },
                  { label: t('status'), value: t('verified').toUpperCase() }
                ].map((stat) => (
                  <div key={stat.label} className="bg-sand-100/50 rounded-2xl p-4 border border-sand-200">
@@ -1163,8 +1179,8 @@ const PropertyDetail = () => {
                       return groupedPolicies.map(([key, val]) => {
                         if (!val) return null;
                         const label = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                        let displayVal = val;
-                        if (typeof val === 'boolean') displayVal = val ? 'Yes' : 'No';
+                        const displayVal = formatVenuePolicyValue(key, val);
+                        if (!displayVal) return null;
                         return (
                           <div key={key} className="bg-white p-4 rounded-2xl border border-sand-200 flex items-center justify-between">
                             <span className="text-sm font-bold text-charcoal-muted truncate mr-2">{label}</span>
