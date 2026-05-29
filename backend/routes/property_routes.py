@@ -305,14 +305,12 @@ async def update_property(
         )
 
 
-@router.delete("/{property_id}")
-async def delete_property(
+async def _delete_property_with_reason(
     property_id: str,
     payload: DeletePropertyRequest,
-    current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    current_user: dict,
+    db: AsyncIOMotorDatabase,
 ):
-    """Delete a host property after collecting a reason and checking active bookings."""
     try:
         reason = (payload.reason or "").strip()
         if len(reason) < 10:
@@ -379,6 +377,28 @@ async def delete_property(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete property"
         )
+
+
+@router.delete("/{property_id}")
+async def delete_property(
+    property_id: str,
+    payload: DeletePropertyRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Delete a host property after collecting a reason and checking active bookings."""
+    return await _delete_property_with_reason(property_id, payload, current_user, db)
+
+
+@router.post("/{property_id}/delete")
+async def delete_property_post_fallback(
+    property_id: str,
+    payload: DeletePropertyRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """POST fallback for deployments/proxies that do not forward DELETE with a body."""
+    return await _delete_property_with_reason(property_id, payload, current_user, db)
 
 @router.post("/{property_id}/submit-verification")
 async def submit_for_verification(

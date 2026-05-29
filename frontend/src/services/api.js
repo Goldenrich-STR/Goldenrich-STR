@@ -147,7 +147,7 @@ export const propertyAPI = {
     apiClient.patch(`/properties/${propertyId}`, updates),
 
   deleteProperty: (propertyId, reason) =>
-    apiClient.delete(`/properties/${propertyId}`, { data: { reason } }),
+    apiClient.post(`/properties/${propertyId}/delete`, { reason }),
   
   getHostProperties: () =>
     apiClient.get('/properties/host/my-properties'),
