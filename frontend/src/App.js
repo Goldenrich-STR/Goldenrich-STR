@@ -18,6 +18,7 @@ import AdminAccount from "./pages/AdminAccount";
 import BrokerDashboard from "./pages/BrokerDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import HostPayouts from "./pages/HostPayouts";
+import HostBookings from "./pages/HostBookings";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -132,6 +133,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={["host"]}>
                   <HostPayouts />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/host/bookings"
+              element={
+                <ProtectedRoute allowedRoles={["host"]}>
+                  <HostBookings />
                 </ProtectedRoute>
               }
             />
