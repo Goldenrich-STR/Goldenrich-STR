@@ -15,6 +15,10 @@ async def get_db():
     from server import db_instance
     return db_instance
 
+
+class DeletePropertyRequest(BaseModel):
+    reason: str
+
 @router.post("/", response_model=Property)
 async def create_property(
     property_data: PropertyCreate,
@@ -300,6 +304,82 @@ async def update_property(
             detail="Failed to update property"
         )
 
+
+@router.delete("/{property_id}")
+async def delete_property(
+    property_id: str,
+    payload: DeletePropertyRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Delete a host property after collecting a reason and checking active bookings."""
+    try:
+        reason = (payload.reason or "").strip()
+        if len(reason) < 10:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Please provide a deletion reason with at least 10 characters"
+            )
+
+        property_dict = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+        if not property_dict:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Property not found"
+            )
+
+        if property_dict["owner_id"] != current_user["user_id"] and current_user["role"] != UserRole.ADMIN.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to delete this property"
+            )
+
+        active_booking_count = await db.bookings.count_documents({
+            "property_id": property_id,
+            "booking_status": {"$in": ["soft_lock", "confirmed"]},
+        })
+        if active_booking_count:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot delete property with active or confirmed bookings. Cancel/complete those bookings first."
+            )
+
+        deleted_at = datetime.now(timezone.utc)
+        await db.deleted_properties.insert_one({
+            "property_id": property_id,
+            "owner_id": property_dict.get("owner_id"),
+            "title": property_dict.get("title"),
+            "city": property_dict.get("city"),
+            "status": property_dict.get("status"),
+            "reason": reason,
+            "deleted_by": current_user["user_id"],
+            "deleted_by_role": current_user["role"],
+            "deleted_at": deleted_at,
+            "property_snapshot": property_dict,
+        })
+
+        await db.properties.delete_one({"property_id": property_id})
+        await db.blocked_dates.delete_many({"property_id": property_id})
+        await db.external_calendars.delete_many({"property_id": property_id})
+        await db.property_verifications.delete_many({"property_id": property_id})
+
+        logger.info(
+            "Property deleted: %s by %s reason=%s",
+            property_id,
+            current_user["user_id"],
+            reason,
+        )
+        return {"message": "Property deleted successfully", "property_id": property_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting property: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete property"
+        )
+
 @router.post("/{property_id}/submit-verification")
 async def submit_for_verification(
     property_id: str,
@@ -460,6 +540,7 @@ async def get_nearby_places(
 class ReviewSubmit(BaseModel):
     rating: float
     comment: Optional[str] = None
+
 
 @router.post("/{property_id}/reviews")
 async def submit_review(

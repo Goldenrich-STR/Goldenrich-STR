@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, getImageUrl, accountAPI, uploadAPI } from '../services/api';
-import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { NotificationBell } from '../components/NotificationCenter';
 
 const HostDashboard = () => {
@@ -17,6 +17,7 @@ const HostDashboard = () => {
   const [paymentConfig, setPaymentConfig] = useState(null);
   const [payouts, setPayouts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, property: null, reason: '', deleting: false });
   const itemsPerPage = 5;
 
   // Verification & Agreement Modal States
@@ -315,6 +316,36 @@ const HostDashboard = () => {
     }
   };
 
+  const openDeleteModal = (property) => {
+    setDeleteModal({ isOpen: true, property, reason: '', deleting: false });
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteModal.deleting) return;
+    setDeleteModal({ isOpen: false, property: null, reason: '', deleting: false });
+  };
+
+  const handleDeleteProperty = async () => {
+    const property = deleteModal.property;
+    const reason = deleteModal.reason.trim();
+    if (!property) return;
+    if (reason.length < 10) {
+      alert('Please enter a deletion reason with at least 10 characters.');
+      return;
+    }
+
+    setDeleteModal(prev => ({ ...prev, deleting: true }));
+    try {
+      await propertyAPI.deleteProperty(property.property_id, reason);
+      setProperties(prev => prev.filter(p => p.property_id !== property.property_id));
+      setDeleteModal({ isOpen: false, property: null, reason: '', deleting: false });
+      alert('Property deleted successfully.');
+    } catch (error) {
+      alert('Delete failed: ' + (error.response?.data?.detail || error.message));
+      setDeleteModal(prev => ({ ...prev, deleting: false }));
+    }
+  };
+
   const totalEarningsPaise = payouts
     .filter(p => p.status === 'paid')
     .reduce((sum, p) => sum + (p.net_amount || 0), 0);
@@ -543,6 +574,14 @@ const HostDashboard = () => {
                         Manage
                       </button>
                     </div>
+                    <button
+                      onClick={() => openDeleteModal(property)}
+                      className="mt-3 w-full py-3 rounded-xl border-2 border-red-100 bg-red-50/60 text-red-600 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 transition-all flex items-center justify-center gap-2"
+                      data-testid={`property-delete-${property.property_id}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete Property
+                    </button>
                   </div>
                 ))}
               </div>
@@ -583,6 +622,56 @@ const HostDashboard = () => {
             </div>
           )}
         </div>
+
+        {deleteModal.isOpen && (
+          <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[110] flex items-center justify-center p-6">
+            <div className="bg-white rounded-[2rem] p-8 max-w-lg w-full shadow-2xl animate-scale-up border border-red-100">
+              <div className="flex items-start gap-4 mb-6">
+                <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-charcoal tracking-tight mb-1">Delete Property</h3>
+                  <p className="text-xs text-charcoal-muted font-bold leading-relaxed">
+                    This will permanently remove <span className="text-charcoal">{deleteModal.property?.title}</span> from your listings. A reason is required for audit records.
+                  </p>
+                </div>
+              </div>
+
+              <label className="block text-[10px] font-black uppercase tracking-widest text-charcoal-muted mb-2">
+                Reason for deletion
+              </label>
+              <textarea
+                value={deleteModal.reason}
+                onChange={(e) => setDeleteModal(prev => ({ ...prev, reason: e.target.value }))}
+                rows={4}
+                placeholder="Example: Duplicate listing, property no longer available, incorrect details..."
+                className="w-full rounded-2xl border-2 border-sand-200 bg-sand-50 px-4 py-3 text-sm font-semibold text-charcoal outline-none focus:border-terracotta transition-colors resize-none"
+                disabled={deleteModal.deleting}
+              />
+              <p className="mt-2 text-[10px] font-bold text-charcoal-muted">
+                Minimum 10 characters. Properties with active or confirmed bookings cannot be deleted.
+              </p>
+
+              <div className="flex flex-col sm:flex-row gap-3 mt-8">
+                <button
+                  onClick={closeDeleteModal}
+                  disabled={deleteModal.deleting}
+                  className="flex-1 py-4 rounded-2xl border-2 border-sand-200 text-charcoal text-[10px] font-black uppercase tracking-widest hover:border-charcoal transition-all disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteProperty}
+                  disabled={deleteModal.deleting || deleteModal.reason.trim().length < 10}
+                  className="flex-1 py-4 rounded-2xl bg-red-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleteModal.deleting ? 'Deleting...' : 'Delete Property'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Purchase Subscription Modal */}
         {showPurchaseModal && (
