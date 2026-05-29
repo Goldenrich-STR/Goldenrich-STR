@@ -341,7 +341,10 @@ const HostDashboard = () => {
       setDeleteModal({ isOpen: false, property: null, reason: '', deleting: false });
       alert('Property deleted successfully.');
     } catch (error) {
-      alert('Delete failed: ' + (error.response?.data?.detail || error.message));
+      const method = error.config?.method?.toUpperCase();
+      const url = error.config?.url;
+      const detail = error.response?.data?.detail || error.message;
+      alert(`Delete failed: ${detail}${method && url ? `\n${method} ${url}` : ''}`);
       setDeleteModal(prev => ({ ...prev, deleting: false }));
     }
   };
