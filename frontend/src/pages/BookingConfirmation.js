@@ -598,11 +598,11 @@ const BookingConfirmation = () => {
 
         <div className="flex flex-col sm:flex-row gap-4 animate-fade-in" style={{ animationDelay: '600ms' }}>
           <button
-            onClick={() => navigate('/guest/browse')}
+            onClick={() => navigate(isConfirmed ? `/property/${booking?.property_id}` : '/guest/browse')}
             className="flex-1 px-6 py-4 rounded-2xl border-2 border-sand-200 text-sm font-black text-charcoal uppercase tracking-widest hover:border-sand-400 transition-all text-center"
             data-testid="back-to-search-btn"
           >
-            Back to Search
+            {isConfirmed ? 'Back to Property details' : 'Back to Search'}
           </button>
           {isConfirmed && (
             <button

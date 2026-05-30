@@ -424,6 +424,7 @@ const HostListProperty = () => {
   const [success, setSuccess] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
 
   useEffect(() => {
     if (editPropertyId) {
@@ -920,6 +921,30 @@ const HostListProperty = () => {
     update({ images: form.images.filter((_, i) => i !== idx) });
   };
 
+  const handleGenerateAIDescription = async () => {
+    setGeneratingDescription(true);
+    setError('');
+    try {
+      const payload = {
+        title: form.title,
+        category: form.category,
+        property_type: form.property_type,
+        bhk_type: form.bhk_type,
+        city: form.city,
+        amenities: form.amenities,
+        area_sqft: form.area_sqft ? Number(form.area_sqft) : null,
+        max_guests: form.max_guests ? Number(form.max_guests) : null,
+      };
+
+      const res = await propertyAPI.generateDescription(payload);
+      update({ description: res.data.description });
+    } catch (err) {
+      setError(formatError(err, 'Failed to generate AI description'));
+    } finally {
+      setGeneratingDescription(false);
+    }
+  };
+
   /* Helper to build payload */
   const buildPropertyPayload = () => {
     return {
@@ -1191,6 +1216,22 @@ const HostListProperty = () => {
               <h2 className="text-xl font-bold text-charcoal mb-2">Tell us about your place</h2>
               <Input label="Title" testid="basics-title" value={form.title} onChange={(v) => update({ title: v })} placeholder="Cozy 2BHK with a sunset view" />
               <Textarea label="Description" testid="basics-description" value={form.description} onChange={(v) => update({ description: v })} placeholder="Describe your space, neighbourhood, what makes it special…" rows={5} />
+              <div className="flex justify-end mt-1">
+                <button
+                  type="button"
+                  onClick={handleGenerateAIDescription}
+                  disabled={generatingDescription}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-terracotta/10 hover:bg-terracotta/20 text-terracotta rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                  data-testid="generate-ai-description"
+                >
+                  {generatingDescription ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  <span>{generatingDescription ? "Generating Description..." : "Generate with AI"}</span>
+                </button>
+              </div>
               <div className={`grid grid-cols-1 ${form.category === 'event_venue' ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-4`}>
                 <Select 
                   label="Category" 

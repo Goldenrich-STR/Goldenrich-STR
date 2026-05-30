@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import apiClient, { verificationAPI, subscriptionAPI, uploadAPI, getImageUrl, bookingAPI, cmsAPI } from '../services/api';
+import apiClient, { verificationAPI, subscriptionAPI, uploadAPI, getImageUrl, bookingAPI, cmsAPI, adminAPI } from '../services/api';
 import { 
   Users, Building2, Calendar, IndianRupee, CheckCircle, 
   X, XCircle, Clock, TrendingUp, BarChart3, LogOut, Plus, Trash, Zap,
@@ -9,6 +9,7 @@ import {
   Check, ListTodo, Heart, FileText, Sparkles, UploadCloud
 } from 'lucide-react';
 import CouponManagement from '../components/admin/CouponManagement';
+import SearchLogsManagement from '../components/admin/SearchLogsManagement';
 
 const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', required = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -348,6 +349,7 @@ const AdminDashboard = () => {
             { id: 'subscriptions', label: 'Subscriptions', icon: Zap },
             { id: 'cms', label: 'CMS', icon: TrendingUp },
             { id: 'coupons', label: 'Coupons', icon: Tag },
+            { id: 'search-logs', label: 'Search Logs', icon: FileText },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -493,6 +495,13 @@ const AdminDashboard = () => {
         {activeTab === 'coupons' && (
           <div data-testid="coupons-section" className="animate-fade-in">
             <CouponManagement />
+          </div>
+        )}
+
+        {/* Search Logs Tab */}
+        {activeTab === 'search-logs' && (
+          <div data-testid="search-logs-section" className="animate-fade-in">
+            <SearchLogsManagement />
           </div>
         )}
       </div>

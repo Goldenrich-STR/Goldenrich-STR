@@ -796,3 +796,43 @@ async def get_all_bookings(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch bookings"
         )
+
+
+@router.get("/search-logs")
+async def get_search_logs(
+    city: Optional[str] = None,
+    has_results: Optional[bool] = None,
+    limit: int = 50,
+    skip: int = 0,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get search logs from landing page (Admin only)."""
+    try:
+        query = {}
+        if city:
+            query["city"] = {"$regex": city, "$options": "i"}
+            
+        if has_results is not None:
+            if has_results:
+                query["results_count"] = {"$gt": 0}
+            else:
+                query["results_count"] = 0
+                
+        cursor = db.search_logs.find(query, {"_id": 0}).sort("timestamp", -1).skip(skip).limit(limit)
+        logs = await cursor.to_list(length=limit)
+        total = await db.search_logs.count_documents(query)
+        
+        return {
+            "logs": logs,
+            "total": total,
+            "limit": limit,
+            "skip": skip
+        }
+    except Exception as e:
+        logger.error(f"Error fetching search logs: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch search logs"
+        )
+

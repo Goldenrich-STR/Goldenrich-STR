@@ -139,6 +139,9 @@ export const propertyAPI = {
   
   getProperty: (propertyId) =>
     apiClient.get(`/properties/${propertyId}`),
+
+  generateDescription: (data) =>
+    apiClient.post('/properties/generate-description', data),
   
   createProperty: (propertyData) =>
     apiClient.post('/properties/', propertyData),
@@ -430,6 +433,11 @@ export const couponAPI = {
   createCoupon: (data) => apiClient.post('/coupons/', data),
   listCoupons: () => apiClient.get('/coupons/'),
   getPropertyCoupons: (propertyId) => apiClient.get(`/coupons/property/${propertyId}`),
+};
+
+// Admin API
+export const adminAPI = {
+  getSearchLogs: (params) => apiClient.get('/admin/search-logs', { params }),
 };
 
 export default apiClient;

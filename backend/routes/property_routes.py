@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List, Optional
 from pydantic import BaseModel
@@ -171,6 +171,27 @@ async def search_properties(
 
         total = await db.properties.count_documents(query)
 
+        # Log search activity for analytics (admin dashboard)
+        try:
+            import uuid
+            import asyncio
+            log_doc = {
+                "search_id": f"search_{uuid.uuid4().hex[:12]}",
+                "timestamp": datetime.now(timezone.utc),
+                "city": city or "",
+                "category": category.value if category else None,
+                "property_type": property_type,
+                "min_price": min_price,
+                "max_price": max_price,
+                "bhk_type": bhk_type,
+                "check_in": check_in,
+                "check_out": check_out,
+                "results_count": total
+            }
+            asyncio.create_task(db.search_logs.insert_one(log_doc))
+        except Exception as log_err:
+            logger.warning(f"Failed to save search log: {log_err}")
+
         return {
             "properties": properties,
             "total": total,
@@ -204,6 +225,7 @@ async def search_properties(
 @router.get("/{property_id}")
 async def get_property(
     property_id: str,
+    request: Request,
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get property details by ID (public endpoint). Includes safe host info."""
@@ -216,10 +238,49 @@ async def get_property(
                 detail="Property not found"
             )
 
-        # Attach safe host profile (no email/phone/password)
+        # Get optional user from Request headers (Authorization)
+        current_user = None
+        auth_header = request.headers.get("authorization")
+        if auth_header and auth_header.lower().startswith("bearer "):
+            token = auth_header.split(" ")[1]
+            try:
+                from utils.auth import decode_access_token
+                current_user = decode_access_token(token)
+            except Exception as token_err:
+                logger.warning(f"Failed to decode token in get_property: {token_err}")
+
+        # Check if the guest has a confirmed booking for this property
+        has_confirmed_booking = False
+        if current_user:
+            user_id = current_user.get("user_id")
+            existing_booking = await db.bookings.find_one({
+                "property_id": property_id,
+                "guest_id": user_id,
+                "booking_status": "confirmed"
+            })
+            if existing_booking:
+                has_confirmed_booking = True
+            elif property_dict.get("owner_id") == user_id or current_user.get("role") == "admin":
+                has_confirmed_booking = True
+
+        # Attach host profile (include phone and email if they have a confirmed booking, are owner, or admin)
+        host_projection = {
+            "_id": 0,
+            "user_id": 1,
+            "full_name": 1,
+            "city": 1,
+            "profile_image": 1,
+            "created_at": 1,
+            "kyc_status": 1,
+            "role": 1,
+        }
+        if has_confirmed_booking:
+            host_projection["phone"] = 1
+            host_projection["email"] = 1
+
         host = await db.users.find_one(
             {"user_id": property_dict.get("owner_id")},
-            {"_id": 0, "user_id": 1, "full_name": 1, "city": 1, "profile_image": 1, "created_at": 1, "kyc_status": 1, "role": 1},
+            host_projection,
         )
         if host:
             created_at = host.get("created_at")
@@ -227,6 +288,7 @@ async def get_property(
         property_dict["host"] = host or None
 
         return property_dict
+
     
     except HTTPException:
         raise
@@ -605,3 +667,151 @@ async def submit_review(
     except Exception as e:
         logger.error(f"Error submitting review: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to submit review")
+
+
+class GenerateDescriptionRequest(BaseModel):
+    title: Optional[str] = ""
+    category: Optional[str] = ""
+    property_type: Optional[str] = ""
+    bhk_type: Optional[str] = ""
+    city: Optional[str] = ""
+    amenities: Optional[List[str]] = []
+    area_sqft: Optional[int] = None
+    max_guests: Optional[int] = None
+
+
+@router.post("/generate-description")
+async def generate_description(
+    data: GenerateDescriptionRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        title = data.title or ""
+        category = data.category or "residential"
+        property_type = data.property_type or ""
+        bhk_type = data.bhk_type or ""
+        city = data.city or ""
+        amenities = data.amenities or []
+        area_sqft = data.area_sqft
+        max_guests = data.max_guests
+
+        import os
+        import json
+        import urllib.request
+        import asyncio
+
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+
+        # Define a helper function to perform sync HTTP requests in a separate thread
+        def perform_request(url: str, payload: dict, headers: dict) -> dict:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10.0) as response:
+                return json.loads(response.read().decode("utf-8"))
+
+        if gemini_key:
+            prompt = (
+                f"Write an engaging, professional, and appealing short-term rental description (around 120-150 words) "
+                f"for a property listing with these details:\n"
+                f"- Title: {title}\n"
+                f"- Category: {category}\n"
+                f"- Property Type: {property_type}\n"
+                f"- BHK / Size: {bhk_type}\n"
+                f"- Location: {city}\n"
+                f"- Area: {area_sqft} sq.ft\n"
+                f"- Max Guests capacity: {max_guests}\n"
+                f"- Amenities: {', '.join(amenities)}.\n"
+                f"Output only the final description. Do not include markdown headers or greetings like 'Sure, here is...'."
+            )
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+                payload = {"contents": [{"parts": [{"text": prompt}]}]}
+                headers = {"Content-Type": "application/json"}
+                
+                result = await asyncio.to_thread(perform_request, url, payload, headers)
+                desc_text = result["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if desc_text:
+                    return {"description": desc_text}
+            except Exception as ex:
+                logger.error(f"Gemini API generation failed: {str(ex)}")
+
+        if openai_key:
+            prompt = (
+                f"Write an engaging, professional, and appealing short-term rental description (around 120-150 words) "
+                f"for a property listing with these details:\n"
+                f"- Title: {title}\n"
+                f"- Category: {category}\n"
+                f"- Property Type: {property_type}\n"
+                f"- BHK / Size: {bhk_type}\n"
+                f"- Location: {city}\n"
+                f"- Area: {area_sqft} sq.ft\n"
+                f"- Max Guests capacity: {max_guests}\n"
+                f"- Amenities: {', '.join(amenities)}.\n"
+                f"Output only the final description. Do not include markdown headers or greetings like 'Sure, here is...'."
+            )
+            try:
+                url = "https://api.openai.com/v1/chat/completions"
+                payload = {
+                    "model": "gpt-3.5-turbo",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.7
+                }
+                headers = {
+                    "Authorization": f"Bearer {openai_key}",
+                    "Content-Type": "application/json"
+                }
+                
+                result = await asyncio.to_thread(perform_request, url, payload, headers)
+                desc_text = result["choices"][0]["message"]["content"].strip()
+                if desc_text:
+                    return {"description": desc_text}
+            except Exception as ex:
+                logger.error(f"OpenAI API generation failed: {str(ex)}")
+
+        # Fallback to local smart template generator
+        clean_prop_type = property_type.replace("_", " ").title() if property_type else "property"
+        clean_bhk = bhk_type.upper() if bhk_type else ""
+        clean_city = city.title() if city else "our location"
+        clean_title = title if title else f"Beautiful {clean_bhk} {clean_prop_type}"
+        clean_amenities = [a.replace("_", " ").title() for a in amenities]
+
+        intro = f"Welcome to our premium {clean_prop_type}! "
+        if title:
+            intro = f"Experience comfort and convenience at '{clean_title}', a premium {clean_prop_type} located in {clean_city}. "
+        else:
+            intro = f"Welcome to this elegant {clean_bhk} {clean_prop_type} nestled in the beautiful surroundings of {clean_city}. "
+
+        details = f"This modern {category} space has been thoughtfully designed to offer a relaxing, stylish retreat. "
+        if area_sqft:
+            details += f"It features a spacious layout covering {area_sqft} sq.ft. of pristine design, "
+        else:
+            details += "It features an inviting layout with plenty of natural light, "
+
+        if max_guests:
+            details += f"comfortably accommodating up to {max_guests} guests. "
+        else:
+            details += "ideal for families, friends, or business travelers. "
+
+        amenities_part = ""
+        if clean_amenities:
+            amenities_part = f"\n\nGuests will have access to a variety of modern amenities, including: {', '.join(clean_amenities)}. "
+
+        closing = (
+            f"\n\nWhether you're visiting {clean_city} for a short getaway or an extended business trip, "
+            "this listing provides everything you need to feel right at home. "
+            "Book now to secure your stay!"
+        )
+
+        final_desc = intro + details + amenities_part + closing
+        return {"description": final_desc}
+
+    except Exception as e:
+        logger.error(f"Error in generate_description: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate description")
+        
+

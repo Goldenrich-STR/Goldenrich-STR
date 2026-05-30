@@ -31,7 +31,8 @@ import {
   X,
   Camera,
   Sparkles,
-  Tag
+  Tag,
+  Lock
 } from 'lucide-react';
 
 const AMENITY_ICONS = {
@@ -1064,9 +1065,24 @@ const PropertyDetail = () => {
                     </div>
                   </div>
                 </div>
-                <button className="px-5 py-2 border-2 border-charcoal rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-charcoal hover:text-white transition-all">
-                   {t('contactHost')}
-                </button>
+                {property.host.phone ? (
+                  <a
+                    href={`tel:${property.host.phone}`}
+                    className="px-5 py-2 border-2 border-charcoal rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-charcoal hover:text-white transition-all flex items-center gap-1.5 cursor-pointer decoration-none"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    {property.host.phone}
+                  </a>
+                ) : (
+                  <button
+                    disabled
+                    className="px-5 py-2 border-2 border-sand-300 text-charcoal-muted rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 cursor-not-allowed bg-sand-100/80"
+                    title="Host contact details will be unlocked after booking confirmation"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    {t('contactHost')}
+                  </button>
+                )}
               </div>
             )}
 

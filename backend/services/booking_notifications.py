@@ -164,6 +164,47 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
                 },
             )
 
+            # Send WhatsApp notification to guest with property location and contact details
+            prop_details = prop or {}
+            address = prop_details.get("address", "")
+            city = prop_details.get("city", "")
+            state = prop_details.get("state", "")
+            pin_code = prop_details.get("pin_code", "")
+            google_maps_url = prop_details.get("google_maps_url")
+
+            location_str = f"{address}, {city}, {state} - {pin_code}"
+            if google_maps_url:
+                location_str += f"\nMaps: {google_maps_url}"
+
+            host_name = host.get("full_name", "Host")
+            host_phone = host.get("phone", "N/A")
+
+            guest_whatsapp_msg = (
+                f"Golden Rich Stay: Your booking for {property_title} is confirmed!\n"
+                f"Booking ID: {booking.get('booking_id')}\n"
+                f"Check-in: {booking.get('check_in_date')}\n"
+                f"Check-out: {booking.get('check_out_date')}\n\n"
+                f"Property Location Details:\n"
+                f"Address: {location_str}\n\n"
+                f"Contact Person (Host) Details:\n"
+                f"Name: {host_name}\n"
+                f"Contact No: {host_phone}"
+            )
+
+            await send_multi_channel_notification(
+                db=db,
+                user_id=guest["user_id"],
+                notification_type=NotificationType.BOOKING_CONFIRMED,
+                title="Booking Confirmation & Details",
+                message=guest_whatsapp_msg,
+                channels=[NotificationChannel.WHATSAPP],
+                data={
+                    **data,
+                    "property_title": property_title,
+                },
+            )
+
+
     except Exception as e:
         logger.error(f"notify_host_booking_confirmed failed: {e}")
 

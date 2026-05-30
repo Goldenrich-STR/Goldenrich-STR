@@ -134,7 +134,7 @@ async def startup_sequence():
             "external_calendars", "property_verifications", 
             "transactions", "payouts", "refunds", "reviews", 
             "notifications", "subscription_plans", "subscriptions", "cms_content", "leads", "coupons",
-            "deleted_properties"
+            "deleted_properties", "search_logs"
         ]
         for table in tables:
             await db_instance.ensure_table(table)
