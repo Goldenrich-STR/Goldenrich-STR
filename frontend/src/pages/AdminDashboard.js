@@ -5,7 +5,8 @@ import apiClient, { verificationAPI, subscriptionAPI, uploadAPI, getImageUrl, bo
 import { 
   Users, Building2, Calendar, IndianRupee, CheckCircle, 
   X, XCircle, Clock, TrendingUp, BarChart3, LogOut, Plus, Trash, Zap,
-  Edit, Eye as EyeIcon, Shield, ChevronLeft, ChevronRight, Tag
+  Edit, Eye as EyeIcon, Shield, ChevronLeft, ChevronRight, Tag,
+  Check, ListTodo, Heart, FileText, Sparkles, UploadCloud
 } from 'lucide-react';
 import CouponManagement from '../components/admin/CouponManagement';
 
@@ -2969,96 +2970,117 @@ const CMSManagement = () => {
       </div>
 
       {/* Sub-tab Navigation */}
-      <div className="flex border-b border-sand-200 space-x-6 mb-8">
+      <div className="flex flex-wrap gap-2.5 p-1.5 bg-sand-100/60 rounded-2xl mb-8 max-w-2xl">
         {[
-          { id: 'hero', label: 'Hero Details' },
-          { id: 'how_it_works', label: 'How It Works' },
-          { id: 'testimonials', label: 'Testimonials' },
-          { id: 'blog', label: 'Blog Posts' }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveSubTab(tab.id)}
-            className={`pb-4 text-sm font-bold uppercase tracking-widest transition relative ${
-              activeSubTab === tab.id
-                ? 'text-terracotta'
-                : 'text-charcoal-muted hover:text-charcoal'
-            }`}
-          >
-            {tab.label}
-            {activeSubTab === tab.id && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-terracotta rounded-full" />
-            )}
-          </button>
-        ))}
+          { id: 'hero', label: 'Hero Details', icon: Sparkles },
+          { id: 'how_it_works', label: 'How It Works', icon: ListTodo },
+          { id: 'testimonials', label: 'Testimonials', icon: Heart },
+          { id: 'blog', label: 'Blog Posts', icon: FileText }
+        ].map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeSubTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveSubTab(tab.id)}
+              className={`flex items-center space-x-2 px-5 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all duration-300 ${
+                isActive
+                  ? 'bg-terracotta text-white shadow-md shadow-terracotta/20 scale-[1.02]'
+                  : 'text-charcoal-muted hover:text-charcoal hover:bg-sand-200/50'
+              }`}
+            >
+              <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-charcoal-muted'}`} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Form Content */}
-      <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium">
+      <div className="bg-white/90 backdrop-blur-md rounded-3xl p-8 border border-sand-200/80 shadow-premium transition-all duration-300 hover:shadow-2xl">
         
         {/* HERO TAB */}
         {activeSubTab === 'hero' && (
-          <div className="space-y-6">
-            <h4 className="text-lg font-black text-charcoal mb-4">Hero Section Configuration</h4>
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-sand-100">
+              <div className="p-2.5 bg-terracotta/10 rounded-xl text-terracotta">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-lg font-black text-charcoal">Hero Section Configuration</h4>
+                <p className="text-xs text-charcoal-muted font-medium">Configure the main above-the-fold content of your homepage.</p>
+              </div>
+            </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Sub Tag</label>
+              <div className="relative group">
+                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Sub Tag</label>
                 <input
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal"
+                  className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
                   value={heroData.sub_tag}
                   onChange={e => setHeroData({ ...heroData, sub_tag: e.target.value })}
+                  placeholder="e.g. Luxury Rentals India"
                 />
               </div>
-              <div>
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Rating Display Text</label>
+              <div className="relative group">
+                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Rating Display Text</label>
                 <input
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal"
+                  className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
                   value={heroData.rating}
                   onChange={e => setHeroData({ ...heroData, rating: e.target.value })}
+                  placeholder="e.g. 4.9/5 Rating"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Heading Title (HTML Supported)</label>
+            <div className="relative group">
+              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Heading Title (HTML Supported)</label>
               <input
-                className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal"
+                className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
                 value={heroData.title}
                 onChange={e => setHeroData({ ...heroData, title: e.target.value })}
+                placeholder="e.g. Elevate Your Living"
               />
-              <span className="text-[10px] text-charcoal-muted font-bold block mt-1">Use &lt;span class="text-terracotta italic font-serif"&gt;Living&lt;/span&gt; for highlighted styled words.</span>
+              <span className="text-[10px] text-charcoal-muted font-bold block mt-1.5 flex items-center space-x-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-terracotta animate-pulse" />
+                <span>Use <code>&lt;span class="text-terracotta italic font-serif"&gt;Living&lt;/span&gt;</code> for highlighted styled words.</span>
+              </span>
             </div>
 
-            <div>
-              <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Subtitle / Paragraph Description</label>
+            <div className="relative group">
+              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Subtitle / Paragraph Description</label>
               <textarea
                 rows={3}
-                className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal"
+                className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm leading-relaxed"
                 value={heroData.subtitle}
                 onChange={e => setHeroData({ ...heroData, subtitle: e.target.value })}
+                placeholder="Describe your platform values and offerings..."
               />
             </div>
 
-            <div>
-              <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Trusted By Text</label>
+            <div className="relative group">
+              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Trusted By Text</label>
               <input
-                className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal"
+                className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
                 value={heroData.trusted_text}
                 onChange={e => setHeroData({ ...heroData, trusted_text: e.target.value })}
+                placeholder="e.g. Trusted by 10,000+ happy families across India"
               />
             </div>
 
-            <div>
-              <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Hero Background Image</label>
-              <div className="flex items-center space-x-4">
-                <input
-                  className="flex-1 border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal"
-                  value={heroData.image_url}
-                  onChange={e => setHeroData({ ...heroData, image_url: e.target.value })}
-                  placeholder="Image URL"
-                />
-                <label className="btn-primary py-2 px-4 rounded-xl cursor-pointer flex items-center space-x-2 text-sm font-semibold">
+            <div className="relative group">
+              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Hero Background Image</label>
+              <div className="flex items-stretch space-x-3">
+                <div className="relative flex-1">
+                  <input
+                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3.5 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
+                    value={heroData.image_url}
+                    onChange={e => setHeroData({ ...heroData, image_url: e.target.value })}
+                    placeholder="Image URL"
+                  />
+                </div>
+                <label className="btn-premium px-6 flex items-center justify-center space-x-2 text-sm font-semibold rounded-2xl cursor-pointer hover:shadow-lg transition-all duration-300">
+                  <UploadCloud className="w-4 h-4" />
                   <span>Upload Image</span>
                   <input
                     type="file"
@@ -3068,20 +3090,34 @@ const CMSManagement = () => {
                   />
                 </label>
               </div>
+              
               {heroData.image_url && (
-                <div className="mt-4 h-48 w-full rounded-2xl overflow-hidden border border-sand-200">
-                  <img src={getImageUrl(heroData.image_url)} alt="Hero Preview" className="w-full h-full object-cover" />
+                <div className="mt-5 relative group overflow-hidden rounded-2xl border border-sand-200/80 shadow-md aspect-video max-h-64">
+                  <img src={getImageUrl(heroData.image_url)} alt="Hero Preview" className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end p-4">
+                    <span className="text-white text-xs font-semibold tracking-wide bg-charcoal/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">Active Hero Background</span>
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="pt-4 border-t border-sand-200">
+            <div className="pt-6 border-t border-sand-150">
               <button
                 onClick={() => handleSave('hero', heroData)}
                 disabled={saving}
-                className="btn-premium px-8 py-3 w-full sm:w-auto flex items-center justify-center space-x-2"
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-md shadow-terracotta/15 active:scale-95 transition-all"
               >
-                <span>{saving ? 'Saving...' : 'Save Hero Details'}</span>
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Saving Changes...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Save Hero Configuration</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -3089,144 +3125,170 @@ const CMSManagement = () => {
 
         {/* HOW IT WORKS TAB */}
         {activeSubTab === 'how_it_works' && (
-          <div className="space-y-8">
-            <h4 className="text-lg font-black text-charcoal mb-4">How It Works Steps</h4>
-
-            {howItWorksData.steps?.map((step, index) => (
-              <div key={step.id} className="p-6 bg-sand-50 rounded-2xl border border-sand-200 space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="px-3 py-1 bg-terracotta/10 text-terracotta text-xs font-black uppercase rounded-full">
-                    Step {step.id} Configuration
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Short Title (Tab)</label>
-                    <input
-                      className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
-                      value={step.shortTitle}
-                      onChange={e => {
-                        const updated = [...howItWorksData.steps];
-                        updated[index] = { ...updated[index], shortTitle: e.target.value };
-                        setHowItWorksData({ steps: updated });
-                      }}
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Heading Title</label>
-                    <input
-                      className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
-                      value={step.heading}
-                      onChange={e => {
-                        const updated = [...howItWorksData.steps];
-                        updated[index] = { ...updated[index], heading: e.target.value };
-                        setHowItWorksData({ steps: updated });
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Subtitle</label>
-                    <input
-                      className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
-                      value={step.subtitle}
-                      onChange={e => {
-                        const updated = [...howItWorksData.steps];
-                        updated[index] = { ...updated[index], subtitle: e.target.value };
-                        setHowItWorksData({ steps: updated });
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Lucide Icon name</label>
-                    <select
-                      className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
-                      value={step.icon_name}
-                      onChange={e => {
-                        const updated = [...howItWorksData.steps];
-                        updated[index] = { ...updated[index], icon_name: e.target.value };
-                        setHowItWorksData({ steps: updated });
-                      }}
-                    >
-                      <option value="User">User / Registration</option>
-                      <option value="CreditCard">CreditCard / Subscription</option>
-                      <option value="Building2">Building2 / Properties</option>
-                      <option value="MapPin">MapPin / Coordinates</option>
-                      <option value="Sparkles">Sparkles / Payouts</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Step Detailed Paragraph</label>
-                  <textarea
-                    rows={2}
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
-                    value={step.paragraph}
-                    onChange={e => {
-                      const updated = [...howItWorksData.steps];
-                      updated[index] = { ...updated[index], paragraph: e.target.value };
-                      setHowItWorksData({ steps: updated });
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-2">Bullet Points</label>
-                  <div className="space-y-2">
-                    {step.bullets?.map((bullet, bIndex) => (
-                      <div key={bIndex} className="flex items-center space-x-2">
-                        <input
-                          className="flex-1 border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white text-sm"
-                          value={bullet}
-                          onChange={e => {
-                            const updatedSteps = [...howItWorksData.steps];
-                            const updatedBullets = [...updatedSteps[index].bullets];
-                            updatedBullets[bIndex] = e.target.value;
-                            updatedSteps[index] = { ...updatedSteps[index], bullets: updatedBullets };
-                            setHowItWorksData({ steps: updatedSteps });
-                          }}
-                        />
-                        <button
-                          onClick={() => {
-                            const updatedSteps = [...howItWorksData.steps];
-                            const updatedBullets = updatedSteps[index].bullets.filter((_, bIdx) => bIdx !== bIndex);
-                            updatedSteps[index] = { ...updatedSteps[index], bullets: updatedBullets };
-                            setHowItWorksData({ steps: updatedSteps });
-                          }}
-                          className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition"
-                        >
-                          <Trash className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      onClick={() => {
-                        const updatedSteps = [...howItWorksData.steps];
-                        const updatedBullets = [...(updatedSteps[index].bullets || []), ''];
-                        updatedSteps[index] = { ...updatedSteps[index], bullets: updatedBullets };
-                        setHowItWorksData({ steps: updatedSteps });
-                      }}
-                      className="text-xs font-black text-sage uppercase tracking-wider hover:underline flex items-center space-x-1"
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Add Bullet Point</span>
-                    </button>
-                  </div>
-                </div>
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-sand-100">
+              <div className="p-2.5 bg-terracotta/10 rounded-xl text-terracotta">
+                <ListTodo className="w-5 h-5" />
               </div>
-            ))}
+              <div>
+                <h4 className="text-lg font-black text-charcoal">How It Works Steps</h4>
+                <p className="text-xs text-charcoal-muted font-medium">Configure onboarding steps and bullet points displayed on the landing page.</p>
+              </div>
+            </div>
 
-            <div className="pt-4 border-t border-sand-200">
+            <div className="space-y-6">
+              {howItWorksData.steps?.map((step, index) => (
+                <div key={step.id} className="p-6 bg-sand-50/50 rounded-3xl border border-sand-200/80 space-y-5 hover:bg-white hover:shadow-lg transition-all duration-300">
+                  <div className="flex justify-between items-center pb-3 border-b border-sand-200/60">
+                    <div className="flex items-center space-x-2.5">
+                      <span className="w-6 h-6 rounded-full bg-terracotta text-white flex items-center justify-center text-xs font-black">
+                        {step.id}
+                      </span>
+                      <span className="text-sm font-black text-charcoal uppercase tracking-wider">
+                        Step Configuration
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div>
+                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Short Title (Tab)</label>
+                      <input
+                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                        value={step.shortTitle}
+                        onChange={e => {
+                          const updated = [...howItWorksData.steps];
+                          updated[index] = { ...updated[index], shortTitle: e.target.value };
+                          setHowItWorksData({ steps: updated });
+                        }}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Heading Title</label>
+                      <input
+                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                        value={step.heading}
+                        onChange={e => {
+                          const updated = [...howItWorksData.steps];
+                          updated[index] = { ...updated[index], heading: e.target.value };
+                          setHowItWorksData({ steps: updated });
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Subtitle</label>
+                      <input
+                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                        value={step.subtitle}
+                        onChange={e => {
+                          const updated = [...howItWorksData.steps];
+                          updated[index] = { ...updated[index], subtitle: e.target.value };
+                          setHowItWorksData({ steps: updated });
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Lucide Icon Name</label>
+                      <select
+                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm appearance-none cursor-pointer"
+                        value={step.icon_name}
+                        onChange={e => {
+                          const updated = [...howItWorksData.steps];
+                          updated[index] = { ...updated[index], icon_name: e.target.value };
+                          setHowItWorksData({ steps: updated });
+                        }}
+                      >
+                        <option value="User">User / Registration</option>
+                        <option value="CreditCard">CreditCard / Subscription</option>
+                        <option value="Building2">Building2 / Properties</option>
+                        <option value="MapPin">MapPin / Coordinates</option>
+                        <option value="Sparkles">Sparkles / Payouts</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Step Detailed Paragraph</label>
+                    <textarea
+                      rows={2}
+                      className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm leading-relaxed"
+                      value={step.paragraph}
+                      onChange={e => {
+                        const updated = [...howItWorksData.steps];
+                        updated[index] = { ...updated[index], paragraph: e.target.value };
+                        setHowItWorksData({ steps: updated });
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Bullet Points</label>
+                    <div className="space-y-3">
+                      {step.bullets?.map((bullet, bIndex) => (
+                        <div key={bIndex} className="flex items-center space-x-2.5 group/bullet">
+                          <input
+                            className="flex-1 border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2 bg-white outline-none transition font-semibold text-charcoal text-xs"
+                            value={bullet}
+                            onChange={e => {
+                              const updatedSteps = [...howItWorksData.steps];
+                              const updatedBullets = [...updatedSteps[index].bullets];
+                              updatedBullets[bIndex] = e.target.value;
+                              updatedSteps[index] = { ...updatedSteps[index], bullets: updatedBullets };
+                              setHowItWorksData({ steps: updatedSteps });
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              const updatedSteps = [...howItWorksData.steps];
+                              const updatedBullets = updatedSteps[index].bullets.filter((_, bIdx) => bIdx !== bIndex);
+                              updatedSteps[index] = { ...updatedSteps[index], bullets: updatedBullets };
+                              setHowItWorksData({ steps: updatedSteps });
+                            }}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition duration-300 opacity-80 hover:opacity-100 active:scale-95"
+                          >
+                            <Trash className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      
+                      <button
+                        onClick={() => {
+                          const updatedSteps = [...howItWorksData.steps];
+                          const updatedBullets = [...(updatedSteps[index].bullets || []), ''];
+                          updatedSteps[index] = { ...updatedSteps[index], bullets: updatedBullets };
+                          setHowItWorksData({ steps: updatedSteps });
+                        }}
+                        className="text-xs font-black text-emerald-600 uppercase tracking-wider hover:text-emerald-700 hover:underline flex items-center space-x-1.5 py-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Bullet Point</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-6 border-t border-sand-150">
               <button
                 onClick={() => handleSave('how_it_works', howItWorksData)}
                 disabled={saving}
-                className="btn-premium px-8 py-3 w-full sm:w-auto flex items-center justify-center space-x-2"
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-md shadow-terracotta/15 active:scale-95 transition-all"
               >
-                <span>{saving ? 'Saving...' : 'Save Steps Data'}</span>
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Saving Steps...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Save Steps Configuration</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -3234,9 +3296,17 @@ const CMSManagement = () => {
 
         {/* TESTIMONIALS TAB */}
         {activeSubTab === 'testimonials' && (
-          <div className="space-y-8">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-lg font-black text-charcoal">Guest Testimonials</h4>
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-sand-100 mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2.5 bg-terracotta/10 rounded-xl text-terracotta">
+                  <Heart className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-charcoal">Guest Testimonials</h4>
+                  <p className="text-xs text-charcoal-muted font-medium">Manage testimonials and reviews from your hosts and guests.</p>
+                </div>
+              </div>
               <button
                 onClick={() => {
                   const updatedItems = [
@@ -3252,7 +3322,7 @@ const CMSManagement = () => {
                   ];
                   setTestimonialsData({ items: updatedItems });
                 }}
-                className="btn-primary py-2 px-4 rounded-xl flex items-center space-x-2 text-xs font-bold uppercase tracking-wider"
+                className="btn-premium px-5 py-2.5 rounded-2xl flex items-center space-x-1.5 text-xs font-black uppercase tracking-wider"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Testimonial</span>
@@ -3261,23 +3331,23 @@ const CMSManagement = () => {
 
             <div className="grid grid-cols-1 gap-6">
               {testimonialsData.items?.map((item, index) => (
-                <div key={item.id || index} className="p-6 bg-sand-50 rounded-2xl border border-sand-200 space-y-4 relative group">
+                <div key={item.id || index} className="p-6 bg-sand-50/50 rounded-3xl border border-sand-200/80 space-y-5 relative group hover:bg-white hover:shadow-lg transition-all duration-300">
                   <button
                     onClick={() => {
                       const updatedItems = testimonialsData.items.filter((_, idx) => idx !== index);
                       setTestimonialsData({ items: updatedItems });
                     }}
-                    className="absolute top-4 right-4 p-2 text-red-500 hover:bg-red-50 rounded-xl transition"
+                    className="absolute top-4 right-4 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition duration-300 active:scale-90"
                     title="Delete Testimonial"
                   >
                     <Trash className="w-4 h-4" />
                   </button>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
-                      <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Author Name</label>
+                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Author Name</label>
                       <input
-                        className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
+                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={item.name}
                         onChange={e => {
                           const updated = [...testimonialsData.items];
@@ -3287,9 +3357,9 @@ const CMSManagement = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Role / Subtitle</label>
+                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Role / Subtitle</label>
                       <input
-                        className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
+                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={item.role}
                         onChange={e => {
                           const updated = [...testimonialsData.items];
@@ -3299,9 +3369,9 @@ const CMSManagement = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Rating Stars (1-5)</label>
+                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Rating Stars (1-5)</label>
                       <select
-                        className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
+                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm cursor-pointer"
                         value={item.rating}
                         onChange={e => {
                           const updated = [...testimonialsData.items];
@@ -3309,20 +3379,20 @@ const CMSManagement = () => {
                           setTestimonialsData({ items: updated });
                         }}
                       >
-                        <option value={5}>5 Stars</option>
-                        <option value={4}>4 Stars</option>
-                        <option value={3}>3 Stars</option>
-                        <option value={2}>2 Stars</option>
-                        <option value={1}>1 Star</option>
+                        <option value={5}>⭐⭐⭐⭐⭐ (5 Stars)</option>
+                        <option value={4}>⭐⭐⭐⭐ (4 Stars)</option>
+                        <option value={3}>⭐⭐⭐ (3 Stars)</option>
+                        <option value={2}>⭐⭐ (2 Stars)</option>
+                        <option value={1}>⭐ (1 Star)</option>
                       </select>
                     </div>
                   </div>
 
                   <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Comment Text</label>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Comment Text</label>
                     <textarea
-                      rows={2}
-                      className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
+                      rows={2.5}
+                      className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm leading-relaxed"
                       value={item.comment}
                       onChange={e => {
                         const updated = [...testimonialsData.items];
@@ -3333,10 +3403,10 @@ const CMSManagement = () => {
                   </div>
 
                   <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Avatar Image</label>
-                    <div className="flex items-center space-x-4">
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Avatar Image</label>
+                    <div className="flex items-stretch space-x-3">
                       <input
-                        className="flex-1 border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
+                        className="flex-1 border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={item.avatar_url}
                         onChange={e => {
                           const updated = [...testimonialsData.items];
@@ -3345,7 +3415,8 @@ const CMSManagement = () => {
                         }}
                         placeholder="Avatar Image URL"
                       />
-                      <label className="btn-primary py-2 px-4 rounded-xl cursor-pointer flex items-center space-x-2 text-sm font-semibold">
+                      <label className="btn-premium px-5 flex items-center justify-center space-x-1.5 text-xs font-semibold rounded-2xl cursor-pointer transition duration-300">
+                        <UploadCloud className="w-3.5 h-3.5" />
                         <span>Upload</span>
                         <input
                           type="file"
@@ -3356,9 +3427,12 @@ const CMSManagement = () => {
                       </label>
                     </div>
                     {item.avatar_url && (
-                      <div className="mt-2 flex items-center space-x-2">
-                        <img src={getImageUrl(item.avatar_url)} alt="Avatar" className="w-12 h-12 rounded-full object-cover border border-sand-200" />
-                        <span className="text-[10px] text-charcoal-muted font-bold">Image loaded</span>
+                      <div className="mt-3.5 flex items-center space-x-3.5 bg-white p-2.5 rounded-2xl border border-sand-200 w-fit shadow-sm">
+                        <img src={getImageUrl(item.avatar_url)} alt="Avatar" className="w-12 h-12 rounded-full object-cover border border-sand-150 shadow-inner" />
+                        <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider flex items-center space-x-1">
+                          <Check className="w-3 h-3 text-emerald-500" />
+                          <span>Image Loaded</span>
+                        </span>
                       </div>
                     )}
                   </div>
@@ -3366,13 +3440,23 @@ const CMSManagement = () => {
               ))}
             </div>
 
-            <div className="pt-4 border-t border-sand-200">
+            <div className="pt-6 border-t border-sand-150">
               <button
                 onClick={() => handleSave('testimonials', testimonialsData)}
                 disabled={saving}
-                className="btn-premium px-8 py-3 w-full sm:w-auto flex items-center justify-center space-x-2"
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-md shadow-terracotta/15 active:scale-95 transition-all"
               >
-                <span>{saving ? 'Saving...' : 'Save Testimonials'}</span>
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Saving Testimonials...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Save Testimonials Configuration</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -3380,9 +3464,17 @@ const CMSManagement = () => {
 
         {/* BLOG TAB */}
         {activeSubTab === 'blog' && (
-          <div className="space-y-8">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-lg font-black text-charcoal">Journal Blog Posts</h4>
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-sand-100 mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2.5 bg-terracotta/10 rounded-xl text-terracotta">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-charcoal">Journal Blog Posts</h4>
+                  <p className="text-xs text-charcoal-muted font-medium">Manage property insights, local guide articles, and platform updates.</p>
+                </div>
+              </div>
               <button
                 onClick={() => {
                   const updatedPosts = [
@@ -3399,7 +3491,7 @@ const CMSManagement = () => {
                   ];
                   setBlogData({ posts: updatedPosts });
                 }}
-                className="btn-primary py-2 px-4 rounded-xl flex items-center space-x-2 text-xs font-bold uppercase tracking-wider"
+                className="btn-premium px-5 py-2.5 rounded-2xl flex items-center space-x-1.5 text-xs font-black uppercase tracking-wider"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Blog Post</span>
@@ -3408,23 +3500,23 @@ const CMSManagement = () => {
 
             <div className="grid grid-cols-1 gap-8">
               {blogData.posts?.map((post, index) => (
-                <div key={post.id || index} className="p-6 bg-sand-50 rounded-2xl border border-sand-200 space-y-4 relative group">
+                <div key={post.id || index} className="p-6 bg-sand-50/50 rounded-3xl border border-sand-200/80 space-y-5 relative group hover:bg-white hover:shadow-lg transition-all duration-300">
                   <button
                     onClick={() => {
                       const updatedPosts = blogData.posts.filter((_, idx) => idx !== index);
                       setBlogData({ posts: updatedPosts });
                     }}
-                    className="absolute top-4 right-4 p-2 text-red-500 hover:bg-red-50 rounded-xl transition"
+                    className="absolute top-4 right-4 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition duration-300 active:scale-90"
                     title="Delete Post"
                   >
                     <Trash className="w-4 h-4" />
                   </button>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Article Title</label>
+                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Article Title</label>
                       <input
-                        className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
+                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={post.title}
                         onChange={e => {
                           const updated = [...blogData.posts];
@@ -3433,11 +3525,11 @@ const CMSManagement = () => {
                         }}
                       />
                     </div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Author</label>
+                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Author</label>
                         <input
-                          className="w-full border-2 border-sand-200 rounded-xl px-2 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
+                          className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
                           value={post.author}
                           onChange={e => {
                             const updated = [...blogData.posts];
@@ -3447,9 +3539,9 @@ const CMSManagement = () => {
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Date</label>
+                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Date</label>
                         <input
-                          className="w-full border-2 border-sand-200 rounded-xl px-2 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
+                          className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
                           value={post.date}
                           onChange={e => {
                             const updated = [...blogData.posts];
@@ -3459,9 +3551,9 @@ const CMSManagement = () => {
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Read Time</label>
+                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Read Time</label>
                         <input
-                          className="w-full border-2 border-sand-200 rounded-xl px-2 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
+                          className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
                           value={post.read_time}
                           onChange={e => {
                             const updated = [...blogData.posts];
@@ -3474,10 +3566,10 @@ const CMSManagement = () => {
                   </div>
 
                   <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Excerpt Summary</label>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Excerpt Summary</label>
                     <textarea
-                      rows={2}
-                      className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
+                      rows={2.5}
+                      className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm leading-relaxed"
                       value={post.excerpt}
                       onChange={e => {
                         const updated = [...blogData.posts];
@@ -3488,10 +3580,10 @@ const CMSManagement = () => {
                   </div>
 
                   <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Cover Image</label>
-                    <div className="flex items-center space-x-4">
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Cover Image</label>
+                    <div className="flex items-stretch space-x-3">
                       <input
-                        className="flex-1 border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition font-semibold text-charcoal bg-white"
+                        className="flex-1 border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={post.image_url}
                         onChange={e => {
                           const updated = [...blogData.posts];
@@ -3500,8 +3592,9 @@ const CMSManagement = () => {
                         }}
                         placeholder="Image URL"
                       />
-                      <label className="btn-primary py-2 px-4 rounded-xl cursor-pointer flex items-center space-x-2 text-sm font-semibold">
-                        <span>Upload Image</span>
+                      <label className="btn-premium px-5 flex items-center justify-center space-x-1.5 text-xs font-semibold rounded-2xl cursor-pointer transition duration-300">
+                        <UploadCloud className="w-3.5 h-3.5" />
+                        <span>Upload Cover</span>
                         <input
                           type="file"
                           accept="image/*"
@@ -3511,8 +3604,11 @@ const CMSManagement = () => {
                       </label>
                     </div>
                     {post.image_url && (
-                      <div className="mt-4 h-32 w-64 rounded-xl overflow-hidden border border-sand-200">
-                        <img src={getImageUrl(post.image_url)} alt="Cover Preview" className="w-full h-full object-cover" />
+                      <div className="mt-4 relative group overflow-hidden rounded-2xl border border-sand-200/80 shadow-md aspect-video max-h-40 w-fit">
+                        <img src={getImageUrl(post.image_url)} alt="Cover Preview" className="w-64 h-full object-cover group-hover:scale-105 transition-all duration-500" />
+                        <div className="absolute top-2 left-2 bg-charcoal/50 backdrop-blur-sm border border-white/10 px-2 py-1 rounded-lg text-[9px] text-white font-bold uppercase tracking-wider">
+                          Cover Preview
+                        </div>
                       </div>
                     )}
                   </div>
@@ -3520,13 +3616,23 @@ const CMSManagement = () => {
               ))}
             </div>
 
-            <div className="pt-4 border-t border-sand-200">
+            <div className="pt-6 border-t border-sand-150">
               <button
                 onClick={() => handleSave('blog', blogData)}
                 disabled={saving}
-                className="btn-premium px-8 py-3 w-full sm:w-auto flex items-center justify-center space-x-2"
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-md shadow-terracotta/15 active:scale-95 transition-all"
               >
-                <span>{saving ? 'Saving...' : 'Save Blog Posts'}</span>
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Saving Blog Posts...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Save Blog Posts Configuration</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

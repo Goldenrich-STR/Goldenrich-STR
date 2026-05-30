@@ -508,7 +508,7 @@ async def list_payouts(
     # enrich with host name + property title
     for p in items:
         host = await db.users.find_one(
-            {"user_id": p["host_id"]}, {"_id": 0, "full_name": 1, "email": 1}
+            {"user_id": p["host_id"]}, {"_id": 0, "full_name": 1, "email": 1, "payout_preference": 1}
         )
         prop = await db.properties.find_one(
             {"property_id": p["property_id"]}, {"_id": 0, "title": 1, "city": 1}

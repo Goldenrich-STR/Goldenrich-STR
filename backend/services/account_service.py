@@ -392,25 +392,43 @@ async def process_payout(
 
 
 async def sweep_payout_eligibility(db: AsyncIOMotorDatabase) -> int:
-    """Find confirmed bookings whose check-out is at least 1 day past and mark them eligible."""
+    """Find confirmed bookings whose check-out satisfies the host's payout cycle and mark them eligible."""
     today = date.today()
-    threshold = (today - timedelta(days=1)).isoformat()
+    today_str = today.isoformat()
 
     # Only target bookings without an existing payout row
     existing_payout_ids = await db.payouts.distinct("booking_id")
 
+    # Find all confirmed + paid bookings that have checked out
     cursor = db.bookings.find({
         "booking_status": "confirmed",
         "payment_status": "paid",
-        "check_out_date": {"$lte": threshold},
+        "check_out_date": {"$lte": today_str},
         "booking_id": {"$nin": existing_payout_ids},
     }, {"_id": 0})
 
     count = 0
     async for booking in cursor:
         try:
-            await mark_booking_payout_eligible(db, booking)
-            count += 1
+            host = await db.users.find_one({"user_id": booking["host_id"]})
+            payout_cycle = "daily"
+            if host:
+                pref = host.get("payout_preference") or {}
+                payout_cycle = pref.get("payout_cycle") or "daily"
+
+            # Determine threshold delay
+            if payout_cycle == "weekly":
+                delay_days = 7
+            elif payout_cycle == "monthly":
+                delay_days = 30
+            else:
+                delay_days = 1
+
+            checkout_date = date.fromisoformat(booking["check_out_date"])
+            # The booking is eligible for payout if today >= check_out_date + delay_days
+            if today >= checkout_date + timedelta(days=delay_days):
+                await mark_booking_payout_eligible(db, booking)
+                count += 1
         except Exception as e:
             logger.warning(f"mark_payout_eligible failed for {booking.get('booking_id')}: {e}")
 

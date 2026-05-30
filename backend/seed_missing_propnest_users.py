@@ -9,7 +9,8 @@ from datetime import datetime
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 async def main():
-    load_dotenv(r"D:\STR_Project\STR_Project\backend\.env")
+    from pathlib import Path
+    load_dotenv(Path(__file__).parent / '.env')
     conn = await asyncpg.connect(os.environ['POSTGRES_URL'])
     
     print("Connected to database. Checking/creating missing propnest users...")

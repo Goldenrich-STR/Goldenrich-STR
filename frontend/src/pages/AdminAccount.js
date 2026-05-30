@@ -553,6 +553,7 @@ const PayoutsTab = () => {
   const [busy, setBusy] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [selectedPayout, setSelectedPayout] = useState(null);
   const LIMIT = 10;
 
   const load = async () => {
@@ -680,9 +681,14 @@ const PayoutsTab = () => {
                     className="border-b border-sand-100"
                     data-testid={`payout-row-${p.payout_id}`}
                   >
-                    <td className="py-2 pr-3">
-                      <div className="font-semibold text-charcoal">{p.host?.full_name || p.host_id}</div>
-                      <div className="text-xs text-charcoal-muted">{p.host?.email}</div>
+                    <td 
+                      className="py-2 pr-3 cursor-pointer hover:underline text-terracotta group"
+                      onClick={() => setSelectedPayout(p)}
+                      title="Click to view full payout & payment details"
+                      data-testid={`payout-host-details-${p.payout_id}`}
+                    >
+                      <div className="font-semibold group-hover:text-terracotta-dark">{p.host?.full_name || p.host_id}</div>
+                      <div className="text-xs text-charcoal-muted group-hover:text-charcoal-light">{p.host?.email}</div>
                     </td>
                     <td className="py-2 pr-3">
                       <div className="font-semibold text-charcoal">{p.property?.title || p.property_id}</div>
@@ -692,8 +698,20 @@ const PayoutsTab = () => {
                     <td className="py-2 pr-3 text-charcoal-muted">{fmtINR(p.platform_fee)}</td>
                     <td className="py-2 pr-3 font-bold">{fmtINR(p.net_amount)}</td>
                     <td className="py-2 pr-3 text-xs">
-                      <div>{p.destination_type?.toUpperCase()}</div>
-                      <div className="text-charcoal-muted">{p.destination_ref || '—'}</div>
+                      <div className="font-semibold capitalize">{p.destination_type}</div>
+                      <div className="text-charcoal-muted font-mono">{p.destination_ref || '—'}</div>
+                      {p.host?.payout_preference && (
+                        <div className="text-[10px] text-sage font-bold mt-0.5">
+                          {p.host.payout_preference.preferred === 'upi' ? (
+                            <span>UPI: {p.host.payout_preference.upi_vpa}</span>
+                          ) : (
+                            <span>A/C: {p.host.payout_preference.bank_account_number}</span>
+                          )}
+                          <div className="text-[9px] text-charcoal-muted uppercase tracking-wider mt-0.5">
+                            Cycle: {p.host.payout_preference.payout_cycle || 'daily'}
+                          </div>
+                        </div>
+                      )}
                     </td>
                     <td className="py-2 pr-3">
                       <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
@@ -707,16 +725,25 @@ const PayoutsTab = () => {
                       )}
                     </td>
                     <td className="py-2 pr-3">
-                      {p.status === 'eligible' && (
+                      <div className="flex items-center space-x-2">
+                        {p.status === 'eligible' && (
+                          <button
+                            onClick={() => processOne(p.payout_id)}
+                            disabled={busy}
+                            className="px-3 py-1 rounded bg-sage text-white text-xs font-semibold hover:bg-sage-dark disabled:opacity-60"
+                            data-testid={`pay-${p.payout_id}`}
+                          >
+                            Pay out
+                          </button>
+                        )}
                         <button
-                          onClick={() => processOne(p.payout_id)}
-                          disabled={busy}
-                          className="px-3 py-1 rounded bg-sage text-white text-xs font-semibold hover:bg-sage-dark disabled:opacity-60"
-                          data-testid={`pay-${p.payout_id}`}
+                          onClick={() => setSelectedPayout(p)}
+                          className="px-2.5 py-1 rounded-lg border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 text-xs font-semibold transition shadow-sm"
+                          data-testid={`details-${p.payout_id}`}
                         >
-                          Pay out
+                          Details
                         </button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -790,6 +817,193 @@ const PayoutsTab = () => {
             </div>
           </>
         )}
+      </div>
+
+      {selectedPayout && (
+        <PayoutDetailsModal
+          payout={selectedPayout}
+          onClose={() => setSelectedPayout(null)}
+          onProcess={processOne}
+          busy={busy}
+        />
+      )}
+    </div>
+  );
+};
+
+const PayoutDetailsModal = ({ payout, onClose, onProcess, busy }) => {
+  const p = payout;
+  const host = p.host || {};
+  const pref = host.payout_preference || {};
+  const isEligible = p.status === 'eligible';
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" data-testid="payout-details-modal">
+      <div className="bg-white rounded-2xl max-w-md w-full border border-sand-200 shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-sand-200 flex items-center justify-between bg-sand-50/50">
+          <div className="flex items-center space-x-2">
+            <Wallet className="w-5 h-5 text-terracotta" />
+            <h3 className="text-md font-bold text-charcoal">Payout Details</h3>
+          </div>
+          <button onClick={onClose} className="text-charcoal-light hover:text-charcoal transition-colors">
+            <XCircle className="w-5 h-5" />
+          </button>
+        </div>
+        
+        {/* Content */}
+        <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+          {/* Status Banner */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-sand-50 border border-sand-100">
+            <span className="text-xs uppercase tracking-wider text-charcoal-muted font-bold">Payout Status</span>
+            <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold uppercase tracking-wide ${
+              p.status === 'paid' ? 'bg-green-100 text-green-700' :
+              p.status === 'eligible' ? 'bg-yellow-100 text-yellow-700' :
+              p.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+              'bg-red-100 text-red-700'
+            }`}>{p.status}</span>
+          </div>
+
+          {/* Host Info */}
+          <div>
+            <h4 className="text-xs uppercase font-bold tracking-wider text-charcoal-muted mb-2">Host Information</h4>
+            <div className="bg-sand-50/50 rounded-xl p-3.5 border border-sand-100 space-y-1.5 text-xs text-charcoal">
+              <div className="flex justify-between">
+                <span className="text-charcoal-light">Name:</span>
+                <span className="font-semibold">{host.full_name || '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-charcoal-light">Email:</span>
+                <span className="font-semibold">{host.email || '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-charcoal-light">Host ID:</span>
+                <span className="font-mono text-[10px]">{p.host_id}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Account Details */}
+          <div>
+            <h4 className="text-xs uppercase font-bold tracking-wider text-charcoal-muted mb-2">
+              Payment Destination Details
+            </h4>
+            <div className="bg-sand-50/50 rounded-xl p-3.5 border border-sand-100 space-y-2 text-xs text-charcoal">
+              <div className="flex justify-between border-b border-sand-200/60 pb-1.5">
+                <span className="text-charcoal-light">Preferred Method:</span>
+                <span className="font-extrabold uppercase text-terracotta tracking-wider">
+                  {pref.preferred || p.destination_type || 'upi'}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-sand-200/60 pb-1.5">
+                <span className="text-charcoal-light">Payout Cycle:</span>
+                <span className="font-extrabold uppercase text-indigo-600 tracking-wider">
+                  {pref.payout_cycle || 'daily'}
+                </span>
+              </div>
+              
+              {(pref.preferred === 'upi' || (!pref.preferred && p.destination_type === 'upi')) ? (
+                <div className="flex justify-between items-center py-0.5">
+                  <span className="text-charcoal-light">UPI ID / VPA:</span>
+                  <span className="font-mono font-bold text-sm select-all bg-white px-2 py-0.5 rounded border border-sand-200/80">
+                    {pref.upi_vpa || p.destination_ref || '—'}
+                  </span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-charcoal-light">Account Holder:</span>
+                    <span className="font-semibold">{pref.bank_account_holder || p.destination_holder || '—'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-charcoal-light">Account Number:</span>
+                    <span className="font-mono font-bold text-sm select-all bg-white px-2 py-0.5 rounded border border-sand-200/80">
+                      {pref.bank_account_number || p.destination_ref || '—'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-charcoal-light">IFSC Code:</span>
+                    <span className="font-mono font-bold uppercase select-all bg-white px-2 py-0.5 rounded border border-sand-200/80">
+                      {pref.bank_ifsc || p.destination_ifsc || '—'}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+            <p className="text-[10px] text-charcoal-light mt-1.5 italic">
+              * Click or double-click to select and copy the VPA/Account details.
+            </p>
+          </div>
+
+          {/* Booking & Financial Info */}
+          <div>
+            <h4 className="text-xs uppercase font-bold tracking-wider text-charcoal-muted mb-2">Financial Summary</h4>
+            <div className="bg-sand-50/50 rounded-xl p-3.5 border border-sand-100 space-y-2 text-xs text-charcoal">
+              <div className="flex justify-between">
+                <span className="text-charcoal-light">Property:</span>
+                <span className="font-semibold">{p.property?.title || '—'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-charcoal-light">Booking ID:</span>
+                <span className="font-mono text-charcoal-muted">{p.booking_id}</span>
+              </div>
+              <div className="flex justify-between border-t border-sand-200/60 pt-2">
+                <span className="text-charcoal-light">Gross Booking Amount:</span>
+                <span>{fmtINR(p.gross_amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-charcoal-light">Platform Fee (10%):</span>
+                <span className="text-charcoal-muted">-{fmtINR(p.platform_fee)}</span>
+              </div>
+              <div className="flex justify-between border-t border-sand-200/60 pt-2 font-bold">
+                <span className="text-charcoal">Net Payout Amount:</span>
+                <span className="text-sm text-terracotta">{fmtINR(p.net_amount)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Razorpay transaction details */}
+          {(p.razorpay_payout_id || p.failure_reason) && (
+            <div>
+              <h4 className="text-xs uppercase font-bold tracking-wider text-charcoal-muted mb-2">Transaction Info</h4>
+              <div className="bg-sand-50/50 rounded-xl p-3.5 border border-sand-100 text-xs text-charcoal">
+                {p.razorpay_payout_id && (
+                  <div className="flex justify-between">
+                    <span className="text-charcoal-light">Razorpay Payout ID:</span>
+                    <span className="font-mono text-charcoal-muted">{p.razorpay_payout_id}</span>
+                  </div>
+                )}
+                {p.failure_reason && (
+                  <div className="text-red-600">
+                    <span className="font-semibold">Failure Reason:</span> {p.failure_reason}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-sand-200 flex items-center justify-end space-x-3 bg-sand-50/50">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl border border-sand-300 text-charcoal hover:bg-sand-100 transition text-xs font-semibold"
+          >
+            Close
+          </button>
+          {isEligible && (
+            <button
+              onClick={() => {
+                onProcess(p.payout_id);
+                onClose();
+              }}
+              disabled={busy}
+              className="px-4 py-2 rounded-xl bg-sage hover:bg-sage-dark text-white font-bold transition text-xs shadow-sm"
+            >
+              Process Payout
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

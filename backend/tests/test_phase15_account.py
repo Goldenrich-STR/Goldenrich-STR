@@ -10,8 +10,14 @@ import pytest
 import requests
 from dotenv import load_dotenv
 
-load_dotenv("/app/frontend/.env")
-load_dotenv("/app/backend/.env")
+if os.path.exists("/app/frontend/.env"):
+    load_dotenv("/app/frontend/.env")
+    load_dotenv("/app/backend/.env")
+else:
+    import pathlib
+    _base_dir = pathlib.Path(__file__).parent.parent.parent
+    load_dotenv(_base_dir / "frontend" / ".env")
+    load_dotenv(_base_dir / "backend" / ".env")
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 assert BASE_URL, "REACT_APP_BACKEND_URL not set"
