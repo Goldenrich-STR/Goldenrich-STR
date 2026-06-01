@@ -1895,6 +1895,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
 // Property Moderation Component
 const PropertyModeration = () => {
+  const navigate = useNavigate();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('awaiting_final_approval');
@@ -2076,8 +2077,25 @@ const PropertyModeration = () => {
                       </div>
                     </div>
                   </div>
-                  {canActOn(property) && (
-                    <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 flex-wrap justify-end">
+                    <button
+                      onClick={() => navigate(`/property/${property.property_id}`)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-white border border-sand-200 text-charcoal rounded-lg hover:border-terracotta hover:text-terracotta transition font-semibold"
+                      title="View property"
+                    >
+                      <EyeIcon className="w-4 h-4" />
+                      <span>View</span>
+                    </button>
+                    <button
+                      onClick={() => navigate(`/host/list-property?edit=${property.property_id}`)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition font-semibold"
+                      title="Edit property"
+                    >
+                      <Edit className="w-4 h-4" />
+                      <span>Edit</span>
+                    </button>
+                    {canActOn(property) && (
+                      <>
                       <button
                         onClick={() => openVerificationDetails(property)}
                         className="flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition font-semibold"
@@ -2092,8 +2110,9 @@ const PropertyModeration = () => {
                         <XCircle className="w-4 h-4" />
                         <span>Reject</span>
                       </button>
-                    </div>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
