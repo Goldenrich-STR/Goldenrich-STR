@@ -627,6 +627,7 @@ const PayoutsTab = () => {
           data-testid="payout-status-filter"
         >
           <option value="eligible">Eligible (ready)</option>
+          <option value="needs_destination">Needs destination</option>
           <option value="processing">Processing</option>
           <option value="paid">Paid</option>
           <option value="failed">Failed</option>
@@ -718,6 +719,7 @@ const PayoutsTab = () => {
                         p.status === 'paid' ? 'bg-green-100 text-green-700' :
                         p.status === 'eligible' ? 'bg-yellow-100 text-yellow-700' :
                         p.status === 'processing' ? 'bg-blue-100 text-blue-700' :
+                        p.status === 'needs_destination' ? 'bg-orange-100 text-orange-700' :
                         'bg-red-100 text-red-700'
                       }`}>{p.status}</span>
                       {p.failure_reason && (
@@ -726,7 +728,7 @@ const PayoutsTab = () => {
                     </td>
                     <td className="py-2 pr-3">
                       <div className="flex items-center space-x-2">
-                        {p.status === 'eligible' && (
+                        {(p.status === 'eligible' || p.status === 'failed') && (
                           <button
                             onClick={() => processOne(p.payout_id)}
                             disabled={busy}

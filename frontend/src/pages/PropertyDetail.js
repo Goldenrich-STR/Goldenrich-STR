@@ -551,7 +551,12 @@ const PropertyDetail = () => {
   };
 
   const isBlocked = (iso) =>
-    blockedDates.some((b) => dateInRange(iso, b.start_date, b.end_date));
+    blockedDates.some((b) => {
+      if (property?.category === 'event_venue' && b.source === 'booking') {
+        return false;
+      }
+      return dateInRange(iso, b.start_date, b.end_date);
+    });
 
   const parsedPolicies = useMemo(() => {
     try {

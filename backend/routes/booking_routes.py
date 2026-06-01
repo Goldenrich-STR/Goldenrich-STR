@@ -43,6 +43,54 @@ def _event_policy_percent(property_dict: dict, key: str, default: float) -> floa
     return percent
 
 
+def _active_booking_query(
+    property_id: str,
+    check_in_iso: str,
+    check_out_iso: str,
+    *,
+    category: str = "",
+    selected_slot: str | None = None,
+) -> dict:
+    now_iso = datetime.now(timezone.utc).isoformat()
+    status_filter = {
+        "$or": [
+            {"booking_status": BookingStatus.CONFIRMED.value},
+            {
+                "booking_status": BookingStatus.SOFT_LOCK.value,
+                "soft_lock_expires_at": {"$gt": now_iso},
+            },
+        ]
+    }
+
+    query = {
+        "property_id": property_id,
+        "$and": [
+            status_filter,
+            {
+                "$or": [
+                    {
+                        "check_in_date": {"$lte": check_in_iso},
+                        "check_out_date": {"$gt": check_in_iso},
+                    },
+                    {
+                        "check_in_date": {"$lt": check_out_iso},
+                        "check_out_date": {"$gte": check_out_iso},
+                    },
+                    {
+                        "check_in_date": {"$gte": check_in_iso},
+                        "check_out_date": {"$lte": check_out_iso},
+                    },
+                ]
+            },
+        ],
+    }
+
+    if category == "event_venue" and selected_slot:
+        query["selected_slot"] = selected_slot
+
+    return query
+
+
 class ConfirmPaymentRequest(BaseModel):
     booking_id: str
     razorpay_payment_id: str
@@ -100,30 +148,20 @@ async def create_booking(
                 detail="Check-out date must be after check-in date"
             )
         
-        # Check for existing bookings (overlap)
-        existing_booking = await db.bookings.find_one({
-            "property_id": booking_data.property_id,
-            "booking_status": {"$in": [BookingStatus.CONFIRMED.value, BookingStatus.SOFT_LOCK.value]},
-            "$or": [
-                {
-                    "check_in_date": {"$lte": check_in.isoformat()},
-                    "check_out_date": {"$gt": check_in.isoformat()}
-                },
-                {
-                    "check_in_date": {"$lt": check_out.isoformat()},
-                    "check_out_date": {"$gte": check_out.isoformat()}
-                },
-                {
-                    "check_in_date": {"$gte": check_in.isoformat()},
-                    "check_out_date": {"$lte": check_out.isoformat()}
-                }
-            ]
-        })
+        # Check for existing active bookings. Event venues are slot-level:
+        # the same date can still be booked for a different available slot.
+        existing_booking = await db.bookings.find_one(_active_booking_query(
+            booking_data.property_id,
+            check_in.isoformat(),
+            check_out.isoformat(),
+            category=property_dict.get("category", ""),
+            selected_slot=booking_data.selected_slot,
+        ))
         
         if existing_booking:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Property is already booked for selected dates"
+                detail="Selected slot is already booked for these dates" if property_dict.get("category") == "event_venue" else "Property is already booked for selected dates"
             )
         
         # Check for blocked dates (manual or external calendar)

@@ -400,11 +400,13 @@ const HostPayouts = () => {
                           p.status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
                           p.status === 'eligible' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
                           p.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                          p.status === 'needs_destination' ? 'bg-orange-50 text-orange-700 border-orange-200' :
                           'bg-red-50 text-red-700 border-red-200'
                         }`}>
                           {p.status === 'paid' && <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
                           {p.status === 'eligible' && <Clock className="w-3.5 h-3.5 mr-1" />}
                           {p.status === 'failed' && <XCircle className="w-3.5 h-3.5 mr-1" />}
+                          {p.status === 'needs_destination' && <AlertCircle className="w-3.5 h-3.5 mr-1" />}
                           {p.status === 'processing' && <Clock className="w-3.5 h-3.5 mr-1" />}
                           <span>{p.status}</span>
                         </span>

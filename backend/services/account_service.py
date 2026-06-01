@@ -282,7 +282,8 @@ async def mark_booking_payout_eligible(
         destination_ref=_mask_account(dest_ref),
         destination_holder=pref.get("bank_account_holder"),
         destination_ifsc=pref.get("bank_ifsc"),
-        status=PayoutStatus.ELIGIBLE,
+        status=PayoutStatus.ELIGIBLE if dest_ref else PayoutStatus.NEEDS_DESTINATION,
+        failure_reason=None if dest_ref else "Host payout destination is not configured",
     )
     await db.payouts.insert_one(payout.model_dump())
     await db.bookings.update_one(
@@ -320,8 +321,8 @@ async def process_payout(
         dest_type = payout.destination_type
     dest_ref = pref.get("upi_vpa") if dest_type == PayoutDestinationType.UPI else pref.get("bank_account_number")
     if not dest_ref:
-        payout.status = PayoutStatus.FAILED
-        payout.failure_reason = "Host has not configured payout destination"
+        payout.status = PayoutStatus.NEEDS_DESTINATION
+        payout.failure_reason = "Host payout destination is not configured"
         payout.updated_at = datetime.now(timezone.utc)
         await db.payouts.update_one(
             {"payout_id": payout_id}, {"$set": payout.model_dump()}
@@ -331,7 +332,11 @@ async def process_payout(
     # Mark processing
     await db.payouts.update_one(
         {"payout_id": payout_id},
-        {"$set": {"status": PayoutStatus.PROCESSING.value, "updated_at": datetime.now(timezone.utc)}},
+        {"$set": {
+            "status": PayoutStatus.PROCESSING.value,
+            "failure_reason": None,
+            "updated_at": datetime.now(timezone.utc),
+        }},
     )
 
     result = razorpay_service.create_payout(
