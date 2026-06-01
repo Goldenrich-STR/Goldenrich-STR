@@ -448,7 +448,7 @@ async def get_host_bookings(
     try:
         cursor = (
             db.bookings.find({"host_id": current_user["user_id"]}, {"_id": 0})
-            .sort("check_in_date", -1)
+            .sort("created_at", -1)
         )
         bookings = await cursor.to_list(length=200)
         bookings = await _attach_property_info(db, bookings)

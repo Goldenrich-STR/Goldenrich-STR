@@ -29,6 +29,23 @@ const STATUS_BADGE = {
   completed: { label: 'Completed', cls: 'bg-indigo-50 text-indigo-700 border-indigo-200', Icon: CheckCircle2 },
 };
 
+const bookingSortTime = (booking) => {
+  const candidates = [
+    booking.confirmed_at,
+    booking.updated_at,
+    booking.created_at,
+    booking.check_in_date,
+  ];
+
+  for (const value of candidates) {
+    if (!value) continue;
+    const time = new Date(value).getTime();
+    if (!Number.isNaN(time)) return time;
+  }
+
+  return 0;
+};
+
 const HostBookings = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -119,7 +136,7 @@ const HostBookings = () => {
       }
     });
 
-    // 2. Filter bookings within each property group and map groups
+    // 2. Filter bookings within each property group and order latest activity first
     return Object.values(groups).map(group => {
       const filtered = group.allBookings.filter(b => {
         const property = b.property || {};
@@ -137,11 +154,17 @@ const HostBookings = () => {
         return matchesSearch && matchesStatus;
       });
 
+      const sortedBookings = [...filtered].sort((a, b) => bookingSortTime(b) - bookingSortTime(a));
+      const latestActivityAt = Math.max(...group.allBookings.map(bookingSortTime));
+
       return {
         ...group,
-        filteredBookings: filtered
+        filteredBookings: sortedBookings,
+        latestActivityAt
       };
-    }).filter(group => group.filteredBookings.length > 0);
+    })
+      .filter(group => group.filteredBookings.length > 0)
+      .sort((a, b) => b.latestActivityAt - a.latestActivityAt);
   }, [bookings, searchTerm, statusFilter]);
 
   // Overall Statistics for Host
