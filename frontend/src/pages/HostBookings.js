@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { bookingAPI, getImageUrl } from '../services/api';
+import { bookingAPI, getImageUrl, aiCallAPI } from '../services/api';
 import {
   Building2,
   CalendarDays,
@@ -19,7 +19,8 @@ import {
   ChevronUp,
   Mail,
   Phone,
-  Building
+  Building,
+  Volume2
 } from 'lucide-react';
 
 const STATUS_BADGE = {
@@ -39,10 +40,24 @@ const HostBookings = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [expandedProperties, setExpandedProperties] = useState({});
+  const [aiCalls, setAiCalls] = useState([]);
+  const [selectedCall, setSelectedCall] = useState(null);
 
   useEffect(() => {
     fetchBookings();
+    fetchAiCalls();
   }, []);
+
+  const fetchAiCalls = async () => {
+    try {
+      const res = await aiCallAPI.getMyCalls();
+      if (res.data && res.data.calls) {
+        setAiCalls(res.data.calls);
+      }
+    } catch (e) {
+      console.error('Failed to fetch AI calls', e);
+    }
+  };
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -472,6 +487,21 @@ const HostBookings = () => {
                                         <BadgeIcon className="w-3.5 h-3.5" />
                                         <span>{badge.label}</span>
                                       </span>
+
+                                      {(() => {
+                                        const matchingCall = aiCalls.find(c => c.booking_id === b.booking_id);
+                                        if (matchingCall) {
+                                          return (
+                                            <button
+                                              onClick={() => setSelectedCall(matchingCall)}
+                                              className="inline-flex items-center text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full transition-all cursor-pointer shadow-sm ml-2"
+                                            >
+                                              <Phone className="w-3 h-3 mr-1 text-emerald-600 animate-pulse" /> AI Call Log 📞
+                                            </button>
+                                          );
+                                        }
+                                        return null;
+                                      })()}
                                     </div>
 
                                     {/* Stay Schedule */}
@@ -585,6 +615,142 @@ const HostBookings = () => {
             )}
           </>
         )}
+      </div>
+      {selectedCall && (
+        <AICallModal
+          call={selectedCall}
+          onClose={() => setSelectedCall(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+const AICallModal = ({ call, onClose }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    let interval;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        setProgress((p) => {
+          if (p >= call.duration_seconds) {
+            setIsPlaying(false);
+            return 0;
+          }
+          return p + 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, call.duration_seconds]);
+
+  const formatTime = (secs) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/60 backdrop-blur-md transition-all duration-300">
+      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-sand-200 flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-charcoal to-neutral-805 p-6 text-white flex justify-between items-center">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-terracotta">Voice AI Concierge</span>
+            <h3 className="text-xl font-black tracking-tight">{call.agent_name}</h3>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all font-bold"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Call Info details */}
+        <div className="p-6 bg-sand-50/50 border-b border-sand-200 text-xs font-semibold text-charcoal-muted grid grid-cols-2 gap-4">
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Recipient</span>
+            <span className="text-charcoal text-sm font-bold">{call.recipient_name} ({call.role})</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Phone number</span>
+            <span className="text-charcoal text-sm font-bold">{call.phone}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Duration</span>
+            <span className="text-charcoal text-sm font-bold">{call.duration_seconds} seconds</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Status</span>
+            <span className="inline-flex items-center text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-md text-[10px] font-black uppercase mt-1">
+              ● Connected
+            </span>
+          </div>
+        </div>
+
+        {/* Audio Visualizer & Player */}
+        <div className="p-6 border-b border-sand-100 flex flex-col items-center justify-center bg-sand-50/30">
+          {/* Wave visualizer */}
+          <div className="flex items-end justify-center gap-1.5 h-16 mb-6 w-full px-12">
+            {Array.from({ length: 28 }).map((_, i) => {
+              const height = isPlaying 
+                ? `${15 + Math.sin(progress * 1.5 + i) * 35 + Math.random() * 20}%`
+                : '10%';
+              return (
+                <div 
+                  key={i} 
+                  className={`w-1 rounded-full transition-all duration-300 ${
+                    isPlaying ? 'bg-terracotta' : 'bg-sand-300'
+                  }`}
+                  style={{ height, minHeight: '4px' }}
+                />
+              );
+            })}
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center justify-between w-full gap-4">
+            <span className="text-xs font-bold font-mono text-charcoal-muted">{formatTime(progress)}</span>
+            <button
+              onClick={() => setIsPlaying(!isPlaying)}
+              className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all cursor-pointer shadow-md flex items-center gap-2 ${
+                isPlaying 
+                  ? 'bg-charcoal hover:bg-neutral-800 text-white' 
+                  : 'bg-terracotta hover:bg-terracotta-dark text-white'
+              }`}
+            >
+              {isPlaying ? (
+                <>
+                  <span className="w-2 h-2 bg-white rounded-full animate-ping" />
+                  Pause Simulation
+                </>
+              ) : (
+                <>
+                  ▶ Play voice call
+                </>
+              )}
+            </button>
+            <span className="text-xs font-bold font-mono text-charcoal-muted">{formatTime(call.duration_seconds)}</span>
+          </div>
+        </div>
+
+        {/* Transcription bubble */}
+        <div className="p-6 overflow-y-auto flex-1 bg-white min-h-[160px] max-h-[300px]">
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-charcoal-muted mb-3 flex items-center gap-1">
+            <Volume2 className="w-3.5 h-3.5" /> Call Transcription Script
+          </h4>
+          <div className="bg-sand-50 p-4 rounded-2xl border border-sand-200/50 text-sm font-medium text-charcoal leading-relaxed relative">
+            <div className="absolute top-3 left-4 text-xs text-terracotta font-black uppercase tracking-wider text-[9px] mb-1">
+              Mayur Voice AI
+            </div>
+            <p className="mt-4 italic">
+              "{call.script}"
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

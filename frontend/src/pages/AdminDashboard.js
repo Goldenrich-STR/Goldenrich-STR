@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import CouponManagement from '../components/admin/CouponManagement';
 import SearchLogsManagement from '../components/admin/SearchLogsManagement';
+import AICallsManagement from '../components/admin/AICallsManagement';
+import { Phone, Volume2 } from 'lucide-react';
 
 const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', required = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -350,6 +352,7 @@ const AdminDashboard = () => {
             { id: 'cms', label: 'CMS', icon: TrendingUp },
             { id: 'coupons', label: 'Coupons', icon: Tag },
             { id: 'search-logs', label: 'Search Logs', icon: FileText },
+            { id: 'ai-calls', label: 'AI Voice Calls', icon: Phone },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -502,6 +505,13 @@ const AdminDashboard = () => {
         {activeTab === 'search-logs' && (
           <div data-testid="search-logs-section" className="animate-fade-in">
             <SearchLogsManagement />
+          </div>
+        )}
+
+        {/* AI Voice Calls Tab */}
+        {activeTab === 'ai-calls' && (
+          <div data-testid="ai-calls-section" className="animate-fade-in">
+            <AICallsManagement />
           </div>
         )}
       </div>

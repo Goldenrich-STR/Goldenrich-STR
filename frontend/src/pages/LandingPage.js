@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper } from 'lucide-react';
+import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ChatbotWidget from '../components/ChatbotWidget';
@@ -69,11 +69,11 @@ const TRANSLATIONS = {
     hostingStandards: 'Hosting Standards',
     payoutSystem: 'Payout System',
     contact: 'Contact',
-    mumbaiHQ: 'Mumbai HQ, Maharashtra',
+    mumbaiHQ: 'Nashik, Maharashtra',
     privacy: 'Privacy',
     terms: 'Terms',
     cookies: 'Cookies',
-    precision: '© 2026 Golden Rich Stay · Made with Precision',
+    precision: '© 2026 · All Rights Reserved · Mayur More',
     modalJourney: 'Interactive Host Onboarding Journey',
     modalTitle: 'How It Works: Step-by-Step',
     modalDesc: 'Golden Rich Stay provides a fully integrated, premium, physically verified short-term renting system. Click on the steps below to explore our interactive host pipeline.',
@@ -220,11 +220,11 @@ const TRANSLATIONS = {
     hostingStandards: 'मेजबानी के मानक',
     payoutSystem: 'पेआउट प्रणाली',
     contact: 'संपर्क',
-    mumbaiHQ: 'मुंबई मुख्यालय, महाराष्ट्र',
+    mumbaiHQ: 'नाशिक, महाराष्ट्र',
     privacy: 'गोपनीयता',
     terms: 'नियम और शर्तें',
     cookies: 'कुकीज़',
-    precision: '© 2026 गोल्डन रिच स्टे · पूर्णता के साथ निर्मित',
+    precision: '© 2026 · सर्वाधिकार सुरक्षित · मयूर मोरे',
     modalJourney: 'इंटरएक्टिव होस्ट ऑनबोर्डिंग यात्रा',
     modalTitle: 'यह कैसे काम करता है: चरण-दर-चरण',
     modalDesc: 'गोल्डन रिच स्टे एक पूर्णतः एकीकृत, प्रीमियम, भौतिक रूप से सत्यापित शॉर्ट-टर्म रेंटल प्रणाली प्रदान करता है। हमारे इंटरएक्टिव होस्ट पाइपलाइन का पता लगाने के लिए नीचे दिए गए चरणों पर क्लिक करें।',
@@ -371,11 +371,11 @@ const TRANSLATIONS = {
     hostingStandards: 'होस्टिंगचे निकष',
     payoutSystem: 'पेआउट प्रणाली',
     contact: 'संपर्क',
-    mumbaiHQ: 'मुंबई मुख्यालय, महाराष्ट्र',
+    mumbaiHQ: 'नाशिक, महाराष्ट्र',
     privacy: 'गोपनीयता',
     terms: 'अटी आणि शर्ती',
     cookies: 'कुकीज',
-    precision: '© 2026 Golden Rich Stay · अचूकतेसह बनविलेले',
+    precision: '© 2026 · सर्व हक्क राखीव · मयूर मोरे',
     modalJourney: 'इंटरएक्टिव्ह होस्ट ऑनबोर्डिंग प्रवास',
     modalTitle: 'हे कसे कार्य करते: पायरी-दर-पायरी',
     modalDesc: 'Golden Rich Stay एक पूर्णतः एकात्मिक, premium, प्रत्यक्ष सत्यापित शॉर्ट-टर्म रेंटिंग प्रणाली प्रदान करते. आमच्या परस्परसंवादी होस्ट पाइपलाइनचा शोध घेण्यासाठी खालील पायऱ्यांवर क्लिक करा.',
@@ -1543,11 +1543,18 @@ const LandingPage = () => {
                 {t('footerSub')}
               </p>
               <div className="flex space-x-4">
-                 {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
-                       <Star className="w-4 h-4" />
-                    </div>
-                 ))}
+                 <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
+                    <Facebook className="w-4 h-4" />
+                 </a>
+                 <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
+                    <Instagram className="w-4 h-4" />
+                 </a>
+                 <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
+                    <Twitter className="w-4 h-4" />
+                 </a>
+                 <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
+                    <Linkedin className="w-4 h-4" />
+                 </a>
               </div>
             </div>
             <div>
@@ -1571,7 +1578,7 @@ const LandingPage = () => {
               <ul className="space-y-4 text-charcoal-light font-medium">
                 <li><p>{t('mumbaiHQ')}</p></li>
                 <li><p>support@goldenrichstay.com</p></li>
-                <li><p>+91 1800 200 4000</p></li>
+                <li><p>+91 8484826247</p></li>
               </ul>
             </div>
           </div>

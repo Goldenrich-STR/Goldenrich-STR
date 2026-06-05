@@ -53,6 +53,7 @@ from routes.host_account_routes import router as host_account_router
 from routes.review_routes import router as review_router
 from routes.webhook_routes import router as webhook_router
 from routes.coupon_routes import router as coupon_router
+from routes.ai_agent_routes import router as ai_agent_router
 
 # Include routers with /api prefix
 app.include_router(auth_router, prefix="/api")
@@ -71,6 +72,7 @@ app.include_router(host_account_router, prefix="/api")
 app.include_router(review_router, prefix="/api")
 app.include_router(webhook_router, prefix="/api")
 app.include_router(coupon_router, prefix="/api")
+app.include_router(ai_agent_router, prefix="/api")
 
 # Backward-compatible auth aliases. Some deployed/cached frontend bundles may
 # still call /auth/*; keep those working while the canonical API remains /api/auth/*.
@@ -119,7 +121,11 @@ async def set_user_agent_context(request: Request, call_next):
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("backend_server.log", encoding="utf-8")
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -134,7 +140,7 @@ async def startup_sequence():
             "external_calendars", "property_verifications", 
             "transactions", "payouts", "refunds", "reviews", 
             "notifications", "subscription_plans", "subscriptions", "cms_content", "leads", "coupons",
-            "deleted_properties", "search_logs"
+            "deleted_properties", "search_logs", "ai_calls", "ai_agents"
         ]
         for table in tables:
             await db_instance.ensure_table(table)
@@ -167,6 +173,7 @@ async def startup_sequence():
         await db_instance.bookings.create_index([("property_id", 1), ("check_in_date", 1), ("check_out_date", 1)])
         await db_instance.blocked_dates.create_index([("property_id", 1), ("start_date", 1), ("end_date", 1)])
         await db_instance.bookings.create_index([("booking_status", 1), ("soft_lock_expires_at", 1)])
+        await db_instance.ai_agents.create_index("agent_id", unique=True)
         
         # 3. Ensure demo users exist
         await create_missing_users(db_instance)

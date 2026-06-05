@@ -440,4 +440,14 @@ export const adminAPI = {
   getSearchLogs: (params) => apiClient.get('/admin/search-logs', { params }),
 };
 
+// AI Voice Calling Agent API
+export const aiCallAPI = {
+  getMyCalls: () => apiClient.get('/ai-calls/my-calls'),
+  getAllCalls: () => apiClient.get('/ai-calls/all-calls'),
+  getAgents: () => apiClient.get('/ai-calls/agents'),
+  createAgent: (data) => apiClient.post('/ai-calls/agents', data),
+  activateAgent: (agentId) => apiClient.patch(`/ai-calls/agents/${agentId}/active`),
+  deleteAgent: (agentId) => apiClient.delete(`/ai-calls/agents/${agentId}`),
+};
+
 export default apiClient;

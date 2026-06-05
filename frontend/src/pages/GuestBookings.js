@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { bookingAPI, reviewAPI } from '../services/api';
+import { bookingAPI, reviewAPI, aiCallAPI } from '../services/api';
 import ReviewModal from '../components/ReviewModal';
 import {
   Building2,
@@ -15,6 +15,8 @@ import {
   Star,
   ChevronLeft,
   ChevronRight,
+  Phone,
+  Volume2,
 } from 'lucide-react';
 
 const TABS = [
@@ -64,11 +66,32 @@ const GuestBookings = () => {
   const [successNotification, setSuccessNotification] = useState(null);
   const [reviewBooking, setReviewBooking] = useState(null);
   const [reviewedIds, setReviewedIds] = useState(new Set());
+  const [aiCalls, setAiCalls] = useState([]);
+  const [selectedCall, setSelectedCall] = useState(null);
 
   useEffect(() => {
     fetchBookings();
     fetchMyReviews();
+    fetchAiCalls();
+
+    const intervalId = setInterval(() => {
+      fetchBookings();
+      fetchAiCalls();
+    }, 3000);
+
+    return () => clearInterval(intervalId);
   }, []);
+
+  const fetchAiCalls = async () => {
+    try {
+      const res = await aiCallAPI.getMyCalls();
+      if (res.data && res.data.calls) {
+        setAiCalls(res.data.calls);
+      }
+    } catch (e) {
+      console.error('Failed to fetch AI calls', e);
+    }
+  };
 
   // Auto-open the review modal when arriving via the deep-link from a
   // review-request notification (e.g. /guest/bookings?review=BK123…).
@@ -379,6 +402,23 @@ const GuestBookings = () => {
                           </div>
                         )}
 
+                        {(() => {
+                          const matchingCall = aiCalls.find(c => c.booking_id === b.booking_id);
+                          if (matchingCall) {
+                            return (
+                              <div className="mt-3">
+                                <button
+                                  onClick={() => setSelectedCall(matchingCall)}
+                                  className="inline-flex items-center text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-sm"
+                                >
+                                  <Phone className="w-3 h-3 mr-1.5 text-emerald-600" /> AI Voice Call Log 📞
+                                </button>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+
                         {/* Premium Refund Status Details */}
                         {b.booking_status === 'cancelled' && (
                           <div className="mt-4 bg-sand-50 border border-sand-200/60 rounded-2xl p-4 text-xs space-y-2">
@@ -641,6 +681,286 @@ const GuestBookings = () => {
           </div>
         </div>
       )}
+      {selectedCall && (
+        <AICallModal
+          call={selectedCall}
+          onClose={() => setSelectedCall(null)}
+        />
+      )}
+    </div>
+  );
+};
+const AICallModal = ({ call, onClose }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const utteranceRef = useRef(null);
+
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      const handleVoicesChanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+      window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
+      
+      return () => {
+        window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+        window.speechSynthesis.cancel();
+      };
+    }
+  }, []);
+
+  const getOptimalVoice = (lang, voiceType) => {
+    if (!('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return null;
+
+    const targetLang = lang.toLowerCase().replace('_', '-');
+    const langFamily = targetLang.split('-')[0];
+
+    // Filter strictly by language or language family first to prevent language mismatch crash
+    let matchingLang = voices.filter(v => {
+      const vLang = v.lang.toLowerCase().replace('_', '-');
+      return vLang.includes(targetLang) || targetLang.includes(vLang) || vLang.startsWith(langFamily + '-');
+    });
+
+    // Hindi/Marathi Devanagari fallback cross-matching if one language family is missing
+    if (matchingLang.length === 0 && (langFamily === 'mr' || langFamily === 'hi')) {
+      const siblingFamily = langFamily === 'mr' ? 'hi' : 'mr';
+      matchingLang = voices.filter(v => {
+        const vLang = v.lang.toLowerCase().replace('_', '-');
+        return vLang.includes(siblingFamily + '-') || vLang.startsWith(siblingFamily + '-');
+      });
+    }
+
+    if (matchingLang.length === 0) {
+      return null;
+    }
+
+    const isFemale = (voiceType || '').toLowerCase() === 'female';
+    const isMale = (voiceType || '').toLowerCase() === 'male';
+
+    const femaleKeywords = ['zira', 'kalpana', 'samantha', 'hazel', 'susan', 'female', 'aria', 'haruka', 'heera', 'shruti', 'sangeeta', 'ekta', 'madhur'];
+    const maleKeywords = ['david', 'hemant', 'mark', 'george', 'male', 'guy', 'ravi', 'stefan', 'dilip', 'ravi', 'hari'];
+
+    let genderFiltered = matchingLang.filter(v => {
+      const nameLower = v.name.toLowerCase();
+      if (isFemale) {
+        return femaleKeywords.some(kw => nameLower.includes(kw)) && !maleKeywords.some(kw => nameLower.includes(kw));
+      }
+      if (isMale) {
+        return maleKeywords.some(kw => nameLower.includes(kw)) && !femaleKeywords.some(kw => nameLower.includes(kw));
+      }
+      return true;
+    });
+
+    if (genderFiltered.length === 0) {
+      genderFiltered = matchingLang;
+    }
+
+    const qualityKeywords = ['natural', 'online', 'neural', 'google', 'premium', 'high'];
+    genderFiltered.sort((a, b) => {
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      const aScore = qualityKeywords.reduce((score, kw) => score + (aName.includes(kw) ? 1 : 0), 0);
+      const bScore = qualityKeywords.reduce((score, kw) => score + (bName.includes(kw) ? 1 : 0), 0);
+      return bScore - aScore;
+    });
+
+    return genderFiltered[0] || null;
+  };
+
+  const handlePlayPause = () => {
+    if (!('speechSynthesis' in window)) {
+      setIsPlaying(!isPlaying);
+      return;
+    }
+
+    if (isPlaying) {
+      window.speechSynthesis.pause();
+      setIsPlaying(false);
+    } else {
+      setIsPlaying(true);
+      if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+      } else {
+        window.speechSynthesis.resume();
+        window.speechSynthesis.cancel();
+        
+        // Micro-timeout to clear speech queue in Chromium engine
+        setTimeout(() => {
+          const utterance = new SpeechSynthesisUtterance(call.script);
+          
+          // Auto-detect language from script text
+          const text = (call.script || '').toLowerCase();
+          let lang = 'en-IN';
+          if (text.includes('bolat aahe') || text.includes('sathi') || text.includes('tumche') || text.includes('tumcha') || text.includes('jhali')) {
+            lang = 'mr-IN';
+          } else if (text.includes('bol raha') || text.includes('aapki') || text.includes('aapka') || text.includes('liye confirm') || text.includes('bol rahi')) {
+            lang = 'hi-IN';
+          }
+          utterance.lang = lang;
+          
+          // Match voice by language and agent gender
+          let selectedVoice = null;
+          if (call.external_voice_name) {
+            const voices = window.speechSynthesis.getVoices();
+            selectedVoice = voices.find(v => v.name === call.external_voice_name);
+          }
+          
+          if (!selectedVoice) {
+            const voiceGender = call.voice_type || ((call.agent_name || '').toLowerCase().includes('sneha') ? 'Female' : 'Male');
+            selectedVoice = getOptimalVoice(lang, voiceGender);
+          }
+
+          if (selectedVoice) {
+            utterance.voice = selectedVoice;
+            utterance.lang = selectedVoice.lang;
+          }
+
+          utterance.onend = () => {
+            setIsPlaying(false);
+            setProgress(0);
+          };
+
+          utterance.onerror = (e) => {
+            console.error('Speech Synthesis Error:', e);
+            setIsPlaying(false);
+            setProgress(0);
+          };
+
+          // Cache the utterance reference globally and on React ref to prevent garbage collection silent failure
+          utteranceRef.current = utterance;
+          window._currentUtterance = utterance;
+
+          window.speechSynthesis.speak(utterance);
+        }, 100);
+      }
+    }
+  };
+
+  useEffect(() => {
+    let interval;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        setProgress((p) => {
+          if (p >= call.duration_seconds) {
+            setIsPlaying(false);
+            return 0;
+          }
+          return p + 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, call.duration_seconds]);
+
+  const formatTime = (secs) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/60 backdrop-blur-md transition-all duration-300">
+      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-sand-200 flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-charcoal to-neutral-805 p-6 text-white flex justify-between items-center">
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-terracotta">Voice AI Concierge</span>
+            <h3 className="text-xl font-black tracking-tight">{call.agent_name}</h3>
+          </div>
+          <button 
+            onClick={onClose} 
+            className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all font-bold"
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* Call Info details */}
+        <div className="p-6 bg-sand-50/50 border-b border-sand-200 text-xs font-semibold text-charcoal-muted grid grid-cols-2 gap-4">
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Recipient</span>
+            <span className="text-charcoal text-sm font-bold">{call.recipient_name} ({call.role})</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Phone number</span>
+            <span className="text-charcoal text-sm font-bold">{call.phone}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Duration</span>
+            <span className="text-charcoal text-sm font-bold">{call.duration_seconds} seconds</span>
+          </div>
+          <div>
+            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Status</span>
+            <span className="inline-flex items-center text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-md text-[10px] font-black uppercase mt-1">
+              ● Connected
+            </span>
+          </div>
+        </div>
+
+        {/* Audio Visualizer & Player */}
+        <div className="p-6 border-b border-sand-100 flex flex-col items-center justify-center bg-sand-50/30">
+          {/* Wave visualizer */}
+          <div className="flex items-end justify-center gap-1.5 h-16 mb-6 w-full px-12">
+            {Array.from({ length: 28 }).map((_, i) => {
+              const height = isPlaying 
+                ? `${15 + Math.sin(progress * 1.5 + i) * 35 + Math.random() * 20}%`
+                : '10%';
+              return (
+                <div 
+                  key={i} 
+                  className={`w-1 rounded-full transition-all duration-300 ${
+                    isPlaying ? 'bg-terracotta' : 'bg-sand-300'
+                  }`}
+                  style={{ height, minHeight: '4px' }}
+                />
+              );
+            })}
+          </div>
+
+          {/* Controls */}
+          <div className="flex items-center justify-between w-full gap-4">
+            <span className="text-xs font-bold font-mono text-charcoal-muted">{formatTime(progress)}</span>
+            <button
+              onClick={handlePlayPause}
+              className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all cursor-pointer shadow-md flex items-center gap-2 ${
+                isPlaying 
+                  ? 'bg-charcoal hover:bg-neutral-800 text-white' 
+                  : 'bg-terracotta hover:bg-terracotta-dark text-white'
+              }`}
+            >
+              {isPlaying ? (
+                <>
+                  <span className="w-2 h-2 bg-white rounded-full animate-ping" />
+                  Pause Simulation
+                </>
+              ) : (
+                <>
+                  ▶ Play voice call
+                </>
+              )}
+            </button>
+            <span className="text-xs font-bold font-mono text-charcoal-muted">{formatTime(call.duration_seconds)}</span>
+          </div>
+        </div>
+
+        {/* Transcription bubble */}
+        <div className="p-6 overflow-y-auto flex-1 bg-white min-h-[160px] max-h-[300px]">
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-charcoal-muted mb-3 flex items-center gap-1">
+            <Volume2 className="w-3.5 h-3.5" /> Call Transcription Script
+          </h4>
+          <div className="bg-sand-50 p-4 rounded-2xl border border-sand-200/50 text-sm font-medium text-charcoal leading-relaxed relative">
+            <div className="absolute top-3 left-4 text-xs text-terracotta font-black uppercase tracking-wider text-[9px] mb-1">
+              Mayur Voice AI
+            </div>
+            <p className="mt-4 italic">
+              "{call.script}"
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

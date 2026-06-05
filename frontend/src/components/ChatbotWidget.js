@@ -51,9 +51,9 @@ const TRANSLATIONS = {
 * Verified properties carry the official trust badge, increasing bookings by up to 150%!`,
 
     contactText: `Need support? Connect with our dedicated support lines:
-* **📞 Helpline:** +91 1800 200 4000 (9:00 AM - 9:00 PM)
+* **📞 Helpline:** +91 8484826247 (9:00 AM - 9:00 PM)
 * **✉️ Email:** support@goldenrichstay.com
-* **🏢 Office:** Powai, Mumbai, Maharashtra.`,
+* **🏢 Office:** Nashik, Maharashtra.`,
 
     diagnosticsText: `🛠️ **MAYUR System Diagnostics & Live Website Analysis:**
 
@@ -118,9 +118,9 @@ const TRANSLATIONS = {
 * सत्यापित संपत्तियों को आधिकारिक ट्रस्ट बैज मिलता है, जिससे बुकिंग में 150% तक की वृद्धि होती है!`,
 
     contactText: `सहायता की आवश्यकता है? हमारी समर्पित सहायता लाइनों से जुड़ें:
-* **📞 हेल्पलाइन:** +91 1800 200 4000 (9:00 AM - 9:00 PM)
+* **📞 हेल्पलाइन:** +91 8484826247 (9:00 AM - 9:00 PM)
 * **✉️ ईमेल:** support@goldenrichstay.com
-* **🏢 कार्यालय:** पवई, मुंबई, महाराष्ट्र।`,
+* **🏢 कार्यालय:** नाशिक, महाराष्ट्र।`,
 
     diagnosticsText: `🛠️ **MAYUR सिस्टम निदान और लाइव वेबसाइट विश्लेषण:**
 
@@ -185,9 +185,9 @@ const TRANSLATIONS = {
 * व्हेरिफाईड जागांना विश्वासार्हतेचे अधिकृत हिरवे चिन्ह मिळते, ज्यामुळे बुकिंग १५०% वाढतात!`,
 
     contactText: `मदतीची गरज आहे? आमच्या अधिकृत हेल्पलाईनला संपर्क करा:
-* **📞 हेल्पलाईन:** +91 1800 200 4000 (सकाळी ९:०० ते रात्री ९:००)
+* **📞 हेल्पलाईन:** +91 8484826247 (सकाळी ९:०० ते रात्री ९:००)
 * **✉️ ईमेल:** support@goldenrichstay.com
-* **🏢 कार्यालय:** पवई, मुंबई, महाराष्ट्र.`,
+* **🏢 कार्यालय:** नाशिक, महाराष्ट्र.`,
 
     diagnosticsText: `🛠️ **MAYUR वेबसाईट तपासणी आणि सिस्टीम विश्लेषण रिपोर्ट:**
 
@@ -226,6 +226,14 @@ const ChatbotWidget = () => {
     ]);
   }, [lang]);
 
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -237,6 +245,10 @@ const ChatbotWidget = () => {
   const handleSend = (textToSend) => {
     const text = textToSend || inputText;
     if (!text.trim()) return;
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
 
     // Add user message
     const userMsg = {
@@ -326,6 +338,14 @@ You can search and filter these directly in the main search pill above!`;
         time: new Date()
       };
       setMessages(prev => [...prev, botMsg]);
+
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const cleanText = replyText.replace(/[\*#_`]/g, '');
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = lang === 'hi' ? 'hi-IN' : lang === 'mr' ? 'mr-IN' : 'en-IN';
+        window.speechSynthesis.speak(utterance);
+      }
     }, 1000);
   };
 

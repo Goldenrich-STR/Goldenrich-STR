@@ -178,6 +178,7 @@ const TRANSLATIONS = {
     unavailable: 'Unavailable',
     selected: 'Selected',
     reviews: 'Guest Reviews',
+    similarProperties: 'Similar Properties in {city}',
     overallRating: 'Overall Rating',
     noReviews: 'No reviews yet. Be the first to share your stay.',
     verifiedGuest: 'Verified Guest',
@@ -231,6 +232,7 @@ const TRANSLATIONS = {
     unavailable: 'अनुपलब्ध',
     selected: 'चयनित',
     reviews: 'अतिथि समीक्षाएं',
+    similarProperties: '{city} में समान संपत्तियां',
     overallRating: 'कुल रेटिंग',
     noReviews: 'अभी तक कोई समीक्षा नहीं है। रहने का अनुभव साझा करने वाले पहले व्यक्ति बनें।',
     verifiedGuest: 'सत्यापित अतिथि',
@@ -284,6 +286,7 @@ const TRANSLATIONS = {
     unavailable: 'अनुपलब्ध',
     selected: 'निवडलेले',
     reviews: 'अतिथी पुनरावलोकने',
+    similarProperties: '{city} मधील तत्सम जागा',
     overallRating: 'एकूण रेटिंग',
     noReviews: 'अद्याप पुनरावलोकने नाहीत. पुनरावलोकन लिहिणारे पहिले व्हा.',
     verifiedGuest: 'व्हेरिफाईड अतिथी',
@@ -467,6 +470,19 @@ const PropertyDetail = () => {
   const [reviewSummary, setReviewSummary] = useState({ rating_avg: 0, rating_count: 0, sub_avgs: {} });
 
   const [availableCoupons, setAvailableCoupons] = useState([]);
+  const [recommended, setRecommended] = useState([]);
+
+  const fetchRecommendations = async (city, currentId) => {
+    try {
+      const res = await propertyAPI.searchProperties({ city, limit: 10 });
+      if (res.data && res.data.properties) {
+        const filtered = res.data.properties.filter(p => p.property_id !== currentId);
+        setRecommended(filtered.slice(0, 3));
+      }
+    } catch (err) {
+      console.error('Failed to load recommended properties', err);
+    }
+  };
 
   useEffect(() => {
     fetchProperty();
@@ -522,6 +538,9 @@ const PropertyDetail = () => {
     try {
       const res = await propertyAPI.getProperty(id);
       setProperty(res.data);
+      if (res.data && res.data.city) {
+        fetchRecommendations(res.data.city, res.data.property_id);
+      }
     } catch (e) {
       setError(e.response?.status === 404 ? 'Property not found' : 'Failed to load property');
     } finally {
@@ -1807,6 +1826,75 @@ const PropertyDetail = () => {
             </div>
           </div>
         </div>
+
+        {/* Recommended Properties */}
+        {recommended.length > 0 && (
+          <div className="mt-16 pt-16 border-t border-sand-200 animate-slide-up">
+            <h2 className="text-3xl font-black text-charcoal tracking-tight mb-8">
+              {t('similarProperties').replace('{city}', property.city)}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {recommended.map((prop) => {
+                const propImg = prop.images?.length 
+                  ? getImageUrl(prop.images[0].split('#')[0]) 
+                  : 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?w=600';
+                return (
+                  <div 
+                    key={prop.property_id} 
+                    onClick={() => {
+                      navigate(`/guest/properties/${prop.property_id}`);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="bg-white rounded-[2rem] border border-sand-200 overflow-hidden shadow-sm hover:shadow-premium hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col h-full"
+                  >
+                    <div className="relative aspect-[4/3] w-full overflow-hidden">
+                      <img 
+                        src={propImg} 
+                        alt={prop.title} 
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-charcoal shadow-sm">
+                        {prop.category?.replace('_', ' ')}
+                      </div>
+                      {prop.instant_booking && (
+                        <div className="absolute top-4 right-4 bg-amber-500 text-white p-1.5 rounded-full shadow-md">
+                          <Zap className="w-3.5 h-3.5 fill-current" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-6 flex flex-col flex-1 justify-between">
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-black text-charcoal text-base tracking-tight leading-snug line-clamp-1 group-hover:text-terracotta transition-colors">
+                            {prop.title}
+                          </h3>
+                        </div>
+                        <p className="text-xs font-bold text-charcoal-muted mb-4 flex items-center">
+                          <MapPin className="w-3.5 h-3.5 mr-1 text-terracotta" />
+                          {prop.address}, {prop.city}
+                        </p>
+                      </div>
+                      <div className="pt-4 border-t border-sand-100 flex justify-between items-center mt-auto">
+                        <div>
+                          <span className="text-lg font-black text-charcoal">₹{prop.price_per_night?.toLocaleString('en-IN')}</span>
+                          <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-wider ml-1">
+                            {prop.category === 'event_venue' ? '/ day' : prop.category === 'commercial' ? '/ day' : '/ night'}
+                          </span>
+                        </div>
+                        {prop.rating && (
+                          <div className="flex items-center space-x-1">
+                            <Star className="w-3.5 h-3.5 text-amber-500 fill-current" />
+                            <span className="text-xs font-black text-charcoal">{prop.rating.toFixed(1)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Full Photo Gallery Modal */}

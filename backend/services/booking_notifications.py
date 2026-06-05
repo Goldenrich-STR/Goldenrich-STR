@@ -204,6 +204,14 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
                 },
             )
 
+            # Trigger AI Voice Call Agent Simulation
+            try:
+                from services.ai_agent_service import AIAgentService
+                asyncio.create_task(AIAgentService.trigger_ai_booking_call(db, booking))
+                logger.info(f"AI voice call trigger queued for booking {booking.get('booking_id')}")
+            except Exception as call_err:
+                logger.error(f"Failed to queue AI call: {call_err}")
+
 
     except Exception as e:
         logger.error(f"notify_host_booking_confirmed failed: {e}")

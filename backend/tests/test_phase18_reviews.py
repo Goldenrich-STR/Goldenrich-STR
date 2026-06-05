@@ -49,8 +49,11 @@ def completed_booking(tokens):
             and b.get("check_out_date")
             and date.fromisoformat(b["check_out_date"]) < today
         ):
-            candidate = b
-            break
+            # Verify the property still exists
+            p_res = requests.get(f"{API}/properties/{b['property_id']}")
+            if p_res.status_code == 200:
+                candidate = b
+                break
 
     if candidate is None:
         # Synthesize one — create a new booking, mock-pay it, then back-date check_out.

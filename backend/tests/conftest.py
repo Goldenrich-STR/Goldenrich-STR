@@ -51,26 +51,12 @@ if os.environ.get("DATABASE_TYPE") == "postgres":
                 asyncio.set_event_loop(loop)
             
             if loop.is_running():
-                import threading
-                from queue import Queue
-                q = Queue()
-                def run_in_thread():
-                    new_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(new_loop)
-                    try:
-                        res = new_loop.run_until_complete(coro)
-                        q.put((True, res))
-                    except Exception as e:
-                        q.put((False, e))
-                    finally:
-                        new_loop.close()
-                t = threading.Thread(target=run_in_thread)
-                t.start()
-                t.join()
-                success, val = q.get()
-                if success:
-                    return val
-                raise val
+                class AwaitableCoro:
+                    def __init__(self, c):
+                        self.c = c
+                    def __await__(self):
+                        return self.c.__await__()
+                return AwaitableCoro(coro)
             else:
                 return loop.run_until_complete(coro)
 
@@ -110,27 +96,57 @@ if os.environ.get("DATABASE_TYPE") == "postgres":
                 return True
             return self._run(_insert())
 
-        def find(self, query):
+        def find(self, query, projection=None):
             async def _find():
                 from utils.pg_adapter import PGCursor
-                cursor = PGCursor(self.table_name, query, None, self.pool)
+                cursor = PGCursor(self.table_name, query, projection, self.pool)
                 where_clause, params = cursor._build_where(query)
                 async with self.pool.acquire() as conn:
                     rows = await conn.fetch(f"SELECT data FROM {self.table_name} {where_clause}", *params)
-                    return [json.loads(row['data']) for row in rows]
+                    results = [json.loads(row['data']) for row in rows]
+                    if projection:
+                        mode = 1 if any(v == 1 for v in projection.values()) else 0
+                        filtered_results = []
+                        for res in results:
+                            new_res = {}
+                            if mode == 1:
+                                for k, v in projection.items():
+                                    if v == 1 and k in res:
+                                        new_res[k] = res[k]
+                            else:
+                                new_res = res.copy()
+                                for k, v in projection.items():
+                                    if v == 0 and k in new_res:
+                                        del new_res[k]
+                            filtered_results.append(new_res)
+                        return filtered_results
+                    return results
             return self._run(_find())
 
-        def find_one(self, query):
-            return self._run(self._find_one(query))
+        def find_one(self, query, projection=None):
+            return self._run(self._find_one(query, projection))
 
-        async def _find_one(self, query):
+        async def _find_one(self, query, projection=None):
             from utils.pg_adapter import PGCursor
-            cursor = PGCursor(self.table_name, query, None, self.pool)
+            cursor = PGCursor(self.table_name, query, projection, self.pool)
             where_clause, params = cursor._build_where(query)
             async with self.pool.acquire() as conn:
                 row = await conn.fetchrow(f"SELECT data FROM {self.table_name} {where_clause} LIMIT 1", *params)
                 if row:
-                    return json.loads(row['data'])
+                    data = json.loads(row['data'])
+                    if projection:
+                        mode = 1 if any(v == 1 for v in projection.values()) else 0
+                        if mode == 1:
+                            filtered = {}
+                            for k, v in projection.items():
+                                if v == 1 and k in data:
+                                    filtered[k] = data[k]
+                            data = filtered
+                        else:
+                            for k, v in projection.items():
+                                if v == 0 and k in data:
+                                    del data[k]
+                    return data
             return None
 
         def update_one(self, query, update):
@@ -320,6 +336,40 @@ if os.environ.get("DATABASE_TYPE") == "postgres":
                 raise sys.modules["pymongo.errors"].DuplicateKeyError(str(e))
             return True
 
+        async def insert_many(self, docs):
+            await self.client._ensure_pool()
+            
+            def json_serializer(obj):
+                if hasattr(obj, 'isoformat'):
+                    return obj.isoformat()
+                raise TypeError(f"Type {type(obj)} not serializable")
+                
+            import copy
+            async with self.client.pool.acquire() as conn:
+                for doc in docs:
+                    if self.table_name == "payouts":
+                        if "payout_id" in doc:
+                            existing = await self.find_one({"payout_id": doc["payout_id"]})
+                            if existing:
+                                raise sys.modules["pymongo.errors"].DuplicateKeyError(f"Duplicate payout_id: {doc['payout_id']}")
+                        if "booking_id" in doc:
+                            existing = await self.find_one({"booking_id": doc["booking_id"]})
+                            if existing:
+                                raise sys.modules["pymongo.errors"].DuplicateKeyError(f"Duplicate booking_id: {doc['booking_id']}")
+                    
+                    doc_copy = copy.deepcopy(doc)
+                    for k, v in doc_copy.items():
+                        if hasattr(v, 'isoformat'):
+                            doc_copy[k] = v.isoformat()
+                    try:
+                        await conn.execute(
+                            f"INSERT INTO {self.table_name} (data) VALUES ($1)",
+                            json.dumps(doc_copy, default=json_serializer)
+                        )
+                    except asyncpg.exceptions.UniqueViolationError as e:
+                        raise sys.modules["pymongo.errors"].DuplicateKeyError(str(e))
+            return True
+
         def _postprocess_doc(self, doc):
             from datetime import datetime, date
             if not isinstance(doc, dict):
@@ -453,6 +503,33 @@ if os.environ.get("DATABASE_TYPE") == "postgres":
                     return True
             return False
 
+        async def update_many(self, query, update):
+            await self.client._ensure_pool()
+            from utils.pg_adapter import PGCursor
+            cursor = PGCursor(self.table_name, query, None, self.client.pool)
+            where_clause, params = cursor._build_where(query)
+            async with self.client.pool.acquire() as conn:
+                rows = await conn.fetch(f"SELECT id, data FROM {self.table_name} {where_clause}", *params)
+                for row in rows:
+                    data = json.loads(row['data'])
+                    if "$set" in update:
+                        def serialize_val(val):
+                            from datetime import datetime, date
+                            if isinstance(val, (datetime, date)):
+                                return val.isoformat()
+                            if isinstance(val, dict):
+                                return {k: serialize_val(v) for k, v in val.items()}
+                            if isinstance(val, list):
+                                return [serialize_val(x) for x in val]
+                            return val
+                        set_data = {k: serialize_val(v) for k, v in update["$set"].items()}
+                        data.update(set_data)
+                    if "$unset" in update:
+                        for k in update["$unset"]:
+                            data.pop(k, None)
+                    await conn.execute(f"UPDATE {self.table_name} SET data = $1 WHERE id = $2", json.dumps(data), row['id'])
+                return len(rows)
+
         async def count_documents(self, query):
             await self.client._ensure_pool()
             from utils.pg_adapter import PGCursor
@@ -503,11 +580,32 @@ if os.environ.get("DATABASE_TYPE") == "postgres":
             return MockMotorDatabase(self)
 
         def close(self):
-            if self.pool:
+            if not self.pool:
+                return
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+            if loop.is_running():
+                import threading
+                def run_in_thread():
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    try:
+                        new_loop.run_until_complete(self.pool.close())
+                    except Exception:
+                        pass
+                    finally:
+                        new_loop.close()
+                t = threading.Thread(target=run_in_thread)
+                t.start()
+                t.join()
+            else:
                 try:
-                    loop = asyncio.get_running_loop()
-                    loop.create_task(self.pool.close())
-                except RuntimeError:
+                    loop.run_until_complete(self.pool.close())
+                except Exception:
                     pass
 
     try:
