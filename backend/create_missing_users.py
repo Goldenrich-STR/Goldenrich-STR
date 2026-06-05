@@ -37,9 +37,9 @@ async def create_missing_users(db=None):
     
     from datetime import timezone
     now = datetime.now(timezone.utc)
-    admin_email = os.environ.get("ADMIN_EMAIL", "admin@goldenrichstay.com")
+    admin_email = os.environ.get("ADMIN_EMAIL", "admin@xspace360.com")
     admin_password = os.environ.get("ADMIN_PASSWORD", "admin@123")
-    admin_name = os.environ.get("ADMIN_NAME", "Golden Rich Stay Admin")
+    admin_name = os.environ.get("ADMIN_NAME", "X-Space360 Admin")
     
     users = [
         {
@@ -61,7 +61,7 @@ async def create_missing_users(db=None):
         },
         {
             "user_id": "user_host_rajesh",
-            "email": "rajesh.patel@goldenrichstay.com",
+            "email": "rajesh.patel@xspace360.com",
             "phone": "+919820061122",
             "password_hash": pwd_context.hash("Host@2026!"),
             "full_name": "Rajesh Patel",
@@ -95,7 +95,7 @@ async def create_missing_users(db=None):
         },
         {
             "user_id": "user_broker_vikram",
-            "email": "vikram.singh@goldenrich.in",
+            "email": "vikram.singh@xspace360.com",
             "phone": "+919712334456",
             "password_hash": pwd_context.hash("Broker@2026!"),
             "full_name": "Vikram Singh",
@@ -112,7 +112,7 @@ async def create_missing_users(db=None):
         },
         {
             "user_id": "user_rm_neha",
-            "email": "neha.kapoor@goldenrichstay.com",
+            "email": "neha.kapoor@xspace360.com",
             "phone": "+919901223344",
             "password_hash": pwd_context.hash("Rm@2026!"),
             "full_name": "Neha Kapoor",

@@ -109,7 +109,7 @@ const BookingConfirmation = () => {
       key: paymentConfig.key_id,
       amount: Math.round((amountToPay || 0) * 100),
       currency: paymentConfig.currency || 'INR',
-      name: 'Golden Rich Stay',
+      name: 'X-Space360',
       description: property?.title || `Booking ${booking.booking_id}`,
       order_id: booking.razorpay_order_id,
       prefill: {
@@ -194,7 +194,7 @@ const BookingConfirmation = () => {
       key: paymentConfig.key_id,
       amount: Math.round((amountToPay || 0) * 100),
       currency: paymentConfig.currency || 'INR',
-      name: 'Golden Rich Stay',
+      name: 'X-Space360',
       description: property?.title || `Booking ${booking.booking_id}`,
       prefill: {
         name: user?.full_name || '',
@@ -272,7 +272,7 @@ const BookingConfirmation = () => {
               className="w-8 h-8 md:w-10 md:h-10 object-contain transition-transform duration-300 group-hover:scale-110"
             />
             <h1 className="text-sm sm:text-lg md:text-xl font-black text-charcoal tracking-tighter whitespace-nowrap">
-              GOLDEN <span className="text-terracotta">RICH</span> STAY
+              X-SPACE<span className="text-terracotta">360</span>
             </h1>
           </div>
           <button 

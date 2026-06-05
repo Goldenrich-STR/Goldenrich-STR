@@ -153,7 +153,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                   className="w-12 h-12 object-contain transition-transform duration-500 group-hover:scale-110"
                />
                <h1 className="text-3xl font-black text-white tracking-tighter uppercase whitespace-nowrap">
-                  Golden Rich <span className="text-terracotta">Stay</span>
+                  X-Space<span className="text-terracotta">360</span>
                </h1>
             </div>
 
@@ -199,7 +199,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                  className="w-16 h-16 object-contain mx-auto mb-3 transition-transform duration-500 hover:scale-110"
               />
               <h1 className="text-xl font-black text-charcoal tracking-tighter uppercase whitespace-nowrap">
-                 Golden Rich <span className="text-terracotta">Stay</span>
+                 X-Space<span className="text-terracotta">360</span>
               </h1>
            </div>
 

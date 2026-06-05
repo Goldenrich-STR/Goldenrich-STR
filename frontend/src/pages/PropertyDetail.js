@@ -791,7 +791,7 @@ const PropertyDetail = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Booking Quotation - Golden Rich Stay</title>
+        <title>Booking Quotation - X-Space360</title>
         <style>
           body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1c1c1c; margin: 40px; background: #ffffff; }
           .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e5e7eb; padding-bottom: 20px; }
@@ -819,7 +819,7 @@ const PropertyDetail = () => {
         <div style="max-width: 800px; margin: 0 auto;">
           <div class="header">
             <div>
-              <div class="title">GOLDEN RICH STAY</div>
+              <div class="title">X-SPACE360</div>
               <div class="subtitle">Premium Venue Booking & Hospitality</div>
             </div>
             <div style="text-align: right;">
@@ -890,7 +890,7 @@ const PropertyDetail = () => {
           </table>
 
           <div class="footer-note">
-            Thank you for choosing Golden Rich Stay. Generated dynamically on booking request.
+            Thank you for choosing X-Space360. Generated dynamically on booking request.
           </div>
           
           <div class="no-print" style="margin-top: 40px; text-align: center;">
@@ -904,7 +904,7 @@ const PropertyDetail = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `GoldenRichStay_Quotation_${qtnNo}.html`;
+    link.download = `XSpace360_Quotation_${qtnNo}.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -948,7 +948,7 @@ const PropertyDetail = () => {
               className="w-8 h-8 md:w-10 md:h-10 object-contain transition-transform duration-300 group-hover:scale-110"
             />
             <h1 className="text-sm sm:text-lg md:text-xl font-black text-charcoal tracking-tighter whitespace-nowrap">
-              GOLDEN <span className="text-terracotta">RICH</span> STAY
+              X-SPACE<span className="text-terracotta">360</span>
             </h1>
           </div>
           <div className="flex items-center space-x-4 md:space-x-6">
@@ -1986,7 +1986,7 @@ const PropertyDetail = () => {
               {/* Branding Header */}
               <div className="flex justify-between items-start border-b border-sand-100 pb-6">
                 <div>
-                  <h4 className="text-xl font-black text-charcoal tracking-tight">GOLDEN RICH STAY</h4>
+                  <h4 className="text-xl font-black text-charcoal tracking-tight">X-SPACE360</h4>
                   <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider">Premium Venue Booking & Hospitality</p>
                 </div>
                 <div className="text-right">

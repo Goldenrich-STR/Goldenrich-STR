@@ -181,12 +181,12 @@ class MSG91Service:
     
     def send_otp_sms(self, phone: str, otp: str) -> Dict:
         """Send OTP via SMS."""
-        message = f"Your Golden Rich Stay OTP is {otp}. Valid for 5 minutes. Do not share with anyone."
+        message = f"Your X-Space360 OTP is {otp}. Valid for 5 minutes. Do not share with anyone."
         return self.send_sms(phone, message)
     
     def send_otp_whatsapp(self, phone: str, otp: str) -> Dict:
         """Send OTP via WhatsApp."""
-        message = f"Your Golden Rich Stay OTP is {otp}. Valid for 5 minutes."
+        message = f"Your X-Space360 OTP is {otp}. Valid for 5 minutes."
         return self.send_whatsapp(phone, message)
 
 from datetime import datetime, timezone

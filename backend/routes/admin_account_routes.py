@@ -442,7 +442,7 @@ async def share_transaction_invoice(
             f"Your invoice of INR {amount_inr} for transaction ID {transaction_id} is generated and ready.\n"
             f"Type: {txn.get('type').replace('_', ' ').title()}\n"
             f"Status: SUCCESS\n\n"
-            f"Thank you for choosing Golden Rich Stay!"
+            f"Thank you for choosing X-Space360!"
         )
         
         from services.notification_service import send_multi_channel_notification

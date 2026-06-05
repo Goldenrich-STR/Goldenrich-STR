@@ -396,7 +396,7 @@ const GuestBrowse = () => {
               className="w-8 h-8 md:w-10 md:h-10 object-contain transition-transform duration-300 group-hover:scale-110"
             />
             <h1 className="text-sm sm:text-lg md:text-xl font-black text-charcoal tracking-tighter whitespace-nowrap">
-              GOLDEN <span className="text-terracotta">RICH</span> STAY
+              X-SPACE<span className="text-terracotta">360</span>
             </h1>
           </div>
           <div className="flex items-center space-x-4 md:space-x-6">

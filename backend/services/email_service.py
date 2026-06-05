@@ -11,7 +11,7 @@ class EmailService:
     def __init__(self):
         """Initialize email service."""
         self.from_email = os.getenv("FROM_EMAIL", "noreply@propnest.com")
-        self.from_name = "Golden Rich Stay STR"
+        self.from_name = "X-Space360 STR"
         
         # For now, we'll mock email sending
         # In production, integrate with SendGrid or AWS SES
@@ -61,7 +61,7 @@ class EmailService:
     
     def send_booking_confirmation(self, to_email: str, booking_data: Dict) -> Dict:
         """Send booking confirmation email."""
-        subject = f"Booking Confirmed - {booking_data.get('property_title', 'Golden Rich Stay Property')}"
+        subject = f"Booking Confirmed - {booking_data.get('property_title', 'X-Space360 Property')}"
         
         html_content = f"""
         <!DOCTYPE html>
@@ -100,7 +100,7 @@ class EmailService:
                     <a href="https://propnest.com/bookings/{booking_data.get('booking_id')}" class="button">View Booking</a>
                 </div>
                 <div class="footer">
-                    <p>&copy; 2026 Golden Rich Stay STR. All rights reserved.</p>
+                    <p>&copy; 2026 X-Space360 STR. All rights reserved.</p>
                     <p>Questions? Contact us at support@propnest.com</p>
                 </div>
             </div>
@@ -135,12 +135,12 @@ class EmailService:
                 <div class="content">
                     <p>Dear Host,</p>
                     <div class="success-badge">Your Property is Now LIVE!</div>
-                    <p><strong>{property_data.get('title', 'Your property')}</strong> has been approved and is now visible to guests on Golden Rich Stay.</p>
+                    <p><strong>{property_data.get('title', 'Your property')}</strong> has been approved and is now visible to guests on X-Space360.</p>
                     <p>Start receiving bookings and maximize your rental income!</p>
                     <p>Property ID: {property_data.get('property_id', 'N/A')}</p>
                 </div>
                 <div class="footer">
-                    <p>&copy; 2026 Golden Rich Stay STR. All rights reserved.</p>
+                    <p>&copy; 2026 X-Space360 STR. All rights reserved.</p>
                 </div>
             </div>
         </body>
@@ -183,7 +183,7 @@ class EmailService:
                     <a href="https://propnest.com/subscriptions/renew" class="button">Renew Subscription</a>
                 </div>
                 <div class="footer">
-                    <p>&copy; 2026 Golden Rich Stay STR. All rights reserved.</p>
+                    <p>&copy; 2026 X-Space360 STR. All rights reserved.</p>
                 </div>
             </div>
         </body>

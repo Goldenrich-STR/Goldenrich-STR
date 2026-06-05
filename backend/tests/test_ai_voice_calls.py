@@ -106,9 +106,9 @@ def test_ai_agent_lifecycle(admin_token, db):
             
             # Check script contains Marathi words and greeting
             assert "Namaskar, Rohan Patil!" in guest_call["script"]
-            assert "Me Golden Rich Stay AI Concierge bolat aahe." in guest_call["script"]
+            assert "Me X-Space360 AI Concierge bolat aahe." in guest_call["script"]
             assert "Namaskar, Mayur More!" in host_call["script"]
-            assert "Me Golden Rich Stay AI Agent bolat aahe." in host_call["script"]
+            assert "Me X-Space360 AI Agent bolat aahe." in host_call["script"]
             
             # Test listing all calls
             r = requests.get(f"{API}/ai-calls/all-calls", headers=_auth(admin_token), timeout=15)

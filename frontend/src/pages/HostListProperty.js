@@ -1018,7 +1018,7 @@ const HostListProperty = () => {
                 key: paymentConfig.key_id,
                 amount: subOrder.amount,
                 currency: subOrder.currency,
-                name: 'Golden Rich Stay',
+                name: 'X-Space360',
                 description: `Subscription: ${subOrder.plan_name || plan?.plan_name || 'Plan'}`,
                 prefill: {
                   name: user?.full_name,
@@ -1072,7 +1072,7 @@ const HostListProperty = () => {
               key: subOrder.razorpay_key_id,
               amount: subOrder.amount,
               currency: subOrder.currency,
-              name: 'Golden Rich Stay',
+              name: 'X-Space360',
               description: `Subscription: ${subOrder.plan_name}`,
               order_id: subOrder.razorpay_order_id,
               prefill: {
@@ -1894,7 +1894,7 @@ const Header = ({ user, logout, navigate }) => (
     <div className="max-w-4xl mx-auto flex justify-between items-center">
       <div className="flex items-center space-x-2">
         <Building2 className="w-6 h-6 text-terracotta" />
-        <span className="text-xl font-bold text-charcoal">Golden Rich Stay</span>
+        <span className="text-xl font-bold text-charcoal">X-Space360</span>
       </div>
       <div className="flex items-center space-x-4">
         <button onClick={() => navigate('/host/dashboard')} className="text-charcoal-light hover:text-terracotta">

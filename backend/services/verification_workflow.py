@@ -314,7 +314,7 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
             property_data["owner_id"],
             NotificationType.PROPERTY_APPROVED,
             "Your listing is live!",
-            f"Congratulations! '{property_data.get('title')}' is now live on Golden Rich Stay and accepting bookings.",
+            f"Congratulations! '{property_data.get('title')}' is now live on X-Space360 and accepting bookings.",
             {"property_id": property_data["property_id"]},
         )
     else:

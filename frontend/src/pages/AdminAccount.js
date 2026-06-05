@@ -48,7 +48,7 @@ const AdminAccount = () => {
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
-            <h1 className="text-xl font-bold text-charcoal">Golden Rich Stay · Admin Account</h1>
+            <h1 className="text-xl font-bold text-charcoal">X-Space360 · Admin Account</h1>
           </div>
           <button
             onClick={logout}
@@ -1401,7 +1401,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
         {/* Invoice Header */}
         <div className="text-center pb-6 border-b border-dashed border-sand-300">
           <div className="text-xs uppercase tracking-widest text-terracotta font-extrabold mb-1">Tax Invoice</div>
-          <h2 className="text-2xl font-black text-charcoal tracking-tight">GOLDEN RICH STAY</h2>
+          <h2 className="text-2xl font-black text-charcoal tracking-tight">X-SPACE360</h2>
           <p className="text-xs text-charcoal-muted mt-1">Short-Term Rentals Platform · India</p>
           <p className="text-xs text-charcoal-light">GSTIN: 27AAAAA1111A1Z1</p>
         </div>

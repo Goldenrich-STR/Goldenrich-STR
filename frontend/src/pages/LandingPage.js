@@ -54,7 +54,7 @@ const TRANSLATIONS = {
     learnFees: 'Learn about our fees →',
     guestStories: 'Guest Stories',
     lovedByGuests: 'Loved by Guests & Hosts',
-    testimonialsSub: 'Hear from our community members about their experience with Golden Rich Stay.',
+    testimonialsSub: 'Hear from our community members about their experience with X-Space360.',
     ourJournal: 'Our Journal',
     latestBlog: 'Latest from the Blog',
     blogSub: 'Insights and tips on property hosting, travel destinations, and short-term rental trends.',
@@ -76,7 +76,7 @@ const TRANSLATIONS = {
     precision: '© 2026 · All Rights Reserved · Mayur More',
     modalJourney: 'Interactive Host Onboarding Journey',
     modalTitle: 'How It Works: Step-by-Step',
-    modalDesc: 'Golden Rich Stay provides a fully integrated, premium, physically verified short-term renting system. Click on the steps below to explore our interactive host pipeline.',
+    modalDesc: 'X-Space360 provides a fully integrated, premium, physically verified short-term renting system. Click on the steps below to explore our interactive host pipeline.',
     activeStage: 'Active Stage {stage} of 5',
     rmInspection: 'RM Inspection Scheduled',
     auditProgress: 'Audit In-Progress',
@@ -356,7 +356,7 @@ const TRANSLATIONS = {
     learnFees: 'आमच्या शुल्काबद्दल जाणून घ्या →',
     guestStories: 'पाहुण्यांचे अनुभव',
     lovedByGuests: 'पाहुणे आणि होस्ट दोघांचे आवडते',
-    testimonialsSub: 'आमच्या कम्युनिटी सदस्यांकडून त्यांच्या Golden Rich Stay सोबतच्या अनुभवांबद्दल जाणून घ्या.',
+    testimonialsSub: 'आमच्या कम्युनिटी सदस्यांकडून त्यांच्या X-Space360 सोबतच्या अनुभवांबद्दल जाणून घ्या.',
     ourJournal: 'आमचे जर्नल',
     latestBlog: 'ब्लॉगवरील नवीनतम लेख',
     blogSub: 'प्रॉपर्टी होस्टिंग, प्रवासाची ठिकाणे आणि शॉर्ट-टर्म रेंटल ट्रेंड्सबद्दल माहिती आणि टिप्स.',
@@ -369,7 +369,7 @@ const TRANSLATIONS = {
     forHosts: 'होस्टसाठी',
     listSpace: 'तुमची जागा लिस्ट करा',
     hostingStandards: 'होस्टिंगचे निकष',
-    payoutSystem: 'पेआउट प्रणाली',
+    payoutSystem: 'पेऑउट प्रणाली',
     contact: 'संपर्क',
     mumbaiHQ: 'नाशिक, महाराष्ट्र',
     privacy: 'गोपनीयता',
@@ -378,7 +378,7 @@ const TRANSLATIONS = {
     precision: '© 2026 · सर्व हक्क राखीव · मयूर मोरे',
     modalJourney: 'इंटरएक्टिव्ह होस्ट ऑनबोर्डिंग प्रवास',
     modalTitle: 'हे कसे कार्य करते: पायरी-दर-पायरी',
-    modalDesc: 'Golden Rich Stay एक पूर्णतः एकात्मिक, premium, प्रत्यक्ष सत्यापित शॉर्ट-टर्म रेंटिंग प्रणाली प्रदान करते. आमच्या परस्परसंवादी होस्ट पाइपलाइनचा शोध घेण्यासाठी खालील पायऱ्यांवर क्लिक करा.',
+    modalDesc: 'X-Space360 एक पूर्णतः एकात्मिक, premium, प्रत्यक्ष सत्यापित शॉर्ट-टर्म रेंटिंग प्रणाली प्रदान करते. आमच्या परस्परसंवादी होस्ट पाइपलाइनचा शोध घेण्यासाठी खालील पायऱ्यांवर क्लिक करा.',
     activeStage: 'सक्रिय टप्पा {stage} पैकी ५',
     rmInspection: 'आरएम तपासणी नियोजित',
     auditProgress: 'तपासणी सुरू आहे',
@@ -829,6 +829,7 @@ const LandingPage = () => {
   const [loading, setLoading] = useState(true);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [cmsContent, setCmsContent] = useState(null);
+  const [selectedPost, setSelectedPost] = useState(null);
 
   const [lang, setLang] = useState(localStorage.getItem('preferredLanguage') || 'en');
 
@@ -899,11 +900,11 @@ const LandingPage = () => {
 
             <img 
               src="/logo.png" 
-              alt="Golden Rich Stay Logo" 
+              alt="X-Space360 Logo" 
               className="w-8 h-8 md:w-12 md:h-12 object-contain transition-transform duration-300 group-hover:scale-110"
             />
             <h1 className="text-sm sm:text-lg md:text-2xl font-black text-charcoal tracking-tighter whitespace-nowrap">
-              GOLDEN <span className="text-terracotta">RICH</span> STAY
+              X-SPACE<span className="text-terracotta">360</span>
             </h1>
           </div>
           
@@ -1480,24 +1481,26 @@ const LandingPage = () => {
 
       {/* Blog Section */}
       {cmsContent?.blog?.posts && (
-        <section className="max-w-7xl mx-auto px-8 mb-32 animate-fade-in">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
-            <div>
-              <span className="inline-block px-4 py-1.5 rounded-full bg-sage/10 text-sage font-bold text-xs uppercase tracking-[0.2em] mb-4">
-                {t('ourJournal')}
-              </span>
-              <h3 className="text-4xl md:text-5xl font-black text-charcoal tracking-tight">
-                {t('latestBlog')}
-              </h3>
-            </div>
-            <p className="text-charcoal-light text-lg max-w-md">
+        <section className="max-w-5xl mx-auto px-8 mb-32 animate-fade-in">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <span className="inline-block px-4 py-1.5 rounded-full bg-terracotta/10 text-terracotta font-bold text-xs uppercase tracking-[0.2em] mb-4">
+              {t('ourJournal')}
+            </span>
+            <h3 className="text-4xl md:text-5xl font-black text-charcoal tracking-tight mb-4">
+              {t('latestBlog')}
+            </h3>
+            <p className="text-charcoal-light text-lg">
               {t('blogSub')}
             </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {cmsContent.blog.posts.map((post, idx) => (
-              <div key={post.id || idx} className="group cursor-pointer bg-white rounded-3xl overflow-hidden border border-sand-200 shadow-sm hover:shadow-md transition duration-300">
-                <div className="h-64 overflow-hidden relative">
+              <div 
+                key={post.id || idx} 
+                onClick={() => setSelectedPost(post)}
+                className="group cursor-pointer bg-white rounded-3xl overflow-hidden border border-sand-200 shadow-sm hover:shadow-md transition duration-300"
+              >
+                <div className="h-48 overflow-hidden relative">
                   <img 
                     src={getImageUrl(post.image_url) || "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600"} 
                     alt={post.title} 
@@ -1507,16 +1510,16 @@ const LandingPage = () => {
                     {post.read_time || '5 min read'}
                   </span>
                 </div>
-                <div className="p-8">
+                <div className="p-6">
                   <div className="flex items-center space-x-2 text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-3">
                     <span>{post.author}</span>
                     <span>•</span>
                     <span>{post.date}</span>
                   </div>
-                  <h4 className="text-2xl font-black text-charcoal mb-4 group-hover:text-terracotta transition-colors line-clamp-2">
+                  <h4 className="text-xl font-black text-charcoal mb-3 group-hover:text-terracotta transition-colors line-clamp-2">
                     {post.title}
                   </h4>
-                  <p className="text-charcoal-light text-sm font-semibold leading-relaxed mb-6 line-clamp-3">
+                  <p className="text-charcoal-light text-sm font-semibold leading-relaxed mb-4 line-clamp-3">
                     {post.excerpt}
                   </p>
                   <span className="text-xs font-black text-terracotta uppercase tracking-wider group-hover:underline">
@@ -1537,7 +1540,7 @@ const LandingPage = () => {
 
               <div className="flex items-center space-x-3 mb-8">
                 <Building2 className="w-8 h-8 text-terracotta" />
-                <h4 className="text-2xl font-black text-charcoal tracking-tighter">GOLDEN RICH STAY</h4>
+                <h4 className="text-2xl font-black text-charcoal tracking-tighter">X-SPACE360</h4>
               </div>
               <p className="text-charcoal-light text-lg mb-8 max-w-sm">
                 {t('footerSub')}
@@ -1577,7 +1580,7 @@ const LandingPage = () => {
               <h5 className="font-black text-charcoal uppercase tracking-[0.2em] text-xs mb-8">{t('contact')}</h5>
               <ul className="space-y-4 text-charcoal-light font-medium">
                 <li><p>{t('mumbaiHQ')}</p></li>
-                <li><p>support@goldenrichstay.com</p></li>
+                <li><p>support@x-space360.com</p></li>
                 <li><p>+91 8484826247</p></li>
               </ul>
             </div>
@@ -1675,14 +1678,141 @@ const LandingPage = () => {
           icon: iconMap[s.icon_name] || Sparkles
         })) : defaultSteps;
         return (
-          <HowItWorksModal 
-            isOpen={showHowItWorksModal} 
-            onClose={() => setShowHowItWorksModal(false)} 
-            user={user} 
-            navigate={navigate} 
-            steps={stepsData}
-            t={t}
-          />
+          <>
+            <HowItWorksModal 
+              isOpen={showHowItWorksModal} 
+              onClose={() => setShowHowItWorksModal(false)} 
+              user={user} 
+              navigate={navigate} 
+              steps={stepsData}
+              t={t}
+            />
+
+            {selectedPost && (
+              <div 
+                className="fixed inset-0 bg-charcoal/70 backdrop-blur-md flex items-center justify-center z-[99999] p-4 md:p-6 transition-all duration-300 animate-fade-in" 
+                onClick={() => setSelectedPost(null)}
+              >
+                <div 
+                  className="bg-white rounded-[2.5rem] max-w-5xl w-full max-h-[85vh] md:max-h-[80vh] overflow-hidden shadow-2xl border border-sand-200 flex flex-col md:flex-row relative animate-scale-up" 
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  
+                  {/* Left Column: Image Banner (Desktop) / Top Banner (Mobile) */}
+                  <div className="relative w-full md:w-[42%] h-[240px] md:h-auto overflow-hidden bg-charcoal-deep shrink-0">
+                    <img 
+                      src={getImageUrl(selectedPost.image_url)} 
+                      alt={selectedPost.title} 
+                      className="w-full h-full object-cover opacity-90 transition-transform duration-700 hover:scale-105"
+                    />
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-charcoal-deep/90 via-charcoal-deep/40 to-transparent z-10"></div>
+                    
+                    {/* Floating Info inside Image Column */}
+                    <div className="absolute bottom-6 left-6 right-6 z-20 text-white">
+                      <span className="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-widest text-white mb-3 shadow-sm">
+                        {selectedPost.read_time || '5 min read'}
+                      </span>
+                      <h4 className="text-lg md:text-xl font-black font-serif italic text-sand-100 leading-tight">
+                        "Curated perspectives on short-term rentals and spaces."
+                      </h4>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Article Details & Content */}
+                  <div className="flex-1 flex flex-col min-w-0 relative h-[calc(85vh-240px)] md:h-auto">
+                    
+                    {/* Header Controls */}
+                    <div className="flex items-center justify-between p-6 md:p-8 pb-4 border-b border-sand-100">
+                      {/* Date & Tagline */}
+                      <div className="flex items-center space-x-2 text-xs font-black text-terracotta uppercase tracking-[0.2em]">
+                        <span>{t('ourJournal')}</span>
+                        <span className="text-charcoal-muted font-normal">•</span>
+                        <span className="text-charcoal-muted">{selectedPost.date}</span>
+                      </div>
+                      
+                      {/* Close Button inside header controls */}
+                      <button
+                        onClick={() => setSelectedPost(null)}
+                        className="w-10 h-10 rounded-full bg-sand-100 hover:bg-terracotta hover:text-white flex items-center justify-center transition-all text-charcoal shadow-sm hover:scale-105 active:scale-95"
+                        title="Close article"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+
+                    {/* Scrollable Article Text */}
+                    <div className="overflow-y-auto px-6 md:px-8 py-6 custom-scrollbar flex-1 space-y-6">
+                      
+                      {/* Title */}
+                      <h3 className="text-2xl md:text-3xl font-black text-charcoal tracking-tight leading-tight">
+                        {selectedPost.title}
+                      </h3>
+
+                      {/* Author Info */}
+                      <div className="flex items-center space-x-3 bg-sand-50/70 border border-sand-200/50 rounded-2xl p-4">
+                        <div className="w-10 h-10 rounded-full bg-sage text-white flex items-center justify-center text-sm font-black shadow-sm shrink-0">
+                          {selectedPost.author?.[0] || 'A'}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-charcoal leading-tight">{selectedPost.author}</p>
+                          <p className="text-[11px] text-charcoal-muted font-bold uppercase tracking-wider mt-0.5">X-Space360 Editorial Desk</p>
+                        </div>
+                      </div>
+
+                      {/* Article Paragraphs */}
+                      <div className="text-charcoal-light font-semibold text-sm md:text-base leading-relaxed space-y-5">
+                        {selectedPost.id === 'p1' ? (
+                          <>
+                            <p className="first-letter:text-5xl first-letter:font-black first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
+                              The real estate landscape is undergoing a massive paradigm shift. Traditional long-term leasing, once the gold standard of property investment, is rapidly losing ground to the dynamic world of short-term rentals (STRs). With the rise of hybrid work models, digital nomadism, and a growing consumer preference for unique, home-like experiences over standardized hotel rooms, properties listed on platforms like X-Space360 are seeing unprecedented demand.
+                            </p>
+                            <p>
+                              What makes short-term renting so lucrative? The math is simple but powerful. Instead of locking in a fixed monthly rent for 11 or 24 months, hosts can optimize pricing daily, weekly, or hourly based on real-time market demand. During peak holiday seasons, weekend getaways, or major local conferences, daily rates can surge, enabling hosts to earn up to 3x more monthly revenue compared to traditional tenancy. Even with average occupancy rates around 60-70%, the net income yields are substantially higher.
+                            </p>
+                            <p className="bg-sage/10 border-l-4 border-sage p-4 rounded-r-xl italic font-serif text-charcoal font-medium my-6">
+                              "Short-term renting isn't just about yielding higher returns; it's about retaining absolute control over your asset, choosing when to host, and ensuring top-tier maintenance under our strict verification guidelines."
+                            </p>
+                            <p>
+                              Furthermore, platforms like X-Space360 eliminate the typical headaches associated with property hosting. Through automated calendar syncing (such as iCal feed integrations), verified digital KYC (using Aadhaar and secure mobile OTPs), and secure checkout locks powered by double-signature Razorpay integrations, the risk of payment defaults or double-bookings is reduced to zero. Whether you own a luxury residential villa, a chic co-working space, or an event rooftop, unlocking your property's short-term potential is the ultimate way to build a robust, passive income stream in 2026.
+                            </p>
+                          </>
+                        ) : selectedPost.id === 'p2' ? (
+                          <>
+                            <p className="first-letter:text-5xl first-letter:font-black first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
+                              Aesthetics are no longer optional—they are the key driver of your property's daily listing value. In a crowded marketplace, guests browse with their eyes first. If your listing features premium design, curated color palettes, and thoughtful lighting, it immediately commands attention. More importantly, as remote and hybrid work becomes a permanent fixture of modern professional life, integrating a functional, high-end workspace into your rental is one of the highest-ROI improvements you can make.
+                            </p>
+                            <p>
+                              To design a five-star workspace, start with the color psychology. Move away from stark office whites or harsh primary colors. Instead, adopt a curated palette of warm sand, rich terracotta, and calming sage green. These organic tones feel premium, relaxed, and incredibly inviting in photos. Next, invest in an ergonomic chair that combines physical comfort with high-end style, paired with a spacious wooden desk. Position the workspace near natural light, but ensure you install adjustable warm-toned task lighting for late-night productivity sessions.
+                            </p>
+                            <p className="bg-terracotta/5 border-l-4 border-terracotta p-4 rounded-r-xl italic font-serif text-charcoal font-medium my-6">
+                              "In premium lodging, a workspace is no longer a luxury addition; it is an expectations baseline. Seamless integration of ergonomics and high-speed tech justifies up to a 30% daily rate premium."
+                            </p>
+                            <p>
+                              Finally, complement the physical design with seamless technology. A blazing-fast, dedicated Wi-Fi connection is non-negotiable. Provide universal charging docks, clean cable management, and a high-quality secondary monitor if possible. By elevating the workspace from a simple desk-in-a-corner to a dedicated, premium workstation, you transform your property into a prime destination for work-cations, justifying a much higher daily price point and earning glowing five-star reviews from every guest.
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="first-letter:text-5xl first-letter:font-black first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
+                              {selectedPost.excerpt}
+                            </p>
+                            <p>
+                              Curation, technology, and superior customer service are at the core of X-Space360. By focusing on rich aesthetics, verified properties, and high-speed amenities, we ensure both guests and hosts enjoy a premium, seamless renting experience.
+                            </p>
+                            <p>
+                              We invite you to explore other articles on our journal to stay updated on the latest short-term rental trends, hosting tips, and travel destinations in India.
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+          </>
         );
       })()}
     </div>

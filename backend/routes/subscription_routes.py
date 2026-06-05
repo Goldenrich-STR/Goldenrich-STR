@@ -400,7 +400,7 @@ async def create_registration_fee_order(
             "is_mock": razorpay_service.is_mock,
             "amount": REGISTRATION_FEE_AMOUNT,
             "currency": "INR",
-            "description": "Golden Rich Stay Host Registration Fee"
+            "description": "X-Space360 Host Registration Fee"
         }
     
     except HTTPException:

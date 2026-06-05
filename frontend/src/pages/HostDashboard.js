@@ -282,7 +282,7 @@ const HostDashboard = () => {
           key: paymentConfig.key_id,
           amount: subOrder.amount,
           currency: 'INR',
-          name: 'Golden Rich Stay',
+          name: 'X-Space360',
           description: `Plan: ${plan.plan_name} (${plan.plan_type})`,
           order_id: subOrder.razorpay_order_id,
           prefill: {
@@ -942,7 +942,7 @@ const HostDashboard = () => {
             <div className="bg-white rounded-[3rem] p-10 max-w-2xl w-full shadow-2xl animate-scale-up max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-2xl font-black text-charcoal tracking-tight mb-1">Golden Rich Stay Agreement</h3>
+                  <h3 className="text-2xl font-black text-charcoal tracking-tight mb-1">X-Space360 Agreement</h3>
                   <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Review and draw signature below</span>
                 </div>
                 <button onClick={() => setShowAgreementModal(false)} className="w-8 h-8 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors">
@@ -952,10 +952,10 @@ const HostDashboard = () => {
 
               <div className="bg-sand-50 p-6 rounded-2xl text-[11px] text-charcoal-light leading-relaxed h-48 overflow-y-auto mb-6 border border-sand-200 select-none">
                 <p className="font-bold mb-2">SHORT-TERM RENTAL HOST AGREEMENT</p>
-                <p className="mb-2">This Short-Term Rental Agreement (the "Agreement") is entered into by and between the Property Owner (hereinafter referred to as the "Host") and Golden Rich Stay.</p>
-                <p className="mb-2">1. Listing Permission: The Host hereby grants Golden Rich Stay the non-exclusive right to list and market their verified properties on the Golden Rich Stay booking application and coordinate reservations.</p>
+                <p className="mb-2">This Short-Term Rental Agreement (the "Agreement") is entered into by and between the Property Owner (hereinafter referred to as the "Host") and X-Space360.</p>
+                <p className="mb-2">1. Listing Permission: The Host hereby grants X-Space360 the non-exclusive right to list and market their verified properties on the X-Space360 booking application and coordinate reservations.</p>
                 <p className="mb-2">2. Compliance & Legalities: The Host guarantees that they are the legal owner or authorized representative of the property, holding all necessary local government permissions, and complies with local taxation and occupancy regulations.</p>
-                <p className="mb-2">3. Platform Services & Fees: Golden Rich Stay coordinates checkout billing, handles guest verification, and processes payouts. Golden Rich Stay will deduct its standard platform service fee from host payouts.</p>
+                <p className="mb-2">3. Platform Services & Fees: X-Space360 coordinates checkout billing, handles guest verification, and processes payouts. X-Space360 will deduct its standard platform service fee from host payouts.</p>
                 <p className="mb-2">4. Host Standards: The Host agrees to maintain properties in clean, functional, and guest-ready conditions. High hospitality standards, correct GPS geolocation, and physical representation of all amenities are mandatory.</p>
               </div>
 
