@@ -19,6 +19,10 @@ def _is_demo_key(key: str) -> bool:
     return (not key) or key == "rzp_test_demo_key" or key == "rzp_test_demo_secret" or "PYTEST_CURRENT_TEST" in os.environ
 
 
+def _env_true(name: str, default: str = "false") -> bool:
+    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
 class RazorpayService:
     """Razorpay integration with a demo/mock fallback when no real keys are set."""
 
@@ -26,6 +30,7 @@ class RazorpayService:
         self.key_id = os.getenv("RAZORPAY_KEY_ID", "rzp_test_demo_key")
         self.key_secret = os.getenv("RAZORPAY_KEY_SECRET", "rzp_test_demo_secret")
         self._is_mock_base = _is_demo_key(self.key_id) or _is_demo_key(self.key_secret)
+        self.payouts_are_mock = _env_true("RAZORPAYX_DEMO_MODE", "true")
 
         if self._is_mock_base:
             logger.warning(
@@ -174,7 +179,7 @@ class RazorpayService:
         destination_type: 'upi' or 'bank'
         destination_ref: VPA string (upi) or account number (bank)
         """
-        if self.is_mock:
+        if self.is_mock or self.payouts_are_mock:
             payout_id = f"pout_mock_{uuid.uuid4().hex[:20]}"
             logger.info(
                 f"[MOCK] RazorpayX payout created: {payout_id} "

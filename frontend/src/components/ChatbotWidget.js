@@ -205,6 +205,110 @@ const TRANSLATIONS = {
   }
 };
 
+const hasAny = (text, words) => words.some((word) => text.includes(word));
+
+const getSmartReply = (lower, current, lang) => {
+  const isMr = lang === 'mr';
+  const isHi = lang === 'hi';
+
+  if (hasAny(lower, ['book property', 'book a property', 'booking property', 'reserve property', 'how to book', 'stay book', 'property book'])) {
+    if (isMr) {
+      return `Property book करण्यासाठी:
+1. Browse/Search मधून property निवडा.
+2. Check-in आणि check-out dates select करा.
+3. Event venue असेल तर timing slot आणि food preference निवडा.
+4. Guests count निवडा.
+5. Total amount तपासा आणि Advance किंवा Full payment निवडा.
+6. Request Booking/Reserve Now click करा.
+7. Razorpay payment complete झाल्यावर booking confirmed होते.
+
+Payment आधी back गेलात तर soft-lock काही मिनिटांनी expire होतो. Confirmed payment झाल्यावरच final booking होते.`;
+    }
+    if (isHi) {
+      return `Property book करने के लिए:
+1. Browse/Search से property चुनें.
+2. Check-in और check-out dates select करें.
+3. Event venue हो तो timing slot और food preference चुनें.
+4. Guests count चुनें.
+5. Total amount देखें और Advance या Full payment चुनें.
+6. Request Booking/Reserve Now दबाएं.
+7. Razorpay payment पूरा होने पर booking confirmed होती है.`;
+    }
+    return `To book a property:
+1. Open Browse/Search and choose a property.
+2. Select check-in and check-out dates.
+3. For event venues, choose the timing slot and food preference.
+4. Select guest count.
+5. Review the total and choose Advance or Full payment.
+6. Click Request Booking/Reserve Now.
+7. Complete Razorpay payment to confirm the booking.`;
+  }
+
+  if (hasAny(lower, ['payout', 'host payment', 'host payout', 'release payment', 'upi', 'bank account'])) {
+    return `Payout flow:
+1. Guest pays for a confirmed booking.
+2. Golden Rich Stay records the booking payment.
+3. After checkout, eligible payout is created for the host.
+4. Platform fee is deducted.
+5. Host receives net amount through saved UPI or bank details.
+6. Admin can process the eligible payout.
+
+If payout says "needs destination" or failed due to destination, the host must save UPI/bank details in Host > Payouts, then admin can retry.`;
+  }
+
+  if (hasAny(lower, ['refund', 'cancel booking', 'cancellation', 'cancel my booking'])) {
+    return `Cancellation and refund summary:
+* 7 or more days before check-in: full refund.
+* 2 to 7 days before check-in: partial refund.
+* Less than 48 hours: strict/no-refund window may apply.
+Use My Bookings > Cancel for guest cancellation. Admin can review refund records from the account section.`;
+  }
+
+  if (hasAny(lower, ['list property', 'add property', 'post property', 'create listing', 'host listing'])) {
+    return current.hostText;
+  }
+
+  if (hasAny(lower, ['verification', 'physical verification', 'verify property', 'rm visit', 'broker verification'])) {
+    return current.verifyText;
+  }
+
+  if (hasAny(lower, ['subscription', 'plan', 'pricing plan', 'host plan'])) {
+    return current.plansText;
+  }
+
+  if (hasAny(lower, ['otp', 'login', 'register', 'sign up', 'signup', 'password'])) {
+    return `Account help:
+* Register with name, email, phone, city and role.
+* OTP is sent to the phone number. On staging/UAT, demo OTP may be shown in server logs.
+* If OTP does not arrive, verify phone number format and retry.
+* For login issues, check whether you are using the correct role: guest, host, broker, employee or admin.`;
+  }
+
+  if (hasAny(lower, ['image', 'photo', 'upload', 'picture'])) {
+    return `Image upload help:
+* Use JPG/PNG/WebP images.
+* Large photos are compressed before upload.
+* If image upload fails, try a smaller image and refresh after upload.
+* Property images appear after the backend stores them under uploads and nginx serves /api/uploads correctly.`;
+  }
+
+  if (hasAny(lower, ['contact', 'support', 'phone', 'email', 'helpline'])) {
+    return current.contactText;
+  }
+
+  if (hasAny(lower, ['error', 'failed', 'not working', 'issue', 'problem'])) {
+    return `I can help troubleshoot. Please share:
+1. Which page has the issue.
+2. The exact error message.
+3. What action you clicked before the error.
+4. Whether you are using guest, host or admin login.
+
+For payment, OTP, image upload or payout errors, include the screenshot and I can point to the likely fix.`;
+  }
+
+  return null;
+};
+
 const ChatbotWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [lang, setLang] = useState('en');
@@ -269,8 +373,11 @@ const ChatbotWidget = () => {
       
       const lower = text.toLowerCase();
       const current = TRANSLATIONS[lang];
+      const smartReply = getSmartReply(lower, current, lang);
 
-      if (lower.includes('onboard') || lower.includes('step') || lower.includes('listing flow') || lower.includes('नोंदणी') || lower.includes('चरण')) {
+      if (smartReply) {
+        replyText = smartReply;
+      } else if (lower.includes('onboard') || lower.includes('step') || lower.includes('listing flow')) {
         replyText = current.onboardingText;
       } else if (lower.includes('host') || lower.includes('list') || lower.includes('जागा') || lower.includes('सूचीबद्ध')) {
         replyText = current.hostText;

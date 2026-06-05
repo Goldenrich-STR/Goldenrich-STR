@@ -32,6 +32,7 @@ class TransactionStatus(str, Enum):
 
 class PayoutStatus(str, Enum):
     ELIGIBLE = "eligible"
+    NEEDS_DESTINATION = "needs_destination"
     PROCESSING = "processing"
     PAID = "paid"
     FAILED = "failed"

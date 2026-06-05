@@ -53,6 +53,10 @@ async def get_blocked_dates(
             query["start_date"] = {"$lte": end_date}
             query["end_date"] = {"$gte": start_date}
 
+        property_data = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+        if property_data and property_data.get("category") == "event_venue":
+            query["source"] = {"$ne": "booking"}
+
         cursor = db.blocked_dates.find(query, {"_id": 0})
         blocked_dates = await cursor.to_list(length=1000)
 

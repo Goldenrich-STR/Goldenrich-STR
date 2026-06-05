@@ -78,6 +78,28 @@ async def update_payout_preference(
         {"user_id": current_user["user_id"]},
         {"$set": {"payout_preference": pref_doc, "updated_at": datetime.now(timezone.utc)}},
     )
+
+    dest_ref = payload.upi_vpa if payload.preferred == PayoutDestinationType.UPI else payload.bank_account_number
+    if dest_ref:
+        await db.payouts.update_many(
+            {
+                "host_id": current_user["user_id"],
+                "status": {"$in": ["needs_destination", "failed"]},
+                "$or": [
+                    {"failure_reason": {"$regex": "destination", "$options": "i"}},
+                    {"failure_reason": None},
+                ],
+            },
+            {"$set": {
+                "status": "eligible",
+                "destination_type": payload.preferred.value,
+                "destination_ref": dest_ref if payload.preferred == PayoutDestinationType.UPI else f"{'*' * max(0, len(dest_ref) - 4)}{dest_ref[-4:]}",
+                "destination_holder": payload.bank_account_holder,
+                "destination_ifsc": payload.bank_ifsc,
+                "failure_reason": None,
+                "updated_at": datetime.now(timezone.utc),
+            }},
+        )
     return {"message": "Payout preference updated", "payout_preference": _sanitise(pref_doc)}
 
 
