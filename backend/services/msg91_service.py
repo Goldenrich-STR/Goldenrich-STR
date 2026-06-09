@@ -241,7 +241,7 @@ class MSG91Service:
         """Send OTP via SMS."""
         template_id = os.getenv("MSG91_TEMPLATE_ID", "").strip()
         if template_id:
-            return self.send_flow_sms(phone, template_id, {"VAR1": "Customer", "VAR2": otp})
+            return self.send_flow_sms(phone, template_id, {"name": "Customer", "otp": otp})
 
         message = f"Your X-Space360 OTP is {otp}. Valid for 5 minutes. Do not share with anyone."
         return self.send_sms(phone, message)
