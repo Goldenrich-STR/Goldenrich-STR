@@ -390,15 +390,12 @@ const AuthPage = ({ isAdminLogin = false }) => {
                           </button>
                        </div>
                     ) : (
-                       <div className="space-y-12 text-center animate-fade-in">
+                       <div className="space-y-9 text-center animate-fade-in">
                           <div className="flex flex-col items-center">
-                             <div className="w-24 h-24 bg-terracotta/10 rounded-[2.5rem] flex items-center justify-center mb-8 border-4 border-terracotta/20 shadow-premium">
-                                <ShieldCheck className="w-12 h-12 text-terracotta" />
+                             <div className="w-22 h-22 bg-terracotta/10 rounded-[2rem] flex items-center justify-center mb-6 border-4 border-terracotta/20 shadow-premium">
+                                <ShieldCheck className="w-11 h-11 text-terracotta" />
                              </div>
-                             <h3 className="text-4xl font-black text-charcoal tracking-tighter mb-3">Verification</h3>
-                             <p className="text-[11px] font-black text-charcoal-muted uppercase tracking-[0.2em] max-w-sm leading-loose">
-                                dispatched a unique key to <span className="text-charcoal underline decoration-terracotta decoration-2 underline-offset-4">{registerData.phone}</span>.
-                             </p>
+                             <h3 className="text-4xl font-black text-charcoal tracking-tighter">Verification</h3>
                           </div>
 
                           <div className="flex justify-center">
@@ -406,7 +403,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                 type="text"
                                 value={otp}
                                 onChange={(e) => setOtp(e.target.value)}
-                                className="w-full max-w-[320px] text-center text-4xl font-black tracking-[0.6em] py-8 bg-white rounded-[2rem] border-2 border-sand-200 focus:border-terracotta focus:ring-12 focus:ring-terracotta/5 transition-all outline-none text-charcoal shadow-inner"
+                                className="w-full max-w-[320px] text-center text-4xl font-black tracking-[0.6em] py-7 bg-white rounded-[2rem] border-2 border-sand-200 focus:border-terracotta focus:ring-12 focus:ring-terracotta/5 transition-all outline-none text-charcoal shadow-inner"
                                 placeholder="000000"
                                 maxLength={6}
                              />
