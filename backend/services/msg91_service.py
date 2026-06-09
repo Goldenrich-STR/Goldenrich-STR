@@ -94,6 +94,64 @@ class MSG91Service:
                 "success": False,
                 "error": str(e)
             }
+
+    def send_flow_sms(self, phone: str, template_id: str, variables: Optional[Dict[str, str]] = None) -> Dict:
+        """Send SMS via MSG91 Flow template.
+
+        MSG91 owns the approved message text in the template. The backend only
+        sends the recipient and variables such as var1=OTP.
+        """
+        try:
+            if self.is_demo_mode:
+                logger.info(f"[DEMO] Flow SMS to {phone}: template={template_id}, variables={variables}")
+                return {
+                    "success": True,
+                    "message_id": f"demo_flow_sms_{int(datetime.now(timezone.utc).timestamp())}",
+                    "demo_mode": True
+                }
+
+            clean_phone = phone.replace("+", "").replace(" ", "")
+            recipient = {"mobiles": clean_phone}
+            if variables:
+                recipient.update(variables)
+
+            payload = {
+                "template_id": template_id,
+                "short_url": "0",
+                "recipients": [recipient],
+            }
+            headers = {
+                "authkey": self.authkey,
+                "Content-Type": "application/json",
+            }
+
+            response = requests.post(
+                self.sms_api_url,
+                json=payload,
+                headers=headers,
+                timeout=10
+            )
+
+            if 200 <= response.status_code < 300:
+                logger.info(f"Flow SMS sent successfully to {phone}")
+                return {
+                    "success": True,
+                    "message_id": response.text,
+                    "demo_mode": False
+                }
+
+            logger.error(f"Flow SMS failed: {response.status_code} {response.text}")
+            return {
+                "success": False,
+                "error": response.text
+            }
+
+        except Exception as e:
+            logger.error(f"Error sending Flow SMS: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
     
     def send_whatsapp(self, phone: str, message: str, template_name: Optional[str] = None) -> Dict:
         """Send WhatsApp message via MSG91.
@@ -181,6 +239,10 @@ class MSG91Service:
     
     def send_otp_sms(self, phone: str, otp: str) -> Dict:
         """Send OTP via SMS."""
+        template_id = os.getenv("MSG91_TEMPLATE_ID", "").strip()
+        if template_id:
+            return self.send_flow_sms(phone, template_id, {"var1": otp})
+
         message = f"Your X-Space360 OTP is {otp}. Valid for 5 minutes. Do not share with anyone."
         return self.send_sms(phone, message)
     
