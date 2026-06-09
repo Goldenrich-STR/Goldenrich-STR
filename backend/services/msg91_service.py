@@ -133,7 +133,7 @@ class MSG91Service:
             )
 
             if 200 <= response.status_code < 300:
-                logger.info(f"Flow SMS sent successfully to {phone}")
+                logger.info(f"Flow SMS sent successfully to {phone}: {response.text}")
                 return {
                     "success": True,
                     "message_id": response.text,
@@ -241,7 +241,7 @@ class MSG91Service:
         """Send OTP via SMS."""
         template_id = os.getenv("MSG91_TEMPLATE_ID", "").strip()
         if template_id:
-            return self.send_flow_sms(phone, template_id, {"var1": "Customer", "var2": otp})
+            return self.send_flow_sms(phone, template_id, {"VAR1": "Customer", "VAR2": otp})
 
         message = f"Your X-Space360 OTP is {otp}. Valid for 5 minutes. Do not share with anyone."
         return self.send_sms(phone, message)
