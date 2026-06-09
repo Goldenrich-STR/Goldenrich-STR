@@ -30,7 +30,6 @@ const AuthPage = ({ isAdminLogin = false }) => {
   
   const [showOTPVerification, setShowOTPVerification] = useState(false);
   const [otp, setOtp] = useState('');
-  const [generatedOTP, setGeneratedOTP] = useState('');
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -77,14 +76,8 @@ const AuthPage = ({ isAdminLogin = false }) => {
     try {
       const response = await authAPI.sendOTP(registerData.phone, 'registration');
       if (response.data) {
-        const demoOtp = response.data.demo_mode ? response.data.otp : '';
-        setGeneratedOTP(demoOtp || '');
         setShowOTPVerification(true);
-        setSuccess(
-          demoOtp
-            ? `OTP sent to ${registerData.phone}. OTP: ${demoOtp}`
-            : `OTP sent to ${registerData.phone}.`
-        );
+        setSuccess(`OTP sent to ${registerData.phone}.`);
       }
     } catch (err) {
       const detail = err?.response?.data?.detail;
