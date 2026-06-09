@@ -99,7 +99,7 @@ class MSG91Service:
         """Send SMS via MSG91 Flow template.
 
         MSG91 owns the approved message text in the template. The backend only
-        sends the recipient and variables such as var1=OTP.
+        sends the recipient and variables required by that template.
         """
         try:
             if self.is_demo_mode:
@@ -241,7 +241,7 @@ class MSG91Service:
         """Send OTP via SMS."""
         template_id = os.getenv("MSG91_TEMPLATE_ID", "").strip()
         if template_id:
-            return self.send_flow_sms(phone, template_id, {"var1": otp})
+            return self.send_flow_sms(phone, template_id, {"var1": "Customer", "var2": otp})
 
         message = f"Your X-Space360 OTP is {otp}. Valid for 5 minutes. Do not share with anyone."
         return self.send_sms(phone, message)
