@@ -79,7 +79,7 @@ const HostPayouts = () => {
             <img 
               src="/logo.png" 
               alt="Logo" 
-              className="w-10 h-10 object-contain transition-transform duration-300 group-hover:scale-110"
+              className="brand-logo-full w-10 h-10 object-contain transition-transform duration-300 group-hover:scale-110"
             />
             <h1 className="text-xl font-black text-charcoal tracking-tighter">
               HOST<span className="text-terracotta">CENTRAL</span>

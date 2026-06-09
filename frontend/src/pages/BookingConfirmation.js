@@ -269,11 +269,8 @@ const BookingConfirmation = () => {
             <img 
               src="/logo.png" 
               alt="Logo" 
-              className="w-8 h-8 md:w-10 md:h-10 object-contain transition-transform duration-300 group-hover:scale-110"
+              className="brand-logo-full w-8 h-8 md:w-10 md:h-10 object-contain transition-transform duration-300 group-hover:scale-110"
             />
-            <h1 className="text-sm sm:text-lg md:text-xl font-black text-charcoal tracking-tighter whitespace-nowrap">
-              X-SPACE<span className="text-terracotta">360</span>
-            </h1>
           </div>
           <button 
             onClick={() => navigate('/guest/browse')} 

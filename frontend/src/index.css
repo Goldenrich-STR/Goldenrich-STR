@@ -123,3 +123,20 @@ input, textarea, select {
   @apply transition-all duration-200 border-sand-300 focus:border-terracotta focus:ring-4 focus:ring-terracotta/10;
 }
 
+
+/* X-Space360 full logo treatment */
+.brand-logo-full {
+  width: clamp(190px, 18vw, 300px) !important;
+  height: auto !important;
+  max-height: 58px !important;
+  object-fit: contain !important;
+  object-position: left center !important;
+  flex-shrink: 0 !important;
+}
+
+@media (max-width: 640px) {
+  .brand-logo-full {
+    width: clamp(150px, 46vw, 220px) !important;
+    max-height: 48px !important;
+  }
+}
