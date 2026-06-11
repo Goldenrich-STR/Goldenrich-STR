@@ -89,12 +89,20 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('propnest_user');
   };
 
+  const acceptToken = async (accessToken) => {
+    setToken(accessToken);
+    localStorage.setItem('propnest_token', accessToken);
+    const userData = await refreshUser();
+    return userData;
+  };
+
   const value = {
     user,
     token,
     loading,
     login,
     register,
+    acceptToken,
     logout,
     refreshUser,
     isAuthenticated: !!token && !!user,

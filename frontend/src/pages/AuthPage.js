@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star } from 'lucide-react';
-import { authAPI } from '../services/api';
+import { authAPI, apiClient } from '../services/api';
 
 const AuthPage = ({ isAdminLogin = false }) => {
   const navigate = useNavigate();
@@ -62,6 +62,11 @@ const AuthPage = ({ isAdminLogin = false }) => {
     }
     
     setLoading(false);
+  };
+
+  const handleGoldenRichSso = () => {
+    const backendUrl = (apiClient.defaults.baseURL || '').replace(/\/$/, '');
+    window.location.href = `${backendUrl}/api/auth/sso/goldenrich/login`;
   };
 
   const sendOTP = async () => {
@@ -281,6 +286,24 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     >
                        {loading ? 'CALIBRATING ACCESS...' : 'SIGN IN'}
                     </button>
+
+                    {!isAdminLogin && (
+                       <div className="space-y-5 pt-2">
+                          <div className="flex items-center gap-4">
+                             <div className="h-px flex-1 bg-sand-200"></div>
+                             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-charcoal-muted">or</span>
+                             <div className="h-px flex-1 bg-sand-200"></div>
+                          </div>
+                          <button
+                             type="button"
+                             onClick={handleGoldenRichSso}
+                             className="w-full py-5 rounded-2xl border-2 border-sand-200 bg-white text-charcoal hover:border-terracotta hover:text-terracotta transition-all shadow-sm font-black text-[11px] uppercase tracking-[0.18em] inline-flex items-center justify-center gap-3"
+                          >
+                             <Building2 className="w-5 h-5" />
+                             <span>Login with GRP SSO</span>
+                          </button>
+                       </div>
+                    )}
                  </form>
               ) : (
                  <div className="space-y-8 animate-slide-up">

@@ -19,6 +19,7 @@ import BrokerDashboard from "./pages/BrokerDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import HostPayouts from "./pages/HostPayouts";
 import HostBookings from "./pages/HostBookings";
+import SsoCallback from "./pages/SsoCallback";
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -80,6 +81,7 @@ function App() {
             <Route path="/admin" element={<AuthPage isAdminLogin={true} />} />
             <Route path="/admin/login" element={<AuthPage isAdminLogin={true} />} />
             <Route path="/property/:id" element={<PropertyDetail />} />
+            <Route path="/sso/goldenrich/callback" element={<SsoCallback />} />
 
             {/* Role-based Dashboard Redirect */}
             <Route path="/dashboard" element={<RoleBasedRedirect />} />

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi.responses import RedirectResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 from models.user import UserCreate, UserLogin, UserResponse, User, UserRole
@@ -9,6 +10,11 @@ from middleware.auth_middleware import get_current_user
 import phonenumbers
 from phonenumbers.phonenumberutil import NumberParseException
 import logging
+import httpx
+import os
+import secrets
+from datetime import datetime, timezone
+from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -26,6 +32,147 @@ class VerifyOTPRequest(BaseModel):
     phone: str
     otp: str
     purpose: str = "registration"
+
+GOLDENRICH_SSO_COOKIE = "goldenrich_sso_state"
+
+def _env(name: str, default: str = "") -> str:
+    return os.getenv(name, default).strip()
+
+def _frontend_url(path: str, params: dict | None = None) -> str:
+    base_url = _env("PUBLIC_FRONTEND_URL", "http://localhost:3000").rstrip("/")
+    url = f"{base_url}{path}"
+    if params:
+        url = f"{url}?{urlencode(params)}"
+    return url
+
+def _goldenrich_redirect_uri() -> str:
+    configured = _env("GOLDENRICH_OAUTH_REDIRECT_URI")
+    if configured:
+        return configured
+    backend_url = _env("PUBLIC_BACKEND_URL", "http://localhost:8001").rstrip("/")
+    return f"{backend_url}/api/auth/sso/goldenrich/callback"
+
+def _sso_cookie_secure() -> bool:
+    configured = _env("SSO_COOKIE_SECURE")
+    if configured:
+        return configured.lower() == "true"
+    return _env("PUBLIC_BACKEND_URL", "http://localhost:8001").startswith("https://")
+
+def _normalize_sso_role(raw_role: str | None) -> UserRole:
+    role = (raw_role or "").strip().lower()
+    if role in {"broker", "agent", "channel_partner", "cp", "lg"}:
+        return UserRole.BROKER
+    if role in {"rm", "relationship_manager", "employee", "regional_manager", "relationship manager"}:
+        return UserRole.EMPLOYEE
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="GoldenRich SSO user role is not allowed for STR access",
+    )
+
+def _first_present(data: dict, keys: tuple[str, ...]) -> str:
+    for key in keys:
+        value = data.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return ""
+
+def _extract_sso_profile(userinfo: dict) -> dict:
+    email = _first_present(userinfo, ("email", "mail", "email_id")).lower()
+    full_name = (
+        _first_present(userinfo, ("name", "full_name", "fullName"))
+        or " ".join(part for part in [userinfo.get("first_name"), userinfo.get("last_name")] if part)
+        or email
+    )
+    role = _normalize_sso_role(
+        _first_present(userinfo, ("role", "user_type", "designation", "type"))
+    )
+    phone = _first_present(userinfo, ("phone", "mobile", "mobile_number", "contact_number"))
+    lg_code = _first_present(userinfo, ("lg_code", "broker_code", "lgCode")).upper()
+    employee_code = _first_present(
+        userinfo,
+        ("employee_code", "employee_id", "emp_code", "rm_code", "uid"),
+    )
+    provider_subject = _first_present(userinfo, ("sub", "id", "user_id"))
+    external_id = provider_subject or (lg_code if role == UserRole.BROKER else employee_code) or email
+
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="GoldenRich SSO profile is missing email",
+        )
+    if role == UserRole.BROKER and not lg_code:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="GoldenRich broker profile is missing lg_code",
+        )
+    if role == UserRole.EMPLOYEE and not employee_code:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="GoldenRich employee profile is missing employee_code",
+        )
+
+    return {
+        "external_id": str(external_id),
+        "email": email,
+        "full_name": full_name,
+        "phone": phone,
+        "role": role,
+        "lg_code": lg_code or None,
+        "employee_code": employee_code or None,
+    }
+
+async def _upsert_goldenrich_user(db: AsyncIOMotorDatabase, profile: dict) -> dict:
+    now = datetime.now(timezone.utc)
+    provider_key = f"goldenrich:{profile['external_id']}"
+    role = profile["role"]
+    existing = await db.users.find_one(
+        {
+            "$or": [
+                {"sso_provider": "goldenrich", "sso_subject": profile["external_id"]},
+                {"external_auth_id": provider_key},
+                {"email": profile["email"]},
+            ]
+        },
+        {"_id": 0},
+    )
+
+    update_fields = {
+        "email": profile["email"],
+        "phone": profile["phone"],
+        "full_name": profile["full_name"],
+        "role": role.value,
+        "uid": profile["lg_code"] or profile["employee_code"],
+        "lg_code": profile["lg_code"],
+        "employee_code": profile["employee_code"],
+        "is_active": True,
+        "is_email_verified": True,
+        "sso_provider": "goldenrich",
+        "sso_subject": profile["external_id"],
+        "external_auth_id": provider_key,
+        "last_sso_login_at": now,
+        "updated_at": now,
+    }
+
+    if existing:
+        await db.users.update_one({"user_id": existing["user_id"]}, {"$set": update_fields})
+        existing.update(update_fields)
+        return existing
+
+    user = User(
+        email=profile["email"],
+        phone=profile["phone"],
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        full_name=profile["full_name"],
+        role=role,
+        uid=profile["lg_code"] or profile["employee_code"],
+        lg_code=profile["lg_code"],
+        is_email_verified=True,
+        is_phone_verified=bool(profile["phone"]),
+    )
+    user_dict = user.model_dump()
+    user_dict.update(update_fields)
+    await db.users.insert_one(user_dict)
+    return user_dict
 
 @router.post("/send-otp")
 async def send_otp(request: SendOTPRequest):
@@ -132,6 +279,120 @@ async def verify_otp(request: VerifyOTPRequest):
 async def get_db():
     from server import db_instance
     return db_instance
+
+@router.get("/sso/goldenrich/login")
+async def goldenrich_sso_login():
+    """Start GoldenRich OAuth2 SSO login."""
+    client_id = _env("GOLDENRICH_OAUTH_CLIENT_ID")
+    authorize_url = _env("GOLDENRICH_OAUTH_AUTHORIZE_URL")
+    if not client_id or not authorize_url:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GoldenRich SSO is not configured",
+        )
+
+    state = secrets.token_urlsafe(32)
+    params = {
+        "response_type": "code",
+        "client_id": client_id,
+        "redirect_uri": _goldenrich_redirect_uri(),
+        "scope": _env("GOLDENRICH_OAUTH_SCOPE", "openid profile email"),
+        "state": state,
+    }
+    response = RedirectResponse(f"{authorize_url}?{urlencode(params)}")
+    response.set_cookie(
+        GOLDENRICH_SSO_COOKIE,
+        state,
+        max_age=600,
+        httponly=True,
+        secure=_sso_cookie_secure(),
+        samesite="lax",
+    )
+    return response
+
+@router.get("/sso/goldenrich/callback")
+async def goldenrich_sso_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Handle GoldenRich OAuth2 callback, provision user, and redirect into STR."""
+    if error:
+        return RedirectResponse(_frontend_url("/sso/goldenrich/callback", {"error": error}))
+
+    expected_state = request.cookies.get(GOLDENRICH_SSO_COOKIE)
+    if not state or not expected_state or not secrets.compare_digest(state, expected_state):
+        return RedirectResponse(_frontend_url("/sso/goldenrich/callback", {"error": "invalid_state"}))
+
+    if not code:
+        return RedirectResponse(_frontend_url("/sso/goldenrich/callback", {"error": "missing_code"}))
+
+    token_url = _env("GOLDENRICH_OAUTH_TOKEN_URL")
+    userinfo_url = _env("GOLDENRICH_OAUTH_USERINFO_URL")
+    client_id = _env("GOLDENRICH_OAUTH_CLIENT_ID")
+    client_secret = _env("GOLDENRICH_OAUTH_CLIENT_SECRET")
+    if not all([token_url, userinfo_url, client_id, client_secret]):
+        return RedirectResponse(_frontend_url("/sso/goldenrich/callback", {"error": "sso_not_configured"}))
+
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            token_response = await client.post(
+                token_url,
+                data={
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": _goldenrich_redirect_uri(),
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                },
+                headers={"Accept": "application/json"},
+            )
+            token_response.raise_for_status()
+            token_payload = token_response.json()
+            provider_access_token = token_payload.get("access_token")
+            if not provider_access_token:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="GoldenRich token response missing access_token",
+                )
+
+            userinfo_response = await client.get(
+                userinfo_url,
+                headers={
+                    "Accept": "application/json",
+                    "Authorization": f"Bearer {provider_access_token}",
+                },
+            )
+            userinfo_response.raise_for_status()
+            profile = _extract_sso_profile(userinfo_response.json())
+            user = await _upsert_goldenrich_user(db, profile)
+    except HTTPException as exc:
+        logger.warning("GoldenRich SSO rejected: %s", exc.detail)
+        return RedirectResponse(_frontend_url("/sso/goldenrich/callback", {"error": str(exc.detail)}))
+    except Exception as exc:
+        logger.exception("GoldenRich SSO callback failed")
+        return RedirectResponse(_frontend_url("/sso/goldenrich/callback", {"error": "sso_callback_failed"}))
+
+    access_token = create_access_token(
+        data={
+            "user_id": user["user_id"],
+            "email": user["email"],
+            "role": user["role"].value if hasattr(user["role"], "value") else user["role"],
+        }
+    )
+    response = RedirectResponse(
+        _frontend_url(
+            "/sso/goldenrich/callback",
+            {
+                "token": access_token,
+                "redirect": "/dashboard",
+            },
+        )
+    )
+    response.delete_cookie(GOLDENRICH_SSO_COOKIE)
+    return response
 
 @router.post("/register", response_model=TokenResponse)
 async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
