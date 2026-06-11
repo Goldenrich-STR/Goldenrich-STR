@@ -14,6 +14,8 @@ from middleware.auth_middleware import get_current_user
 from datetime import datetime, date, timedelta, timezone
 import logging
 import requests
+import os
+import secrets
 from icalendar import Calendar as iCalendar, Event as iCalEvent
 
 logger = logging.getLogger(__name__)
@@ -29,6 +31,62 @@ class ExternalCalendarRequest(BaseModel):
     name: str
     ical_url: str
     color: str = "#3B82F6"
+
+
+def _public_backend_url() -> str:
+    return os.environ.get("PUBLIC_BACKEND_URL", "http://localhost:8001").rstrip("/")
+
+
+async def _build_property_ical(property_id: str, property_data: dict, db: AsyncIOMotorDatabase) -> bytes:
+    cal = iCalendar()
+    cal.add("prodid", "-//X-Space360 STR//Property Calendar//EN")
+    cal.add("version", "2.0")
+    cal.add("calscale", "GREGORIAN")
+    cal.add("method", "PUBLISH")
+    cal.add("x-wr-calname", f"X-Space360 - {property_data.get('title', property_id)}")
+    cal.add("x-wr-timezone", "Asia/Kolkata")
+
+    booking_cursor = db.bookings.find(
+        {"property_id": property_id, "booking_status": "confirmed"}, {"_id": 0}
+    )
+    bookings = await booking_cursor.to_list(length=500)
+
+    for booking in bookings:
+        event = iCalEvent()
+        event.add("uid", f"{booking['booking_id']}@x-space360.in")
+        event.add("summary", "Booked")
+        ci = booking["check_in_date"]
+        co = booking["check_out_date"]
+        event.add("dtstart", date.fromisoformat(ci) if isinstance(ci, str) else ci)
+        event.add("dtend", date.fromisoformat(co) if isinstance(co, str) else co)
+        event.add("dtstamp", datetime.now(timezone.utc))
+        event.add("status", "CONFIRMED")
+        cal.add_component(event)
+
+    blocked_cursor = db.blocked_dates.find(
+        {
+            "property_id": property_id,
+            "source": BlockedDateSource.MANUAL.value,
+        },
+        {"_id": 0},
+    )
+    blocked_dates = await blocked_cursor.to_list(length=500)
+
+    for blocked in blocked_dates:
+        event = iCalEvent()
+        event.add("uid", f"{blocked['blocked_date_id']}@x-space360.in")
+        event.add("summary", "Blocked")
+        sd = blocked["start_date"]
+        ed = blocked["end_date"]
+        event.add("dtstart", date.fromisoformat(sd) if isinstance(sd, str) else sd)
+        event.add("dtend", date.fromisoformat(ed) if isinstance(ed, str) else ed)
+        event.add("dtstamp", datetime.now(timezone.utc))
+        event.add("status", "CONFIRMED")
+        if blocked.get("reason"):
+            event.add("description", blocked["reason"])
+        cal.add_component(event)
+
+    return cal.to_ical()
 
 
 def _ranges_overlap(a_start: str, a_end: str, b_start: str, b_end: str) -> bool:
@@ -586,55 +644,7 @@ async def export_ical(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
 
-        cal = iCalendar()
-        cal.add("prodid", "-//X-Space360 STR//Property Calendar//EN")
-        cal.add("version", "2.0")
-        cal.add("calscale", "GREGORIAN")
-        cal.add("method", "PUBLISH")
-        cal.add("x-wr-calname", f"X-Space360 - {property_data.get('title', property_id)}")
-        cal.add("x-wr-timezone", "Asia/Kolkata")
-
-        booking_cursor = db.bookings.find(
-            {"property_id": property_id, "booking_status": "confirmed"}, {"_id": 0}
-        )
-        bookings = await booking_cursor.to_list(length=500)
-
-        for booking in bookings:
-            event = iCalEvent()
-            event.add("uid", f"{booking['booking_id']}@propnest.com")
-            event.add("summary", f"Booked - {booking['booking_id'][:8]}")
-            ci = booking["check_in_date"]
-            co = booking["check_out_date"]
-            event.add("dtstart", date.fromisoformat(ci) if isinstance(ci, str) else ci)
-            event.add("dtend", date.fromisoformat(co) if isinstance(co, str) else co)
-            event.add("dtstamp", datetime.now(timezone.utc))
-            event.add("status", "CONFIRMED")
-            cal.add_component(event)
-
-        blocked_cursor = db.blocked_dates.find(
-            {
-                "property_id": property_id,
-                "source": BlockedDateSource.MANUAL.value,
-            },
-            {"_id": 0},
-        )
-        blocked_dates = await blocked_cursor.to_list(length=500)
-
-        for blocked in blocked_dates:
-            event = iCalEvent()
-            event.add("uid", f"{blocked['blocked_date_id']}@propnest.com")
-            event.add("summary", "Blocked")
-            sd = blocked["start_date"]
-            ed = blocked["end_date"]
-            event.add("dtstart", date.fromisoformat(sd) if isinstance(sd, str) else sd)
-            event.add("dtend", date.fromisoformat(ed) if isinstance(ed, str) else ed)
-            event.add("dtstamp", datetime.now(timezone.utc))
-            event.add("status", "CONFIRMED")
-            if blocked.get("reason"):
-                event.add("description", blocked["reason"])
-            cal.add_component(event)
-
-        ical_data = cal.to_ical()
+        ical_data = await _build_property_ical(property_id, property_data, db)
         return Response(
             content=ical_data,
             media_type="text/calendar",
@@ -650,6 +660,131 @@ async def export_ical(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to export calendar",
+        )
+
+
+@router.get("/properties/{property_id}/ical-feed-url")
+async def get_ical_feed_url(
+    property_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Return a public, unguessable iCal feed URL for external platforms."""
+    try:
+        property_data = await db.properties.find_one(
+            {"property_id": property_id}, {"_id": 0}
+        )
+        if not property_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Property not found"
+            )
+        if property_data["owner_id"] != current_user["user_id"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+            )
+
+        token = property_data.get("ical_export_token")
+        if not token:
+            token = secrets.token_urlsafe(32)
+            await db.properties.update_one(
+                {"property_id": property_id},
+                {
+                    "$set": {
+                        "ical_export_token": token,
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                },
+            )
+
+        feed_url = f"{_public_backend_url()}/api/calendar/properties/{property_id}/ical-feed/{token}"
+        return {"property_id": property_id, "feed_url": feed_url}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating iCal feed URL: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate iCal feed URL",
+        )
+
+
+@router.post("/properties/{property_id}/ical-feed-url/rotate")
+async def rotate_ical_feed_url(
+    property_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Rotate the public iCal feed URL if it was shared accidentally."""
+    try:
+        property_data = await db.properties.find_one(
+            {"property_id": property_id}, {"_id": 0}
+        )
+        if not property_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Property not found"
+            )
+        if property_data["owner_id"] != current_user["user_id"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+            )
+
+        token = secrets.token_urlsafe(32)
+        await db.properties.update_one(
+            {"property_id": property_id},
+            {
+                "$set": {
+                    "ical_export_token": token,
+                    "updated_at": datetime.now(timezone.utc),
+                }
+            },
+        )
+        feed_url = f"{_public_backend_url()}/api/calendar/properties/{property_id}/ical-feed/{token}"
+        return {"property_id": property_id, "feed_url": feed_url}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error rotating iCal feed URL: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to rotate iCal feed URL",
+        )
+
+
+@router.get("/properties/{property_id}/ical-feed/{token}")
+async def public_ical_feed(
+    property_id: str,
+    token: str,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Public iCal feed consumed by Airbnb, Vrbo, Google Calendar, etc."""
+    try:
+        property_data = await db.properties.find_one(
+            {"property_id": property_id, "ical_export_token": token}, {"_id": 0}
+        )
+        if not property_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Calendar feed not found"
+            )
+
+        ical_data = await _build_property_ical(property_id, property_data, db)
+        return Response(
+            content=ical_data,
+            media_type="text/calendar",
+            headers={
+                "Content-Disposition": f"inline; filename={property_id}_calendar.ics",
+                "Cache-Control": "no-store, max-age=0",
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error serving public iCal feed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to serve calendar feed",
         )
 
 

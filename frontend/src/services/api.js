@@ -295,6 +295,12 @@ export const calendarAPI = {
     };
   },
 
+  getICalFeedUrl: (propertyId) =>
+    apiClient.get(`/calendar/properties/${propertyId}/ical-feed-url`),
+
+  rotateICalFeedUrl: (propertyId) =>
+    apiClient.post(`/calendar/properties/${propertyId}/ical-feed-url/rotate`),
+
   downloadICal: async (propertyId) => {
     const response = await apiClient.get(
       `/calendar/properties/${propertyId}/ical-export`,

@@ -10,6 +10,8 @@ import {
   Trash2,
   Download,
   Link as LinkIcon,
+  Copy,
+  Check,
   RefreshCw,
   AlertCircle,
   Building2,
@@ -79,6 +81,8 @@ const HostCalendar = () => {
   const [extName, setExtName] = useState('');
   const [extUrl, setExtUrl] = useState('');
   const [extColor, setExtColor] = useState('#3B82F6');
+  const [icalFeedUrl, setIcalFeedUrl] = useState('');
+  const [copiedFeedUrl, setCopiedFeedUrl] = useState(false);
 
   useEffect(() => {
     fetchProperties();
@@ -89,6 +93,7 @@ const HostCalendar = () => {
       fetchUnifiedView();
       fetchAllManualBlocks();
       fetchExternalCalendars();
+      fetchICalFeedUrl();
     }
   }, [selectedPropertyId, month, year]);
 
@@ -147,6 +152,38 @@ const HostCalendar = () => {
       setAllManualBlocks(list);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const fetchICalFeedUrl = async () => {
+    try {
+      const res = await calendarAPI.getICalFeedUrl(selectedPropertyId);
+      setIcalFeedUrl(res.data.feed_url || '');
+      setCopiedFeedUrl(false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const copyICalFeedUrl = async () => {
+    if (!icalFeedUrl) return;
+    try {
+      await navigator.clipboard.writeText(icalFeedUrl);
+      setCopiedFeedUrl(true);
+      setTimeout(() => setCopiedFeedUrl(false), 1800);
+    } catch (e) {
+      setError('Unable to copy iCal link. Please select and copy it manually.');
+    }
+  };
+
+  const rotateICalFeedUrl = async () => {
+    if (!window.confirm('Generate a new iCal link? Old links pasted on other platforms will stop working.')) return;
+    try {
+      const res = await calendarAPI.rotateICalFeedUrl(selectedPropertyId);
+      setIcalFeedUrl(res.data.feed_url || '');
+      setCopiedFeedUrl(false);
+    } catch (e) {
+      setError(e.response?.data?.detail || 'Failed to refresh iCal link');
     }
   };
 
@@ -582,6 +619,57 @@ const HostCalendar = () => {
                       </button>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* X-Space360 iCal Feed */}
+              <div className="bg-white rounded-3xl p-6 border border-sand-200/80 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-black text-charcoal">X-Space360 iCal Link</h3>
+                    <p className="text-xs text-charcoal-light">Paste this link on Airbnb, Vrbo, etc.</p>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-green-50 text-green-700">
+                    <CalendarIcon className="w-5 h-5" />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-sand-200 bg-sand-50/50 p-3">
+                    <input
+                      type="text"
+                      value={icalFeedUrl}
+                      readOnly
+                      className="w-full bg-transparent text-xs text-charcoal font-semibold outline-none truncate"
+                      data-testid="ical-feed-url-input"
+                      onFocus={(e) => e.target.select()}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={copyICalFeedUrl}
+                      disabled={!icalFeedUrl}
+                      className="py-3 bg-terracotta text-white rounded-xl font-bold text-sm hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-md shadow-terracotta/15 disabled:opacity-50 flex items-center justify-center gap-2"
+                      data-testid="copy-ical-feed-btn"
+                    >
+                      {copiedFeedUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      {copiedFeedUrl ? 'Copied' : 'Copy Link'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={rotateICalFeedUrl}
+                      disabled={!icalFeedUrl}
+                      className="py-3 bg-white border border-sand-200 text-charcoal rounded-xl font-bold text-sm hover:text-terracotta hover:border-terracotta active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      data-testid="rotate-ical-feed-btn"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      New Link
+                    </button>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-charcoal-light">
+                    This feed includes confirmed X-Space360 bookings and manual blocks. External calendar blocks are not re-exported to avoid sync loops.
+                  </p>
                 </div>
               </div>
 
