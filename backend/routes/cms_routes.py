@@ -191,10 +191,56 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                 "is_active": True,
                 "created_at": now,
                 "updated_at": now
+            },
+            {
+                "content_id": "cms_footer_default",
+                "page": "landing",
+                "section": "footer",
+                "content_type": "object",
+                "content_data": {
+                    "brand_description": "Redefining short-term rentals in India through curation, technology, and superior service.",
+                    "location": "Nashik, Maharashtra",
+                    "email": "support@x-space360.com",
+                    "phone": "+91 8484826247",
+                    "grievance_title": "Grievance & Escalations",
+                    "grievance_officer": "Rahul Mundra",
+                    "grievance_email": "nodal.officer@rupiyaloan.com",
+                    "grievance_phone": "+91 76206 66949",
+                    "resolution_text": "Resolution: 7 working days"
+                },
+                "is_active": True,
+                "created_at": now,
+                "updated_at": now
             }
         ]
         for item in default_content:
             await db.cms_content.insert_one(item)
+    else:
+        footer_doc = await db.cms_content.find_one(
+            {"page": "landing", "section": "footer"}, {"_id": 0}
+        )
+        if not footer_doc:
+            now = datetime.now(timezone.utc)
+            await db.cms_content.insert_one({
+                "content_id": "cms_footer_default",
+                "page": "landing",
+                "section": "footer",
+                "content_type": "object",
+                "content_data": {
+                    "brand_description": "Redefining short-term rentals in India through curation, technology, and superior service.",
+                    "location": "Nashik, Maharashtra",
+                    "email": "support@x-space360.com",
+                    "phone": "+91 8484826247",
+                    "grievance_title": "Grievance & Escalations",
+                    "grievance_officer": "Rahul Mundra",
+                    "grievance_email": "nodal.officer@rupiyaloan.com",
+                    "grievance_phone": "+91 76206 66949",
+                    "resolution_text": "Resolution: 7 working days"
+                },
+                "is_active": True,
+                "created_at": now,
+                "updated_at": now
+            })
     return content
 
 # ========== PUBLIC CMS ENDPOINTS ==========

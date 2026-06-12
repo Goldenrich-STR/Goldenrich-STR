@@ -463,6 +463,18 @@ const TRANSLATIONS = {
   }
 };
 
+const DEFAULT_FOOTER_DATA = {
+  brand_description: 'Redefining short-term rentals in India through curation, technology, and superior service.',
+  location: 'Nashik, Maharashtra',
+  email: 'support@x-space360.com',
+  phone: '+91 8484826247',
+  grievance_title: 'Grievance & Escalations',
+  grievance_officer: 'Rahul Mundra',
+  grievance_email: 'nodal.officer@rupiyaloan.com',
+  grievance_phone: '+91 76206 66949',
+  resolution_text: 'Resolution: 7 working days'
+};
+
 // Custom Stateful & Interactive How It Works Modal Component
 const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
   const [activeStep, setActiveStep] = useState(1);
@@ -836,6 +848,7 @@ const LandingPage = () => {
   const t = (key) => {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en']?.[key] || key;
   };
+  const footerData = { ...DEFAULT_FOOTER_DATA, ...(cmsContent?.footer || {}) };
 
   React.useEffect(() => {
     const fetchCMS = async () => {
@@ -1532,7 +1545,7 @@ const LandingPage = () => {
       {/* Footer */}
       <footer className="bg-white border-t border-sand-200 pt-16 md:pt-24 pb-12">
         <div className="max-w-7xl mx-auto px-6 md:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-16 mb-16 md:mb-24">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-12 lg:gap-12 mb-16 md:mb-24">
             <div className="sm:col-span-2">
 
               <div className="flex items-center space-x-3 mb-8">
@@ -1540,7 +1553,7 @@ const LandingPage = () => {
                 <h4 className="text-2xl font-black text-charcoal tracking-tighter">X-SPACE360</h4>
               </div>
               <p className="text-charcoal-light text-lg mb-8 max-w-sm">
-                {t('footerSub')}
+                {footerData.brand_description || t('footerSub')}
               </p>
               <div className="flex space-x-4">
                  <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
@@ -1576,9 +1589,18 @@ const LandingPage = () => {
             <div>
               <h5 className="font-black text-charcoal uppercase tracking-[0.2em] text-xs mb-8">{t('contact')}</h5>
               <ul className="space-y-4 text-charcoal-light font-medium">
-                <li><p>{t('mumbaiHQ')}</p></li>
-                <li><p>support@x-space360.com</p></li>
-                <li><p>+91 8484826247</p></li>
+                <li><p>{footerData.location || t('mumbaiHQ')}</p></li>
+                <li><p>{footerData.email}</p></li>
+                <li><p>{footerData.phone}</p></li>
+              </ul>
+            </div>
+            <div>
+              <h5 className="font-black text-charcoal uppercase tracking-[0.2em] text-xs mb-8">{footerData.grievance_title}</h5>
+              <ul className="space-y-4 text-charcoal-light font-medium">
+                <li><p><span className="font-black text-charcoal">Officer:</span> {footerData.grievance_officer}</p></li>
+                <li><p className="text-sky-600 font-bold break-words">{footerData.grievance_email}</p></li>
+                <li><p>{footerData.grievance_phone}</p></li>
+                <li><p className="text-[10px] font-black uppercase tracking-[0.18em] text-charcoal-muted">{footerData.resolution_text}</p></li>
               </ul>
             </div>
           </div>

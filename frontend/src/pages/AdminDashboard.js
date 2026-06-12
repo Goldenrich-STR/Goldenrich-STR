@@ -2911,6 +2911,18 @@ const CMSManagement = () => {
     posts: []
   });
 
+  const [footerData, setFooterData] = useState({
+    brand_description: '',
+    location: '',
+    email: '',
+    phone: '',
+    grievance_title: '',
+    grievance_officer: '',
+    grievance_email: '',
+    grievance_phone: '',
+    resolution_text: ''
+  });
+
   const fetchCMSContent = async () => {
     try {
       setLoading(true);
@@ -2929,6 +2941,9 @@ const CMSManagement = () => {
 
       const blogDoc = docs.find(d => d.section === 'blog');
       if (blogDoc) setBlogData(blogDoc.content_data);
+
+      const footerDoc = docs.find(d => d.section === 'footer');
+      if (footerDoc) setFooterData(footerDoc.content_data);
 
     } catch (err) {
       console.error('Failed to load CMS content:', err);
@@ -3012,7 +3027,8 @@ const CMSManagement = () => {
           { id: 'hero', label: 'Hero Details', icon: Sparkles },
           { id: 'how_it_works', label: 'How It Works', icon: ListTodo },
           { id: 'testimonials', label: 'Testimonials', icon: Heart },
-          { id: 'blog', label: 'Blog Posts', icon: FileText }
+          { id: 'blog', label: 'Blog Posts', icon: FileText },
+          { id: 'footer', label: 'Footer', icon: Phone }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
@@ -3492,6 +3508,72 @@ const CMSManagement = () => {
                   <>
                     <Check className="w-4 h-4" />
                     <span>Save Testimonials Configuration</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* FOOTER TAB */}
+        {activeSubTab === 'footer' && (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-sand-100">
+              <div className="p-2.5 bg-terracotta/10 rounded-xl text-terracotta">
+                <Phone className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-lg font-black text-charcoal">Footer Contact & Grievance</h4>
+                <p className="text-xs text-charcoal-muted font-medium">Edit public footer contact details and escalation information.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2">
+                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Brand Description</label>
+                <textarea
+                  rows={3}
+                  className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                  value={footerData.brand_description || ''}
+                  onChange={e => setFooterData({ ...footerData, brand_description: e.target.value })}
+                />
+              </div>
+              {[
+                ['location', 'Location'],
+                ['email', 'Contact Email'],
+                ['phone', 'Contact Phone'],
+                ['grievance_title', 'Grievance Heading'],
+                ['grievance_officer', 'Officer Name'],
+                ['grievance_email', 'Officer Email'],
+                ['grievance_phone', 'Officer Phone'],
+                ['resolution_text', 'Resolution Text']
+              ].map(([key, label]) => (
+                <div key={key}>
+                  <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">{label}</label>
+                  <input
+                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                    value={footerData[key] || ''}
+                    onChange={e => setFooterData({ ...footerData, [key]: e.target.value })}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-6 border-t border-sand-150">
+              <button
+                onClick={() => handleSave('footer', footerData)}
+                disabled={saving}
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-md shadow-terracotta/15 active:scale-95 transition-all"
+              >
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Saving Footer...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Save Footer Configuration</span>
                   </>
                 )}
               </button>
