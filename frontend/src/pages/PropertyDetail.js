@@ -1581,9 +1581,16 @@ const PropertyDetail = () => {
                     <div className="flex items-center w-full">
                       <Users className="w-4 h-4 text-charcoal-muted mr-3" />
                       <div className="w-full">
-                        <label className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">
-                          {property.category === 'commercial' ? 'Total Staff' : t('totalGuests')}
-                        </label>
+                        <div className="mb-1 flex items-center justify-between gap-3">
+                          <label className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest block">
+                            {property.category === 'commercial' ? 'Total Staff' : t('totalGuests')}
+                          </label>
+                          {property.category !== 'event_venue' && property.category !== 'commercial' && (
+                            <span className="text-[10px] font-black text-terracotta uppercase tracking-widest shrink-0">
+                              {t('maxGuests').replace('{count}', maxGuests)}
+                            </span>
+                          )}
+                        </div>
                         {property.category === 'event_venue' ? (
                           <div className="relative w-full">
                             <button
@@ -1706,11 +1713,9 @@ const PropertyDetail = () => {
                         )}
                       </div>
                     </div>
-                    {property.category !== 'event_venue' && (
+                    {property.category === 'commercial' && (
                       <span className="text-[10px] font-black text-terracotta uppercase tracking-widest shrink-0 ml-4">
-                        {property.category === 'commercial' 
-                          ? `MAX ${maxGuests} STAFF`
-                          : t('maxGuests').replace('{count}', maxGuests)}
+                        {`MAX ${maxGuests} STAFF`}
                       </span>
                     )}
                   </div>
