@@ -68,11 +68,61 @@ const RoleBasedRedirect = () => {
   }
 };
 
+const GlobalAlertDialog = () => {
+  const [message, setMessage] = React.useState('');
+  const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const originalAlert = window.alert;
+
+    window.alert = (value) => {
+      setMessage(String(value || ''));
+      setOpen(true);
+    };
+
+    return () => {
+      window.alert = originalAlert;
+    };
+  }, []);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-charcoal/60 backdrop-blur-sm px-4">
+      <div className="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl border border-sand-200 animate-scale-in">
+        <div className="mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-terracotta/10 flex items-center justify-center mb-4">
+            <span className="text-2xl font-black text-terracotta">!</span>
+          </div>
+          <h2 className="text-xl font-black text-charcoal mb-2">X-Space360</h2>
+          <p className="text-sm font-medium text-charcoal-muted leading-relaxed whitespace-pre-wrap">
+            {message}
+          </p>
+        </div>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              setMessage('');
+            }}
+            className="px-8 py-3 rounded-2xl bg-terracotta text-white text-xs font-black uppercase tracking-widest shadow-premium hover:bg-terracotta-dark transition"
+            autoFocus
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
         <AuthProvider>
+          <GlobalAlertDialog />
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
