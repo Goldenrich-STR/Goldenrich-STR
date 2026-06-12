@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin } from 'lucide-react';
+import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ChatbotWidget from '../components/ChatbotWidget';
@@ -822,6 +822,10 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
 const LandingPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const handleSignOut = () => {
+    logout();
+    navigate('/');
+  };
   const [locationQuery, setLocationQuery] = useState('');
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [guestCounts, setGuestCounts] = useState({ adults: 2, children: 0, infants: 0 });
@@ -843,8 +847,62 @@ const LandingPage = () => {
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
   const [cmsContent, setCmsContent] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
+  const [activeVideo, setActiveVideo] = useState(0);
+  const [prevVideo, setPrevVideo] = useState(null);
+
+  const heroSlides = [
+    {
+      src: '/videos/hero/pexels-akshay-mr-187831647-12414221.jpg',
+      label: 'Luxury Villas with Pools'
+    },
+    {
+      src: '/videos/hero/pexels-shahfaizanfilms-30077915.jpg',
+      label: 'Seaside Green Villas'
+    },
+    {
+      src: '/videos/hero/pexels-thevisionaryvows-33485971.jpg',
+      label: 'Premium Holiday Stays'
+    }
+  ];
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveVideo(prev => {
+        setPrevVideo(prev);
+        return (prev + 1) % heroSlides.length;
+      });
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [heroSlides.length]);
 
   const [lang, setLang] = useState(localStorage.getItem('preferredLanguage') || 'en');
+
+  const [wishlist, setWishlist] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('guest_wishlist')) || [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const handleWishlistToggle = (propertyId) => {
+    setWishlist(prev => {
+      let updated;
+      if (prev.includes(propertyId)) {
+        updated = prev.filter(id => id !== propertyId);
+      } else {
+        updated = [...prev, propertyId];
+      }
+      localStorage.setItem('guest_wishlist', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleShareWhatsApp = (property) => {
+    const url = `${window.location.origin}/property/${property.property_id}`;
+    const text = `Check out this amazing property *${property.title}* in *${property.city}* on X-Space360:\n${url}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
 
   const t = (key) => {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en']?.[key] || key;
@@ -868,9 +926,9 @@ const LandingPage = () => {
       setLoading(true);
       try {
         const [resRes, resComm, resEvent] = await Promise.all([
-          propertyAPI.searchProperties({ category: 'residential', limit: 6, sort: 'rating_desc' }),
-          propertyAPI.searchProperties({ category: 'commercial', limit: 6, sort: 'rating_desc' }),
-          propertyAPI.searchProperties({ category: 'event_venue', limit: 6, sort: 'rating_desc' })
+          propertyAPI.searchProperties({ category: 'residential', limit: 10, sort: 'rating_desc' }),
+          propertyAPI.searchProperties({ category: 'commercial', limit: 10, sort: 'rating_desc' }),
+          propertyAPI.searchProperties({ category: 'event_venue', limit: 10, sort: 'rating_desc' })
         ]);
 
         setProperties({
@@ -900,658 +958,575 @@ const LandingPage = () => {
     { name: 'Bengaluru', img: 'https://images.unsplash.com/photo-1596761303554-17ec789178d5?w=100' },
   ];
 
+  const scrollSlider = (direction, id) => {
+    const container = document.getElementById(id);
+    if (container) {
+      container.scrollBy({ left: direction === 'left' ? -350 : 350, behavior: 'smooth' });
+    }
+  };
 
-  return (
-    <div className="min-h-screen bg-sand-50 selection:bg-terracotta selection:text-white overflow-x-hidden">
+  const renderPropertySlider = (sectionId, title, subtitle, IconComponent, categoryKey, items, fallbackItems) => {
+    const displayItems = items && items.length > 0 ? items : fallbackItems;
 
-      {/* Header */}
-      <header className="glass sticky top-0 z-50 px-4 md:px-8 py-4 shadow-glass transition-all duration-300">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div 
-            className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
-            onClick={() => navigate('/')}
-          >
-
-            <img 
-              src="/logo.png" 
-              alt="X-Space360 Logo" 
-              className="brand-logo-full w-8 h-8 md:w-12 md:h-12 object-contain transition-transform duration-300 group-hover:scale-110"
-            />
+    return (
+      <div className="relative mb-24 group">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8 px-8 max-w-7xl mx-auto">
+          <div className="flex items-center">
+            <div className="w-12 h-12 rounded-full bg-terracotta/10 flex items-center justify-center mr-4 shrink-0">
+              <IconComponent className="w-6 h-6 text-terracotta" />
+            </div>
+            <div>
+              <h3 className="text-[22px] font-black text-charcoal tracking-tight uppercase leading-none mb-1.5">{title}</h3>
+              <p className="text-gray-500 text-[13px] font-medium">{subtitle}</p>
+            </div>
           </div>
           
-          <div className="flex items-center space-x-4 md:space-x-8">
-            <nav className="hidden md:flex items-center space-x-8">
-              <button 
-                onClick={() => navigate('/guest/browse')}
-                className="text-charcoal-light hover:text-terracotta font-bold text-sm uppercase tracking-widest transition-colors"
-              >
-                {t('discover')}
-              </button>
-              <button 
-                onClick={() => setShowHowItWorksModal(true)}
-                className="text-charcoal-light hover:text-terracotta font-bold text-sm uppercase tracking-widest transition-colors"
-              >
-                {t('howItWorks')}
-              </button>
-            </nav>
-
-            {/* Language Selector */}
-            <div className="relative flex items-center">
-              <LanguageSelector
-                currentLang={lang}
-                onLanguageChange={(newLang) => {
-                  setLang(newLang);
-                  localStorage.setItem('preferredLanguage', newLang);
-                }}
-              />
-            </div>
-
-            <div className="h-4 w-[1px] bg-sand-300 hidden md:block"></div>
-
-            {/* Desktop Auth Section */}
-            <div className="hidden md:flex items-center space-x-6">
-              {user ? (
-                <div className="flex items-center space-x-6">
-                  <button
-                    onClick={() => navigate('/dashboard')}
-                    className="flex items-center space-x-3 px-4 py-2 bg-white/60 border border-sand-200 rounded-full shadow-sm hover:border-terracotta hover:bg-white transition-all group"
-                    title="Go to Dashboard"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-sage flex items-center justify-center text-xs font-black text-white shadow-sm group-hover:scale-105 transition-all overflow-hidden">
-                      {user.profile_image ? (
-                        <img src={getImageUrl(user.profile_image)} alt={user.full_name} className="w-full h-full object-cover" />
-                      ) : (
-                        user.full_name?.[0]?.toUpperCase() || <User className="w-4 h-4" />
-                      )}
-                    </div>
-                    <span className="text-[10px] font-black text-charcoal uppercase tracking-widest pr-1">
-                      {user.full_name?.split(' ')[0]}
-                    </span>
-                  </button>
-                  <button
-                    onClick={logout}
-                    className="flex items-center space-x-2 text-[10px] font-black text-terracotta uppercase tracking-[0.2em] hover:underline transition-all"
-                    title="Sign Out"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>{t('signOut')}</span>
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <button
-                    onClick={() => navigate('/login')}
-                    className="text-charcoal font-bold text-sm uppercase tracking-widest hover:text-terracotta transition-colors"
-                  >
-                    {t('signIn')}
-                  </button>
-                  <button
-                    onClick={() => navigate('/register')}
-                    className="btn-premium py-2 text-sm"
-                  >
-                    {t('getStarted')}
-                  </button>
-                </>
-              )}
-            </div>
-
-            {/* Mobile Auth / Dashboard Icon */}
-            <div className="flex md:hidden items-center">
-              {user ? (
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="w-8 h-8 rounded-full bg-sage flex items-center justify-center text-xs font-black text-white shadow-sm overflow-hidden"
-                  title="Go to Dashboard"
-                >
-                  {user.profile_image ? (
-                    <img src={getImageUrl(user.profile_image)} alt={user.full_name} className="w-full h-full object-cover" />
-                  ) : (
-                    user.full_name?.[0]?.toUpperCase() || <User className="w-4 h-4" />
-                  )}
-                </button>
-              ) : (
-                <button
-                  onClick={() => navigate('/login')}
-                  className="text-charcoal font-bold text-xs uppercase tracking-widest hover:text-terracotta transition-colors border border-sand-300 rounded-full px-3 py-1.5"
-                >
-                  {t('signIn')}
-                </button>
-              )}
-            </div>
-
+          {/* Navigation Arrows */}
+          <div className="hidden md:flex space-x-3">
+            <button onClick={() => scrollSlider('left', sectionId)} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button onClick={() => scrollSlider('right', sectionId)} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm">
+              <ChevronRight className="w-5 h-5" />
+            </button>
           </div>
         </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="relative min-h-[85vh] flex flex-col items-center justify-center py-20 z-10">
-
-
-
-        {/* Animated Background Elements */}
-        <div className="absolute top-20 -right-20 w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-terracotta/5 rounded-full blur-[80px] md:blur-[120px] animate-pulse"></div>
-        <div className="absolute bottom-0 -left-20 w-[250px] md:w-[400px] h-[250px] md:h-[400px] bg-sage/10 rounded-full blur-[70px] md:blur-[100px]"></div>
-
-
-        <div className="max-w-7xl mx-auto px-8 grid lg:grid-cols-2 gap-12 items-center relative z-10">
-          {(() => {
-            const defaultHero = {
-              sub_tag: t('heroSubTag'),
-              title: t('heroTitle'),
-              subtitle: t('heroSubtitle'),
-              image_url: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070&auto=format&fit=crop",
-              rating: t('heroRating'),
-              trusted_text: t('heroTrusted')
-            };
-            const heroData = lang === 'en' ? (cmsContent?.hero || defaultHero) : defaultHero;
-            return (
-              <>
-                <div className="animate-slide-up">
-                  <span className="inline-block px-4 py-1.5 rounded-full bg-terracotta/10 text-terracotta font-bold text-xs uppercase tracking-[0.2em] mb-6">
-                    {heroData.sub_tag}
-                  </span>
-                  <h2 
-                    className="text-4xl md:text-6xl lg:text-7xl font-black text-charcoal leading-[1.05] mb-8 tracking-tight"
-                    dangerouslySetInnerHTML={{ __html: heroData.title }}
+        
+        {/* Slider */}
+        <div className="max-w-7xl mx-auto relative">
+          <div id={sectionId} className="flex overflow-x-auto pb-10 px-8 gap-6 no-scrollbar snap-x scroll-smooth">
+            {displayItems.map((item, index) => (
+              <div 
+                key={item.property_id || index} 
+                onClick={() => navigate(`/property/${item.property_id}`)}
+                className="bg-white rounded-[2rem] p-4 cursor-pointer hover:-translate-y-2 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 min-w-[300px] md:min-w-[340px] snap-center flex flex-col group/card"
+              >
+                <div className="relative h-[220px] rounded-2xl overflow-hidden mb-5">
+                  <img 
+                    src={item.img || getImageUrl(item.images?.[0]) || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800'} 
+                    alt={item.title} 
+                    className="w-full h-full object-cover group-hover/card:scale-105 transition duration-700" 
                   />
-                  <p className="text-lg md:text-xl text-charcoal-light mb-12 max-w-lg leading-relaxed mx-auto lg:mx-0">
-                    {heroData.subtitle}
+                  {/* Rating Pill */}
+                  <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md rounded-full px-3 py-1.5 flex items-center shadow-sm">
+                    <Star className="w-3.5 h-3.5 text-[#eab308] fill-current mr-1.5" />
+                    <span className="text-xs font-bold text-gray-800">{item.rating || '4.90'}</span>
+                  </div>
+                  
+                  {/* Right Actions */}
+                  <div className="absolute top-4 right-4 flex space-x-2 z-20">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(item); }}
+                      className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-110 transition cursor-pointer"
+                    >
+                      <Share2 className="w-4 h-4 text-gray-600 hover:text-green-600" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
+                      className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-110 transition cursor-pointer"
+                    >
+                      <Heart className={`w-4 h-4 ${wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-gray-600 hover:text-terracotta'}`} />
+                    </button>
+                  </div>
+
+                  {/* Type Pill */}
+                  <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-md rounded-full px-3 py-1 shadow-sm">
+                    <span className="text-[10px] font-bold text-terracotta uppercase tracking-wider">
+                      {item.type || item.property_type || 'VILLA'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="px-1 flex-1 flex flex-col">
+                  <h4 className="font-bold text-lg text-charcoal mb-1 line-clamp-1 group-hover/card:text-terracotta transition-colors">{item.title}</h4>
+                  <p className="text-gray-500 text-xs font-medium mb-4 flex items-center">
+                    <MapPin className="w-3.5 h-3.5 mr-1.5 text-terracotta/70" />
+                    {item.city}, {item.state || item.city}
                   </p>
-                </div>
-
-                <div className="relative animate-fade-in delay-300 z-10 w-full lg:w-auto">
-                   <div className="relative z-10 rounded-2xl overflow-hidden shadow-elevated lg:rotate-2 hover:rotate-0 transition-transform duration-700">
-                      <img 
-                        src={getImageUrl(heroData.image_url)} 
-                        alt="Premium Property" 
-                        className="w-full h-[300px] md:h-[500px] lg:h-[600px] object-cover"
-                      />
-                   </div>
-
-                   {/* Floating Info Card */}
-                   <div className="hidden sm:block absolute -bottom-10 -left-10 glass p-6 rounded-2xl shadow-premium animate-float z-20 max-w-[280px]">
-                      <div className="flex items-center space-x-4 mb-3">
-                         <div className="w-10 h-10 rounded-full bg-sage/20 flex items-center justify-center text-sage">
-                            <Star className="w-5 h-5 fill-current" />
-                         </div>
-                         <div>
-                            <p className="text-xs text-charcoal-muted font-bold uppercase tracking-widest">{t('topRated')}</p>
-                            <p className="font-black text-charcoal">{heroData.rating}</p>
-                         </div>
-                      </div>
-                      <p className="text-sm text-charcoal-light leading-relaxed">{heroData.trusted_text}</p>
-                   </div>
-                </div>
-              </>
-            );
-          })()}
-        </div>
-
-        {/* Modern Search Pill - Centered below hero content */}
-        <div className="relative mt-8 md:mt-16 z-50 px-4 md:px-8 flex justify-center w-full animate-slide-up delay-500">
-            <div className="relative w-full max-w-5xl">
-              <div className="bg-white rounded-3xl lg:rounded-full shadow-2xl border border-sand-200 p-2 lg:p-2 flex flex-col lg:flex-row items-stretch lg:items-center">
-
-                
-                {/* Location */}
-                <div 
-                  className={`flex-1 flex items-center px-8 py-3 rounded-full cursor-pointer transition-colors ${activeDropdown === 'location' ? 'bg-sand-50' : 'hover:bg-sand-50/50'}`}
-                  onClick={() => setActiveDropdown(activeDropdown === 'location' ? null : 'location')}
-                >
-                  <MapPin className="w-5 h-5 text-terracotta mr-3 flex-shrink-0" />
-                  <div className="overflow-hidden">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-charcoal-muted mb-0.5">{t('whereToNext')}</p>
-                    <p className="text-sm font-bold text-charcoal truncate">{locationQuery || t('searchDestinations')}</p>
+                  
+                  <div className="mt-auto border-t border-gray-100 pt-4 flex justify-between items-center">
+                    <div>
+                      <p className="text-terracotta font-black text-xl">₹ {(item.price || item.price_per_night || 0).toLocaleString('en-IN')}</p>
+                      <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest mt-0.5">PER NIGHT</p>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-sand-50 border border-sand-200 flex items-center justify-center group-hover/card:bg-terracotta group-hover/card:border-terracotta transition-all duration-300 shadow-sm">
+                      <Search className="w-4 h-4 text-charcoal group-hover/card:text-white transition-colors" />
+                    </div>
                   </div>
                 </div>
-
-                <div className="hidden lg:block w-px h-10 bg-sand-200 mx-2"></div>
-                <div className="lg:hidden h-px w-full bg-sand-200 my-1"></div>
-
-
-                {/* Dates */}
-                <div 
-                  className={`flex-1 flex items-center px-8 py-3 rounded-full cursor-pointer transition-colors ${activeDropdown === 'dates' ? 'bg-sand-50' : 'hover:bg-sand-50/50'}`}
-                  onClick={() => setActiveDropdown(activeDropdown === 'dates' ? null : 'dates')}
-                >
-                  <Calendar className="w-5 h-5 text-sage mr-3 flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-charcoal-muted mb-0.5">{t('selectDates')}</p>
-                    <p className="text-sm font-bold text-charcoal">
-                      {dates.checkIn ? `${dates.checkIn} - ${dates.checkOut || t('addDates')}` : t('addDates')}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="hidden lg:block w-px h-10 bg-sand-200 mx-2"></div>
-                <div className="lg:hidden h-px w-full bg-sand-200 my-1"></div>
-
-
-                {/* Guests */}
-                <div 
-                  className={`flex-1 flex items-center px-8 py-3 rounded-full cursor-pointer transition-colors ${activeDropdown === 'guests' ? 'bg-sand-50' : 'hover:bg-sand-50/50'}`}
-                  onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                >
-                  <Search className="w-5 h-5 text-charcoal-muted mr-3 flex-shrink-0" />
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-charcoal-muted mb-0.5">{t('whosComing')}</p>
-                    <p className="text-sm font-bold text-charcoal">
-                      {guestCounts.adults + guestCounts.children} {t('guests')}
-                    </p>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={handleSearch}
-                  className="bg-terracotta hover:bg-terracotta-dark text-white px-10 py-5 lg:py-4 rounded-2xl lg:rounded-full shadow-lg transition-all active:scale-95 mt-2 lg:mt-0 lg:ml-2 flex items-center justify-center space-x-3"
-                >
-                  <span className="font-bold text-sm">{t('search')}</span>
-                  <Search className="w-5 h-5" />
-                </button>
               </div>
-
-
-              {/* Dropdowns */}
-              {/* Location Dropdown */}
-              {activeDropdown === 'location' && (
-                <div className="absolute top-full mt-4 left-0 right-0 lg:right-auto lg:w-96 bg-white rounded-3xl shadow-2xl border border-sand-200 p-6 lg:p-8 z-[60] animate-slide-up overflow-visible mx-4 lg:mx-0">
-
-
-                  <div className="relative mb-6">
-                    <input 
-                      type="text"
-                      autoFocus
-                      placeholder={t('searchDestinations') + "..."}
-                      className="w-full bg-sand-50 border-none rounded-xl px-4 py-3 text-sm font-bold text-charcoal focus:ring-2 focus:ring-terracotta/20"
-                      value={locationQuery}
-                      onChange={(e) => setLocationQuery(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    {LOCATIONS.map(loc => (
-                      <div 
-                        key={loc.name}
-                        className="flex items-center space-x-4 p-3 rounded-2xl hover:bg-sand-50 cursor-pointer transition-colors group"
-                        onClick={() => {
-                          setLocationQuery(loc.name);
-                          setActiveDropdown(null);
-                        }}
-                      >
-                        <img src={loc.img} alt="" className="w-12 h-12 rounded-xl object-cover" />
-                        <div className="flex-1">
-                          <p className="font-bold text-charcoal group-hover:text-terracotta transition-colors">{loc.name}</p>
-                          <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">City</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {activeDropdown === 'dates' && (
-                <div className="absolute top-full mt-4 left-0 right-0 lg:left-1/4 lg:right-auto lg:w-96 bg-white rounded-3xl shadow-2xl border border-sand-200 p-6 lg:p-8 z-[60] animate-slide-up overflow-visible mx-4 lg:mx-0">
-                  <div className="grid grid-cols-1 gap-6 mb-8">
-                    <div>
-                      <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">{t('checkIn')}</p>
-                      <input 
-                        type="date" 
-                        min={todayISO}
-                        className="w-full bg-sand-50 border-none rounded-xl px-4 py-3 text-sm font-bold text-charcoal focus:ring-2 focus:ring-terracotta/20"
-                        value={dates.checkIn}
-                        onChange={(e) => setDates(prev => ({ ...prev, checkIn: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">{t('checkOut')}</p>
-                      <input 
-                        type="date" 
-                        min={dates.checkIn || todayISO}
-                        className="w-full bg-sand-50 border-none rounded-xl px-4 py-3 text-sm font-bold text-charcoal focus:ring-2 focus:ring-terracotta/20"
-                        value={dates.checkOut}
-                        onChange={(e) => setDates(prev => ({ ...prev, checkOut: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  <button 
-                    className="btn-premium w-full py-4 text-[10px]"
-                    onClick={() => setActiveDropdown(null)}
-                  >
-                    {t('confirmDates')}
-                  </button>
-                </div>
-              )}
-
-              {activeDropdown === 'guests' && (
-                <div className="absolute top-full mt-4 left-0 right-0 lg:left-auto lg:right-0 lg:w-96 bg-white rounded-3xl shadow-2xl border border-sand-200 p-6 lg:p-8 z-[60] animate-slide-up overflow-visible mx-4 lg:mx-0">
-                  <div className="space-y-8 mb-8">
-                    {[
-                      { key: 'adults', label: t('adults'), desc: t('ages18') },
-                      { key: 'children', label: t('children'), desc: t('ages617') },
-                      { key: 'infants', label: t('infants'), desc: t('under5') },
-                    ].map((type) => (
-                      <div key={type.key} className="flex items-center justify-between">
-                        <div>
-                          <p className="font-black text-charcoal uppercase tracking-widest text-[10px] mb-1">{type.label}</p>
-                          <p className="text-xs text-charcoal-muted font-bold">{type.desc}</p>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <button 
-                            className="w-8 h-8 rounded-full border border-sand-300 flex items-center justify-center text-charcoal hover:border-terracotta hover:text-terracotta transition-all disabled:opacity-30"
-                            disabled={guestCounts[type.key] === (type.key === 'adults' ? 1 : 0)}
-                            onClick={() => setGuestCounts(prev => ({ ...prev, [type.key]: prev[type.key] - 1 }))}
-                          >
-                            -
-                          </button>
-                          <span className="w-4 text-center font-black text-charcoal">{guestCounts[type.key]}</span>
-                          <button 
-                            className="w-8 h-8 rounded-full border border-sand-300 flex items-center justify-center text-charcoal hover:border-terracotta hover:text-terracotta transition-all"
-                            onClick={() => setGuestCounts(prev => ({ ...prev, [type.key]: prev[type.key] + 1 }))}
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between pt-6 border-t border-sand-200">
-                    <button 
-                      className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest hover:text-terracotta"
-                      onClick={() => setGuestCounts({ adults: 2, children: 0, infants: 0 })}
-                    >
-                      {t('clear')}
-                    </button>
-                    <button 
-                      className="btn-premium px-6 py-3 text-[10px]"
-                      onClick={() => setActiveDropdown(null)}
-                    >
-                      {t('applySearch')}
-                    </button>
-                  </div>
-                </div>
-              )}
+            ))}
+            
+            {/* View All Card */}
+            <div 
+              onClick={() => navigate(`/guest/browse?category=${categoryKey}`)}
+              className="min-w-[200px] md:min-w-[240px] border border-dashed border-terracotta/30 rounded-[2rem] flex flex-col items-center justify-center cursor-pointer hover:bg-terracotta/5 hover:border-terracotta/50 transition-all duration-300 snap-center group/viewall"
+            >
+              <div className="w-14 h-14 rounded-full bg-terracotta/10 flex items-center justify-center mb-4 group-hover/viewall:scale-110 transition-transform">
+                <ArrowRight className="w-5 h-5 text-terracotta" />
+              </div>
+              <span className="font-bold text-charcoal text-sm">View All</span>
+              <span className="font-bold text-gray-500 text-xs mt-1">Properties</span>
             </div>
-        </div>
-      </section>
-
-      {/* Category Selection Circles */}
-      <section className="relative max-w-7xl mx-auto px-4 md:px-8 pt-12 md:pt-16 pb-0 flex justify-center animate-fade-in">
-        {/* Subtle background glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] h-[110%] bg-gradient-to-r from-terracotta/5 via-sage/5 to-gold/5 blur-3xl rounded-full opacity-65 pointer-events-none"></div>
-
-        <div className="relative flex justify-center items-center gap-4 sm:gap-10 md:gap-16 w-full max-w-4xl py-6 md:py-8 px-4 md:px-6 bg-gradient-to-br from-white/95 via-sand-50/80 to-white/95 backdrop-blur-xl rounded-3xl md:rounded-[2.5rem] border border-sand-200/80 shadow-premium transition-all duration-300 hover:shadow-elevated hover:border-sand-300/80">
-          {[
-            { id: 'residential', label: t('catResidential'), icon: Home, color: 'bg-terracotta/5 text-terracotta border-terracotta/20 hover:bg-terracotta hover:text-white hover:shadow-lg hover:shadow-terracotta/25 hover:border-terracotta', hoverColor: 'group-hover:text-terracotta' },
-            { id: 'commercial', label: t('catCommercial'), icon: Briefcase, color: 'bg-sage/5 text-sage border-sage/20 hover:bg-sage hover:text-white hover:shadow-lg hover:shadow-sage/25 hover:border-sage', hoverColor: 'group-hover:text-sage' },
-            { id: 'event_venue', label: t('catEvent'), icon: PartyPopper, color: 'bg-amber-500/5 text-amber-600 border-amber-500/20 hover:bg-amber-500 hover:text-white hover:shadow-lg hover:shadow-amber-500/25 hover:border-amber-500', hoverColor: 'group-hover:text-amber-600' }
-          ].map((cat, idx) => {
-            const Icon = cat.icon;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  const totalGuests = guestCounts.adults + guestCounts.children;
-                  navigate(`/guest/browse?category=${cat.id}&city=${locationQuery}&guests=${totalGuests}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`);
-                }}
-                className="flex flex-col items-center group focus:outline-none transition-all duration-500 transform hover:-translate-y-2 animate-slide-up"
-                style={{ animationDelay: `${idx * 150}ms` }}
-              >
-                <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center border transition-all duration-500 ${cat.color}`}>
-                  <Icon className="w-6 h-6 md:w-8 md:h-8 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6" />
-                </div>
-                <span className={`text-[10px] md:text-[11px] font-black uppercase tracking-[0.2em] mt-4 transition-colors duration-300 ${cat.hoverColor}`}>
-                  {cat.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="max-w-7xl mx-auto px-4 md:px-8 py-16 md:py-32 space-y-16 md:space-y-32">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 md:mb-12 gap-6">
-          <div>
-            <h3 className="text-3xl md:text-5xl font-black text-charcoal tracking-tight mb-3 md:mb-4">{t('featuredCollections')}</h3>
-            <p className="text-charcoal-light text-base md:text-lg">{t('featuredSub')}</p>
           </div>
-          <button 
-            onClick={() => {
-              const totalGuests = guestCounts.adults + guestCounts.children;
-              navigate(`/guest/browse?city=${locationQuery}&guests=${totalGuests}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`);
-            }}
-            className="btn-premium-outline self-start md:self-auto w-full md:w-auto text-center"
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FDFCF8] font-sans text-[#2A2A2A] overflow-x-hidden selection:bg-terracotta/20">
+      {/* Navbar */}
+      <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-white px-6 md:px-12 lg:px-20 h-20">
+        {/* Left Logo */}
+        <div className="flex items-center">
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight cursor-pointer drop-shadow-md text-white hover:text-white/95 transition" onClick={() => navigate('/')}>
+            x-space360<span className="text-terracotta">.in</span>
+          </h1>
+        </div>
+
+        {/* Center Pill Links — Glass Transparent style */}
+        <div className="hidden md:flex h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-white/95 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-lg self-center">
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
+            className="hover:text-terracotta transition"
           >
-            {t('viewAll')}
+            Discover
+          </a>
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
+            className="hover:text-terracotta transition flex items-center space-x-1"
+          >
+            <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
+            <span>Wishlist</span>
+          </a>
+          <button
+            onClick={() => setShowHowItWorksModal(true)}
+            className="hover:text-terracotta transition"
+          >
+            How It Works
+          </button>
+          <div className="w-[1px] h-4 bg-white/20" />
+          <LanguageSelector
+            currentLang={lang}
+            onLanguageChange={(newLang) => {
+              setLang(newLang);
+              localStorage.setItem('preferredLanguage', newLang);
+            }}
+          />
+          <div className="w-[1px] h-4 bg-white/20" />
+          {user ? (
+            <>
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="hover:text-terracotta transition font-black text-terracotta"
+              >
+                Dashboard
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="bg-terracotta hover:bg-terracotta-hover text-white px-4 py-1.5 rounded-full transition shadow-md"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => navigate('/login')}
+                className="hover:text-terracotta transition"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => navigate('/register')}
+                className="bg-terracotta hover:bg-terracotta-hover text-white px-4 py-1.5 rounded-full transition shadow-md"
+              >
+                Get Started
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Right — Get the app */}
+        <div className="flex items-center">
+          <button onClick={() => navigate('/login')} className="hidden md:flex items-center space-x-2 border border-white/50 rounded-full px-5 py-2 hover:bg-white/20 transition backdrop-blur-sm shadow-sm text-white">
+            <span className="text-xs font-semibold uppercase tracking-widest">Get the app</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
+      </nav>
 
-        {[
-          { id: 'residential', label: t('residential'), icon: Building2, desc: t('residentialSub') },
-          { id: 'commercial', label: t('commercial'), icon: Building2, desc: t('commercialSub') },
-          { id: 'event_venue', label: t('eventVenue'), icon: Calendar, desc: t('eventVenueSub') }
-        ].map((cat) => (
-          <div key={cat.id} className="animate-fade-in">
-            <div className="flex items-center space-x-3 md:space-x-4 mb-8 md:mb-10">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-terracotta/10 flex items-center justify-center text-terracotta shadow-sm shrink-0">
-                <cat.icon className="w-5 h-5 md:w-6 md:h-6" />
-              </div>
-              <div>
-                <h4 className="text-xl md:text-3xl font-black text-charcoal tracking-tight uppercase leading-tight">{cat.label}</h4>
-                <p className="text-xs md:text-base text-charcoal-muted font-medium mt-0.5">{cat.desc}</p>
-              </div>
-            </div>
+      {/* ===== PREMIUM VIDEO SLIDER HERO ===== */}
+      <style>{`
+        @keyframes kenburns {
+          0%   { transform: scale(1)    translate(0%, 0%); }
+          100% { transform: scale(1.12) translate(-2%, -2%); }
+        }
+        .hero-video-active  { opacity: 1; animation: kenburns 7s ease-out forwards; }
+        .hero-video-exiting { opacity: 0; transition: opacity 1.2s ease; }
+        .hero-video-hidden  { opacity: 0; }
+        .hero-video-wrap    { transition: opacity 1.2s ease; }
+      `}</style>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-              {loading ? (
-                Array(6).fill(0).map((_, i) => (
-                  <div key={i} className="h-64 bg-sand-100 rounded-2xl animate-pulse"></div>
-                ))
-              ) : properties[cat.id]?.length === 0 ? (
-                <div className="col-span-full py-12 text-center bg-white rounded-3xl border border-sand-100 shadow-sm">
-                   <p className="text-charcoal-muted font-bold">{t('comingSoon').replace('{category}', cat.label)}</p>
-                </div>
-              ) : (
-                <>
-                  {properties[cat.id].slice(0, 5).map((property, idx) => (
-                    <div
-                      key={property.property_id}
-                      className="group cursor-pointer flex flex-col"
-                      onClick={() => {
-                        const totalGuests = guestCounts.adults + guestCounts.children;
-                        navigate(`/property/${property.property_id}?checkIn=${dates.checkIn}&checkOut=${dates.checkOut}&guests=${totalGuests}`);
-                      }}
-                    >
-                      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl mb-3">
-                        <img
-                          src={getImageUrl(property.images?.[0]) || "https://images.unsplash.com/photo-1600585154340-be6199f7d009?q=80&w=2070&auto=format&fit=crop"}
-                          alt={property.title}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        />
-                        <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm">
-                          <span className="text-[10px] font-black uppercase text-charcoal">
-                            {property.property_type ? formatPropertyTypeLabel(property.property_type) : formatCategoryLabel(property.category)}
-                          </span>
-                        </div>
-                        <button className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-white/20 transition-colors">
-                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="rgba(0,0,0,0.5)" stroke="white" strokeWidth="2" className="w-5 h-5">
-                             <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-                           </svg>
-                        </button>
-                      </div>
-                      <div className="flex flex-col flex-1 px-1">
-                        <div className="flex justify-between items-start mb-0.5">
-                          <h4 className="text-[15px] font-bold text-charcoal truncate pr-2">{property.title}</h4>
-                          <div className="flex items-center space-x-1 shrink-0 pt-0.5">
-                             <Star className="w-3.5 h-3.5 text-charcoal fill-charcoal" />
-                             <span className="text-[13px] font-medium text-charcoal">{property.rating ? property.rating.toFixed(2) : 'New'}</span>
-                          </div>
-                        </div>
-                        <div className="text-[14px] text-charcoal-muted truncate mb-1">
-                          {property.city}, {property.state || 'India'}
-                        </div>
-                        <div className="mt-auto pt-1 flex items-baseline space-x-1">
-                          <span className="text-[14px] font-bold text-charcoal">₹{property.price_per_night?.toLocaleString('en-IN')}</span>
-                          <span className="text-[14px] text-charcoal">
-                            {property.category === 'commercial' || property.category === 'event_venue'
-                              ? (property.pricing_cycle === 'hourly' ? `/ ${t('hour')}` : property.pricing_cycle === 'weekly' ? `/ ${t('week')}` : property.pricing_cycle === 'monthly' ? `/ ${t('month')}` : `/ ${t('day')}`)
-                              : `/ ${t('night')}`}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {properties[cat.id].length > 0 && (
-                    <div 
-                      onClick={() => {
-                        const totalGuests = guestCounts.adults + guestCounts.children;
-                        navigate(`/guest/browse?category=${cat.id}&city=${locationQuery}&guests=${totalGuests}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`);
-                      }}
-                      className="group cursor-pointer flex flex-col justify-center items-center rounded-2xl border-2 border-dashed border-sand-300 hover:border-terracotta hover:bg-terracotta/5 transition-all p-6 min-h-[220px]"
-                    >
-                      <div className="w-12 h-12 rounded-full border border-sand-300 bg-white flex items-center justify-center mb-4 group-hover:scale-110 group-hover:bg-terracotta group-hover:text-white group-hover:border-terracotta transition-all shadow-sm">
-                        <ArrowRight className="w-5 h-5 text-charcoal transition-colors group-hover:text-white" />
-                      </div>
-                      <h4 className="text-[15px] font-bold text-charcoal group-hover:text-terracotta transition-colors">{t('viewAll')}</h4>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+      <div className="relative h-screen w-full overflow-hidden">
+
+        {/* ── Video layers (Now Images) ── */}
+        {heroSlides.map((slide, idx) => (
+          <div
+            key={idx}
+            className={`absolute inset-0 w-full h-full hero-video-wrap ${
+              idx === activeVideo
+                ? 'hero-video-active z-10'
+                : idx === prevVideo
+                ? 'hero-video-exiting z-[9]'
+                : 'hero-video-hidden z-0'
+            }`}
+            style={{
+              backgroundImage: `url(${slide.src})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center'
+            }}
+          >
           </div>
         ))}
-      </section>
 
-      {/* CTA Section */}
-      <section className="relative mx-8 mb-32 rounded-[2.5rem] overflow-hidden bg-charcoal-deep py-24 px-8 text-center">
-        <div className="absolute inset-0 opacity-20" style={{
-           backgroundImage: 'url("https://www.transparenttextures.com/patterns/carbon-fibre.png")'
-        }}></div>
-        <div className="relative z-10 max-w-3xl mx-auto">
-          <h3 
-            className="text-5xl font-black text-white mb-6 tracking-tight"
-            dangerouslySetInnerHTML={{ __html: t('readyToHost') }}
-          />
-          <p className="text-white/70 text-xl mb-12 font-medium">
-            {t('ctaParagraph')}
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-            <button
-              onClick={() => navigate('/register')}
-              className="btn-premium px-12 py-4 text-lg w-full sm:w-auto"
-            >
-              {t('listProperty')}
-            </button>
-            <button className="text-white font-bold hover:text-terracotta transition-colors text-lg">{t('learnFees')}</button>
+        {/* ── 50% dark overlay ── */}
+        <div className="absolute inset-0 bg-black/50 z-20" />
+
+        {/* ── Solid Bottom Divider Strip ── */}
+        <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#FDFCF8] border-t border-sand-200/40 z-20" />
+
+        {/* ── Hero Content ── */}
+        <div className="relative z-30 max-w-7xl mx-auto px-6 md:px-12 lg:px-20 h-full flex flex-col justify-center pt-24 pb-12 text-left">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end w-full">
+            {/* Left side: Heading & Search Bar */}
+            <div className="lg:col-span-12 flex flex-col items-start w-full">
+              {/* Slide label pill */}
+              <div className="mb-6 inline-flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-5 py-2 text-white/80 text-xs font-semibold tracking-widest uppercase">
+                <span className="w-1.5 h-1.5 rounded-full bg-terracotta mr-2.5 animate-pulse"></span>
+                {heroSlides[activeVideo]?.label}
+              </div>
+
+              {/* Headline */}
+              <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] text-white drop-shadow-xl max-w-2xl">
+                Explore your place<br />
+                to stay
+              </h2>
+
+              {/* ── Search Bar ── */}
+              <div className="mt-8 w-full max-w-5xl">
+                {/* Outer Dark Container */}
+                <div className="bg-slate-900/60 backdrop-blur-md p-2 md:p-3 rounded-3xl md:rounded-full shadow-2xl border border-white/10">
+                  {/* Inner White Container */}
+                  <div className="flex flex-col md:flex-row items-center bg-white rounded-2xl md:rounded-full w-full">
+                    
+                    {/* Location */}
+                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:flex-1 cursor-pointer rounded-t-2xl md:rounded-l-full hover:bg-gray-50 transition">
+                      <MapPin className="w-5 h-5 text-gray-400 mr-3" />
+                      <div className="w-full">
+                        <input
+                          type="text"
+                          value={locationQuery}
+                          onChange={(e) => setLocationQuery(e.target.value)}
+                          placeholder="Location, project or developer"
+                          className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-400 font-medium text-sm focus:ring-0 focus:outline-none p-0"
+                        />
+                      </div>
+                    </div>
+                    <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+                    
+                    {/* Check-in */}
+                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer hover:bg-gray-50 transition">
+                      <Calendar className="w-5 h-5 text-gray-400 mr-3" />
+                      <div>
+                        <input
+                          type="date"
+                          min={todayISO}
+                          value={dates.checkIn}
+                          onChange={(e) => setDates({ ...dates, checkIn: e.target.value })}
+                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-32 [color-scheme:light] text-gray-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+                    
+                    {/* Check-out */}
+                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer hover:bg-gray-50 transition">
+                      <Calendar className="w-5 h-5 text-gray-400 mr-3" />
+                      <div>
+                        <input
+                          type="date"
+                          min={dates.checkIn || todayISO}
+                          value={dates.checkOut}
+                          onChange={(e) => setDates({ ...dates, checkOut: e.target.value })}
+                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-32 [color-scheme:light] text-gray-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+                    
+                    {/* Guests */}
+                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer hover:bg-gray-50 transition">
+                      <User className="w-5 h-5 text-gray-400 mr-3" />
+                      <div>
+                        <select
+                          value={guestCounts.adults}
+                          onChange={(e) => setGuestCounts({ ...guestCounts, adults: parseInt(e.target.value) })}
+                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-24 cursor-pointer text-gray-500"
+                        >
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                            <option key={n} value={n}>{n} Guest{n > 1 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    {/* Search Button */}
+                    <div className="p-2 w-full md:w-auto">
+                      <button
+                        onClick={handleSearch}
+                        className="w-full md:w-auto bg-terracotta hover:bg-terracotta/90 text-white py-3 md:py-4 md:px-8 rounded-xl md:rounded-full transition-all duration-300 flex items-center justify-center shadow-md"
+                      >
+                        <Search className="w-5 h-5 text-white" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+
+          </div>
+
+          {/* ── Dot indicators ── */}
+          <div className="flex items-center space-x-2 mt-8">
+            {heroSlides.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => { setPrevVideo(activeVideo); setActiveVideo(idx); }}
+                className={`rounded-full transition-all duration-500 ${
+                  idx === activeVideo
+                    ? 'w-8 h-2 bg-white'
+                    : 'w-2 h-2 bg-white/40 hover:bg-white/70'
+                }`}
+              />
+            ))}
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Testimonials Section */}
-      {cmsContent?.testimonials?.items && (
-        <section className="max-w-7xl mx-auto px-8 mb-32 animate-fade-in">
-          <div className="py-20 bg-sand-100/50 rounded-[3rem] px-8 border border-sand-200">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <span className="inline-block px-4 py-1.5 rounded-full bg-terracotta/10 text-terracotta font-bold text-xs uppercase tracking-[0.2em] mb-4">
-                {t('guestStories')}
-              </span>
-              <h3 className="text-4xl md:text-5xl font-black text-charcoal tracking-tight mb-4">
-                {t('lovedByGuests')}
-              </h3>
-              <p className="text-charcoal-light text-lg">
-                {t('testimonialsSub')}
+      {/* Content Section */}
+      <div className="w-full bg-[#FDFCF8] relative z-20 pb-32 pt-24">
+        <div className="max-w-7xl mx-auto px-8">
+          {/* Residential Collection Slider */}
+          {renderPropertySlider(
+            'slider-residential',
+            'Residential Collection',
+            'Luxury homes, apartments, and private stays.',
+            Building2,
+            'residential',
+            properties.residential,
+            [
+               {property_id: 'temp_1', title: 'Villa, Kemah Tinggi', price: 25000, rating: '4.93', img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800', city: 'Goa', state: 'Goa', type: 'Villa'},
+               {property_id: 'temp_2', title: 'Bandra Heights, Mumbai', price: 15500, rating: '4.85', img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800', city: 'Mumbai', state: 'Maharashtra', type: 'Apartment'},
+               {property_id: 'temp_3', title: 'Coorg Retreat, Karnataka', price: 12200, rating: '4.98', img: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=800', city: 'Coorg', state: 'Karnataka', type: 'Cottage'},
+               {property_id: 'temp_4', title: 'Goa Beachfront Villa', price: 45000, rating: '4.90', img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800', city: 'Goa', state: 'Goa', type: 'Villa'}
+            ]
+          )}
+
+          {/* Commercial Spaces Slider */}
+          {renderPropertySlider(
+            'slider-commercial',
+            'Commercial Spaces',
+            'Premium offices, co-working spaces, and retail.',
+            Briefcase,
+            'commercial',
+            properties.commercial,
+            [
+               {property_id: 'temp_c1', title: 'City Vista Office', price: 5000, rating: '4.80', img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800', city: 'Pune', state: 'Maharashtra', type: 'Private Office'},
+               {property_id: 'temp_c2', title: 'Tech Hub Co-working', price: 1200, rating: '4.95', img: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&q=80&w=800', city: 'Bengaluru', state: 'Karnataka', type: 'Co-working'},
+               {property_id: 'temp_c3', title: 'Marina Retail Space', price: 15000, rating: '4.70', img: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800', city: 'Mumbai', state: 'Maharashtra', type: 'Retail'}
+            ]
+          )}
+
+          {/* Events & Functions Slider */}
+          {renderPropertySlider(
+            'slider-events',
+            'Events & Functions',
+            'Banquet halls, rooftops, and celebration venues.',
+            PartyPopper,
+            'event_venue',
+            properties.event_venue,
+            [
+               {property_id: 'temp_e1', title: 'Grand Hotel Ballroom', price: 150000, rating: '4.90', img: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800', city: 'Delhi', state: 'Delhi', type: 'Banquet Hall'},
+               {property_id: 'temp_e2', title: 'Skyline Rooftop Lounge', price: 85000, rating: '4.85', img: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&q=80&w=800', city: 'Gurugram', state: 'Haryana', type: 'Rooftop'},
+               {property_id: 'temp_e3', title: 'Heritage Courtyard', price: 120000, rating: '4.95', img: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=800', city: 'Jaipur', state: 'Rajasthan', type: 'Venue'}
+            ]
+          )}
+
+          {/* Ready to Host Section */}
+          <div className="bg-[#1a1a1a] rounded-[2.5rem] p-12 md:p-16 text-center text-white mb-32 relative overflow-hidden shadow-2xl">
+            <div className="absolute top-0 right-0 w-80 h-80 bg-terracotta/10 rounded-full blur-3xl -mr-28 -mt-28"></div>
+            <div className="relative z-10 max-w-3xl mx-auto">
+              <h3 
+                className="text-4xl md:text-5xl font-black mb-6 leading-tight tracking-tight"
+                dangerouslySetInnerHTML={{ __html: t('readyToHost') }}
+              />
+              <p className="text-gray-300 text-base md:text-lg font-medium leading-relaxed mb-10 max-w-2xl mx-auto">
+                {t('ctaParagraph')}
               </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                <button 
+                  onClick={() => navigate(user ? '/dashboard' : '/register')}
+                  className="bg-terracotta hover:bg-terracotta-hover text-white font-bold px-8 py-4 rounded-full transition shadow-lg w-full sm:w-auto text-sm uppercase tracking-wider"
+                >
+                  {t('listProperty')}
+                </button>
+                <a href="#" className="text-white hover:text-terracotta font-bold text-sm transition-colors duration-300">
+                  {t('learnFees')}
+                </a>
+              </div>
             </div>
+          </div>
+
+          {/* Testimonials (Loved by Guests & Hosts) */}
+          <div className="mb-32 text-center">
+            <span className="text-xs font-black tracking-[0.2em] text-terracotta uppercase">{t('guestStories')}</span>
+            <h3 className="text-4xl font-bold text-charcoal mt-3 mb-4 tracking-tight">{t('lovedByGuests')}</h3>
+            <p className="text-gray-505 text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('testimonialsSub')}</p>
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {cmsContent.testimonials.items.map((item, idx) => (
-                <div key={item.id || idx} className="bg-white rounded-3xl p-8 border border-sand-200 shadow-sm hover:shadow-md transition duration-300">
-                  <div className="flex space-x-1 mb-4 text-yellow-500">
-                    {Array(item.rating || 5).fill(0).map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-current" />
-                    ))}
+              {[
+                {
+                  stars: 5,
+                  text: "Golden Rich Stay spaces are absolutely stunning. The Wi-Fi is blazing fast and the locations are perfect for work-cations.",
+                  author: "Ananya Sen",
+                  role: "Consultant & Remote Worker",
+                  avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100"
+                },
+                {
+                  stars: 5,
+                  text: "Listing my commercial space was incredibly smooth. The automated payout verification is rock solid.",
+                  author: "Rohan Deshmukh",
+                  role: "Property Host",
+                  avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"
+                },
+                {
+                  stars: 5,
+                  text: "Booked an event venue for our product launch. The geo-coordinates and Leaflet mapping made it easy for everyone to find.",
+                  author: "Priya Nair",
+                  role: "Event Organizer",
+                  avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100"
+                }
+              ].map((item, idx) => (
+                <div key={idx} className="bg-white rounded-[2rem] p-8 border border-sand-200/50 shadow-md text-left flex flex-col justify-between hover:shadow-xl transition-all duration-300">
+                  <div>
+                    <div className="flex items-center space-x-1 text-amber-500 mb-6">
+                      {[...Array(item.stars)].map((_, i) => (
+                        <Star key={i} className="w-4 h-4 fill-current" />
+                      ))}
+                    </div>
+                    <p className="text-charcoal-light italic font-medium leading-relaxed mb-8">
+                      "{item.text}"
+                    </p>
                   </div>
-                  <p className="text-charcoal-light text-sm italic font-medium leading-relaxed mb-6">
-                    "{item.comment}"
-                  </p>
                   <div className="flex items-center space-x-4">
-                    <img 
-                      src={getImageUrl(item.avatar_url) || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"} 
-                      alt={item.name} 
-                      className="w-12 h-12 rounded-full object-cover border-2 border-sand-200"
-                    />
+                    <img src={item.avatar} alt={item.author} className="w-12 h-12 rounded-full object-cover" />
                     <div>
-                      <h5 className="font-bold text-charcoal">{item.name}</h5>
-                      <p className="text-xs text-charcoal-muted font-bold">{item.role}</p>
+                      <h4 className="font-bold text-charcoal text-sm">{item.author}</h4>
+                      <p className="text-gray-400 text-xs font-semibold">{item.role}</p>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        </section>
-      )}
 
-      {/* Blog Section */}
-      {cmsContent?.blog?.posts && (
-        <section className="max-w-5xl mx-auto px-8 mb-32 animate-fade-in">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <span className="inline-block px-4 py-1.5 rounded-full bg-terracotta/10 text-terracotta font-bold text-xs uppercase tracking-[0.2em] mb-4">
-              {t('ourJournal')}
-            </span>
-            <h3 className="text-4xl md:text-5xl font-black text-charcoal tracking-tight mb-4">
-              {t('latestBlog')}
-            </h3>
-            <p className="text-charcoal-light text-lg">
-              {t('blogSub')}
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {cmsContent.blog.posts.map((post, idx) => (
-              <div 
-                key={post.id || idx} 
-                onClick={() => setSelectedPost(post)}
-                className="group cursor-pointer bg-white rounded-3xl overflow-hidden border border-sand-200 shadow-sm hover:shadow-md transition duration-300"
-              >
-                <div className="h-48 overflow-hidden relative">
-                  <img 
-                    src={getImageUrl(post.image_url) || "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600"} 
-                    alt={post.title} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <span className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-charcoal shadow-sm">
-                    {post.read_time || '5 min read'}
-                  </span>
-                </div>
-                <div className="p-6">
-                  <div className="flex items-center space-x-2 text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-3">
-                    <span>{post.author}</span>
-                    <span>•</span>
-                    <span>{post.date}</span>
+          {/* Blogs Section (Our Journal) */}
+          <div className="mb-32 text-center">
+            <span className="text-xs font-black tracking-[0.2em] text-terracotta uppercase">{t('ourJournal')}</span>
+            <h3 className="text-4xl font-bold text-charcoal mt-3 mb-4 tracking-tight">{t('latestBlog')}</h3>
+            <p className="text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('blogSub')}</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+              {[
+                {
+                  id: 'p1',
+                  title: 'The Future of Short-Term Rentals in India',
+                  excerpt: 'How shifting preferences and hybrid work models are driving growth in STR spaces.',
+                  date: 'June 10, 2026',
+                  author: 'Amit Sharma',
+                  img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800'
+                },
+                {
+                  id: 'p2',
+                  title: 'Design Tips to Maximize Your Property Yield',
+                  excerpt: 'Curate your space to appeal to high-end travelers with styling and amenity upgrades.',
+                  date: 'June 05, 2026',
+                  author: 'Neha Patel',
+                  img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800'
+                },
+                {
+                  id: 'p3',
+                  title: 'Top 5 Weekend Escapes Near Mumbai & Nashik',
+                  excerpt: 'Explore the most beautiful villa retreats and holiday home collections for your next vacation.',
+                  date: 'May 28, 2026',
+                  author: 'Vikram Singh',
+                  img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800'
+                }
+              ].map((post) => (
+                <div 
+                  key={post.id} 
+                  onClick={() => setSelectedPost({
+                    id: post.id,
+                    title: post.title,
+                    excerpt: post.excerpt,
+                    date: post.date,
+                    author: post.author,
+                    image_url: post.img,
+                    read_time: '5 min read'
+                  })}
+                  className="bg-white rounded-[2rem] overflow-hidden border border-sand-200/50 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col h-full"
+                >
+                  <div className="h-48 overflow-hidden relative">
+                    <img src={post.img} alt={post.title} className="w-full h-full object-cover" />
                   </div>
-                  <h4 className="text-xl font-black text-charcoal mb-3 group-hover:text-terracotta transition-colors line-clamp-2">
-                    {post.title}
-                  </h4>
-                  <p className="text-charcoal-light text-sm font-semibold leading-relaxed mb-4 line-clamp-3">
-                    {post.excerpt}
-                  </p>
-                  <span className="text-xs font-black text-terracotta uppercase tracking-wider group-hover:underline">
-                    {t('readArticle')}
-                  </span>
+                  <div className="p-6 flex-1 flex flex-col justify-between">
+                    <div>
+                      <span className="text-[10px] font-black text-terracotta uppercase tracking-wider">{post.date}</span>
+                      <h4 className="font-bold text-lg text-charcoal mt-2 mb-3 leading-snug hover:text-terracotta transition-colors line-clamp-2">{post.title}</h4>
+                      <p className="text-gray-500 text-sm font-medium leading-relaxed line-clamp-2 mb-4">{post.excerpt}</p>
+                    </div>
+                    <div className="flex items-center justify-between pt-4 border-t border-sand-100">
+                      <span className="text-xs font-bold text-charcoal-muted">By {post.author}</span>
+                      <span className="text-xs font-black text-terracotta uppercase tracking-wider">{t('readArticle')}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </section>
-      )}
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-sand-200 pt-16 md:pt-24 pb-12">
+          
+        </div>
+      </div>
+
+<footer className="bg-white border-t border-sand-200 pt-16 md:pt-24 pb-12">
         <div className="max-w-7xl mx-auto px-6 md:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2.1fr_1fr_1fr_1.15fr_1.35fr] gap-10 xl:gap-14 mb-16 md:mb-24 items-start">
-            <div>
-
-              <div className="flex items-center space-x-3 mb-8">
-                <Building2 className="w-8 h-8 text-terracotta" />
-                <h4 className="text-2xl font-black text-charcoal tracking-tighter">X-SPACE360</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-16 mb-16 md:mb-24">
+            <div className="sm:col-span-2">
+              <div 
+                className="flex items-center space-x-3 mb-8 cursor-pointer group"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              >
+                <span className="text-2xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">
+                  x-space360<span className="text-terracotta">.in</span>
+                </span>
               </div>
               <p className="text-charcoal-light text-lg mb-8 max-w-md leading-relaxed">
                 {footerData.brand_description || t('footerSub')}
@@ -1591,16 +1566,16 @@ const LandingPage = () => {
               <h5 className="font-black text-charcoal uppercase tracking-[0.2em] text-xs mb-8">{t('contact')}</h5>
               <ul className="space-y-4 text-charcoal-light font-medium">
                 <li><p>{footerData.location || t('mumbaiHQ')}</p></li>
-                <li><p>{footerData.email}</p></li>
-                <li><p>{footerData.phone}</p></li>
+                <li><p className="hover:text-terracotta transition-colors">{footerData.email}</p></li>
+                <li><p className="hover:text-terracotta transition-colors">{footerData.phone}</p></li>
               </ul>
             </div>
             <div>
               <h5 className="font-black text-charcoal uppercase tracking-[0.18em] text-xs mb-8 leading-snug">{footerData.grievance_title}</h5>
               <ul className="space-y-4 text-charcoal-light font-medium leading-relaxed">
                 <li><p><span className="font-black text-charcoal">Officer:</span> {footerData.grievance_officer}</p></li>
-                <li><p className="text-sky-600 font-bold break-all">{footerData.grievance_email}</p></li>
-                <li><p>{footerData.grievance_phone}</p></li>
+                <li><p className="text-sky-600 font-bold break-all hover:text-terracotta transition-colors">{footerData.grievance_email}</p></li>
+                <li><p className="hover:text-terracotta transition-colors">{footerData.grievance_phone}</p></li>
                 <li><p className="text-[10px] font-black uppercase tracking-[0.14em] text-charcoal-muted leading-relaxed">{footerData.resolution_text}</p></li>
               </ul>
             </div>
@@ -1614,8 +1589,7 @@ const LandingPage = () => {
             </div>
           </div>
         </div>
-      </footer>
-      <ChatbotWidget />
+      </footer><ChatbotWidget />
 
       {/* Premium How It Works: Step-by-Step Host Onboarding Modal Component */}
       {(() => {
@@ -1835,6 +1809,23 @@ const LandingPage = () => {
           </>
         );
       })()}
+      {/* Floating Scroll Buttons */}
+      <div className="fixed top-1/2 -translate-y-1/2 right-8 flex flex-col space-y-3 z-50">
+        <button 
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-white/70 hover:-translate-y-1 transition-all duration-300 cursor-pointer border border-white/20"
+          title="Scroll to Top"
+        >
+          <ChevronUp className="w-5 h-5 text-charcoal" />
+        </button>
+        <button 
+          onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
+          className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-white/70 hover:translate-y-1 transition-all duration-300 cursor-pointer border border-white/20"
+          title="Scroll to Bottom"
+        >
+          <ChevronDown className="w-5 h-5 text-charcoal" />
+        </button>
+      </div>
     </div>
   );
 };

@@ -18,6 +18,8 @@ import {
   ZapOff,
   Zap,
   Star,
+  Heart,
+  Share2,
 } from 'lucide-react';
 
 // Fix Leaflet default marker icon for webpack/CRA
@@ -270,6 +272,34 @@ const GuestBrowse = () => {
   const [viewMode, setViewMode] = useState(VIEW_MODES.GRID);
   const [hoveredId, setHoveredId] = useState(null);
 
+  const [wishlist, setWishlist] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('guest_wishlist')) || [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [showWishlistOnly, setShowWishlistOnly] = useState(false);
+
+  const handleWishlistToggle = (propertyId) => {
+    setWishlist(prev => {
+      let updated;
+      if (prev.includes(propertyId)) {
+        updated = prev.filter(id => id !== propertyId);
+      } else {
+        updated = [...prev, propertyId];
+      }
+      localStorage.setItem('guest_wishlist', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleShareWhatsApp = (property) => {
+    const url = `${window.location.origin}/property/${property.property_id}`;
+    const text = `Check out this amazing property *${property.title}* in *${property.city}* on X-Space360:\n${url}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
   const [filters, setFilters] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return {
@@ -294,6 +324,11 @@ const GuestBrowse = () => {
     const category = params.get('category');
     const checkIn = params.get('checkIn');
     const checkOut = params.get('checkOut');
+    const isWishlist = params.get('wishlist') === 'true';
+    
+    if (isWishlist) {
+      setShowWishlistOnly(true);
+    }
     
     if (city || category || checkIn || checkOut) {
       setFilters(prev => ({
@@ -377,9 +412,16 @@ const GuestBrowse = () => {
     navigate(`/property/${propertyId}?checkIn=${filters.check_in || ''}&checkOut=${filters.check_out || ''}&guests=${urlGuests}`);
   };
 
+  const displayedProperties = useMemo(() => {
+    if (showWishlistOnly) {
+      return properties.filter(p => wishlist.includes(p.property_id));
+    }
+    return properties;
+  }, [properties, wishlist, showWishlistOnly]);
+
   const propsWithCoords = useMemo(
-    () => properties.filter((p) => p.latitude && p.longitude),
-    [properties]
+    () => displayedProperties.filter((p) => p.latitude && p.longitude),
+    [displayedProperties]
   );
 
   const indiaCenter = [20.5937, 78.9629];  return (
@@ -391,11 +433,7 @@ const GuestBrowse = () => {
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
-            <img 
-              src="/logo.png" 
-              alt="Logo" 
-              className="brand-logo-full w-8 h-8 md:w-10 md:h-10 object-contain transition-transform duration-300 group-hover:scale-110"
-            />
+            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">x-space360<span className="text-terracotta">.in</span></span>
           </div>
           <div className="flex items-center space-x-4 md:space-x-6">
             {/* Language Selector */}
@@ -408,6 +446,18 @@ const GuestBrowse = () => {
                 }}
               />
             </div>
+
+            <div className="h-4 w-[1px] bg-sand-300"></div>
+
+            <button
+              onClick={() => setShowWishlistOnly(prev => !prev)}
+              className={`text-[10px] font-black tracking-widest transition-colors uppercase flex items-center space-x-1 ${
+                showWishlistOnly ? 'text-red-500' : 'text-charcoal-muted hover:text-terracotta'
+              }`}
+            >
+              <Heart className={`w-3 h-3 ${showWishlistOnly ? 'fill-red-500 text-red-500' : ''}`} />
+              <span>Wishlist</span>
+            </button>
 
             <div className="h-4 w-[1px] bg-sand-300"></div>
 
@@ -662,7 +712,7 @@ const GuestBrowse = () => {
           <h2 className="text-3xl font-black text-charcoal tracking-tight">
              {loading ? t('searching') : (
                 <>
-                   {properties.length} {properties.length === 1 ? t('spaceFound') : t('spacesFound')}
+                   {displayedProperties.length} {displayedProperties.length === 1 ? t('spaceFound') : t('spacesFound')}
                 </>
              )}
           </h2>
@@ -715,14 +765,20 @@ const GuestBrowse = () => {
              <div className="w-12 h-12 border-4 border-sand-200 border-t-terracotta rounded-full animate-spin"></div>
              <p className="font-black text-charcoal-muted uppercase tracking-[0.2em] text-xs">{t('curatingSpaces')}</p>
           </div>
-        ) : properties.length === 0 ? (
+        ) : displayedProperties.length === 0 ? (
           <div className="text-center py-24 bg-white rounded-3xl border border-sand-200 shadow-premium">
             <div className="w-20 h-20 bg-sand-50 rounded-full flex items-center justify-center mx-auto mb-6">
                <Building2 className="w-10 h-10 text-sand-300" />
             </div>
-            <h3 className="text-2xl font-black text-charcoal mb-2">{t('noMatches')}</h3>
-            <p className="text-charcoal-muted font-medium mb-8 max-w-sm mx-auto">{t('noMatchesSub')}</p>
-            <button onClick={clearFilters} className="btn-premium px-10">{t('clearAll')}</button>
+            <h3 className="text-2xl font-black text-charcoal mb-2">{showWishlistOnly ? "No Wishlisted Properties" : t('noMatches')}</h3>
+            <p className="text-charcoal-muted font-medium mb-8 max-w-sm mx-auto">
+              {showWishlistOnly ? "You haven't added any spaces to your wishlist yet." : t('noMatchesSub')}
+            </p>
+            {showWishlistOnly ? (
+              <button onClick={() => setShowWishlistOnly(false)} className="btn-premium px-10">Browse All</button>
+            ) : (
+              <button onClick={clearFilters} className="btn-premium px-10">{t('clearAll')}</button>
+            )}
           </div>
         ) : (
           <div
@@ -743,7 +799,7 @@ const GuestBrowse = () => {
                     : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-slide-up'
                 }
               >
-                {properties.map((p, idx) => (
+                {displayedProperties.map((p, idx) => (
                   <PropertyCard
                     key={p.property_id}
                     property={p}
@@ -752,6 +808,9 @@ const GuestBrowse = () => {
                     onClick={() => navigateToProperty(p.property_id)}
                     style={{ animationDelay: `${idx * 100}ms` }}
                     t={t}
+                    isWishlisted={wishlist.includes(p.property_id)}
+                    onWishlistToggle={handleWishlistToggle}
+                    onShare={handleShareWhatsApp}
                   />
                 ))}
               </div>
@@ -827,7 +886,7 @@ const GuestBrowse = () => {
   );
 };
 
-const PropertyCard = ({ property, compact, onHover, onClick, style, t }) => (
+const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlisted, onWishlistToggle, onShare }) => (
   <div
     className={`card-premium group cursor-pointer ${compact ? 'flex h-48' : 'flex flex-col'} transition-all duration-500`}
     onClick={onClick}
@@ -848,6 +907,31 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t }) => (
             </span>
          </div>
       </div>
+      
+      {/* Share & Wishlist Buttons overlay */}
+      <div className="absolute top-4 right-4 flex space-x-2 z-20">
+         <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onShare(property);
+            }}
+            className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-white hover:scale-110 transition cursor-pointer"
+            title="Share on WhatsApp"
+         >
+            <Share2 className="w-3.5 h-3.5 text-charcoal hover:text-green-600" />
+         </button>
+         <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onWishlistToggle(property.property_id);
+            }}
+            className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-white hover:scale-110 transition cursor-pointer"
+            title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+         >
+            <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'}`} />
+         </button>
+      </div>
+
       {property.instant_booking && (
          <div className="absolute bottom-4 left-4 bg-amber-500 text-white p-1.5 rounded-lg shadow-lg">
             <Zap className="w-3 h-3 fill-current" />

@@ -133,12 +133,12 @@ const AuthPage = ({ isAdminLogin = false }) => {
       {/* Left Panel: Visual/Branding (Desktop Only) */}
       <div className="hidden lg:flex lg:w-5/12 relative bg-charcoal overflow-hidden border-r border-sand-200">
         <div className="absolute inset-0 z-0">
-           <img 
-              src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c" 
-              alt="Luxury Architecture" 
-              className="w-full h-full object-cover opacity-50 scale-105 animate-slow-zoom"
-           />
-           <div className="absolute inset-0 bg-gradient-to-tr from-charcoal via-charcoal/30 to-transparent"></div>
+          <img
+            src="/videos/login%20image/pexels-veer-patel-2161481449-37547129.jpg"
+            alt="Login Background"
+            className="w-full h-full object-cover opacity-50 scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-tr from-charcoal via-charcoal/30 to-transparent"></div>
         </div>
 
         <div className="relative z-10 w-full p-16 flex flex-col justify-between">
@@ -146,11 +146,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                className="flex items-center space-x-3 cursor-pointer group w-fit" 
                onClick={() => navigate('/')}
             >
-               <img 
-                  src="/logo.png" 
-                  alt="Logo" 
-                  className="brand-logo-full w-12 h-12 object-contain transition-transform duration-500 group-hover:scale-110"
-               />
+               <span className="text-2xl font-black text-white tracking-tight hover:text-white/95 transition">x-space360<span className="text-terracotta">.in</span></span>
             </div>
 
            <div className="animate-slide-up">
@@ -189,11 +185,9 @@ const AuthPage = ({ isAdminLogin = false }) => {
         <div className="w-full max-w-xl animate-fade-in">
            {/* Logo (Mobile Only) */}
            <div className="lg:hidden text-center mb-10">
-              <img 
-                 src="/logo.png" 
-                 alt="Logo" 
-                 className="brand-logo-full w-16 h-16 object-contain mx-auto mb-3 transition-transform duration-500 hover:scale-110"
-              />
+              <span className="text-3xl font-black text-charcoal tracking-tight hover:text-terracotta transition cursor-pointer" onClick={() => navigate('/')}>
+                 x-space360<span className="text-terracotta">.in</span>
+              </span>
            </div>
 
            <div className="mb-10 text-center lg:text-left">

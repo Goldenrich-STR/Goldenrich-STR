@@ -208,11 +208,7 @@ const GuestBookings = () => {
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
-            <img 
-              src="/logo.png" 
-              alt="Logo" 
-              className="brand-logo-full w-8 h-8 md:w-9 md:h-9 object-contain transition-transform duration-300 group-hover:scale-110"
-            />
+            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">x-space360<span className="text-terracotta">.in</span></span>
           </div>
           <div className="flex items-center space-x-6">
             <span className="text-xs font-bold text-charcoal-muted hidden sm:inline">
