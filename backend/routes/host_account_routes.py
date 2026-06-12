@@ -134,6 +134,8 @@ class HostVerificationSubmit(BaseModel):
     agreement_owner_name: str
     agreement_owner_address: str
     agreement_signature: str
+    terms_accepted: bool = False
+    terms_version: Optional[str] = None
 
 
 @router.post("/submit-verification")
@@ -142,6 +144,13 @@ async def submit_host_verification(
     current_user: dict = Depends(require_host),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
+    if not payload.terms_accepted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Terms & Conditions consent is required",
+        )
+
+    accepted_at = datetime.now(timezone.utc)
     docs = [
         {"document_type": "aadhar_card", "document_url": payload.aadhar_card},
         {"document_type": "property_proof", "document_url": payload.property_proof},
@@ -161,8 +170,11 @@ async def submit_host_verification(
                 "agreement_owner_name": payload.agreement_owner_name,
                 "agreement_owner_address": payload.agreement_owner_address,
                 "agreement_signature": payload.agreement_signature,
-                "agreement_signed_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc)
+                "agreement_signed_at": accepted_at.isoformat(),
+                "verification_terms_accepted": True,
+                "verification_terms_accepted_at": accepted_at.isoformat(),
+                "verification_terms_version": payload.terms_version or "host-verification",
+                "updated_at": accepted_at
             }
         }
     )

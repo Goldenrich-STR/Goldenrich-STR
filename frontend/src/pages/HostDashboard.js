@@ -34,6 +34,7 @@ const HostDashboard = () => {
   const [agreementOwnerName, setAgreementOwnerName] = useState('');
   const [agreementOwnerAddress, setAgreementOwnerAddress] = useState('');
   const [agreementSignature, setAgreementSignature] = useState('');
+  const [verificationConsent, setVerificationConsent] = useState(false);
   
   // File uploading states
   const [uploadingDocs, setUploadingDocs] = useState({
@@ -220,6 +221,10 @@ const HostDashboard = () => {
       alert('Please upload all mandatory documents and sign the agreement.');
       return;
     }
+    if (!verificationConsent) {
+      alert('Please accept the Terms & Conditions consent before submitting.');
+      return;
+    }
     setVerificationSubmitting(true);
     try {
       await accountAPI.submitHostVerification({
@@ -230,7 +235,9 @@ const HostDashboard = () => {
         gst_number: gstNumber || null,
         agreement_owner_name: agreementOwnerName,
         agreement_owner_address: agreementOwnerAddress,
-        agreement_signature: agreementSignature
+        agreement_signature: agreementSignature,
+        terms_accepted: true,
+        terms_version: 'host-verification-2026-06'
       });
       
       alert('Verification documents submitted successfully for Admin review!');
@@ -914,6 +921,21 @@ const HostDashboard = () => {
                   </div>
                 </div>
 
+                {/* Terms Consent */}
+                <label className="flex items-start gap-4 bg-white rounded-[2rem] border border-sand-200 p-5 cursor-pointer hover:border-terracotta transition-all">
+                  <input
+                    type="checkbox"
+                    checked={verificationConsent}
+                    onChange={(e) => setVerificationConsent(e.target.checked)}
+                    className="mt-1 w-5 h-5 rounded border-sand-300 text-terracotta focus:ring-terracotta cursor-pointer"
+                    data-testid="host-verification-consent-checkbox"
+                    required
+                  />
+                  <span className="text-xs md:text-sm text-charcoal-light font-bold leading-relaxed">
+                    I confirm that the uploaded documents and ownership details are true and valid. I have read and agree to the X-Space360 Host Verification Terms & Conditions, GR & Owner Agreement, privacy policy, and consent to verification by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.
+                  </span>
+                </label>
+
                 {/* Submit button */}
                 <div className="pt-6 border-t border-sand-200 flex space-x-4">
                   <button
@@ -925,7 +947,7 @@ const HostDashboard = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={verificationSubmitting || !aadharCard || !propertyProof || !cancelledCheque || !agreementSignature}
+                    disabled={verificationSubmitting || !aadharCard || !propertyProof || !cancelledCheque || !agreementSignature || !verificationConsent}
                     className="flex-1 btn-premium py-4 shadow-premium disabled:opacity-40"
                   >
                     {verificationSubmitting ? 'Submitting...' : 'Submit for Verification'}
