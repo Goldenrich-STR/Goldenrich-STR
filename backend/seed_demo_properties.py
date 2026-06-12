@@ -18,174 +18,203 @@ POSTGRES_URL = os.environ.get("POSTGRES_URL")
 
 DEMO_PROPERTIES = [
     {
-        "title": "Sea Breeze Villa, Anjuna",
-        "description": "3-bedroom beachside villa with private pool and sunset views.",
+        "title": "The Whispering Palms Villa, Candolim",
+        "description": "Exquisite 4-bedroom luxury villa featuring a private infinity pool, lush tropical gardens, and personal chef services just steps from Candolim Beach.",
         "property_type": "villa",
         "category": "residential",
-        "bhk_type": "3bhk",
-        "address": "Anjuna Beach Road",
+        "bhk_type": "4bhk",
+        "address": "Candolim Beach Road, near Taj Fort Aguada",
         "city": "Goa",
         "state": "Goa",
-        "pin_code": "403509",
-        "latitude": 15.5736,
-        "longitude": 73.7407,
-        "area_sqft": 2200,
-        "price_per_night": 8500,
-        "amenities": ["wifi", "pool", "ac", "parking", "kitchen"],
+        "pin_code": "403515",
+        "latitude": 15.5164,
+        "longitude": 73.7632,
+        "area_sqft": 4500,
+        "price_per_night": 22000,
+        "amenities": ["wifi", "pool", "ac", "parking", "kitchen", "chef", "jacuzzi"],
         "images": [
-            "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800",
-            "https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=800",
+            "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&q=80&w=1200",
+            "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&q=80&w=1200",
         ],
         "instant_booking": True,
         "pet_friendly": True,
     },
     {
-        "title": "Skyline Studio, Bandra",
-        "description": "Modern studio apartment with city view, walking distance to Carter Road.",
-        "property_type": "studio",
+        "title": "Royal Lakefront Palace, Udaipur",
+        "description": "Magnificent 5-bedroom heritage palace stay overlooking Lake Pichola. Features hand-painted frescoes, private courtyard, and boat dock access.",
+        "property_type": "villa",
         "category": "residential",
-        "bhk_type": "studio",
-        "address": "Pali Hill",
-        "city": "Mumbai",
-        "state": "Maharashtra",
-        "pin_code": "400050",
-        "latitude": 19.0596,
-        "longitude": 72.8295,
-        "area_sqft": 550,
-        "price_per_night": 3200,
-        "amenities": ["wifi", "ac", "kitchen", "tv"],
-        "images": [
-            "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800",
-        ],
-        "instant_booking": True,
-        "pet_friendly": False,
-    },
-    {
-        "title": "Heritage Haveli, Old Jaipur",
-        "description": "Restored haveli with frescoed walls, central courtyard and rooftop dining.",
-        "property_type": "independent_house",
-        "category": "residential",
-        "bhk_type": "4bhk",
-        "address": "Chandpole Bazaar",
-        "city": "Jaipur",
+        "bhk_type": "5bhk",
+        "address": "Pichola Lake Side, Near City Palace",
+        "city": "Udaipur",
         "state": "Rajasthan",
-        "pin_code": "302001",
-        "latitude": 26.9239,
-        "longitude": 75.8167,
-        "area_sqft": 3800,
-        "price_per_night": 12500,
-        "amenities": ["wifi", "ac", "parking", "kitchen", "rooftop"],
+        "pin_code": "313001",
+        "latitude": 24.5764,
+        "longitude": 73.6835,
+        "area_sqft": 6500,
+        "price_per_night": 45000,
+        "amenities": ["wifi", "ac", "parking", "kitchen", "rooftop", "lake_view", "butler"],
         "images": [
-            "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800",
+            "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=1200",
+            "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200",
         ],
         "instant_booking": False,
         "pet_friendly": False,
     },
     {
-        "title": "Tech Park Co-Working Suite",
-        "description": "8-seat private office in Whitefield tech park with high-speed fiber.",
-        "property_type": "private_office",
-        "category": "commercial",
-        "bhk_type": "commercial",
-        "address": "ITPL Main Road, Whitefield",
-        "city": "Bangalore",
-        "state": "Karnataka",
-        "pin_code": "560066",
-        "latitude": 12.9698,
-        "longitude": 77.7500,
-        "area_sqft": 600,
-        "price_per_night": 4500,
-        "amenities": ["wifi", "ac", "parking", "coffee", "printer"],
-        "images": [
-            "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800",
-        ],
-        "instant_booking": True,
-        "pet_friendly": False,
-    },
-    {
-        "title": "Lakeview Banquet Hall, Hussain Sagar",
-        "description": "Air-conditioned banquet hall seats 250 with stage and full A/V.",
-        "property_type": "banquet_hall",
-        "category": "event_venue",
-        "bhk_type": "banquet",
-        "address": "Necklace Road",
-        "city": "Hyderabad",
-        "state": "Telangana",
-        "pin_code": "500080",
-        "latitude": 17.4239,
-        "longitude": 78.4738,
-        "area_sqft": 5000,
-        "price_per_night": 35000,
-        "amenities": ["ac", "stage", "parking", "av_system", "catering"],
-        "images": [
-            "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800",
-        ],
-        "instant_booking": False,
-        "pet_friendly": False,
-    },
-    {
-        "title": "Hill Cottage, Manali",
-        "description": "Wooden cottage with fireplace, mountain view balcony, 2 bedrooms.",
+        "title": "The Oakwood Alpine Chalet, Manali",
+        "description": "Cozy 3-bedroom wooden chalet in Solang Valley. Panoramic views of snow-capped peaks, large brick fireplace, and glass sunroom.",
         "property_type": "independent_house",
         "category": "residential",
-        "bhk_type": "2bhk",
-        "address": "Old Manali Road",
+        "bhk_type": "3bhk",
+        "address": "Solang Valley Road",
         "city": "Manali",
         "state": "Himachal Pradesh",
         "pin_code": "175131",
-        "latitude": 32.2396,
-        "longitude": 77.1887,
-        "area_sqft": 1100,
-        "price_per_night": 4800,
-        "amenities": ["wifi", "fireplace", "parking", "kitchen"],
+        "latitude": 32.3164,
+        "longitude": 77.1632,
+        "area_sqft": 2800,
+        "price_per_night": 14500,
+        "amenities": ["wifi", "fireplace", "parking", "kitchen", "heating", "balcony"],
         "images": [
-            "https://images.unsplash.com/photo-1518733057094-95b53143d2a7?w=800",
+            "https://images.unsplash.com/photo-1518733057094-95b53143d2a7?auto=format&fit=crop&q=80&w=1200",
+            "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=1200",
         ],
         "instant_booking": True,
         "pet_friendly": True,
     },
     {
-        "title": "Powai Lakeview Apartment",
-        "description": "2BHK in Hiranandani with full lake view, gated community, gym + pool.",
-        "property_type": "apartment",
+        "title": "Coconut Grove Beach Villa, Alibaug",
+        "description": "Modern 3-bedroom villa nestled inside a coconut orchard. Steps from Varsoli beach, features a private plunge pool and open-air gazebo.",
+        "property_type": "villa",
         "category": "residential",
-        "bhk_type": "2bhk",
-        "address": "Hiranandani Gardens",
-        "city": "Mumbai",
+        "bhk_type": "3bhk",
+        "address": "Varsoli Beach Road",
+        "city": "Alibaug",
         "state": "Maharashtra",
-        "pin_code": "400076",
-        "latitude": 19.1197,
-        "longitude": 72.9156,
-        "area_sqft": 950,
-        "price_per_night": 5500,
-        "amenities": ["wifi", "ac", "pool", "gym", "parking", "kitchen"],
+        "pin_code": "402201",
+        "latitude": 18.6725,
+        "longitude": 72.8835,
+        "area_sqft": 3200,
+        "price_per_night": 18000,
+        "amenities": ["wifi", "pool", "ac", "parking", "kitchen", "gazebo", "bbq"],
         "images": [
-            "https://images.unsplash.com/photo-1567496898669-ee935f5f647a?w=800",
+            "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=1200",
+            "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=1200",
+        ],
+        "instant_booking": True,
+        "pet_friendly": True,
+    },
+    {
+        "title": "Elysium Glasshouse Villa, Karjat",
+        "description": "Ultra-modern 4-bedroom architectural masterpiece with glass facades, private infinity pool, and striking view of the Western Ghats waterfalls.",
+        "property_type": "villa",
+        "category": "residential",
+        "bhk_type": "4bhk",
+        "address": "Ghat Road, Karjat Hills",
+        "city": "Karjat",
+        "state": "Maharashtra",
+        "pin_code": "410201",
+        "latitude": 18.9102,
+        "longitude": 73.3284,
+        "area_sqft": 5200,
+        "price_per_night": 26000,
+        "amenities": ["wifi", "pool", "ac", "parking", "kitchen", "gym", "game_room"],
+        "images": [
+            "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1200",
+            "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&q=80&w=1200",
         ],
         "instant_booking": True,
         "pet_friendly": False,
     },
     {
-        "title": "Rooftop Lounge, Connaught Place",
-        "description": "Open-air rooftop lounge perfect for product launches and parties (capacity 80).",
-        "property_type": "rooftop",
-        "category": "event_venue",
-        "bhk_type": "banquet",
-        "address": "Block A, Inner Circle",
-        "city": "New Delhi",
-        "state": "Delhi",
-        "pin_code": "110001",
-        "latitude": 28.6315,
-        "longitude": 77.2167,
-        "area_sqft": 2200,
-        "price_per_night": 22000,
-        "amenities": ["bar", "av_system", "parking", "restrooms"],
+        "title": "The Pine Wood Estate, Landour",
+        "description": "Charming 4-bedroom colonial-era stone estate surrounded by old pine trees. Features antique furniture, library, and dramatic Himalayan sunset views.",
+        "property_type": "independent_house",
+        "category": "residential",
+        "bhk_type": "4bhk",
+        "address": "Upper Mall Road, Landour",
+        "city": "Mussoorie",
+        "state": "Uttarakhand",
+        "pin_code": "248179",
+        "latitude": 30.4624,
+        "longitude": 78.0932,
+        "area_sqft": 4000,
+        "price_per_night": 19500,
+        "amenities": ["wifi", "parking", "kitchen", "fireplace", "heating", "library"],
         "images": [
-            "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800",
+            "https://images.unsplash.com/photo-1549517045-bc93de075e53?auto=format&fit=crop&q=80&w=1200",
+            "https://images.unsplash.com/photo-1507089947368-19c1da9775ae?auto=format&fit=crop&q=80&w=1200",
         ],
         "instant_booking": False,
         "pet_friendly": False,
     },
+    {
+        "title": "Infinity Pool Penthouse, Candolim",
+        "description": "Luxurious 3-bedroom sky penthouse overlooking the Arabian Sea. Private terrace plunge pool, fully automated smart controls, and concierge.",
+        "property_type": "apartment",
+        "category": "residential",
+        "bhk_type": "3bhk",
+        "address": "Sea View Tower, Candolim Beach Road",
+        "city": "Goa",
+        "state": "Goa",
+        "pin_code": "403515",
+        "latitude": 15.5188,
+        "longitude": 73.7611,
+        "area_sqft": 3500,
+        "price_per_night": 16000,
+        "amenities": ["wifi", "pool", "ac", "parking", "kitchen", "terrace", "sea_view"],
+        "images": [
+            "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=1200",
+            "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200",
+        ],
+        "instant_booking": True,
+        "pet_friendly": False,
+    },
+    {
+        "title": "Emerald Rainforest Retreat, Vythiri",
+        "description": "Charming 2-bedroom eco-luxe wooden villa built inside Wayanad's rainforest canopy. Private jacuzzi, natural spring pool, and bird watching deck.",
+        "property_type": "independent_house",
+        "category": "residential",
+        "bhk_type": "2bhk",
+        "address": "Vythiri Forest Reserve",
+        "city": "Wayanad",
+        "state": "Kerala",
+        "pin_code": "673576",
+        "latitude": 11.5542,
+        "longitude": 76.0384,
+        "area_sqft": 1800,
+        "price_per_night": 11000,
+        "amenities": ["wifi", "parking", "jacuzzi", "deck", "forest_view"],
+        "images": [
+            "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1200",
+            "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1200",
+        ],
+        "instant_booking": True,
+        "pet_friendly": True,
+    },
+    {
+        "title": "Highland Valley Cottage, Ooty",
+        "description": "Scenic 3-bedroom colonial cottage nestled inside a tea estate. Fireplace in bedrooms, organic vegetable patch, and direct valley views.",
+        "property_type": "independent_house",
+        "category": "residential",
+        "bhk_type": "3bhk",
+        "address": "Doddabetta Estate Road",
+        "city": "Ooty",
+        "state": "Tamil Nadu",
+        "pin_code": "643001",
+        "latitude": 11.4102,
+        "longitude": 76.7384,
+        "area_sqft": 2400,
+        "price_per_night": 12500,
+        "amenities": ["wifi", "fireplace", "parking", "kitchen", "valley_view", "tea_garden"],
+        "images": [
+            "https://images.unsplash.com/photo-1587061949409-02df41d5e562?auto=format&fit=crop&q=80&w=1200",
+            "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=1200",
+        ],
+        "instant_booking": True,
+        "pet_friendly": True,
+    }
 ]
 
 
@@ -203,20 +232,28 @@ async def seed():
 
     host = await db.users.find_one({"email": "host@propnest.com"}, {"_id": 0})
     if not host:
-        print("ERROR: host@propnest.com not found. Run seed_users.py first.")
+        # Try alternate emails
+        host = await db.users.find_one({"email": "host@goldenrichstay.com"}, {"_id": 0})
+        
+    if not host:
+        # Find any user that is a host or admin to act as owner
+        host = await db.users.find_one({"role": "host"}, {"_id": 0})
+        if not host:
+            host = await db.users.find_one({}, {"_id": 0})
+            
+    if not host:
+        print("ERROR: No host or admin user found to link properties. Run seed_users.py first.")
         return
 
     owner_id = host["user_id"]
     inserted = 0
     skipped = 0
 
-    for idx, data in enumerate(DEMO_PROPERTIES):
-        # Skip if a demo property with same title already exists
-        existing = await db.properties.find_one({"title": data["title"]})
-        if existing:
-            skipped += 1
-            continue
+    # Delete all previously seeded demo properties
+    print("Clearing old demo properties...")
+    await db.properties.delete_many({"property_id": {"$regex": "^prop_demo_"}})
 
+    for idx, data in enumerate(DEMO_PROPERTIES):
         prop_id = f"prop_demo_{idx + 1}_{int(datetime.utcnow().timestamp())}"
         doc = {
             "property_id": prop_id,
@@ -259,7 +296,7 @@ async def seed():
         inserted += 1
         print(f"  + {data['title']} ({prop_id})")
 
-    print(f"\nDone. Inserted {inserted}, skipped {skipped} (already exist).")
+    print(f"\nDone. Inserted {inserted} new luxury stay demo properties.")
     if client:
         client.close()
     if hasattr(db, 'pool') and db.pool:
@@ -268,3 +305,4 @@ async def seed():
 
 if __name__ == "__main__":
     asyncio.run(seed())
+

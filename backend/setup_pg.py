@@ -9,8 +9,8 @@ async def setup_db():
     load_dotenv(ROOT_DIR / '.env')
     
     # Try to connect to system 'postgres' db first to create our db
-    sys_url = "postgresql://postgres:Mayur123@localhost:5432/postgres"
-    db_name = "STR_Project"
+    sys_url = "postgresql://postgres:Pratik16@localhost:5432/postgres"
+    db_name = "Goldenrich_STR"
     
     print(f"Connecting to system database to ensure '{db_name}' exists...")
     try:
