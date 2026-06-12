@@ -218,7 +218,12 @@ const VerificationReviewSection = () => {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState(null);
   const [showRejectReasonModal, setShowRejectReasonModal] = useState(false);
+  const [showApproveModal, setShowApproveModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [approveRemarks, setApproveRemarks] = useState('');
+  const [approveError, setApproveError] = useState('');
+  const [approving, setApproving] = useState(false);
+  const [reviewNotice, setReviewNotice] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -262,18 +267,24 @@ const VerificationReviewSection = () => {
     }
   };
 
-  const handleApprove = async (verificationId) => {
-    const remarks = prompt('Add remarks (If Applicable):') || '';
+  const handleApprove = async () => {
+    if (!selectedVerification?.verification_id) return;
+    setApproving(true);
+    setApproveError('');
     try {
-      await verificationAPI.rmApprove(verificationId, remarks);
-      alert('Verification approved! Forwarded to admin for final approval.');
+      await verificationAPI.rmApprove(selectedVerification.verification_id, approveRemarks.trim());
+      setReviewNotice('Verification approved and forwarded to admin for final approval.');
       fetchPendingVerifications();
       fetchHistoryVerifications();
+      setShowApproveModal(false);
+      setApproveRemarks('');
       setSelectedVerification(null);
     } catch (error) {
       console.error('Error approving verification:', error);
       const msg = error?.response?.data?.detail || 'Failed to approve verification';
-      alert(msg);
+      setApproveError(msg);
+    } finally {
+      setApproving(false);
     }
   };
 
@@ -320,6 +331,20 @@ const VerificationReviewSection = () => {
         <h3 className="text-2xl font-bold text-charcoal mb-2">Pending Verification Reviews</h3>
         <p className="text-charcoal-light">Remote review of broker-submitted verification reports</p>
       </div>
+
+      {reviewNotice && (
+        <div className="mb-4 bg-green-50 border border-green-200 text-green-700 rounded-2xl px-4 py-3 text-sm font-bold flex items-center justify-between">
+          <span>{reviewNotice}</span>
+          <button
+            type="button"
+            onClick={() => setReviewNotice('')}
+            className="text-green-700/70 hover:text-green-900 font-black"
+            aria-label="Dismiss notice"
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-12">
@@ -385,7 +410,12 @@ const VerificationReviewSection = () => {
                       <span>View Details</span>
                     </button>
                     <button
-                      onClick={() => handleApprove(verification.verification_id)}
+                      onClick={() => {
+                        setSelectedVerification(verification);
+                        setApproveRemarks('');
+                        setApproveError('');
+                        setShowApproveModal(true);
+                      }}
                       className="flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition font-semibold"
                       data-testid={`approve-${verification.verification_id}`}
                     >
@@ -726,9 +756,7 @@ const VerificationReviewSection = () => {
                       <div className="flex space-x-2">
                         <button 
                           onClick={() => {
-                            // In a real audit, this might update a local state, 
-                            // but for now we just show a success toast or similar
-                            alert(`Confirmed: ${formatDisplayLabel(key)} is approved.`);
+                            setReviewNotice(`${formatDisplayLabel(key)} marked as approved for this review.`);
                           }}
                           className="flex-1 py-2 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-green-100 transition flex items-center justify-center space-x-1"
                         >
@@ -814,11 +842,68 @@ const VerificationReviewSection = () => {
                 <span>Reject Report</span>
               </button>
               <button 
-                onClick={() => handleApprove(selectedVerification.verification_id)}
+                onClick={() => {
+                  setApproveRemarks('');
+                  setApproveError('');
+                  setShowApproveModal(true);
+                }}
                 className="flex-1 py-4 bg-green-600 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-green-700 shadow-lg shadow-green-200 transition flex items-center justify-center space-x-2"
               >
                 <CheckCircle className="w-5 h-5" />
                 <span>Approve Report</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Approval Remarks Modal */}
+      {showApproveModal && (
+        <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[110] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-black text-charcoal">Approve Report</h3>
+              <p className="text-charcoal-light text-sm mt-1">
+                Add optional RM remarks before forwarding this verification to admin.
+              </p>
+            </div>
+
+            <textarea
+              className="w-full border-2 border-sand-200 rounded-2xl p-4 focus:border-green-500 outline-none transition min-h-[120px] text-charcoal font-medium"
+              placeholder="Add remarks, if applicable..."
+              value={approveRemarks}
+              onChange={(e) => setApproveRemarks(e.target.value)}
+            />
+
+            {approveError && (
+              <div className="mt-4 bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 text-xs font-bold">
+                {approveError}
+              </div>
+            )}
+
+            <div className="flex space-x-3 mt-8">
+              <button
+                type="button"
+                onClick={() => {
+                  if (approving) return;
+                  setShowApproveModal(false);
+                  setApproveRemarks('');
+                  setApproveError('');
+                }}
+                className="flex-1 py-4 font-bold text-charcoal-muted hover:text-charcoal transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleApprove}
+                disabled={approving}
+                className="flex-1 py-4 bg-green-600 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-green-700 shadow-lg shadow-green-200 transition disabled:opacity-60"
+              >
+                {approving ? 'Approving...' : 'Confirm Approve'}
               </button>
             </div>
           </div>
