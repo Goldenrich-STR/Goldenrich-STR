@@ -1545,14 +1545,14 @@ const LandingPage = () => {
       {/* Footer */}
       <footer className="bg-white border-t border-sand-200 pt-16 md:pt-24 pb-12">
         <div className="max-w-7xl mx-auto px-6 md:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-12 lg:gap-12 mb-16 md:mb-24">
-            <div className="sm:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[2.1fr_1fr_1fr_1.15fr_1.35fr] gap-10 xl:gap-14 mb-16 md:mb-24 items-start">
+            <div>
 
               <div className="flex items-center space-x-3 mb-8">
                 <Building2 className="w-8 h-8 text-terracotta" />
                 <h4 className="text-2xl font-black text-charcoal tracking-tighter">X-SPACE360</h4>
               </div>
-              <p className="text-charcoal-light text-lg mb-8 max-w-sm">
+              <p className="text-charcoal-light text-lg mb-8 max-w-md leading-relaxed">
                 {footerData.brand_description || t('footerSub')}
               </p>
               <div className="flex space-x-4">
@@ -1595,12 +1595,12 @@ const LandingPage = () => {
               </ul>
             </div>
             <div>
-              <h5 className="font-black text-charcoal uppercase tracking-[0.2em] text-xs mb-8">{footerData.grievance_title}</h5>
-              <ul className="space-y-4 text-charcoal-light font-medium">
+              <h5 className="font-black text-charcoal uppercase tracking-[0.18em] text-xs mb-8 leading-snug">{footerData.grievance_title}</h5>
+              <ul className="space-y-4 text-charcoal-light font-medium leading-relaxed">
                 <li><p><span className="font-black text-charcoal">Officer:</span> {footerData.grievance_officer}</p></li>
-                <li><p className="text-sky-600 font-bold break-words">{footerData.grievance_email}</p></li>
+                <li><p className="text-sky-600 font-bold break-all">{footerData.grievance_email}</p></li>
                 <li><p>{footerData.grievance_phone}</p></li>
-                <li><p className="text-[10px] font-black uppercase tracking-[0.18em] text-charcoal-muted">{footerData.resolution_text}</p></li>
+                <li><p className="text-[10px] font-black uppercase tracking-[0.14em] text-charcoal-muted leading-relaxed">{footerData.resolution_text}</p></li>
               </ul>
             </div>
           </div>
