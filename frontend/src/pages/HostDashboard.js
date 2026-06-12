@@ -932,7 +932,7 @@ const HostDashboard = () => {
                     required
                   />
                   <span className="text-xs md:text-sm text-charcoal-light font-bold leading-relaxed">
-                    I confirm that the uploaded documents and ownership details are true and valid. I have read and agree to the X-Space360 Host Verification Terms & Conditions, GR & Owner Agreement, privacy policy, and consent to verification by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.
+                    I confirm the submitted details are true and consent to verification.
                   </span>
                 </label>
 
