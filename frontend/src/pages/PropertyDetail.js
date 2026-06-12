@@ -605,6 +605,13 @@ const PropertyDetail = () => {
       return dateInRange(iso, b.start_date, b.end_date);
     });
 
+  const getCalendarDateStatus = (iso) => {
+    const matches = blockedDates.filter((b) => dateInRange(iso, b.start_date, b.end_date));
+    if (matches.some((b) => b.source === 'booking')) return 'booked';
+    if (matches.length > 0) return 'blocked';
+    return 'available';
+  };
+
   const parsedPolicies = useMemo(() => {
     try {
       if (property?.category === 'event_venue' && property.house_rules) {
@@ -1392,6 +1399,9 @@ const PropertyDetail = () => {
                     const iso = toISO(d);
                     const past = iso < todayISO;
                     const blocked = isBlocked(iso);
+                    const dateStatus = getCalendarDateStatus(iso);
+                    const booked = dateStatus === 'booked';
+                    const manuallyBlocked = dateStatus === 'blocked';
                     const isStart = iso === checkIn;
                     const isEnd = iso === checkOut;
                     const inRange = checkIn && checkOut && iso > checkIn && iso < checkOut;
@@ -1405,8 +1415,10 @@ const PropertyDetail = () => {
                         className={`h-14 rounded-2xl text-sm font-black transition-all relative overflow-hidden group ${
                           past
                             ? 'text-charcoal-muted/30 bg-sand-50 cursor-not-allowed'
-                            : blocked
-                            ? 'text-red-500 bg-red-50/50 hover:bg-red-50 border border-dashed border-red-200 cursor-pointer'
+                            : booked
+                            ? 'text-red-600 bg-red-50/80 hover:bg-red-50 border border-dashed border-red-200 cursor-pointer'
+                            : manuallyBlocked
+                            ? 'text-gray-600 bg-gray-100/80 hover:bg-gray-100 border border-dashed border-gray-300 cursor-pointer'
                             : isStart || isEnd
                             ? 'bg-charcoal text-white shadow-elevated scale-105 z-10'
                             : inRange
@@ -1415,7 +1427,8 @@ const PropertyDetail = () => {
                         }`}
                       >
                         {d.getDate()}
-                        {blocked && <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-400"></div>}
+                        {booked && <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-500"></div>}
+                        {manuallyBlocked && <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-gray-500"></div>}
                         {isStart && <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] uppercase font-black opacity-50">{t('inLabel')}</div>}
                         {isEnd && <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] uppercase font-black opacity-50">{t('outLabel')}</div>}
                       </button>
@@ -1429,8 +1442,12 @@ const PropertyDetail = () => {
                       <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">{t('available')}</span>
                    </div>
                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 rounded-full bg-sand-100 border border-sand-200"></div>
-                      <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">{t('unavailable')}</span>
+                      <div className="w-3 h-3 rounded-full bg-gray-300 border border-gray-400"></div>
+                      <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Blocked</span>
+                   </div>
+                   <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Booked</span>
                    </div>
                    <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 rounded-full bg-charcoal"></div>

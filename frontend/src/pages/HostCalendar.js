@@ -24,9 +24,9 @@ const MONTH_NAMES = [
 ];
 
 const SOURCE_LABELS = {
-  manual: { label: 'Blocked', color: '#EF4444', bg: 'bg-red-100', text: 'text-red-700' },
-  booking: { label: 'Booked', color: '#10B981', bg: 'bg-green-100', text: 'text-green-700' },
-  external: { label: 'External', color: '#F59E0B', bg: 'bg-amber-100', text: 'text-amber-700' },
+  manual: { label: 'Blocked', color: '#6B7280', bg: 'bg-gray-100', text: 'text-gray-700' },
+  booking: { label: 'Booked', color: '#EF4444', bg: 'bg-red-100', text: 'text-red-700' },
+  external: { label: 'Blocked', color: '#6B7280', bg: 'bg-gray-100', text: 'text-gray-700' },
 };
 
 function toISO(d) {
@@ -452,13 +452,21 @@ const HostCalendar = () => {
                     );
                     const dayEvents = eventsForDay(d);
                     const isToday = toISO(d) === toISO(new Date());
+                    const hasBooking = dayEvents.some((ev) => ev.source === 'booking');
+                    const hasBlocked = dayEvents.some((ev) => ev.source !== 'booking');
                     return (
                       <div
                         key={idx}
-                        className={`h-24 border rounded-xl p-2 text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] hover:shadow-md bg-white ${
+                        className={`h-24 border rounded-xl p-2 text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] hover:shadow-md ${
+                          hasBooking
+                            ? 'bg-red-50/70 border-red-200'
+                            : hasBlocked
+                            ? 'bg-gray-50 border-gray-200'
+                            : 'bg-white border-sand-200/85 hover:border-terracotta/40'
+                        } ${
                           isToday 
                             ? 'border-terracotta ring-2 ring-terracotta/20 shadow-sm shadow-terracotta/10' 
-                            : 'border-sand-200/85 hover:border-terracotta/40'
+                            : ''
                         }`}
                         data-testid={`day-${toISO(d)}`}
                       >
@@ -480,13 +488,13 @@ const HostCalendar = () => {
                               key={ev.event_id + toISO(d)}
                               className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg truncate transition-all duration-200 hover:brightness-95 flex items-center gap-1 shadow-sm"
                               style={{ 
-                                backgroundColor: ev.color + '22', 
-                                color: ev.color, 
-                                borderLeft: `3px solid ${ev.color}`
+                                backgroundColor: (SOURCE_LABELS[ev.source]?.color || ev.color) + '22', 
+                                color: SOURCE_LABELS[ev.source]?.color || ev.color, 
+                                borderLeft: `3px solid ${SOURCE_LABELS[ev.source]?.color || ev.color}`
                               }}
                               title={`${SOURCE_LABELS[ev.source]?.label}: ${ev.start_date} → ${ev.end_date}`}
                             >
-                              <span className="w-1 h-1 rounded-full" style={{ backgroundColor: ev.color }} />
+                              <span className="w-1 h-1 rounded-full" style={{ backgroundColor: SOURCE_LABELS[ev.source]?.color || ev.color }} />
                               {SOURCE_LABELS[ev.source]?.label || ev.title}
                             </div>
                           ))}
@@ -503,9 +511,9 @@ const HostCalendar = () => {
               )}
 
               <div className="flex flex-wrap items-center gap-4 mt-6 p-4 bg-sand-50/50 rounded-xl border border-sand-100/50 text-xs text-charcoal-light">
-                <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md bg-green-500 shadow-sm shadow-green-500/20" />Booked</span>
-                <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md bg-red-500 shadow-sm shadow-red-500/20" />Manually Blocked</span>
-                <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md bg-amber-500 shadow-sm shadow-amber-500/20" />External Calendar</span>
+                <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md border border-sand-300 bg-white" />Available</span>
+                <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md bg-gray-300 shadow-sm shadow-gray-300/20" />Blocked</span>
+                <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md bg-red-500 shadow-sm shadow-red-500/20" />Booked</span>
               </div>
             </div>
 
