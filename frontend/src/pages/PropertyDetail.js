@@ -33,7 +33,9 @@ import {
   Camera,
   Sparkles,
   Tag,
-  Lock
+  Lock,
+  Minus,
+  Plus
 } from 'lucide-react';
 
 const AMENITY_ICONS = {
@@ -458,6 +460,8 @@ const PropertyDetail = () => {
     const params = new URLSearchParams(window.location.search);
     return Number(params.get('guests')) || 1;
   });
+  const [childrenGuests, setChildrenGuests] = useState(0);
+  const [infantGuests, setInfantGuests] = useState(0);
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
   const [foodPreference, setFoodPreference] = useState('veg');
   const [booking, setBooking] = useState(false);
@@ -524,6 +528,29 @@ const PropertyDetail = () => {
 
   const allCategories = Object.keys(groupedImages);
   const maxGuests = Math.max(1, Number(property?.max_guests) || 6);
+  const adultGuests = Number(guests) || 1;
+  const chargeableGuests = Math.max(1, adultGuests + childrenGuests);
+  const canAddChargeableGuest = chargeableGuests < maxGuests;
+
+  const updateAdultGuests = (delta) => {
+    setGuests((current) => {
+      const currentAdults = Math.max(1, Number(current) || 1);
+      if (delta > 0 && currentAdults + childrenGuests >= maxGuests) return currentAdults;
+      return Math.max(1, Math.min(maxGuests, currentAdults + delta));
+    });
+  };
+
+  const updateChildrenGuests = (delta) => {
+    setChildrenGuests((current) => {
+      const next = Math.max(0, current + delta);
+      if (delta > 0 && adultGuests + current >= maxGuests) return current;
+      return Math.min(maxGuests - adultGuests, next);
+    });
+  };
+
+  const updateInfantGuests = (delta) => {
+    setInfantGuests((current) => Math.max(0, Math.min(5, current + delta)));
+  };
 
   const fetchReviews = async () => {
     try {
@@ -655,6 +682,7 @@ const PropertyDetail = () => {
   const total = baseAmount + serviceFee + taxes;
   const advanceAmount = Math.round(total * (advancePercent / 100));
   const amountDueNow = bookingPaymentType === 'advance' ? advanceAmount : Math.round(total);
+  const canShowBookingAmount = Boolean(checkIn && checkOut && nights > 0 && amountDueNow > 0);
 
   const goPrev = () => {
     if (calMonth === 1) {
@@ -752,7 +780,7 @@ const PropertyDetail = () => {
       );
       return;
     }
-    if (property?.category !== 'event_venue' && Number(guests) > maxGuests) {
+    if (property?.category !== 'event_venue' && chargeableGuests > maxGuests) {
       setBookingError(
         property?.category === 'commercial'
           ? `Maximum staff allowed is ${maxGuests}`
@@ -768,7 +796,7 @@ const PropertyDetail = () => {
         property_id: id,
         check_in_date: checkIn,
         check_out_date: checkOut,
-        number_of_guests: Number(guests),
+        number_of_guests: property?.category === 'event_venue' ? Number(guests) : chargeableGuests,
         selected_slot: property?.category === 'event_venue' ? selectedSlot : undefined,
         food_preference: property?.category === 'event_venue' ? foodPreference : undefined,
         payment_type: paymentType,
@@ -1600,7 +1628,7 @@ const PropertyDetail = () => {
                               </>
                             )}
                           </div>
-                        ) : (
+                        ) : property.category === 'commercial' ? (
                           <input
                             type="number"
                             min="1"
@@ -1612,6 +1640,69 @@ const PropertyDetail = () => {
                             }}
                             className="w-16 text-xs font-black text-charcoal bg-transparent outline-none"
                           />
+                        ) : (
+                          <div className="mt-3 space-y-4">
+                            {[
+                              {
+                                key: 'adults',
+                                title: 'Adults',
+                                subtitle: 'Age 13+',
+                                value: adultGuests,
+                                minusDisabled: adultGuests <= 1,
+                                plusDisabled: !canAddChargeableGuest,
+                                onMinus: () => updateAdultGuests(-1),
+                                onPlus: () => updateAdultGuests(1),
+                              },
+                              {
+                                key: 'children',
+                                title: 'Children',
+                                subtitle: 'Ages 2-12',
+                                value: childrenGuests,
+                                minusDisabled: childrenGuests <= 0,
+                                plusDisabled: !canAddChargeableGuest,
+                                onMinus: () => updateChildrenGuests(-1),
+                                onPlus: () => updateChildrenGuests(1),
+                              },
+                              {
+                                key: 'infants',
+                                title: 'Infants',
+                                subtitle: 'Under 2',
+                                value: infantGuests,
+                                minusDisabled: infantGuests <= 0,
+                                plusDisabled: infantGuests >= 5,
+                                onMinus: () => updateInfantGuests(-1),
+                                onPlus: () => updateInfantGuests(1),
+                              },
+                            ].map((item) => (
+                              <div key={item.key} className="flex items-center justify-between">
+                                <div>
+                                  <div className="text-sm font-black text-charcoal leading-tight">{item.title}</div>
+                                  <div className="text-xs font-medium text-charcoal-muted mt-0.5">{item.subtitle}</div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={item.onMinus}
+                                    disabled={item.minusDisabled}
+                                    className="w-8 h-8 rounded-full bg-sand-100 text-charcoal-muted flex items-center justify-center transition-colors hover:bg-sand-200 disabled:opacity-40 disabled:hover:bg-sand-100"
+                                    aria-label={`Decrease ${item.title}`}
+                                  >
+                                    <Minus className="w-4 h-4" />
+                                  </button>
+                                  <span className="w-5 text-center text-sm font-bold text-charcoal">{item.value}</span>
+                                  <button
+                                    type="button"
+                                    onClick={item.onPlus}
+                                    disabled={item.plusDisabled}
+                                    className="w-8 h-8 rounded-full bg-sand-100 text-charcoal flex items-center justify-center transition-colors hover:bg-sand-200 disabled:opacity-40 disabled:hover:bg-sand-100"
+                                    aria-label={`Increase ${item.title}`}
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1806,7 +1897,9 @@ const PropertyDetail = () => {
                       <span>{t('holdingSpot')}</span>
                    </div>
                 ) : (
-                   `${property.instant_booking ? t('reserveNow') : t('requestBooking')} - Rs.${amountDueNow.toLocaleString('en-IN')}`
+                   canShowBookingAmount
+                     ? `${property.instant_booking ? t('reserveNow') : t('requestBooking')} - Rs.${amountDueNow.toLocaleString('en-IN')}`
+                     : `${property.instant_booking ? t('reserveNow') : t('requestBooking')}`
                 )}
               </button>
 
