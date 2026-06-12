@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, getImageUrl } from '../services/api';
 import { createPortal } from 'react-dom';
-import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
+import { formatCategoryLabel, formatDisplayLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 import { 
   Users, Building2, FileCheck, Target, IndianRupee, 
   AlertCircle, Plus, CheckCircle, XCircle, Clock, 
@@ -346,6 +346,12 @@ const MyOwnersSection = () => {
 
 
 // Properties Section
+const formatReadableText = (value) => (
+  String(value || '').replace(/\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b/g, (match) =>
+    formatDisplayLabel(match).toLowerCase()
+  )
+);
+
 const PropertiesSection = () => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -371,7 +377,7 @@ const PropertiesSection = () => {
   return (
     <div data-testid="properties-section" className="animate-slide-up">
       <div className="flex items-center mb-8">
-         <h3 className="text-2xl font-black text-charcoal tracking-tight">STR Inventory</h3>
+         <h3 className="text-2xl font-black text-charcoal tracking-tight">Property Inventory</h3>
          <div className="ml-4 h-px flex-1 bg-sand-200"></div>
       </div>
 
@@ -930,7 +936,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
               </div>
               <div>
                 <span className="text-[9px] font-bold text-charcoal-muted uppercase block">BHK Type</span>
-                <span className="font-bold text-charcoal text-xs uppercase">{task.property_details?.bhk_type || 'N/A'}</span>
+                <span className="font-bold text-charcoal text-xs">{formatDisplayLabel(task.property_details?.bhk_type) || 'N/A'}</span>
               </div>
               <div>
                 <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Price per Night</span>
@@ -1705,7 +1711,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
               <div>
                 <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider mb-2">Description</h4>
                 <p className="text-sm text-charcoal-muted leading-relaxed whitespace-pre-line">
-                  {property.description}
+                  {formatReadableText(property.description)}
                 </p>
               </div>
 
@@ -1713,7 +1719,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 bg-sand-50 rounded-2xl border border-sand-200">
                 <div>
                   <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider block">BHK / Size</span>
-                  <span className="text-sm font-black text-charcoal uppercase mt-1 block">{property.bhk_type || '—'}</span>
+                  <span className="text-sm font-black text-charcoal mt-1 block">{formatDisplayLabel(property.bhk_type) || '—'}</span>
                 </div>
                 <div>
                   <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider block">Area (sq.ft)</span>
@@ -1721,7 +1727,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                 </div>
                 <div>
                   <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider block">Pricing Mode</span>
-                  <span className="text-sm font-black text-charcoal uppercase mt-1 block">{property.pricing_cycle || 'day'}</span>
+                  <span className="text-sm font-black text-charcoal mt-1 block">{formatDisplayLabel(property.pricing_cycle || 'day')}</span>
                 </div>
                 <div>
                   <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider block">Min Stay</span>
@@ -1769,7 +1775,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                         key={idx}
                         className="px-3.5 py-1.5 bg-sand-100 text-charcoal text-xs font-bold rounded-full border border-sand-200 capitalize"
                       >
-                        {amenity.replace('_', ' ')}
+                        {formatDisplayLabel(amenity)}
                       </span>
                     ))
                   ) : (
@@ -1821,7 +1827,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                                 <li key={item} className="flex justify-between items-center text-sm">
                                   <span className="text-charcoal-muted font-medium flex items-center">
                                     <CheckCircle className="w-4 h-4 text-emerald-500 mr-2 flex-shrink-0" />
-                                    {item}
+                                    {formatDisplayLabel(item)}
                                   </span>
                                   <span className="text-xs font-black bg-sand-100 text-charcoal px-2 py-0.5 rounded-full">
                                     x{count}
@@ -1868,7 +1874,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                     <p className="text-3xl font-black text-terracotta tracking-tight">
                       ₹{property.price_per_night?.toLocaleString('en-IN')}{' '}
                       <span className="text-xs text-white/60">
-                        /{property.pricing_cycle || 'night'}
+                        /{formatDisplayLabel(property.pricing_cycle || 'night')}
                       </span>
                     </p>
                   </div>
@@ -1944,7 +1950,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                   </div>
                 ) : (
                   <p className="text-sm text-charcoal-muted leading-relaxed whitespace-pre-line">
-                    {textRules || 'No rules specified.'}
+                    {textRules ? formatReadableText(textRules) : 'No rules specified.'}
                   </p>
                 )}
               </div>
