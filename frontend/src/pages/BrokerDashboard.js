@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, getImageUrl } from '../services/api';
 import { createPortal } from 'react-dom';
+import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 import { 
   Users, Building2, FileCheck, Target, IndianRupee, 
   AlertCircle, Plus, CheckCircle, XCircle, Clock, 
@@ -399,7 +400,7 @@ const PropertiesSection = () => {
                       <h4 className="text-lg font-black text-charcoal mb-1">{property.title}</h4>
                       <div className="flex items-center space-x-3 text-charcoal-muted mb-3">
                          <MapPin className="w-3 h-3" />
-                         <span className="text-[10px] font-bold uppercase tracking-widest">{property.city} · {property.category}</span>
+                         <span className="text-[10px] font-bold uppercase tracking-widest">{property.city} · {formatCategoryLabel(property.category)}</span>
                       </div>
                       <div className="flex items-center space-x-4">
                          <span className="text-lg font-black text-terracotta tracking-tight">₹{property.price_per_night} <span className="text-[10px] text-charcoal-muted uppercase">
@@ -925,7 +926,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <div>
                 <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Category</span>
-                <span className="font-bold text-charcoal text-xs capitalize">{task.property_details?.category || 'N/A'}</span>
+                <span className="font-bold text-charcoal text-xs">{formatCategoryLabel(task.property_details?.category) || 'N/A'}</span>
               </div>
               <div>
                 <span className="text-[9px] font-bold text-charcoal-muted uppercase block">BHK Type</span>
@@ -1465,7 +1466,7 @@ const LeadsSection = () => {
                          <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">{lead.phone} · {lead.email}</p>
                          <div className="flex items-center space-x-2 text-[10px] font-bold text-terracotta">
                             <MapPin className="w-3 h-3" />
-                            <span className="uppercase tracking-widest">{lead.city} · {lead.property_type}</span>
+                            <span className="uppercase tracking-widest">{lead.city} · {formatPropertyTypeLabel(lead.property_type)}</span>
                          </div>
                          {lead.from_date && lead.to_date && (
                             <div className="flex items-center space-x-1 text-[9px] font-black text-sage-dark bg-sage/10 px-2 py-0.5 rounded-full uppercase tracking-widest">
@@ -1650,7 +1651,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
         <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-sand-200 px-8 py-5 flex items-center justify-between z-10">
           <div>
             <span className="text-[9px] font-black text-terracotta bg-terracotta/10 px-2.5 py-1 rounded-full uppercase tracking-wider">
-              {property.category} · {property.property_type.replace('_', ' ')}
+              {formatCategoryLabel(property.category)} · {formatPropertyTypeLabel(property.property_type)}
             </span>
             <h3 className="text-xl font-black text-charcoal mt-2 tracking-tight">
               {property.title}

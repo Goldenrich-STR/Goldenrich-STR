@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
+import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 import {
   ArrowLeft,
   Building2,
@@ -977,7 +978,7 @@ const PropertyDetail = () => {
         <div className="mb-8 animate-fade-in">
            <div className="flex items-center space-x-2 mb-3">
               <span className="px-3 py-1 bg-terracotta/10 text-terracotta text-[10px] font-black uppercase tracking-[0.2em] rounded-full">
-                {property.category?.replace('_', ' ')}
+                {formatCategoryLabel(property.category)}
               </span>
               {property.instant_booking && (
                 <span className="flex items-center text-amber-500 text-[10px] font-black uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
@@ -1110,7 +1111,7 @@ const PropertyDetail = () => {
             {/* Overview Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                {[
-                 { label: t('type'), value: `${property.category === 'event_venue' ? 'EVENT VENUE' : property.category?.toUpperCase() || 'RESIDENTIAL'} · ${property.property_type?.toUpperCase()}` },
+                 { label: t('type'), value: `${formatCategoryLabel(property.category || 'residential')} · ${formatPropertyTypeLabel(property.property_type)}` },
                  { label: t('area'), value: `${property.area_sqft} SQFT` },
                  { label: t('config'), value: getBhkTypeLabel(property.category, property.bhk_type, property.max_guests) },
                  { label: t('status'), value: t('verified').toUpperCase() }
@@ -1856,7 +1857,7 @@ const PropertyDetail = () => {
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       />
                       <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-charcoal shadow-sm">
-                        {prop.category?.replace('_', ' ')}
+                        {formatCategoryLabel(prop.category)}
                       </div>
                       {prop.instant_booking && (
                         <div className="absolute top-4 right-4 bg-amber-500 text-white p-1.5 rounded-full shadow-md">

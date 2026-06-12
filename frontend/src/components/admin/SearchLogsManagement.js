@@ -4,6 +4,7 @@ import {
   Search, RefreshCw, Filter, MapPin, Calendar, Users, 
   AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, BarChart3, Clock
 } from 'lucide-react';
+import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel } from '../../lib/displayLabels';
 
 const SearchLogsManagement = () => {
   const [logs, setLogs] = useState([]);
@@ -212,17 +213,17 @@ const SearchLogsManagement = () => {
                         <div className="flex flex-wrap gap-2">
                           {log.category && (
                             <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase bg-sand-100 text-charcoal border border-sand-300 rounded">
-                              Category: {log.category.replace('_', ' ')}
+                              Category: {formatCategoryLabel(log.category)}
                             </span>
                           )}
                           {log.property_type && (
                             <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase bg-sand-100 text-charcoal border border-sand-300 rounded">
-                              Type: {log.property_type.replace('_', ' ')}
+                              Type: {formatPropertyTypeLabel(log.property_type)}
                             </span>
                           )}
                           {log.bhk_type && (
                             <span className="inline-block px-2.5 py-0.5 text-[10px] font-black uppercase bg-sand-100 text-charcoal border border-sand-300 rounded">
-                              BHK: {log.bhk_type}
+                              BHK: {formatDisplayLabel(log.bhk_type)}
                             </span>
                           )}
                           {(log.min_price || log.max_price) ? (

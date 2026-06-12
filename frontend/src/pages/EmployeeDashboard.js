@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, getImageUrl } from '../services/api';
 import { NotificationBell } from '../components/NotificationCenter';
+import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 import { 
   Users, Building2, FileCheck, AlertCircle, CheckCircle, 
   XCircle, Download, FileText, BarChart3, LogOut, Eye, ChevronLeft, ChevronRight
@@ -603,14 +604,14 @@ const VerificationReviewSection = () => {
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                     <div>
                       <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Property Type</p>
-                      <p className="font-bold text-charcoal capitalize">
-                        {selectedVerification.property_details.property_type || 'N/A'}
+                      <p className="font-bold text-charcoal">
+                        {formatPropertyTypeLabel(selectedVerification.property_details.property_type) || 'N/A'}
                       </p>
                     </div>
                     <div>
                       <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Category</p>
-                      <p className="font-bold text-charcoal capitalize">
-                        {selectedVerification.property_details.category || 'N/A'}
+                      <p className="font-bold text-charcoal">
+                        {formatCategoryLabel(selectedVerification.property_details.category) || 'N/A'}
                       </p>
                     </div>
                     <div>
@@ -1120,7 +1121,7 @@ const BrokersSection = () => {
                         <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-sand-200">
                           <div>
                             <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Category</p>
-                            <p className="text-xs font-bold text-charcoal mt-0.5 capitalize">{property.category || 'N/A'}</p>
+                            <p className="text-xs font-bold text-charcoal mt-0.5">{formatCategoryLabel(property.category) || 'N/A'}</p>
                           </div>
                           <div>
                             <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">BHK Type</p>

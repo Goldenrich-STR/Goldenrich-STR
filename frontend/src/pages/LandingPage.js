@@ -5,6 +5,7 @@ import apiClient, { propertyAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ChatbotWidget from '../components/ChatbotWidget';
 import LanguageSelector from '../components/LanguageSelector';
+import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 
 // Translation Dictionary
 const TRANSLATIONS = {
@@ -1367,7 +1368,7 @@ const LandingPage = () => {
                         />
                         <div className="absolute top-2 left-2 bg-white/90 backdrop-blur px-2 py-1 rounded-full shadow-sm">
                           <span className="text-[10px] font-black uppercase text-charcoal">
-                            {property.property_type?.replace('_', ' ') || property.category?.replace('_', ' ')}
+                            {property.property_type ? formatPropertyTypeLabel(property.property_type) : formatCategoryLabel(property.category)}
                           </span>
                         </div>
                         <button className="absolute top-2 right-2 p-1.5 rounded-full hover:bg-white/20 transition-colors">

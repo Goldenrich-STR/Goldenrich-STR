@@ -5,6 +5,7 @@ import L from 'leaflet';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, getImageUrl } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
+import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 import {
   Building2,
   Search,
@@ -843,7 +844,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t }) => (
       <div className="absolute top-4 left-4 flex gap-2">
          <div className="glass px-3 py-1 rounded-full">
             <span className="text-[10px] font-black uppercase tracking-widest text-charcoal">
-               {property.category?.replace('_', ' ')}
+               {formatCategoryLabel(property.category)}
             </span>
          </div>
       </div>
@@ -857,7 +858,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t }) => (
       <div>
         <div className="flex items-center justify-between mb-2">
            <span className="text-[10px] font-black text-sage-dark uppercase tracking-widest">
-              {property.property_type || 'Premium Stay'}
+              {formatPropertyTypeLabel(property.property_type) || 'Premium Stay'}
            </span>
            <div className="flex items-center text-amber-500">
               <Star className="w-3 h-3 fill-current mr-1" />

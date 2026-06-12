@@ -12,6 +12,7 @@ import CouponManagement from '../components/admin/CouponManagement';
 import SearchLogsManagement from '../components/admin/SearchLogsManagement';
 import AICallsManagement from '../components/admin/AICallsManagement';
 import { Phone, Volume2 } from 'lucide-react';
+import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel } from '../lib/displayLabels';
 
 const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', required = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -2067,7 +2068,7 @@ const PropertyModeration = () => {
                     <div className="flex-1">
                       <h4 className="font-bold text-charcoal text-lg">{property.title}</h4>
                       <p className="text-sm text-charcoal-light mt-1">
-                        {property.city} | {property.bhk_type} | {property.category}
+                        {property.city} | {formatDisplayLabel(property.bhk_type)} | {formatCategoryLabel(property.category)}
                       </p>
                       <div className="flex items-center space-x-2 mt-3 flex-wrap gap-y-2">
                         <span className="text-lg font-bold text-terracotta">₹{property.price_per_night}</span>
@@ -2217,7 +2218,7 @@ const PropertyModeration = () => {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div>
                   <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Category</span>
-                  <span className="font-bold text-charcoal text-xs capitalize">{activeReviewProperty.category || 'N/A'}</span>
+                  <span className="font-bold text-charcoal text-xs">{formatCategoryLabel(activeReviewProperty.category) || 'N/A'}</span>
                 </div>
                 <div>
                   <span className="text-[9px] font-bold text-charcoal-muted uppercase block">BHK Type</span>
@@ -2609,7 +2610,7 @@ const BookingManagement = () => {
                             {booking.property.bhk_type}
                           </span>
                           <span className="inline-block px-1.5 py-0.5 bg-sand-100 text-charcoal-muted text-[9px] font-black uppercase rounded">
-                            {booking.property.category}
+                            {formatCategoryLabel(booking.property.category)}
                           </span>
                         </div>
                       </div>
