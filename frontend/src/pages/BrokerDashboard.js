@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, getImageUrl } from '../services/api';
 import { createPortal } from 'react-dom';
-import { formatCategoryLabel, formatDisplayLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
+import { formatCategoryLabel, formatDisplayLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
 import { 
   Users, Building2, FileCheck, Target, IndianRupee, 
   AlertCircle, Plus, CheckCircle, XCircle, Clock, 
@@ -342,12 +342,6 @@ const MyOwnersSection = () => {
 
 
 // Properties Section
-const formatReadableText = (value) => (
-  String(value || '').replace(/\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b/g, (match) =>
-    formatDisplayLabel(match).toLowerCase()
-  )
-);
-
 const PropertiesSection = () => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -954,7 +948,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
             {task.property_details?.description && (
               <div className="mb-3">
                 <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Description</span>
-                <p className="text-xs text-charcoal-light leading-relaxed whitespace-pre-wrap">{task.property_details.description}</p>
+                <p className="text-xs text-charcoal-light leading-relaxed whitespace-pre-wrap">{formatReadableText(task.property_details.description)}</p>
               </div>
             )}
 
@@ -964,7 +958,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
                 <div className="flex flex-wrap gap-1">
                   {task.property_details.amenities.map((amenity, idx) => (
                     <span key={idx} className="px-2 py-0.5 bg-sand-200/50 text-charcoal text-[9px] font-semibold rounded">
-                      {amenity}
+                      {formatDisplayLabel(amenity)}
                     </span>
                   ))}
                 </div>
@@ -987,7 +981,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
                       data-testid={`check-${key}`}
                     />
                     <span className={`text-sm font-bold capitalize ${val ? 'text-green-800' : 'text-charcoal'}`}>
-                      {key.replaceAll('_', ' ')}
+                      {formatDisplayLabel(key)}
                     </span>
                   </label>
                   {!val && (

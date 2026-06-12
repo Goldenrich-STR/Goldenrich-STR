@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
-import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
+import { formatCategoryLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
 import {
   ArrowLeft,
   Building2,
@@ -1161,7 +1161,7 @@ const PropertyDetail = () => {
                  <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
               </h2>
               <p className="text-charcoal-muted font-medium text-lg leading-relaxed whitespace-pre-line">
-                {property.description}
+                {formatReadableText(property.description)}
               </p>
             </div>
 

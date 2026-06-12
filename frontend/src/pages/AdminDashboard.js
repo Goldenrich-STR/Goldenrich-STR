@@ -12,7 +12,7 @@ import CouponManagement from '../components/admin/CouponManagement';
 import SearchLogsManagement from '../components/admin/SearchLogsManagement';
 import AICallsManagement from '../components/admin/AICallsManagement';
 import { Phone, Volume2 } from 'lucide-react';
-import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel } from '../lib/displayLabels';
+import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, formatReadableText } from '../lib/displayLabels';
 
 const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', required = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -2177,17 +2177,21 @@ const PropertyModeration = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="p-4 bg-sand-50 rounded-2xl">
                 <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Property Details</p>
-                <p className="text-sm font-bold text-charcoal truncate">Property ID: {activeReviewProperty.property_id || 'N/A'}</p>
-                <p className="text-xs text-charcoal-light mt-1 truncate">Host ID: {activeReviewProperty.owner_id || 'N/A'}</p>
+                <p className="font-mono text-xs font-bold text-charcoal break-all" title={activeReviewProperty.property_id || ''}>
+                  Property ID: {activeReviewProperty.property_id || 'N/A'}
+                </p>
+                <p className="font-mono text-[10px] text-charcoal-light mt-1 break-all" title={activeReviewProperty.owner_id || ''}>
+                  Host ID: {activeReviewProperty.owner_id || 'N/A'}
+                </p>
               </div>
               <div className="p-4 bg-sand-50 rounded-2xl">
                 <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Assigned RM Details</p>
-                <p className="text-sm font-bold text-charcoal truncate">RM ID: {activeReviewProperty.rm_id || 'N/A'}</p>
+                <p className="font-mono text-[10px] font-bold text-charcoal break-all" title={activeReviewProperty.rm_id || ''}>RM ID: {activeReviewProperty.rm_id || 'N/A'}</p>
                 <p className="text-xs text-charcoal-light mt-1">RM Remarks: "{activeReviewProperty.rm_remarks || 'No remarks provided'}"</p>
               </div>
               <div className="p-4 bg-sand-50 rounded-2xl">
                 <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Field Intelligence (Broker)</p>
-                <p className="text-sm font-bold text-charcoal truncate">Broker ID: {activeReviewProperty.broker_id || 'N/A'}</p>
+                <p className="font-mono text-[10px] font-bold text-charcoal break-all" title={activeReviewProperty.broker_id || ''}>Broker ID: {activeReviewProperty.broker_id || 'N/A'}</p>
                 <p className="text-xs text-charcoal-light mt-1">Broker Remarks: "{activeReviewProperty.broker_remarks || 'No remarks provided'}"</p>
               </div>
             </div>
@@ -2220,7 +2224,7 @@ const PropertyModeration = () => {
                 </div>
                 <div>
                   <span className="text-[9px] font-bold text-charcoal-muted uppercase block">BHK Type</span>
-                  <span className="font-bold text-charcoal text-xs uppercase">{activeReviewProperty.bhk_type || 'N/A'}</span>
+                  <span className="font-bold text-charcoal text-xs">{formatDisplayLabel(activeReviewProperty.bhk_type) || 'N/A'}</span>
                 </div>
                 <div>
                   <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Price per Night</span>
@@ -2242,7 +2246,7 @@ const PropertyModeration = () => {
               {activeReviewProperty.description && (
                 <div className="mb-3">
                   <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Description</span>
-                  <p className="text-xs text-charcoal-light leading-relaxed whitespace-pre-wrap">{activeReviewProperty.description}</p>
+                  <p className="text-xs text-charcoal-light leading-relaxed whitespace-pre-wrap">{formatReadableText(activeReviewProperty.description)}</p>
                 </div>
               )}
 
@@ -2252,7 +2256,7 @@ const PropertyModeration = () => {
                   <div className="flex flex-wrap gap-1">
                     {activeReviewProperty.amenities.map((amenity, idx) => (
                       <span key={idx} className="px-2 py-0.5 bg-sand-200/50 text-charcoal text-[9px] font-semibold rounded">
-                        {amenity}
+                        {formatDisplayLabel(amenity)}
                       </span>
                     ))}
                   </div>

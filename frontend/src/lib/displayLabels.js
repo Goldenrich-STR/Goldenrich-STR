@@ -38,3 +38,9 @@ export const formatPropertyTypeLabel = (value) => PROPERTY_TYPE_LABELS[value] ||
 export const formatDisplayLabel = (value) => (
   CATEGORY_LABELS[value] || PROPERTY_TYPE_LABELS[value] || titleCase(value)
 );
+
+export const formatReadableText = (value) => (
+  String(value || '').replace(/\b[a-z][a-z0-9]*(?:_[a-z0-9]+)+\b/g, (match) =>
+    formatDisplayLabel(match).toLowerCase()
+  )
+);

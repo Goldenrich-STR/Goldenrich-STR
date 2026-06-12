@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, getImageUrl } from '../services/api';
 import { NotificationBell } from '../components/NotificationCenter';
-import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
+import { formatCategoryLabel, formatDisplayLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
 import { 
   Users, Building2, FileCheck, AlertCircle, CheckCircle, 
   XCircle, Download, FileText, BarChart3, LogOut, Eye, ChevronLeft, ChevronRight
@@ -361,7 +361,7 @@ const VerificationReviewSection = () => {
                             ) : (
                               <XCircle className="w-3 h-3 text-red-600" />
                             )}
-                            <span className="text-charcoal-light">{key.replace(/_/g, ' ')}</span>
+                            <span className="text-charcoal-light">{formatDisplayLabel(key)}</span>
                           </div>
                         ))}
                       </div>
@@ -552,13 +552,19 @@ const VerificationReviewSection = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="p-4 bg-sand-50 rounded-2xl">
                   <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Property Details</p>
-                  <p className="font-bold text-charcoal truncate">ID: {selectedVerification.property_id || 'N/A'}</p>
-                  <p className="text-xs text-charcoal-light mt-1 truncate">Host: {selectedVerification.owner_id || 'N/A'}</p>
+                  <p className="font-mono text-xs font-bold text-charcoal break-all" title={selectedVerification.property_id || ''}>
+                    ID: {selectedVerification.property_id || 'N/A'}
+                  </p>
+                  <p className="font-mono text-[10px] text-charcoal-light mt-1 break-all" title={selectedVerification.owner_id || ''}>
+                    Host: {selectedVerification.owner_id || 'N/A'}
+                  </p>
                 </div>
                 <div className="p-4 bg-sand-50 rounded-2xl">
                   <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Assigned Broker</p>
-                  <p className="font-bold text-charcoal truncate">{selectedVerification.broker_details?.full_name}</p>
-                  <p className="text-xs text-charcoal-light mt-1 truncate">ID: {selectedVerification.broker_id || 'N/A'}</p>
+                  <p className="font-bold text-charcoal">{selectedVerification.broker_details?.full_name || 'N/A'}</p>
+                  <p className="font-mono text-[10px] text-charcoal-light mt-1 break-all" title={selectedVerification.broker_id || ''}>
+                    ID: {selectedVerification.broker_id || 'N/A'}
+                  </p>
                 </div>
                 <div className="p-4 bg-sand-50 rounded-2xl">
                   <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Visit Date</p>
@@ -612,8 +618,8 @@ const VerificationReviewSection = () => {
                     </div>
                     <div>
                       <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">BHK / Config</p>
-                      <p className="font-bold text-charcoal capitalize">
-                        {selectedVerification.property_details.bhk_type || 'N/A'}
+                      <p className="font-bold text-charcoal">
+                        {formatDisplayLabel(selectedVerification.property_details.bhk_type) || 'N/A'}
                       </p>
                     </div>
                     <div>
@@ -665,7 +671,7 @@ const VerificationReviewSection = () => {
                     <div className="pt-2">
                       <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider mb-1">Description</p>
                       <p className="text-xs text-charcoal-light leading-relaxed">
-                        {selectedVerification.property_details.description}
+                        {formatReadableText(selectedVerification.property_details.description)}
                       </p>
                     </div>
                   )}
@@ -687,7 +693,7 @@ const VerificationReviewSection = () => {
                       <div className="flex flex-wrap gap-1.5">
                         {selectedVerification.property_details.amenities.map((amenity, i) => (
                           <span key={i} className="px-2 py-1 bg-white border border-sand-200 rounded-lg text-[10px] font-semibold text-charcoal capitalize">
-                            {amenity.replace(/_/g, ' ')}
+                            {formatDisplayLabel(amenity)}
                           </span>
                         ))}
                       </div>
@@ -703,7 +709,7 @@ const VerificationReviewSection = () => {
                   {Object.entries(selectedVerification.checklist || {}).map(([key, value]) => (
                     <div key={key} className="flex flex-col p-4 bg-white border border-sand-200 rounded-2xl hover:shadow-md transition">
                       <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-bold text-charcoal capitalize">{key.replace(/_/g, ' ')}</span>
+                        <span className="text-sm font-bold text-charcoal">{formatDisplayLabel(key)}</span>
                         {value ? (
                           <div className="flex items-center space-x-1 text-green-600">
                             <CheckCircle className="w-3 h-3" />
@@ -722,7 +728,7 @@ const VerificationReviewSection = () => {
                           onClick={() => {
                             // In a real audit, this might update a local state, 
                             // but for now we just show a success toast or similar
-                            alert(`Confirmed: ${key.replace(/_/g, ' ')} is approved.`);
+                            alert(`Confirmed: ${formatDisplayLabel(key)} is approved.`);
                           }}
                           className="flex-1 py-2 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-green-100 transition flex items-center justify-center space-x-1"
                         >
@@ -731,7 +737,7 @@ const VerificationReviewSection = () => {
                         </button>
                         <button 
                           onClick={() => {
-                            setRejectReason(`Rejected Point: ${key.replace(/_/g, ' ').toUpperCase()} - `);
+                            setRejectReason(`Rejected Point: ${formatDisplayLabel(key).toUpperCase()} - `);
                             setShowRejectReasonModal(true);
                           }}
                           className="flex-1 py-2 bg-red-50 text-red-700 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-red-100 transition flex items-center justify-center space-x-1"
@@ -1121,7 +1127,7 @@ const BrokersSection = () => {
                           </div>
                           <div>
                             <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">BHK Type</p>
-                            <p className="text-xs font-bold text-charcoal mt-0.5 uppercase">{property.bhk_type || 'N/A'}</p>
+                            <p className="text-xs font-bold text-charcoal mt-0.5">{formatDisplayLabel(property.bhk_type) || 'N/A'}</p>
                           </div>
                         </div>
 
@@ -1248,7 +1254,7 @@ const ReportsSection = () => {
                   <div key={property.property_id} className="p-4 bg-sand-50 rounded-lg">
                     <h5 className="font-semibold text-charcoal">{property.title}</h5>
                     <p className="text-sm text-charcoal-light">
-                      {property.city} | {property.bhk_type} | ₹{property.price_per_night}{
+                      {property.city} | {formatDisplayLabel(property.bhk_type)} | ₹{property.price_per_night}{
                         property.category === 'commercial' || property.category === 'event_venue'
                           ? (property.pricing_cycle === 'hourly' ? '/hr' : property.pricing_cycle === 'weekly' ? '/week' : property.pricing_cycle === 'monthly' ? '/month' : '/day')
                           : '/night'
