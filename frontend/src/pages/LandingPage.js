@@ -1052,8 +1052,8 @@ const LandingPage = () => {
     }
   };
 
-  const renderPropertySlider = (sectionId, title, subtitle, IconComponent, categoryKey, items, fallbackItems) => {
-    const displayItems = items && items.length > 0 ? items : fallbackItems;
+  const renderPropertySlider = (sectionId, title, subtitle, IconComponent, categoryKey, items) => {
+    const displayItems = items || [];
 
     return (
       <div className="relative mb-24 group">
@@ -1417,13 +1417,7 @@ const LandingPage = () => {
             'Luxury homes, apartments, and private stays.',
             Building2,
             'residential',
-            properties.residential,
-            [
-               {property_id: 'temp_1', title: 'Villa, Kemah Tinggi', price: 25000, rating: '4.93', img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800', city: 'Goa', state: 'Goa', type: 'Villa'},
-               {property_id: 'temp_2', title: 'Bandra Heights, Mumbai', price: 15500, rating: '4.85', img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800', city: 'Mumbai', state: 'Maharashtra', type: 'Apartment'},
-               {property_id: 'temp_3', title: 'Coorg Retreat, Karnataka', price: 12200, rating: '4.98', img: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=800', city: 'Coorg', state: 'Karnataka', type: 'Cottage'},
-               {property_id: 'temp_4', title: 'Goa Beachfront Villa', price: 45000, rating: '4.90', img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800', city: 'Goa', state: 'Goa', type: 'Villa'}
-            ]
+            properties.residential
           )}
 
           {/* Commercial Spaces Slider */}
@@ -1433,12 +1427,7 @@ const LandingPage = () => {
             'Premium offices, co-working spaces, and retail.',
             Briefcase,
             'commercial',
-            properties.commercial,
-            [
-               {property_id: 'temp_c1', title: 'City Vista Office', price: 5000, rating: '4.80', img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800', city: 'Pune', state: 'Maharashtra', type: 'Private Office'},
-               {property_id: 'temp_c2', title: 'Tech Hub Co-working', price: 1200, rating: '4.95', img: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&q=80&w=800', city: 'Bengaluru', state: 'Karnataka', type: 'Co-working'},
-               {property_id: 'temp_c3', title: 'Marina Retail Space', price: 15000, rating: '4.70', img: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800', city: 'Mumbai', state: 'Maharashtra', type: 'Retail'}
-            ]
+            properties.commercial
           )}
 
           {/* Events & Functions Slider */}
@@ -1448,12 +1437,7 @@ const LandingPage = () => {
             'Banquet halls, rooftops, and celebration venues.',
             PartyPopper,
             'event_venue',
-            properties.event_venue,
-            [
-               {property_id: 'temp_e1', title: 'Grand Hotel Ballroom', price: 150000, rating: '4.90', img: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800', city: 'Delhi', state: 'Delhi', type: 'Banquet Hall'},
-               {property_id: 'temp_e2', title: 'Skyline Rooftop Lounge', price: 85000, rating: '4.85', img: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&q=80&w=800', city: 'Gurugram', state: 'Haryana', type: 'Rooftop'},
-               {property_id: 'temp_e3', title: 'Heritage Courtyard', price: 120000, rating: '4.95', img: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=800', city: 'Jaipur', state: 'Rajasthan', type: 'Venue'}
-            ]
+            properties.event_venue
           )}
 
           {/* Ready to Host Section */}
