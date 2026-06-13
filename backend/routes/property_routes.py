@@ -7,6 +7,7 @@ from models.user import UserRole
 from middleware.auth_middleware import get_current_user, require_role
 from datetime import datetime, timezone
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/properties", tags=["Properties"])
@@ -72,6 +73,8 @@ async def search_properties(
     amenities: Optional[str] = Query(None, description="Comma-separated amenities"),
     instant_booking: Optional[bool] = None,
     pet_friendly: Optional[bool] = None,
+    guests: Optional[int] = Query(None, ge=1, description="Minimum guest capacity required"),
+    max_guests: Optional[int] = Query(None, ge=1, description="Alias for guests/minimum guest capacity"),
     check_in: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
     check_out: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
     bbox: Optional[str] = Query(None, description="min_lat,min_lng,max_lat,max_lng for map viewport"),
@@ -89,7 +92,15 @@ async def search_properties(
             query["category"] = category.value
 
         if city:
-            query["city"] = {"$regex": city, "$options": "i"}
+            keyword = re.escape(city.strip())
+            query["$or"] = [
+                {"city": {"$regex": keyword, "$options": "i"}},
+                {"state": {"$regex": keyword, "$options": "i"}},
+                {"title": {"$regex": keyword, "$options": "i"}},
+                {"address": {"$regex": keyword, "$options": "i"}},
+                {"property_type": {"$regex": keyword, "$options": "i"}},
+                {"bhk_type": {"$regex": keyword, "$options": "i"}},
+            ]
 
         if property_type:
             query["property_type"] = property_type
@@ -102,6 +113,10 @@ async def search_properties(
 
         if pet_friendly is not None:
             query["pet_friendly"] = pet_friendly
+
+        requested_guests = guests or max_guests
+        if requested_guests is not None:
+            query["max_guests"] = {"$gte": requested_guests}
 
         # Price filter
         if min_price is not None or max_price is not None:
@@ -184,6 +199,7 @@ async def search_properties(
                 "min_price": min_price,
                 "max_price": max_price,
                 "bhk_type": bhk_type,
+                "guests": requested_guests,
                 "check_in": check_in,
                 "check_out": check_out,
                 "results_count": total
@@ -207,6 +223,7 @@ async def search_properties(
                 "amenities": amenities,
                 "instant_booking": instant_booking,
                 "pet_friendly": pet_friendly,
+                "guests": requested_guests,
                 "check_in": check_in,
                 "check_out": check_out,
                 "sort": sort,

@@ -309,6 +309,7 @@ const GuestBrowse = () => {
       bhk_type: '',
       min_price: '',
       max_price: '',
+      guests: params.get('guests') || '',
       instant_booking: false,
       pet_friendly: false,
       check_in: params.get('checkIn') || '',
@@ -324,19 +325,21 @@ const GuestBrowse = () => {
     const category = params.get('category');
     const checkIn = params.get('checkIn');
     const checkOut = params.get('checkOut');
+    const guests = params.get('guests');
     const isWishlist = params.get('wishlist') === 'true';
     
     if (isWishlist) {
       setShowWishlistOnly(true);
     }
     
-    if (city || category || checkIn || checkOut) {
+    if (city || category || checkIn || checkOut || guests) {
       setFilters(prev => ({
         ...prev,
         city: city || prev.city,
         category: category || prev.category,
         check_in: checkIn || prev.check_in,
-        check_out: checkOut || prev.check_out
+        check_out: checkOut || prev.check_out,
+        guests: guests || prev.guests
       }));
     }
   }, []);
@@ -344,7 +347,21 @@ const GuestBrowse = () => {
   useEffect(() => {
     fetchProperties();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.sort, filters.city, filters.category, filters.check_in, filters.check_out]);
+  }, [
+    filters.sort,
+    filters.city,
+    filters.category,
+    filters.property_type,
+    filters.bhk_type,
+    filters.min_price,
+    filters.max_price,
+    filters.guests,
+    filters.instant_booking,
+    filters.pet_friendly,
+    filters.check_in,
+    filters.check_out,
+    filters.amenities,
+  ]);
 
   const buildParams = () => {
     const params = {};
@@ -354,6 +371,7 @@ const GuestBrowse = () => {
     if (filters.bhk_type) params.bhk_type = filters.bhk_type;
     if (filters.min_price) params.min_price = Number(filters.min_price);
     if (filters.max_price) params.max_price = Number(filters.max_price);
+    if (filters.guests) params.guests = Number(filters.guests);
     if (filters.instant_booking) params.instant_booking = true;
     if (filters.pet_friendly) params.pet_friendly = true;
     if (filters.check_in) params.check_in = filters.check_in;
@@ -392,6 +410,7 @@ const GuestBrowse = () => {
       bhk_type: '',
       min_price: '',
       max_price: '',
+      guests: '',
       instant_booking: false,
       pet_friendly: false,
       check_in: '',

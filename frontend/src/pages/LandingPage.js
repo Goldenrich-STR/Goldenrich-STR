@@ -1029,7 +1029,12 @@ const LandingPage = () => {
 
   const handleSearch = () => {
     const totalGuests = guestCounts.adults + guestCounts.children;
-    navigate(`/guest/browse?city=${locationQuery}&guests=${totalGuests}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`);
+    const params = new URLSearchParams();
+    if (locationQuery.trim()) params.set('city', locationQuery.trim());
+    if (totalGuests) params.set('guests', String(totalGuests));
+    if (dates.checkIn) params.set('checkIn', dates.checkIn);
+    if (dates.checkOut) params.set('checkOut', dates.checkOut);
+    navigate(`/guest/browse?${params.toString()}`);
   };
 
   const LOCATIONS = [
