@@ -225,7 +225,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                             {"label": "Nashik, Maharashtra", "action_type": "text", "link": "", "text": "X-Space360 support is available for guest and host assistance.\n\nEmail: support@x-space360.com\nPhone: +91 8484826247"},
                             {"label": "support@x-space360.com", "action_type": "text", "link": "", "text": "Email support@x-space360.com for help with bookings, listings, or account support."}
                         ]},
-                        {"heading": "Grievance & Escalations", "items": [
+                        {"heading": "Grievance & Escalation", "resolution_text": "Resolution: 7 working days", "items": [
                             {"label": "Officer: Rahul Mundra", "action_type": "text", "link": "", "text": "Grievance Officer: Rahul Mundra\nEmail: nodal.officer@rupiyaloan.com\nPhone: +91 76206 66949\nResolution: 7 working days"},
                             {"label": "nodal.officer@rupiyaloan.com", "action_type": "text", "link": "", "text": "Email nodal.officer@rupiyaloan.com for grievance escalation.\nResolution: 7 working days."}
                         ]}
@@ -288,7 +288,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                             {"label": "Nashik, Maharashtra", "action_type": "text", "link": "", "text": "X-Space360 support is available for guest and host assistance.\n\nEmail: support@x-space360.com\nPhone: +91 8484826247"},
                             {"label": "support@x-space360.com", "action_type": "text", "link": "", "text": "Email support@x-space360.com for help with bookings, listings, or account support."}
                         ]},
-                        {"heading": "Grievance & Escalations", "items": [
+                        {"heading": "Grievance & Escalation", "resolution_text": "Resolution: 7 working days", "items": [
                             {"label": "Officer: Rahul Mundra", "action_type": "text", "link": "", "text": "Grievance Officer: Rahul Mundra\nEmail: nodal.officer@rupiyaloan.com\nPhone: +91 76206 66949\nResolution: 7 working days"},
                             {"label": "nodal.officer@rupiyaloan.com", "action_type": "text", "link": "", "text": "Email nodal.officer@rupiyaloan.com for grievance escalation.\nResolution: 7 working days."}
                         ]}

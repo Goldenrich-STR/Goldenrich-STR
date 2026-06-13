@@ -3557,12 +3557,16 @@ const CMSManagement = () => {
               <div className="md:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {Array.from({ length: 4 }).map((_, index) => {
                   const sections = footerData.footer_sections || [];
-                  const rawSection = sections[index] || { heading: `Section ${index + 1}`, items: [] };
+                  const defaultHeadings = ['For Guests', 'For Hosts', 'Contact', 'Grievance & Escalation'];
+                  const rawSection = sections[index] || { heading: defaultHeadings[index], items: [] };
+                  const isActionSection = index < 2;
+                  const isGrievanceSection = index === 3;
                   const section = {
                     ...rawSection,
+                    heading: (!rawSection.heading || /^Section\s+\d+$/i.test(rawSection.heading)) ? defaultHeadings[index] : rawSection.heading,
                     items: Array.isArray(rawSection.items) && rawSection.items.length
                       ? rawSection.items
-                      : [{ label: rawSection.label || '', action_type: rawSection.action_type || 'link', link: rawSection.link || '', text: rawSection.text || '' }]
+                      : [{ label: rawSection.label || '', action_type: isActionSection ? (rawSection.action_type || 'link') : 'text', link: rawSection.link || '', text: rawSection.text || '' }]
                   };
                   const updateSection = (patch) => {
                     const next = [...sections];
@@ -3580,7 +3584,7 @@ const CMSManagement = () => {
                         <h5 className="text-sm font-black text-charcoal uppercase tracking-widest">Section {index + 1}</h5>
                         <button
                           type="button"
-                          onClick={() => updateSection({ items: [...section.items, { label: 'New Label', action_type: 'link', link: '', text: '' }] })}
+                          onClick={() => updateSection({ items: [...section.items, { label: 'New Label', action_type: isActionSection ? 'link' : 'text', link: '', text: '' }] })}
                           className="px-3 py-2 rounded-xl bg-terracotta text-white text-[10px] font-black uppercase tracking-widest"
                         >
                           Add Label
@@ -3609,16 +3613,18 @@ const CMSManagement = () => {
                               <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Label</label>
                               <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.label || ''} onChange={e => updateItem(itemIndex, { label: e.target.value })} />
                             </div>
-                            <div>
-                              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Action Type</label>
-                              <select className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.action_type || 'link'} onChange={e => updateItem(itemIndex, { action_type: e.target.value })}>
-                                <option value="link">Link Redirect</option>
-                                <option value="text">Text Popup</option>
-                              </select>
-                            </div>
-                            {item.action_type === 'text' ? (
+                            {isActionSection && (
                               <div>
-                                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Popup Text</label>
+                                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Action Type</label>
+                                <select className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.action_type || 'link'} onChange={e => updateItem(itemIndex, { action_type: e.target.value })}>
+                                  <option value="link">Link Redirect</option>
+                                  <option value="text">Text Popup</option>
+                                </select>
+                              </div>
+                            )}
+                            {(isActionSection ? item.action_type === 'text' : true) ? (
+                              <div>
+                                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">{isActionSection ? 'Popup Text' : 'Text'}</label>
                                 <textarea rows={4} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.text || ''} onChange={e => updateItem(itemIndex, { text: e.target.value })} />
                               </div>
                             ) : (
@@ -3630,6 +3636,20 @@ const CMSManagement = () => {
                           </div>
                         ))}
                       </div>
+                      {isGrievanceSection && (
+                        <div>
+                          <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Resolution Line</label>
+                          <input
+                            className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                            value={section.resolution_text || footerData.resolution_text || ''}
+                            onChange={e => {
+                              updateSection({ resolution_text: e.target.value });
+                              setFooterData(prev => ({ ...prev, resolution_text: e.target.value }));
+                            }}
+                            placeholder="Resolution: 7 working days"
+                          />
+                        </div>
+                      )}
                     </div>
                   );
                 })}

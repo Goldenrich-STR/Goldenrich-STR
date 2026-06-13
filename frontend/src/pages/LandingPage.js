@@ -492,7 +492,7 @@ const DEFAULT_FOOTER_DATA = {
       { label: 'Nashik, Maharashtra', action_type: 'text', link: '', text: 'X-Space360 support is available for guest and host assistance.\n\nEmail: support@x-space360.com\nPhone: +91 8484826247' },
       { label: 'support@x-space360.com', action_type: 'text', link: '', text: 'Email support@x-space360.com for help with bookings, listings, or account support.' },
     ] },
-    { heading: 'Grievance & Escalations', items: [
+    { heading: 'Grievance & Escalation', resolution_text: 'Resolution: 7 working days', items: [
       { label: 'Officer: Rahul Mundra', action_type: 'text', link: '', text: 'Grievance Officer: Rahul Mundra\nEmail: nodal.officer@rupiyaloan.com\nPhone: +91 76206 66949\nResolution: 7 working days' },
       { label: 'nodal.officer@rupiyaloan.com', action_type: 'text', link: '', text: 'Email nodal.officer@rupiyaloan.com for grievance escalation.\nResolution: 7 working days.' },
     ] },
@@ -948,8 +948,11 @@ const LandingPage = () => {
   const footerSections = (Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
     ? footerData.footer_sections
     : DEFAULT_FOOTER_DATA.footer_sections
-  ).slice(0, 4).map((section) => ({
+  ).slice(0, 4).map((section, index) => ({
     ...section,
+    heading: (!section.heading || /^Section\s+\d+$/i.test(section.heading))
+      ? ['For Guests', 'For Hosts', 'Contact', 'Grievance & Escalation'][index]
+      : section.heading,
     items: Array.isArray(section.items) && section.items.length
       ? section.items
       : [{ label: section.label || '', action_type: section.action_type || 'link', link: section.link || '', text: section.text || '' }]
@@ -1627,15 +1630,28 @@ const LandingPage = () => {
                 <ul className="space-y-4">
                   {section.items.map((item, itemIndex) => (
                     <li key={itemIndex}>
-                      <button
-                        type="button"
-                        onClick={() => handleFooterSectionClick(section, item)}
-                        className="text-left text-charcoal-light font-medium hover:text-terracotta transition-colors leading-relaxed break-words"
-                      >
-                        {item.label || 'Footer Link'}
-                      </button>
+                      {index < 2 ? (
+                        <button
+                          type="button"
+                          onClick={() => handleFooterSectionClick(section, item)}
+                          className="text-left text-charcoal-light font-medium hover:text-terracotta transition-colors leading-relaxed break-words"
+                        >
+                          {item.label || 'Footer Link'}
+                        </button>
+                      ) : (
+                        <p className="text-charcoal-light font-medium leading-relaxed break-words">
+                          {item.label || item.text || 'Footer Text'}
+                        </p>
+                      )}
                     </li>
                   ))}
+                  {index === 3 && (section.resolution_text || footerData.resolution_text) && (
+                    <li>
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-charcoal-muted leading-relaxed">
+                        {section.resolution_text || footerData.resolution_text}
+                      </p>
+                    </li>
+                  )}
                 </ul>
               </div>
             ))}
