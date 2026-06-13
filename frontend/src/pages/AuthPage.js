@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star } from 'lucide-react';
 import { authAPI, apiClient } from '../services/api';
+import LegalLinks from '../components/LegalLinks';
 
 const AuthPage = ({ isAdminLogin = false }) => {
   const navigate = useNavigate();
@@ -393,7 +394,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                 required
                              />
                              <label className="text-[10px] text-charcoal-muted font-black leading-relaxed uppercase tracking-widest cursor-pointer">
-                                I accept the <span className="text-terracotta hover:underline">Membership Terms</span> and <span className="text-terracotta hover:underline">Privacy Protocols</span>.
+                                I accept the <LegalLinks />.
                              </label>
                           </div>
                           

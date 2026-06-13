@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, getImageUrl, accountAPI, uploadAPI } from '../services/api';
 import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { NotificationBell } from '../components/NotificationCenter';
+import LegalLinks from '../components/LegalLinks';
 
 const HostDashboard = () => {
   const navigate = useNavigate();
@@ -928,7 +929,7 @@ const HostDashboard = () => {
                     required
                   />
                   <span className="text-xs md:text-sm text-charcoal-light font-bold leading-relaxed">
-                    I confirm the submitted details are true and consent to verification.
+                    I confirm the submitted details are true, consent to verification, and accept the <LegalLinks />.
                   </span>
                 </label>
 
