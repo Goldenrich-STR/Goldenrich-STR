@@ -116,28 +116,6 @@ async def search_properties(
         if requested_guests is not None:
             query["max_guests"] = {"$gte": requested_guests}
 
-        # Price filter
-        if min_price is not None or max_price is not None:
-            price_value = {
-                "$convert": {
-                    "input": "$price_per_night",
-                    "to": "double",
-                    "onError": None,
-                    "onNull": None,
-                }
-            }
-            price_conditions = []
-            if min_price is not None:
-                price_conditions.append({"$gte": [price_value, min_price]})
-            if max_price is not None:
-                price_conditions.append({"$lte": [price_value, max_price]})
-            if price_conditions:
-                query["$expr"] = (
-                    {"$and": price_conditions}
-                    if len(price_conditions) > 1
-                    else price_conditions[0]
-                )
-
         # Amenities filter
         if amenities:
             amenity_list = [a.strip() for a in amenities.split(",") if a.strip()]
@@ -182,20 +160,47 @@ async def search_properties(
             if unavailable:
                 query["property_id"] = {"$nin": unavailable}
 
-        # Sort
         sort_map = {
-            "price_asc": [("price_per_night", 1)],
-            "price_desc": [("price_per_night", -1)],
-            "newest": [("created_at", -1)],
-            "recommended": [("instant_booking", -1), ("created_at", -1)],
-            "rating_desc": [("rating", -1), ("review_count", -1)],
+            "price_asc": {"_search_price": 1},
+            "price_desc": {"_search_price": -1},
+            "newest": {"created_at": -1},
+            "recommended": {"instant_booking": -1, "created_at": -1},
+            "rating_desc": {"rating": -1, "review_count": -1},
         }
         sort_spec = sort_map.get(sort, sort_map["recommended"])
 
-        cursor = db.properties.find(query, {"_id": 0}).sort(sort_spec).skip(skip).limit(limit)
-        properties = await cursor.to_list(length=limit)
+        pipeline = [
+            {"$match": query},
+            {
+                "$addFields": {
+                    "_search_price": {
+                        "$convert": {
+                            "input": "$price_per_night",
+                            "to": "double",
+                            "onError": None,
+                            "onNull": None,
+                        }
+                    }
+                }
+            },
+        ]
 
-        total = await db.properties.count_documents(query)
+        if min_price is not None:
+            pipeline.append({"$match": {"_search_price": {"$gte": min_price}}})
+        if max_price is not None:
+            pipeline.append({"$match": {"_search_price": {"$lte": max_price}}})
+
+        count_pipeline = pipeline + [{"$count": "total"}]
+        count_result = await db.properties.aggregate(count_pipeline).to_list(length=1)
+        total = count_result[0]["total"] if count_result else 0
+
+        pipeline.extend([
+            {"$sort": sort_spec},
+            {"$skip": skip},
+            {"$limit": limit},
+            {"$project": {"_id": 0, "_search_price": 0}},
+        ])
+        properties = await db.properties.aggregate(pipeline).to_list(length=limit)
 
         # Log search activity for analytics (admin dashboard)
         try:
