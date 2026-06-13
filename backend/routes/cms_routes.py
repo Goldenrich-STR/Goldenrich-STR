@@ -240,7 +240,11 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                     "grievance_officer": "Rahul Mundra",
                     "grievance_email": "nodal.officer@rupiyaloan.com",
                     "grievance_phone": "+91 76206 66949",
-                    "resolution_text": "Resolution: 7 working days"
+                    "resolution_text": "Resolution: 7 working days",
+                    "privacy_label": "Privacy Policy",
+                    "privacy_text": "X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.",
+                    "terms_label": "Terms & Conditions",
+                    "terms_text": "By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360."
                 },
                 "is_active": True,
                 "created_at": now,
@@ -303,7 +307,11 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                     "grievance_officer": "Rahul Mundra",
                     "grievance_email": "nodal.officer@rupiyaloan.com",
                     "grievance_phone": "+91 76206 66949",
-                    "resolution_text": "Resolution: 7 working days"
+                    "resolution_text": "Resolution: 7 working days",
+                    "privacy_label": "Privacy Policy",
+                    "privacy_text": "X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.",
+                    "terms_label": "Terms & Conditions",
+                    "terms_text": "By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360."
                 },
                 "is_active": True,
                 "created_at": now,

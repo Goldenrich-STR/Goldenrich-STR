@@ -2936,7 +2936,11 @@ const CMSManagement = () => {
     grievance_officer: '',
     grievance_email: '',
     grievance_phone: '',
-    resolution_text: ''
+    resolution_text: '',
+    privacy_label: '',
+    privacy_text: '',
+    terms_label: '',
+    terms_text: ''
   });
 
   const fetchCMSContent = async () => {
@@ -3653,6 +3657,27 @@ const CMSManagement = () => {
                     </div>
                   );
                 })}
+              </div>
+              <div className="md:col-span-2 rounded-3xl border border-sand-200 bg-sand-50/60 p-5 space-y-4">
+                <h5 className="text-sm font-black text-charcoal uppercase tracking-widest">Footer Legal Links</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Privacy Label</label>
+                    <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_label || ''} onChange={e => setFooterData({ ...footerData, privacy_label: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Terms Label</label>
+                    <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_label || ''} onChange={e => setFooterData({ ...footerData, terms_label: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Privacy Policy Text</label>
+                    <textarea rows={5} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_text || ''} onChange={e => setFooterData({ ...footerData, privacy_text: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Terms & Conditions Text</label>
+                    <textarea rows={5} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_text || ''} onChange={e => setFooterData({ ...footerData, terms_text: e.target.value })} />
+                  </div>
+                </div>
               </div>
             </div>
 
