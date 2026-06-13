@@ -2919,6 +2919,19 @@ const CMSManagement = () => {
     location: '',
     email: '',
     phone: '',
+    guests_title: '',
+    guest_link_1_label: '',
+    guest_link_1_url: '',
+    guest_link_2_label: '',
+    faq_title: '',
+    faq_items: [],
+    footer_sections: [],
+    hosts_title: '',
+    host_link_1_label: '',
+    host_link_1_url: '',
+    host_link_2_label: '',
+    host_link_2_url: '',
+    contact_title: '',
     grievance_title: '',
     grievance_officer: '',
     grievance_email: '',
@@ -3025,7 +3038,7 @@ const CMSManagement = () => {
       </div>
 
       {/* Sub-tab Navigation */}
-      <div className="flex flex-wrap gap-2.5 p-1.5 bg-sand-100/60 rounded-2xl mb-8 max-w-2xl">
+      <div className="flex flex-wrap gap-2.5 p-1.5 bg-sand-100/60 rounded-2xl mb-8 w-fit max-w-full">
         {[
           { id: 'hero', label: 'Hero Details', icon: Sparkles },
           { id: 'how_it_works', label: 'How It Works', icon: ListTodo },
@@ -3526,14 +3539,14 @@ const CMSManagement = () => {
                 <Phone className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-lg font-black text-charcoal">Footer Contact & Grievance</h4>
-                <p className="text-xs text-charcoal-muted font-medium">Edit public footer contact details and escalation information.</p>
+                <h4 className="text-lg font-black text-charcoal">Footer</h4>
+                <p className="text-xs text-charcoal-muted font-medium">Edit public footer brand copy and four configurable sections.</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
-                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Brand Description</label>
+                <label className="text-[11px] font-black text-charcoal uppercase tracking-widest block mb-2">Brand Description</label>
                 <textarea
                   rows={3}
                   className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
@@ -3541,25 +3554,48 @@ const CMSManagement = () => {
                   onChange={e => setFooterData({ ...footerData, brand_description: e.target.value })}
                 />
               </div>
-              {[
-                ['location', 'Location'],
-                ['email', 'Contact Email'],
-                ['phone', 'Contact Phone'],
-                ['grievance_title', 'Grievance Heading'],
-                ['grievance_officer', 'Officer Name'],
-                ['grievance_email', 'Officer Email'],
-                ['grievance_phone', 'Officer Phone'],
-                ['resolution_text', 'Resolution Text']
-              ].map(([key, label]) => (
-                <div key={key}>
-                  <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">{label}</label>
-                  <input
-                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
-                    value={footerData[key] || ''}
-                    onChange={e => setFooterData({ ...footerData, [key]: e.target.value })}
-                  />
-                </div>
-              ))}
+              <div className="md:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {Array.from({ length: 4 }).map((_, index) => {
+                  const sections = footerData.footer_sections || [];
+                  const section = sections[index] || { heading: `Section ${index + 1}`, label: '', action_type: 'link', link: '', text: '' };
+                  const updateSection = (patch) => {
+                    const next = [...sections];
+                    next[index] = { ...section, ...patch };
+                    setFooterData({ ...footerData, footer_sections: next });
+                  };
+                  return (
+                    <div key={index} className="rounded-3xl border border-sand-200 bg-sand-50/60 p-5 space-y-4">
+                      <h5 className="text-sm font-black text-charcoal uppercase tracking-widest">Section {index + 1}</h5>
+                      <div>
+                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Section Heading</label>
+                        <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.heading || ''} onChange={e => updateSection({ heading: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Label</label>
+                        <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.label || ''} onChange={e => updateSection({ label: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Action Type</label>
+                        <select className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.action_type || 'link'} onChange={e => updateSection({ action_type: e.target.value })}>
+                          <option value="link">Link Redirect</option>
+                          <option value="text">Text Popup</option>
+                        </select>
+                      </div>
+                      {section.action_type === 'text' ? (
+                        <div>
+                          <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Popup Text</label>
+                          <textarea rows={5} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.text || ''} onChange={e => updateSection({ text: e.target.value })} />
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Redirect Link</label>
+                          <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.link || ''} onChange={e => updateSection({ link: e.target.value })} placeholder="/guest/browse or https://..." />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="pt-6 border-t border-sand-150">

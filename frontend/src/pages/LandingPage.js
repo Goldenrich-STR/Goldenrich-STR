@@ -469,6 +469,28 @@ const DEFAULT_FOOTER_DATA = {
   location: 'Nashik, Maharashtra',
   email: 'support@x-space360.com',
   phone: '+91 8484826247',
+  guests_title: 'For Guests',
+  guest_link_1_label: 'Browse Collections',
+  guest_link_1_url: '/guest/browse',
+  guest_link_2_label: 'FAQs',
+  faq_title: 'Frequently Asked Questions',
+  faq_items: [
+    { question: 'How do I book a property?', answer: 'Browse collections, choose your dates, and submit a booking request from the property page.' },
+    { question: 'How do hosts list a space?', answer: 'Hosts can sign in and use List Your Space to submit property details and documents for verification.' },
+    { question: 'Who do I contact for support?', answer: 'Use the contact and grievance details in the footer for support or escalation.' },
+  ],
+  footer_sections: [
+    { heading: 'For Guests', label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
+    { heading: 'For Guests', label: 'FAQs', action_type: 'text', link: '', text: 'Browse collections, choose your dates, and submit a booking request from the property page.\n\nHosts can sign in and use List Your Space to submit property details and documents for verification.\n\nFor support or escalation, use the contact details in the footer.' },
+    { heading: 'For Hosts', label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
+    { heading: 'Contact & Grievance', label: 'Support & Escalation', action_type: 'text', link: '', text: 'Contact: Nashik, Maharashtra\nEmail: support@x-space360.com\nPhone: +91 8484826247\n\nGrievance Officer: Rahul Mundra\nEmail: nodal.officer@rupiyaloan.com\nPhone: +91 76206 66949\nResolution: 7 working days' },
+  ],
+  hosts_title: 'For Hosts',
+  host_link_1_label: 'List Your Space',
+  host_link_1_url: '/host/list-property',
+  host_link_2_label: 'Hosting Standards',
+  host_link_2_url: '#how-it-works',
+  contact_title: 'Contact',
   grievance_title: 'Grievance & Escalations',
   grievance_officer: 'Rahul Mundra',
   grievance_email: 'nodal.officer@rupiyaloan.com',
@@ -845,6 +867,8 @@ const LandingPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
+  const [showFaqModal, setShowFaqModal] = useState(false);
+  const [footerPopup, setFooterPopup] = useState(null);
   const [cmsContent, setCmsContent] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
   const [activeVideo, setActiveVideo] = useState(0);
@@ -908,6 +932,39 @@ const LandingPage = () => {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en']?.[key] || key;
   };
   const footerData = { ...DEFAULT_FOOTER_DATA, ...(cmsContent?.footer || {}) };
+  const footerFaqItems = Array.isArray(footerData.faq_items) ? footerData.faq_items : DEFAULT_FOOTER_DATA.faq_items;
+  const footerSections = Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
+    ? footerData.footer_sections.slice(0, 4)
+    : DEFAULT_FOOTER_DATA.footer_sections;
+
+  const handleFooterLink = (url, fallbackUrl = '/') => {
+    const target = url || fallbackUrl;
+    if (target.startsWith('#')) {
+      const el = document.querySelector(target);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    navigate(target);
+  };
+
+  const handleListSpaceClick = () => {
+    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/login');
+  };
+
+  const handleFooterSectionClick = (section) => {
+    if (section.action_type === 'link' && section.link) {
+      if (section.link === '/host/list-property') {
+        navigate(user ? section.link : '/login');
+      } else {
+        handleFooterLink(section.link, '/');
+      }
+      return;
+    }
+    setFooterPopup({
+      title: section.label || section.heading || 'X-Space360',
+      text: section.text || 'Details will be updated soon.',
+    });
+  };
 
   React.useEffect(() => {
     const fetchCMS = async () => {
@@ -1516,10 +1573,10 @@ const LandingPage = () => {
         </div>
       </div>
 
-<footer className="bg-white border-t border-sand-200 pt-16 md:pt-24 pb-12">
-        <div className="max-w-7xl mx-auto px-6 md:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-16 mb-16 md:mb-24">
-            <div className="sm:col-span-2">
+<footer className="bg-white border-t border-sand-200 pt-16 md:pt-20 pb-12">
+        <div className="w-full px-6 md:px-10 xl:px-16 2xl:px-24">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_repeat(4,minmax(0,1fr))] gap-x-10 xl:gap-x-16 2xl:gap-x-20 gap-y-12 mb-16">
+            <div>
               <div 
                 className="flex items-center space-x-3 mb-8 cursor-pointer group"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -1546,39 +1603,18 @@ const LandingPage = () => {
                  </a>
               </div>
             </div>
-            <div>
-              <h5 className="font-black text-charcoal uppercase tracking-[0.2em] text-xs mb-8">{t('forGuests')}</h5>
-              <ul className="space-y-4 text-charcoal-light font-medium">
-                <li><a href="#" className="hover:text-terracotta transition-colors">{t('browseCollections')}</a></li>
-                <li><a href="#" className="hover:text-terracotta transition-colors">{t('safetyProtocols')}</a></li>
-                <li><a href="#" className="hover:text-terracotta transition-colors">{t('guestSupport')}</a></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-black text-charcoal uppercase tracking-[0.2em] text-xs mb-8">{t('forHosts')}</h5>
-              <ul className="space-y-4 text-charcoal-light font-medium">
-                <li><a href="#" className="hover:text-terracotta transition-colors">{t('listSpace')}</a></li>
-                <li><a href="#" className="hover:text-terracotta transition-colors">{t('hostingStandards')}</a></li>
-                <li><a href="#" className="hover:text-terracotta transition-colors">{t('payoutSystem')}</a></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-black text-charcoal uppercase tracking-[0.2em] text-xs mb-8">{t('contact')}</h5>
-              <ul className="space-y-4 text-charcoal-light font-medium">
-                <li><p>{footerData.location || t('mumbaiHQ')}</p></li>
-                <li><p className="hover:text-terracotta transition-colors">{footerData.email}</p></li>
-                <li><p className="hover:text-terracotta transition-colors">{footerData.phone}</p></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-black text-charcoal uppercase tracking-[0.18em] text-xs mb-8 leading-snug">{footerData.grievance_title}</h5>
-              <ul className="space-y-4 text-charcoal-light font-medium leading-relaxed">
-                <li><p><span className="font-black text-charcoal">Officer:</span> {footerData.grievance_officer}</p></li>
-                <li><p className="text-sky-600 font-bold break-all hover:text-terracotta transition-colors">{footerData.grievance_email}</p></li>
-                <li><p className="hover:text-terracotta transition-colors">{footerData.grievance_phone}</p></li>
-                <li><p className="text-[10px] font-black uppercase tracking-[0.14em] text-charcoal-muted leading-relaxed">{footerData.resolution_text}</p></li>
-              </ul>
-            </div>
+            {footerSections.map((section, index) => (
+              <div key={`${section.heading}-${index}`} className="min-w-0">
+                <h5 className="font-black text-charcoal uppercase tracking-[0.18em] text-xs mb-8 leading-snug">{section.heading || `Section ${index + 1}`}</h5>
+                <button
+                  type="button"
+                  onClick={() => handleFooterSectionClick(section)}
+                  className="text-left text-charcoal-light font-medium hover:text-terracotta transition-colors leading-relaxed break-words"
+                >
+                  {section.label || 'Footer Link'}
+                </button>
+              </div>
+            ))}
           </div>
           <div className="pt-12 border-t border-sand-200 flex flex-col md:flex-row justify-between items-center gap-6">
             <p className="text-charcoal-muted font-bold text-sm tracking-wide uppercase">{t('precision')}</p>
@@ -1589,7 +1625,57 @@ const LandingPage = () => {
             </div>
           </div>
         </div>
-      </footer><ChatbotWidget />
+      </footer>
+
+      {showFaqModal && (
+        <div className="fixed inset-0 z-[120] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-white rounded-3xl shadow-2xl border border-sand-200 w-full max-w-2xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
+            <div className="flex items-start justify-between gap-6 mb-7">
+              <div>
+                <h3 className="text-2xl font-black text-charcoal">{footerData.faq_title || 'Frequently Asked Questions'}</h3>
+                <p className="text-sm text-charcoal-muted mt-1">Quick answers for guests and hosts.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFaqModal(false)}
+                className="w-10 h-10 rounded-full border border-sand-200 text-charcoal-muted hover:text-charcoal hover:bg-sand-50 transition flex items-center justify-center"
+                aria-label="Close FAQs"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              {footerFaqItems.map((item, index) => (
+                <div key={index} className="rounded-2xl border border-sand-200 bg-sand-50/60 p-5">
+                  <h4 className="font-black text-charcoal mb-2">{item.question || `Question ${index + 1}`}</h4>
+                  <p className="text-sm text-charcoal-light leading-relaxed">{item.answer || 'Answer coming soon.'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {footerPopup && (
+        <div className="fixed inset-0 z-[120] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-white rounded-3xl shadow-2xl border border-sand-200 w-full max-w-xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
+            <div className="flex items-start justify-between gap-6 mb-6">
+              <h3 className="text-2xl font-black text-charcoal">{footerPopup.title}</h3>
+              <button
+                type="button"
+                onClick={() => setFooterPopup(null)}
+                className="w-10 h-10 rounded-full border border-sand-200 text-charcoal-muted hover:text-charcoal hover:bg-sand-50 transition flex items-center justify-center"
+                aria-label="Close footer details"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-charcoal-light leading-relaxed whitespace-pre-line">{footerPopup.text}</p>
+          </div>
+        </div>
+      )}
+
+      <ChatbotWidget />
 
       {/* Premium How It Works: Step-by-Step Host Onboarding Modal Component */}
       {(() => {
