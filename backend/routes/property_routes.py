@@ -86,7 +86,10 @@ async def search_properties(
     """Search properties with filters (public endpoint)."""
     try:
         # Build query
-        query = {"status": PropertyStatus.LIVE.value}
+        query = {
+            "status": PropertyStatus.LIVE.value,
+            "property_id": {"$not": {"$regex": "^prop_demo_"}},
+        }
 
         if category:
             query["category"] = category.value
