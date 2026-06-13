@@ -480,10 +480,22 @@ const DEFAULT_FOOTER_DATA = {
     { question: 'Who do I contact for support?', answer: 'Use the contact and grievance details in the footer for support or escalation.' },
   ],
   footer_sections: [
-    { heading: 'For Guests', label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
-    { heading: 'For Guests', label: 'FAQs', action_type: 'text', link: '', text: 'Browse collections, choose your dates, and submit a booking request from the property page.\n\nHosts can sign in and use List Your Space to submit property details and documents for verification.\n\nFor support or escalation, use the contact details in the footer.' },
-    { heading: 'For Hosts', label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
-    { heading: 'Contact & Grievance', label: 'Support & Escalation', action_type: 'text', link: '', text: 'Contact: Nashik, Maharashtra\nEmail: support@x-space360.com\nPhone: +91 8484826247\n\nGrievance Officer: Rahul Mundra\nEmail: nodal.officer@rupiyaloan.com\nPhone: +91 76206 66949\nResolution: 7 working days' },
+    { heading: 'For Guests', items: [
+      { label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
+      { label: 'FAQs', action_type: 'text', link: '', text: 'Browse collections, choose your dates, and submit a booking request from the property page.\n\nHosts can sign in and use List Your Space to submit property details and documents for verification.\n\nFor support or escalation, use the contact details in the footer.' },
+    ] },
+    { heading: 'For Hosts', items: [
+      { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
+      { label: 'Hosting Standards', action_type: 'link', link: '#how-it-works', text: '' },
+    ] },
+    { heading: 'Contact', items: [
+      { label: 'Nashik, Maharashtra', action_type: 'text', link: '', text: 'X-Space360 support is available for guest and host assistance.\n\nEmail: support@x-space360.com\nPhone: +91 8484826247' },
+      { label: 'support@x-space360.com', action_type: 'text', link: '', text: 'Email support@x-space360.com for help with bookings, listings, or account support.' },
+    ] },
+    { heading: 'Grievance & Escalations', items: [
+      { label: 'Officer: Rahul Mundra', action_type: 'text', link: '', text: 'Grievance Officer: Rahul Mundra\nEmail: nodal.officer@rupiyaloan.com\nPhone: +91 76206 66949\nResolution: 7 working days' },
+      { label: 'nodal.officer@rupiyaloan.com', action_type: 'text', link: '', text: 'Email nodal.officer@rupiyaloan.com for grievance escalation.\nResolution: 7 working days.' },
+    ] },
   ],
   hosts_title: 'For Hosts',
   host_link_1_label: 'List Your Space',
@@ -933,9 +945,15 @@ const LandingPage = () => {
   };
   const footerData = { ...DEFAULT_FOOTER_DATA, ...(cmsContent?.footer || {}) };
   const footerFaqItems = Array.isArray(footerData.faq_items) ? footerData.faq_items : DEFAULT_FOOTER_DATA.faq_items;
-  const footerSections = Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
-    ? footerData.footer_sections.slice(0, 4)
-    : DEFAULT_FOOTER_DATA.footer_sections;
+  const footerSections = (Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
+    ? footerData.footer_sections
+    : DEFAULT_FOOTER_DATA.footer_sections
+  ).slice(0, 4).map((section) => ({
+    ...section,
+    items: Array.isArray(section.items) && section.items.length
+      ? section.items
+      : [{ label: section.label || '', action_type: section.action_type || 'link', link: section.link || '', text: section.text || '' }]
+  }));
 
   const handleFooterLink = (url, fallbackUrl = '/') => {
     const target = url || fallbackUrl;
@@ -951,18 +969,18 @@ const LandingPage = () => {
     navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/login');
   };
 
-  const handleFooterSectionClick = (section) => {
-    if (section.action_type === 'link' && section.link) {
-      if (section.link === '/host/list-property') {
-        navigate(user ? section.link : '/login');
+  const handleFooterSectionClick = (section, item) => {
+    if (item.action_type === 'link' && item.link) {
+      if (item.link === '/host/list-property') {
+        navigate(user ? item.link : '/login');
       } else {
-        handleFooterLink(section.link, '/');
+        handleFooterLink(item.link, '/');
       }
       return;
     }
     setFooterPopup({
-      title: section.label || section.heading || 'X-Space360',
-      text: section.text || 'Details will be updated soon.',
+      title: item.label || section.heading || 'X-Space360',
+      text: item.text || 'Details will be updated soon.',
     });
   };
 
@@ -1606,13 +1624,19 @@ const LandingPage = () => {
             {footerSections.map((section, index) => (
               <div key={`${section.heading}-${index}`} className="min-w-0">
                 <h5 className="font-black text-charcoal uppercase tracking-[0.18em] text-xs mb-8 leading-snug">{section.heading || `Section ${index + 1}`}</h5>
-                <button
-                  type="button"
-                  onClick={() => handleFooterSectionClick(section)}
-                  className="text-left text-charcoal-light font-medium hover:text-terracotta transition-colors leading-relaxed break-words"
-                >
-                  {section.label || 'Footer Link'}
-                </button>
+                <ul className="space-y-4">
+                  {section.items.map((item, itemIndex) => (
+                    <li key={itemIndex}>
+                      <button
+                        type="button"
+                        onClick={() => handleFooterSectionClick(section, item)}
+                        className="text-left text-charcoal-light font-medium hover:text-terracotta transition-colors leading-relaxed break-words"
+                      >
+                        {item.label || 'Footer Link'}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
           </div>

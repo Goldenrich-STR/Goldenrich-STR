@@ -3557,41 +3557,79 @@ const CMSManagement = () => {
               <div className="md:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {Array.from({ length: 4 }).map((_, index) => {
                   const sections = footerData.footer_sections || [];
-                  const section = sections[index] || { heading: `Section ${index + 1}`, label: '', action_type: 'link', link: '', text: '' };
+                  const rawSection = sections[index] || { heading: `Section ${index + 1}`, items: [] };
+                  const section = {
+                    ...rawSection,
+                    items: Array.isArray(rawSection.items) && rawSection.items.length
+                      ? rawSection.items
+                      : [{ label: rawSection.label || '', action_type: rawSection.action_type || 'link', link: rawSection.link || '', text: rawSection.text || '' }]
+                  };
                   const updateSection = (patch) => {
                     const next = [...sections];
                     next[index] = { ...section, ...patch };
                     setFooterData({ ...footerData, footer_sections: next });
                   };
+                  const updateItem = (itemIndex, patch) => {
+                    const nextItems = [...section.items];
+                    nextItems[itemIndex] = { ...nextItems[itemIndex], ...patch };
+                    updateSection({ items: nextItems });
+                  };
                   return (
                     <div key={index} className="rounded-3xl border border-sand-200 bg-sand-50/60 p-5 space-y-4">
-                      <h5 className="text-sm font-black text-charcoal uppercase tracking-widest">Section {index + 1}</h5>
+                      <div className="flex items-center justify-between gap-3">
+                        <h5 className="text-sm font-black text-charcoal uppercase tracking-widest">Section {index + 1}</h5>
+                        <button
+                          type="button"
+                          onClick={() => updateSection({ items: [...section.items, { label: 'New Label', action_type: 'link', link: '', text: '' }] })}
+                          className="px-3 py-2 rounded-xl bg-terracotta text-white text-[10px] font-black uppercase tracking-widest"
+                        >
+                          Add Label
+                        </button>
+                      </div>
                       <div>
                         <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Section Heading</label>
                         <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.heading || ''} onChange={e => updateSection({ heading: e.target.value })} />
                       </div>
-                      <div>
-                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Label</label>
-                        <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.label || ''} onChange={e => updateSection({ label: e.target.value })} />
+                      <div className="space-y-4">
+                        {section.items.map((item, itemIndex) => (
+                          <div key={itemIndex} className="rounded-2xl border border-sand-200 bg-white p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Label {itemIndex + 1}</span>
+                              {section.items.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateSection({ items: section.items.filter((_, i) => i !== itemIndex) })}
+                                  className="text-[10px] font-black text-red-600 uppercase tracking-widest"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Label</label>
+                              <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.label || ''} onChange={e => updateItem(itemIndex, { label: e.target.value })} />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Action Type</label>
+                              <select className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.action_type || 'link'} onChange={e => updateItem(itemIndex, { action_type: e.target.value })}>
+                                <option value="link">Link Redirect</option>
+                                <option value="text">Text Popup</option>
+                              </select>
+                            </div>
+                            {item.action_type === 'text' ? (
+                              <div>
+                                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Popup Text</label>
+                                <textarea rows={4} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.text || ''} onChange={e => updateItem(itemIndex, { text: e.target.value })} />
+                              </div>
+                            ) : (
+                              <div>
+                                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Redirect Link</label>
+                                <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.link || ''} onChange={e => updateItem(itemIndex, { link: e.target.value })} placeholder="/guest/browse or https://..." />
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                      <div>
-                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Action Type</label>
-                        <select className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.action_type || 'link'} onChange={e => updateSection({ action_type: e.target.value })}>
-                          <option value="link">Link Redirect</option>
-                          <option value="text">Text Popup</option>
-                        </select>
-                      </div>
-                      {section.action_type === 'text' ? (
-                        <div>
-                          <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Popup Text</label>
-                          <textarea rows={5} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.text || ''} onChange={e => updateSection({ text: e.target.value })} />
-                        </div>
-                      ) : (
-                        <div>
-                          <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Redirect Link</label>
-                          <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.link || ''} onChange={e => updateSection({ link: e.target.value })} placeholder="/guest/browse or https://..." />
-                        </div>
-                      )}
                     </div>
                   );
                 })}
