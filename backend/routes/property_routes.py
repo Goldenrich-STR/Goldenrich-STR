@@ -163,47 +163,38 @@ async def search_properties(
             if unavailable:
                 query["property_id"] = {"$nin": unavailable}
 
-        sort_map = {
-            "price_asc": {"_search_price": 1},
-            "price_desc": {"_search_price": -1},
-            "newest": {"created_at": -1},
-            "recommended": {"instant_booking": -1, "created_at": -1},
-            "rating_desc": {"rating": -1, "review_count": -1},
-        }
-        sort_spec = sort_map.get(sort, sort_map["recommended"])
+        def numeric_price(prop: dict) -> float:
+            try:
+                return float(prop.get("price_per_night") or 0)
+            except (TypeError, ValueError):
+                return 0
 
-        pipeline = [
-            {"$match": query},
-            {
-                "$addFields": {
-                    "_search_price": {
-                        "$convert": {
-                            "input": "$price_per_night",
-                            "to": "double",
-                            "onError": None,
-                            "onNull": None,
-                        }
-                    }
-                }
-            },
-        ]
+        raw_properties = await db.properties.find(query, {"_id": 0}).to_list(length=1000)
 
         if min_price is not None:
-            pipeline.append({"$match": {"_search_price": {"$gte": min_price}}})
+            raw_properties = [p for p in raw_properties if numeric_price(p) >= min_price]
         if max_price is not None:
-            pipeline.append({"$match": {"_search_price": {"$lte": max_price}}})
+            raw_properties = [p for p in raw_properties if numeric_price(p) <= max_price]
 
-        count_pipeline = pipeline + [{"$count": "total"}]
-        count_result = await db.properties.aggregate(count_pipeline).to_list(length=1)
-        total = count_result[0]["total"] if count_result else 0
+        if sort == "price_asc":
+            raw_properties.sort(key=numeric_price)
+        elif sort == "price_desc":
+            raw_properties.sort(key=numeric_price, reverse=True)
+        elif sort == "newest":
+            raw_properties.sort(key=lambda p: p.get("created_at") or "", reverse=True)
+        elif sort == "rating_desc":
+            raw_properties.sort(
+                key=lambda p: (p.get("rating") or 0, p.get("review_count") or 0),
+                reverse=True,
+            )
+        else:
+            raw_properties.sort(
+                key=lambda p: (bool(p.get("instant_booking")), p.get("created_at") or ""),
+                reverse=True,
+            )
 
-        pipeline.extend([
-            {"$sort": sort_spec},
-            {"$skip": skip},
-            {"$limit": limit},
-            {"$project": {"_id": 0, "_search_price": 0}},
-        ])
-        properties = await db.properties.aggregate(pipeline).to_list(length=limit)
+        total = len(raw_properties)
+        properties = raw_properties[skip: skip + limit]
 
         # Log search activity for analytics (admin dashboard)
         try:
