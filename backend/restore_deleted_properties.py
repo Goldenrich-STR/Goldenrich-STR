@@ -7,11 +7,23 @@ Usage:
 
 import argparse
 import asyncio
-from dotenv import load_dotenv
+import os
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / ".env")
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(ROOT_DIR / ".env")
+except ModuleNotFoundError:
+    env_path = ROOT_DIR / ".env"
+    if env_path.exists():
+        for raw_line in env_path.read_text().splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 from server import db_instance  # noqa: E402
 
