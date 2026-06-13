@@ -92,16 +92,12 @@ async def search_properties(
             query["category"] = category.value
 
         if city:
-            raw_keyword = city.strip()
-            escaped_keyword = re.escape(raw_keyword)
-            keyword = rf"\b{escaped_keyword}" if len(raw_keyword) <= 2 else escaped_keyword
+            keyword = re.escape(city.strip())
             query["$or"] = [
                 {"city": {"$regex": keyword, "$options": "i"}},
                 {"state": {"$regex": keyword, "$options": "i"}},
                 {"title": {"$regex": keyword, "$options": "i"}},
                 {"address": {"$regex": keyword, "$options": "i"}},
-                {"property_type": {"$regex": keyword, "$options": "i"}},
-                {"bhk_type": {"$regex": keyword, "$options": "i"}},
             ]
 
         if property_type:

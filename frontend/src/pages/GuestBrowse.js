@@ -371,7 +371,6 @@ const GuestBrowse = () => {
     if (filters.bhk_type) params.bhk_type = filters.bhk_type;
     if (filters.min_price) params.min_price = Number(filters.min_price);
     if (filters.max_price) params.max_price = Number(filters.max_price);
-    if (filters.guests) params.guests = Number(filters.guests);
     if (filters.instant_booking) params.instant_booking = true;
     if (filters.pet_friendly) params.pet_friendly = true;
     if (filters.check_in) params.check_in = filters.check_in;
