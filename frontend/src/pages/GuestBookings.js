@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { bookingAPI, reviewAPI, aiCallAPI } from '../services/api';
@@ -69,20 +69,7 @@ const GuestBookings = () => {
   const [aiCalls, setAiCalls] = useState([]);
   const [selectedCall, setSelectedCall] = useState(null);
 
-  useEffect(() => {
-    fetchBookings();
-    fetchMyReviews();
-    fetchAiCalls();
-
-    const intervalId = setInterval(() => {
-      fetchBookings();
-      fetchAiCalls();
-    }, 3000);
-
-    return () => clearInterval(intervalId);
-  }, []);
-
-  const fetchAiCalls = async () => {
+  const fetchAiCalls = useCallback(async () => {
     try {
       const res = await aiCallAPI.getMyCalls();
       if (res.data && res.data.calls) {
@@ -91,7 +78,7 @@ const GuestBookings = () => {
     } catch (e) {
       console.error('Failed to fetch AI calls', e);
     }
-  };
+  }, []);
 
   // Auto-open the review modal when arriving via the deep-link from a
   // review-request notification (e.g. /guest/bookings?review=BK123…).
@@ -116,17 +103,17 @@ const GuestBookings = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bookings, reviewedIds, searchParams]);
 
-  const fetchMyReviews = async () => {
+  const fetchMyReviews = useCallback(async () => {
     try {
       const res = await reviewAPI.listMyReviews();
       setReviewedIds(new Set((res.data.reviews || []).map((r) => r.booking_id)));
     } catch (e) {
       // non-blocking — empty set just hides the "Reviewed" tag
     }
-  };
+  }, []);
 
-  const fetchBookings = async () => {
-    setLoading(true);
+  const fetchBookings = useCallback(async ({ showLoader = false } = {}) => {
+    if (showLoader) setLoading(true);
     setError('');
     try {
       const res = await bookingAPI.getGuestBookings();
@@ -139,9 +126,31 @@ const GuestBookings = () => {
       setError(e.response?.data?.detail || 'Failed to load bookings');
       return [];
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadInitialData = async () => {
+      setLoading(true);
+      await Promise.all([fetchBookings(), fetchMyReviews(), fetchAiCalls()]);
+      if (mounted) setLoading(false);
+    };
+
+    loadInitialData();
+
+    const intervalId = setInterval(() => {
+      fetchBookings();
+      fetchAiCalls();
+    }, 60000);
+
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+    };
+  }, [fetchAiCalls, fetchBookings, fetchMyReviews]);
 
   const handleCancel = (booking) => {
     setCancellingBooking(booking);
@@ -154,7 +163,7 @@ const GuestBookings = () => {
     setCancelling(bookingId);
     try {
       await bookingAPI.cancelBooking(bookingId);
-      const list = await fetchBookings();
+      const list = await fetchBookings({ showLoader: false });
       const cancelledB = list.find(b => b.booking_id === bookingId);
       if (cancelledB && cancelledB.booking_status === 'cancelled') {
         const refundAmt = cancelledB.refund?.refund_amount 
@@ -192,7 +201,7 @@ const GuestBookings = () => {
     return { upcoming, past, cancelled };
   }, [bookings, today]);
 
-  const visible = groups[tab] || [];
+  const visible = useMemo(() => groups[tab] || [], [groups, tab]);
   const itemsPerPage = 5;
   const totalPages = Math.ceil(visible.length / itemsPerPage);
   const paginatedBookings = useMemo(() => {
