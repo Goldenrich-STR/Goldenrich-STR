@@ -118,12 +118,25 @@ async def search_properties(
 
         # Price filter
         if min_price is not None or max_price is not None:
-            price_query = {}
+            price_value = {
+                "$convert": {
+                    "input": "$price_per_night",
+                    "to": "double",
+                    "onError": None,
+                    "onNull": None,
+                }
+            }
+            price_conditions = []
             if min_price is not None:
-                price_query["$gte"] = min_price
+                price_conditions.append({"$gte": [price_value, min_price]})
             if max_price is not None:
-                price_query["$lte"] = max_price
-            query["price_per_night"] = price_query
+                price_conditions.append({"$lte": [price_value, max_price]})
+            if price_conditions:
+                query["$expr"] = (
+                    {"$and": price_conditions}
+                    if len(price_conditions) > 1
+                    else price_conditions[0]
+                )
 
         # Amenities filter
         if amenities:

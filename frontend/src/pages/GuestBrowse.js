@@ -54,9 +54,9 @@ const BHK_TYPES = [
   { value: '2bhk', label: '2 BHK' },
   { value: '3bhk', label: '3 BHK' },
   { value: '4bhk', label: '4 BHK' },
-  { value: 'commercial', label: 'Commercial' },
-  { value: 'banquet', label: 'Banquet' },
 ];
+
+const PROPERTY_TYPES_WITHOUT_BHK = new Set(['private_office', 'co_working']);
 
 const AMENITY_OPTIONS = [
   'wifi', 'ac', 'parking', 'kitchen', 'pool', 'gym', 'tv',
@@ -363,12 +363,20 @@ const GuestBrowse = () => {
     filters.amenities,
   ]);
 
+  const hideBhkFilter = PROPERTY_TYPES_WITHOUT_BHK.has(filters.property_type);
+
+  useEffect(() => {
+    if (hideBhkFilter && filters.bhk_type) {
+      setFilters(prev => ({ ...prev, bhk_type: '' }));
+    }
+  }, [hideBhkFilter, filters.bhk_type]);
+
   const buildParams = () => {
     const params = {};
     if (filters.city) params.city = filters.city;
     if (filters.category) params.category = filters.category;
     if (filters.property_type) params.property_type = filters.property_type;
-    if (filters.bhk_type) params.bhk_type = filters.bhk_type;
+    if (!hideBhkFilter && filters.bhk_type) params.bhk_type = filters.bhk_type;
     if (filters.min_price) params.min_price = Number(filters.min_price);
     if (filters.max_price) params.max_price = Number(filters.max_price);
     if (filters.instant_booking) params.instant_booking = true;
@@ -613,18 +621,20 @@ const GuestBrowse = () => {
                 ))}
               </select>
             </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('bhkConfig')}</label>
-              <select
-                value={filters.bhk_type}
-                onChange={(e) => setFilters({ ...filters, bhk_type: e.target.value })}
-                className="w-full bg-white border-sand-300 rounded-xl px-4 py-3 text-sm font-medium outline-none"
-              >
-                {BHK_TYPES.map((tOpt) => (
-                  <option key={tOpt.value} value={tOpt.value}>{tOpt.label}</option>
-                ))}
-              </select>
-            </div>
+            {!hideBhkFilter && (
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('bhkConfig')}</label>
+                <select
+                  value={filters.bhk_type}
+                  onChange={(e) => setFilters({ ...filters, bhk_type: e.target.value })}
+                  className="w-full bg-white border-sand-300 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                >
+                  {BHK_TYPES.map((tOpt) => (
+                    <option key={tOpt.value} value={tOpt.value}>{tOpt.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('priceRange')}</label>
               <div className="flex items-center space-x-3">
