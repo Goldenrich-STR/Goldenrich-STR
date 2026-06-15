@@ -952,15 +952,23 @@ const LandingPage = () => {
   const footerSections = (Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
     ? footerData.footer_sections
     : DEFAULT_FOOTER_DATA.footer_sections
-  ).slice(0, 4).map((section, index) => ({
-    ...section,
-    heading: (!section.heading || /^Section\s+\d+$/i.test(section.heading))
-      ? ['For Guests', 'For Hosts', 'Contact', 'Grievance & Escalation'][index]
-      : section.heading,
-    items: Array.isArray(section.items) && section.items.length
-      ? section.items
-      : [{ label: section.label || '', action_type: section.action_type || 'link', link: section.link || '', text: section.text || '' }]
-  }));
+  ).slice(0, 4).map((rawSection, index) => {
+    const section = rawSection || {};
+    return {
+      ...section,
+      heading: (!section.heading || /^Section\s+\d+$/i.test(section.heading))
+        ? ['For Guests', 'For Hosts', 'Contact', 'Grievance & Escalation'][index]
+        : section.heading,
+      items: Array.isArray(section.items) && section.items.length
+        ? section.items.filter(Boolean).map(item => ({
+          label: item.label || '',
+          action_type: item.action_type || 'link',
+          link: item.link || '',
+          text: item.text || '',
+        }))
+        : [{ label: section.label || '', action_type: section.action_type || 'link', link: section.link || '', text: section.text || '' }]
+    };
+  });
 
   const handleFooterLink = (url, fallbackUrl = '/') => {
     const target = url || fallbackUrl;
@@ -976,7 +984,7 @@ const LandingPage = () => {
     navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/login');
   };
 
-  const handleFooterSectionClick = (section, item) => {
+  const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
       if (item.link === '/host/list-property') {
         navigate(user ? item.link : '/login');
