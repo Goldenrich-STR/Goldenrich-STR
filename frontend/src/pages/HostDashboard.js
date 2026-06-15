@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { propertyAPI, subscriptionAPI, getImageUrl, accountAPI, uploadAPI } from '../services/api';
+import { propertyAPI, subscriptionAPI, getImageUrl, accountAPI, uploadAPI, loadRazorpaySdk } from '../services/api';
 import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { NotificationBell } from '../components/NotificationCenter';
 import LegalLinks from '../components/LegalLinks';
@@ -282,7 +282,8 @@ const HostDashboard = () => {
         setShowPurchaseModal(false);
         fetchData();
       } else {
-        if (!window.Razorpay) {
+        const sdkLoaded = await loadRazorpaySdk();
+        if (!sdkLoaded || !window.Razorpay) {
           alert('Razorpay SDK failed to load. Please check your internet connection.');
           return;
         }
