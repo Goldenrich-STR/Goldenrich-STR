@@ -244,14 +244,6 @@ export const NotificationBell = () => {
       console.warn('AudioContext playback blocked or not supported:', e);
     }
     
-    // Also try to play Mixkit audio chime
-    try {
-      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav');
-      audio.volume = 0.4;
-      audio.play().catch(() => {});
-    } catch (err) {
-      // silently absorb network/cors block
-    }
   }, []);
 
   const fetchUnreadCount = useCallback(async () => {
