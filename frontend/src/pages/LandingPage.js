@@ -1375,20 +1375,20 @@ const LandingPage = () => {
                     {/* Guests */}
                     <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer hover:bg-gray-50 transition">
                       <User className="w-5 h-5 text-gray-400 mr-3" />
-                      <div>
-                        <select
+                      <div className="flex items-center gap-1">
+                        <input
                           id="landing-guests"
                           name="guests"
+                          type="number"
+                          min="1"
                           value={guestCounts.adults}
-                          onChange={(e) => setGuestCounts({ ...guestCounts, adults: parseInt(e.target.value) })}
-                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-24 cursor-pointer text-gray-500"
-                        >
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                            <option key={n} value={n}>{n} Guest{n > 1 ? 's' : ''}</option>
-                          ))}
-                        </select>
+                          onChange={(e) => setGuestCounts({ ...guestCounts, adults: Math.max(1, parseInt(e.target.value) || 1) })}
+                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-10 text-gray-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-gray-500 font-medium text-sm">Guest{guestCounts.adults > 1 ? 's' : ''}</span>
                       </div>
                     </div>
+
                     
                     {/* Search Button */}
                     <div className="p-2 w-full md:w-auto">
@@ -1407,6 +1407,8 @@ const LandingPage = () => {
 
           </div>
 
+
+
           {/* ── Dot indicators ── */}
           <div className="flex items-center space-x-2 mt-8">
             {heroSlides.map((_, idx) => (
@@ -1424,8 +1426,59 @@ const LandingPage = () => {
         </div>
       </div>
 
+      {/* ── Category Shortcut Strip ── */}
+      <div className="w-full bg-[#FDFCF8] relative z-20 py-12 border-b border-sand-100">
+        <div className="max-w-7xl mx-auto px-8">
+          <div className="flex items-center justify-center gap-10 md:gap-20">
+            {[
+              {
+                label: 'Residential',
+                icon: Home,
+                category: 'residential',
+                desc: 'Homes & Villas',
+                bg: 'bg-terracotta',
+                ring: 'ring-terracotta/20',
+                shadow: 'shadow-terracotta/30'
+              },
+              {
+                label: 'Commercial',
+                icon: Briefcase,
+                category: 'commercial',
+                desc: 'Offices & Co-working',
+                bg: 'bg-[#4a3f35]',
+                ring: 'ring-[#4a3f35]/20',
+                shadow: 'shadow-[#4a3f35]/20'
+              },
+              {
+                label: 'Event Venue',
+                icon: PartyPopper,
+                category: 'event_venue',
+                desc: 'Halls & Rooftops',
+                bg: 'bg-[#4a6b50]',
+                ring: 'ring-[#4a6b50]/20',
+                shadow: 'shadow-[#4a6b50]/20'
+              }
+            ].map(({ label, icon: Icon, category, desc, bg, ring, shadow }) => (
+              <button
+                key={category}
+                onClick={() => navigate(`/guest/browse?category=${category}`)}
+                className="group flex flex-col items-center gap-3 cursor-pointer"
+              >
+                <div className={`w-20 h-20 rounded-full ${bg} flex items-center justify-center ring-4 ${ring} shadow-xl ${shadow} group-hover:scale-110 group-hover:shadow-2xl transition-all duration-300 active:scale-95`}>
+                  <Icon className="w-9 h-9 text-white" />
+                </div>
+                <div className="text-center">
+                  <p className="text-charcoal font-black text-[14px] tracking-tight">{label}</p>
+                  <p className="text-gray-400 text-[11px] font-medium mt-0.5">{desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Content Section */}
-      <div className="w-full bg-[#FDFCF8] relative z-20 pb-32 pt-24">
+      <div className="w-full bg-[#FDFCF8] relative z-20 pb-32 pt-14">
         <div className="max-w-7xl mx-auto px-8">
           {/* Residential Collection Slider */}
           {renderPropertySlider(

@@ -130,9 +130,9 @@ const AuthPage = ({ isAdminLogin = false }) => {
   };
 
   return (
-    <div className="min-h-screen bg-sand-50 flex overflow-hidden selection:bg-terracotta selection:text-white font-outfit">
+    <div className="h-screen bg-sand-50 flex overflow-hidden selection:bg-terracotta selection:text-white font-outfit">
       {/* Left Panel: Visual/Branding (Desktop Only) */}
-      <div className="hidden lg:flex lg:w-5/12 relative bg-charcoal overflow-hidden border-r border-sand-200">
+      <div className="hidden lg:flex lg:w-5/12 relative bg-charcoal overflow-hidden border-r border-sand-200 h-full">
         <div className="absolute inset-0 z-0">
           <img
             src="/videos/login%20image/pexels-veer-patel-2161481449-37547129.jpg"
@@ -182,7 +182,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
       </div>
 
       {/* Right Panel: Auth Form */}
-      <div className="w-full lg:w-7/12 flex items-center justify-center p-8 md:p-24 overflow-y-auto bg-white/50 backdrop-blur-xl">
+      <div className="w-full lg:w-7/12 flex items-center justify-center p-6 md:p-14 overflow-y-auto h-full bg-white/50 backdrop-blur-xl">
         <div className="w-full max-w-xl animate-fade-in">
            {/* Logo (Mobile Only) */}
            <div className="lg:hidden text-center mb-10">
@@ -191,8 +191,8 @@ const AuthPage = ({ isAdminLogin = false }) => {
               </span>
            </div>
 
-           <div className="mb-10 text-center lg:text-left">
-              <h3 className="text-5xl font-black text-charcoal tracking-tighter mb-3 leading-none">
+           <div className="mb-5 text-center lg:text-left">
+              <h3 className="text-4xl font-black text-charcoal tracking-tighter mb-2 leading-none">
                  {isAdminLogin ? 'Admin Console' : (isLogin ? 'Welcome Back' : 'Create Account')}
               </h3>
               <p className="text-charcoal-muted font-bold text-[10px] uppercase tracking-[0.25em]">
@@ -201,7 +201,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
            </div>
 
            {/* Auth Card Content */}
-           <div className="space-y-10">
+           <div className="space-y-5">
               {/* Toggle Switch */}
               {!isAdminLogin && (
                  <div className="flex bg-sand-200 p-1.5 rounded-2xl border border-sand-300 shadow-inner max-w-sm mx-auto lg:mx-0">
@@ -307,10 +307,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     )}
                  </form>
               ) : (
-                 <div className="space-y-8 animate-slide-up">
+                 <div className="space-y-4 animate-slide-up">
                     {!showOTPVerification ? (
-                       <div className="space-y-8">
-                          <div className="space-y-3">
+                       <div className="space-y-4">
+                          <div className="space-y-2">
                              <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Full Legal Name</label>
                              <input
                                 id="register-full-name"
@@ -319,14 +319,14 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                 autoComplete="name"
                                 value={registerData.full_name}
                                 onChange={(e) => setRegisterData({ ...registerData, full_name: e.target.value })}
-                                className="w-full px-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                className="w-full px-6 py-3.5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
                                 placeholder="Your full name"
                                 required
                              />
                           </div>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                             <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                             <div className="space-y-2">
                                 <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Work Email</label>
                                 <input
                                    id="register-email"
@@ -335,12 +335,12 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    autoComplete="email"
                                    value={registerData.email}
                                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                                   className="w-full px-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                   className="w-full px-6 py-3.5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
                                    placeholder="email@work.com"
                                    required
                                 />
                              </div>
-                             <div className="space-y-3">
+                             <div className="space-y-2">
                                 <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Phone Number</label>
                                 <input
                                    id="register-phone"
@@ -349,15 +349,15 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    autoComplete="tel"
                                    value={registerData.phone}
                                    onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
-                                   className="w-full px-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                   className="w-full px-6 py-3.5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
                                    placeholder="+91..."
                                    required
                                 />
                              </div>
                           </div>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                             <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                             <div className="space-y-2">
                                 <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Set Password</label>
                                 <input
                                    id="register-password"
@@ -366,12 +366,12 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    autoComplete="new-password"
                                    value={registerData.password}
                                    onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                                   className="w-full px-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                   className="w-full px-6 py-3.5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
                                    placeholder="••••••••"
                                    required
                                 />
                              </div>
-                             <div className="space-y-3">
+                             <div className="space-y-2">
                                 <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">City</label>
                                 <input
                                    id="register-city"
@@ -380,21 +380,21 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    autoComplete="address-level2"
                                    value={registerData.city}
                                    onChange={(e) => setRegisterData({ ...registerData, city: e.target.value })}
-                                   className="w-full px-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                   className="w-full px-6 py-3.5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
                                    placeholder="Your City"
                                 />
                              </div>
                           </div>
                           
-                          <div className="space-y-6 pt-4 text-center">
+                          <div className="space-y-3 pt-1 text-center">
                              <label className="block text-[11px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Select Professional Role</label>
-                             <div className="grid grid-cols-2 gap-6 max-w-sm mx-auto">
+                             <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
                                 {['guest', 'host'].map(role => (
                                    <button
                                       key={role}
                                       type="button"
                                       onClick={() => setRegisterData({ ...registerData, role })}
-                                      className={`py-4 rounded-2xl border-2 font-black text-[11px] uppercase tracking-widest transition-all duration-500 ${
+                                      className={`py-3 rounded-2xl border-2 font-black text-[11px] uppercase tracking-widest transition-all duration-500 ${
                                          registerData.role === role 
                                          ? 'border-terracotta bg-terracotta text-white shadow-elevated scale-[1.02]' 
                                          : 'border-sand-200 bg-white text-charcoal-muted hover:border-terracotta'
@@ -406,14 +406,14 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              </div>
                           </div>
                           
-                          <div className="flex items-start space-x-4 p-6 bg-sand-100 rounded-2xl border border-sand-200 group cursor-pointer">
+                          <div className="flex items-start space-x-3 p-4 bg-sand-100 rounded-2xl border border-sand-200 group cursor-pointer">
                              <input
                                 id="register-terms"
                                 name="terms_accepted"
                                 type="checkbox"
                                 checked={registerData.terms_accepted}
                                 onChange={(e) => setRegisterData({ ...registerData, terms_accepted: e.target.checked })}
-                                className="mt-1 w-6 h-6 text-terracotta rounded-lg border-sand-300 focus:ring-terracotta cursor-pointer"
+                                className="mt-1 w-5 h-5 text-terracotta rounded-lg border-sand-300 focus:ring-terracotta cursor-pointer flex-shrink-0"
                                 required
                              />
                              <label className="text-[10px] text-charcoal-muted font-black leading-relaxed uppercase tracking-widest cursor-pointer">
@@ -425,7 +425,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              type="button"
                              onClick={sendOTP}
                              disabled={loading}
-                             className="btn-premium w-full py-5 text-base tracking-widest shadow-elevated rounded-2xl"
+                             className="btn-premium w-full py-3.5 text-base tracking-widest shadow-elevated rounded-2xl"
                           >
                              {loading ? 'VALIDATING...' : 'CONTINUE'}
                           </button>
@@ -476,7 +476,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
               )}
            </div>
 
-           <div className="text-center mt-20 pt-10 border-t border-sand-200">
+           <div className="text-center mt-6 pt-5 border-t border-sand-200">
               <button
                  onClick={() => navigate('/')}
                  className="group inline-flex items-center space-x-4 text-charcoal-muted hover:text-terracotta transition-colors font-black text-[10px] uppercase tracking-[0.4em]"
