@@ -1317,7 +1317,10 @@ const LandingPage = () => {
                       <MapPin className="w-5 h-5 text-gray-400 mr-3" />
                       <div className="w-full">
                         <input
+                          id="landing-destination"
+                          name="destination"
                           type="text"
+                          autoComplete="address-level2"
                           value={locationQuery}
                           onChange={(e) => setLocationQuery(e.target.value)}
                           placeholder="Location, project or developer"
@@ -1332,6 +1335,8 @@ const LandingPage = () => {
                       <Calendar className="w-5 h-5 text-gray-400 mr-3" />
                       <div>
                         <input
+                          id="landing-check-in"
+                          name="checkIn"
                           type="date"
                           min={todayISO}
                           value={dates.checkIn}
@@ -1347,6 +1352,8 @@ const LandingPage = () => {
                       <Calendar className="w-5 h-5 text-gray-400 mr-3" />
                       <div>
                         <input
+                          id="landing-check-out"
+                          name="checkOut"
                           type="date"
                           min={dates.checkIn || todayISO}
                           value={dates.checkOut}
@@ -1362,6 +1369,8 @@ const LandingPage = () => {
                       <User className="w-5 h-5 text-gray-400 mr-3" />
                       <div>
                         <select
+                          id="landing-guests"
+                          name="guests"
                           value={guestCounts.adults}
                           onChange={(e) => setGuestCounts({ ...guestCounts, adults: parseInt(e.target.value) })}
                           className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-24 cursor-pointer text-gray-500"

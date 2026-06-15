@@ -546,7 +546,10 @@ const GuestBrowse = () => {
                 <div className="relative">
                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-terracotta" />
                    <input
+                     id="browse-destination"
+                     name="destination"
                      type="text"
+                     autoComplete="address-level2"
                      value={filters.city}
                      onChange={(e) => setFilters({ ...filters, city: e.target.value })}
                      placeholder={t('destination') + "..."}
@@ -557,6 +560,8 @@ const GuestBrowse = () => {
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('checkIn')}</label>
                 <input
+                   id="browse-check-in"
+                   name="checkIn"
                    type="date"
                    min={todayISO}
                    value={filters.check_in}
@@ -567,6 +572,8 @@ const GuestBrowse = () => {
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('checkOut')}</label>
                 <input
+                   id="browse-check-out"
+                   name="checkOut"
                    type="date"
                    value={filters.check_out}
                    onChange={(e) => setFilters({ ...filters, check_out: e.target.value })}
@@ -577,6 +584,8 @@ const GuestBrowse = () => {
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('type')}</label>
                 <select
+                  id="browse-category"
+                  name="category"
                   value={filters.category}
                   onChange={(e) => setFilters({ ...filters, category: e.target.value })}
                   className="w-full bg-sand-50/50 border-sand-300 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white transition-all outline-none cursor-pointer"

@@ -246,7 +246,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
                        <div className="relative group">
                           <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-sand-400 group-focus-within:text-terracotta transition-all z-10" />
                           <input
+                             id="login-email"
+                             name="email"
                              type="email"
+                             autoComplete="email"
                              value={loginData.email}
                              onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                              className="w-full pl-16 pr-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm placeholder:text-sand-300 placeholder:font-semibold"
@@ -264,7 +267,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
                        <div className="relative group">
                           <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-sand-400 group-focus-within:text-terracotta transition-all z-10" />
                           <input
+                             id="login-password"
+                             name="password"
                              type="password"
+                             autoComplete="current-password"
                              value={loginData.password}
                              onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
                              className="w-full pl-16 pr-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm placeholder:text-sand-300 placeholder:font-semibold"
@@ -307,7 +313,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
                           <div className="space-y-3">
                              <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Full Legal Name</label>
                              <input
+                                id="register-full-name"
+                                name="full_name"
                                 type="text"
+                                autoComplete="name"
                                 value={registerData.full_name}
                                 onChange={(e) => setRegisterData({ ...registerData, full_name: e.target.value })}
                                 className="w-full px-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
@@ -320,7 +329,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              <div className="space-y-3">
                                 <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Work Email</label>
                                 <input
+                                   id="register-email"
+                                   name="email"
                                    type="email"
+                                   autoComplete="email"
                                    value={registerData.email}
                                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                                    className="w-full px-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
@@ -331,7 +343,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              <div className="space-y-3">
                                 <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Phone Number</label>
                                 <input
+                                   id="register-phone"
+                                   name="phone"
                                    type="tel"
+                                   autoComplete="tel"
                                    value={registerData.phone}
                                    onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
                                    className="w-full px-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
@@ -345,7 +360,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              <div className="space-y-3">
                                 <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Set Password</label>
                                 <input
+                                   id="register-password"
+                                   name="password"
                                    type="password"
+                                   autoComplete="new-password"
                                    value={registerData.password}
                                    onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
                                    className="w-full px-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
@@ -356,7 +374,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              <div className="space-y-3">
                                 <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">City</label>
                                 <input
+                                   id="register-city"
+                                   name="city"
                                    type="text"
+                                   autoComplete="address-level2"
                                    value={registerData.city}
                                    onChange={(e) => setRegisterData({ ...registerData, city: e.target.value })}
                                    className="w-full px-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
@@ -387,6 +408,8 @@ const AuthPage = ({ isAdminLogin = false }) => {
                           
                           <div className="flex items-start space-x-4 p-6 bg-sand-100 rounded-2xl border border-sand-200 group cursor-pointer">
                              <input
+                                id="register-terms"
+                                name="terms_accepted"
                                 type="checkbox"
                                 checked={registerData.terms_accepted}
                                 onChange={(e) => setRegisterData({ ...registerData, terms_accepted: e.target.checked })}
@@ -418,7 +441,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
 
                           <div className="flex justify-center">
                              <input
+                                id="otp-code"
+                                name="otp"
                                 type="text"
+                                autoComplete="one-time-code"
                                 value={otp}
                                 onChange={(e) => setOtp(e.target.value)}
                                 className="w-full max-w-[320px] text-center text-4xl font-black tracking-[0.6em] py-7 bg-white rounded-[2rem] border-2 border-sand-200 focus:border-terracotta focus:ring-12 focus:ring-terracotta/5 transition-all outline-none text-charcoal shadow-inner"
