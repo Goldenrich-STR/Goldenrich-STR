@@ -241,7 +241,26 @@ class MSG91Service:
         """Send OTP via SMS."""
         template_id = os.getenv("MSG91_TEMPLATE_ID", "").strip()
         if template_id:
-            return self.send_flow_sms(phone, template_id, {"name": "Customer", "otp": otp})
+            recipient_name = os.getenv("MSG91_OTP_DEFAULT_NAME", "Customer").strip() or "Customer"
+            name_key = os.getenv("MSG91_OTP_NAME_VARIABLE", "name").strip() or "name"
+            otp_key = os.getenv("MSG91_OTP_CODE_VARIABLE", "otp").strip() or "otp"
+            variables = {
+                name_key: recipient_name,
+                otp_key: otp,
+                # Keep common MSG91/DLT variable aliases populated so older
+                # templates with var1/var2 or uppercase names do not render blank.
+                "name": recipient_name,
+                "user_name": recipient_name,
+                "customer_name": recipient_name,
+                "otp": otp,
+                "OTP": otp,
+                "code": otp,
+                "var1": recipient_name,
+                "var2": otp,
+                "VAR1": recipient_name,
+                "VAR2": otp,
+            }
+            return self.send_flow_sms(phone, template_id, variables)
 
         message = f"Your X-Space360 OTP is {otp}. Valid for 5 minutes. Do not share with anyone."
         return self.send_sms(phone, message)
