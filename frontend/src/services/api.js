@@ -108,7 +108,11 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const isAuthAttempt = error.config?.url?.startsWith('/api/auth/');
-    if (error.response && error.response.status === 401 && !isAuthAttempt) {
+    const isSilentAuth = error.config?._silentAuth;
+    if (error.response && error.response.status === 401 && isSilentAuth) {
+      localStorage.removeItem('propnest_token');
+      localStorage.removeItem('propnest_user');
+    } else if (error.response && error.response.status === 401 && !isAuthAttempt) {
       localStorage.removeItem('propnest_token');
       localStorage.removeItem('propnest_user');
       window.location.href = '/login';
