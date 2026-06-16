@@ -229,6 +229,8 @@ async def startup_sequence():
         await db_instance.reviews.create_index([("property_id", 1), ("created_at", -1)])
         await db_instance.reviews.create_index("host_id")
         await db_instance.reviews.create_index("guest_id")
+        await db_instance.password_reset_tokens.create_index("token", unique=True)
+        await db_instance.password_reset_tokens.create_index("expires_at")
         await db_instance.bookings.create_index([("property_id", 1), ("check_in_date", 1), ("check_out_date", 1)])
         await db_instance.blocked_dates.create_index([("property_id", 1), ("start_date", 1), ("end_date", 1)])
         await db_instance.bookings.create_index([("booking_status", 1), ("soft_lock_expires_at", 1)])

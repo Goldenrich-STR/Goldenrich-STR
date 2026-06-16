@@ -33,6 +33,13 @@ class VerifyOTPRequest(BaseModel):
     otp: str
     purpose: str = "registration"
 
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
 GOLDENRICH_SSO_COOKIE = "goldenrich_sso_state"
 
 def _env(name: str, default: str = "") -> str:
@@ -57,6 +64,10 @@ def _sso_cookie_secure() -> bool:
     if configured:
         return configured.lower() == "true"
     return _env("PUBLIC_BACKEND_URL", "http://localhost:8001").startswith("https://")
+
+async def get_db():
+    from server import db_instance
+    return db_instance
 
 def _normalize_sso_role(raw_role: str | None) -> UserRole:
     role = (raw_role or "").strip().lower()
@@ -276,9 +287,57 @@ async def verify_otp(request: VerifyOTPRequest):
             detail="Verification error"
         )
 
-async def get_db():
-    from server import db_instance
-    return db_instance
+@router.post("/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Send password reset email for host/customer/admin users."""
+    try:
+        email = request.email.strip().lower()
+        user = await db.users.find_one({"email": email}, {"_id": 0})
+        if user:
+            token = secrets.token_urlsafe(32)
+            expires_at = datetime.now(timezone.utc).timestamp() + 3600
+            await db.password_reset_tokens.insert_one({
+                "token": token,
+                "user_id": user["user_id"],
+                "email": email,
+                "expires_at": expires_at,
+                "used": False,
+                "created_at": datetime.now(timezone.utc),
+            })
+            try:
+                from services.email_service import email_service
+                email_service.send_template(
+                    email,
+                    "password_reset",
+                    {
+                        "name": user.get("full_name", "there"),
+                        "action_url": _frontend_url("/reset-password", {"token": token}),
+                    },
+                )
+            except Exception as email_err:
+                logger.warning("Password reset email failed for %s: %s", email, email_err)
+        return {"message": "If this email is registered, a reset link has been sent."}
+    except Exception:
+        logger.exception("Forgot password failed")
+        raise HTTPException(status_code=500, detail="Failed to process password reset request")
+
+@router.post("/reset-password")
+async def reset_password(request: ResetPasswordRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Reset password using a valid password reset token."""
+    token_doc = await db.password_reset_tokens.find_one({"token": request.token, "used": False})
+    if not token_doc or token_doc.get("expires_at", 0) < datetime.now(timezone.utc).timestamp():
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    if len(request.password.strip()) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    await db.users.update_one(
+        {"user_id": token_doc["user_id"]},
+        {"$set": {"password_hash": hash_password(request.password), "updated_at": datetime.now(timezone.utc)}},
+    )
+    await db.password_reset_tokens.update_one(
+        {"token": request.token},
+        {"$set": {"used": True, "used_at": datetime.now(timezone.utc)}},
+    )
+    return {"message": "Password reset successfully"}
 
 @router.get("/sso/goldenrich/login")
 async def goldenrich_sso_login():
@@ -450,6 +509,20 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
         # Insert into database
         user_dict = user.model_dump()
         await db.users.insert_one(user_dict)
+
+        try:
+            from services.email_service import email_service
+            template = "host_registration" if role_str.lower() == "host" else "customer_registration"
+            email_service.send_template(
+                user.email,
+                template,
+                {
+                    "name": user.full_name,
+                    "action_url": _frontend_url("/host/dashboard" if role_str.lower() == "host" else "/guest/browse"),
+                },
+            )
+        except Exception as email_err:
+            logger.warning("Registration email failed for %s: %s", user.email, email_err)
         
         # Create access token
         access_token = create_access_token(data={

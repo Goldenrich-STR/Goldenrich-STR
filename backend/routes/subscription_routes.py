@@ -23,6 +23,28 @@ async def get_db():
     from server import db_instance
     return db_instance
 
+async def _send_subscription_email(db: AsyncIOMotorDatabase, user_id: str, template: str, subscription: dict, extra: Optional[dict] = None) -> None:
+    try:
+        from services.email_service import email_service
+        user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "email": 1, "full_name": 1})
+        if not user or not user.get("email"):
+            return
+        plan = await db.subscription_plans.find_one({"plan_id": subscription.get("plan_id")}, {"_id": 0})
+        email_service.send_template(
+            user["email"],
+            template,
+            {
+                "name": user.get("full_name", "there"),
+                "plan_name": (plan or {}).get("plan_name") or subscription.get("plan_id"),
+                "total_amount": subscription.get("amount"),
+                "payment_id": subscription.get("razorpay_subscription_id"),
+                "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/") + "/host/dashboard",
+                **(extra or {}),
+            },
+        )
+    except Exception as email_err:
+        logger.warning("Subscription email failed: %s", email_err)
+
 REGISTRATION_FEE_AMOUNT = int(os.getenv("REGISTRATION_FEE_AMOUNT", "50000"))  # ₹500 in paise
 
 # ========== SUBSCRIPTION PLANS (PUBLIC) ==========
@@ -253,6 +275,13 @@ async def confirm_subscription_payment(
         except Exception as txn_err:
             logger.warning(f"Failed to record subscription transaction: {txn_err}")
 
+        await _send_subscription_email(
+            db,
+            subscription["user_id"],
+            "subscription_activated",
+            {**subscription, "razorpay_subscription_id": razorpay_payment_id},
+        )
+
         return {
             "message": "Subscription activated successfully",
             "subscription_id": subscription_id
@@ -328,6 +357,13 @@ async def mock_pay_subscription(
         )
     except Exception as txn_err:
         logger.warning(f"Failed to record mock subscription transaction: {txn_err}")
+
+    await _send_subscription_email(
+        db,
+        subscription["user_id"],
+        "subscription_activated",
+        {**subscription, "razorpay_subscription_id": mock["razorpay_payment_id"]},
+    )
 
     return {
         "message": "Subscription activated (mock)",
