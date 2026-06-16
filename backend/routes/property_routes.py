@@ -331,9 +331,9 @@ async def get_host_properties(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Get all properties owned by the current host."""
+    """Get all properties owned by the current host, sorted by latest created first."""
     try:
-        cursor = db.properties.find({"owner_id": current_user["user_id"]}, {"_id": 0})
+        cursor = db.properties.find({"owner_id": current_user["user_id"]}, {"_id": 0}).sort("created_at", -1)
         properties = await cursor.to_list(length=100)
         
         return {

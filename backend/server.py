@@ -85,6 +85,17 @@ _uploads_dir = ROOT_DIR / "uploads"
 _uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/api/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 
+@app.get("/download-apk")
+async def download_apk():
+    apk_path = r"d:\FinalSTR\Goldenrich-STR\mobile\build\app\outputs\flutter-apk\app-debug.apk"
+    if os.path.exists(apk_path):
+        return FileResponse(
+            apk_path,
+            media_type="application/vnd.android.package-archive",
+            filename="GoldenrichSTR.apk"
+        )
+    return {"error": "APK file not found. Please build the mobile application first."}
+
 # CORS middleware
 _cors_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
 if "*" in _cors_origins:

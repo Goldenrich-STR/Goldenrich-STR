@@ -9,6 +9,7 @@ class SubscriptionPlanType(str, Enum):
     TWO_BHK = "2bhk"
     THREE_BHK = "3bhk"
     FOUR_BHK = "4bhk"
+    FOUR_BHK_PLUS = "4bhk_plus"
     COMMERCIAL = "commercial"
     BANQUET = "banquet"
 
@@ -50,6 +51,8 @@ class Subscription(BaseModel):
     # Payment
     razorpay_subscription_id: Optional[str] = None
     auto_renewal: bool = True
+    coupon_code: Optional[str] = None
+    discount_amount: float = 0.0
     
     # Timestamps
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -60,3 +63,4 @@ class SubscriptionCreate(BaseModel):
     plan_id: str
     property_id: Optional[str] = None
     billing_cycle: str = "monthly"
+    coupon_code: Optional[str] = None

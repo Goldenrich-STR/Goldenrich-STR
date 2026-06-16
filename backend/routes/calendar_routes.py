@@ -329,6 +329,12 @@ async def get_unified_calendar(
             {"_id": 0},
         )
         bookings = await booking_cursor.to_list(length=200)
+        
+        try:
+            from routes.booking_routes import _attach_guest_info
+            bookings = await _attach_guest_info(db, bookings)
+        except Exception as ex:
+            logger.error(f"Error attaching guest info to calendar: {str(ex)}")
 
         for booking in bookings:
             events.append(
@@ -345,6 +351,7 @@ async def get_unified_calendar(
                         "guest_id": booking.get("guest_id"),
                         "total_amount": booking.get("total_amount"),
                         "booking_status": booking.get("booking_status"),
+                        "guest": booking.get("guest"),
                     },
                 }
             )
