@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { propertyAPI, subscriptionAPI, uploadAPI, bookingAPI, getImageUrl } from '../services/api';
+import { propertyAPI, subscriptionAPI, uploadAPI, bookingAPI, getImageUrl, loadRazorpaySdk } from '../services/api';
 import {
   Building2,
   ArrowLeft,
@@ -1024,10 +1024,11 @@ const HostListProperty = () => {
     };
   };
 
-  const canUseRazorpayTestCheckout = () => (
+  const canUseRazorpayTestCheckout = async () => (
     paymentConfig?.is_mock &&
     paymentConfig?.key_id?.startsWith('rzp_test_') &&
     paymentConfig.key_id !== 'rzp_test_demo_key' &&
+    await loadRazorpaySdk() &&
     !!window.Razorpay
   );
 
@@ -1056,7 +1057,7 @@ const HostListProperty = () => {
 
         if (paymentConfig?.is_mock) {
           const plan = plans.find(p => p.plan_id === form.subscription_plan_id);
-          if (canUseRazorpayTestCheckout()) {
+          if (await canUseRazorpayTestCheckout()) {
             await new Promise((resolve, reject) => {
               const rzp = new window.Razorpay({
                 key: paymentConfig.key_id,
@@ -1110,8 +1111,11 @@ const HostListProperty = () => {
             });
           }
         } else {
+          const sdkLoaded = await loadRazorpaySdk();
+          if (!sdkLoaded || !window.Razorpay) {
+            throw new Error('Razorpay SDK failed to load. Please check your internet connection.');
+          }
           await new Promise((resolve, reject) => {
-            if (!window.Razorpay) return reject(new Error('Razorpay SDK not loaded'));
             const rzp = new window.Razorpay({
               key: subOrder.razorpay_key_id,
               amount: subOrder.amount,

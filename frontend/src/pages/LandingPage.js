@@ -469,11 +469,49 @@ const DEFAULT_FOOTER_DATA = {
   location: 'Nashik, Maharashtra',
   email: 'support@x-space360.com',
   phone: '+91 8484826247',
+  guests_title: 'For Guests',
+  guest_link_1_label: 'Browse Collections',
+  guest_link_1_url: '/guest/browse',
+  guest_link_2_label: 'FAQs',
+  faq_title: 'Frequently Asked Questions',
+  faq_items: [
+    { question: 'How do I book a property?', answer: 'Browse collections, choose your dates, and submit a booking request from the property page.' },
+    { question: 'How do hosts list a space?', answer: 'Hosts can sign in and use List Your Space to submit property details and documents for verification.' },
+    { question: 'Who do I contact for support?', answer: 'Use the contact and grievance details in the footer for support or escalation.' },
+  ],
+  footer_sections: [
+    { heading: 'For Guests', items: [
+      { label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
+      { label: 'FAQs', action_type: 'text', link: '', text: 'Browse collections, choose your dates, and submit a booking request from the property page.\n\nHosts can sign in and use List Your Space to submit property details and documents for verification.\n\nFor support or escalation, use the contact details in the footer.' },
+    ] },
+    { heading: 'For Hosts', items: [
+      { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
+      { label: 'Hosting Standards', action_type: 'link', link: '#how-it-works', text: '' },
+    ] },
+    { heading: 'Contact', items: [
+      { label: 'Nashik, Maharashtra', action_type: 'text', link: '', text: 'X-Space360 support is available for guest and host assistance.\n\nEmail: support@x-space360.com\nPhone: +91 8484826247' },
+      { label: 'support@x-space360.com', action_type: 'text', link: '', text: 'Email support@x-space360.com for help with bookings, listings, or account support.' },
+    ] },
+    { heading: 'Grievance & Escalation', resolution_text: 'Resolution: 7 working days', items: [
+      { label: 'Officer: Rahul Mundra', action_type: 'text', link: '', text: 'Grievance Officer: Rahul Mundra\nEmail: nodal.officer@rupiyaloan.com\nPhone: +91 76206 66949\nResolution: 7 working days' },
+      { label: 'nodal.officer@rupiyaloan.com', action_type: 'text', link: '', text: 'Email nodal.officer@rupiyaloan.com for grievance escalation.\nResolution: 7 working days.' },
+    ] },
+  ],
+  hosts_title: 'For Hosts',
+  host_link_1_label: 'List Your Space',
+  host_link_1_url: '/host/list-property',
+  host_link_2_label: 'Hosting Standards',
+  host_link_2_url: '#how-it-works',
+  contact_title: 'Contact',
   grievance_title: 'Grievance & Escalations',
   grievance_officer: 'Rahul Mundra',
   grievance_email: 'nodal.officer@rupiyaloan.com',
   grievance_phone: '+91 76206 66949',
-  resolution_text: 'Resolution: 7 working days'
+  resolution_text: 'Resolution: 7 working days',
+  privacy_label: 'Privacy Policy',
+  privacy_text: 'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.',
+  terms_label: 'Terms & Conditions',
+  terms_text: 'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.'
 };
 
 // Custom Stateful & Interactive How It Works Modal Component
@@ -845,6 +883,8 @@ const LandingPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
+  const [showFaqModal, setShowFaqModal] = useState(false);
+  const [footerPopup, setFooterPopup] = useState(null);
   const [cmsContent, setCmsContent] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
   const [activeVideo, setActiveVideo] = useState(0);
@@ -908,6 +948,56 @@ const LandingPage = () => {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en']?.[key] || key;
   };
   const footerData = { ...DEFAULT_FOOTER_DATA, ...(cmsContent?.footer || {}) };
+  const footerFaqItems = Array.isArray(footerData.faq_items) ? footerData.faq_items : DEFAULT_FOOTER_DATA.faq_items;
+  const footerSections = (Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
+    ? footerData.footer_sections
+    : DEFAULT_FOOTER_DATA.footer_sections
+  ).slice(0, 4).map((rawSection, index) => {
+    const section = rawSection || {};
+    return {
+      ...section,
+      heading: (!section.heading || /^Section\s+\d+$/i.test(section.heading))
+        ? ['For Guests', 'For Hosts', 'Contact', 'Grievance & Escalation'][index]
+        : section.heading,
+      items: Array.isArray(section.items) && section.items.length
+        ? section.items.filter(Boolean).map(item => ({
+          label: item.label || '',
+          action_type: item.action_type || 'link',
+          link: item.link || '',
+          text: item.text || '',
+        }))
+        : [{ label: section.label || '', action_type: section.action_type || 'link', link: section.link || '', text: section.text || '' }]
+    };
+  });
+
+  const handleFooterLink = (url, fallbackUrl = '/') => {
+    const target = url || fallbackUrl;
+    if (target.startsWith('#')) {
+      const el = document.querySelector(target);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+    navigate(target);
+  };
+
+  const handleListSpaceClick = () => {
+    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/login');
+  };
+
+  const handleFooterSectionClick = (section = {}, item = {}) => {
+    if (item.action_type === 'link' && item.link) {
+      if (item.link === '/host/list-property') {
+        navigate(user ? item.link : '/login');
+      } else {
+        handleFooterLink(item.link, '/');
+      }
+      return;
+    }
+    setFooterPopup({
+      title: item.label || section.heading || 'X-Space360',
+      text: item.text || 'Details will be updated soon.',
+    });
+  };
 
   React.useEffect(() => {
     const fetchCMS = async () => {
@@ -947,7 +1037,12 @@ const LandingPage = () => {
 
   const handleSearch = () => {
     const totalGuests = guestCounts.adults + guestCounts.children;
-    navigate(`/guest/browse?city=${locationQuery}&guests=${totalGuests}&checkIn=${dates.checkIn}&checkOut=${dates.checkOut}`);
+    const params = new URLSearchParams();
+    if (locationQuery.trim()) params.set('city', locationQuery.trim());
+    if (totalGuests) params.set('guests', String(totalGuests));
+    if (dates.checkIn) params.set('checkIn', dates.checkIn);
+    if (dates.checkOut) params.set('checkOut', dates.checkOut);
+    navigate(`/guest/browse?${params.toString()}`);
   };
 
   const LOCATIONS = [
@@ -965,8 +1060,8 @@ const LandingPage = () => {
     }
   };
 
-  const renderPropertySlider = (sectionId, title, subtitle, IconComponent, categoryKey, items, fallbackItems) => {
-    const displayItems = items && items.length > 0 ? items : fallbackItems;
+  const renderPropertySlider = (sectionId, title, subtitle, IconComponent, categoryKey, items) => {
+    const displayItems = items || [];
 
     return (
       <div className="relative mb-24 group">
@@ -1230,7 +1325,10 @@ const LandingPage = () => {
                       <MapPin className="w-5 h-5 text-gray-400 mr-3" />
                       <div className="w-full">
                         <input
+                          id="landing-destination"
+                          name="destination"
                           type="text"
+                          autoComplete="address-level2"
                           value={locationQuery}
                           onChange={(e) => setLocationQuery(e.target.value)}
                           placeholder="Location, project or developer"
@@ -1245,6 +1343,8 @@ const LandingPage = () => {
                       <Calendar className="w-5 h-5 text-gray-400 mr-3" />
                       <div>
                         <input
+                          id="landing-check-in"
+                          name="checkIn"
                           type="date"
                           min={todayISO}
                           value={dates.checkIn}
@@ -1260,6 +1360,8 @@ const LandingPage = () => {
                       <Calendar className="w-5 h-5 text-gray-400 mr-3" />
                       <div>
                         <input
+                          id="landing-check-out"
+                          name="checkOut"
                           type="date"
                           min={dates.checkIn || todayISO}
                           value={dates.checkOut}
@@ -1273,18 +1375,20 @@ const LandingPage = () => {
                     {/* Guests */}
                     <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer hover:bg-gray-50 transition">
                       <User className="w-5 h-5 text-gray-400 mr-3" />
-                      <div>
-                        <select
+                      <div className="flex items-center gap-1">
+                        <input
+                          id="landing-guests"
+                          name="guests"
+                          type="number"
+                          min="1"
                           value={guestCounts.adults}
-                          onChange={(e) => setGuestCounts({ ...guestCounts, adults: parseInt(e.target.value) })}
-                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-24 cursor-pointer text-gray-500"
-                        >
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                            <option key={n} value={n}>{n} Guest{n > 1 ? 's' : ''}</option>
-                          ))}
-                        </select>
+                          onChange={(e) => setGuestCounts({ ...guestCounts, adults: Math.max(1, parseInt(e.target.value) || 1) })}
+                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-10 text-gray-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-gray-500 font-medium text-sm">Guest{guestCounts.adults > 1 ? 's' : ''}</span>
                       </div>
                     </div>
+
                     
                     {/* Search Button */}
                     <div className="p-2 w-full md:w-auto">
@@ -1303,6 +1407,8 @@ const LandingPage = () => {
 
           </div>
 
+
+
           {/* ── Dot indicators ── */}
           <div className="flex items-center space-x-2 mt-8">
             {heroSlides.map((_, idx) => (
@@ -1320,8 +1426,59 @@ const LandingPage = () => {
         </div>
       </div>
 
+      {/* ── Category Shortcut Strip ── */}
+      <div className="w-full bg-[#FDFCF8] relative z-20 py-12 border-b border-sand-100">
+        <div className="max-w-7xl mx-auto px-8">
+          <div className="flex items-center justify-center gap-10 md:gap-20">
+            {[
+              {
+                label: 'Residential',
+                icon: Home,
+                category: 'residential',
+                desc: 'Homes & Villas',
+                bg: 'bg-terracotta',
+                ring: 'ring-terracotta/20',
+                shadow: 'shadow-terracotta/30'
+              },
+              {
+                label: 'Commercial',
+                icon: Briefcase,
+                category: 'commercial',
+                desc: 'Offices & Co-working',
+                bg: 'bg-[#4a3f35]',
+                ring: 'ring-[#4a3f35]/20',
+                shadow: 'shadow-[#4a3f35]/20'
+              },
+              {
+                label: 'Event Venue',
+                icon: PartyPopper,
+                category: 'event_venue',
+                desc: 'Halls & Rooftops',
+                bg: 'bg-[#4a6b50]',
+                ring: 'ring-[#4a6b50]/20',
+                shadow: 'shadow-[#4a6b50]/20'
+              }
+            ].map(({ label, icon: Icon, category, desc, bg, ring, shadow }) => (
+              <button
+                key={category}
+                onClick={() => navigate(`/guest/browse?category=${category}`)}
+                className="group flex flex-col items-center gap-3 cursor-pointer"
+              >
+                <div className={`w-20 h-20 rounded-full ${bg} flex items-center justify-center ring-4 ${ring} shadow-xl ${shadow} group-hover:scale-110 group-hover:shadow-2xl transition-all duration-300 active:scale-95`}>
+                  <Icon className="w-9 h-9 text-white" />
+                </div>
+                <div className="text-center">
+                  <p className="text-charcoal font-black text-[14px] tracking-tight">{label}</p>
+                  <p className="text-gray-400 text-[11px] font-medium mt-0.5">{desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Content Section */}
-      <div className="w-full bg-[#FDFCF8] relative z-20 pb-32 pt-24">
+      <div className="w-full bg-[#FDFCF8] relative z-20 pb-32 pt-14">
         <div className="max-w-7xl mx-auto px-8">
           {/* Residential Collection Slider */}
           {renderPropertySlider(
@@ -1330,13 +1487,7 @@ const LandingPage = () => {
             'Luxury homes, apartments, and private stays.',
             Building2,
             'residential',
-            properties.residential,
-            [
-               {property_id: 'temp_1', title: 'Villa, Kemah Tinggi', price: 25000, rating: '4.93', img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800', city: 'Goa', state: 'Goa', type: 'Villa'},
-               {property_id: 'temp_2', title: 'Bandra Heights, Mumbai', price: 15500, rating: '4.85', img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800', city: 'Mumbai', state: 'Maharashtra', type: 'Apartment'},
-               {property_id: 'temp_3', title: 'Coorg Retreat, Karnataka', price: 12200, rating: '4.98', img: 'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=800', city: 'Coorg', state: 'Karnataka', type: 'Cottage'},
-               {property_id: 'temp_4', title: 'Goa Beachfront Villa', price: 45000, rating: '4.90', img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800', city: 'Goa', state: 'Goa', type: 'Villa'}
-            ]
+            properties.residential
           )}
 
           {/* Commercial Spaces Slider */}
@@ -1346,12 +1497,7 @@ const LandingPage = () => {
             'Premium offices, co-working spaces, and retail.',
             Briefcase,
             'commercial',
-            properties.commercial,
-            [
-               {property_id: 'temp_c1', title: 'City Vista Office', price: 5000, rating: '4.80', img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800', city: 'Pune', state: 'Maharashtra', type: 'Private Office'},
-               {property_id: 'temp_c2', title: 'Tech Hub Co-working', price: 1200, rating: '4.95', img: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&q=80&w=800', city: 'Bengaluru', state: 'Karnataka', type: 'Co-working'},
-               {property_id: 'temp_c3', title: 'Marina Retail Space', price: 15000, rating: '4.70', img: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=800', city: 'Mumbai', state: 'Maharashtra', type: 'Retail'}
-            ]
+            properties.commercial
           )}
 
           {/* Events & Functions Slider */}
@@ -1361,12 +1507,7 @@ const LandingPage = () => {
             'Banquet halls, rooftops, and celebration venues.',
             PartyPopper,
             'event_venue',
-            properties.event_venue,
-            [
-               {property_id: 'temp_e1', title: 'Grand Hotel Ballroom', price: 150000, rating: '4.90', img: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=800', city: 'Delhi', state: 'Delhi', type: 'Banquet Hall'},
-               {property_id: 'temp_e2', title: 'Skyline Rooftop Lounge', price: 85000, rating: '4.85', img: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&q=80&w=800', city: 'Gurugram', state: 'Haryana', type: 'Rooftop'},
-               {property_id: 'temp_e3', title: 'Heritage Courtyard', price: 120000, rating: '4.95', img: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&q=80&w=800', city: 'Jaipur', state: 'Rajasthan', type: 'Venue'}
-            ]
+            properties.event_venue
           )}
 
           {/* Ready to Host Section */}
@@ -1516,10 +1657,10 @@ const LandingPage = () => {
         </div>
       </div>
 
-<footer className="bg-white border-t border-sand-200 pt-16 md:pt-24 pb-12">
-        <div className="max-w-7xl mx-auto px-6 md:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-16 mb-16 md:mb-24">
-            <div className="sm:col-span-2">
+<footer className="bg-white border-t border-sand-200 pt-16 md:pt-20 pb-12">
+        <div className="w-full px-6 md:px-10 xl:px-16 2xl:px-24">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_repeat(4,minmax(0,1fr))] gap-x-10 xl:gap-x-16 2xl:gap-x-20 gap-y-12 mb-16">
+            <div>
               <div 
                 className="flex items-center space-x-3 mb-8 cursor-pointer group"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -1546,50 +1687,101 @@ const LandingPage = () => {
                  </a>
               </div>
             </div>
-            <div>
-              <h5 className="font-black text-charcoal uppercase tracking-[0.2em] text-xs mb-8">{t('forGuests')}</h5>
-              <ul className="space-y-4 text-charcoal-light font-medium">
-                <li><a href="#" className="hover:text-terracotta transition-colors">{t('browseCollections')}</a></li>
-                <li><a href="#" className="hover:text-terracotta transition-colors">{t('safetyProtocols')}</a></li>
-                <li><a href="#" className="hover:text-terracotta transition-colors">{t('guestSupport')}</a></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-black text-charcoal uppercase tracking-[0.2em] text-xs mb-8">{t('forHosts')}</h5>
-              <ul className="space-y-4 text-charcoal-light font-medium">
-                <li><a href="#" className="hover:text-terracotta transition-colors">{t('listSpace')}</a></li>
-                <li><a href="#" className="hover:text-terracotta transition-colors">{t('hostingStandards')}</a></li>
-                <li><a href="#" className="hover:text-terracotta transition-colors">{t('payoutSystem')}</a></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-black text-charcoal uppercase tracking-[0.2em] text-xs mb-8">{t('contact')}</h5>
-              <ul className="space-y-4 text-charcoal-light font-medium">
-                <li><p>{footerData.location || t('mumbaiHQ')}</p></li>
-                <li><p className="hover:text-terracotta transition-colors">{footerData.email}</p></li>
-                <li><p className="hover:text-terracotta transition-colors">{footerData.phone}</p></li>
-              </ul>
-            </div>
-            <div>
-              <h5 className="font-black text-charcoal uppercase tracking-[0.18em] text-xs mb-8 leading-snug">{footerData.grievance_title}</h5>
-              <ul className="space-y-4 text-charcoal-light font-medium leading-relaxed">
-                <li><p><span className="font-black text-charcoal">Officer:</span> {footerData.grievance_officer}</p></li>
-                <li><p className="text-sky-600 font-bold break-all hover:text-terracotta transition-colors">{footerData.grievance_email}</p></li>
-                <li><p className="hover:text-terracotta transition-colors">{footerData.grievance_phone}</p></li>
-                <li><p className="text-[10px] font-black uppercase tracking-[0.14em] text-charcoal-muted leading-relaxed">{footerData.resolution_text}</p></li>
-              </ul>
-            </div>
+            {footerSections.map((section, index) => (
+              <div key={`${section.heading}-${index}`} className="min-w-0">
+                <h5 className="font-black text-charcoal uppercase tracking-[0.18em] text-xs mb-8 leading-snug">{section.heading || `Section ${index + 1}`}</h5>
+                <ul className="space-y-4">
+                  {section.items.map((item, itemIndex) => (
+                    <li key={itemIndex}>
+                      {index < 2 ? (
+                        <button
+                          type="button"
+                          onClick={() => handleFooterSectionClick(section, item)}
+                          className="text-left text-charcoal-light font-medium hover:text-terracotta transition-colors leading-relaxed break-words"
+                        >
+                          {item.label || 'Footer Link'}
+                        </button>
+                      ) : (
+                        <p className="text-charcoal-light font-medium leading-relaxed break-words">
+                          {item.label || item.text || 'Footer Text'}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                  {index === 3 && (section.resolution_text || footerData.resolution_text) && (
+                    <li>
+                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-charcoal-muted leading-relaxed">
+                        {section.resolution_text || footerData.resolution_text}
+                      </p>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            ))}
           </div>
           <div className="pt-12 border-t border-sand-200 flex flex-col md:flex-row justify-between items-center gap-6">
             <p className="text-charcoal-muted font-bold text-sm tracking-wide uppercase">{t('precision')}</p>
             <div className="flex space-x-8 text-sm font-bold text-charcoal-muted uppercase tracking-widest">
-               <a href="#" className="hover:text-terracotta">{t('privacy')}</a>
-               <a href="#" className="hover:text-terracotta">{t('terms')}</a>
-               <a href="#" className="hover:text-terracotta">{t('cookies')}</a>
+               <button type="button" onClick={() => setFooterPopup({ title: footerData.privacy_label || 'Privacy Policy', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text })} className="hover:text-terracotta">
+                 {footerData.privacy_label || 'Privacy Policy'}
+               </button>
+               <button type="button" onClick={() => setFooterPopup({ title: footerData.terms_label || 'Terms & Conditions', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text })} className="hover:text-terracotta">
+                 {footerData.terms_label || 'Terms & Conditions'}
+               </button>
             </div>
           </div>
         </div>
-      </footer><ChatbotWidget />
+      </footer>
+
+      {showFaqModal && (
+        <div className="fixed inset-0 z-[120] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-white rounded-3xl shadow-2xl border border-sand-200 w-full max-w-2xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
+            <div className="flex items-start justify-between gap-6 mb-7">
+              <div>
+                <h3 className="text-2xl font-black text-charcoal">{footerData.faq_title || 'Frequently Asked Questions'}</h3>
+                <p className="text-sm text-charcoal-muted mt-1">Quick answers for guests and hosts.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFaqModal(false)}
+                className="w-10 h-10 rounded-full border border-sand-200 text-charcoal-muted hover:text-charcoal hover:bg-sand-50 transition flex items-center justify-center"
+                aria-label="Close FAQs"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              {footerFaqItems.map((item, index) => (
+                <div key={index} className="rounded-2xl border border-sand-200 bg-sand-50/60 p-5">
+                  <h4 className="font-black text-charcoal mb-2">{item.question || `Question ${index + 1}`}</h4>
+                  <p className="text-sm text-charcoal-light leading-relaxed">{item.answer || 'Answer coming soon.'}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {footerPopup && (
+        <div className="fixed inset-0 z-[120] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-white rounded-3xl shadow-2xl border border-sand-200 w-full max-w-xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
+            <div className="flex items-start justify-between gap-6 mb-6">
+              <h3 className="text-2xl font-black text-charcoal">{footerPopup.title}</h3>
+              <button
+                type="button"
+                onClick={() => setFooterPopup(null)}
+                className="w-10 h-10 rounded-full border border-sand-200 text-charcoal-muted hover:text-charcoal hover:bg-sand-50 transition flex items-center justify-center"
+                aria-label="Close footer details"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-charcoal-light leading-relaxed whitespace-pre-line">{footerPopup.text}</p>
+          </div>
+        </div>
+      )}
+
+      <ChatbotWidget />
 
       {/* Premium How It Works: Step-by-Step Host Onboarding Modal Component */}
       {(() => {

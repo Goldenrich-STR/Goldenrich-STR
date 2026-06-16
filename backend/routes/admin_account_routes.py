@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import os
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from pydantic import BaseModel
@@ -457,20 +458,35 @@ async def share_transaction_invoice(
             raise HTTPException(400, detail="Invalid share channel. Choose 'whatsapp' or 'email'")
         
         # Trigger sending via notification helper
-        await send_multi_channel_notification(
-            db=db,
-            user_id=uid,
-            notification_type=NotificationType.BOOKING_CONFIRMED,
-            title=title,
-            message=message,
-            channels=chosen_channels,
-            data={
-                "amount": amount_inr,
-                "transaction_id": transaction_id,
-                "created_at": str(txn.get("created_at")),
-                "full_name": user_info.get("full_name")
-            }
-        )
+        if channel_name == "email":
+            from services.email_service import email_service
+            email_service.send_template(
+                user_info.get("email"),
+                "invoice_sent",
+                {
+                    "name": user_info.get("full_name"),
+                    "subject": title,
+                    "payment_id": txn.get("razorpay_payment_id") or txn.get("razorpay_order_id") or transaction_id,
+                    "total_amount": amount_inr,
+                    "reason": (txn.get("type") or "transaction").replace("_", " ").title(),
+                    "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/") + "/admin/account",
+                },
+            )
+        else:
+            await send_multi_channel_notification(
+                db=db,
+                user_id=uid,
+                notification_type=NotificationType.BOOKING_CONFIRMED,
+                title=title,
+                message=message,
+                channels=chosen_channels,
+                data={
+                    "amount": amount_inr,
+                    "transaction_id": transaction_id,
+                    "created_at": str(txn.get("created_at")),
+                    "full_name": user_info.get("full_name")
+                }
+            )
         
         return {
             "success": True,

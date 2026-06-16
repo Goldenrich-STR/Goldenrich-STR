@@ -2925,11 +2925,28 @@ const CMSManagement = () => {
     location: '',
     email: '',
     phone: '',
+    guests_title: '',
+    guest_link_1_label: '',
+    guest_link_1_url: '',
+    guest_link_2_label: '',
+    faq_title: '',
+    faq_items: [],
+    footer_sections: [],
+    hosts_title: '',
+    host_link_1_label: '',
+    host_link_1_url: '',
+    host_link_2_label: '',
+    host_link_2_url: '',
+    contact_title: '',
     grievance_title: '',
     grievance_officer: '',
     grievance_email: '',
     grievance_phone: '',
-    resolution_text: ''
+    resolution_text: '',
+    privacy_label: '',
+    privacy_text: '',
+    terms_label: '',
+    terms_text: ''
   });
 
   const fetchCMSContent = async () => {
@@ -3031,7 +3048,7 @@ const CMSManagement = () => {
       </div>
 
       {/* Sub-tab Navigation */}
-      <div className="flex flex-wrap gap-2.5 p-1.5 bg-sand-100/60 rounded-2xl mb-8 max-w-2xl">
+      <div className="flex flex-wrap gap-2.5 p-1.5 bg-sand-100/60 rounded-2xl mb-8 w-fit max-w-full">
         {[
           { id: 'hero', label: 'Hero Details', icon: Sparkles },
           { id: 'how_it_works', label: 'How It Works', icon: ListTodo },
@@ -3532,14 +3549,14 @@ const CMSManagement = () => {
                 <Phone className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-lg font-black text-charcoal">Footer Contact & Grievance</h4>
-                <p className="text-xs text-charcoal-muted font-medium">Edit public footer contact details and escalation information.</p>
+                <h4 className="text-lg font-black text-charcoal">Footer</h4>
+                <p className="text-xs text-charcoal-muted font-medium">Edit public footer brand copy and four configurable sections.</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
-                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Brand Description</label>
+                <label className="text-[11px] font-black text-charcoal uppercase tracking-widest block mb-2">Brand Description</label>
                 <textarea
                   rows={3}
                   className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
@@ -3547,25 +3564,127 @@ const CMSManagement = () => {
                   onChange={e => setFooterData({ ...footerData, brand_description: e.target.value })}
                 />
               </div>
-              {[
-                ['location', 'Location'],
-                ['email', 'Contact Email'],
-                ['phone', 'Contact Phone'],
-                ['grievance_title', 'Grievance Heading'],
-                ['grievance_officer', 'Officer Name'],
-                ['grievance_email', 'Officer Email'],
-                ['grievance_phone', 'Officer Phone'],
-                ['resolution_text', 'Resolution Text']
-              ].map(([key, label]) => (
-                <div key={key}>
-                  <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">{label}</label>
-                  <input
-                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
-                    value={footerData[key] || ''}
-                    onChange={e => setFooterData({ ...footerData, [key]: e.target.value })}
-                  />
+              <div className="md:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-5">
+                {Array.from({ length: 4 }).map((_, index) => {
+                  const sections = footerData.footer_sections || [];
+                  const defaultHeadings = ['For Guests', 'For Hosts', 'Contact', 'Grievance & Escalation'];
+                  const rawSection = sections[index] || { heading: defaultHeadings[index], items: [] };
+                  const isActionSection = index < 2;
+                  const isGrievanceSection = index === 3;
+                  const section = {
+                    ...rawSection,
+                    heading: (!rawSection.heading || /^Section\s+\d+$/i.test(rawSection.heading)) ? defaultHeadings[index] : rawSection.heading,
+                    items: Array.isArray(rawSection.items) && rawSection.items.length
+                      ? rawSection.items
+                      : [{ label: rawSection.label || '', action_type: isActionSection ? (rawSection.action_type || 'link') : 'text', link: rawSection.link || '', text: rawSection.text || '' }]
+                  };
+                  const updateSection = (patch) => {
+                    const next = [...sections];
+                    next[index] = { ...section, ...patch };
+                    setFooterData({ ...footerData, footer_sections: next });
+                  };
+                  const updateItem = (itemIndex, patch) => {
+                    const nextItems = [...section.items];
+                    nextItems[itemIndex] = { ...nextItems[itemIndex], ...patch };
+                    updateSection({ items: nextItems });
+                  };
+                  return (
+                    <div key={index} className="rounded-3xl border border-sand-200 bg-sand-50/60 p-5 space-y-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <h5 className="text-sm font-black text-charcoal uppercase tracking-widest">Section {index + 1}</h5>
+                        <button
+                          type="button"
+                          onClick={() => updateSection({ items: [...section.items, { label: 'New Label', action_type: isActionSection ? 'link' : 'text', link: '', text: '' }] })}
+                          className="px-3 py-2 rounded-xl bg-terracotta text-white text-[10px] font-black uppercase tracking-widest"
+                        >
+                          Add Label
+                        </button>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Section Heading</label>
+                        <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.heading || ''} onChange={e => updateSection({ heading: e.target.value })} />
+                      </div>
+                      <div className="space-y-4">
+                        {section.items.map((item, itemIndex) => (
+                          <div key={itemIndex} className="rounded-2xl border border-sand-200 bg-white p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Label {itemIndex + 1}</span>
+                              {section.items.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateSection({ items: section.items.filter((_, i) => i !== itemIndex) })}
+                                  className="text-[10px] font-black text-red-600 uppercase tracking-widest"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Label</label>
+                              <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.label || ''} onChange={e => updateItem(itemIndex, { label: e.target.value })} />
+                            </div>
+                            {isActionSection && (
+                              <div>
+                                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Action Type</label>
+                                <select className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.action_type || 'link'} onChange={e => updateItem(itemIndex, { action_type: e.target.value })}>
+                                  <option value="link">Link Redirect</option>
+                                  <option value="text">Text Popup</option>
+                                </select>
+                              </div>
+                            )}
+                            {(isActionSection ? item.action_type === 'text' : true) ? (
+                              <div>
+                                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">{isActionSection ? 'Popup Text' : 'Text'}</label>
+                                <textarea rows={4} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.text || ''} onChange={e => updateItem(itemIndex, { text: e.target.value })} />
+                              </div>
+                            ) : (
+                              <div>
+                                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Redirect Link</label>
+                                <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.link || ''} onChange={e => updateItem(itemIndex, { link: e.target.value })} placeholder="/guest/browse or https://..." />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {isGrievanceSection && (
+                        <div>
+                          <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Resolution Line</label>
+                          <input
+                            className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                            value={section.resolution_text || footerData.resolution_text || ''}
+                            onChange={e => {
+                              updateSection({ resolution_text: e.target.value });
+                              setFooterData(prev => ({ ...prev, resolution_text: e.target.value }));
+                            }}
+                            placeholder="Resolution: 7 working days"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="md:col-span-2 rounded-3xl border border-sand-200 bg-sand-50/60 p-5 space-y-4">
+                <h5 className="text-sm font-black text-charcoal uppercase tracking-widest">Footer Legal Links</h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Privacy Label</label>
+                    <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_label || ''} onChange={e => setFooterData({ ...footerData, privacy_label: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Terms Label</label>
+                    <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_label || ''} onChange={e => setFooterData({ ...footerData, terms_label: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Privacy Policy Text</label>
+                    <textarea rows={5} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_text || ''} onChange={e => setFooterData({ ...footerData, privacy_text: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Terms & Conditions Text</label>
+                    <textarea rows={5} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_text || ''} onChange={e => setFooterData({ ...footerData, terms_text: e.target.value })} />
+                  </div>
                 </div>
-              ))}
+              </div>
             </div>
 
             <div className="pt-6 border-t border-sand-150">

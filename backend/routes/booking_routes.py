@@ -622,6 +622,30 @@ async def cancel_booking(
             except Exception as rf_err:
                 logger.warning(f"Auto-refund on cancel failed: {rf_err}")
 
+        try:
+            from services.notification_service import send_multi_channel_notification
+            from models.notification import NotificationChannel, NotificationType
+            prop = await db.properties.find_one({"property_id": booking_dict["property_id"]}, {"_id": 0, "title": 1})
+            await send_multi_channel_notification(
+                db=db,
+                user_id=current_user["user_id"],
+                notification_type=NotificationType.BOOKING_CANCELLED,
+                title="Booking cancelled",
+                message=f"Your booking {booking_id} has been cancelled.",
+                channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+                data={
+                    "booking_id": booking_id,
+                    "property_id": booking_dict.get("property_id"),
+                    "property_title": (prop or {}).get("title"),
+                    "check_in_date": booking_dict.get("check_in_date"),
+                    "check_out_date": booking_dict.get("check_out_date"),
+                    "total_amount": booking_dict.get("total_amount"),
+                    "reason": "Guest cancellation",
+                },
+            )
+        except Exception as notify_err:
+            logger.warning(f"Booking cancellation email failed: {notify_err}")
+
         logger.info(f"Booking cancelled: {booking_id} by guest {current_user['user_id']}")
         return {
             "message": "Booking cancelled",

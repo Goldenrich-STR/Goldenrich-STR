@@ -3,6 +3,15 @@ import { authAPI, apiClient } from '../services/api';
 
 const AuthContext = createContext();
 
+const isTokenExpired = (value) => {
+  try {
+    const payload = JSON.parse(atob(value.split('.')[1]));
+    return payload.exp && payload.exp * 1000 <= Date.now();
+  } catch (e) {
+    return true;
+  }
+};
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -17,14 +26,27 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
-    if (!localStorage.getItem('propnest_token')) return null;
+    const storedToken = localStorage.getItem('propnest_token');
+    if (!storedToken) return null;
+    if (isTokenExpired(storedToken)) {
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('propnest_token');
+      localStorage.removeItem('propnest_user');
+      return null;
+    }
     try {
-      const res = await apiClient.get('/api/auth/me');
+      const res = await apiClient.get('/api/auth/me', { _silentAuth: true });
       setUser(res.data);
       localStorage.setItem('propnest_user', JSON.stringify(res.data));
       return res.data;
     } catch (e) {
-      // 401 etc.
+      if (e.response?.status === 401) {
+        setUser(null);
+        setToken(null);
+        localStorage.removeItem('propnest_token');
+        localStorage.removeItem('propnest_user');
+      }
       return null;
     }
   }, []);

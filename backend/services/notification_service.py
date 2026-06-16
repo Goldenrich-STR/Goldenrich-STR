@@ -136,18 +136,37 @@ class NotificationService:
         if not email:
             return {"success": False, "error": "No email address"}
         
+        data = data or {}
+        email_data = {
+            **data,
+            "name": user.get("full_name") or user.get("email") or "there",
+            "message": message,
+        }
+
         # Use appropriate email template based on type
-        if data and "subscription_id" in data:
-            result = email_service.send_subscription_invoice(email, data)
-        elif notification_type == NotificationType.BOOKING_CONFIRMED:
-            result = email_service.send_booking_confirmation(email, data or {})
+        if notification_type == NotificationType.BOOKING_CONFIRMED:
+            result = email_service.send_template(email, "booking_confirmation", email_data)
+        elif notification_type == NotificationType.BOOKING_CANCELLED:
+            result = email_service.send_template(email, "booking_cancellation", email_data)
+        elif notification_type == NotificationType.REVIEW_REQUEST:
+            result = email_service.send_template(email, "review_reminder", email_data)
+        elif notification_type == NotificationType.REFUND_RECEIVED:
+            result = email_service.send_template(email, "refund", email_data)
         elif notification_type == NotificationType.PROPERTY_APPROVED:
-            result = email_service.send_property_approved(email, data or {})
+            result = email_service.send_template(email, "property_approved", email_data)
+        elif notification_type == NotificationType.PROPERTY_REJECTED:
+            result = email_service.send_template(email, "property_rejected", email_data)
+        elif notification_type == NotificationType.KYC_APPROVED:
+            result = email_service.send_template(email, "host_approved", email_data)
+        elif notification_type == NotificationType.KYC_REJECTED:
+            result = email_service.send_template(email, "host_documents_rejected", email_data)
         elif notification_type == NotificationType.SUBSCRIPTION_EXPIRING:
-            result = email_service.send_subscription_reminder(email, data.get("days_remaining", 5), data or {})
+            result = email_service.send_subscription_reminder(email, data.get("days_remaining", 5), email_data)
+        elif notification_type == NotificationType.SUBSCRIPTION_EXPIRED:
+            result = email_service.send_template(email, "subscription_failed", email_data)
         else:
             # Generic email
-            result = email_service.send_email(email, title, f"<p>{message}</p>")
+            result = email_service.send_template(email, "generic", {**email_data, "subject": title})
         
         # Store notification
         notification = Notification(

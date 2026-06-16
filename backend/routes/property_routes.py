@@ -7,6 +7,7 @@ from models.user import UserRole
 from middleware.auth_middleware import get_current_user, require_role
 from datetime import datetime, timezone
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/properties", tags=["Properties"])
@@ -72,6 +73,8 @@ async def search_properties(
     amenities: Optional[str] = Query(None, description="Comma-separated amenities"),
     instant_booking: Optional[bool] = None,
     pet_friendly: Optional[bool] = None,
+    guests: Optional[int] = Query(None, ge=1, description="Minimum guest capacity required"),
+    max_guests: Optional[int] = Query(None, ge=1, description="Alias for guests/minimum guest capacity"),
     check_in: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
     check_out: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
     bbox: Optional[str] = Query(None, description="min_lat,min_lng,max_lat,max_lng for map viewport"),
@@ -83,13 +86,22 @@ async def search_properties(
     """Search properties with filters (public endpoint)."""
     try:
         # Build query
-        query = {"status": PropertyStatus.LIVE.value}
+        query = {
+            "status": PropertyStatus.LIVE.value,
+            "property_id": {"$not": {"$regex": "^prop_demo_"}},
+        }
 
         if category:
             query["category"] = category.value
 
         if city:
-            query["city"] = {"$regex": city, "$options": "i"}
+            keyword = re.escape(city.strip())
+            query["$or"] = [
+                {"city": {"$regex": keyword, "$options": "i"}},
+                {"state": {"$regex": keyword, "$options": "i"}},
+                {"title": {"$regex": keyword, "$options": "i"}},
+                {"address": {"$regex": keyword, "$options": "i"}},
+            ]
 
         if property_type:
             query["property_type"] = property_type
@@ -103,14 +115,9 @@ async def search_properties(
         if pet_friendly is not None:
             query["pet_friendly"] = pet_friendly
 
-        # Price filter
-        if min_price is not None or max_price is not None:
-            price_query = {}
-            if min_price is not None:
-                price_query["$gte"] = min_price
-            if max_price is not None:
-                price_query["$lte"] = max_price
-            query["price_per_night"] = price_query
+        requested_guests = guests or max_guests
+        if requested_guests is not None:
+            query["max_guests"] = {"$gte": requested_guests}
 
         # Amenities filter
         if amenities:
@@ -156,20 +163,38 @@ async def search_properties(
             if unavailable:
                 query["property_id"] = {"$nin": unavailable}
 
-        # Sort
-        sort_map = {
-            "price_asc": [("price_per_night", 1)],
-            "price_desc": [("price_per_night", -1)],
-            "newest": [("created_at", -1)],
-            "recommended": [("instant_booking", -1), ("created_at", -1)],
-            "rating_desc": [("rating", -1), ("review_count", -1)],
-        }
-        sort_spec = sort_map.get(sort, sort_map["recommended"])
+        def numeric_price(prop: dict) -> float:
+            try:
+                return float(prop.get("price_per_night") or 0)
+            except (TypeError, ValueError):
+                return 0
 
-        cursor = db.properties.find(query, {"_id": 0}).sort(sort_spec).skip(skip).limit(limit)
-        properties = await cursor.to_list(length=limit)
+        raw_properties = await db.properties.find(query, {"_id": 0}).to_list(length=1000)
 
-        total = await db.properties.count_documents(query)
+        if min_price is not None:
+            raw_properties = [p for p in raw_properties if numeric_price(p) >= min_price]
+        if max_price is not None:
+            raw_properties = [p for p in raw_properties if numeric_price(p) <= max_price]
+
+        if sort == "price_asc":
+            raw_properties.sort(key=numeric_price)
+        elif sort == "price_desc":
+            raw_properties.sort(key=numeric_price, reverse=True)
+        elif sort == "newest":
+            raw_properties.sort(key=lambda p: p.get("created_at") or "", reverse=True)
+        elif sort == "rating_desc":
+            raw_properties.sort(
+                key=lambda p: (p.get("rating") or 0, p.get("review_count") or 0),
+                reverse=True,
+            )
+        else:
+            raw_properties.sort(
+                key=lambda p: (bool(p.get("instant_booking")), p.get("created_at") or ""),
+                reverse=True,
+            )
+
+        total = len(raw_properties)
+        properties = raw_properties[skip: skip + limit]
 
         # Log search activity for analytics (admin dashboard)
         try:
@@ -184,6 +209,7 @@ async def search_properties(
                 "min_price": min_price,
                 "max_price": max_price,
                 "bhk_type": bhk_type,
+                "guests": requested_guests,
                 "check_in": check_in,
                 "check_out": check_out,
                 "results_count": total
@@ -207,6 +233,7 @@ async def search_properties(
                 "amenities": amenities,
                 "instant_booking": instant_booking,
                 "pet_friendly": pet_friendly,
+                "guests": requested_guests,
                 "check_in": check_in,
                 "check_out": check_out,
                 "sort": sort,

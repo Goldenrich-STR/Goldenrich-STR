@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { bookingAPI, propertyAPI, couponAPI } from '../services/api';
+import { bookingAPI, propertyAPI, couponAPI, loadRazorpaySdk } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import {
   CheckCircle2,
@@ -98,12 +98,14 @@ const BookingConfirmation = () => {
     paymentConfig?.key_id?.startsWith('rzp_test_') &&
     paymentConfig.key_id !== 'rzp_test_demo_key';
 
-  const handleRealRazorpay = () => {
-    if (!window.Razorpay) {
-      setError('Razorpay SDK failed to load. Please refresh and try again.');
+  const handleRealRazorpay = async () => {
+    setPaying(true);
+    const sdkLoaded = await loadRazorpaySdk();
+    if (!sdkLoaded || !window.Razorpay) {
+      setPaying(false);
+      setError('Razorpay SDK failed to load. Please check your internet connection and try again.');
       return;
     }
-    setPaying(true);
     setError('');
     const options = {
       key: paymentConfig.key_id,
@@ -183,12 +185,14 @@ const BookingConfirmation = () => {
     }
   };
 
-  const handleRazorpayTestCheckout = () => {
-    if (!window.Razorpay) {
-      setError('Razorpay SDK failed to load. Please refresh and try again.');
+  const handleRazorpayTestCheckout = async () => {
+    setPaying(true);
+    const sdkLoaded = await loadRazorpaySdk();
+    if (!sdkLoaded || !window.Razorpay) {
+      setPaying(false);
+      setError('Razorpay SDK failed to load. Please check your internet connection and try again.');
       return;
     }
-    setPaying(true);
     setError('');
     const rzp = new window.Razorpay({
       key: paymentConfig.key_id,

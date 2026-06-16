@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient from '../services/api';
 import { Bell, Check, CheckCheck, X } from 'lucide-react';
@@ -202,21 +202,12 @@ const NotificationCenter = ({ isOpen, onClose }) => {
 export const NotificationBell = () => {
   const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [prevCount, setPrevCount] = useState(-1);
   const [activeToast, setActiveToast] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [playedSoundIds] = useState(new Set());
+  const prevCountRef = useRef(-1);
+  const playedSoundIdsRef = useRef(new Set());
 
-  useEffect(() => {
-    if (user) {
-      fetchUnreadCount();
-      // Poll for new notifications every 15 seconds
-      const interval = setInterval(fetchUnreadCount, 15000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
-
-  const playNotificationSound = () => {
+  const playNotificationSound = useCallback(() => {
     try {
       // Create oscillator synthesis as robust local fallback
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -253,24 +244,16 @@ export const NotificationBell = () => {
       console.warn('AudioContext playback blocked or not supported:', e);
     }
     
-    // Also try to play Mixkit audio chime
-    try {
-      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav');
-      audio.volume = 0.4;
-      audio.play().catch(() => {});
-    } catch (err) {
-      // silently absorb network/cors block
-    }
-  };
+  }, []);
 
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     try {
       const response = await apiClient.get('/notifications/unread-count');
       const count = response.data.unread_count || 0;
       setUnreadCount(count);
 
       // Play sound and trigger popup if there are new unread notifications
-      if (prevCount !== -1 && count > prevCount) {
+      if (prevCountRef.current !== -1 && count > prevCountRef.current) {
         playNotificationSound();
         try {
           const res = await apiClient.get('/notifications/my-notifications');
@@ -291,7 +274,7 @@ export const NotificationBell = () => {
           console.error("Error fetching newest notification for toast:", err);
         }
       }
-      setPrevCount(count);
+      prevCountRef.current = count;
 
       // If admin, check if there are any new verification_submitted notifications
       if (user?.role === 'admin' && count > 0) {
@@ -301,8 +284,8 @@ export const NotificationBell = () => {
         
         let playedNew = false;
         unreadSubmitted.forEach(n => {
-          if (!playedSoundIds.has(n.notification_id)) {
-            playedSoundIds.add(n.notification_id);
+          if (!playedSoundIdsRef.current.has(n.notification_id)) {
+            playedSoundIdsRef.current.add(n.notification_id);
             playedNew = true;
           }
         });
@@ -313,7 +296,15 @@ export const NotificationBell = () => {
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
-  };
+  }, [playNotificationSound, user?.role]);
+
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCount();
+      const interval = setInterval(fetchUnreadCount, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [user, fetchUnreadCount]);
 
   return (
     <>

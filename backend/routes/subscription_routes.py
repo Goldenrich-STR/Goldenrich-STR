@@ -23,6 +23,28 @@ async def get_db():
     from server import db_instance
     return db_instance
 
+async def _send_subscription_email(db: AsyncIOMotorDatabase, user_id: str, template: str, subscription: dict, extra: Optional[dict] = None) -> None:
+    try:
+        from services.email_service import email_service
+        user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "email": 1, "full_name": 1})
+        if not user or not user.get("email"):
+            return
+        plan = await db.subscription_plans.find_one({"plan_id": subscription.get("plan_id")}, {"_id": 0})
+        email_service.send_template(
+            user["email"],
+            template,
+            {
+                "name": user.get("full_name", "there"),
+                "plan_name": (plan or {}).get("plan_name") or subscription.get("plan_id"),
+                "total_amount": subscription.get("amount"),
+                "payment_id": subscription.get("razorpay_subscription_id"),
+                "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/") + "/host/dashboard",
+                **(extra or {}),
+            },
+        )
+    except Exception as email_err:
+        logger.warning("Subscription email failed: %s", email_err)
+
 REGISTRATION_FEE_AMOUNT = int(os.getenv("REGISTRATION_FEE_AMOUNT", "50000"))  # ₹500 in paise
 
 # ========== SUBSCRIPTION PLANS (PUBLIC) ==========
@@ -82,62 +104,6 @@ async def get_plan_details(
 
 # ========== SUBSCRIPTION MANAGEMENT ==========
 
-class ValidateCouponRequest(BaseModel):
-    code: str
-    plan_id: str
-    billing_cycle: str
-
-@router.post("/validate-coupon")
-async def validate_subscription_coupon(
-    payload: ValidateCouponRequest,
-    db: AsyncIOMotorDatabase = Depends(get_db)
-):
-    """Validate a subscription coupon code and return discount details."""
-    try:
-        plan = await db.subscription_plans.find_one({"plan_id": payload.plan_id}, {"_id": 0})
-        if not plan:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Subscription plan not found"
-            )
-        
-        amount = plan["price_monthly"] if payload.billing_cycle == "monthly" else plan["price_annual"]
-        
-        code = payload.code.strip().upper()
-        db_coupon = await db.coupons.find_one({"code": code, "is_active": True, "coupon_type": "subscription"})
-        
-        if not db_coupon:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid coupon code"
-            )
-        
-        discount_amount = 0.0
-        if db_coupon.get("discount_type") == "percentage":
-            discount_amount = round(amount * (db_coupon.get("discount_value", 0) / 100), 2)
-        else:
-            discount_amount = float(db_coupon.get("discount_value", 0))
-            
-        discounted_amount = max(0.0, amount - discount_amount)
-        
-        return {
-            "valid": True,
-            "code": code,
-            "discount_type": db_coupon.get("discount_type"),
-            "discount_value": db_coupon.get("discount_value"),
-            "discount_amount": discount_amount,
-            "original_amount": amount,
-            "discounted_amount": discounted_amount
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error validating subscription coupon: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to validate coupon"
-        )
-
 @router.post("/subscribe")
 async def create_subscription(
     subscription_data: SubscriptionCreate,
@@ -164,26 +130,6 @@ async def create_subscription(
         # Calculate amount based on billing cycle
         amount = plan["price_monthly"] if subscription_data.billing_cycle == "monthly" else plan["price_annual"]
         
-        # Apply coupon code if provided
-        discount_amount = 0.0
-        applied_coupon_code = None
-        if subscription_data.coupon_code:
-            code = subscription_data.coupon_code.strip().upper()
-            db_coupon = await db.coupons.find_one({"code": code, "is_active": True, "coupon_type": "subscription"})
-            if not db_coupon:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid coupon code"
-                )
-            
-            applied_coupon_code = code
-            if db_coupon.get("discount_type") == "percentage":
-                discount_amount = round(amount * (db_coupon.get("discount_value", 0) / 100), 2)
-            else:
-                discount_amount = float(db_coupon.get("discount_value", 0))
-        
-        discounted_amount = max(0.0, amount - discount_amount)
-        
         # Calculate dates
         start_date = date.today()
         if subscription_data.billing_cycle == "monthly":
@@ -198,31 +144,24 @@ async def create_subscription(
             plan_id=subscription_data.plan_id,
             plan_type=plan["plan_type"],
             billing_cycle=subscription_data.billing_cycle,
-            amount=discounted_amount,
-            coupon_code=applied_coupon_code,
-            discount_amount=discount_amount,
+            amount=amount,
             status=SubscriptionStatus.TRIAL,
             start_date=start_date,
             end_date=end_date,
             trial_end_date=start_date + timedelta(days=90)  # 3-month trial
         )
         
-        # Create Razorpay order for subscription (if discounted amount > 0)
-        razorpay_order_id = None
-        if discounted_amount > 0.0:
-            razorpay_result = razorpay_service.create_order(
-                amount=int(discounted_amount * 100),  # Convert to paise
-                receipt=subscription.subscription_id[:40]
+        # Create Razorpay order for subscription
+        razorpay_result = razorpay_service.create_order(
+            amount=int(amount * 100),  # Convert to paise
+            receipt=subscription.subscription_id[:40]
+        )
+        
+        if not razorpay_result["success"]:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create payment order"
             )
-            
-            if not razorpay_result["success"]:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to create payment order"
-                )
-            razorpay_order_id = razorpay_result["order"]["id"]
-        else:
-            razorpay_order_id = f"free_{subscription.subscription_id}"
         
         # Store subscription
         subscription_dict = subscription.model_dump()
@@ -237,13 +176,11 @@ async def create_subscription(
         
         return {
             "subscription_id": subscription.subscription_id,
-            "razorpay_order_id": razorpay_order_id,
+            "razorpay_order_id": razorpay_result["order"]["id"],
             "razorpay_key_id": razorpay_service.key_id,
-            "amount": int(discounted_amount * 100),
+            "amount": int(amount * 100),
             "currency": "INR",
-            "plan_name": plan["plan_name"],
-            "discount_amount": discount_amount,
-            "coupon_code": applied_coupon_code
+            "plan_name": plan["plan_name"]
         }
     
     except HTTPException:
@@ -281,26 +218,25 @@ async def confirm_subscription_payment(
                 detail="Not authorized"
             )
         
-        # Verify payment signature (unless it's a free subscription)
-        if subscription.get("amount", 0.0) > 0.0:
-            is_valid = razorpay_service.verify_payment_signature(
-                razorpay_order_id,
-                razorpay_payment_id,
-                razorpay_signature
+        # Verify payment signature
+        is_valid = razorpay_service.verify_payment_signature(
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature
+        )
+        
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid payment signature"
             )
-            
-            if not is_valid:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid payment signature"
-                )
         
         # Update subscription status to active
         await db.subscriptions.update_one(
             {"subscription_id": subscription_id},
             {"$set": {
                 "status": SubscriptionStatus.ACTIVE.value,
-                "razorpay_subscription_id": razorpay_payment_id if subscription.get("amount", 0.0) > 0.0 else "free_promo",
+                "razorpay_subscription_id": razorpay_payment_id,
                 "updated_at": datetime.now(timezone.utc)
             }}
         )
@@ -339,36 +275,12 @@ async def confirm_subscription_payment(
         except Exception as txn_err:
             logger.warning(f"Failed to record subscription transaction: {txn_err}")
 
-        # Send notifications (In-app, SMS, Email Invoice)
-        try:
-            from services.notification_service import send_multi_channel_notification
-            from models.notification import NotificationType, NotificationChannel
-            
-            sub_plan_name = "Goldenrich STR Subscription"
-            plan_details = await db.subscription_plans.find_one({"plan_id": subscription.get("plan_id")}, {"_id": 0})
-            if plan_details:
-                sub_plan_name = plan_details.get("plan_name", sub_plan_name)
-
-            title = "Subscription Payment Successful!"
-            message = f"Your payment of ₹{subscription.get('amount', 0)} for {sub_plan_name} has been processed successfully. Your subscription ID is {subscription_id}."
-            
-            await send_multi_channel_notification(
-                db=db,
-                user_id=subscription["user_id"],
-                notification_type=NotificationType.PROPERTY_APPROVED,
-                title=title,
-                message=message,
-                channels=[NotificationChannel.IN_APP, NotificationChannel.SMS, NotificationChannel.EMAIL],
-                data={
-                    "subscription_id": subscription_id,
-                    "property_id": subscription.get("property_id"),
-                    "plan_name": sub_plan_name,
-                    "billing_cycle": subscription.get("billing_cycle", "monthly"),
-                    "amount": subscription.get("amount", 0)
-                }
-            )
-        except Exception as notif_err:
-            logger.warning(f"Failed to send subscription confirmation notification: {notif_err}")
+        await _send_subscription_email(
+            db,
+            subscription["user_id"],
+            "subscription_activated",
+            {**subscription, "razorpay_subscription_id": razorpay_payment_id},
+        )
 
         return {
             "message": "Subscription activated successfully",
@@ -405,15 +317,7 @@ async def mock_pay_subscription(
     if subscription["user_id"] != current_user["user_id"]:
         raise HTTPException(status_code=403, detail="Unauthorized")
 
-    if subscription.get("amount", 0.0) == 0.0 or razorpay_order_id.startswith("free_"):
-        mock = {
-            "success": True,
-            "razorpay_payment_id": "free_promo",
-            "razorpay_signature": "free_promo_sig"
-        }
-    else:
-        mock = razorpay_service.mock_complete_payment(razorpay_order_id)
-        
+    mock = razorpay_service.mock_complete_payment(razorpay_order_id)
     if not mock.get("success"):
         raise HTTPException(status_code=500, detail="Mock payment failed")
 
@@ -454,36 +358,12 @@ async def mock_pay_subscription(
     except Exception as txn_err:
         logger.warning(f"Failed to record mock subscription transaction: {txn_err}")
 
-    # Send notifications (In-app, SMS, Email Invoice)
-    try:
-        from services.notification_service import send_multi_channel_notification
-        from models.notification import NotificationType, NotificationChannel
-        
-        sub_plan_name = "Goldenrich STR Subscription"
-        plan_details = await db.subscription_plans.find_one({"plan_id": subscription.get("plan_id")}, {"_id": 0})
-        if plan_details:
-            sub_plan_name = plan_details.get("plan_name", sub_plan_name)
-
-        title = "Subscription Payment Successful!"
-        message = f"Your payment of ₹{subscription.get('amount', 0)} for {sub_plan_name} has been processed successfully. Your subscription ID is {subscription_id}."
-        
-        await send_multi_channel_notification(
-            db=db,
-            user_id=subscription["user_id"],
-            notification_type=NotificationType.PROPERTY_APPROVED,
-            title=title,
-            message=message,
-            channels=[NotificationChannel.IN_APP, NotificationChannel.SMS, NotificationChannel.EMAIL],
-            data={
-                "subscription_id": subscription_id,
-                "property_id": subscription.get("property_id"),
-                "plan_name": sub_plan_name,
-                "billing_cycle": subscription.get("billing_cycle", "monthly"),
-                "amount": subscription.get("amount", 0)
-            }
-        )
-    except Exception as notif_err:
-        logger.warning(f"Failed to send subscription confirmation notification: {notif_err}")
+    await _send_subscription_email(
+        db,
+        subscription["user_id"],
+        "subscription_activated",
+        {**subscription, "razorpay_subscription_id": mock["razorpay_payment_id"]},
+    )
 
     return {
         "message": "Subscription activated (mock)",

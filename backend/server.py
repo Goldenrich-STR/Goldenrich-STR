@@ -9,6 +9,8 @@ import logging
 import asyncio
 from pathlib import Path
 from create_missing_users import create_missing_users
+from collections import defaultdict, deque
+import time
 
 # Load environment variables
 ROOT_DIR = Path(__file__).parent
@@ -119,6 +121,63 @@ app.add_middleware(
 
 from services.razorpay_service import request_user_agent_var
 
+_rate_buckets = defaultdict(deque)
+
+
+def _client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",", 1)[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _rate_limit_for_path(path: str) -> tuple[int, int]:
+    if path.startswith("/api/auth"):
+        return 30, 60
+    if path.startswith("/api/upload"):
+        return 20, 60
+    return 240, 60
+
+
+@app.middleware("http")
+async def security_headers_and_rate_limit(request: Request, call_next):
+    path = request.url.path
+    if path.startswith("/api"):
+        content_length = request.headers.get("content-length")
+        if content_length and int(content_length) > 10 * 1024 * 1024:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                {"detail": "Request body too large"},
+                status_code=413,
+                headers={"Retry-After": "60"},
+            )
+
+        limit, window = _rate_limit_for_path(path)
+        key = (_client_ip(request), path.split("/", 3)[1:3][1] if len(path.split("/", 3)) > 2 else path)
+        now = time.monotonic()
+        bucket = _rate_buckets[key]
+        while bucket and bucket[0] <= now - window:
+            bucket.popleft()
+        if len(bucket) >= limit:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                {"detail": "Too many requests"},
+                status_code=429,
+                headers={"Retry-After": str(window)},
+            )
+        bucket.append(now)
+
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(self), payment=(self)")
+    response.headers.setdefault("Cross-Origin-Resource-Policy", "same-site")
+    if request.url.scheme == "https":
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
+
+
 @app.middleware("http")
 async def set_user_agent_context(request: Request, call_next):
     user_agent = request.headers.get("user-agent", "")
@@ -181,6 +240,8 @@ async def startup_sequence():
         await db_instance.reviews.create_index([("property_id", 1), ("created_at", -1)])
         await db_instance.reviews.create_index("host_id")
         await db_instance.reviews.create_index("guest_id")
+        await db_instance.password_reset_tokens.create_index("token", unique=True)
+        await db_instance.password_reset_tokens.create_index("expires_at")
         await db_instance.bookings.create_index([("property_id", 1), ("check_in_date", 1), ("check_out_date", 1)])
         await db_instance.blocked_dates.create_index([("property_id", 1), ("start_date", 1), ("end_date", 1)])
         await db_instance.bookings.create_index([("booking_status", 1), ("soft_lock_expires_at", 1)])

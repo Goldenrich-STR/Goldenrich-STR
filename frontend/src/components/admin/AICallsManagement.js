@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { aiCallAPI } from '../../services/api';
 import { 
   Plus, Phone, Search, RefreshCw, CheckCircle, 
@@ -43,39 +43,39 @@ const AICallsManagement = () => {
     }
   }, []);
 
-  const fetchCalls = async () => {
-    setLoading(true);
+  const fetchCalls = useCallback(async ({ showLoader = false } = {}) => {
+    if (showLoader) setLoading(true);
     try {
       const res = await aiCallAPI.getAllCalls();
       setCalls(res.data.calls || []);
     } catch (err) {
       console.error('Failed to fetch AI calls', err);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchAgents = async () => {
+  const fetchAgents = useCallback(async () => {
     try {
       const res = await aiCallAPI.getAgents();
       setAgents(res.data.agents || []);
     } catch (err) {
       console.error('Failed to fetch AI agents', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchCalls();
+    fetchCalls({ showLoader: true });
     fetchAgents();
 
-    // Poll for real-time updates every 3 seconds
+    // Keep the list fresh in the background without replacing the table with a loader.
     const intervalId = setInterval(() => {
       fetchCalls();
       fetchAgents();
-    }, 3000);
+    }, 60000);
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [fetchCalls, fetchAgents]);
 
   const handleCreateAgent = async (e) => {
     e.preventDefault();

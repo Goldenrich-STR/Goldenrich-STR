@@ -54,8 +54,17 @@ const BHK_TYPES = [
   { value: '2bhk', label: '2 BHK' },
   { value: '3bhk', label: '3 BHK' },
   { value: '4bhk', label: '4 BHK' },
-  { value: 'commercial', label: 'Commercial' },
-  { value: 'banquet', label: 'Banquet' },
+];
+
+const COMMERCIAL_SIZE_TYPES = new Set(['private_office', 'co_working', 'meeting_room']);
+
+const SIZE_TYPES = [
+  { value: '', label: 'Any size' },
+  { value: 'small', label: 'Small (under 500 sqft)' },
+  { value: 'medium', label: 'Medium (500-2000 sqft)' },
+  { value: 'large', label: 'Large (2000-5000 sqft)' },
+  { value: 'extra_large', label: 'Extra Large (5000+ sqft)' },
+  { value: 'custom', label: 'Custom Size' },
 ];
 
 const AMENITY_OPTIONS = [
@@ -309,6 +318,7 @@ const GuestBrowse = () => {
       bhk_type: '',
       min_price: '',
       max_price: '',
+      guests: params.get('guests') || '',
       instant_booking: false,
       pet_friendly: false,
       check_in: params.get('checkIn') || '',
@@ -324,19 +334,21 @@ const GuestBrowse = () => {
     const category = params.get('category');
     const checkIn = params.get('checkIn');
     const checkOut = params.get('checkOut');
+    const guests = params.get('guests');
     const isWishlist = params.get('wishlist') === 'true';
     
     if (isWishlist) {
       setShowWishlistOnly(true);
     }
     
-    if (city || category || checkIn || checkOut) {
+    if (city || category || checkIn || checkOut || guests) {
       setFilters(prev => ({
         ...prev,
         city: city || prev.city,
         category: category || prev.category,
         check_in: checkIn || prev.check_in,
-        check_out: checkOut || prev.check_out
+        check_out: checkOut || prev.check_out,
+        guests: guests || prev.guests
       }));
     }
   }, []);
@@ -344,7 +356,33 @@ const GuestBrowse = () => {
   useEffect(() => {
     fetchProperties();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters.sort, filters.city, filters.category, filters.check_in, filters.check_out]);
+  }, [
+    filters.sort,
+    filters.city,
+    filters.category,
+    filters.property_type,
+    filters.bhk_type,
+    filters.min_price,
+    filters.max_price,
+    filters.guests,
+    filters.instant_booking,
+    filters.pet_friendly,
+    filters.check_in,
+    filters.check_out,
+    filters.amenities,
+  ]);
+
+  const usesCommercialSizeFilter = COMMERCIAL_SIZE_TYPES.has(filters.property_type);
+  const configurationOptions = usesCommercialSizeFilter ? SIZE_TYPES : BHK_TYPES;
+
+  useEffect(() => {
+    if (
+      filters.bhk_type &&
+      !configurationOptions.some(option => option.value === filters.bhk_type)
+    ) {
+      setFilters(prev => ({ ...prev, bhk_type: '' }));
+    }
+  }, [configurationOptions, filters.bhk_type]);
 
   const buildParams = () => {
     const params = {};
@@ -392,6 +430,7 @@ const GuestBrowse = () => {
       bhk_type: '',
       min_price: '',
       max_price: '',
+      guests: '',
       instant_booking: false,
       pet_friendly: false,
       check_in: '',
@@ -507,7 +546,10 @@ const GuestBrowse = () => {
                 <div className="relative">
                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-terracotta" />
                    <input
+                     id="browse-destination"
+                     name="destination"
                      type="text"
+                     autoComplete="address-level2"
                      value={filters.city}
                      onChange={(e) => setFilters({ ...filters, city: e.target.value })}
                      placeholder={t('destination') + "..."}
@@ -518,6 +560,8 @@ const GuestBrowse = () => {
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('checkIn')}</label>
                 <input
+                   id="browse-check-in"
+                   name="checkIn"
                    type="date"
                    min={todayISO}
                    value={filters.check_in}
@@ -528,6 +572,8 @@ const GuestBrowse = () => {
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('checkOut')}</label>
                 <input
+                   id="browse-check-out"
+                   name="checkOut"
                    type="date"
                    value={filters.check_out}
                    onChange={(e) => setFilters({ ...filters, check_out: e.target.value })}
@@ -538,6 +584,8 @@ const GuestBrowse = () => {
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('type')}</label>
                 <select
+                  id="browse-category"
+                  name="category"
                   value={filters.category}
                   onChange={(e) => setFilters({ ...filters, category: e.target.value })}
                   className="w-full bg-sand-50/50 border-sand-300 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white transition-all outline-none cursor-pointer"
@@ -596,13 +644,15 @@ const GuestBrowse = () => {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('bhkConfig')}</label>
+              <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">
+                {usesCommercialSizeFilter ? 'Size' : t('bhkConfig')}
+              </label>
               <select
                 value={filters.bhk_type}
                 onChange={(e) => setFilters({ ...filters, bhk_type: e.target.value })}
                 className="w-full bg-white border-sand-300 rounded-xl px-4 py-3 text-sm font-medium outline-none"
               >
-                {BHK_TYPES.map((tOpt) => (
+                {configurationOptions.map((tOpt) => (
                   <option key={tOpt.value} value={tOpt.value}>{tOpt.label}</option>
                 ))}
               </select>
