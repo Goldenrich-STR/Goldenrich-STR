@@ -137,7 +137,9 @@ class NotificationService:
             return {"success": False, "error": "No email address"}
         
         # Use appropriate email template based on type
-        if notification_type == NotificationType.BOOKING_CONFIRMED:
+        if data and "subscription_id" in data:
+            result = email_service.send_subscription_invoice(email, data)
+        elif notification_type == NotificationType.BOOKING_CONFIRMED:
             result = email_service.send_booking_confirmation(email, data or {})
         elif notification_type == NotificationType.PROPERTY_APPROVED:
             result = email_service.send_property_approved(email, data or {})

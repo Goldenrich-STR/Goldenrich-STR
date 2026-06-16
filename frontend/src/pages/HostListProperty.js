@@ -20,6 +20,8 @@ import {
   SunDim,
   Moon,
   Clock,
+  Video,
+  Play,
 } from 'lucide-react';
 
 const CATEGORY_DATA = {
@@ -343,6 +345,9 @@ const initialForm = {
   minimum_stay_days: 1,
   amenities: [],
   images: [],
+  video_url: '',
+  youtube_short_url: '',
+  youtube_long_url: '',
   house_rules: '',
   pet_friendly: false,
   smoking_allowed: false,
@@ -420,6 +425,7 @@ const HostListProperty = () => {
   const [createdPropertyId, setCreatedPropertyId] = useState(null);
   const [mockPayment, setMockPayment] = useState({ isOpen: false, amount: 0, title: '', onConfirm: null });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
@@ -475,6 +481,9 @@ const HostListProperty = () => {
             minimum_stay_days: p.minimum_stay_days || 1,
             amenities: p.amenities || [],
             images: p.images || [],
+            video_url: p.video_url || '',
+            youtube_short_url: p.youtube_short_url || '',
+            youtube_long_url: p.youtube_long_url || '',
             house_rules: p.house_rules || '',
             pet_friendly: !!p.pet_friendly,
             smoking_allowed: !!p.smoking_allowed,
@@ -921,6 +930,38 @@ const HostListProperty = () => {
     update({ images: form.images.filter((_, i) => i !== idx) });
   };
 
+  const handleVideoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingVideo(true);
+    setError('');
+
+    try {
+      const data = await uploadAPI.uploadVideo(file);
+      update({ video_url: data.url });
+    } catch (err) {
+      setError(formatError(err, 'Video upload failed'));
+    } finally {
+      setUploadingVideo(false);
+      e.target.value = '';
+    }
+  };
+
+  const handlePasteVideoUrl = () => {
+    const url = window.prompt('Paste video URL:');
+    if (!url) return;
+    if (!/^https?:\/\//.test(url)) {
+      setError('URL must start with http:// or https://');
+      return;
+    }
+    update({ video_url: url });
+  };
+
+  const removeVideo = () => {
+    update({ video_url: '' });
+  };
+
   const handleGenerateAIDescription = async () => {
     setGeneratingDescription(true);
     setError('');
@@ -968,6 +1009,9 @@ const HostListProperty = () => {
       minimum_stay_days: Number(form.minimum_stay_days),
       amenities: form.amenities,
       images: form.images,
+      video_url: form.video_url || null,
+      youtube_short_url: form.youtube_short_url || null,
+      youtube_long_url: form.youtube_long_url || null,
       house_rules: form.house_rules || null,
       pet_friendly: form.pet_friendly,
       smoking_allowed: form.smoking_allowed,
@@ -1717,6 +1761,91 @@ const HostListProperty = () => {
                   </div>
                 )}
               </div>
+
+              {/* Property Video & YouTube Links Section */}
+              <div className="mt-8 pt-8 border-t border-sand-200 space-y-6">
+                <div>
+                  <h3 className="text-lg font-bold text-charcoal flex items-center gap-2">
+                    <Video className="w-5 h-5 text-terracotta" />
+                    Property Video
+                  </h3>
+                  <p className="text-xs text-charcoal-light mt-1">
+                    Add a high-quality property walkthrough video. Supported formats: MP4, MOV, WebM (Max 50MB).
+                  </p>
+                </div>
+
+                <div className="flex gap-2 flex-wrap items-center">
+                  <label
+                    className={`btn-primary cursor-pointer flex items-center space-x-2 ${uploadingVideo ? 'opacity-50 pointer-events-none' : ''}`}
+                    data-testid="upload-video-btn"
+                  >
+                    {uploadingVideo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    <span>{uploadingVideo ? 'Uploading Video…' : 'Upload video file'}</span>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={handleVideoUpload}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handlePasteVideoUrl}
+                    className="btn-secondary flex items-center space-x-2"
+                  >
+                    <Play className="w-4 h-4" />
+                    <span>Paste Video URL</span>
+                  </button>
+                </div>
+
+                {form.video_url && (
+                  <div className="bg-white rounded-2xl border border-sand-200 p-4 shadow-sm flex items-center justify-between max-w-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    <div className="flex items-center space-x-3 overflow-hidden">
+                      <div className="w-12 h-12 bg-terracotta/10 rounded-xl flex items-center justify-center text-terracotta flex-shrink-0">
+                        <Video className="w-6 h-6" />
+                      </div>
+                      <div className="overflow-hidden">
+                        <span className="text-xs font-black text-charcoal-muted uppercase tracking-widest block">Uploaded Video</span>
+                        <span className="text-sm font-semibold text-charcoal truncate block">{form.video_url}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeVideo}
+                      className="text-red-600 hover:text-red-800 p-2 transition"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+
+                <div className="border-t border-sand-150 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-charcoal-light block mb-2">
+                      YouTube Short Link
+                    </label>
+                    <input
+                      type="url"
+                      value={form.youtube_short_url || ''}
+                      onChange={(e) => update({ youtube_short_url: e.target.value })}
+                      placeholder="https://www.youtube.com/shorts/..."
+                      className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all shadow-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-charcoal-light block mb-2">
+                      YouTube Video Link (Long)
+                    </label>
+                    <input
+                      type="url"
+                      value={form.youtube_long_url || ''}
+                      onChange={(e) => update({ youtube_long_url: e.target.value })}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all shadow-sm"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1805,6 +1934,9 @@ const HostListProperty = () => {
                 } 
               />
               <ReviewBlock label="Photos" value={`${form.images.length} uploaded`} />
+              {form.video_url && <ReviewBlock label="Walkthrough Video" value="Attached" />}
+              {form.youtube_short_url && <ReviewBlock label="YouTube Short" value="Attached" />}
+              {form.youtube_long_url && <ReviewBlock label="YouTube Video" value="Attached" />}
               <ReviewBlock label="Plan" value={hasActiveSubscription ? 'Active Subscription' : (plans.find((p) => p.plan_id === form.subscription_plan_id)?.plan_name || '—')} />
 
               <button

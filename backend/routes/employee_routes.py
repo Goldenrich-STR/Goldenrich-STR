@@ -56,9 +56,17 @@ async def get_employee_dashboard_stats(
             "rm_reviewed": False
         })
         
-        # Total properties under review
+        # Total properties under review (pending RM review)
+        pending_reviews = await db.property_verifications.find({
+            "status": VerificationStatus.COMPLETED.value,
+            "rm_reviewed": False
+        }).to_list()
+        
+        pending_property_ids = list(set([v["property_id"] for v in pending_reviews if "property_id" in v]))
+        
         properties_under_review = await db.properties.count_documents({
-            "status": "under_review"
+            "status": "under_review",
+            "property_id": {"$in": pending_property_ids}
         })
         
         # Subscription alerts

@@ -59,6 +59,76 @@ class EmailService:
                 "error": str(e)
             }
     
+    def send_subscription_invoice(self, to_email: str, subscription_data: Dict) -> Dict:
+        """Send subscription invoice email."""
+        subject = f"Subscription Invoice - {subscription_data.get('plan_name', 'Goldenrich STR Subscription')}"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: 'Arial', sans-serif; background-color: #FDFCF8; color: #333333; }}
+                .container {{ max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; border: 1px solid #E5E5E0; }}
+                .header {{ background-color: #C05C4F; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }}
+                .content {{ padding: 20px; }}
+                .invoice-details {{ background: #F5F5F0; padding: 15px; border-radius: 8px; margin: 20px 0; }}
+                .invoice-table {{ width: 100%; border-collapse: collapse; margin-top: 15px; }}
+                .invoice-table th, .invoice-table td {{ padding: 10px; text-align: left; border-bottom: 1px solid #E5E5E0; }}
+                .invoice-table th {{ background-color: #E5E5E0; font-weight: bold; }}
+                .footer {{ text-align: center; color: #8C8C8C; font-size: 12px; margin-top: 30px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Subscription Invoice 🧾</h1>
+                </div>
+                <div class="content">
+                    <p>Dear Host,</p>
+                    <p>Thank you for subscribing to Goldenrich STR. Your payment has been received successfully.</p>
+                    
+                    <div class="invoice-details">
+                        <h3>Invoice Summary</h3>
+                        <p><strong>Subscription ID:</strong> {subscription_data.get('subscription_id', 'N/A')}</p>
+                        <p><strong>Property ID:</strong> {subscription_data.get('property_id', 'N/A')}</p>
+                        <p><strong>Date:</strong> {datetime.now().strftime('%Y-%m-%d')}</p>
+                    </div>
+
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Billing Cycle</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>{subscription_data.get('plan_name', 'N/A')} Plan</td>
+                                <td>{subscription_data.get('billing_cycle', 'monthly')}</td>
+                                <td>₹{subscription_data.get('amount', 0)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" style="text-align: right; font-weight: bold;">Total Paid</td>
+                                <td style="font-weight: bold;">₹{subscription_data.get('amount', 0)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <p>Your property listing is now under review and will go live shortly.</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; 2026 Goldenrich STR. All rights reserved.</p>
+                    <p>Questions? Contact us at support@goldenrichstr.com</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        return self.send_email(to_email, subject, html_content)
+
     def send_booking_confirmation(self, to_email: str, booking_data: Dict) -> Dict:
         """Send booking confirmation email."""
         subject = f"Booking Confirmed - {booking_data.get('property_title', 'X-Space360 Property')}"

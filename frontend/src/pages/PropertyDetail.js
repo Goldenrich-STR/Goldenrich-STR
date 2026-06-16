@@ -408,6 +408,26 @@ const ReviewForm = ({ user, propertyId, t, setProperty, onSuccess }) => {
   );
 };
 
+const getYouTubeEmbedUrl = (url) => {
+  if (!url) return '';
+  let match = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]+)/);
+  if (match) {
+    return `https://www.youtube.com/embed/${match[1]}`;
+  }
+  match = url.match(/v=([a-zA-Z0-9_-]+)/);
+  if (match) {
+    return `https://www.youtube.com/embed/${match[1]}`;
+  }
+  match = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+  if (match) {
+    return `https://www.youtube.com/embed/${match[1]}`;
+  }
+  if (url.includes('youtube.com/embed/')) {
+    return url;
+  }
+  return '';
+};
+
 const PropertyDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -1164,6 +1184,63 @@ const PropertyDetail = () => {
                 {formatReadableText(property.description)}
               </p>
             </div>
+
+            {/* Videos & Virtual Tours Section */}
+            {(property.video_url || property.youtube_short_url || property.youtube_long_url) && (
+              <div className="space-y-6">
+                <h2 className="text-2xl font-black text-charcoal mb-4 flex items-center">
+                   Videos & Virtual Tours
+                   <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {property.video_url && (
+                    <div className="bg-white rounded-3xl p-4 border border-sand-200 shadow-premium space-y-3">
+                      <h3 className="text-xs font-black text-charcoal-muted uppercase tracking-widest">Walkthrough Video</h3>
+                      <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black">
+                        <video
+                          src={getImageUrl(property.video_url)}
+                          controls
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {property.youtube_long_url && (
+                    <div className="bg-white rounded-3xl p-4 border border-sand-200 shadow-premium space-y-3">
+                      <h3 className="text-xs font-black text-charcoal-muted uppercase tracking-widest">Full YouTube Tour</h3>
+                      <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black">
+                        <iframe
+                          src={getYouTubeEmbedUrl(property.youtube_long_url)}
+                          title="YouTube video player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                          className="w-full h-full"
+                        ></iframe>
+                      </div>
+                    </div>
+                  )}
+
+                  {property.youtube_short_url && (
+                    <div className="bg-white rounded-3xl p-4 border border-sand-200 shadow-premium space-y-3 md:col-span-2 max-w-sm mx-auto w-full">
+                      <h3 className="text-xs font-black text-charcoal-muted uppercase tracking-widest text-center">YouTube Short Tour</h3>
+                      <div className="aspect-[9/16] w-full rounded-2xl overflow-hidden bg-black max-h-[500px]">
+                        <iframe
+                          src={getYouTubeEmbedUrl(property.youtube_short_url)}
+                          title="YouTube Shorts player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          allowFullScreen
+                          className="w-full h-full"
+                        ></iframe>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Event Details */}
             {property.category === 'event_venue' && (

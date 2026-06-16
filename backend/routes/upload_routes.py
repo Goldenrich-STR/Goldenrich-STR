@@ -111,3 +111,85 @@ async def upload_image(
         "content_type": file.content_type,
         "detected_kind": detected,
     }
+
+
+# Video uploads configuration
+ALLOWED_VIDEO_EXT = {"mp4", "mov", "avi", "webm", "mkv"}
+MAX_VIDEO_BYTES = 50 * 1024 * 1024  # 50 MB
+
+
+def _detect_video_kind(data: bytes) -> str | None:
+    if not data or len(data) < 12:
+        return None
+    if b"ftyp" in data[4:12]:
+        return "mp4_mov"
+    if data[:4] == b"RIFF" and data[8:12] == b"AVI ":
+        return "avi"
+    if data[:4] == b"\x1a\x45\xdf\xa3":
+        return "ebml"
+    return None
+
+
+@router.post("/video")
+async def upload_video(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload a property video. Auth required. Returns the public URL."""
+    if not file.filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No filename")
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in ALLOWED_VIDEO_EXT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported file type .{ext}. Allowed: {', '.join(sorted(ALLOWED_VIDEO_EXT))}",
+        )
+
+    contents = await file.read()
+    if len(contents) > MAX_VIDEO_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large (max {MAX_VIDEO_BYTES // (1024*1024)} MB)",
+        )
+
+    detected = _detect_video_kind(contents)
+    if detected is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File content does not match any supported video format (mp4, mov, avi, webm, mkv)",
+        )
+
+    # Validate signature against extension claim
+    if ext in ("mp4", "mov") and detected != "mp4_mov":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File content does not match the claimed .{ext} format",
+        )
+    elif ext == "avi" and detected != "avi":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File content does not match the claimed .{ext} format",
+        )
+    elif ext in ("webm", "mkv") and detected != "ebml":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File content does not match the claimed .{ext} format",
+        )
+
+    filename = f"{uuid4().hex}.{ext}"
+    target = UPLOAD_DIR / filename
+    target.write_bytes(contents)
+
+    logger.info(
+        f"Video uploaded by {current_user['user_id']}: {filename} ({len(contents)} bytes, kind={detected})"
+    )
+
+    return {
+        "filename": filename,
+        "url": _public_url(filename),
+        "size": len(contents),
+        "content_type": file.content_type,
+        "detected_kind": detected,
+    }
+

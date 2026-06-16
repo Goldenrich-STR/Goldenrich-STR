@@ -169,7 +169,7 @@ DEMO_PROPERTIES = [
             "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200",
         ],
         "instant_booking": True,
-        "pet_friendly": False,
+        "pet_friendly": True,
     },
     {
         "title": "Emerald Rainforest Retreat, Vythiri",
@@ -214,6 +214,174 @@ DEMO_PROPERTIES = [
         ],
         "instant_booking": True,
         "pet_friendly": True,
+    },
+    {
+        "title": "Taj Valley View Villa, Nashik",
+        "description": "Premium 4-bedroom villa nested in the vineyards with a private pool.",
+        "property_type": "villa",
+        "category": "residential",
+        "bhk_type": "4bhk",
+        "address": "Trimbakeshwar Road",
+        "city": "Nashik",
+        "state": "Maharashtra",
+        "pin_code": "422007",
+        "latitude": 19.9975,
+        "longitude": 73.7898,
+        "area_sqft": 4500,
+        "price_per_night": 18500,
+        "amenities": ["wifi", "pool", "ac", "parking", "kitchen", "rooftop"],
+        "images": [
+            "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800",
+        ],
+        "instant_booking": True,
+        "pet_friendly": True,
+    },
+    {
+        "title": "Goldenrich STR Banquet, College Road",
+        "description": "Grand banquet hall for up to 300 guests with central air conditioning and audio system.",
+        "property_type": "banquet_hall",
+        "category": "event_venue",
+        "bhk_type": "banquet",
+        "address": "College Road",
+        "city": "Nashik",
+        "state": "Maharashtra",
+        "pin_code": "422005",
+        "latitude": 20.0078,
+        "longitude": 73.7656,
+        "area_sqft": 6000,
+        "price_per_night": 45000,
+        "amenities": ["ac", "stage", "parking", "av_system", "catering"],
+        "images": [
+            "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800",
+        ],
+        "instant_booking": False,
+        "pet_friendly": False,
+    },
+    {
+        "title": "Nashik IT Park Workspace",
+        "description": "Premium co-working office desks and private meeting rooms with high-speed internet.",
+        "property_type": "private_office",
+        "category": "commercial",
+        "bhk_type": "commercial",
+        "address": "Ambad Link Road",
+        "city": "Nashik",
+        "state": "Maharashtra",
+        "pin_code": "422010",
+        "latitude": 19.9542,
+        "longitude": 73.7329,
+        "area_sqft": 1500,
+        "price_per_night": 5000,
+        "amenities": ["wifi", "ac", "parking", "coffee", "printer"],
+        "images": [
+            "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800",
+        ],
+        "instant_booking": True,
+        "pet_friendly": False,
+    },
+    {
+        "title": "Downtown Premium Office Desk",
+        "description": "Premium dedicated desks in a shared co-working office, high-speed wifi, free coffee.",
+        "property_type": "private_office",
+        "category": "commercial",
+        "bhk_type": "commercial",
+        "address": "MG Road",
+        "city": "Pune",
+        "state": "Maharashtra",
+        "pin_code": "411001",
+        "latitude": 18.5204,
+        "longitude": 73.8567,
+        "area_sqft": 100,
+        "price_per_night": 1200,
+        "amenities": ["wifi", "ac", "parking", "coffee"],
+        "images": [
+            "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800",
+        ],
+        "instant_booking": True,
+        "pet_friendly": False,
+    },
+    {
+        "title": "Corporate Meeting Room, BKC",
+        "description": "Professional 12-seater conference and meeting room with projector and white-board.",
+        "property_type": "private_office",
+        "category": "commercial",
+        "bhk_type": "commercial",
+        "address": "Bandra Kurla Complex",
+        "city": "Mumbai",
+        "state": "Maharashtra",
+        "pin_code": "400051",
+        "latitude": 19.0596,
+        "longitude": 72.8295,
+        "area_sqft": 400,
+        "price_per_night": 8000,
+        "amenities": ["wifi", "ac", "tv", "white-board"],
+        "images": [
+            "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800",
+        ],
+        "instant_booking": True,
+        "pet_friendly": False,
+    },
+    {
+        "title": "Industrial Warehouse Storage",
+        "description": "Secure storage warehouse space with excellent connectivity to highway, 24/7 security.",
+        "property_type": "private_office",
+        "category": "commercial",
+        "bhk_type": "commercial",
+        "address": "MIDC Ambad",
+        "city": "Nashik",
+        "state": "Maharashtra",
+        "pin_code": "422010",
+        "latitude": 19.9542,
+        "longitude": 73.7329,
+        "area_sqft": 5000,
+        "price_per_night": 15000,
+        "amenities": ["parking", "ac"],
+        "images": [
+            "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800",
+        ],
+        "instant_booking": True,
+        "pet_friendly": False,
+    },
+    {
+        "title": "Grand Lawn & Garden Venue",
+        "description": "Spacious outdoor lawn and garden venue perfect for premium wedding receptions and events.",
+        "property_type": "banquet_hall",
+        "category": "event_venue",
+        "bhk_type": "banquet",
+        "address": "Pathardi Phata",
+        "city": "Nashik",
+        "state": "Maharashtra",
+        "pin_code": "422010",
+        "latitude": 19.9542,
+        "longitude": 73.7329,
+        "area_sqft": 15000,
+        "price_per_night": 50000,
+        "amenities": ["parking", "stage", "catering"],
+        "images": [
+            "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=800",
+        ],
+        "instant_booking": False,
+        "pet_friendly": False,
+    },
+    {
+        "title": "Luxury Yacht Event Deck",
+        "description": "Ultimate private yacht event venue for premium sunset cruise celebrations.",
+        "property_type": "rooftop",
+        "category": "event_venue",
+        "bhk_type": "banquet",
+        "address": "Gateway of India",
+        "city": "Mumbai",
+        "state": "Maharashtra",
+        "pin_code": "400001",
+        "latitude": 18.9220,
+        "longitude": 72.8347,
+        "area_sqft": 3000,
+        "price_per_night": 120000,
+        "amenities": ["bar", "av_system", "kitchen", "catering"],
+        "images": [
+            "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=800",
+        ],
+        "instant_booking": False,
+        "pet_friendly": False,
     }
 ]
 
@@ -246,14 +414,56 @@ async def seed():
         return
 
     owner_id = host["user_id"]
+
+    # Delete existing demo properties first to avoid duplication
+    print("Clearing existing demo properties...")
+    await db.properties.delete_many({"property_id": {"$regex": "^prop_demo_"}})
+
     inserted = 0
     skipped = 0
 
-    # Delete all previously seeded demo properties
-    print("Clearing old demo properties...")
-    await db.properties.delete_many({"property_id": {"$regex": "^prop_demo_"}})
-
     for idx, data in enumerate(DEMO_PROPERTIES):
+        # Determine max_guests, veg_price, and non_veg_price based on category
+        max_guests = 6
+        veg_price = None
+        non_veg_price = None
+        
+        category_lower = data["category"].lower()
+        if category_lower == "commercial":
+            max_guests = 15
+        elif category_lower == "event_venue":
+            max_guests = 500
+            if "yacht" in data["title"].lower():
+                veg_price = 1500.0
+                non_veg_price = 2500.0
+            elif "lounge" in data["title"].lower() or "rooftop" in data["title"].lower():
+                veg_price = 800.0
+                non_veg_price = 1200.0
+            elif "banquet" in data["title"].lower():
+                if "goldenrich" in data["title"].lower():
+                    veg_price = 600.0
+                    non_veg_price = 900.0
+                else:
+                    veg_price = 500.0
+                    non_veg_price = 700.0
+            else:  # lawn/garden
+                veg_price = 450.0
+                non_veg_price = 650.0
+        else: # residential
+            bhk_lower = data.get("bhk_type", "").lower()
+            if "studio" in bhk_lower:
+                max_guests = 2
+            elif "1bhk" in bhk_lower:
+                max_guests = 2
+            elif "2bhk" in bhk_lower:
+                max_guests = 4
+            elif "3bhk" in bhk_lower:
+                max_guests = 6
+            elif "4bhk" in bhk_lower:
+                max_guests = 8
+            else:
+                max_guests = 6
+
         prop_id = f"prop_demo_{idx + 1}_{int(datetime.utcnow().timestamp())}"
         doc = {
             "property_id": prop_id,
@@ -275,6 +485,9 @@ async def seed():
             "price_per_week": None,
             "price_per_month": None,
             "minimum_stay_days": 1,
+            "max_guests": max_guests,
+            "veg_price": veg_price,
+            "non_veg_price": non_veg_price,
             "amenities": data["amenities"],
             "images": data["images"],
             "virtual_tour_link": None,
@@ -296,6 +509,35 @@ async def seed():
         inserted += 1
         print(f"  + {data['title']} ({prop_id})")
 
+    # Seed subscription coupons
+    print("\nSeeding demo subscription coupons...")
+    await db.coupons.delete_many({"coupon_type": "subscription"})
+    demo_coupons = [
+        {
+            "coupon_id": "coup_sub_50_pct",
+            "code": "SUB50",
+            "discount_type": "percentage",
+            "discount_value": 50.0,
+            "coupon_type": "subscription",
+            "property_id": None,
+            "is_active": True,
+            "created_at": datetime.utcnow()
+        },
+        {
+            "coupon_id": "coup_sub_welcome_500",
+            "code": "SUBWELCOME",
+            "discount_type": "fixed",
+            "discount_value": 500.0,
+            "coupon_type": "subscription",
+            "property_id": None,
+            "is_active": True,
+            "created_at": datetime.utcnow()
+        }
+    ]
+    for coupon in demo_coupons:
+        await db.coupons.insert_one(coupon)
+        print(f"  + Coupon: {coupon['code']} ({coupon['discount_value']} discount)")
+
     print(f"\nDone. Inserted {inserted} new luxury stay demo properties.")
     if client:
         client.close()
@@ -305,4 +547,3 @@ async def seed():
 
 if __name__ == "__main__":
     asyncio.run(seed())
-
