@@ -93,6 +93,9 @@ class Property(BaseModel):
     
     # Media
     images: List[str] = []
+    video_url: Optional[str] = None
+    youtube_short_url: Optional[str] = None
+    youtube_long_url: Optional[str] = None
     virtual_tour_link: Optional[str] = None
     
     # Policies
@@ -151,6 +154,9 @@ class PropertyCreate(BaseModel):
     minimum_stay_days: int = 1
     amenities: List[str] = []
     images: List[str] = []
+    video_url: Optional[str] = None
+    youtube_short_url: Optional[str] = None
+    youtube_long_url: Optional[str] = None
     house_rules: Optional[str] = None
     pet_friendly: bool = False
     smoking_allowed: bool = False
@@ -184,6 +190,9 @@ class PropertyUpdate(BaseModel):
     minimum_stay_days: Optional[int] = None
     amenities: Optional[List[str]] = None
     images: Optional[List[str]] = None
+    video_url: Optional[str] = None
+    youtube_short_url: Optional[str] = None
+    youtube_long_url: Optional[str] = None
     house_rules: Optional[str] = None
     pet_friendly: Optional[bool] = None
     smoking_allowed: Optional[bool] = None

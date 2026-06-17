@@ -315,7 +315,11 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
             NotificationType.PROPERTY_APPROVED,
             "Your listing is live!",
             f"Congratulations! '{property_data.get('title')}' is now live on X-Space360 and accepting bookings.",
-            {"property_id": property_data["property_id"]},
+            {
+                "property_id": property_data["property_id"],
+                "property_title": property_data.get("title"),
+                "action_url": "/host/dashboard",
+            },
         )
     else:
         await _notify(
@@ -325,7 +329,13 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
             "Listing not approved",
             f"Unfortunately '{property_data.get('title')}' was not approved: {reason or 'see admin remarks'}. "
             f"You can update and resubmit.",
-            {"property_id": property_data["property_id"], "reason": reason},
+            {
+                "property_id": property_data["property_id"],
+                "property_title": property_data.get("title"),
+                "reason": reason,
+                "remarks": reason,
+                "action_url": "/host/dashboard",
+            },
         )
 
         # Notify broker and RM about the rejection

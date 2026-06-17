@@ -109,3 +109,22 @@ async def get_property_coupons(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch property coupons"
         )
+
+@router.get("/subscription", response_model=dict)
+async def get_subscription_coupons(
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get active subscription coupons (Public)"""
+    try:
+        cursor = db.coupons.find({
+            "is_active": True,
+            "coupon_type": "subscription"
+        }, {"_id": 0})
+        coupons = await cursor.to_list(length=20)
+        return {"coupons": coupons}
+    except Exception as e:
+        logger.error(f"Error fetching subscription coupons: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch subscription coupons"
+        )

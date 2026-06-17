@@ -85,6 +85,17 @@ _uploads_dir = ROOT_DIR / "uploads"
 _uploads_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/api/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
 
+@app.get("/download-apk")
+async def download_apk():
+    apk_path = r"d:\FinalSTR\Goldenrich-STR\mobile\build\app\outputs\flutter-apk\app-debug.apk"
+    if os.path.exists(apk_path):
+        return FileResponse(
+            apk_path,
+            media_type="application/vnd.android.package-archive",
+            filename="GoldenrichSTR.apk"
+        )
+    return {"error": "APK file not found. Please build the mobile application first."}
+
 # CORS middleware
 _cors_origins = os.environ.get('CORS_ORIGINS', '*').split(',')
 if "*" in _cors_origins:
@@ -229,6 +240,8 @@ async def startup_sequence():
         await db_instance.reviews.create_index([("property_id", 1), ("created_at", -1)])
         await db_instance.reviews.create_index("host_id")
         await db_instance.reviews.create_index("guest_id")
+        await db_instance.password_reset_tokens.create_index("token", unique=True)
+        await db_instance.password_reset_tokens.create_index("expires_at")
         await db_instance.bookings.create_index([("property_id", 1), ("check_in_date", 1), ("check_out_date", 1)])
         await db_instance.blocked_dates.create_index([("property_id", 1), ("start_date", 1), ("end_date", 1)])
         await db_instance.bookings.create_index([("booking_status", 1), ("soft_lock_expires_at", 1)])

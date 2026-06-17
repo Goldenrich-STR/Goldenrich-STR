@@ -2055,29 +2055,29 @@ const PropertyModeration = () => {
             {[...properties]
               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((property) => (
-              <div key={property.property_id} className="dashboard-card" data-testid={`property-${property.property_id}`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4 flex-1">
+              <div key={property.property_id} className="bg-white border border-[#F3F4F6] rounded-[24px] p-5 shadow-sm hover:shadow-md transition-all mb-4" data-testid={`property-${property.property_id}`}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-center space-x-5 flex-1 min-w-0">
                     <img
                       src={property.images?.[0] || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                       alt={property.title}
-                      className="w-24 h-24 rounded-lg object-cover"
+                      className="w-20 h-20 rounded-[18px] object-cover shadow-sm flex-shrink-0"
                     />
-                    <div className="flex-1">
-                      <h4 className="font-bold text-charcoal text-lg">{property.title}</h4>
-                      <p className="text-sm text-charcoal-light mt-1">
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-[#1F2937] text-base leading-snug truncate">{property.title}</h4>
+                      <p className="text-xs text-[#6B7280] mt-1 font-medium truncate">
                         {property.city} | {formatDisplayLabel(property.bhk_type)} | {formatCategoryLabel(property.category)}
                       </p>
-                      <div className="flex items-center space-x-2 mt-3 flex-wrap gap-y-2">
-                        <span className="text-lg font-bold text-terracotta">₹{property.price_per_night}</span>
-                        <span className="text-sm text-charcoal-light">/night</span>
+                      <div className="flex items-center mt-2.5">
+                        <span className="text-sm font-bold text-terracotta">₹{property.price_per_night}</span>
+                        <span className="text-[11px] text-[#6B7280] ml-0.5">/night</span>
                         <span
-                          className={`inline-block px-2 py-1 text-xs font-semibold rounded ml-2 ${
-                            property.status === 'live' ? 'bg-green-100 text-green-700' :
-                            property.status === 'under_review' ? 'bg-blue-100 text-blue-700' :
-                            property.status === 'pending_verification' ? 'bg-yellow-100 text-yellow-700' :
-                            property.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                            'bg-gray-100 text-gray-700'
+                          className={`ml-3 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                            property.status === 'live' ? 'bg-[#ECFDF5] text-[#10B981]' :
+                            property.status === 'under_review' ? 'bg-[#DBEAFE] text-[#2563EB]' :
+                            property.status === 'pending_verification' ? 'bg-[#FEF3C7] text-[#D97706]' :
+                            property.status === 'rejected' ? 'bg-[#FEE2E2] text-[#EF4444]' :
+                            'bg-[#F3F4F6] text-[#4B5563]'
                           }`}
                         >
                           {property.status.replace('_', ' ').toUpperCase()}
@@ -2085,39 +2085,39 @@ const PropertyModeration = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2 flex-wrap justify-end">
+                  <div className="flex items-center space-x-2.5 flex-wrap justify-start md:justify-end">
                     <button
                       onClick={() => navigate(`/property/${property.property_id}`)}
-                      className="flex items-center space-x-2 px-4 py-2 bg-white border border-sand-200 text-charcoal rounded-lg hover:border-terracotta hover:text-terracotta transition font-semibold"
+                      className="flex items-center space-x-1.5 px-4 py-2 border border-[#E5E7EB] text-[#4B5563] bg-white rounded-full font-bold text-xs hover:bg-gray-50 transition-all shadow-sm"
                       title="View property"
                     >
-                      <EyeIcon className="w-4 h-4" />
+                      <EyeIcon className="w-3.5 h-3.5" />
                       <span>View</span>
                     </button>
                     <button
                       onClick={() => navigate(`/host/list-property?edit=${property.property_id}`)}
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg hover:bg-blue-100 transition font-semibold"
+                      className="flex items-center space-x-1.5 px-4 py-2 border border-[#DBEAFE] text-[#2563EB] bg-[#EFF6FF] rounded-full font-bold text-xs hover:bg-[#DBEAFE]/80 transition-all shadow-sm"
                       title="Edit property"
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="w-3.5 h-3.5" />
                       <span>Edit</span>
                     </button>
                     {canActOn(property) && (
                       <>
-                      <button
-                        onClick={() => openVerificationDetails(property)}
-                        className="flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition font-semibold"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Verify & Approve</span>
-                      </button>
-                      <button
-                        onClick={() => rejectProperty(property.property_id)}
-                        className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        <span>Reject</span>
-                      </button>
+                        <button
+                          onClick={() => openVerificationDetails(property)}
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#BBF7D0] text-[#15803D] bg-[#DCFCE7] rounded-full font-bold text-xs hover:bg-[#BBF7D0]/80 transition-all shadow-sm"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          <span>Verify & Approve</span>
+                        </button>
+                        <button
+                          onClick={() => rejectProperty(property.property_id)}
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#FEE2E2] text-[#EF4444] bg-[#FEF2F2] rounded-full font-bold text-xs hover:bg-[#FEE2E2]/80 transition-all shadow-sm"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span>Reject</span>
+                        </button>
                       </>
                     )}
                   </div>
@@ -2175,8 +2175,8 @@ const PropertyModeration = () => {
 
             {/* Basic Info & Remarks */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="p-4 bg-sand-50 rounded-2xl">
-                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Property Details</p>
+              <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-sm">
+                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1.5">Property Details</p>
                 <p className="font-mono text-xs font-bold text-charcoal break-all" title={activeReviewProperty.property_id || ''}>
                   Property ID: {activeReviewProperty.property_id || 'N/A'}
                 </p>
@@ -2184,13 +2184,13 @@ const PropertyModeration = () => {
                   Host ID: {activeReviewProperty.owner_id || 'N/A'}
                 </p>
               </div>
-              <div className="p-4 bg-sand-50 rounded-2xl">
-                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Assigned RM Details</p>
+              <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-sm">
+                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1.5">Assigned RM Details</p>
                 <p className="font-mono text-[10px] font-bold text-charcoal break-all" title={activeReviewProperty.rm_id || ''}>RM ID: {activeReviewProperty.rm_id || 'N/A'}</p>
                 <p className="text-xs text-charcoal-light mt-1">RM Remarks: "{activeReviewProperty.rm_remarks || 'No remarks provided'}"</p>
               </div>
-              <div className="p-4 bg-sand-50 rounded-2xl">
-                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Field Intelligence (Broker)</p>
+              <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-sm">
+                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1.5">Field Intelligence (Broker)</p>
                 <p className="font-mono text-[10px] font-bold text-charcoal break-all" title={activeReviewProperty.broker_id || ''}>Broker ID: {activeReviewProperty.broker_id || 'N/A'}</p>
                 <p className="text-xs text-charcoal-light mt-1">Broker Remarks: "{activeReviewProperty.broker_remarks || 'No remarks provided'}"</p>
               </div>
@@ -2214,48 +2214,48 @@ const PropertyModeration = () => {
             )}
 
             {/* Detailed Info */}
-            <div className="p-5 bg-sand-50/50 border border-sand-200/80 rounded-2xl mb-6">
+            <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm mb-6">
               <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-3">Listing Details</p>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div>
-                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Category</span>
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-0.5">Category</span>
                   <span className="font-bold text-charcoal text-xs">{formatCategoryLabel(activeReviewProperty.category) || 'N/A'}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block">BHK Type</span>
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-0.5">BHK Type</span>
                   <span className="font-bold text-charcoal text-xs">{formatDisplayLabel(activeReviewProperty.bhk_type) || 'N/A'}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Price per Night</span>
-                  <span className="font-bold text-terracotta text-xs">₹{activeReviewProperty.price_per_night || 0}</span>
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-0.5">Price per Night</span>
+                  <span className="font-bold text-terracotta text-sm">₹{activeReviewProperty.price_per_night || 0}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Location</span>
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-0.5">Location</span>
                   <span className="font-bold text-charcoal text-xs">{activeReviewProperty.city || 'N/A'}, {activeReviewProperty.state || ''}</span>
                 </div>
               </div>
 
               {activeReviewProperty.address && (
                 <div className="mb-3">
-                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Full Address</span>
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-0.5">Full Address</span>
                   <span className="text-xs font-semibold text-charcoal-light">{activeReviewProperty.address}</span>
                 </div>
               )}
 
               {activeReviewProperty.description && (
                 <div className="mb-3">
-                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Description</span>
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-0.5">Description</span>
                   <p className="text-xs text-charcoal-light leading-relaxed whitespace-pre-wrap">{formatReadableText(activeReviewProperty.description)}</p>
                 </div>
               )}
 
               {activeReviewProperty.amenities && activeReviewProperty.amenities.length > 0 && (
                 <div>
-                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Amenities</span>
+                  <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1.5">Amenities</span>
                   <div className="flex flex-wrap gap-1">
                     {activeReviewProperty.amenities.map((amenity, idx) => (
-                      <span key={idx} className="px-2 py-0.5 bg-sand-200/50 text-charcoal text-[9px] font-semibold rounded">
+                      <span key={idx} className="px-2.5 py-1 bg-sand-100 text-charcoal text-[10px] font-semibold rounded-md border border-sand-200">
                         {formatDisplayLabel(amenity)}
                       </span>
                     ))}
@@ -2266,15 +2266,18 @@ const PropertyModeration = () => {
 
             {/* Evidence Video Link */}
             {activeReviewProperty.video_url && (
-              <div className="p-4 bg-sand-50 rounded-2xl mb-6">
-                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Walkthrough Video</p>
+              <div className="p-4 bg-white border border-[#E5E7EB] rounded-2xl shadow-sm mb-6 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Walkthrough Video</p>
+                  <span className="text-xs text-charcoal-light font-semibold">RM uploaded evidence walkthrough video</span>
+                </div>
                 <a 
                   href={activeReviewProperty.video_url} 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="text-xs font-bold text-terracotta hover:underline flex items-center space-x-1"
+                  className="px-4 py-2 bg-terracotta/10 text-terracotta rounded-xl text-xs font-bold hover:bg-terracotta/20 transition-all flex items-center space-x-1"
                 >
-                  <span>🎥 Watch Video Walkthrough</span>
+                  <span>🎥 Watch Video</span>
                 </a>
               </div>
             )}
@@ -2287,17 +2290,18 @@ const PropertyModeration = () => {
                   const brokerRMVal = activeReviewProperty.checklist?.[key];
                   const adminVal = adminChecklist[key];
                   return (
-                    <div key={key} className="flex items-center justify-between p-3.5 bg-sand-50/50 border border-sand-200/60 rounded-2xl hover:bg-sand-50 transition-all">
+                    <div key={key} className="flex items-center justify-between p-4 bg-white border border-[#E5E7EB] rounded-2xl hover:shadow-sm transition-all animate-fade-in">
                       <div className="flex-1 mr-4">
                         <p className="text-sm font-bold text-charcoal">{CHECKLIST_LABELS[key]}</p>
                         <div className="flex items-center space-x-2 mt-1">
-                          <span className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider">Broker/RM Status:</span>
-                          <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${
+                          <span className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider">Broker Verdict:</span>
+                          <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center space-x-1 ${
                             brokerRMVal 
-                              ? 'bg-green-50 text-green-700' 
-                              : 'bg-red-50 text-red-700'
+                              ? 'bg-[#ECFDF5] text-[#10B981]' 
+                              : 'bg-[#FEF2F2] text-[#EF4444]'
                           }`}>
-                            {brokerRMVal ? '✔ Compliant' : '✘ Deficient'}
+                            <span>{brokerRMVal ? '✔' : '✘'}</span>
+                            <span>{brokerRMVal ? 'Compliant' : 'Deficient'}</span>
                           </span>
                         </div>
                       </div>
@@ -2307,10 +2311,10 @@ const PropertyModeration = () => {
                         <button
                           type="button"
                           onClick={() => setAdminChecklist({ ...adminChecklist, [key]: true })}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                          className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
                             adminVal === true
-                              ? 'bg-green-600 text-white shadow-elevated scale-105 border-2 border-green-600'
-                              : 'bg-white text-charcoal-light border-2 border-sand-200 hover:border-green-600/30'
+                              ? 'bg-[#10B981] text-white border border-[#10B981] shadow-sm'
+                              : 'bg-white text-[#10B981] border border-[#10B981] hover:bg-[#10B981] hover:text-white'
                           }`}
                         >
                           Approve
@@ -2318,10 +2322,10 @@ const PropertyModeration = () => {
                         <button
                           type="button"
                           onClick={() => setAdminChecklist({ ...adminChecklist, [key]: false })}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                          className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
                             adminVal === false
-                              ? 'bg-red-600 text-white shadow-elevated scale-105 border-2 border-red-600'
-                              : 'bg-white text-charcoal-light border-2 border-sand-200 hover:border-red-600/30'
+                              ? 'bg-[#EF4444] text-white border border-[#EF4444] shadow-sm'
+                              : 'bg-white text-[#EF4444] border border-[#E5E7EB] hover:bg-[#EF4444] hover:text-white'
                           }`}
                         >
                           Reject
@@ -2339,15 +2343,15 @@ const PropertyModeration = () => {
                 <h4 className="text-xs font-black text-charcoal-muted uppercase tracking-widest mb-4">Geo-Tagged Evidence Photos</h4>
                 <div className="grid grid-cols-2 gap-4">
                   {activeReviewProperty.geo_tagged_photos.map((photo, idx) => (
-                    <div key={idx} className="relative group rounded-2xl overflow-hidden border border-sand-200 bg-sand-50 p-2">
+                    <div key={idx} className="relative group rounded-2xl overflow-hidden border border-[#E5E7EB] bg-white p-3 shadow-sm">
                       <img 
                         src={getImageUrl(photo.photo_url)} 
                         alt={photo.description || 'Evidence Photo'} 
                         className="w-full h-36 object-cover rounded-xl"
                       />
-                      <div className="mt-2">
-                        <p className="text-[10px] font-bold text-charcoal truncate">{photo.description || 'Verified Site View'}</p>
-                        <p className="text-[9px] text-charcoal-muted mt-0.5">GPS: {photo.latitude.toFixed(6)}, {photo.longitude.toFixed(6)}</p>
+                      <div className="mt-3">
+                        <p className="text-xs font-bold text-charcoal truncate">{photo.description || 'Verified Site View'}</p>
+                        <p className="text-[10px] text-charcoal-muted font-bold mt-1">LAT: {photo.latitude.toFixed(6)}, {photo.longitude.toFixed(6)}</p>
                       </div>
                     </div>
                   ))}
@@ -2356,28 +2360,30 @@ const PropertyModeration = () => {
             )}
 
             {/* Actions */}
-            <div className="flex space-x-3 pt-6 border-t border-sand-200">
+            <div className="flex items-center justify-between pt-6 border-t border-[#E5E7EB] mt-6">
               <button 
                 type="button" 
                 onClick={() => setActiveReviewProperty(null)} 
-                className="flex-1 py-4 font-black text-xs text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition-all"
+                className="font-bold text-xs text-charcoal-muted hover:text-charcoal uppercase tracking-widest transition-all"
               >
                 Cancel
               </button>
-              <button 
-                type="button" 
-                onClick={() => rejectProperty(activeReviewProperty.property_id)} 
-                className="flex-1 py-4 font-black text-xs bg-red-50 text-red-700 rounded-xl uppercase tracking-widest hover:bg-red-100 transition-all"
-              >
-                Reject Listing
-              </button>
-              <button 
-                type="button" 
-                onClick={() => handleFinalApprove(activeReviewProperty.property_id)} 
-                className="flex-1 btn-premium py-4 shadow-elevated"
-              >
-                Approve & Go Live
-              </button>
+              <div className="flex items-center space-x-4">
+                <button 
+                  type="button" 
+                  onClick={() => rejectProperty(activeReviewProperty.property_id)} 
+                  className="font-bold text-xs text-[#EF4444] hover:text-[#DC2626] uppercase tracking-widest transition-all px-4 py-2 hover:bg-red-50 rounded-lg"
+                >
+                  Reject Listing
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => handleFinalApprove(activeReviewProperty.property_id)} 
+                  className="px-6 py-3.5 bg-[#9A3412] hover:bg-[#7C2D12] text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                >
+                  Approve & Go Live
+                </button>
+              </div>
             </div>
           </div>
         </div>
