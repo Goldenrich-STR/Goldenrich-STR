@@ -4,9 +4,11 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/property_provider.dart';
 import '../../providers/booking_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/property_model.dart';
 import '../../theme.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../auth/login_screen.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
   final String propertyId;
@@ -140,6 +142,26 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   Future<void> _handleBooking(BuildContext context, double pricePerNight) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (!auth.isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please sign in to book this property.'),
+          backgroundColor: AppTheme.primary,
+        ),
+      );
+      final loggedIn = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const LoginScreen(popOnSuccess: true),
+        ),
+      );
+      if (loggedIn == true && context.mounted) {
+        _handleBooking(context, pricePerNight);
+      }
+      return;
+    }
+
     final propertyProvider = Provider.of<PropertyProvider>(context, listen: false);
     final prop = propertyProvider.currentProperty;
     final isEvent = prop?.category.toLowerCase() == 'event_venue';

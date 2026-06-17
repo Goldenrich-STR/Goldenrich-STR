@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/localization_service.dart';
 import '../../theme.dart';
@@ -12,14 +13,31 @@ import '../employee/employee_dashboard_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  final int initialIndex;
+  final String? initialSearchCity;
+  final int? initialSearchGuests;
+  final String? initialCategory;
+
+  const AppShell({
+    super.key,
+    this.initialIndex = 0,
+    this.initialSearchCity,
+    this.initialSearchGuests,
+    this.initialCategory,
+  });
 
   @override
   State<AppShell> createState() => _AppShellState();
 }
 
 class _AppShellState extends State<AppShell> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -32,72 +50,94 @@ class _AppShellState extends State<AppShell> {
     final auth = Provider.of<AuthProvider>(context);
     final user = auth.currentUser;
 
-    if (user == null) {
-      return const LoginScreen();
-    }
-
-    final String role = user.role;
-    
     // Screens based on roles
     List<Widget> screens = [];
     List<BottomNavigationBarItem> navItems = [];
 
-    if (role == 'guest') {
+    if (user == null) {
       screens = [
-        const GuestBrowseScreen(),
-        const GuestBookingsScreen(),
-        _ProfileTab(user: user, auth: auth),
+        GuestBrowseScreen(
+          initialCity: widget.initialSearchCity,
+          initialGuests: widget.initialSearchGuests,
+          initialCategory: widget.initialCategory,
+        ),
+        const _UnauthenticatedPlaceholder(
+          title: 'Bookings',
+          message: 'Please sign in to view and manage your property bookings.',
+        ),
+        const _UnauthenticatedPlaceholder(
+          title: 'Profile',
+          message: 'Please sign in to view your profile and account settings.',
+        ),
       ];
       navItems = const [
         BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Explore'),
         BottomNavigationBarItem(icon: Icon(Icons.bookmark_border), label: 'Bookings'),
         BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
       ];
-    } else if (role == 'host') {
-      screens = [
-        const HostDashboardScreen(),
-        _ProfileTab(user: user, auth: auth),
-      ];
-      navItems = const [
-        BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-      ];
-    } else if (role == 'broker') {
-      screens = [
-        const BrokerDashboardScreen(),
-        _ProfileTab(user: user, auth: auth),
-      ];
-      navItems = const [
-        BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-      ];
-    } else if (role == 'employee') {
-      screens = [
-        const EmployeeDashboardScreen(),
-        _ProfileTab(user: user, auth: auth),
-      ];
-      navItems = const [
-        BottomNavigationBarItem(icon: Icon(Icons.rate_review_outlined), label: 'Reviews'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-      ];
-    } else if (role == 'admin') {
-      screens = [
-        const AdminDashboardScreen(),
-        _ProfileTab(user: user, auth: auth),
-      ];
-      navItems = const [
-        BottomNavigationBarItem(icon: Icon(Icons.admin_panel_settings_outlined), label: 'Admin'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-      ];
     } else {
-      screens = [
-        const Center(child: Text('Unknown Role')),
-        _ProfileTab(user: user, auth: auth),
-      ];
-      navItems = const [
-        BottomNavigationBarItem(icon: Icon(Icons.error_outline), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-      ];
+      final String role = user.role;
+      if (role == 'guest') {
+        screens = [
+          GuestBrowseScreen(
+            initialCity: widget.initialSearchCity,
+            initialGuests: widget.initialSearchGuests,
+            initialCategory: widget.initialCategory,
+          ),
+          const GuestBookingsScreen(),
+          _ProfileTab(user: user, auth: auth),
+        ];
+        navItems = const [
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Explore'),
+          BottomNavigationBarItem(icon: Icon(Icons.bookmark_border), label: 'Bookings'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        ];
+      } else if (role == 'host') {
+        screens = [
+          const HostDashboardScreen(),
+          _ProfileTab(user: user, auth: auth),
+        ];
+        navItems = const [
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        ];
+      } else if (role == 'broker') {
+        screens = [
+          const BrokerDashboardScreen(),
+          _ProfileTab(user: user, auth: auth),
+        ];
+        navItems = const [
+          BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        ];
+      } else if (role == 'employee') {
+        screens = [
+          const EmployeeDashboardScreen(),
+          _ProfileTab(user: user, auth: auth),
+        ];
+        navItems = const [
+          BottomNavigationBarItem(icon: Icon(Icons.rate_review_outlined), label: 'Reviews'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        ];
+      } else if (role == 'admin') {
+        screens = [
+          const AdminDashboardScreen(),
+          _ProfileTab(user: user, auth: auth),
+        ];
+        navItems = const [
+          BottomNavigationBarItem(icon: Icon(Icons.admin_panel_settings_outlined), label: 'Admin'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        ];
+      } else {
+        screens = [
+          const Center(child: Text('Unknown Role')),
+          _ProfileTab(user: user, auth: auth),
+        ];
+        navItems = const [
+          BottomNavigationBarItem(icon: Icon(Icons.error_outline), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        ];
+      }
     }
 
     // Guard selectedIndex if it goes out of bounds
@@ -209,6 +249,97 @@ class _ProfileTab extends StatelessWidget {
                 );
               },
               child: Text(localeProvider.translate('sign_out')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UnauthenticatedPlaceholder extends StatelessWidget {
+  final String title;
+  final String message;
+
+  const _UnauthenticatedPlaceholder({required this.title, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: Text(
+          title,
+          style: textTheme.displayMedium?.copyWith(color: AppTheme.charcoal),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(
+                  color: AppTheme.stone,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  title == 'Bookings' ? Icons.bookmark_border : Icons.person_outline,
+                  size: 64,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Sign In Required',
+              style: GoogleFonts.outfit(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.charcoal,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                color: AppTheme.charcoalMuted,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: Text(
+                'Sign In Now',
+                style: GoogleFonts.manrope(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ],
         ),

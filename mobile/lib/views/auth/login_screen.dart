@@ -8,7 +8,8 @@ import '../shared/app_shell.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final bool popOnSuccess;
+  const LoginScreen({super.key, this.popOnSuccess = false});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -41,10 +42,14 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (success && mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AppShell()),
-      );
+      if (widget.popOnSuccess) {
+        Navigator.pop(context, true);
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AppShell()),
+        );
+      }
     } else {
       setState(() {
         _errorMessage = 'Invalid email or password. Please try again.';
@@ -147,11 +152,16 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                   const SizedBox(height: 16),
                   TextButton(
-                    onPressed: () {
-                      Navigator.push(
+                    onPressed: () async {
+                      final registered = await Navigator.push<bool>(
                         context,
-                        MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => RegisterScreen(popOnSuccess: widget.popOnSuccess),
+                        ),
                       );
+                      if (registered == true && widget.popOnSuccess && mounted) {
+                        Navigator.pop(context, true);
+                      }
                     },
                     child: Text(
                       localeProvider.translate('dont_have_account'),

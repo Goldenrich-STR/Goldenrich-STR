@@ -7,7 +7,16 @@ import 'property_detail_screen.dart';
 import 'property_filter_dialog.dart';
 
 class GuestBrowseScreen extends StatefulWidget {
-  const GuestBrowseScreen({super.key});
+  final String? initialCity;
+  final int? initialGuests;
+  final String? initialCategory;
+
+  const GuestBrowseScreen({
+    super.key,
+    this.initialCity,
+    this.initialGuests,
+    this.initialCategory,
+  });
 
   @override
   State<GuestBrowseScreen> createState() => _GuestBrowseScreenState();
@@ -30,6 +39,16 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialCity != null && widget.initialCity!.isNotEmpty) {
+      _searchController.text = widget.initialCity!;
+      _selectedCity = widget.initialCity!;
+    }
+    if (widget.initialGuests != null && widget.initialGuests! > 0) {
+      _advancedFilters['guests'] = widget.initialGuests;
+    }
+    if (widget.initialCategory != null && widget.initialCategory!.isNotEmpty) {
+      _advancedFilters['category'] = widget.initialCategory;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadProperties();
     });

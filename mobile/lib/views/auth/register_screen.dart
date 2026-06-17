@@ -5,7 +5,8 @@ import '../../theme.dart';
 import '../shared/app_shell.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final bool popOnSuccess;
+  const RegisterScreen({super.key, this.popOnSuccess = false});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -85,10 +86,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final success = await auth.register(regData);
 
     if (success && mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AppShell()),
-      );
+      if (widget.popOnSuccess) {
+        Navigator.pop(context, true);
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AppShell()),
+        );
+      }
     } else {
       setState(() => _errorMessage = 'Registration failed. Email/phone might already exist.');
     }
