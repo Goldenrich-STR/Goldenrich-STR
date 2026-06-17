@@ -12,6 +12,7 @@ from passlib.context import CryptContext
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 async def create_employee():

@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 # Ensure backend root on path so we can import models/services
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+# pyrefly: ignore [missing-import]
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent / ".env")
 

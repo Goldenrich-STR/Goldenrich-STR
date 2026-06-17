@@ -467,7 +467,7 @@ const GuestBrowse = () => {
     <div className="min-h-screen bg-sand-50 flex flex-col selection:bg-terracotta selection:text-white">
       {/* Header */}
       <header className="glass px-4 md:px-8 py-4 border-b border-sand-200" data-testid="guest-header">
-        <div className="max-w-7xl mx-auto flex justify-between items-center w-full gap-2">
+        <div className="w-full flex justify-between items-center gap-2">
           <div 
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
@@ -534,93 +534,110 @@ const GuestBrowse = () => {
       </header>
 
       {/* Top Search Bar */}
-      <div className="bg-white/80 backdrop-blur sticky top-0 z-30 px-8 py-4 border-b border-sand-200 shadow-sm">
-        <div className="max-w-7xl mx-auto">
+      <div className="bg-white/80 backdrop-blur sticky top-0 z-30 px-4 md:px-8 py-4 border-b border-sand-200 shadow-sm">
+        <div className="w-full max-w-5xl mx-auto">
           <form
             onSubmit={handleSearch}
-            className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-end"
+            className="flex flex-col lg:flex-row items-center bg-white rounded-[2rem] lg:rounded-full border border-sand-200 shadow-premium p-2 gap-2 w-full"
           >
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('destination')}</label>
-                <div className="relative">
-                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-terracotta" />
-                   <input
-                     id="browse-destination"
-                     name="destination"
-                     type="text"
-                     autoComplete="address-level2"
-                     value={filters.city}
-                     onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-                     placeholder={t('destination') + "..."}
-                     className="w-full bg-sand-50/50 border-sand-300 rounded-xl pl-9 pr-4 py-3 text-sm font-medium focus:bg-white transition-all outline-none"
-                   />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('checkIn')}</label>
-                <input
-                   id="browse-check-in"
-                   name="checkIn"
-                   type="date"
-                   min={todayISO}
-                   value={filters.check_in}
-                   onChange={(e) => setFilters({ ...filters, check_in: e.target.value })}
-                   className="w-full bg-sand-50/50 border-sand-300 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white transition-all outline-none"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('checkOut')}</label>
-                <input
-                   id="browse-check-out"
-                   name="checkOut"
-                   type="date"
-                   value={filters.check_out}
-                   onChange={(e) => setFilters({ ...filters, check_out: e.target.value })}
-                   min={filters.check_in || todayISO}
-                   className="w-full bg-sand-50/50 border-sand-300 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white transition-all outline-none"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('type')}</label>
-                <select
-                  id="browse-category"
-                  name="category"
-                  value={filters.category}
-                  onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                  className="w-full bg-sand-50/50 border-sand-300 rounded-xl px-4 py-3 text-sm font-medium focus:bg-white transition-all outline-none cursor-pointer"
-                >
-                  <option value="">{t('anyCategory')}</option>
-                  <option value="residential">{t('residential')}</option>
-                  <option value="commercial">{t('commercial')}</option>
-                  <option value="event_venue">{t('eventVenue')}</option>
-                </select>
-              </div>
+            {/* Destination */}
+            <div className="flex-1 flex flex-col px-6 py-2 hover:bg-sand-50 rounded-full cursor-pointer transition-colors relative w-full lg:w-auto">
+              <label htmlFor="browse-destination" className="text-[10px] font-black text-charcoal uppercase tracking-widest cursor-pointer">{t('destination')}</label>
+              <input
+                id="browse-destination"
+                name="destination"
+                type="text"
+                autoComplete="address-level2"
+                value={filters.city}
+                onChange={(e) => setFilters({ ...filters, city: e.target.value })}
+                placeholder="Where to next?"
+                className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 mt-1 placeholder-charcoal-muted"
+              />
             </div>
-            <div className="flex gap-3">
+
+            <div className="hidden lg:block w-[1px] h-10 bg-sand-200"></div>
+
+            {/* Check In */}
+            <div className="flex-1 flex flex-col px-6 py-2 hover:bg-sand-50 rounded-full cursor-pointer transition-colors relative w-full lg:w-auto">
+              <label htmlFor="browse-check-in" className="text-[10px] font-black text-charcoal uppercase tracking-widest cursor-pointer">{t('checkIn')}</label>
+              <input
+                id="browse-check-in"
+                name="checkIn"
+                type={filters.check_in ? "date" : "text"}
+                onFocus={(e) => e.target.type = 'date'}
+                onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
+                placeholder="Add dates"
+                min={todayISO}
+                value={filters.check_in}
+                onChange={(e) => setFilters({ ...filters, check_in: e.target.value })}
+                className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 mt-1 placeholder-charcoal-muted [color-scheme:light]"
+              />
+            </div>
+
+            <div className="hidden lg:block w-[1px] h-10 bg-sand-200"></div>
+
+            {/* Check Out */}
+            <div className="flex-1 flex flex-col px-6 py-2 hover:bg-sand-50 rounded-full cursor-pointer transition-colors relative w-full lg:w-auto">
+              <label htmlFor="browse-check-out" className="text-[10px] font-black text-charcoal uppercase tracking-widest cursor-pointer">{t('checkOut')}</label>
+              <input
+                id="browse-check-out"
+                name="checkOut"
+                type={filters.check_out ? "date" : "text"}
+                onFocus={(e) => e.target.type = 'date'}
+                onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
+                placeholder="Add dates"
+                min={filters.check_in || todayISO}
+                value={filters.check_out}
+                onChange={(e) => setFilters({ ...filters, check_out: e.target.value })}
+                className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 mt-1 placeholder-charcoal-muted [color-scheme:light]"
+              />
+            </div>
+
+            <div className="hidden lg:block w-[1px] h-10 bg-sand-200"></div>
+
+            {/* Category */}
+            <div className="flex-1 flex flex-col px-6 py-2 hover:bg-sand-50 rounded-full cursor-pointer transition-colors relative w-full lg:w-auto">
+              <label htmlFor="browse-category" className="text-[10px] font-black text-charcoal uppercase tracking-widest cursor-pointer">{t('type')}</label>
+              <select
+                id="browse-category"
+                name="category"
+                value={filters.category}
+                onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 mt-1 cursor-pointer appearance-none"
+              >
+                <option value="">{t('anyCategory')}</option>
+                <option value="residential">{t('residential')}</option>
+                <option value="commercial">{t('commercial')}</option>
+                <option value="event_venue">{t('eventVenue')}</option>
+              </select>
+            </div>
+
+            <div className="hidden lg:block w-[1px] h-10 bg-sand-200"></div>
+
+            <div className="flex items-center justify-between lg:justify-end w-full lg:w-auto px-4 lg:px-2 py-2">
               <button
                 type="button"
                 onClick={() => setShowFilters((v) => !v)}
-                className={`px-5 py-3 rounded-xl border-2 font-bold text-sm transition-all flex items-center space-x-2 ${
+                className={`relative w-12 h-12 rounded-full border-2 transition-all flex items-center justify-center mr-2 lg:mr-0 lg:ml-2 ${
                    showFilters || filters.amenities.length > 0 
                    ? 'border-terracotta bg-terracotta/5 text-terracotta' 
-                   : 'border-sand-200 text-charcoal-light hover:border-sand-400'
+                   : 'border-transparent hover:bg-sand-50 text-charcoal'
                 }`}
+                title={t('filters')}
               >
-                <SlidersHorizontal className="w-4 h-4" />
-                <span>{t('filters')}</span>
+                <SlidersHorizontal className="w-5 h-5" />
                 {filters.amenities.length > 0 && (
-                   <span className="bg-terracotta text-white text-[10px] rounded-full w-5 h-5 flex items-center justify-center animate-bounce">
+                   <span className="absolute top-0 right-0 bg-terracotta text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
                      {filters.amenities.length}
                    </span>
                 )}
               </button>
               <button
                 type="submit"
-                className="btn-premium px-8 flex items-center space-x-2"
+                className="w-12 h-12 rounded-full bg-terracotta text-white flex items-center justify-center hover:scale-105 transition-transform shadow-premium ml-2"
+                title={t('findSpaces')}
               >
-                <Search className="w-4 h-4" />
-                <span>{t('findSpaces')}</span>
+                <Search className="w-5 h-5" />
               </button>
             </div>
           </form>
@@ -629,8 +646,8 @@ const GuestBrowse = () => {
 
       {/* Advanced filters drawer */}
       {showFilters && (
-        <div className="bg-sand-50 border-b border-sand-200 px-8 py-8 animate-slide-up" data-testid="advanced-filters">
-          <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="bg-sand-50 border-b border-sand-200 px-4 md:px-8 py-8 animate-slide-up" data-testid="advanced-filters">
+          <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-2">
               <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('propertyType')}</label>
               <select
@@ -757,7 +774,7 @@ const GuestBrowse = () => {
       )}
 
       {/* Results header */}
-      <div className="px-8 py-8 max-w-7xl mx-auto w-full flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between">
+      <div className="px-4 md:px-8 py-8 w-full flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between">
         <div>
           <h2 className="text-3xl font-black text-charcoal tracking-tight">
              {loading ? t('searching') : (
@@ -809,7 +826,7 @@ const GuestBrowse = () => {
       </div>
 
       {/* Results body */}
-      <div className="flex-1 px-8 pb-12 max-w-7xl mx-auto w-full">
+      <div className="flex-1 px-4 md:px-8 pb-12 w-full">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-4">
              <div className="w-12 h-12 border-4 border-sand-200 border-t-terracotta rounded-full animate-spin"></div>
@@ -846,7 +863,7 @@ const GuestBrowse = () => {
                 className={
                   viewMode === VIEW_MODES.SPLIT
                     ? 'overflow-y-auto pr-4 space-y-6 custom-scrollbar'
-                    : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-slide-up'
+                    : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 animate-slide-up'
                 }
               >
                 {displayedProperties.map((p, idx) => (
@@ -944,14 +961,16 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
     onMouseLeave={() => onHover && onHover(null)}
     style={style}
   >
-    <div className={`relative overflow-hidden ${compact ? 'w-1/3' : 'h-64'}`}>
+    <div className={`relative overflow-hidden ${compact ? 'w-1/3' : 'h-72'} rounded-t-2xl`}>
       <img
         src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?w=800'}
         alt={property.title}
         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
       />
+      <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+      
       <div className="absolute top-4 left-4 flex gap-2">
-         <div className="glass px-3 py-1 rounded-full">
+         <div className="glass px-3 py-1 rounded-full shadow-sm">
             <span className="text-[10px] font-black uppercase tracking-widest text-charcoal">
                {formatCategoryLabel(property.category)}
             </span>
@@ -982,27 +1001,54 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
          </button>
       </div>
 
-      {property.instant_booking && (
-         <div className="absolute bottom-4 left-4 bg-amber-500 text-white p-1.5 rounded-lg shadow-lg">
-            <Zap className="w-3 h-3 fill-current" />
-         </div>
-      )}
+      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+        {property.instant_booking && (
+           <div className="bg-amber-500 text-white p-1.5 rounded-lg shadow-lg" title="Instant Booking">
+              <Zap className="w-3.5 h-3.5 fill-current" />
+           </div>
+        )}
+        <div className="ml-auto flex items-center text-white space-x-1.5 drop-shadow-md">
+           <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+           <span className="text-sm font-black text-white">4.8</span>
+           <span className="text-[10px] text-white/80 font-bold ml-1">(120 Reviews)</span>
+        </div>
+      </div>
     </div>
-    <div className={`p-6 flex flex-col justify-between ${compact ? 'w-2/3' : 'flex-1'}`}>
+    <div className={`p-5 flex flex-col justify-between ${compact ? 'w-2/3' : 'flex-1'} bg-white rounded-b-2xl`}>
       <div>
         <div className="flex items-center justify-between mb-2">
-           <span className="text-[10px] font-black text-sage-dark uppercase tracking-widest">
+           <span className="text-[10px] font-black text-sage-dark uppercase tracking-widest bg-sage/10 px-2 py-0.5 rounded">
               {formatPropertyTypeLabel(property.property_type) || 'Premium Stay'}
            </span>
-           <div className="flex items-center text-amber-500">
-              <Star className="w-3 h-3 fill-current mr-1" />
-              <span className="text-xs font-black text-charcoal">4.8</span>
-           </div>
         </div>
-        <h3 className="text-lg font-bold text-charcoal mb-1 group-hover:text-terracotta transition-colors line-clamp-1">{property.title}</h3>
-        <div className="flex items-center text-charcoal-muted mb-4">
+        <h3 className="text-lg font-black text-charcoal mb-1 group-hover:text-terracotta transition-colors line-clamp-1">{property.title}</h3>
+        <div className="flex items-center text-charcoal-muted mb-3">
           <MapPin className="w-3.5 h-3.5 mr-1.5 text-sage" />
           <span className="text-xs font-semibold">{property.city}, {property.state}</span>
+        </div>
+        
+        {/* Additional Property Info */}
+        <div className="flex flex-wrap gap-2 mb-4">
+           {property.guests && (
+             <div className="flex items-center space-x-1 bg-sand-50 border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted">
+               <span>{property.guests} Guests</span>
+             </div>
+           )}
+           {property.bhk_type && (
+             <div className="flex items-center space-x-1 bg-sand-50 border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted uppercase">
+               <span>{property.bhk_type}</span>
+             </div>
+           )}
+           {property.size_sqft && (
+             <div className="flex items-center space-x-1 bg-sand-50 border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted">
+               <span>{property.size_sqft} sqft</span>
+             </div>
+           )}
+           {property.amenities?.slice(0, 2).map((a, i) => (
+             <div key={i} className="flex items-center space-x-1 bg-sand-50 border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted capitalize">
+               <span>{a.replace('_', ' ')}</span>
+             </div>
+           ))}
         </div>
       </div>
       

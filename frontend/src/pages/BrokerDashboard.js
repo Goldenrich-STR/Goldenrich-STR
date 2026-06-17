@@ -64,8 +64,8 @@ const BrokerDashboard = () => {
   return (
     <div className="min-h-screen bg-sand-50 selection:bg-terracotta selection:text-white">
       {/* Header */}
-      <header className="glass px-8 py-4 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+      <header className="glass px-4 md:px-8 lg:px-12 py-4 sticky top-0 z-50">
+        <div className="w-full flex justify-between items-center">
           <div 
             className="flex items-center space-x-3 cursor-pointer group" 
             onClick={() => navigate('/')}
@@ -99,7 +99,7 @@ const BrokerDashboard = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-8 py-10">
+      <div className="w-full px-4 md:px-8 lg:px-12 py-10 mx-auto">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12 animate-fade-in">
           <div>
             <h2 className="text-4xl font-black text-charcoal tracking-tight mb-2" data-testid="dashboard-title">

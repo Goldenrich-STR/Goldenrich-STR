@@ -1341,15 +1341,18 @@ const LandingPage = () => {
                     {/* Check-in */}
                     <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer hover:bg-gray-50 transition">
                       <Calendar className="w-5 h-5 text-gray-400 mr-3" />
-                      <div>
+                      <div className="w-full">
                         <input
                           id="landing-check-in"
                           name="checkIn"
-                          type="date"
+                          type={dates.checkIn ? "date" : "text"}
+                          onFocus={(e) => e.target.type = 'date'}
+                          onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
+                          placeholder="Add dates"
                           min={todayISO}
                           value={dates.checkIn}
                           onChange={(e) => setDates({ ...dates, checkIn: e.target.value })}
-                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-32 [color-scheme:light] text-gray-500"
+                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400"
                         />
                       </div>
                     </div>
@@ -1358,15 +1361,18 @@ const LandingPage = () => {
                     {/* Check-out */}
                     <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer hover:bg-gray-50 transition">
                       <Calendar className="w-5 h-5 text-gray-400 mr-3" />
-                      <div>
+                      <div className="w-full">
                         <input
                           id="landing-check-out"
                           name="checkOut"
-                          type="date"
+                          type={dates.checkOut ? "date" : "text"}
+                          onFocus={(e) => e.target.type = 'date'}
+                          onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
+                          placeholder="Add dates"
                           min={dates.checkIn || todayISO}
                           value={dates.checkOut}
                           onChange={(e) => setDates({ ...dates, checkOut: e.target.value })}
-                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-32 [color-scheme:light] text-gray-500"
+                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400"
                         />
                       </div>
                     </div>

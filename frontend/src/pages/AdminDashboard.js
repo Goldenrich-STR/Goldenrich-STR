@@ -295,8 +295,8 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-sand-50">
       {/* Header */}
-      <header className="header-glass px-6 py-4" data-testid="admin-header">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
+      <header className="header-glass px-4 md:px-8 lg:px-12 py-4" data-testid="admin-header">
+        <div className="w-full flex justify-between items-center">
           <div 
             className="flex items-center space-x-3 cursor-pointer group"
             onClick={() => navigate('/')}
@@ -332,7 +332,7 @@ const AdminDashboard = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="w-full px-4 md:px-8 lg:px-12 py-8 mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-4xl font-extrabold text-charcoal" data-testid="dashboard-title">
             Dashboard Overview
