@@ -288,6 +288,17 @@ const AuthPage = ({ isAdminLogin = false }) => {
                        {loading ? 'CALIBRATING ACCESS...' : 'SIGN IN'}
                     </button>
 
+                    <div className="text-center mt-3">
+                       <span className="text-xs font-semibold text-charcoal-muted">If you are a broker? </span>
+                       <button
+                          type="button"
+                          onClick={handleGoldenRichSso}
+                          className="text-xs font-black text-terracotta hover:underline underline-offset-4"
+                       >
+                          Login
+                       </button>
+                    </div>
+
                     {!isAdminLogin && (
                        <div className="space-y-5 pt-2">
                           <div className="flex items-center gap-4">
@@ -310,6 +321,32 @@ const AuthPage = ({ isAdminLogin = false }) => {
                  <div className="space-y-4 animate-slide-up">
                     {!showOTPVerification ? (
                        <div className="space-y-4">
+                          <div className="space-y-3 pt-1 text-center">
+                             <label className="block text-[11px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Select Professional Role</label>
+                             <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto">
+                                {['guest', 'host', 'broker'].map(role => (
+                                   <button
+                                      key={role}
+                                      type="button"
+                                      onClick={() => {
+                                         if (role === 'broker') {
+                                            handleGoldenRichSso();
+                                         } else {
+                                            setRegisterData({ ...registerData, role });
+                                         }
+                                      }}
+                                      className={`py-3 rounded-2xl border-2 font-black text-[11px] uppercase tracking-widest transition-all duration-500 ${
+                                         registerData.role === role 
+                                         ? 'border-terracotta bg-terracotta text-white shadow-elevated scale-[1.02]' 
+                                         : 'border-sand-200 bg-white text-charcoal-muted hover:border-terracotta'
+                                      }`}
+                                   >
+                                      {role === 'guest' ? 'Explorer' : role === 'host' ? 'Owner' : 'Broker'}
+                                   </button>
+                                ))}
+                             </div>
+                          </div>
+
                           <div className="space-y-2">
                              <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Full Legal Name</label>
                              <input
@@ -383,26 +420,6 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    className="w-full px-6 py-3.5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
                                    placeholder="Your City"
                                 />
-                             </div>
-                          </div>
-                          
-                          <div className="space-y-3 pt-1 text-center">
-                             <label className="block text-[11px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Select Professional Role</label>
-                             <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
-                                {['guest', 'host'].map(role => (
-                                   <button
-                                      key={role}
-                                      type="button"
-                                      onClick={() => setRegisterData({ ...registerData, role })}
-                                      className={`py-3 rounded-2xl border-2 font-black text-[11px] uppercase tracking-widest transition-all duration-500 ${
-                                         registerData.role === role 
-                                         ? 'border-terracotta bg-terracotta text-white shadow-elevated scale-[1.02]' 
-                                         : 'border-sand-200 bg-white text-charcoal-muted hover:border-terracotta'
-                                      }`}
-                                   >
-                                      {role === 'guest' ? 'Explorer' : 'Owner'}
-                                   </button>
-                                ))}
                              </div>
                           </div>
                           
