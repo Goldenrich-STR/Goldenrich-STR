@@ -189,6 +189,17 @@ async def create_booking(
             plate_price = property_dict.get("non_veg_price", 0) if food_pref == "non_veg" else property_dict.get("veg_price", 0)
             base_amount += plate_price * booking_data.number_of_guests * num_nights
             
+        # Apply promo discount
+        user = await db.users.find_one({"user_id": current_user["user_id"]})
+        is_promo_claimed = user.get("is_promo_claimed", False) if user else False
+        
+        discount_amount = 0.0
+        coupon_code = None
+        if is_promo_claimed:
+            discount_amount = round(base_amount * 0.10, 2)
+            base_amount = round(base_amount - discount_amount, 2)
+            coupon_code = "SUMMER10"
+            
         tax_rate = _event_policy_percent(property_dict, "taxes", 18.0)
         advance_rate = _event_policy_percent(property_dict, "advance", 50.0)
         service_fee = base_amount * 0.10  # 10% service fee
@@ -225,7 +236,9 @@ async def create_booking(
             food_preference=booking_data.food_preference,
             payment_type=booking_data.payment_type or "full",
             advance_amount=advance_amount,
-            paid_amount=0.0
+            paid_amount=0.0,
+            coupon_code=coupon_code,
+            discount_amount=discount_amount
         )
 
         # Insert booking into database

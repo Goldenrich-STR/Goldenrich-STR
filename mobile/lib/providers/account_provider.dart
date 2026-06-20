@@ -7,12 +7,16 @@ class AccountProvider with ChangeNotifier {
   List<dynamic> _transactions = [];
   List<dynamic> _payouts = [];
   final List<dynamic> _refunds = [];
+  List<dynamic> _mrrChartData = [];
+  List<dynamic> _topHosts = [];
   bool _isLoading = false;
 
   Map<String, dynamic> get overviewData => _overviewData;
   List<dynamic> get transactions => _transactions;
   List<dynamic> get payouts => _payouts;
   List<dynamic> get refunds => _refunds;
+  List<dynamic> get mrrChartData => _mrrChartData;
+  List<dynamic> get topHosts => _topHosts;
   bool get isLoading => _isLoading;
 
   Future<void> getOverview() async {
@@ -145,6 +149,38 @@ class AccountProvider with ChangeNotifier {
       }
     } catch (e) {
       _payouts = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> getMrrChartData() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio.get('/admin/account/mrr-chart');
+      if (response.statusCode == 200) {
+        _mrrChartData = response.data['months'] ?? [];
+      }
+    } catch (e) {
+      _mrrChartData = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> getTopHosts() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio.get('/admin/account/top-hosts');
+      if (response.statusCode == 200) {
+        _topHosts = response.data ?? [];
+      }
+    } catch (e) {
+      _topHosts = [];
     } finally {
       _isLoading = false;
       notifyListeners();

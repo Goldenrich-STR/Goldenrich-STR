@@ -9,9 +9,12 @@ import 'providers/account_provider.dart';
 import 'providers/ai_call_provider.dart';
 import 'providers/admin_provider.dart';
 import 'services/localization_service.dart';
+import 'services/api_service.dart';
 import 'views/auth/welcome_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ApiService().init();
   runApp(
     MultiProvider(
       providers: [

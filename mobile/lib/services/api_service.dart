@@ -51,9 +51,24 @@ class ApiService {
     ));
   }
 
-  void setBaseUrl(String url) {
+  Future<void> init() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final customUrl = prefs.getString('custom_api_base_url');
+      if (customUrl != null && customUrl.isNotEmpty) {
+        _baseUrl = customUrl;
+        dio.options.baseUrl = _baseUrl;
+      }
+    } catch (_) {}
+  }
+
+  Future<void> setBaseUrl(String url) async {
     _baseUrl = url.trim().replaceAll(RegExp(r'/$'), '');
     dio.options.baseUrl = _baseUrl;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('custom_api_base_url', _baseUrl);
+    } catch (_) {}
   }
 
   String get baseUrl => _baseUrl;

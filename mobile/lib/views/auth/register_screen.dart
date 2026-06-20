@@ -3,9 +3,13 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme.dart';
 import '../shared/app_shell.dart';
+import '../../services/api_service.dart';
+import 'package:flutter/gestures.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final bool popOnSuccess;
+  const RegisterScreen({super.key, this.popOnSuccess = false});
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -24,9 +28,94 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _selectedRole = 'guest';
   int _step = 1; // 1: Enter Phone, 2: Enter OTP, 3: Complete Register Details
   String? _errorMessage;
+  bool _acceptTerms = false;
+
+  late TapGestureRecognizer _termsRecognizer;
+  late TapGestureRecognizer _privacyRecognizer;
+  late TapGestureRecognizer _checkinRecognizer;
+
+  String _termsText = 'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.';
+  String _privacyText = 'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.';
+  String _checkinText = 'Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival. Quiet hours are from 10:00 PM to 7:00 AM.';
+
+  @override
+  void initState() {
+    super.initState();
+    _termsRecognizer = TapGestureRecognizer()..onTap = () => _showDocumentDialog('Terms & Conditions', _termsText);
+    _privacyRecognizer = TapGestureRecognizer()..onTap = () => _showDocumentDialog('Privacy Policy', _privacyText);
+    _checkinRecognizer = TapGestureRecognizer()..onTap = () => _showDocumentDialog('Check-in Instructions', _checkinText);
+    _fetchCmsContent();
+  }
+
+  Future<void> _fetchCmsContent() async {
+    try {
+      final response = await ApiService().dio.get('/cms/landing-page');
+      if (response.statusCode == 200 && response.data != null) {
+        final footer = response.data['footer'];
+        if (footer != null) {
+          setState(() {
+            if (footer['terms_text'] != null && footer['terms_text'].toString().isNotEmpty) {
+              _termsText = footer['terms_text'];
+            }
+            if (footer['privacy_text'] != null && footer['privacy_text'].toString().isNotEmpty) {
+              _privacyText = footer['privacy_text'];
+            }
+            if (footer['checkin_text'] != null && footer['checkin_text'].toString().isNotEmpty) {
+              _checkinText = footer['checkin_text'];
+            }
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching CMS landing page content: $e');
+    }
+  }
+
+  void _showDocumentDialog(String title, String content) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            title,
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              color: AppTheme.charcoal,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Text(
+              content,
+              style: GoogleFonts.outfit(
+                color: AppTheme.charcoalMuted,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'CLOSE',
+                style: GoogleFonts.outfit(
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
+    _checkinRecognizer.dispose();
     _phoneController.dispose();
     _otpController.dispose();
     _emailController.dispose();
@@ -65,6 +154,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _completeRegistration() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_acceptTerms) {
+      setState(() => _errorMessage = 'Please accept the Terms & Conditions, Privacy Policy, and Check-in Instructions.');
+      return;
+    }
     setState(() => _errorMessage = null);
     
     final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -85,10 +178,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final success = await auth.register(regData);
 
     if (success && mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AppShell()),
-      );
+      if (widget.popOnSuccess) {
+        Navigator.pop(context, true);
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AppShell()),
+        );
+      }
     } else {
       setState(() => _errorMessage = 'Registration failed. Email/phone might already exist.');
     }
@@ -220,22 +317,102 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         validator: (v) => v == null || v.isEmpty ? 'Enter your city' : null,
                       ),
                       const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedRole,
-                        decoration: const InputDecoration(
-                          labelText: 'Register As',
-                          prefixIcon: Icon(Icons.work),
+                      Center(
+                        child: Text(
+                          'SELECT PROFESSIONAL ROLE',
+                          style: GoogleFonts.outfit(
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.charcoalMuted,
+                            letterSpacing: 1.0,
+                          ),
                         ),
-                        items: const [
-                          DropdownMenuItem(value: 'guest', child: Text('Guest (Rent a space)')),
-                          DropdownMenuItem(value: 'host', child: Text('Host (List a space)')),
-                          DropdownMenuItem(value: 'broker', child: Text('Broker (Verify properties)')),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedRole = 'guest';
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: _selectedRole == 'guest' ? AppTheme.primary : Colors.white,
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(
+                                    color: _selectedRole == 'guest' ? AppTheme.primary : AppTheme.border,
+                                    width: 1,
+                                  ),
+                                  boxShadow: _selectedRole == 'guest'
+                                      ? [
+                                          BoxShadow(
+                                            color: AppTheme.primary.withOpacity(0.25),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          )
+                                        ]
+                                      : null,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'EXPLORER',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w900,
+                                    color: _selectedRole == 'guest' ? Colors.white : AppTheme.charcoalMuted,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedRole = 'host';
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: _selectedRole == 'host' ? AppTheme.primary : Colors.white,
+                                  borderRadius: BorderRadius.circular(24),
+                                  border: Border.all(
+                                    color: _selectedRole == 'host' ? AppTheme.primary : AppTheme.border,
+                                    width: 1,
+                                  ),
+                                  boxShadow: _selectedRole == 'host'
+                                      ? [
+                                          BoxShadow(
+                                            color: AppTheme.primary.withOpacity(0.25),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          )
+                                        ]
+                                      : null,
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  'OWNER',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w900,
+                                    color: _selectedRole == 'host' ? Colors.white : AppTheme.charcoalMuted,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() => _selectedRole = val);
-                          }
-                        },
                       ),
                       if (_selectedRole == 'host') ...[
                         const SizedBox(height: 16),
@@ -248,6 +425,96 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                       ],
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFAF7F2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0xFFF0ECE3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _acceptTerms = !_acceptTerms;
+                                });
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeInOut,
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  color: _acceptTerms ? AppTheme.primary : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: _acceptTerms ? AppTheme.primary : AppTheme.charcoalMuted,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: AnimatedScale(
+                                  scale: _acceptTerms ? 1.0 : 0.0,
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.elasticOut,
+                                  child: const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.charcoalMuted,
+                                    letterSpacing: 0.5,
+                                  ),
+                                  children: [
+                                    const TextSpan(text: 'I ACCEPT THE '),
+                                    TextSpan(
+                                      text: 'Terms & Conditions',
+                                      recognizer: _termsRecognizer,
+                                      style: const TextStyle(
+                                        color: AppTheme.primary,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const TextSpan(text: ', '),
+                                    TextSpan(
+                                      text: 'Privacy Policy',
+                                      recognizer: _privacyRecognizer,
+                                      style: const TextStyle(
+                                        color: AppTheme.primary,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const TextSpan(text: ' AND '),
+                                    TextSpan(
+                                      text: 'Check-in Instructions',
+                                      recognizer: _checkinRecognizer,
+                                      style: const TextStyle(
+                                        color: AppTheme.primary,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                    const TextSpan(text: '.'),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       auth.isLoading
                           ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))

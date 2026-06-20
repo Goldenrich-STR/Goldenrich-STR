@@ -2946,7 +2946,17 @@ const CMSManagement = () => {
     privacy_label: '',
     privacy_text: '',
     terms_label: '',
-    terms_text: ''
+    terms_text: '',
+    checkin_label: '',
+    checkin_text: ''
+  });
+
+  const [offerData, setOfferData] = useState({
+    title: '',
+    description: '',
+    button_text: '',
+    image_url: '',
+    is_enabled: false
   });
 
   const fetchCMSContent = async () => {
@@ -2970,6 +2980,9 @@ const CMSManagement = () => {
 
       const footerDoc = docs.find(d => d.section === 'footer');
       if (footerDoc) setFooterData(footerDoc.content_data);
+
+      const offerDoc = docs.find(d => d.section === 'offer');
+      if (offerDoc) setOfferData(offerDoc.content_data);
 
     } catch (err) {
       console.error('Failed to load CMS content:', err);
@@ -3010,6 +3023,8 @@ const CMSManagement = () => {
       
       if (type === 'hero') {
         setHeroData(prev => ({ ...prev, image_url: uploadedUrl }));
+      } else if (type === 'offer') {
+        setOfferData(prev => ({ ...prev, image_url: uploadedUrl }));
       } else if (type === 'blog' && index !== null) {
         setBlogData(prev => {
           const updated = [...prev.posts];
@@ -3054,6 +3069,7 @@ const CMSManagement = () => {
           { id: 'how_it_works', label: 'How It Works', icon: ListTodo },
           { id: 'testimonials', label: 'Testimonials', icon: Heart },
           { id: 'blog', label: 'Blog Posts', icon: FileText },
+          { id: 'offer', label: 'Promotional Offer', icon: Tag },
           { id: 'footer', label: 'Footer', icon: Phone }
         ].map(tab => {
           const Icon = tab.icon;
@@ -3666,7 +3682,7 @@ const CMSManagement = () => {
               </div>
               <div className="md:col-span-2 rounded-3xl border border-sand-200 bg-sand-50/60 p-5 space-y-4">
                 <h5 className="text-sm font-black text-charcoal uppercase tracking-widest">Footer Legal Links</h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Privacy Label</label>
                     <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_label || ''} onChange={e => setFooterData({ ...footerData, privacy_label: e.target.value })} />
@@ -3676,12 +3692,20 @@ const CMSManagement = () => {
                     <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_label || ''} onChange={e => setFooterData({ ...footerData, terms_label: e.target.value })} />
                   </div>
                   <div>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Check-in Instructions Label</label>
+                    <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.checkin_label || ''} onChange={e => setFooterData({ ...footerData, checkin_label: e.target.value })} />
+                  </div>
+                  <div>
                     <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Privacy Policy Text</label>
                     <textarea rows={5} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_text || ''} onChange={e => setFooterData({ ...footerData, privacy_text: e.target.value })} />
                   </div>
                   <div>
                     <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Terms & Conditions Text</label>
                     <textarea rows={5} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_text || ''} onChange={e => setFooterData({ ...footerData, terms_text: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Check-in Instructions Text</label>
+                    <textarea rows={5} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.checkin_text || ''} onChange={e => setFooterData({ ...footerData, checkin_text: e.target.value })} />
                   </div>
                 </div>
               </div>
@@ -3878,6 +3902,130 @@ const CMSManagement = () => {
                   <>
                     <Check className="w-4 h-4" />
                     <span>Save Blog Posts Configuration</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* PROMOTIONAL OFFER TAB */}
+        {activeSubTab === 'offer' && (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-sand-100">
+              <div className="p-2.5 bg-terracotta/10 rounded-xl text-terracotta">
+                <Tag className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-lg font-black text-charcoal">Promotional Offer Banner</h4>
+                <p className="text-xs text-charcoal-muted font-medium">Configure the pop-up promotional banner shown to unauthenticated guests.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-6">
+                <div className="relative group">
+                  <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Offer Title</label>
+                  <input
+                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
+                    value={offerData.title}
+                    onChange={e => setOfferData({ ...offerData, title: e.target.value })}
+                    placeholder="e.g. Special Launch Offer! Get 20% Off"
+                  />
+                </div>
+
+                <div className="relative group">
+                  <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Call To Action Button Text</label>
+                  <input
+                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
+                    value={offerData.button_text}
+                    onChange={e => setOfferData({ ...offerData, button_text: e.target.value })}
+                    placeholder="e.g. Claim 20% Discount"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-sand-50/50 rounded-2xl border border-sand-200">
+                  <div>
+                    <h5 className="text-sm font-bold text-charcoal">Offer Active Status</h5>
+                    <p className="text-xs text-charcoal-muted font-medium">Toggle whether guests see this offer banner on landing.</p>
+                  </div>
+                  <button
+                    onClick={() => setOfferData({ ...offerData, is_enabled: !offerData.is_enabled })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-350 outline-none ${
+                      offerData.is_enabled ? 'bg-terracotta' : 'bg-sand-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-all duration-350 ${
+                        offerData.is_enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="relative group">
+                  <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Offer Description / Subtitle</label>
+                  <textarea
+                    rows={4}
+                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3.5 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm leading-relaxed"
+                    value={offerData.description}
+                    onChange={e => setOfferData({ ...offerData, description: e.target.value })}
+                    placeholder="Describe your special discounts, exclusive perks, or member benefits here..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="relative group">
+              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Offer Banner Image</label>
+              <div className="flex items-stretch space-x-3">
+                <div className="relative flex-1">
+                  <input
+                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3.5 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
+                    value={offerData.image_url}
+                    onChange={e => setOfferData({ ...offerData, image_url: e.target.value })}
+                    placeholder="Image URL"
+                  />
+                </div>
+                <label className="btn-premium px-6 flex items-center justify-center space-x-2 text-sm font-semibold rounded-2xl cursor-pointer hover:shadow-lg transition-all duration-300">
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Upload Banner</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => handleImageUpload(e, 'offer')}
+                  />
+                </label>
+              </div>
+              
+              {offerData.image_url && (
+                <div className="mt-5 relative group overflow-hidden rounded-2xl border border-sand-200/80 shadow-md max-h-56 max-w-lg animate-fadeIn">
+                  <img src={getImageUrl(offerData.image_url)} alt="Offer Preview" className="w-full object-cover group-hover:scale-105 transition-all duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end p-4">
+                    <span className="text-white text-xs font-semibold tracking-wide bg-charcoal/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">Active Offer Banner Preview</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="pt-6 border-t border-sand-150">
+              <button
+                onClick={() => handleSave('offer', offerData)}
+                disabled={saving}
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-md shadow-terracotta/15 active:scale-95 transition-all"
+              >
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Saving Offer...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Save Offer Configuration</span>
                   </>
                 )}
               </button>

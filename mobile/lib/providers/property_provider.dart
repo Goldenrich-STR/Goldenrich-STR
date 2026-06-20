@@ -384,4 +384,25 @@ class PropertyProvider with ChangeNotifier {
     } catch (_) {}
     return null;
   }
+
+  // --- WISHLIST MANAGEMENT ---
+  final Set<String> _wishlistIds = {};
+  Set<String> get wishlistIds => _wishlistIds;
+
+  bool isWishlisted(String propertyId) {
+    return _wishlistIds.contains(propertyId);
+  }
+
+  void toggleWishlist(String propertyId) {
+    if (_wishlistIds.contains(propertyId)) {
+      _wishlistIds.remove(propertyId);
+    } else {
+      _wishlistIds.add(propertyId);
+    }
+    notifyListeners();
+  }
+
+  List<PropertyModel> get wishlistProperties {
+    return _properties.where((p) => _wishlistIds.contains(p.propertyId)).toList();
+  }
 }

@@ -88,7 +88,6 @@ async def search_properties(
         # Build query
         query = {
             "status": PropertyStatus.LIVE.value,
-            "property_id": {"$not": {"$regex": "^prop_demo_"}},
         }
 
         if category:
