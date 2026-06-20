@@ -9,6 +9,7 @@ import '../../models/property_model.dart';
 import '../../theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../auth/login_screen.dart';
+import 'dart:math';
 
 class PropertyDetailScreen extends StatefulWidget {
   final String propertyId;
@@ -26,6 +27,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   String _paymentType = 'full';
   final _couponController = TextEditingController();
   int _currentImageIndex = 0;
+  bool _isDescriptionExpanded = false;
   final PageController _pageController = PageController();
   
   // New State variables for availability calendar, reviews, and guest count
@@ -797,8 +799,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     final propertyProvider = Provider.of<PropertyProvider>(context);
+    final auth = Provider.of<AuthProvider>(context);
     final prop = propertyProvider.currentProperty;
 
     if (propertyProvider.isLoading || prop == null) {
@@ -876,7 +880,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       // Slide Index indicator badge
                       Positioned(
                         right: 16,
-                        bottom: 16,
+                        bottom: 36, // leave room for card overlap
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
@@ -897,103 +901,161 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   ),
 
                   // DETAILS & CONTAINER CONTENT
-                  Padding(
-                    padding: const EdgeInsets.all(20.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Category Label
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            prop.category.toUpperCase(),
+                  Transform.translate(
+                    offset: const Offset(0, -24),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Title
+                          Text(
+                            prop.title,
                             style: GoogleFonts.manrope(
-                              color: AppTheme.primary,
-                              fontSize: 10,
+                              fontSize: 22,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: 1.0,
+                              color: AppTheme.charcoal,
+                              height: 1.25,
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
+                          const SizedBox(height: 8),
 
-                        // Title
-                        Text(
-                          prop.title,
-                          style: GoogleFonts.manrope(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.charcoal,
+                          // Subtitle & Info
+                          Text(
+                            '${prop.category.toUpperCase()} IN ${prop.city.toUpperCase()}',
+                            style: GoogleFonts.manrope(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.charcoal,
+                              letterSpacing: 0.5,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${prop.maxGuests} guests · ${prop.bhkType.toUpperCase()} · ${prop.areaSqft.toStringAsFixed(0)} Sqft',
+                            style: GoogleFonts.manrope(
+                              fontSize: 13,
+                              color: AppTheme.charcoalLight,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
 
-                        // Location
-                        Row(
-                          children: [
-                            const Icon(Icons.location_on_outlined, size: 16, color: AppTheme.primary),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                '${prop.address}, ${prop.city}, ${prop.state}',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 14,
-                                  color: AppTheme.charcoalLight,
-                                  fontWeight: FontWeight.w500,
+                          // Small Guest Favourite Badge
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                Column(
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          '4.95',
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppTheme.charcoal,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        const Icon(Icons.star, size: 14, color: AppTheme.charcoal),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '★★★★★',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 8,
+                                        color: AppTheme.charcoalMuted,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
+                                Container(width: 1, height: 28, color: Colors.grey.shade200),
+                                Column(
+                                  children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.keyboard_double_arrow_left_rounded, size: 14, color: AppTheme.charcoal),
+                                        Text(
+                                          'Guest favourite',
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppTheme.charcoal,
+                                          ),
+                                        ),
+                                        const Icon(Icons.keyboard_double_arrow_right_rounded, size: 14, color: AppTheme.charcoal),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Highly rated stay',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 10,
+                                        color: AppTheme.charcoalMuted,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(width: 1, height: 28, color: Colors.grey.shade200),
+                                Column(
+                                  children: [
+                                    Text(
+                                      '22',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.charcoal,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Reviews',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.charcoalMuted,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
+                          ),
+                          const SizedBox(height: 20),
 
-                        // BHK & Area highlights
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: AppTheme.stone,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.border.withOpacity(0.5)),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildHighlightItem(Icons.meeting_room_outlined, 'BHK', prop.bhkType.toUpperCase()),
-                              Container(width: 1, height: 24, color: AppTheme.border),
-                              _buildHighlightItem(Icons.aspect_ratio_outlined, 'Size', '${prop.areaSqft.toStringAsFixed(0)} Sqft'),
-                              Container(width: 1, height: 24, color: AppTheme.border),
-                              _buildHighlightItem(
-                                prop.petFriendly ? Icons.pets : Icons.block,
-                                'Pets',
-                                prop.petFriendly ? 'Allowed' : 'No',
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
+                          const Divider(height: 1),
+                          const SizedBox(height: 20),
 
-                        // Host Section Card
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.border),
-                          ),
-                          child: Row(
+                          // Host Section Card
+                          Row(
                             children: [
                               Container(
                                 width: 44,
                                 height: 44,
-                                decoration: const BoxDecoration(
-                                  color: AppTheme.secondary,
+                                decoration: BoxDecoration(
                                   shape: BoxShape.circle,
+                                  image: const DecorationImage(
+                                    image: NetworkImage('https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'),
+                                    fit: BoxFit.cover,
+                                  ),
+                                  border: Border.all(color: Colors.grey.shade100, width: 1.5),
                                 ),
-                                child: const Icon(Icons.person, color: Colors.white),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -1001,15 +1063,15 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Hosted by Goldenrich Partner',
+                                      'Hosted by Shivani',
                                       style: GoogleFonts.manrope(
-                                        fontSize: 14,
+                                        fontSize: 15,
                                         fontWeight: FontWeight.w700,
                                         color: AppTheme.charcoal,
                                       ),
                                     ),
                                     Text(
-                                      'Certified Host • Responsive',
+                                      'Superhost · 3 years hosting',
                                       style: GoogleFonts.manrope(
                                         fontSize: 12,
                                         color: AppTheme.charcoalMuted,
@@ -1021,184 +1083,377 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                               ),
                             ],
                           ),
-                        ),
-                        const SizedBox(height: 28),
+                          const SizedBox(height: 20),
 
-                        // About Section
-                        Text(
-                          'About this space',
-                          style: GoogleFonts.manrope(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.charcoal,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          prop.description,
-                          style: GoogleFonts.manrope(
-                            fontSize: 14,
-                            color: AppTheme.charcoalLight,
-                            height: 1.6,
-                          ),
-                        ),
-                        const SizedBox(height: 28),
+                          const Divider(height: 1),
+                          const SizedBox(height: 20),
 
-                        _buildVideoSection(prop),
-
-                        // Amenities Section
-                        Text(
-                          'What this place offers',
-                          style: GoogleFonts.manrope(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.charcoal,
+                          // Exceptional key features list
+                          _buildPremiumHighlight(
+                            Icons.login_rounded,
+                            'Exceptional check-in experience',
+                            'Recent guests gave the check-in process a 5-star rating.',
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        if (prop.amenities.isEmpty)
-                          Text(
-                            'No specific amenities listed.',
-                            style: GoogleFonts.manrope(color: AppTheme.charcoalMuted),
-                          )
-                        else
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 3.5,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 12,
+                          _buildPremiumHighlight(
+                            Icons.location_on_outlined,
+                            'Great location',
+                            'Guests who stayed here in the past year loved the location.',
+                          ),
+                          _buildPremiumHighlight(
+                            prop.petFriendly ? Icons.pets_outlined : Icons.local_parking_rounded,
+                            prop.petFriendly ? 'Pet friendly environment' : 'Park for free',
+                            prop.petFriendly
+                                ? 'Pets are welcomed with open arms at this listing.'
+                                : 'This is one of the few places in the area with free parking.',
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Translation Banner
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade100),
                             ),
-                            itemCount: prop.amenities.length,
-                            itemBuilder: (context, index) {
-                              final amenity = prop.amenities[index];
-                              return Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.stone,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      _getAmenityIcon(amenity),
-                                      color: AppTheme.primary,
-                                      size: 18,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.translate, size: 16, color: AppTheme.charcoal),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'Some info has been automatically translated. Show original',
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.charcoalLight,
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      amenity.toUpperCase(),
-                                      style: GoogleFonts.manrope(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppTheme.charcoal,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          const Divider(height: 1),
+                          const SizedBox(height: 24),
+
+                          // Description / About
+                          Text(
+                            prop.description,
+                            maxLines: _isDescriptionExpanded ? null : 4,
+                            overflow: _isDescriptionExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                            style: GoogleFonts.manrope(
+                              fontSize: 14,
+                              color: AppTheme.charcoalLight,
+                              height: 1.6,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _isDescriptionExpanded = !_isDescriptionExpanded;
+                              });
+                            },
+                            child: Row(
+                              children: [
+                                Text(
+                                  _isDescriptionExpanded ? 'Show less' : 'Read more',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.charcoal,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Icon(
+                                  _isDescriptionExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                  size: 16,
+                                  color: AppTheme.charcoal,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          _buildVideoSection(prop),
+
+                          const Divider(height: 1),
+                          const SizedBox(height: 24),
+
+                          // What this place offers (Amenities)
+                          Text(
+                            'What this place offers',
+                            style: GoogleFonts.manrope(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.charcoal,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          if (prop.amenities.isEmpty)
+                            Text(
+                              'No specific amenities listed.',
+                              style: GoogleFonts.manrope(color: AppTheme.charcoalMuted),
+                            )
+                          else
+                            GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                childAspectRatio: 3.5,
+                                crossAxisSpacing: 16,
+                                mainAxisSpacing: 12,
+                              ),
+                              itemCount: prop.amenities.length > 6 ? 6 : prop.amenities.length,
+                              itemBuilder: (context, index) {
+                                final amenity = prop.amenities[index];
+                                return Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.stone,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        _getAmenityIcon(amenity),
+                                        color: AppTheme.primary,
+                                        size: 18,
                                       ),
                                     ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
-                        const SizedBox(height: 32),
-
-                        // Stay Dates & Guests Selection card
-                        Text(
-                          isEvent ? 'Select event date' : 'Select stay dates',
-                          style: GoogleFonts.manrope(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.charcoal,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppTheme.border, width: 1.5),
-                          ),
-                          child: Column(
-                            children: [
-                              // Dates row
-                              Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
+                                    const SizedBox(width: 12),
                                     Expanded(
-                                      child: InkWell(
-                                        onTap: () => _selectCheckIn(context),
+                                      child: Text(
+                                        amenity.toUpperCase(),
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.charcoal,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          if (prop.amenities.length > 6) ...[
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  // Simple bottom sheet to show all amenities
+                                  showModalBottomSheet(
+                                    context: context,
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                                    ),
+                                    builder: (context) {
+                                      return Padding(
+                                        padding: const EdgeInsets.all(24.0),
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              isEvent ? 'EVENT DATE' : 'CHECK-IN',
+                                              'What this place offers',
                                               style: GoogleFonts.manrope(
-                                                fontSize: 10,
+                                                fontSize: 20,
                                                 fontWeight: FontWeight.w800,
-                                                color: AppTheme.charcoalMuted,
+                                                color: AppTheme.charcoal,
                                               ),
                                             ),
-                                            const SizedBox(height: 6),
-                                            Row(
-                                              children: [
-                                                const Icon(Icons.calendar_today, size: 14, color: AppTheme.primary),
-                                                const SizedBox(width: 6),
-                                                Text(
-                                                  _checkInDate == null
-                                                      ? 'Add Date'
-                                                      : DateFormat('dd-MM-yyyy').format(_checkInDate!),
-                                                  style: GoogleFonts.manrope(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: _checkInDate == null ? AppTheme.primary : AppTheme.charcoal,
-                                                  ),
-                                                ),
-                                              ],
+                                            const SizedBox(height: 20),
+                                            Expanded(
+                                              child: ListView.separated(
+                                                itemCount: prop.amenities.length,
+                                                separatorBuilder: (context, index) => const Divider(),
+                                                itemBuilder: (context, index) {
+                                                  final amenity = prop.amenities[index];
+                                                  return ListTile(
+                                                    leading: Icon(_getAmenityIcon(amenity), color: AppTheme.primary),
+                                                    title: Text(
+                                                      amenity.toUpperCase(),
+                                                      style: GoogleFonts.manrope(
+                                                        fontWeight: FontWeight.w600,
+                                                        color: AppTheme.charcoal,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
                                             ),
                                           ],
                                         ),
-                                      ),
+                                      );
+                                    },
+                                  );
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  side: const BorderSide(color: AppTheme.charcoal),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Show all ${prop.amenities.length} amenities',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.charcoal,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+
+                          const Divider(height: 1),
+                          const SizedBox(height: 24),
+
+                          // Where you'll be
+                          Text(
+                            'Where you\'ll be',
+                            style: GoogleFonts.manrope(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.charcoal,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${prop.city}, ${prop.state}, India',
+                            style: GoogleFonts.manrope(
+                              fontSize: 14,
+                              color: AppTheme.charcoalLight,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Container(
+                            height: 200,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              image: const DecorationImage(
+                                image: NetworkImage('https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600'),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
-                                    if (!isEvent) ...[
-                                      Container(width: 1.5, height: 40, color: AppTheme.border),
-                                      const SizedBox(width: 16),
+                                  ),
+                                ),
+                                Center(
+                                  child: Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: const BoxDecoration(
+                                      color: AppTheme.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.home_work_rounded, color: Colors.white, size: 24),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+
+                          const Divider(height: 1),
+                          const SizedBox(height: 32),
+
+                          // Large Wreath Guest Favourite Banner
+                          Center(
+                            child: Column(
+                              children: [
+                                LaurelWreathWidget(rating: 4.95),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Guest favourite',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.charcoal,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'One of the most loved homes on Goldenrich STR,\nbased on ratings, reviews, and reliability',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 12,
+                                    color: AppTheme.charcoalMuted,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+
+                          const Divider(height: 1),
+                          const SizedBox(height: 32),
+
+                          // Stay Dates Selection Card
+                          Text(
+                            isEvent ? 'Select event date' : 'Select stay dates',
+                            style: GoogleFonts.manrope(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.charcoal,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppTheme.border, width: 1.5),
+                            ),
+                            child: Column(
+                              children: [
+                                // Dates row
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Row(
+                                    children: [
                                       Expanded(
                                         child: InkWell(
-                                          onTap: _checkInDate == null ? null : () => _selectCheckOut(context),
+                                          onTap: () => _selectCheckIn(context),
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                'CHECK-OUT',
+                                                isEvent ? 'EVENT DATE' : 'CHECK-IN',
                                                 style: GoogleFonts.manrope(
                                                   fontSize: 10,
                                                   fontWeight: FontWeight.w800,
-                                                  color: _checkInDate == null ? AppTheme.charcoalMuted.withOpacity(0.5) : AppTheme.charcoalMuted,
+                                                  color: AppTheme.charcoalMuted,
                                                 ),
                                               ),
                                               const SizedBox(height: 6),
                                               Row(
                                                 children: [
-                                                  Icon(
-                                                    Icons.calendar_today,
-                                                    size: 14,
-                                                    color: _checkInDate == null ? AppTheme.charcoalMuted.withOpacity(0.4) : AppTheme.primary,
-                                                  ),
+                                                  const Icon(Icons.calendar_today, size: 14, color: AppTheme.primary),
                                                   const SizedBox(width: 6),
                                                   Text(
-                                                    _checkOutDate == null
+                                                    _checkInDate == null
                                                         ? 'Add Date'
-                                                        : DateFormat('dd-MM-yyyy').format(_checkOutDate!),
+                                                        : DateFormat('dd-MM-yyyy').format(_checkInDate!),
                                                     style: GoogleFonts.manrope(
                                                       fontSize: 14,
                                                       fontWeight: FontWeight.w700,
-                                                      color: _checkOutDate == null
-                                                          ? (_checkInDate == null ? AppTheme.charcoalMuted.withOpacity(0.5) : AppTheme.primary)
-                                                          : AppTheme.charcoal,
+                                                      color: _checkInDate == null ? AppTheme.primary : AppTheme.charcoal,
                                                     ),
                                                   ),
                                                 ],
@@ -1207,135 +1462,187 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                           ),
                                         ),
                                       ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              
-                              Divider(height: 1, thickness: 1.5, color: AppTheme.border),
-                              
-                              // Guests row
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Expanded(
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            isCommercial ? Icons.groups_outlined : Icons.people_outline,
-                                            color: AppTheme.charcoalLight,
-                                            size: 22,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
+                                      if (!isEvent) ...[
+                                        Container(width: 1.5, height: 40, color: AppTheme.border),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: InkWell(
+                                            onTap: _checkInDate == null ? null : () => _selectCheckOut(context),
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
                                                 Text(
-                                                  isCommercial ? 'TOTAL STAFF' : 'TOTAL GUESTS',
+                                                  'CHECK-OUT',
                                                   style: GoogleFonts.manrope(
                                                     fontSize: 10,
                                                     fontWeight: FontWeight.w800,
-                                                    color: AppTheme.charcoalMuted,
+                                                    color: _checkInDate == null ? AppTheme.charcoalMuted.withOpacity(0.5) : AppTheme.charcoalMuted,
                                                   ),
                                                 ),
-                                                const SizedBox(height: 4),
-                                                if (isEvent)
-                                                  DropdownButton<int>(
-                                                    value: _guestCount,
-                                                    underline: const SizedBox(),
-                                                    icon: const Icon(Icons.arrow_drop_down, color: AppTheme.primary),
-                                                    style: GoogleFonts.manrope(
-                                                      fontSize: 15,
-                                                      fontWeight: FontWeight.w700,
-                                                      color: AppTheme.charcoal,
+                                                const SizedBox(height: 6),
+                                                Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons.calendar_today,
+                                                      size: 14,
+                                                      color: _checkInDate == null ? AppTheme.charcoalMuted.withOpacity(0.4) : AppTheme.primary,
                                                     ),
-                                                    items: const [
-                                                      DropdownMenuItem(value: 100, child: Text('Less than 100')),
-                                                      DropdownMenuItem(value: 200, child: Text('100-200')),
-                                                      DropdownMenuItem(value: 300, child: Text('200-300')),
-                                                      DropdownMenuItem(value: 400, child: Text('300-400')),
-                                                      DropdownMenuItem(value: 500, child: Text('400-500')),
-                                                      DropdownMenuItem(value: 600, child: Text('Greater than 500')),
-                                                    ],
-                                                    onChanged: (val) {
-                                                      setState(() {
-                                                        _guestCount = val ?? 100;
-                                                      });
-                                                    },
-                                                  )
-                                                else
-                                                  Row(
-                                                    children: [
-                                                      InkWell(
-                                                        onTap: _guestCount > 1
-                                                            ? () => setState(() => _guestCount--)
-                                                            : null,
-                                                        child: Container(
-                                                          padding: const EdgeInsets.all(4),
-                                                          decoration: BoxDecoration(
-                                                            shape: BoxShape.circle,
-                                                            border: Border.all(color: AppTheme.border),
-                                                          ),
-                                                          child: const Icon(Icons.remove, size: 14, color: AppTheme.charcoal),
-                                                        ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      _checkOutDate == null
+                                                          ? 'Add Date'
+                                                          : DateFormat('dd-MM-yyyy').format(_checkOutDate!),
+                                                      style: GoogleFonts.manrope(
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.w700,
+                                                        color: _checkOutDate == null
+                                                            ? (_checkInDate == null ? AppTheme.charcoalMuted.withOpacity(0.5) : AppTheme.primary)
+                                                            : AppTheme.charcoal,
                                                       ),
-                                                      const SizedBox(width: 12),
-                                                      Text(
-                                                        '$_guestCount',
-                                                        style: GoogleFonts.manrope(
-                                                          fontSize: 16,
-                                                          fontWeight: FontWeight.w700,
-                                                          color: AppTheme.charcoal,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 12),
-                                                      InkWell(
-                                                        onTap: _guestCount < prop.maxGuests
-                                                            ? () => setState(() => _guestCount++)
-                                                            : null,
-                                                        child: Container(
-                                                          padding: const EdgeInsets.all(4),
-                                                          decoration: BoxDecoration(
-                                                            shape: BoxShape.circle,
-                                                            border: Border.all(color: AppTheme.border),
-                                                          ),
-                                                          child: const Icon(Icons.add, size: 14, color: AppTheme.charcoal),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
+                                                    ),
+                                                  ],
+                                                ),
                                               ],
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (!isEvent)
-                                      Text(
-                                        isCommercial ? 'MAX ${prop.maxGuests} STAFF' : 'MAX ${prop.maxGuests}',
-                                        style: GoogleFonts.manrope(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTheme.primary,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                
+                                Divider(height: 1, thickness: 1.5, color: AppTheme.border),
+                                
+                                // Guests row
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              isCommercial ? Icons.groups_outlined : Icons.people_outline,
+                                              color: AppTheme.charcoalLight,
+                                              size: 22,
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    isCommercial ? 'TOTAL STAFF' : 'TOTAL GUESTS',
+                                                    style: GoogleFonts.manrope(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: AppTheme.charcoalMuted,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  if (isEvent)
+                                                    DropdownButton<int>(
+                                                      value: _guestCount,
+                                                      underline: const SizedBox(),
+                                                      icon: const Icon(Icons.arrow_drop_down, color: AppTheme.primary),
+                                                      style: GoogleFonts.manrope(
+                                                        fontSize: 15,
+                                                        fontWeight: FontWeight.w700,
+                                                        color: AppTheme.charcoal,
+                                                      ),
+                                                      items: const [
+                                                        DropdownMenuItem(value: 100, child: Text('Less than 100')),
+                                                        DropdownMenuItem(value: 200, child: Text('100-200')),
+                                                        DropdownMenuItem(value: 300, child: Text('200-300')),
+                                                        DropdownMenuItem(value: 400, child: Text('300-400')),
+                                                        DropdownMenuItem(value: 500, child: Text('400-500')),
+                                                        DropdownMenuItem(value: 600, child: Text('Greater than 500')),
+                                                      ],
+                                                      onChanged: (val) {
+                                                        setState(() {
+                                                          _guestCount = val ?? 100;
+                                                        });
+                                                      },
+                                                    )
+                                                  else
+                                                    Row(
+                                                      children: [
+                                                        InkWell(
+                                                          onTap: _guestCount > 1
+                                                              ? () => setState(() => _guestCount--)
+                                                              : null,
+                                                          child: Container(
+                                                            padding: const EdgeInsets.all(4),
+                                                            decoration: BoxDecoration(
+                                                              shape: BoxShape.circle,
+                                                              border: Border.all(color: AppTheme.border),
+                                                            ),
+                                                            child: const Icon(Icons.remove, size: 14, color: AppTheme.charcoal),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 12),
+                                                        Text(
+                                                          '$_guestCount',
+                                                          style: GoogleFonts.manrope(
+                                                            fontSize: 16,
+                                                            fontWeight: FontWeight.w700,
+                                                            color: AppTheme.charcoal,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 12),
+                                                        InkWell(
+                                                          onTap: _guestCount < prop.maxGuests
+                                                              ? () => setState(() => _guestCount++)
+                                                              : null,
+                                                          child: Container(
+                                                            padding: const EdgeInsets.all(4),
+                                                            decoration: BoxDecoration(
+                                                              shape: BoxShape.circle,
+                                                              border: Border.all(color: AppTheme.border),
+                                                            ),
+                                                            child: const Icon(Icons.add, size: 14, color: AppTheme.charcoal),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                  ],
+                                      if (!isEvent)
+                                        Text(
+                                          isCommercial ? 'MAX ${prop.maxGuests} STAFF' : 'MAX ${prop.maxGuests}',
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppTheme.primary,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        _buildEventVenueOptions(prop),
-                        
-                        // Inline Availability Calendar section
-                        _buildAvailabilityCalendar(),
-                        
-                        // Guest Reviews section
-                        _buildReviewsSection(),
-                      ],
+                          _buildEventVenueOptions(prop),
+
+                          // Inline Availability Calendar section
+                          _buildAvailabilityCalendar(),
+
+                          // Guest Reviews section
+                          _buildReviewsSection(),
+                          const SizedBox(height: 32),
+
+                          const Divider(height: 1),
+                          const SizedBox(height: 32),
+
+                          // Meet your host section (Airbnb style)
+                          _buildAirbnbMeetHostSection(),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -1389,20 +1696,33 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       child: const Icon(Icons.share_outlined, color: AppTheme.charcoal, size: 20),
                     ),
                     const SizedBox(width: 12),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          )
-                        ],
+                    GestureDetector(
+                      onTap: () {
+                        propertyProvider.toggleWishlist(prop.propertyId);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            )
+                          ],
+                        ),
+                        child: Icon(
+                          propertyProvider.isWishlisted(prop.propertyId)
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          color: propertyProvider.isWishlisted(prop.propertyId)
+                              ? Colors.red
+                              : AppTheme.charcoal,
+                          size: 20,
+                        ),
                       ),
-                      child: const Icon(Icons.favorite_border, color: AppTheme.charcoal, size: 20),
                     ),
                   ],
                 ),
@@ -1437,9 +1757,11 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
                           children: [
                             Text(
-                              '₹${NumberFormat('#,##,###').format(prop.pricePerNight)}',
+                              '₹${NumberFormat('#,##,###').format(prop.pricePerNight * (auth.isPromoClaimed ? 0.9 : 1.0))}',
                               style: GoogleFonts.manrope(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
@@ -1454,35 +1776,54 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
+                            if (auth.isPromoClaimed) ...[
+                              const SizedBox(width: 6),
+                              Text(
+                                '₹${NumberFormat('#,##,###').format(prop.pricePerNight)}',
+                                style: GoogleFonts.manrope(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.charcoalMuted,
+                                  decoration: TextDecoration.lineThrough,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          'Instant Booking available',
-                          style: GoogleFonts.manrope(
-                            fontSize: 11,
-                            color: AppTheme.secondary,
-                            fontWeight: FontWeight.w600,
+                        InkWell(
+                          onTap: () {
+                            // pricing details logic or show info dialog
+                          },
+                          child: Text(
+                            'See calculation',
+                            style: GoogleFonts.manrope(
+                              fontSize: 12,
+                              color: AppTheme.charcoal,
+                              fontWeight: FontWeight.w700,
+                              decoration: TextDecoration.underline,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  // Book Button
+                  // Book Button (Reserve - Airbnb style)
                   ElevatedButton(
                     onPressed: () => _handleBooking(context, prop.pricePerNight),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+                      backgroundColor: const Color(0xFFE61E4F), // Airbnb hot pink
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
+                      elevation: 0,
                     ),
                     child: Text(
-                      'Instant Book',
+                      'Reserve',
                       style: GoogleFonts.manrope(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
                         color: Colors.white,
                       ),
                     ),
@@ -2072,5 +2413,479 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       ],
     );
   }
+
+  Widget _buildPremiumHighlight(IconData icon, String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 26,
+            color: AppTheme.charcoal,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.charcoal,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    color: AppTheme.charcoalMuted,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAirbnbMeetHostSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Meet your host',
+          style: GoogleFonts.manrope(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.charcoal,
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Host Card
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.grey.shade200),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Left Part
+              Expanded(
+                flex: 5,
+                child: Column(
+                  children: [
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 44,
+                          backgroundImage: const NetworkImage('https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'),
+                          backgroundColor: Colors.grey.shade100,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE61E4F),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.star_rounded, color: Colors.white, size: 14),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Shivani',
+                      style: GoogleFonts.manrope(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.charcoal,
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.workspace_premium, size: 14, color: AppTheme.charcoal),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Superhost',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.charcoal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Divider
+              Container(
+                height: 100,
+                width: 1,
+                color: Colors.grey.shade200,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+              ),
+              // Right Part
+              Expanded(
+                flex: 5,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '566',
+                          style: GoogleFonts.manrope(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.charcoal,
+                          ),
+                        ),
+                        Text(
+                          'Reviews',
+                          style: GoogleFonts.manrope(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.charcoalMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              '4.79',
+                              style: GoogleFonts.manrope(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.charcoal,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            const Icon(Icons.star_rounded, size: 14, color: AppTheme.charcoal),
+                          ],
+                        ),
+                        Text(
+                          'Rating',
+                          style: GoogleFonts.manrope(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.charcoalMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '1',
+                          style: GoogleFonts.manrope(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.charcoal,
+                          ),
+                        ),
+                        Text(
+                          'Year hosting',
+                          style: GoogleFonts.manrope(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.charcoalMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        
+        // Host Bio details
+        Row(
+          children: [
+            const Icon(Icons.work_outline, color: AppTheme.charcoal, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              "Shivani's work: School Director",
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.charcoal,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const Icon(Icons.lightbulb_outline, color: AppTheme.charcoal, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              "My favorite: Traveling",
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.charcoal,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        
+        // Superhost Description
+        Text(
+          'Shivani is a Superhost',
+          style: GoogleFonts.manrope(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.charcoal,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Superhosts are experienced, highly rated hosts who are committed to providing great stays for guests.',
+          style: GoogleFonts.manrope(
+            fontSize: 13,
+            color: AppTheme.charcoalMuted,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 24),
+        
+        // Co-Hosts
+        Text(
+          'Co-Hosts',
+          style: GoogleFonts.manrope(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.charcoal,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const CircleAvatar(
+              radius: 18,
+              backgroundImage: NetworkImage('https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150'),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Ritesh',
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.charcoal,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+        
+        // Host details
+        Text(
+          'Host details',
+          style: GoogleFonts.manrope(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.charcoal,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Response rate: 100%\nResponds within an hour',
+          style: GoogleFonts.manrope(
+            fontSize: 13,
+            color: AppTheme.charcoal,
+            height: 1.6,
+          ),
+        ),
+        const SizedBox(height: 20),
+        
+        // Message Host Button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () {
+              // Message host logic
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey.shade100,
+              foregroundColor: AppTheme.charcoal,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade300),
+              ),
+            ),
+            child: Text(
+              'Message host',
+              style: GoogleFonts.manrope(
+                fontWeight: FontWeight.w800,
+                fontSize: 15,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Warning note
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.security_rounded, size: 18, color: Colors.grey),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'To protect your payment, never transfer money or communicate outside the Goldenrich STR website or app.',
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  color: AppTheme.charcoalMuted,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class LaurelWreathWidget extends StatelessWidget {
+  final double rating;
+  const LaurelWreathWidget({super.key, required this.rating});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        CustomPaint(
+          size: const Size(24, 48),
+          painter: LaurelWreathPainter(isLeft: true),
+        ),
+        const SizedBox(width: 16),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              rating.toStringAsFixed(2),
+              style: GoogleFonts.manrope(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.charcoal,
+                height: 1.1,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Row(
+              children: List.generate(5, (index) {
+                return const Icon(
+                  Icons.star_rounded,
+                  color: AppTheme.charcoal,
+                  size: 14,
+                );
+              }),
+            ),
+          ],
+        ),
+        const SizedBox(width: 16),
+        CustomPaint(
+          size: const Size(24, 48),
+          painter: LaurelWreathPainter(isLeft: false),
+        ),
+      ],
+    );
+  }
+}
+
+class LaurelWreathPainter extends CustomPainter {
+  final bool isLeft;
+  LaurelWreathPainter({required this.isLeft});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppTheme.charcoal
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    final path = Path();
+    if (isLeft) {
+      // Draw left curved branch
+      path.moveTo(size.width, size.height);
+      path.quadraticBezierTo(0, size.height * 0.7, 0, size.height * 0.2);
+      path.quadraticBezierTo(0, 0, size.width * 0.4, 0);
+    } else {
+      // Draw right curved branch
+      path.moveTo(0, size.height);
+      path.quadraticBezierTo(size.width, size.height * 0.7, size.width, size.height * 0.2);
+      path.quadraticBezierTo(size.width, 0, size.width * 0.6, 0);
+    }
+    canvas.drawPath(path, paint);
+
+    // Draw small leaves along the curve
+    final leafPaint = Paint()
+      ..color = AppTheme.charcoal
+      ..style = PaintingStyle.fill;
+
+    if (isLeft) {
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.8, size.height * 0.85), -0.5);
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.4, size.height * 0.7), -0.8);
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.15, size.height * 0.5), -1.1);
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.1, size.height * 0.3), -1.4);
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.25, size.height * 0.1), -1.8);
+    } else {
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.2, size.height * 0.85), 0.5);
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.6, size.height * 0.7), 0.8);
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.85, size.height * 0.5), 1.1);
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.9, size.height * 0.3), 1.4);
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.75, size.height * 0.1), 1.8);
+    }
+  }
+
+  void _drawLeaf(Canvas canvas, Paint paint, Offset center, double rotation) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotation);
+    canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: 14, height: 6), paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 

@@ -244,7 +244,25 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                     "privacy_label": "Privacy Policy",
                     "privacy_text": "X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.",
                     "terms_label": "Terms & Conditions",
-                    "terms_text": "By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360."
+                    "terms_text": "By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.",
+                    "checkin_label": "Check-in Instructions",
+                    "checkin_text": "Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival. Quiet hours are from 10:00 PM to 7:00 AM."
+                },
+                "is_active": True,
+                "created_at": now,
+                "updated_at": now
+            },
+            {
+                "content_id": "cms_offer_default",
+                "page": "landing",
+                "section": "offer",
+                "content_type": "object",
+                "content_data": {
+                    "is_enabled": True,
+                    "title": "Save 10% on a summertime trip",
+                    "description": "Book within 7 days and save up to $100 on your next stay. Terms apply.",
+                    "button_text": "Log in to claim offer",
+                    "image_url": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=600"
                 },
                 "is_active": True,
                 "created_at": now,
@@ -311,7 +329,31 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                     "privacy_label": "Privacy Policy",
                     "privacy_text": "X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.",
                     "terms_label": "Terms & Conditions",
-                    "terms_text": "By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360."
+                    "terms_text": "By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.",
+                    "checkin_label": "Check-in Instructions",
+                    "checkin_text": "Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival. Quiet hours are from 10:00 PM to 7:00 AM."
+                },
+                "is_active": True,
+                "created_at": now,
+                "updated_at": now
+            })
+        
+        offer_doc = await db.cms_content.find_one(
+            {"page": "landing", "section": "offer"}, {"_id": 0}
+        )
+        if not offer_doc:
+            now = datetime.now(timezone.utc)
+            await db.cms_content.insert_one({
+                "content_id": "cms_offer_default",
+                "page": "landing",
+                "section": "offer",
+                "content_type": "object",
+                "content_data": {
+                    "is_enabled": True,
+                    "title": "Save 10% on a summertime trip",
+                    "description": "Book within 7 days and save up to $100 on your next stay. Terms apply.",
+                    "button_text": "Log in to claim offer",
+                    "image_url": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=600"
                 },
                 "is_active": True,
                 "created_at": now,

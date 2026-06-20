@@ -194,7 +194,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("backend_server.log", encoding="utf-8")
+        logging.FileHandler(str(ROOT_DIR.parent / "backend_server.log"), encoding="utf-8")
     ]
 )
 logger = logging.getLogger(__name__)

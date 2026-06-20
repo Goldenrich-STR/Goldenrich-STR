@@ -6,6 +6,7 @@ import '../../theme.dart';
 import '../../providers/auth_provider.dart';
 import '../shared/app_shell.dart';
 import '../guest/landing_screen.dart';
+import 'login_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -117,7 +118,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
           context,
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
-                auth.isAuthenticated ? const AppShell() : const LandingScreen(),
+                auth.isAuthenticated ? const AppShell() : const LoginScreen(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
             },

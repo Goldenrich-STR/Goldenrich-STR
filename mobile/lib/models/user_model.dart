@@ -9,6 +9,7 @@ class UserModel {
   final String kycStatus;
   final bool isActive;
   final bool registrationFeePaid;
+  final bool isPromoClaimed;
 
   UserModel({
     required this.userId,
@@ -21,6 +22,7 @@ class UserModel {
     required this.kycStatus,
     required this.isActive,
     required this.registrationFeePaid,
+    required this.isPromoClaimed,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class UserModel {
       kycStatus: json['kyc_status'] ?? 'pending',
       isActive: json['is_active'] ?? false,
       registrationFeePaid: json['registration_fee_paid'] ?? false,
+      isPromoClaimed: json['is_promo_claimed'] ?? false,
     );
   }
 
@@ -50,6 +53,7 @@ class UserModel {
       'kyc_status': kycStatus,
       'is_active': isActive,
       'registration_fee_paid': registrationFeePaid,
+      'is_promo_claimed': isPromoClaimed,
     };
   }
 }

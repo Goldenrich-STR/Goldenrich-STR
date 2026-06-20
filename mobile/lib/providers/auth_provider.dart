@@ -14,6 +14,10 @@ class AuthProvider with ChangeNotifier {
   String? get token => _token;
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _token != null;
+  bool get isPromoClaimed => _currentUser?.isPromoClaimed ?? false;
+
+  String? _demoOtp;
+  String? get demoOtp => _demoOtp;
 
   Future<void> loadSession() async {
     _isLoading = true;
@@ -38,13 +42,20 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> sendOTP(String phone, {String purpose = 'registration'}) async {
     _isLoading = true;
+    _demoOtp = null;
     notifyListeners();
     try {
       final response = await _apiService.dio.post('/api/auth/send-otp', data: {
         'phone': phone,
         'purpose': purpose,
       });
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        if (response.data != null && response.data['otp'] != null) {
+          _demoOtp = response.data['otp'].toString();
+        }
+        return true;
+      }
+      return false;
     } catch (e) {
       return false;
     } finally {
@@ -143,6 +154,25 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
     try {
       final response = await _apiService.dio.post('/api/host/submit-verification', data: payload);
+      if (response.statusCode == 200) {
+        await refreshProfile();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> claimPromo() async {
+    if (_token == null) return false;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio.post('/api/auth/claim-promo');
       if (response.statusCode == 200) {
         await refreshProfile();
         return true;

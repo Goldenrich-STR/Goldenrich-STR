@@ -639,3 +639,16 @@ async def get_current_user_profile(
         if user.get(key):
             user[key] = user[key].isoformat() if hasattr(user[key], "isoformat") else user[key]
     return user
+
+@router.post("/claim-promo")
+async def claim_promo(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Claim the summer promo 10% discount."""
+    await db.users.update_one(
+        {"user_id": current_user["user_id"]},
+        {"$set": {"is_promo_claimed": True, "updated_at": datetime.now(timezone.utc)}}
+    )
+    return {"message": "Promo claimed successfully", "is_promo_claimed": True}
+

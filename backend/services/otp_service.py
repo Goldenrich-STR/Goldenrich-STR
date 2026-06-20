@@ -135,6 +135,20 @@ class OTPService:
             else:
                 stored_otp = self._mem_get(otp_key)
 
+            # Allow mock OTP "123456" in demo mode
+            is_demo = os.getenv("MSG91_DEMO_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
+            if is_demo and submitted_otp.strip() == "123456":
+                if self.redis_client:
+                    try:
+                        self.redis_client.delete(otp_key)
+                        self.redis_client.delete(attempts_key)
+                    except Exception:
+                        pass
+                self._mem_delete(otp_key)
+                self._mem_delete(attempts_key)
+                logger.info(f"OTP verified successfully using mock fallback for {identifier}")
+                return {"success": True, "message": "OTP verified successfully"}
+
             if not stored_otp:
                 return {
                     "success": False,

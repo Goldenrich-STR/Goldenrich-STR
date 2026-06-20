@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,6 +9,7 @@ import '../../theme.dart';
 import '../auth/login_screen.dart';
 import '../shared/app_shell.dart';
 import 'property_detail_screen.dart';
+import '../../services/api_service.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -18,17 +20,199 @@ class LandingScreen extends StatefulWidget {
 
 class _LandingScreenState extends State<LandingScreen> {
   final TextEditingController _searchController = TextEditingController();
+  Timer? _heroTimer;
+  int _currentHeroImageIndex = 0;
+
+  final List<String> _heroImages = [
+    'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=1200',
+    'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&q=80&w=1200',
+    'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1200',
+    'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1200',
+    'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200',
+  ];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<PropertyProvider>(context, listen: false).searchProperties({});
+      // Delay promotional offer check to let the UI render first
+      Timer(const Duration(milliseconds: 2000), () {
+        if (mounted) {
+          _checkAndShowPromoOffer();
+        }
+      });
     });
+    // Automatic transition every 5 seconds
+    _heroTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (mounted) {
+        setState(() {
+          _currentHeroImageIndex = (_currentHeroImageIndex + 1) % _heroImages.length;
+        });
+      }
+    });
+  }
+
+  Future<void> _checkAndShowPromoOffer() async {
+    try {
+      final response = await ApiService().dio.get('/cms/landing-page');
+      if (response.statusCode == 200 && response.data != null) {
+        final offer = response.data['offer'];
+        if (offer != null && offer['is_enabled'] == true) {
+          _showOfferDialog(offer);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading CMS promotional offer: $e');
+    }
+  }
+
+  void _showOfferDialog(Map<String, dynamic> offer) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + 20,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    child: Image.network(
+                      offer['image_url'] ?? 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=600',
+                      height: 220,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        height: 220,
+                        color: AppTheme.stone,
+                        child: const Icon(Icons.local_offer, size: 64, color: AppTheme.primary),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 16,
+                    right: 16,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.white.withOpacity(0.9),
+                      radius: 18,
+                      child: IconButton(
+                        icon: const Icon(Icons.close, color: Colors.black, size: 18),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      offer['title'] ?? 'Save 10% on a summertime trip',
+                      style: GoogleFonts.outfit(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.charcoal,
+                        height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      offer['description'] ?? 'Book within 7 days and save up to \$100 on your next stay. Terms apply.',
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        color: AppTheme.charcoalMuted,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: Consumer<AuthProvider>(
+                        builder: (context, auth, _) {
+                          final bool isClaimed = auth.isAuthenticated && auth.isPromoClaimed;
+                          return ElevatedButton(
+                            onPressed: isClaimed
+                                ? null
+                                : () {
+                                    if (!auth.isAuthenticated) {
+                                      Navigator.pop(context);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (context) => const LoginScreen(popOnSuccess: true)),
+                                      );
+                                    } else {
+                                      auth.claimPromo().then((success) {
+                                        if (success) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Promo claimed! The discount has been applied to your account.'),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        } else {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Failed to claim promo. Please try again later.'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      });
+                                      Navigator.pop(context);
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isClaimed ? Colors.grey : AppTheme.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              auth.isAuthenticated
+                                  ? (isClaimed ? 'Offer Claimed' : 'Claim Offer')
+                                  : (offer['button_text'] ?? 'Log in to claim offer'),
+                              style: GoogleFonts.manrope(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
   void dispose() {
+    _heroTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -84,7 +268,7 @@ class _LandingScreenState extends State<LandingScreen> {
               context,
               title: 'COMMERCIAL SPACES',
               subtitle: 'Premium offices, co-working spaces, and retail.',
-              properties: residentialProps, // fallback just in case commercial is empty
+              properties: commercialProps.isEmpty ? residentialProps : commercialProps,
             ),
 
             const SizedBox(height: 32),
@@ -126,14 +310,33 @@ class _LandingScreenState extends State<LandingScreen> {
     final double statusBarHeight = MediaQuery.of(context).padding.top;
     return Stack(
       children: [
-        // Background image
-        Container(
+        // Background image with beautiful transition and scale animation
+        SizedBox(
           height: 380 + statusBarHeight,
           width: double.infinity,
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: NetworkImage('https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=1200'),
-              fit: BoxFit.cover,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 1200),
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween<double>(begin: 1.05, end: 1.0).animate(
+                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                  ),
+                  child: child,
+                ),
+              );
+            },
+            child: Container(
+              key: ValueKey<int>(_currentHeroImageIndex),
+              height: double.infinity,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: NetworkImage(_heroImages[_currentHeroImageIndex]),
+                  fit: BoxFit.cover,
+                ),
+              ),
             ),
           ),
         ),
@@ -153,6 +356,28 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
           ),
         ),
+        // Slide indicators (dots)
+        Positioned(
+          bottom: 110,
+          left: 0,
+          right: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_heroImages.length, (index) {
+              final isSelected = index == _currentHeroImageIndex;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                height: 6,
+                width: isSelected ? 20 : 6,
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFFD4AF37) : Colors.white.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+        ),
         // Content
         Padding(
           padding: EdgeInsets.only(top: statusBarHeight),
@@ -161,7 +386,7 @@ class _LandingScreenState extends State<LandingScreen> {
             children: [
               // Header inside the Stack
               _buildHeaderTranslucent(context, auth),
-              const SizedBox(height: 40),
+              const SizedBox(height: 30),
               // Gold indicator
               Center(
                 child: Container(
@@ -201,7 +426,7 @@ class _LandingScreenState extends State<LandingScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: 35),
               // Search capsule overlay
               _buildSearchCapsule(context),
             ],
@@ -376,17 +601,21 @@ class _LandingScreenState extends State<LandingScreen> {
 
   // --- CATEGORY QUICK LINKS ---
   Widget _buildCategoryQuickLinks(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _buildCircularCategoryItem(context, 'RESIDENTIAL', 'Resort Villa', Icons.hotel_outlined, 'residential'),
-        _buildCircularCategoryItem(context, 'COMMERCIAL', 'Office & Coworking', Icons.business_outlined, 'commercial'),
-        _buildCircularCategoryItem(context, 'EVENTS', 'Hall & Garden', Icons.park_outlined, 'event_venue'),
-      ],
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildCategoryItem(context, 'Residential', Icons.home_rounded, 'residential', isNew: false),
+          _buildCategoryItem(context, 'Commercial', Icons.business_rounded, 'commercial', isNew: true),
+          _buildCategoryItem(context, 'Events', Icons.celebration_rounded, 'event_venue', isNew: true),
+        ],
+      ),
     );
   }
 
-  Widget _buildCircularCategoryItem(BuildContext context, String label, String subtitle, IconData icon, String categoryValue) {
+  Widget _buildCategoryItem(BuildContext context, String label, IconData iconData, String categoryValue, {bool isNew = false}) {
     return GestureDetector(
       onTap: () {
         Navigator.pushReplacement(
@@ -399,42 +628,48 @@ class _LandingScreenState extends State<LandingScreen> {
           ),
         );
       },
+      behavior: HitTestBehavior.opaque,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFD4AF37), width: 1.5), // Gold border
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(
+                iconData,
+                size: 28,
+                color: Colors.black87,
+              ),
+              if (isNew)
+                Positioned(
+                  top: -6,
+                  right: -16,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F2C59), // Deep Navy Blue
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'NEW',
+                      style: TextStyle(
+                        fontSize: 7,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
                 ),
-              ],
-            ),
-            child: Icon(icon, color: AppTheme.primary, size: 24),
+            ],
           ),
           const SizedBox(height: 8),
           Text(
             label,
-            style: GoogleFonts.outfit(
-              fontSize: 10,
-              fontWeight: FontWeight.w900,
-              color: AppTheme.charcoal,
-              letterSpacing: 1.0,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
             style: GoogleFonts.manrope(
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: AppTheme.charcoalMuted,
+              color: Colors.black87,
             ),
           ),
         ],
@@ -449,6 +684,7 @@ class _LandingScreenState extends State<LandingScreen> {
     required String subtitle,
     required List<dynamic> properties,
   }) {
+    final auth = Provider.of<AuthProvider>(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -624,15 +860,33 @@ class _LandingScreenState extends State<LandingScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 2),
-                                  Text(
-                                    prop.category.toLowerCase() == 'commercial' || prop.category.toLowerCase() == 'event_venue'
-                                        ? '₹${prop.pricePerNight.toStringAsFixed(0)} / day'
-                                        : '₹${prop.pricePerNight.toStringAsFixed(0)} / night',
-                                    style: GoogleFonts.manrope(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppTheme.primary,
-                                    ),
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                                    textBaseline: TextBaseline.alphabetic,
+                                    children: [
+                                      Text(
+                                        prop.category.toLowerCase() == 'commercial' || prop.category.toLowerCase() == 'event_venue'
+                                            ? '₹${(prop.pricePerNight * (auth.isPromoClaimed ? 0.9 : 1.0)).toStringAsFixed(0)} / day'
+                                            : '₹${(prop.pricePerNight * (auth.isPromoClaimed ? 0.9 : 1.0)).toStringAsFixed(0)} / night',
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTheme.primary,
+                                        ),
+                                      ),
+                                      if (auth.isPromoClaimed) ...[
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          '₹${prop.pricePerNight.toStringAsFixed(0)}',
+                                          style: GoogleFonts.manrope(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppTheme.charcoalMuted,
+                                            decoration: TextDecoration.lineThrough,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ],
                               ),
@@ -1244,7 +1498,8 @@ class _LandingScreenState extends State<LandingScreen> {
           const Divider(color: AppTheme.stone),
           const SizedBox(height: 16),
           Text(
-            '© 2026 · All Rights Reserved · X-Space360.in',
+            '© 2026 X-Space360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd',
+            textAlign: TextAlign.center,
             style: GoogleFonts.manrope(
               fontSize: 10,
               fontWeight: FontWeight.bold,

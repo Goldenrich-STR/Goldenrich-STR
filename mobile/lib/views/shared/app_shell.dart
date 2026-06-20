@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/property_provider.dart';
+import '../../models/property_model.dart';
 import '../../services/localization_service.dart';
 import '../../theme.dart';
 import '../auth/login_screen.dart';
 import '../guest/guest_browse_screen.dart';
 import '../guest/guest_bookings_screen.dart';
+import '../guest/landing_screen.dart';
+import '../guest/property_detail_screen.dart';
 import '../host/host_dashboard_screen.dart';
 import '../broker/broker_dashboard_screen.dart';
 import '../employee/employee_dashboard_screen.dart';
@@ -37,6 +41,22 @@ class _AppShellState extends State<AppShell> {
   void initState() {
     super.initState();
     _selectedIndex = widget.initialIndex;
+
+    // Automatically push search/browse page if initial filters are provided
+    if (widget.initialSearchCity != null || widget.initialCategory != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GuestBrowseScreen(
+              initialCity: widget.initialSearchCity,
+              initialGuests: widget.initialSearchGuests,
+              initialCategory: widget.initialCategory,
+            ),
+          ),
+        );
+      });
+    }
   }
 
   void _onItemTapped(int index) {
@@ -56,41 +76,41 @@ class _AppShellState extends State<AppShell> {
 
     if (user == null) {
       screens = [
-        GuestBrowseScreen(
-          initialCity: widget.initialSearchCity,
-          initialGuests: widget.initialSearchGuests,
-          initialCategory: widget.initialCategory,
-        ),
+        const LandingScreen(),
+        const _WishlistsTab(isAuthenticated: false),
         const _UnauthenticatedPlaceholder(
-          title: 'Bookings',
+          title: 'Trips',
           message: 'Please sign in to view and manage your property bookings.',
         ),
+        const _MessagesTab(isAuthenticated: false),
         const _UnauthenticatedPlaceholder(
           title: 'Profile',
           message: 'Please sign in to view your profile and account settings.',
         ),
       ];
       navItems = const [
-        BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Explore'),
-        BottomNavigationBarItem(icon: Icon(Icons.bookmark_border), label: 'Bookings'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'Explore'),
+        BottomNavigationBarItem(icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+        BottomNavigationBarItem(icon: Icon(Icons.luggage_outlined), label: 'Trips'),
+        BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline_rounded), label: 'Messages'),
+        BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'Log In'),
       ];
     } else {
       final String role = user.role;
       if (role == 'guest') {
         screens = [
-          GuestBrowseScreen(
-            initialCity: widget.initialSearchCity,
-            initialGuests: widget.initialSearchGuests,
-            initialCategory: widget.initialCategory,
-          ),
+          const LandingScreen(),
+          const _WishlistsTab(isAuthenticated: true),
           const GuestBookingsScreen(),
+          const _MessagesTab(isAuthenticated: true),
           _ProfileTab(user: user, auth: auth),
         ];
-        navItems = const [
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Explore'),
-          BottomNavigationBarItem(icon: Icon(Icons.bookmark_border), label: 'Bookings'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        navItems = [
+          const BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'Explore'),
+          const BottomNavigationBarItem(icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+          const BottomNavigationBarItem(icon: Icon(Icons.luggage_outlined), label: 'Trips'),
+          const BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline_rounded), label: 'Messages'),
+          BottomNavigationBarItem(icon: const Icon(Icons.person_outline_rounded), label: user.fullName.split(' ')[0]),
         ];
       } else if (role == 'host') {
         screens = [
@@ -147,14 +167,30 @@ class _AppShellState extends State<AppShell> {
 
     return Scaffold(
       body: screens[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: AppTheme.primary,
-        unselectedItemColor: AppTheme.charcoalMuted,
-        backgroundColor: AppTheme.white,
-        elevation: 8,
-        items: navItems,
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: Colors.grey[200]!, width: 1),
+          ),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          selectedItemColor: AppTheme.primary,
+          unselectedItemColor: AppTheme.charcoalMuted,
+          backgroundColor: AppTheme.white,
+          elevation: 0,
+          type: BottomNavigationBarType.fixed,
+          selectedLabelStyle: GoogleFonts.manrope(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+          unselectedLabelStyle: GoogleFonts.manrope(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+          ),
+          items: navItems,
+        ),
       ),
     );
   }
@@ -267,6 +303,18 @@ class _UnauthenticatedPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
 
+    IconData getIcon() {
+      if (title == 'Wishlists') {
+        return Icons.favorite_border_rounded;
+      } else if (title == 'Trips') {
+        return Icons.luggage_outlined;
+      } else if (title == 'Messages') {
+        return Icons.chat_bubble_outline_rounded;
+      } else {
+        return Icons.person_outline_rounded;
+      }
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -291,7 +339,7 @@ class _UnauthenticatedPlaceholder extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  title == 'Bookings' ? Icons.bookmark_border : Icons.person_outline,
+                  getIcon(),
                   size: 64,
                   color: AppTheme.primary,
                 ),
@@ -340,6 +388,256 @@ class _UnauthenticatedPlaceholder extends StatelessWidget {
                   color: Colors.white,
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WishlistsTab extends StatelessWidget {
+  final bool isAuthenticated;
+  const _WishlistsTab({required this.isAuthenticated});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isAuthenticated) {
+      return const _UnauthenticatedPlaceholder(
+        title: 'Wishlists',
+        message: 'Log in to create and view wishlists of your favorite stays.',
+      );
+    }
+
+    final propertyProvider = Provider.of<PropertyProvider>(context);
+    final wishlist = propertyProvider.wishlistProperties;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(
+          'Wishlists',
+          style: GoogleFonts.manrope(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: wishlist.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Icon(
+                    Icons.favorite_border_rounded,
+                    size: 64,
+                    color: AppTheme.primary,
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Create your first wishlist',
+                    style: GoogleFonts.manrope(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'As you search, tap the heart icon on any stay to save it to a wishlist.',
+                    style: GoogleFonts.manrope(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              itemCount: wishlist.length,
+              itemBuilder: (context, index) {
+                final PropertyModel prop = wishlist[index];
+                final double rating = 4.7 + (prop.title.hashCode % 31) * 0.01;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 24.0),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PropertyDetailScreen(propertyId: prop.propertyId),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Image.network(
+                                prop.images.isNotEmpty
+                                    ? prop.images[0]
+                                    : 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85',
+                                height: 200,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, _, __) => Container(
+                                  height: 200,
+                                  color: AppTheme.stone,
+                                  child: const Icon(Icons.home, size: 40, color: AppTheme.secondary),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 12,
+                              right: 12,
+                              child: GestureDetector(
+                                onTap: () {
+                                  propertyProvider.toggleWishlist(prop.propertyId);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.favorite_rounded,
+                                    color: Colors.red,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                prop.title,
+                                style: GoogleFonts.manrope(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                const Icon(Icons.star_rounded, size: 18, color: Colors.black87),
+                                const SizedBox(width: 2),
+                                Text(
+                                  rating.toStringAsFixed(2),
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${prop.city}, ${prop.state}',
+                          style: GoogleFonts.manrope(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '₹${prop.pricePerNight.toStringAsFixed(0)} / night',
+                          style: GoogleFonts.manrope(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+
+class _MessagesTab extends StatelessWidget {
+  final bool isAuthenticated;
+  const _MessagesTab({required this.isAuthenticated});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isAuthenticated) {
+      return const _UnauthenticatedPlaceholder(
+        title: 'Messages',
+        message: 'Please sign in to read and send messages.',
+      );
+    }
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(
+          'Inbox',
+          style: GoogleFonts.manrope(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Icon(
+              Icons.chat_bubble_outline_rounded,
+              size: 64,
+              color: AppTheme.primary,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No new messages',
+              style: GoogleFonts.manrope(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'When you contact hosts or book properties, your messages will appear here.',
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                color: Colors.grey[600],
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

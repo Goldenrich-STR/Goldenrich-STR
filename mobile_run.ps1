@@ -31,9 +31,55 @@ if (Test-Path $emulatorPath) {
     
     if ($androidDevices -eq $null -or $androidDevices.Count -eq 0) {
         Write-Host "Android Emulator is not running. Launching 'Pixel_10_Pro'..." -ForegroundColor Cyan
+        
+        # Clear lock files if they exist to prevent "Running multiple emulators" fatal error
+        $avdPath = Join-Path $env:USERPROFILE ".android\avd\Pixel_10_Pro.avd"
+        if (Test-Path $avdPath) {
+            $lockFiles = Get-ChildItem -Path $avdPath -Filter "*.lock" -Recurse -ErrorAction SilentlyContinue
+            if ($lockFiles) {
+                Write-Host "Clearing stale emulator lock files..." -ForegroundColor Yellow
+                $lockFiles | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+        
         Start-Process $emulatorPath -ArgumentList "-avd Pixel_10_Pro"
-        Write-Host "Waiting 15 seconds for emulator to start..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 15
+        Write-Host "Waiting for emulator to start and connect (up to 45 seconds)..." -ForegroundColor Yellow
+        
+        $sdkPath = Split-Path (Split-Path $emulatorPath -Parent) -Parent
+        $adbPath = Join-Path $sdkPath "platform-tools\adb.exe"
+        
+        $timeout = 45 # seconds
+        $elapsed = 0
+        $deviceReady = $false
+        
+        while ($elapsed -lt $timeout) {
+            if (Test-Path $adbPath) {
+                $adbCheck = & $adbPath devices 2>&1
+                if ($adbCheck -match "emulator-\d+\s+device") {
+                    $deviceReady = $true
+                    break
+                }
+            } else {
+                # Fallback to flutter devices if adb is not found
+                $flutterCheck = flutter devices | Select-String -Pattern "emulator-[0-9]"
+                if ($flutterCheck -ne $null -and $flutterCheck.Count -gt 0) {
+                    $deviceReady = $true
+                    break
+                }
+            }
+            Start-Sleep -Seconds 2
+            $elapsed += 2
+            Write-Host -NoNewline "."
+        }
+        Write-Host ""
+        
+        if ($deviceReady) {
+            Write-Host "Emulator is ready and online!" -ForegroundColor Green
+            # Additional brief sleep to ensure emulator services are fully ready
+            Start-Sleep -Seconds 3
+        } else {
+            Write-Host "Emulator launch timed out or still booting. Proceeding anyway..." -ForegroundColor Yellow
+        }
     }
 }
 

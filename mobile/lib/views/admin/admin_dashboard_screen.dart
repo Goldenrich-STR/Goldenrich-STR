@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart' as dio_pkg;
 import 'package:dio/dio.dart' show MultipartFile, FormData;
@@ -72,12 +73,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   final _footerOfficerEmailCtrl = TextEditingController();
   final _footerOfficerPhoneCtrl = TextEditingController();
   final _footerResolutionTextCtrl = TextEditingController();
+  final _footerTermsCtrl = TextEditingController();
+  final _footerPrivacyCtrl = TextEditingController();
+  final _footerCheckinCtrl = TextEditingController();
   bool _footerInitialized = false;
+  int _accountSubTab = 0;
+
+  // CMS Offer Controllers
+  final _cmsOfferTitleController = TextEditingController();
+  final _cmsOfferDescController = TextEditingController();
+  final _cmsOfferButtonTextController = TextEditingController();
+  final _cmsOfferImageController = TextEditingController();
+  bool _cmsOfferIsEnabled = true;
+  bool _cmsOfferControllersInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 9, vsync: this);
+    _tabController = TabController(length: 10, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
@@ -99,6 +112,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     verificationProv.getAwaitingFinalApprovals(filter: _selectedPropertyFilter);
     accountProv.getOverview();
     accountProv.getTransactions({});
+    accountProv.getPayouts({});
+    accountProv.getMrrChartData();
+    accountProv.getTopHosts();
     adminProv.getDashboardStats();
     adminProv.getUsers(role: _selectedRole, search: _searchController.text);
     
@@ -117,6 +133,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     _tabController.dispose();
     _remarksController.dispose();
     _searchController.dispose();
+    _cmsOfferTitleController.dispose();
+    _cmsOfferDescController.dispose();
+    _cmsOfferButtonTextController.dispose();
+    _cmsOfferImageController.dispose();
     super.dispose();
   }
 
@@ -441,6 +461,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       'grievance_email': _footerOfficerEmailCtrl.text,
       'grievance_phone': _footerOfficerPhoneCtrl.text,
       'resolution_text': _footerResolutionTextCtrl.text,
+      'terms_text': _footerTermsCtrl.text,
+      'privacy_text': _footerPrivacyCtrl.text,
+      'checkin_text': _footerCheckinCtrl.text,
     };
     final success = await Provider.of<AdminProvider>(context, listen: false)
         .updateCMSContent(contentId, payload);
@@ -494,9 +517,258 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         return _buildCmsBlogPostsList(adminProvider);
       case 4:
         return _buildCmsFooterConfig(adminProvider);
+      case 5:
+        return _buildCmsOfferConfig(adminProvider);
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  Widget _buildCmsOfferConfig(AdminProvider adminProvider) {
+    final offerCms = adminProvider.cmsContent.firstWhere(
+      (c) => c['section'] == 'offer',
+      orElse: () => null,
+    );
+    
+    if (offerCms == null) {
+      return Card(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppTheme.stone),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              const Text(
+                'Offer configuration not found in CMS data. Click below to initialize the default promotional offer.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  final payload = {
+                    'is_enabled': true,
+                    'title': 'Save 10% on a summertime trip',
+                    'description': 'Book within 7 days and save up to \$100 on your next stay. Terms apply.',
+                    'button_text': 'Log in to claim offer',
+                    'image_url': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=600',
+                  };
+                  try {
+                    await ApiService().dio.post('/cms/admin/content', data: {
+                      'page': 'landing',
+                      'section': 'offer',
+                      'content_type': 'object',
+                      'content_data': payload,
+                    });
+                    await adminProvider.getCMSContent();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Offer initialized successfully!'), backgroundColor: Colors.green),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to initialize offer: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+                child: const Text('Initialize Offer CMS', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final contentId = offerCms['content_id'];
+
+    if (!_cmsOfferControllersInitialized) {
+      final data = offerCms['content_data'] ?? {};
+      _cmsOfferTitleController.text = data['title'] ?? 'Save 10% on a summertime trip';
+      _cmsOfferDescController.text = data['description'] ?? 'Book within 7 days and save up to \$100 on your next stay. Terms apply.';
+      _cmsOfferButtonTextController.text = data['button_text'] ?? 'Log in to claim offer';
+      _cmsOfferImageController.text = data['image_url'] ?? '';
+      _cmsOfferIsEnabled = data['is_enabled'] ?? true;
+      _cmsOfferControllersInitialized = true;
+    }
+
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppTheme.stone),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.local_offer_outlined, color: AppTheme.primary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Promotional Offer Popup Config',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Configure the popup offer shown on the landing page.',
+                        style: TextStyle(fontSize: 10, color: AppTheme.charcoalMuted),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            
+            // Enable / Disable Switch
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'ENABLE OFFER POPUP',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+                ),
+                Switch(
+                  value: _cmsOfferIsEnabled,
+                  activeColor: AppTheme.primary,
+                  onChanged: (val) {
+                    setState(() {
+                      _cmsOfferIsEnabled = val;
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Title
+            const Text('OFFER TITLE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _cmsOfferTitleController,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Save 10% on a summertime trip',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Description
+            const Text('OFFER DESCRIPTION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _cmsOfferDescController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Book within 7 days and save up to \$100...',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.all(12),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Button Text
+            const Text('BUTTON TEXT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _cmsOfferButtonTextController,
+              decoration: const InputDecoration(
+                hintText: 'e.g. Log in to claim offer',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Offer Image URL
+            const Text('OFFER IMAGE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _cmsOfferImageController,
+                    decoration: const InputDecoration(
+                      hintText: 'Image URL',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: _cmsUploadingImage
+                      ? null
+                      : () async {
+                          await _pickAndUploadImageForCms((url) {
+                            setState(() {
+                              _cmsOfferImageController.text = url;
+                            });
+                          });
+                        },
+                  icon: _cmsUploadingImage
+                      ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.upload, size: 14, color: Colors.white),
+                  label: const Text('Upload', style: TextStyle(color: Colors.white, fontSize: 11)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary,
+                    minimumSize: const Size(80, 40),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Save button
+            ElevatedButton.icon(
+              onPressed: () async {
+                final payload = {
+                  'is_enabled': _cmsOfferIsEnabled,
+                  'title': _cmsOfferTitleController.text,
+                  'description': _cmsOfferDescController.text,
+                  'button_text': _cmsOfferButtonTextController.text,
+                  'image_url': _cmsOfferImageController.text,
+                };
+                final success = await Provider.of<AdminProvider>(context, listen: false)
+                    .updateCMSContent(contentId, payload);
+
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Offer saved successfully!'), backgroundColor: Colors.green),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Failed to save Offer.'), backgroundColor: Colors.red),
+                  );
+                }
+              },
+              icon: const Icon(Icons.check, size: 16, color: Colors.white),
+              label: const Text('Save Offer Configuration', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildCmsHeroDetailsForm(AdminProvider adminProvider) {
@@ -1313,6 +1585,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       _footerOfficerEmailCtrl.text = data['grievance_email'] ?? '';
       _footerOfficerPhoneCtrl.text = data['grievance_phone'] ?? '';
       _footerResolutionTextCtrl.text = data['resolution_text'] ?? '';
+      _footerTermsCtrl.text = data['terms_text'] ?? 'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.';
+      _footerPrivacyCtrl.text = data['privacy_text'] ?? 'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.';
+      _footerCheckinCtrl.text = data['checkin_text'] ?? 'Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival. Quiet hours are from 10:00 PM to 7:00 AM.';
       _footerInitialized = true;
     }
 
@@ -1467,6 +1742,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 16),
+                _buildCmsFieldWithController(
+                  label: 'TERMS & CONDITIONS TEXT',
+                  hint: 'Enter terms and conditions text...',
+                  maxLines: 5,
+                  controller: _footerTermsCtrl,
+                ),
+                const SizedBox(height: 16),
+                _buildCmsFieldWithController(
+                  label: 'PRIVACY POLICY TEXT',
+                  hint: 'Enter privacy policy text...',
+                  maxLines: 5,
+                  controller: _footerPrivacyCtrl,
+                ),
+                const SizedBox(height: 16),
+                _buildCmsFieldWithController(
+                  label: 'CHECK-IN INSTRUCTIONS TEXT',
+                  hint: 'Enter check-in instructions text...',
+                  maxLines: 5,
+                  controller: _footerCheckinCtrl,
                 ),
               ],
             ),
@@ -3189,6 +3485,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   Widget build(BuildContext context) {
     final verificationProvider = Provider.of<VerificationProvider>(context);
     final adminProvider = Provider.of<AdminProvider>(context);
+    final accountProvider = Provider.of<AccountProvider>(context);
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
@@ -3218,6 +3515,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             Tab(text: 'Users'),
             Tab(text: 'Properties'),
             Tab(text: 'Bookings'),
+            Tab(text: 'Account'),
             Tab(text: 'Subscriptions'),
             Tab(text: 'CMS'),
             Tab(text: 'Coupons'),
@@ -3744,7 +4042,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             ),
           ),
 
-          // TAB 5: SUBSCRIPTIONS
+          // TAB 5: ACCOUNT & FINANCES
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Sub-tabs chips
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                color: Colors.white,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _buildAccountTabChip('Overview', 0),
+                      const SizedBox(width: 8),
+                      _buildAccountTabChip('Transactions', 1),
+                      const SizedBox(width: 8),
+                      _buildAccountTabChip('Payouts', 2),
+                      const SizedBox(width: 8),
+                      _buildAccountTabChip('Refunds', 3),
+                      const SizedBox(width: 8),
+                      _buildAccountTabChip('Top Hosts', 4),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _buildAccountSubTabContent(context, accountProvider),
+              ),
+            ],
+          ),
+
+          // TAB 6: SUBSCRIPTIONS
           RefreshIndicator(
             onRefresh: () async => _loadData(),
             child: Column(
@@ -3914,6 +4243,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   _buildCmsChip('BLOG POSTS', 3),
                                   const SizedBox(width: 8),
                                   _buildCmsChip('FOOTER', 4),
+                                  const SizedBox(width: 8),
+                                  _buildCmsChip('PROMOTIONAL OFFER', 5),
                                 ],
                               ),
                             ),
@@ -4903,7 +5234,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   onPressed: () async {
                     final adminProv = Provider.of<AdminProvider>(context, listen: false);
                     final success = await adminProv.toggleUserStatus(user['user_id'], !isOnline);
-                    if (success && context.mounted) {
+                    if (success && mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(isOnline ? 'User deactivated!' : 'User activated!')),
                       );
@@ -4961,6 +5292,1030 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAccountTabChip(String label, int index) {
+    final isSelected = _accountSubTab == index;
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: isSelected ? Colors.white : AppTheme.charcoalMuted,
+        ),
+      ),
+      selected: isSelected,
+      selectedColor: AppTheme.primary,
+      backgroundColor: Colors.grey.shade100,
+      onSelected: (val) {
+        setState(() {
+          _accountSubTab = index;
+        });
+      },
+    );
+  }
+
+  Widget _buildAccountSubTabContent(BuildContext context, AccountProvider accountProv) {
+    switch (_accountSubTab) {
+      case 0:
+        return _buildAccountFinancialsView(accountProv);
+      case 1:
+        return _buildAccountLedgerView(accountProv);
+      case 2:
+        return _buildAccountPayoutsView(accountProv);
+      case 3:
+        return _buildAccountRefundsView(accountProv);
+      case 4:
+        return _buildAccountTopHostsView(accountProv);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildAccountFinancialsView(AccountProvider accountProv) {
+    final overview = accountProv.overviewData;
+    final rev = overview['revenue'] ?? {};
+    final counts = overview['counts'] ?? {};
+    final pending = overview['pending_payouts'] ?? {};
+
+    final double gross = (rev['total_gross_paise'] ?? 0) / 100.0;
+    final double platform = (rev['platform_take_paise'] ?? 0) / 100.0;
+    final double paidPayouts = (rev['payouts_paid_paise'] ?? 0) / 100.0;
+    final double tax = (rev['total_tax_paise'] ?? 0) / 100.0;
+    final double bookingPayments = (rev['booking_payments_paise'] ?? 0) / 100.0;
+    final double regFees = (rev['registration_fees_paise'] ?? 0) / 100.0;
+    final double subRevenue = (rev['subscriptions_paise'] ?? 0) / 100.0;
+    final double refunds = (rev['refunds_paise'] ?? 0) / 100.0;
+
+    final double pendingAmt = (pending['amount_paise'] ?? 0) / 100.0;
+    final int pendingCount = pending['count'] ?? 0;
+
+    final currencyFmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+
+    return ListView(
+      padding: const EdgeInsets.all(16.0),
+      children: [
+        // Grid of 8 Stats Cards
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.25,
+          children: [
+            _buildFinCardPremium(
+              title: 'TOTAL GROSS REVENUE',
+              amount: currencyFmt.format(gross),
+              icon: Icons.currency_rupee,
+            ),
+            _buildFinCardPremium(
+              title: 'PLATFORM FEE',
+              amount: currencyFmt.format(platform),
+              icon: Icons.trending_up,
+            ),
+            _buildFinCardPremium(
+              title: 'HOST PAYOUTS',
+              amount: currencyFmt.format(paidPayouts),
+              icon: Icons.account_balance_wallet_outlined,
+              extraWidget: _buildPendingStatus(pendingAmt),
+              subtitle: '$pendingCount pending payout',
+            ),
+            _buildFinCardPremium(
+              title: 'TAX',
+              amount: currencyFmt.format(tax),
+              icon: Icons.sync,
+            ),
+            _buildFinCardPremium(
+              title: 'BOOKING PAYMENTS',
+              amount: currencyFmt.format(bookingPayments),
+              icon: Icons.currency_rupee,
+              subtitle: '${counts['booking_payments'] ?? 0} bookings',
+            ),
+            _buildFinCardPremium(
+              title: 'REGISTRATION FEES',
+              amount: currencyFmt.format(regFees),
+              icon: Icons.check_circle_outline,
+              subtitle: '${counts['registration_fees'] ?? 0} hosts',
+            ),
+            _buildFinCardPremium(
+              title: 'SUBSCRIPTION REVENUE',
+              amount: currencyFmt.format(subRevenue),
+              icon: Icons.sync,
+              subtitle: '${counts['subscriptions'] ?? 0} subs',
+            ),
+            _buildFinCardPremium(
+              title: 'REFUNDS ISSUED',
+              amount: currencyFmt.format(refunds),
+              icon: Icons.cancel_outlined,
+              subtitle: '${counts['refunds'] ?? 0} refunds',
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // Line Chart Section
+        _buildRevenueTrendChart(accountProv),
+        const SizedBox(height: 100),
+      ],
+    );
+  }
+
+  Widget _buildPendingStatus(double pendingAmt) {
+    final currencyFmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: const BoxDecoration(
+            color: Colors.orange,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          'Pending: ${currencyFmt.format(pendingAmt)}',
+          style: const TextStyle(
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+            color: Colors.orange,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFinCardPremium({
+    required String title,
+    required String amount,
+    required IconData icon,
+    String? subtitle,
+    Widget? extraWidget,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.stone.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.01),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.charcoalMuted,
+                        letterSpacing: 0.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    if (extraWidget != null) ...[
+                      extraWidget,
+                      const SizedBox(height: 2),
+                    ],
+                    Text(
+                      amount,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.charcoal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (subtitle != null)
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+            ],
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFBEBE8),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: AppTheme.primary,
+                size: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRevenueTrendChart(AccountProvider accountProv) {
+    final chartData = accountProv.mrrChartData;
+    if (chartData.isEmpty) {
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppTheme.stone),
+        ),
+        child: const Center(
+          child: Text('No trend data available'),
+        ),
+      );
+    }
+
+    final double maxVal = chartData.fold<double>(10000.0, (prev, element) {
+      final double inflow = (element['inflow_paise'] ?? 0) / 100.0;
+      final double refunds = (element['refund_paise'] ?? 0) / 100.0;
+      final double net = (element['net_paise'] ?? 0) / 100.0;
+      double currentMax = inflow > refunds ? inflow : refunds;
+      if (net > currentMax) currentMax = net;
+      return currentMax > prev ? currentMax : prev;
+    }) * 1.15; // 15% padding
+
+    List<FlSpot> inflowSpots = [];
+    List<FlSpot> refundSpots = [];
+    List<FlSpot> netSpots = [];
+
+    for (int i = 0; i < chartData.length; i++) {
+      final item = chartData[i];
+      final double inflow = (item['inflow_paise'] ?? 0) / 100.0;
+      final double refunds = (item['refund_paise'] ?? 0) / 100.0;
+      final double net = (item['net_paise'] ?? 0) / 100.0;
+      inflowSpots.add(FlSpot(i.toDouble(), inflow));
+      refundSpots.add(FlSpot(i.toDouble(), refunds));
+      netSpots.add(FlSpot(i.toDouble(), net));
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.stone),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Revenue trend (last 6 months)',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 220,
+            child: LineChart(
+              LineChartData(
+                gridData: const FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: 20000,
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      interval: 1,
+                      getTitlesWidget: (value, meta) {
+                        final int index = value.toInt();
+                        if (index >= 0 && index < chartData.length) {
+                          final label = chartData[index]['label'] ?? '';
+                          return SideTitleWidget(
+                            axisSide: meta.axisSide,
+                            child: Text(
+                              label,
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 8),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      getTitlesWidget: (value, meta) {
+                        return SideTitleWidget(
+                          axisSide: meta.axisSide,
+                          child: Text(
+                            '₹${(value / 1000).toStringAsFixed(0)}k',
+                            style: TextStyle(color: Colors.grey.shade600, fontSize: 8),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border(
+                    bottom: BorderSide(color: Colors.grey.shade200, width: 1),
+                    left: BorderSide(color: Colors.grey.shade200, width: 1),
+                  ),
+                ),
+                minX: 0,
+                maxX: (chartData.length - 1).toDouble(),
+                minY: 0,
+                maxY: maxVal,
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: inflowSpots,
+                    isCurved: true,
+                    color: AppTheme.primary,
+                    barWidth: 2,
+                    isStrokeCapRound: true,
+                    dotData: const FlDotData(show: true),
+                    belowBarData: BarAreaData(show: false),
+                  ),
+                  LineChartBarData(
+                    spots: refundSpots,
+                    isCurved: true,
+                    color: Colors.teal,
+                    barWidth: 2,
+                    isStrokeCapRound: true,
+                    dotData: const FlDotData(show: true),
+                    belowBarData: BarAreaData(show: false),
+                  ),
+                  LineChartBarData(
+                    spots: netSpots,
+                    isCurved: true,
+                    color: AppTheme.charcoal,
+                    barWidth: 2,
+                    isStrokeCapRound: true,
+                    dotData: const FlDotData(show: true),
+                    belowBarData: BarAreaData(show: false),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Legend
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildLegendItem('Inflow', AppTheme.primary),
+              const SizedBox(width: 16),
+              _buildLegendItem('Refunds', Colors.teal),
+              const SizedBox(width: 16),
+              _buildLegendItem('Net', AppTheme.charcoal),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccountLedgerView(AccountProvider accountProv) {
+    final txns = accountProv.transactions;
+
+    if (txns.isEmpty) {
+      return const Center(child: Text('No transactions found in ledger.'));
+    }
+
+    return ListView.builder(
+      itemCount: txns.length,
+      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+      itemBuilder: (context, index) {
+        final txn = txns[index];
+        final id = txn['transaction_id'] ?? '';
+        final type = (txn['type'] ?? 'payment').toString().replaceAll('_', ' ').toUpperCase();
+        final status = (txn['status'] ?? 'pending').toString().toUpperCase();
+        final amount = (txn['amount'] ?? 0) / 100.0;
+        final dateStr = _formatDate(txn['created_at']);
+        final user = txn['user'];
+
+        Color statusColor = Colors.orange;
+        if (status == 'SUCCESS') statusColor = Colors.green;
+        if (status == 'FAILED') statusColor = Colors.red;
+
+        final isOutflow = txn['type'] == 'refund' || txn['type'] == 'payout';
+        final amtText = '${isOutflow ? "-" : "+"} ₹${amount.toStringAsFixed(2)}';
+        final amtColor = isOutflow ? Colors.red.shade700 : Colors.green.shade700;
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppTheme.stone),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'TXN: $id',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.charcoalMuted),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        status,
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(type, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.charcoal)),
+                        const SizedBox(height: 4),
+                        Text(dateStr, style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+                      ],
+                    ),
+                    Text(
+                      amtText,
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: amtColor),
+                    ),
+                  ],
+                ),
+                if (user != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person_outline, size: 14, color: AppTheme.charcoalMuted),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'User: ${user['full_name'] ?? ''} (${user['email'] ?? ''})',
+                            style: const TextStyle(fontSize: 11, color: AppTheme.charcoal),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => _showShareInvoiceDialog(id),
+                      icon: const Icon(Icons.share, size: 14),
+                      label: const Text('Share Invoice', style: TextStyle(fontSize: 11)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAccountPayoutsView(AccountProvider accountProv) {
+    final payouts = accountProv.payouts;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Host Payout Requests',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+              ),
+              Row(
+                children: [
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.sync_alt, size: 14),
+                    label: const Text('Sweep', style: TextStyle(fontSize: 11)),
+                    onPressed: _triggerPayoutSweep,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.play_arrow, size: 14),
+                    label: const Text('Process All', style: TextStyle(fontSize: 11)),
+                    onPressed: _processAllEligiblePayouts,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: payouts.isEmpty
+              ? const Center(child: Text('No payout records found.'))
+              : ListView.builder(
+                  itemCount: payouts.length,
+                  padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+                  itemBuilder: (context, index) {
+                    final payout = payouts[index];
+                    final pid = payout['payout_id'] ?? '';
+                    final hostName = payout['host']?['full_name'] ?? payout['host_id'] ?? 'Host';
+                    final hostEmail = payout['host']?['email'] ?? '';
+                    final pref = payout['host']?['payout_preference'] ?? {};
+                    final propTitle = payout['property']?['title'] ?? 'Listing Payout';
+                    final netAmount = (payout['net_amount'] ?? payout['amount'] ?? 0) / 100.0;
+                    final status = (payout['status'] ?? 'eligible').toString().toUpperCase();
+                    final eligibleDate = _formatDate(payout['eligible_at']);
+
+                    Color statusColor = Colors.orange;
+                    if (status == 'PAID') statusColor = Colors.green;
+                    if (status == 'FAILED') statusColor = Colors.red;
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(color: AppTheme.stone),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('PAYOUT ID: $pid', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.charcoalMuted)),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: statusColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    status,
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
+                                  ),
+                                )
+                              ],
+                            ),
+                            const Divider(height: 16),
+                            Text(propTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            const SizedBox(height: 4),
+                            Text('Host: $hostName ($hostEmail)', style: const TextStyle(fontSize: 12)),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                                const SizedBox(width: 4),
+                                Text('Eligible: $eligibleDate', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'PAYMENT DETAILS',
+                                    style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppTheme.charcoalMuted),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  if (pref['upi_id'] != null && pref['upi_id'].toString().isNotEmpty) ...[
+                                    Text('UPI ID: ${pref['upi_id']}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                  ] else if (pref['bank_account_number'] != null) ...[
+                                    Text('Holder: ${pref['bank_account_holder'] ?? '—'}', style: const TextStyle(fontSize: 11)),
+                                    Text('A/C: ${pref['bank_account_number']}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                    Text('Bank: ${pref['bank_name'] ?? '—'} | IFSC: ${pref['bank_ifsc'] ?? '—'}', style: const TextStyle(fontSize: 11)),
+                                  ] else ...[
+                                    const Text('No payout preference specified', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.red)),
+                                  ],
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('Net Payout Amount', style: TextStyle(fontSize: 10, color: AppTheme.charcoalMuted)),
+                                    Text(
+                                      '₹${netAmount.toStringAsFixed(2)}',
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.secondary),
+                                    ),
+                                  ],
+                                ),
+                                if (status == 'ELIGIBLE') ...[
+                                  ElevatedButton(
+                                    onPressed: () async {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text('Process Payout?'),
+                                          content: Text('Are you sure you want to process the payout of ₹${netAmount.toStringAsFixed(2)} to $hostName?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, false),
+                                              child: const Text('Cancel'),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, true),
+                                              child: const Text('Process'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        final success = await accountProv.processPayout(pid);
+                                        if (context.mounted) {
+                                          if (success) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Payout processed successfully!'), backgroundColor: Colors.green),
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Failed to process payout.'), backgroundColor: Colors.red),
+                                            );
+                                          }
+                                        }
+                                      }
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green.shade700,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: const Text('Process'),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _triggerPayoutSweep() async {
+    try {
+      final response = await ApiService().dio.post('/admin/account/payouts/sweep-eligibility');
+      if (response.statusCode == 200) {
+        final count = response.data['count'] ?? 0;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Sweep completed. Marked $count bookings as eligible.'), backgroundColor: Colors.green),
+          );
+        }
+        _loadData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Sweep failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _processAllEligiblePayouts() async {
+    try {
+      final response = await ApiService().dio.post('/admin/account/payouts/process-eligible');
+      if (response.statusCode == 200) {
+        final processed = response.data['processed'] ?? 0;
+        final failed = response.data['failed'] ?? 0;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Batch processing done. Processed: $processed, Failed: $failed'), backgroundColor: Colors.green),
+          );
+        }
+        _loadData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Processing failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  void _showShareInvoiceDialog(String transactionId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Share Invoice'),
+        content: const Text('Choose a channel to share the invoice with the user:'),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.email_outlined),
+            label: const Text('Email'),
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await _shareInvoice(transactionId, 'email');
+              if (success && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Invoice shared successfully via Email.'), backgroundColor: Colors.green),
+                );
+              }
+            },
+          ),
+          TextButton.icon(
+            icon: const Icon(Icons.message_outlined),
+            label: const Text('WhatsApp'),
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await _shareInvoice(transactionId, 'whatsapp');
+              if (success && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Invoice shared successfully via WhatsApp.'), backgroundColor: Colors.green),
+                );
+              }
+            },
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _shareInvoice(String transactionId, String channel) async {
+    try {
+      final response = await ApiService().dio.post(
+        '/admin/account/transactions/$transactionId/share-invoice',
+        data: {'channel': channel},
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to share invoice: $e'), backgroundColor: Colors.red),
+        );
+      }
+      return false;
+    }
+  }
+
+  Widget _buildAccountRefundsView(AccountProvider accountProv) {
+    final txns = accountProv.transactions.where((t) => t['type'] == 'refund').toList();
+
+    if (txns.isEmpty) {
+      return const Center(child: Text('No refund records found.'));
+    }
+
+    return ListView.builder(
+      itemCount: txns.length,
+      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+      itemBuilder: (context, index) {
+        final txn = txns[index];
+        final id = txn['transaction_id'] ?? '';
+        final status = (txn['status'] ?? 'pending').toString().toUpperCase();
+        final amount = (txn['amount'] ?? 0) / 100.0;
+        final dateStr = _formatDate(txn['created_at']);
+        final user = txn['user'];
+
+        Color statusColor = Colors.orange;
+        if (status == 'SUCCESS') statusColor = Colors.green;
+        if (status == 'FAILED') statusColor = Colors.red;
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppTheme.stone),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'REFUND ID: $id',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.charcoalMuted),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        status,
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('REFUND ISSUED', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.charcoal)),
+                        const SizedBox(height: 4),
+                        Text(dateStr, style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+                      ],
+                    ),
+                    Text(
+                      '- ₹${amount.toStringAsFixed(2)}',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red),
+                    ),
+                  ],
+                ),
+                if (user != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person_outline, size: 14, color: AppTheme.charcoalMuted),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Refunded To: ${user['full_name'] ?? ''} (${user['email'] ?? ''})',
+                            style: const TextStyle(fontSize: 11, color: AppTheme.charcoal),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAccountTopHostsView(AccountProvider accountProv) {
+    final hosts = accountProv.topHosts;
+
+    if (hosts.isEmpty) {
+      return const Center(child: Text('No host earnings data found.'));
+    }
+
+    final currencyFmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+
+    return ListView.builder(
+      itemCount: hosts.length,
+      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+      itemBuilder: (context, index) {
+        final host = hosts[index];
+        final name = host['full_name'] ?? 'Host';
+        final email = host['email'] ?? '';
+        final city = host['city'] ?? 'N/A';
+        final double gross = (host['gross_paise'] ?? 0) / 100.0;
+        final bookingsCount = host['bookings'] ?? 0;
+        final rank = index + 1;
+
+        Color medalColor = Colors.grey.shade400;
+        if (rank == 1) medalColor = const Color(0xFFFFD700); // Gold
+        if (rank == 2) medalColor = const Color(0xFFC0C0C0); // Silver
+        if (rank == 3) medalColor = const Color(0xCD7F3200); // Bronze
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppTheme.stone),
+          ),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: rank <= 3 ? medalColor.withOpacity(0.2) : Colors.grey.shade100,
+              child: Text(
+                '#$rank',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: rank <= 3 ? medalColor : Colors.grey.shade600,
+                ),
+              ),
+            ),
+            title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            subtitle: Text('$email • $city\n$bookingsCount bookings processed', style: const TextStyle(fontSize: 11)),
+            trailing: Text(
+              currencyFmt.format(gross),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.green),
+            ),
+            isThreeLine: true,
+          ),
+        );
+      },
     );
   }
 }
