@@ -518,6 +518,13 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
                 template,
                 {
                     "name": user.full_name,
+                    "host_name": user.full_name,
+                    "customer_name": user.full_name,
+                    "email": user.email,
+                    "mobile": user.phone,
+                    "phone": user.phone,
+                    "role": role_str,
+                    "city": user.city or "",
                     "action_url": _frontend_url("/host/dashboard" if role_str.lower() == "host" else "/guest/browse"),
                 },
             )
