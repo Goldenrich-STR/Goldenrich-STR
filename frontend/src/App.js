@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import ReactGA from "react-ga4";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
@@ -117,10 +118,21 @@ const GlobalAlertDialog = () => {
   );
 };
 
+const AnalyticsTracker = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    ReactGA.send({ hitType: "pageview", page: location.pathname + location.search });
+  }, [location]);
+
+  return null;
+};
+
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
+        <AnalyticsTracker />
         <AuthProvider>
           <GlobalAlertDialog />
           <Routes>
