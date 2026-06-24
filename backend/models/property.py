@@ -104,6 +104,11 @@ class Property(BaseModel):
     smoking_allowed: bool = False
     instant_booking: bool = False
     
+    # Cook Option
+    has_cook: bool = False
+    cook_price: Optional[float] = None
+    has_self_cook: bool = False
+    
     # Status
     status: PropertyStatus = PropertyStatus.DRAFT
     verification_remarks: Optional[str] = None
@@ -161,6 +166,9 @@ class PropertyCreate(BaseModel):
     pet_friendly: bool = False
     smoking_allowed: bool = False
     instant_booking: bool = False
+    has_cook: bool = False
+    cook_price: Optional[float] = None
+    has_self_cook: bool = False
     veg_price: Optional[float] = None
     non_veg_price: Optional[float] = None
     guest_size: Optional[int] = None
@@ -197,6 +205,9 @@ class PropertyUpdate(BaseModel):
     pet_friendly: Optional[bool] = None
     smoking_allowed: Optional[bool] = None
     instant_booking: Optional[bool] = None
+    has_cook: Optional[bool] = None
+    cook_price: Optional[float] = None
+    has_self_cook: Optional[bool] = None
     veg_price: Optional[float] = None
     non_veg_price: Optional[float] = None
     guest_size: Optional[int] = None

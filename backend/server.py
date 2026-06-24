@@ -80,17 +80,34 @@ app.include_router(ai_agent_router, prefix="/api")
 # still call /auth/*; keep those working while the canonical API remains /api/auth/*.
 app.include_router(auth_router)
 
+# Custom StaticFiles subclass to enforce browser caching headers dynamically
+class DynamicCacheStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        filename = path.lower()
+        if filename.endswith(('.css', '.js')):
+            response.headers["Cache-Control"] = "public, max-age=2592000"  # 30 Days
+        elif filename.endswith(('.webp', '.jpg', '.jpeg', '.png', '.svg', '.gif', '.woff', '.woff2', '.ttf', '.otf', '.eot', '.mp4', '.webm')):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"  # 1 Year
+        else:
+            response.headers["Cache-Control"] = "public, max-age=86400"  # 1 Day default
+        return response
+
 # Static files: serve uploaded property images
 _uploads_dir = ROOT_DIR / "uploads"
 _uploads_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/api/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
+app.mount("/api/uploads", DynamicCacheStaticFiles(directory=str(_uploads_dir)), name="uploads")
 
 @app.get("/download-apk")
 async def download_apk():
-    apk_path = r"d:\FinalSTR\Goldenrich-STR\mobile\build\app\outputs\flutter-apk\app-debug.apk"
-    if os.path.exists(apk_path):
+    release_apk = r"d:\FinalSTR\Goldenrich-STR\mobile\build\app\outputs\flutter-apk\app-release.apk"
+    debug_apk = r"d:\FinalSTR\Goldenrich-STR\mobile\build\app\outputs\flutter-apk\app-debug.apk"
+    
+    selected_apk = release_apk if os.path.exists(release_apk) else debug_apk
+    
+    if os.path.exists(selected_apk):
         return FileResponse(
-            apk_path,
+            selected_apk,
             media_type="application/vnd.android.package-archive",
             filename="GoldenrichSTR.apk"
         )
@@ -330,7 +347,7 @@ _frontend_build_dir = ROOT_DIR.parent / "frontend" / "build"
 if _frontend_build_dir.exists():
     app.mount(
         "/static",
-        StaticFiles(directory=str(_frontend_build_dir / "static")),
+        DynamicCacheStaticFiles(directory=str(_frontend_build_dir / "static")),
         name="frontend-static",
     )
 
@@ -338,5 +355,20 @@ if _frontend_build_dir.exists():
     async def serve_frontend(full_path: str):
         requested_file = _frontend_build_dir / full_path
         if requested_file.is_file():
-            return FileResponse(str(requested_file))
-        return FileResponse(str(_frontend_build_dir / "index.html"))
+            filename = full_path.lower()
+            response = FileResponse(str(requested_file))
+            if filename == "index.html" or filename == "service-worker.js":
+                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
+            elif filename.endswith(('.webp', '.jpg', '.jpeg', '.png', '.svg', '.ico')):
+                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            elif filename.endswith(('.js', '.css')):
+                response.headers["Cache-Control"] = "public, max-age=2592000"
+            return response
+        
+        index_response = FileResponse(str(_frontend_build_dir / "index.html"))
+        index_response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        index_response.headers["Pragma"] = "no-cache"
+        index_response.headers["Expires"] = "0"
+        return index_response

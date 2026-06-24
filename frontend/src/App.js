@@ -1,25 +1,34 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
-// Pages
-import LandingPage from "./pages/LandingPage";
-import AuthPage from "./pages/AuthPage";
-import GuestBrowse from "./pages/GuestBrowse";
-import GuestBookings from "./pages/GuestBookings";
-import HostDashboard from "./pages/HostDashboard";
-import HostCalendar from "./pages/HostCalendar";
-import HostListProperty from "./pages/HostListProperty";
-import PropertyDetail from "./pages/PropertyDetail";
-import BookingConfirmation from "./pages/BookingConfirmation";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminAccount from "./pages/AdminAccount";
-import BrokerDashboard from "./pages/BrokerDashboard";
-import EmployeeDashboard from "./pages/EmployeeDashboard";
-import HostPayouts from "./pages/HostPayouts";
-import HostBookings from "./pages/HostBookings";
-import SsoCallback from "./pages/SsoCallback";
+// Pages (Code-splitted with dynamic lazy imports)
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
+const GuestBrowse = lazy(() => import("./pages/GuestBrowse"));
+const GuestBookings = lazy(() => import("./pages/GuestBookings"));
+const HostDashboard = lazy(() => import("./pages/HostDashboard"));
+const HostCalendar = lazy(() => import("./pages/HostCalendar"));
+const HostListProperty = lazy(() => import("./pages/HostListProperty"));
+const PropertyDetail = lazy(() => import("./pages/PropertyDetail"));
+const BookingConfirmation = lazy(() => import("./pages/BookingConfirmation"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminAccount = lazy(() => import("./pages/AdminAccount"));
+const BrokerDashboard = lazy(() => import("./pages/BrokerDashboard"));
+const EmployeeDashboard = lazy(() => import("./pages/EmployeeDashboard"));
+const HostPayouts = lazy(() => import("./pages/HostPayouts"));
+const HostBookings = lazy(() => import("./pages/HostBookings"));
+const SsoCallback = lazy(() => import("./pages/SsoCallback"));
+
+const ScreenLoading = () => (
+  <div className="min-h-screen bg-sand-50 flex items-center justify-center">
+    <div className="text-center animate-pulse">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-terracotta mx-auto mb-4"></div>
+      <p className="text-charcoal-light text-sm font-medium tracking-wide">Loading Screen...</p>
+    </div>
+  </div>
+);
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -123,7 +132,8 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <GlobalAlertDialog />
-          <Routes>
+          <Suspense fallback={<ScreenLoading />}>
+            <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<AuthPage />} />
@@ -251,7 +261,8 @@ function App() {
               }
             />
           </Routes>
-        </AuthProvider>
+        </Suspense>
+      </AuthProvider>
       </BrowserRouter>
     </div>
   );

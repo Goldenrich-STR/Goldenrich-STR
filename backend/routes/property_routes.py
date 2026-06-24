@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Request, Response
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List, Optional
 from pydantic import BaseModel
@@ -64,6 +64,7 @@ async def create_property(
 
 @router.get("/search")
 async def search_properties(
+    response: Response,
     category: Optional[PropertyCategory] = None,
     city: Optional[str] = None,
     property_type: Optional[str] = None,
@@ -168,7 +169,27 @@ async def search_properties(
             except (TypeError, ValueError):
                 return 0
 
-        raw_properties = await db.properties.find(query, {"_id": 0}).to_list(length=1000)
+        projection = {
+            "_id": 0,
+            "property_id": 1,
+            "owner_id": 1,
+            "title": 1,
+            "property_type": 1,
+            "category": 1,
+            "bhk_type": 1,
+            "city": 1,
+            "latitude": 1,
+            "longitude": 1,
+            "max_guests": 1,
+            "price_per_night": 1,
+            "pricing_cycle": 1,
+            "images": 1,
+            "average_rating": 1,
+            "reviews_count": 1,
+            "has_self_cook": 1,
+            "status": 1
+        }
+        raw_properties = await db.properties.find(query, projection).to_list(length=1000)
 
         if min_price is not None:
             raw_properties = [p for p in raw_properties if numeric_price(p) >= min_price]
@@ -217,6 +238,9 @@ async def search_properties(
         except Exception as log_err:
             logger.warning(f"Failed to save search log: {log_err}")
 
+        # Set cache-control header for property search listings (15 minutes)
+        response.headers["Cache-Control"] = "public, max-age=900"
+
         return {
             "properties": properties,
             "total": total,
@@ -252,6 +276,7 @@ async def search_properties(
 async def get_property(
     property_id: str,
     request: Request,
+    response: Response,
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get property details by ID (public endpoint). Includes safe host info."""
@@ -312,6 +337,9 @@ async def get_property(
             created_at = host.get("created_at")
             host["created_at"] = created_at.isoformat() if hasattr(created_at, "isoformat") else created_at
         property_dict["host"] = host or None
+
+        # Set cache-control header for property details (30 minutes)
+        response.headers["Cache-Control"] = "public, max-age=1800"
 
         return property_dict
 
@@ -755,7 +783,7 @@ async def generate_description(
                 f"Output only the final description. Do not include markdown headers or greetings like 'Sure, here is...'."
             )
             try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={gemini_key}"
                 payload = {"contents": [{"parts": [{"text": prompt}]}]}
                 headers = {"Content-Type": "application/json"}
                 
