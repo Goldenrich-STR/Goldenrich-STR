@@ -227,7 +227,7 @@ async def startup_sequence():
             "external_calendars", "property_verifications", 
             "transactions", "payouts", "refunds", "reviews", 
             "notifications", "subscription_plans", "subscriptions", "cms_content", "leads", "coupons",
-            "deleted_properties", "search_logs", "ai_calls", "ai_agents"
+            "deleted_properties", "search_logs", "ai_calls", "ai_agents", "calendar_sync_logs"
         ]
         for table in tables:
             await db_instance.ensure_table(table)
@@ -261,6 +261,8 @@ async def startup_sequence():
         await db_instance.password_reset_tokens.create_index("expires_at")
         await db_instance.bookings.create_index([("property_id", 1), ("check_in_date", 1), ("check_out_date", 1)])
         await db_instance.blocked_dates.create_index([("property_id", 1), ("start_date", 1), ("end_date", 1)])
+        await db_instance.blocked_dates.create_index([("property_id", 1), ("source_id", 1), ("external_uid", 1)])
+        await db_instance.calendar_sync_logs.create_index([("property_id", 1), ("synced_at", -1)])
         await db_instance.bookings.create_index([("booking_status", 1), ("soft_lock_expires_at", 1)])
         await db_instance.ai_agents.create_index("agent_id", unique=True)
         
@@ -291,12 +293,13 @@ async def startup_sequence():
     except Exception as e:
         logger.error(f"Failed to start review reminder: {e}")
 
-    # 6. Start iCal sweeper
+    # 6. Start iCal scheduler
     try:
-        from services.ical_sync import start_ical_sync
-        start_ical_sync(db_instance)
+        from services.calendar_scheduler import start_calendar_scheduler
+
+        start_calendar_scheduler(db_instance)
     except Exception as e:
-        logger.error(f"Failed to start iCal sweeper: {e}")
+        logger.error(f"Failed to start calendar scheduler: {e}")
 
     # 7. Start payout sweeper
     try:
@@ -318,6 +321,13 @@ async def startup_sequence():
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    try:
+        from services.calendar_scheduler import shutdown_calendar_scheduler
+
+        shutdown_calendar_scheduler()
+    except Exception as e:
+        logger.warning(f"Failed to stop calendar scheduler: {e}")
+
     if client:
         client.close()
     if hasattr(db_instance, 'pool') and db_instance.pool:

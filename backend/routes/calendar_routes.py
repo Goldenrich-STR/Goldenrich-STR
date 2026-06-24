@@ -13,7 +13,6 @@ from models.calendar import (
 from middleware.auth_middleware import get_current_user
 from datetime import datetime, date, timedelta, timezone
 import logging
-import requests
 import os
 import secrets
 from icalendar import Calendar as iCalendar, Event as iCalEvent
@@ -797,94 +796,6 @@ async def public_ical_feed(
 
 async def sync_external_calendar(calendar_id: str, db: AsyncIOMotorDatabase):
     """Pull external iCal feed and persist as EXTERNAL blocked dates."""
-    try:
-        calendar = await db.external_calendars.find_one(
-            {"calendar_id": calendar_id}, {"_id": 0}
-        )
-        if not calendar:
-            return
+    from services.calendar_sync_service import sync_calendar_by_id
 
-        ical_url = calendar["ical_url"]
-        if ical_url.startswith("webcal://"):
-            ical_url = "https://" + ical_url[len("webcal://"):]
-
-        response = requests.get(ical_url, timeout=15)
-        if response.status_code != 200:
-            await db.external_calendars.update_one(
-                {"calendar_id": calendar_id},
-                {
-                    "$set": {
-                        "sync_status": "failed",
-                        "sync_error": f"HTTP {response.status_code}",
-                        "updated_at": datetime.now(timezone.utc),
-                    }
-                },
-            )
-            return
-
-        cal = iCalendar.from_ical(response.content)
-
-        await db.blocked_dates.delete_many(
-            {
-                "property_id": calendar["property_id"],
-                "source": BlockedDateSource.EXTERNAL.value,
-                "source_id": calendar_id,
-            }
-        )
-
-        blocked_dates = []
-        for component in cal.walk():
-            if component.name != "VEVENT":
-                continue
-            dtstart_field = component.get("dtstart")
-            dtend_field = component.get("dtend")
-            if not dtstart_field or not dtend_field:
-                continue
-            dtstart = dtstart_field.dt
-            dtend = dtend_field.dt
-            if isinstance(dtstart, datetime):
-                dtstart = dtstart.date()
-            if isinstance(dtend, datetime):
-                dtend = dtend.date()
-
-            blocked_date = BlockedDate(
-                property_id=calendar["property_id"],
-                owner_id=calendar["owner_id"],
-                start_date=dtstart,
-                end_date=dtend,
-                source=BlockedDateSource.EXTERNAL,
-                source_id=calendar_id,
-            )
-            blocked_dict = blocked_date.model_dump()
-            blocked_dict["start_date"] = dtstart.isoformat()
-            blocked_dict["end_date"] = dtend.isoformat()
-            blocked_dates.append(blocked_dict)
-
-        if blocked_dates:
-            await db.blocked_dates.insert_many(blocked_dates)
-
-        await db.external_calendars.update_one(
-            {"calendar_id": calendar_id},
-            {
-                "$set": {
-                    "sync_status": "success",
-                    "sync_error": None,
-                    "last_synced_at": datetime.now(timezone.utc),
-                    "updated_at": datetime.now(timezone.utc),
-                }
-            },
-        )
-        logger.info(f"External calendar synced: {calendar_id}, {len(blocked_dates)} events")
-
-    except Exception as e:
-        logger.error(f"Error syncing external calendar {calendar_id}: {str(e)}")
-        await db.external_calendars.update_one(
-            {"calendar_id": calendar_id},
-            {
-                "$set": {
-                    "sync_status": "failed",
-                    "sync_error": str(e),
-                    "updated_at": datetime.now(timezone.utc),
-                }
-            },
-        )
+    return await sync_calendar_by_id(calendar_id, db)
