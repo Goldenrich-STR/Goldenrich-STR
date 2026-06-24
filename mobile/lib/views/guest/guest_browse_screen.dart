@@ -456,6 +456,7 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
                           fit: BoxFit.cover,
                           errorBuilder: (context, _, __) => Container(
                             height: 180,
+                            width: double.infinity,
                             color: AppTheme.stone,
                             child: const Icon(Icons.home, size: 40, color: AppTheme.secondary),
                           ),
