@@ -1,3 +1,5 @@
+import '../config.dart';
+
 class PropertyModel {
   final String propertyId;
   final String ownerId;
@@ -31,6 +33,9 @@ class PropertyModel {
   final String? houseRules;
   final String? subscriptionId;
   final String? subscriptionStatus;
+  final bool hasCook;
+  final double? cookPrice;
+  final bool hasSelfCook;
 
   PropertyModel({
     required this.propertyId,
@@ -65,6 +70,9 @@ class PropertyModel {
     this.houseRules,
     this.subscriptionId,
     this.subscriptionStatus,
+    required this.hasCook,
+    this.cookPrice,
+    required this.hasSelfCook,
   });
 
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
@@ -87,7 +95,9 @@ class PropertyModel {
       pricePerNight: (json['price_per_night'] as num?)?.toDouble() ?? 0.0,
       maxGuests: json['max_guests'] ?? 6,
       amenities: List<String>.from(json['amenities'] ?? []),
-      images: List<String>.from(json['images'] ?? []),
+      images: (json['images'] as List? ?? [])
+          .map<String>((img) => AppConfig.resolveImageUrl(img.toString()))
+          .toList(),
       videoUrl: json['video_url'],
       youtubeShortUrl: json['youtube_short_url'],
       youtubeLongUrl: json['youtube_long_url'],
@@ -99,8 +109,10 @@ class PropertyModel {
       guestSize: json['guest_size'] as int?,
       createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null,
       houseRules: json['house_rules'],
-      subscriptionId: json['subscription_id'],
       subscriptionStatus: json['subscription_status'],
+      hasCook: json['has_cook'] ?? false,
+      cookPrice: (json['cook_price'] as num?)?.toDouble(),
+      hasSelfCook: json['has_self_cook'] ?? false,
     );
   }
 
@@ -138,6 +150,9 @@ class PropertyModel {
       'house_rules': houseRules,
       'subscription_id': subscriptionId,
       'subscription_status': subscriptionStatus,
+      'has_cook': hasCook,
+      'cook_price': cookPrice,
+      'has_self_cook': hasSelfCook,
     };
   }
 }

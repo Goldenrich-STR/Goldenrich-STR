@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart' as dio;
+import '../../config.dart';
 import '../../providers/verification_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
@@ -62,17 +63,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
   }
 
   String _getImageUrl(String? path) {
-    if (path == null || path.isEmpty) {
-      return 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85';
-    }
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
-    }
-    final baseUrl = _apiService.baseUrl;
-    if (path.startsWith('/')) {
-      return '$baseUrl$path';
-    }
-    return '$baseUrl/$path';
+    return AppConfig.resolveImageUrl(path);
   }
 
   Future<void> _refreshData() async {
@@ -1420,17 +1411,7 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
   }
 
   String _getImageUrl(String? path) {
-    if (path == null || path.isEmpty) {
-      return 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85';
-    }
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
-    }
-    final baseUrl = _apiService.baseUrl;
-    if (path.startsWith('/')) {
-      return '$baseUrl$path';
-    }
-    return '$baseUrl/$path';
+    return AppConfig.resolveImageUrl(path);
   }
 
   Future<void> _pickImageAndUpload(ImageSource source) async {

@@ -1,3 +1,5 @@
+import '../config.dart';
+
 class BookingModel {
   final String bookingId;
   final String propertyId;
@@ -90,7 +92,9 @@ class BookingModel {
       createdAt: json['created_at'] ?? '',
       propertyCity: propJson != null ? propJson['city'] : null,
       propertyState: propJson != null ? propJson['state'] : null,
-      propertyImages: propJson != null && propJson['images'] != null ? List<String>.from(propJson['images']) : null,
+      propertyImages: propJson != null && propJson['images'] != null
+          ? (propJson['images'] as List).map<String>((img) => AppConfig.resolveImageUrl(img.toString())).toList()
+          : null,
       propertyCategory: propJson != null ? propJson['category'] : null,
     );
   }

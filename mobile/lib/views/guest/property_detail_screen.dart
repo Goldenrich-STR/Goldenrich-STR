@@ -1183,6 +1183,139 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           const Divider(height: 1),
                           const SizedBox(height: 24),
 
+                          // Cook Service Section
+                          if (prop.hasCook || prop.hasSelfCook) ...[
+                            Text(
+                              'Cook & Kitchen Service',
+                              style: GoogleFonts.manrope(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.charcoal,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            if (prop.hasCook) ...[
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.stone,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppTheme.border, width: 1),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primary.withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.restaurant,
+                                        color: AppTheme.primary,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Cook Available',
+                                            style: GoogleFonts.manrope(
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.charcoal,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Personal cook service is available at this property.',
+                                            style: GoogleFonts.manrope(
+                                              color: AppTheme.charcoalMuted,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      '₹${(prop.cookPrice ?? 0.0).toStringAsFixed(0)}/day',
+                                      style: GoogleFonts.manrope(
+                                        fontWeight: FontWeight.w800,
+                                        color: AppTheme.primary,
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (prop.hasSelfCook) const SizedBox(height: 12),
+                            ],
+                            if (prop.hasSelfCook) ...[
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.stone,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppTheme.border, width: 1),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF10B981).withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.soup_kitchen,
+                                        color: Color(0xFF10B981),
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Self Cooking Allowed',
+                                            style: GoogleFonts.manrope(
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.charcoal,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Guests can use the kitchen facility to cook meals.',
+                                            style: GoogleFonts.manrope(
+                                              color: AppTheme.charcoalMuted,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      'Free',
+                                      style: GoogleFonts.manrope(
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF10B981),
+                                        fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                            const Divider(height: 1),
+                            const SizedBox(height: 24),
+                          ],
+
                           // What this place offers (Amenities)
                           Text(
                             'What this place offers',

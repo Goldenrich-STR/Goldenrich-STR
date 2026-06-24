@@ -82,6 +82,9 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
   bool _petFriendly = false;
   bool _smokingAllowed = false;
   bool _instantBooking = false;
+  bool _hasCook = false;
+  final _cookPriceController = TextEditingController();
+  bool _hasSelfCook = false;
 
   // Step 4: Amenities
   final List<String> _selectedAmenities = [];
@@ -267,6 +270,9 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       _uploadedImages.addAll(p.images);
       _petFriendly = p.petFriendly;
       _instantBooking = p.instantBooking;
+      _hasCook = p.hasCook;
+      if (p.cookPrice != null) _cookPriceController.text = p.cookPrice.toString();
+      _hasSelfCook = p.hasSelfCook;
       
       if (p.vegPrice != null) _vegPriceController.text = p.vegPrice.toString();
       if (p.nonVegPrice != null) _nonVegPriceController.text = p.nonVegPrice.toString();
@@ -325,6 +331,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     _parkingSpaceController.dispose();
     _youtubeShortController.dispose();
     _youtubeLongController.dispose();
+    _cookPriceController.dispose();
     for (final controller in _rulesControllers) {
       controller.dispose();
     }
@@ -701,6 +708,10 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid price.')));
         return false;
       }
+      if (_hasCook && (_cookPriceController.text.isEmpty || double.tryParse(_cookPriceController.text) == null || double.parse(_cookPriceController.text) <= 0)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid cook price.')));
+        return false;
+      }
     }
     if (_currentStep == 3) {
       if (_selectedAmenities.isEmpty) {
@@ -783,6 +794,9 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       'pet_friendly': _petFriendly,
       'smoking_allowed': _smokingAllowed,
       'instant_booking': _instantBooking,
+      'has_cook': _hasCook,
+      'cook_price': _hasCook && _cookPriceController.text.isNotEmpty ? double.tryParse(_cookPriceController.text) : null,
+      'has_self_cook': _hasSelfCook,
       'veg_price': _category == 'event_venue' ? double.tryParse(_vegPriceController.text) : null,
       'non_veg_price': _category == 'event_venue' ? double.tryParse(_nonVegPriceController.text) : null,
       'packages': _category == 'event_venue' ? [
@@ -878,6 +892,9 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       'pet_friendly': _petFriendly,
       'smoking_allowed': _smokingAllowed,
       'instant_booking': _instantBooking,
+      'has_cook': _hasCook,
+      'cook_price': _hasCook && _cookPriceController.text.isNotEmpty ? double.tryParse(_cookPriceController.text) : null,
+      'has_self_cook': _hasSelfCook,
       'veg_price': _category == 'event_venue' ? double.tryParse(_vegPriceController.text) : null,
       'non_veg_price': _category == 'event_venue' ? double.tryParse(_nonVegPriceController.text) : null,
       'packages': _category == 'event_venue' ? [
@@ -2407,6 +2424,42 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
             _instantBooking,
             (val) => setState(() => _instantBooking = val),
           ),
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 12),
+          const Text(
+            'Cook Service',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+          ),
+          const SizedBox(height: 8),
+          _buildCustomSwitchRow(
+            'Cook Service Available',
+            _hasCook,
+            (val) => setState(() {
+              _hasCook = val;
+              if (!val) _cookPriceController.clear();
+            }),
+          ),
+          if (_hasCook) ...[
+            const SizedBox(height: 8),
+            _buildFieldLabel('Cook Price per day (₹)'),
+            TextFormField(
+              controller: _cookPriceController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                prefixText: '₹ ',
+                hintText: 'e.g., 500',
+              ),
+            ),
+          ],
+          const SizedBox(height: 8),
+          _buildCustomSwitchRow(
+            'Self Cooking Option Available',
+            _hasSelfCook,
+            (val) => setState(() {
+              _hasSelfCook = val;
+            }),
+          ),
         ],
       ],
     );
@@ -3414,6 +3467,8 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                 ] else ...[
                   _buildReviewRow('Price', '₹${_priceController.text} / $_pricingCycle'),
                 ],
+                _buildReviewRow('Cook Available', _hasCook ? 'Yes (₹${_cookPriceController.text}/day)' : 'No'),
+                _buildReviewRow('Self Cook Allowed', _hasSelfCook ? 'Yes' : 'No'),
                 _buildReviewRow('Amenities', '${_selectedAmenities.length} selected'),
                 _buildReviewRow('Photos', '${_uploadedImages.length} uploaded'),
               ],
