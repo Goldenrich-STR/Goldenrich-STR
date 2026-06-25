@@ -949,7 +949,14 @@ const LandingPage = () => {
     }
   ];
 
+  const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
 
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentHeroSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [heroSlides.length]);
 
   const [lang, setLang] = useState(localStorage.getItem('preferredLanguage') || 'en');
 
@@ -1378,18 +1385,22 @@ const LandingPage = () => {
         </div>
       )}
 
-      {/* ===== PREMIUM STATIC IMAGE HERO ===== */}
+      {/* ===== PREMIUM SLIDING IMAGE HERO ===== */}
       <div className="relative h-screen w-full z-30">
         
-        {/* ── Static Background Image (No Zoom / Transition) ── */}
-        <div 
-          className="absolute inset-0 w-full h-full z-0"
-          style={{
-            backgroundImage: "url('/videos/hero/pexels-akshay-mr-187831647-12414221.webp')",
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        />
+        {/* ── Sliding/Fading Background Images ── */}
+        {heroSlides.map((slide, index) => (
+          <div 
+            key={index}
+            className="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out z-0"
+            style={{
+              backgroundImage: `url(${slide.src})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: index === currentHeroSlide ? 1 : 0
+            }}
+          />
+        ))}
 
         {/* ── 50% dark overlay ── */}
         <div className="absolute inset-0 bg-black/50 z-20" />
