@@ -21,6 +21,17 @@ import {
   Star,
   Heart,
   Share2,
+  Menu,
+  Calendar,
+  User,
+  Compass,
+  Trees,
+  Waves,
+  Hotel,
+  Sunset,
+  Home,
+  Briefcase,
+  PartyPopper,
 } from 'lucide-react';
 
 // Fix Leaflet default marker icon for webpack/CRA
@@ -259,6 +270,15 @@ const TRANSLATIONS = {
   }
 };
 
+const SUGGESTED_DESTINATIONS = [
+  { city: "Pune", state: "Maharashtra", desc: "A hidden gem", icon: Hotel },
+  { city: "Lonavala", state: "Maharashtra", desc: "For sights like Karla Caves", icon: Trees },
+  { city: "Mumbai", state: "Maharashtra", desc: "For its top-notch dining", icon: Building2 },
+  { city: "North Goa", state: "Goa", desc: "Popular beach destination", icon: Waves },
+  { city: "Nashik", state: "Maharashtra", desc: "Near you", icon: Compass },
+  { city: "Karjat", state: "Maharashtra", desc: "A hidden gem", icon: Home }
+];
+
 const GuestBrowse = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -275,6 +295,18 @@ const GuestBrowse = () => {
     return `${yyyy}-${mm}-${dd}`;
   }, []);
 
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [guestCounts, setGuestCounts] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const initialGuests = parseInt(params.get('guests')) || 2;
+    return { adults: Math.max(1, initialGuests), children: 0, infants: 0 };
+  });
+
+  useEffect(() => {
+    const total = guestCounts.adults + guestCounts.children;
+    setFilters(prev => ({ ...prev, guests: String(total) }));
+  }, [guestCounts]);
+
   const [properties, setProperties] = useState([]);
   const [seoData, setSeoData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -282,6 +314,7 @@ const GuestBrowse = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState(VIEW_MODES.GRID);
   const [hoveredId, setHoveredId] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [wishlist, setWishlist] = useState(() => {
     try {
@@ -315,7 +348,7 @@ const GuestBrowse = () => {
     const params = new URLSearchParams(window.location.search);
     return {
       city: params.get('city') || '',
-      category: params.get('category') || '',
+      category: params.get('category') || 'residential',
       property_type: '',
       bhk_type: '',
       min_price: '',
@@ -494,15 +527,15 @@ const GuestBrowse = () => {
         seo={seoData}
       />
       {/* Header */}
-      <header className="glass px-4 md:px-8 py-4 border-b border-sand-200" data-testid="guest-header">
+      <header className="relative z-40 glass px-4 md:px-8 py-4 border-b border-sand-200" data-testid="guest-header">
         <div className="w-full flex justify-between items-center gap-2">
           <div 
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">x-space360<span className="text-terracotta">.in</span></span>
+            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
           </div>
-          <div className="flex items-center space-x-4 md:space-x-6">
+          <div className="hidden md:flex items-center space-x-4 md:space-x-6">
             {/* Language Selector */}
             <div className="relative flex items-center">
               <LanguageSelector
@@ -558,120 +591,308 @@ const GuestBrowse = () => {
               </button>
             )}
           </div>
+          
+          {/* Mobile Hamburger Icon */}
+          <div className="md:hidden flex items-center">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="text-charcoal hover:text-terracotta transition p-2">
+              <Menu className="w-7 h-7" />
+            </button>
+          </div>
         </div>
       </header>
 
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-[100] bg-white flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-charcoal md:hidden">
+          <div className="flex justify-between items-center mb-12">
+            <h1 className="text-2xl font-black tracking-tight cursor-pointer text-charcoal" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
+              X-space360<span className="text-terracotta">.in</span>
+            </h1>
+            <button onClick={() => setIsMobileMenuOpen(false)} className="text-charcoal hover:text-terracotta transition p-2 bg-sand-100 rounded-full">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          
+          <div className="flex flex-col space-y-6 flex-1">
+            <button
+              onClick={() => { setIsMobileMenuOpen(false); setShowWishlistOnly(prev => !prev); }}
+              className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-sand-200"
+            >
+              <span>{showWishlistOnly ? 'Show All Spaces' : 'Wishlist'}</span>
+              <Heart className={`w-6 h-6 ${showWishlistOnly ? 'text-red-500 fill-red-500' : 'text-charcoal-muted'}`} />
+            </button>
+            <div className="py-2 border-b border-sand-200 flex items-center justify-between">
+              <span className="text-2xl font-bold">Language</span>
+              <LanguageSelector
+                currentLang={lang}
+                onLanguageChange={(newLang) => {
+                  setLang(newLang);
+                  localStorage.setItem('preferredLanguage', newLang);
+                }}
+              />
+            </div>
+
+            {user ? (
+              <>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/bookings'); }}
+                  className="text-left text-2xl font-bold text-terracotta py-2 border-b border-sand-200"
+                >
+                  {t('myBookings')}
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); logout(); }}
+                  className="mt-8 bg-sand-200 hover:bg-sand-300 text-charcoal font-bold py-4 rounded-xl text-center transition"
+                >
+                  {t('signOut')}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }}
+                  className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-sand-200"
+                >
+                  {t('signIn')}
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/register'); }}
+                  className="mt-8 bg-terracotta hover:bg-terracotta-hover text-white font-bold py-4 rounded-xl text-center shadow-lg transition"
+                >
+                  Get Started
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Top Search Bar */}
-      <div className="bg-white/80 backdrop-blur sticky top-0 z-30 px-4 md:px-8 py-4 border-b border-sand-200 shadow-sm">
-        <div className="w-full max-w-5xl mx-auto">
+      <div className="bg-white/80 backdrop-blur sticky top-0 z-30 px-4 md:px-8 py-4 border-b border-sand-200 shadow-sm relative">
+        {/* Transparent overlay to close active dropdowns on clicking outside */}
+        {activeDropdown && (
+          <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActiveDropdown(null)} />
+        )}
+
+        <div className="w-full max-w-5xl mx-auto relative z-50">
           <form
             onSubmit={handleSearch}
-            className="flex flex-col lg:flex-row items-center bg-white rounded-[2rem] lg:rounded-full border border-sand-200 shadow-premium p-2 gap-2 w-full"
+            className="flex flex-col md:flex-row items-center bg-white rounded-2xl md:rounded-full w-full shadow-2xl border border-gray-100 relative z-50 animate-fade-in"
           >
-            {/* Destination */}
-            <div className="flex-1 flex flex-col px-6 py-2 hover:bg-sand-50 rounded-full cursor-pointer transition-colors relative w-full lg:w-auto">
-              <label htmlFor="browse-destination" className="text-[10px] font-black text-charcoal uppercase tracking-widest cursor-pointer">{t('destination')}</label>
-              <input
-                id="browse-destination"
-                name="destination"
-                type="text"
-                autoComplete="address-level2"
-                value={filters.city}
-                onChange={(e) => setFilters({ ...filters, city: e.target.value })}
-                placeholder="Where to next?"
-                className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 mt-1 placeholder-charcoal-muted"
-              />
-            </div>
+              
+              {/* Location */}
+              <div className="relative flex-1 w-full">
+                <div 
+                  onClick={() => setActiveDropdown(activeDropdown === 'location' ? null : 'location')}
+                  className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer rounded-t-2xl md:rounded-l-full border-b border-gray-100 md:border-none hover:bg-gray-50 transition"
+                >
+                  <MapPin className="w-5 h-5 text-gray-400 mr-3" />
+                  <div className="w-full text-left">
+                    <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">Where</p>
+                    <input
+                      id="browse-destination"
+                      name="destination"
+                      type="text"
+                      autoComplete="address-level2"
+                      value={filters.city}
+                      onFocus={() => setActiveDropdown('location')}
+                      onChange={(e) => {
+                        setFilters({ ...filters, city: e.target.value });
+                        setActiveDropdown('location');
+                      }}
+                      placeholder="Location"
+                      className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-400 font-bold text-sm focus:ring-0 focus:outline-none p-0 mt-0.5"
+                    />
+                  </div>
+                </div>
 
-            <div className="hidden lg:block w-[1px] h-10 bg-sand-200"></div>
-
-            {/* Check In */}
-            <div className="flex-1 flex flex-col px-6 py-2 hover:bg-sand-50 rounded-full cursor-pointer transition-colors relative w-full lg:w-auto">
-              <label htmlFor="browse-check-in" className="text-[10px] font-black text-charcoal uppercase tracking-widest cursor-pointer">{t('checkIn')}</label>
-              <input
-                id="browse-check-in"
-                name="checkIn"
-                type={filters.check_in ? "date" : "text"}
-                onFocus={(e) => e.target.type = 'date'}
-                onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                placeholder="Add dates"
-                min={todayISO}
-                value={filters.check_in}
-                onChange={(e) => setFilters({ ...filters, check_in: e.target.value })}
-                className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 mt-1 placeholder-charcoal-muted [color-scheme:light]"
-              />
-            </div>
-
-            <div className="hidden lg:block w-[1px] h-10 bg-sand-200"></div>
-
-            {/* Check Out */}
-            <div className="flex-1 flex flex-col px-6 py-2 hover:bg-sand-50 rounded-full cursor-pointer transition-colors relative w-full lg:w-auto">
-              <label htmlFor="browse-check-out" className="text-[10px] font-black text-charcoal uppercase tracking-widest cursor-pointer">{t('checkOut')}</label>
-              <input
-                id="browse-check-out"
-                name="checkOut"
-                type={filters.check_out ? "date" : "text"}
-                onFocus={(e) => e.target.type = 'date'}
-                onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                placeholder="Add dates"
-                min={filters.check_in || todayISO}
-                value={filters.check_out}
-                onChange={(e) => setFilters({ ...filters, check_out: e.target.value })}
-                className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 mt-1 placeholder-charcoal-muted [color-scheme:light]"
-              />
-            </div>
-
-            <div className="hidden lg:block w-[1px] h-10 bg-sand-200"></div>
-
-            {/* Category */}
-            <div className="flex-1 flex flex-col px-6 py-2 hover:bg-sand-50 rounded-full cursor-pointer transition-colors relative w-full lg:w-auto">
-              <label htmlFor="browse-category" className="text-[10px] font-black text-charcoal uppercase tracking-widest cursor-pointer">{t('type')}</label>
-              <select
-                id="browse-category"
-                name="category"
-                value={filters.category}
-                onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-                className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 mt-1 cursor-pointer appearance-none"
-              >
-                <option value="">{t('anyCategory')}</option>
-                <option value="residential">{t('residential')}</option>
-                <option value="commercial">{t('commercial')}</option>
-                <option value="event_venue">{t('eventVenue')}</option>
-              </select>
-            </div>
-
-            <div className="hidden lg:block w-[1px] h-10 bg-sand-200"></div>
-
-            <div className="flex items-center justify-between lg:justify-end w-full lg:w-auto px-4 lg:px-2 py-2">
-              <button
-                type="button"
-                onClick={() => setShowFilters((v) => !v)}
-                className={`relative w-12 h-12 rounded-full border-2 transition-all flex items-center justify-center mr-2 lg:mr-0 lg:ml-2 ${
-                   showFilters || filters.amenities.length > 0 
-                   ? 'border-terracotta bg-terracotta/5 text-terracotta' 
-                   : 'border-transparent hover:bg-sand-50 text-charcoal'
-                }`}
-                title={t('filters')}
-              >
-                <SlidersHorizontal className="w-5 h-5" />
-                {filters.amenities.length > 0 && (
-                   <span className="absolute top-0 right-0 bg-terracotta text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                     {filters.amenities.length}
-                   </span>
+                {/* Airbnb-style Suggested Destinations Dropdown */}
+                {activeDropdown === 'location' && (
+                  <div className="absolute left-0 top-full mt-3 w-80 bg-white border border-sand-200 rounded-3xl shadow-2xl z-50 p-4 max-h-96 overflow-y-auto">
+                    <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-3 px-2">Suggested destinations</p>
+                    <div className="space-y-1">
+                      {SUGGESTED_DESTINATIONS.filter(dest => 
+                        !filters.city || 
+                        dest.city.toLowerCase().includes(filters.city.toLowerCase()) || 
+                        dest.state.toLowerCase().includes(filters.city.toLowerCase())
+                      ).map((dest, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            setFilters({ ...filters, city: dest.city });
+                            setActiveDropdown(null);
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-sand-50 transition text-left"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center shrink-0">
+                            {dest.icon ? <dest.icon className="w-5 h-5 text-gray-500" /> : <MapPin className="w-5 h-5 text-gray-500" />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-charcoal">{dest.city}, {dest.state}</p>
+                            <p className="text-xs text-gray-400 font-semibold mt-0.5">{dest.desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                      {SUGGESTED_DESTINATIONS.filter(dest => 
+                        !filters.city || 
+                        dest.city.toLowerCase().includes(filters.city.toLowerCase()) || 
+                        dest.state.toLowerCase().includes(filters.city.toLowerCase())
+                      ).length === 0 && (
+                        <p className="text-xs font-semibold text-gray-400 p-2 italic text-center">No locations matched. Press enter to search anyway.</p>
+                      )}
+                    </div>
+                  </div>
                 )}
-              </button>
-              <button
-                type="submit"
-                className="w-12 h-12 rounded-full bg-terracotta text-white flex items-center justify-center hover:scale-105 transition-transform shadow-premium ml-2"
-                title={t('findSpaces')}
-              >
-                <Search className="w-5 h-5" />
-              </button>
-            </div>
+              </div>
+              <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+              
+              {/* Check-in */}
+              <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
+                <Calendar className="w-5 h-5 text-gray-400 mr-3" />
+                <div className="w-full text-left">
+                  <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">When</p>
+                  <input
+                    id="browse-check-in"
+                    name="checkIn"
+                    type={filters.check_in ? "date" : "text"}
+                    onFocus={(e) => e.target.type = 'date'}
+                    onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
+                    placeholder="Check-in"
+                    min={todayISO}
+                    value={filters.check_in}
+                    onChange={(e) => setFilters({ ...filters, check_in: e.target.value })}
+                    className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5"
+                  />
+                </div>
+              </div>
+              <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+              
+              {/* Check-out */}
+              <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
+                <Calendar className="w-5 h-5 text-gray-400 mr-3" />
+                <div className="w-full text-left">
+                  <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">When</p>
+                  <input
+                    id="browse-check-out"
+                    name="checkOut"
+                    type={filters.check_out ? "date" : "text"}
+                    onFocus={(e) => e.target.type = 'date'}
+                    onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
+                    placeholder="Check-out"
+                    min={filters.check_in || todayISO}
+                    value={filters.check_out}
+                    onChange={(e) => setFilters({ ...filters, check_out: e.target.value })}
+                    className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5"
+                  />
+                </div>
+              </div>
+              <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+
+
+              
+              {/* Guests Selector with Airbnb style +/- counter popover */}
+              <div className="relative flex-1 w-full">
+                <div 
+                  onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
+                  className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer hover:bg-gray-50 transition rounded-b-2xl md:rounded-none"
+                >
+                  <User className="w-5 h-5 text-gray-400 mr-3" />
+                  <div className="text-left">
+                    <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">Who</p>
+                    <p className="text-charcoal font-bold text-sm mt-0.5 whitespace-nowrap">
+                      {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+                
+                {activeDropdown === 'guests' && (
+                  <div className="absolute right-0 top-full mt-3 w-72 bg-white border border-sand-200 rounded-3xl shadow-2xl z-50 p-6 space-y-5">
+                    {/* Adults Row */}
+                    <div className="flex items-center justify-between">
+                      <div className="text-left">
+                        <p className="text-sm font-bold text-charcoal">Adults</p>
+                        <p className="text-xs text-gray-400 font-semibold mt-0.5">Age 13 or above</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setGuestCounts({ ...guestCounts, adults: Math.max(1, guestCounts.adults - 1) })}
+                          className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                        >
+                          -
+                        </button>
+                        <span className="w-4 text-center text-sm font-bold text-charcoal">{guestCounts.adults}</span>
+                        <button
+                          type="button"
+                          onClick={() => setGuestCounts({ ...guestCounts, adults: guestCounts.adults + 1 })}
+                          className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Children Row */}
+                    <div className="flex items-center justify-between">
+                      <div className="text-left">
+                        <p className="text-sm font-bold text-charcoal">Children</p>
+                        <p className="text-xs text-gray-400 font-semibold mt-0.5">Ages 2–12</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setGuestCounts({ ...guestCounts, children: Math.max(0, guestCounts.children - 1) })}
+                          className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                        >
+                          -
+                        </button>
+                        <span className="w-4 text-center text-sm font-bold text-charcoal">{guestCounts.children}</span>
+                        <button
+                          type="button"
+                          onClick={() => setGuestCounts({ ...guestCounts, children: guestCounts.children + 1 })}
+                          className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Filter & Search Buttons */}
+              <div className="p-2 w-full md:w-auto flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters((v) => !v)}
+                  className={`relative w-12 h-12 rounded-full border transition-all flex items-center justify-center ${
+                    showFilters || filters.amenities.length > 0
+                      ? 'border-terracotta bg-terracotta text-white'
+                      : 'border-gray-200 hover:bg-gray-50 text-charcoal'
+                  }`}
+                  title={t('filters')}
+                >
+                  <SlidersHorizontal className="w-5 h-5" />
+                  {filters.amenities.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                      {filters.amenities.length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="submit"
+                  className="w-12 h-12 rounded-full bg-terracotta hover:bg-terracotta/90 text-white flex items-center justify-center transition-all duration-300 shadow-md cursor-pointer"
+                  title={t('findSpaces')}
+                >
+                  <Search className="w-5 h-5 text-white" />
+                </button>
+              </div>
+
           </form>
         </div>
       </div>
-
       {/* Advanced filters drawer */}
       {showFilters && (
         <div className="bg-sand-50 border-b border-sand-200 px-4 md:px-8 py-8 animate-slide-up" data-testid="advanced-filters">
