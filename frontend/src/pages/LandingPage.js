@@ -874,7 +874,7 @@ const LandingPage = () => {
     navigate('/');
   };
   const [locationQuery, setLocationQuery] = useState('');
-  const [searchCategory, setSearchCategory] = useState('all');
+  const [searchCategory, setSearchCategory] = useState('residential');
 
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [guestCounts, setGuestCounts] = useState({ adults: 2, children: 0, infants: 0 });
@@ -948,15 +948,7 @@ const LandingPage = () => {
     }
   ];
 
-  React.useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveVideo(prev => {
-        setPrevVideo(prev);
-        return (prev + 1) % heroSlides.length;
-      });
-    }, 6000);
-    return () => clearInterval(timer);
-  }, [heroSlides.length]);
+
 
   const [lang, setLang] = useState(localStorage.getItem('preferredLanguage') || 'en');
 
@@ -1384,47 +1376,24 @@ const LandingPage = () => {
         </div>
       )}
 
-      {/* ===== PREMIUM VIDEO SLIDER HERO ===== */}
-      <style>{`
-        @keyframes kenburns {
-          0%   { transform: scale(1)    translate(0%, 0%); }
-          100% { transform: scale(1.12) translate(-2%, -2%); }
-        }
-        .hero-video-active  { opacity: 1; animation: kenburns 7s ease-out forwards; }
-        .hero-video-exiting { opacity: 0; transition: opacity 1.2s ease; }
-        .hero-video-hidden  { opacity: 0; }
-        .hero-video-wrap    { transition: opacity 1.2s ease; }
-      `}</style>
-
+      {/* ===== PREMIUM STATIC IMAGE HERO ===== */}
       <div className="relative h-screen w-full z-30">
+        
+        {/* ── Static Background Image (No Zoom / Transition) ── */}
+        <div 
+          className="absolute inset-0 w-full h-full z-0"
+          style={{
+            backgroundImage: "url('/videos/hero/pexels-akshay-mr-187831647-12414221.webp')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        />
 
-        {/* ── Background Ken Burns Slides (with overflow hidden) ── */}
-        <div className="absolute inset-0 overflow-hidden z-0">
-          {heroSlides.map((slide, idx) => (
-            <div
-              key={idx}
-              className={`absolute inset-0 w-full h-full hero-video-wrap ${
-                idx === activeVideo
-                  ? 'hero-video-active z-10'
-                  : idx === prevVideo
-                  ? 'hero-video-exiting z-[9]'
-                  : 'hero-video-hidden z-0'
-              }`}
-              style={{
-                backgroundImage: `url(${slide.src})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-            >
-            </div>
-          ))}
+        {/* ── 50% dark overlay ── */}
+        <div className="absolute inset-0 bg-black/50 z-20" />
 
-          {/* ── 50% dark overlay ── */}
-          <div className="absolute inset-0 bg-black/50 z-20" />
-
-          {/* ── Solid Bottom Divider Strip ── */}
-          <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#FDFCF8] border-t border-sand-200/40 z-20" />
-        </div>
+        {/* ── Solid Bottom Divider Strip ── */}
+        <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#FDFCF8] border-t border-sand-200/40 z-20" />
 
         {/* ── Hero Content ── */}
         <div className="relative z-30 max-w-7xl mx-auto px-6 md:px-12 lg:px-20 h-full flex flex-col justify-center pt-24 pb-12 text-left">
@@ -1432,10 +1401,10 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end w-full">
             {/* Left side: Heading & Search Bar */}
             <div className="lg:col-span-12 flex flex-col items-start w-full">
-              {/* Slide label pill */}
+              {/* Premium STR tag pill */}
               <div className="mb-6 inline-flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-5 py-2 text-white/80 text-xs font-semibold tracking-widest uppercase">
-                <span className="w-1.5 h-1.5 rounded-full bg-terracotta mr-2.5 animate-pulse"></span>
-                {heroSlides[activeVideo]?.label}
+                <span className="w-1.5 h-1.5 rounded-full bg-terracotta mr-2.5"></span>
+                Luxury Short-Term Rentals
               </div>
 
               {/* Headline */}
@@ -1563,59 +1532,7 @@ const LandingPage = () => {
                     </div>
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
 
-                    {/* Category Type */}
-                    <div className="relative flex-1 w-full">
-                      <div 
-                        onClick={() => setActiveDropdown(activeDropdown === 'category' ? null : 'category')}
-                        className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer hover:bg-gray-50 transition border-b border-gray-100 md:border-none"
-                      >
-                        <Building2 className="w-5 h-5 text-gray-400 mr-3" />
-                        <div className="text-left">
-                          <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">Type</p>
-                          <p className="text-charcoal font-bold text-sm mt-0.5 whitespace-nowrap">
-                            {searchCategory === 'residential' ? 'Residential' :
-                             searchCategory === 'commercial' ? 'Commercial' :
-                             searchCategory === 'event_venue' ? 'Event Venue' : 'All Types'}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {activeDropdown === 'category' && (
-                        <div className="absolute left-0 top-full mt-3 w-64 bg-white border border-sand-200 rounded-3xl shadow-2xl z-50 p-4">
-                          <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-3 px-2">Property Type</p>
-                          <div className="space-y-1">
-                            {[
-                              { id: 'all', label: 'All Types', desc: 'Search everything', icon: Building2 },
-                              { id: 'residential', label: 'Residential', desc: 'Villas, apartments, stays', icon: Home },
-                              { id: 'commercial', label: 'Commercial', desc: 'Offices, co-working spaces', icon: Briefcase },
-                              { id: 'event_venue', label: 'Event Venue', desc: 'Halls, rooftops, venues', icon: PartyPopper }
-                            ].map((type) => {
-                              const TypeIcon = type.icon;
-                              return (
-                                <button
-                                  key={type.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setSearchCategory(type.id);
-                                    setActiveDropdown(null);
-                                  }}
-                                  className={`w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-sand-50 transition text-left ${searchCategory === type.id ? 'bg-sand-50 border border-terracotta/20' : ''}`}
-                                >
-                                  <div className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center shrink-0">
-                                    <TypeIcon className="w-5 h-5 text-gray-500" />
-                                  </div>
-                                  <div>
-                                    <p className="text-sm font-bold text-charcoal">{type.label}</p>
-                                    <p className="text-xs text-gray-400 font-semibold mt-0.5">{type.desc}</p>
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+
                     
                     {/* Guests Selector with Airbnb style +/- counter popover */}
                     <div className="relative flex-1 w-full">
@@ -1703,20 +1620,7 @@ const LandingPage = () => {
 
 
           </div>
-{/* ── Dot indicators ── */}
-          <div className="flex items-center space-x-2 mt-8">
-            {heroSlides.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => { setPrevVideo(activeVideo); setActiveVideo(idx); }}
-                className={`rounded-full transition-all duration-500 ${
-                  idx === activeVideo
-                    ? 'w-8 h-2 bg-white'
-                    : 'w-2 h-2 bg-white/40 hover:bg-white/70'
-                }`}
-              />
-            ))}
-          </div>
+
         </div>
       </div>
 

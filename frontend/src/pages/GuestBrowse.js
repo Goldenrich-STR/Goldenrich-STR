@@ -346,7 +346,7 @@ const GuestBrowse = () => {
     const params = new URLSearchParams(window.location.search);
     return {
       city: params.get('city') || '',
-      category: params.get('category') || '',
+      category: params.get('category') || 'residential',
       property_type: '',
       bhk_type: '',
       min_price: '',
@@ -761,59 +761,7 @@ const GuestBrowse = () => {
               </div>
               <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
 
-              {/* Category Type */}
-              <div className="relative flex-1 w-full">
-                <div 
-                  onClick={() => setActiveDropdown(activeDropdown === 'category' ? null : 'category')}
-                  className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer hover:bg-gray-50 transition border-b border-gray-100 md:border-none"
-                >
-                  <Building2 className="w-5 h-5 text-gray-400 mr-3" />
-                  <div className="text-left">
-                    <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">Type</p>
-                    <p className="text-charcoal font-bold text-sm mt-0.5 whitespace-nowrap">
-                      {filters.category === 'residential' ? 'Residential' :
-                       filters.category === 'commercial' ? 'Commercial' :
-                       filters.category === 'event_venue' ? 'Event Venue' : 'All Types'}
-                    </p>
-                  </div>
-                </div>
-                
-                {activeDropdown === 'category' && (
-                  <div className="absolute left-0 top-full mt-3 w-64 bg-white border border-sand-200 rounded-3xl shadow-2xl z-50 p-4">
-                    <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-3 px-2">Property Type</p>
-                    <div className="space-y-1">
-                      {[
-                        { id: '', label: 'All Types', desc: 'Search everything', icon: Building2 },
-                        { id: 'residential', label: 'Residential', desc: 'Villas, apartments, stays', icon: Home },
-                        { id: 'commercial', label: 'Commercial', desc: 'Offices, co-working spaces', icon: Briefcase },
-                        { id: 'event_venue', label: 'Event Venue', desc: 'Halls, rooftops, venues', icon: PartyPopper }
-                      ].map((type) => {
-                        const TypeIcon = type.icon;
-                        return (
-                          <button
-                            key={type.id}
-                            type="button"
-                            onClick={() => {
-                              setFilters({ ...filters, category: type.id });
-                              setActiveDropdown(null);
-                            }}
-                            className={`w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-sand-50 transition text-left ${filters.category === type.id ? 'bg-sand-50 border border-terracotta/20' : ''}`}
-                          >
-                            <div className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center shrink-0">
-                              <TypeIcon className="w-5 h-5 text-gray-500" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-charcoal">{type.label}</p>
-                              <p className="text-xs text-gray-400 font-semibold mt-0.5">{type.desc}</p>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+
               
               {/* Guests Selector with Airbnb style +/- counter popover */}
               <div className="relative flex-1 w-full">
