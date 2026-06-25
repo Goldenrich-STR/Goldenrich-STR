@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu } from 'lucide-react';
+import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ChatbotWidget from '../components/ChatbotWidget';
@@ -467,7 +467,7 @@ const TRANSLATIONS = {
 const DEFAULT_FOOTER_DATA = {
   brand_description: 'Redefining short-term rentals in India through curation, technology, and superior service.',
   location: 'Nashik, Maharashtra',
-  email: 'support@x-space360.com',
+  email: 'support@X-space360.com',
   phone: '+91 8484826247',
   guests_title: 'For Guests',
   guest_link_1_label: 'Browse Collections',
@@ -489,8 +489,8 @@ const DEFAULT_FOOTER_DATA = {
       { label: 'Hosting Standards', action_type: 'link', link: '#how-it-works', text: '' },
     ] },
     { heading: 'Contact', items: [
-      { label: 'Nashik, Maharashtra', action_type: 'text', link: '', text: 'X-Space360 support is available for guest and host assistance.\n\nEmail: support@x-space360.com\nPhone: +91 8484826247' },
-      { label: 'support@x-space360.com', action_type: 'text', link: '', text: 'Email support@x-space360.com for help with bookings, listings, or account support.' },
+      { label: 'Nashik, Maharashtra', action_type: 'text', link: '', text: 'X-Space360 support is available for guest and host assistance.\n\nEmail: support@X-space360.com\nPhone: +91 8484826247' },
+      { label: 'support@X-space360.com', action_type: 'text', link: '', text: 'Email support@X-space360.com for help with bookings, listings, or account support.' },
     ] },
     { heading: 'Grievance & Escalation', resolution_text: 'Resolution: 7 working days', items: [
       { label: 'Officer: Rahul Mundra', action_type: 'text', link: '', text: 'Grievance Officer: Rahul Mundra\nEmail: nodal.officer@rupiyaloan.com\nPhone: +91 76206 66949\nResolution: 7 working days' },
@@ -857,6 +857,15 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
   );
 };
 
+const SUGGESTED_DESTINATIONS = [
+  { city: "Pune", state: "Maharashtra", desc: "A hidden gem", icon: Hotel },
+  { city: "Lonavala", state: "Maharashtra", desc: "For sights like Karla Caves", icon: Trees },
+  { city: "Mumbai", state: "Maharashtra", desc: "For its top-notch dining", icon: Building2 },
+  { city: "North Goa", state: "Goa", desc: "Popular beach destination", icon: Waves },
+  { city: "Nashik", state: "Maharashtra", desc: "Near you", icon: Compass },
+  { city: "Karjat", state: "Maharashtra", desc: "A hidden gem", icon: Home }
+];
+
 const LandingPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -865,6 +874,8 @@ const LandingPage = () => {
     navigate('/');
   };
   const [locationQuery, setLocationQuery] = useState('');
+  const [searchCategory, setSearchCategory] = useState('all');
+
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [guestCounts, setGuestCounts] = useState({ adults: 2, children: 0, infants: 0 });
   const [dates, setDates] = useState({ checkIn: '', checkOut: '' });
@@ -1074,6 +1085,7 @@ const LandingPage = () => {
     if (totalGuests) params.set('guests', String(totalGuests));
     if (dates.checkIn) params.set('checkIn', dates.checkIn);
     if (dates.checkOut) params.set('checkOut', dates.checkOut);
+    if (searchCategory && searchCategory !== 'all') params.set('category', searchCategory);
     navigate(`/guest/browse?${params.toString()}`);
   };
 
@@ -1209,7 +1221,7 @@ const LandingPage = () => {
         {/* Left Logo */}
         <div className="flex items-center">
           <h1 className="text-2xl md:text-3xl font-black tracking-tight cursor-pointer drop-shadow-md text-white hover:text-white/95 transition" onClick={() => navigate('/')}>
-            x-space360<span className="text-terracotta">.in</span>
+            X-space360<span className="text-terracotta">.in</span>
           </h1>
         </div>
 
@@ -1299,7 +1311,7 @@ const LandingPage = () => {
         <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-white md:hidden">
           <div className="flex justify-between items-center mb-12">
             <h1 className="text-2xl font-black tracking-tight cursor-pointer text-white" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
-              x-space360<span className="text-terracotta">.in</span>
+              X-space360<span className="text-terracotta">.in</span>
             </h1>
             <button onClick={() => setIsMobileMenuOpen(false)} className="text-white hover:text-terracotta transition p-2 bg-white/10 rounded-full">
               <X className="w-6 h-6" />
@@ -1384,33 +1396,35 @@ const LandingPage = () => {
         .hero-video-wrap    { transition: opacity 1.2s ease; }
       `}</style>
 
-      <div className="relative h-screen w-full overflow-hidden">
+      <div className="relative h-screen w-full z-30">
 
-        {/* ── Video layers (Now Images) ── */}
-        {heroSlides.map((slide, idx) => (
-          <div
-            key={idx}
-            className={`absolute inset-0 w-full h-full hero-video-wrap ${
-              idx === activeVideo
-                ? 'hero-video-active z-10'
-                : idx === prevVideo
-                ? 'hero-video-exiting z-[9]'
-                : 'hero-video-hidden z-0'
-            }`}
-            style={{
-              backgroundImage: `url(${slide.src})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center'
-            }}
-          >
-          </div>
-        ))}
+        {/* ── Background Ken Burns Slides (with overflow hidden) ── */}
+        <div className="absolute inset-0 overflow-hidden z-0">
+          {heroSlides.map((slide, idx) => (
+            <div
+              key={idx}
+              className={`absolute inset-0 w-full h-full hero-video-wrap ${
+                idx === activeVideo
+                  ? 'hero-video-active z-10'
+                  : idx === prevVideo
+                  ? 'hero-video-exiting z-[9]'
+                  : 'hero-video-hidden z-0'
+              }`}
+              style={{
+                backgroundImage: `url(${slide.src})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }}
+            >
+            </div>
+          ))}
 
-        {/* ── 50% dark overlay ── */}
-        <div className="absolute inset-0 bg-black/50 z-20" />
+          {/* ── 50% dark overlay ── */}
+          <div className="absolute inset-0 bg-black/50 z-20" />
 
-        {/* ── Solid Bottom Divider Strip ── */}
-        <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#FDFCF8] border-t border-sand-200/40 z-20" />
+          {/* ── Solid Bottom Divider Strip ── */}
+          <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#FDFCF8] border-t border-sand-200/40 z-20" />
+        </div>
 
         {/* ── Hero Content ── */}
         <div className="relative z-30 max-w-7xl mx-auto px-6 md:px-12 lg:px-20 h-full flex flex-col justify-center pt-24 pb-12 text-left">
@@ -1431,45 +1445,98 @@ const LandingPage = () => {
               </h2>
 
               {/* ── Search Bar ── */}
-              <div className="mt-8 w-full max-w-5xl">
-                {/* Outer Dark Container */}
-                <div className="bg-slate-900/60 backdrop-blur-md p-2 md:p-3 rounded-3xl md:rounded-full shadow-2xl border border-white/10">
-                  {/* Inner White Container */}
-                  <div className="flex flex-col md:flex-row items-center bg-white rounded-2xl md:rounded-full w-full">
+              <div className="mt-8 w-full max-w-5xl relative">
+                {/* Transparent overlay to close active dropdowns on clicking outside */}
+                {activeDropdown && (
+                  <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActiveDropdown(null)} />
+                )}
+
+                {/* Capsule Search Bar */}
+                <div className="flex flex-col md:flex-row items-center bg-white rounded-2xl md:rounded-full w-full shadow-2xl border border-gray-100 relative z-50">
                     
                     {/* Location */}
-                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:flex-1 cursor-pointer rounded-t-2xl md:rounded-l-full border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
-                      <MapPin className="w-5 h-5 text-gray-400 mr-3" />
-                      <div className="w-full">
-                        <input
-                          id="landing-destination"
-                          name="destination"
-                          type="text"
-                          autoComplete="address-level2"
-                          value={locationQuery}
-                          onChange={(e) => setLocationQuery(e.target.value)}
-                          placeholder="Location, project or developer"
-                          className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-400 font-medium text-sm focus:ring-0 focus:outline-none p-0"
-                        />
+                    <div className="relative flex-1 w-full">
+                      <div 
+                        onClick={() => setActiveDropdown(activeDropdown === 'location' ? null : 'location')}
+                        className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer rounded-t-2xl md:rounded-l-full border-b border-gray-100 md:border-none hover:bg-gray-50 transition"
+                      >
+                        <MapPin className="w-5 h-5 text-gray-400 mr-3" />
+                        <div className="w-full text-left">
+                          <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">Where</p>
+                          <input
+                            id="landing-destination"
+                            name="destination"
+                            type="text"
+                            autoComplete="address-level2"
+                            value={locationQuery}
+                            onFocus={() => setActiveDropdown('location')}
+                            onChange={(e) => {
+                              setLocationQuery(e.target.value);
+                              setActiveDropdown('location');
+                            }}
+                            placeholder="Location"
+                            className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-400 font-bold text-sm focus:ring-0 focus:outline-none p-0 mt-0.5"
+                          />
+                        </div>
                       </div>
+
+                      {/* Airbnb-style Suggested Destinations Dropdown */}
+                      {activeDropdown === 'location' && (
+                        <div className="absolute left-0 top-full mt-3 w-80 bg-white border border-sand-200 rounded-3xl shadow-2xl z-50 p-4 max-h-96 overflow-y-auto">
+                          <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-3 px-2">Suggested destinations</p>
+                          <div className="space-y-1">
+                            {SUGGESTED_DESTINATIONS.filter(dest => 
+                              !locationQuery || 
+                              dest.city.toLowerCase().includes(locationQuery.toLowerCase()) || 
+                              dest.state.toLowerCase().includes(locationQuery.toLowerCase())
+                            ).map((dest, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onClick={() => {
+                                  setLocationQuery(dest.city);
+                                  setActiveDropdown(null);
+                                }}
+                                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-sand-50 transition text-left"
+                              >
+                                <div className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center shrink-0">
+                                  {dest.icon ? <dest.icon className="w-5 h-5 text-gray-500" /> : <MapPin className="w-5 h-5 text-gray-500" />}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-bold text-charcoal">{dest.city}, {dest.state}</p>
+                                  <p className="text-xs text-gray-400 font-semibold mt-0.5">{dest.desc}</p>
+                                </div>
+                              </button>
+                            ))}
+                            {SUGGESTED_DESTINATIONS.filter(dest => 
+                              !locationQuery || 
+                              dest.city.toLowerCase().includes(locationQuery.toLowerCase()) || 
+                              dest.state.toLowerCase().includes(locationQuery.toLowerCase())
+                            ).length === 0 && (
+                              <p className="text-xs font-semibold text-gray-400 p-2 italic text-center">No locations matched. Press enter to search anyway.</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
                     
                     {/* Check-in */}
                     <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
                       <Calendar className="w-5 h-5 text-gray-400 mr-3" />
-                      <div className="w-full">
+                      <div className="w-full text-left">
+                        <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">When</p>
                         <input
                           id="landing-check-in"
                           name="checkIn"
                           type={dates.checkIn ? "date" : "text"}
                           onFocus={(e) => e.target.type = 'date'}
                           onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                          placeholder="Add dates"
+                          placeholder="Check-in"
                           min={todayISO}
                           value={dates.checkIn}
                           onChange={(e) => setDates({ ...dates, checkIn: e.target.value })}
-                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400"
+                          className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5"
                         />
                       </div>
                     </div>
@@ -1478,38 +1545,146 @@ const LandingPage = () => {
                     {/* Check-out */}
                     <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
                       <Calendar className="w-5 h-5 text-gray-400 mr-3" />
-                      <div className="w-full">
+                      <div className="w-full text-left">
+                        <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">When</p>
                         <input
                           id="landing-check-out"
                           name="checkOut"
                           type={dates.checkOut ? "date" : "text"}
                           onFocus={(e) => e.target.type = 'date'}
                           onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                          placeholder="Add dates"
+                          placeholder="Check-out"
                           min={dates.checkIn || todayISO}
                           value={dates.checkOut}
                           onChange={(e) => setDates({ ...dates, checkOut: e.target.value })}
-                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400"
+                          className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5"
                         />
                       </div>
                     </div>
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
-                    
-                    {/* Guests */}
-                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
-                      <User className="w-5 h-5 text-gray-400 mr-3" />
-                      <div className="flex items-center gap-1">
-                        <input
-                          id="landing-guests"
-                          name="guests"
-                          type="number"
-                          min="1"
-                          value={guestCounts.adults}
-                          onChange={(e) => setGuestCounts({ ...guestCounts, adults: Math.max(1, parseInt(e.target.value) || 1) })}
-                          className="bg-transparent border-none outline-none text-charcoal font-medium text-sm focus:ring-0 focus:outline-none p-0 w-10 text-gray-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
-                        <span className="text-gray-500 font-medium text-sm">Guest{guestCounts.adults > 1 ? 's' : ''}</span>
+
+                    {/* Category Type */}
+                    <div className="relative flex-1 w-full">
+                      <div 
+                        onClick={() => setActiveDropdown(activeDropdown === 'category' ? null : 'category')}
+                        className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer hover:bg-gray-50 transition border-b border-gray-100 md:border-none"
+                      >
+                        <Building2 className="w-5 h-5 text-gray-400 mr-3" />
+                        <div className="text-left">
+                          <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">Type</p>
+                          <p className="text-charcoal font-bold text-sm mt-0.5 whitespace-nowrap">
+                            {searchCategory === 'residential' ? 'Residential' :
+                             searchCategory === 'commercial' ? 'Commercial' :
+                             searchCategory === 'event_venue' ? 'Event Venue' : 'All Types'}
+                          </p>
+                        </div>
                       </div>
+                      
+                      {activeDropdown === 'category' && (
+                        <div className="absolute left-0 top-full mt-3 w-64 bg-white border border-sand-200 rounded-3xl shadow-2xl z-50 p-4">
+                          <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-3 px-2">Property Type</p>
+                          <div className="space-y-1">
+                            {[
+                              { id: 'all', label: 'All Types', desc: 'Search everything', icon: Building2 },
+                              { id: 'residential', label: 'Residential', desc: 'Villas, apartments, stays', icon: Home },
+                              { id: 'commercial', label: 'Commercial', desc: 'Offices, co-working spaces', icon: Briefcase },
+                              { id: 'event_venue', label: 'Event Venue', desc: 'Halls, rooftops, venues', icon: PartyPopper }
+                            ].map((type) => {
+                              const TypeIcon = type.icon;
+                              return (
+                                <button
+                                  key={type.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setSearchCategory(type.id);
+                                    setActiveDropdown(null);
+                                  }}
+                                  className={`w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-sand-50 transition text-left ${searchCategory === type.id ? 'bg-sand-50 border border-terracotta/20' : ''}`}
+                                >
+                                  <div className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center shrink-0">
+                                    <TypeIcon className="w-5 h-5 text-gray-500" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-bold text-charcoal">{type.label}</p>
+                                    <p className="text-xs text-gray-400 font-semibold mt-0.5">{type.desc}</p>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+                    
+                    {/* Guests Selector with Airbnb style +/- counter popover */}
+                    <div className="relative flex-1 w-full">
+                      <div 
+                        onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
+                        className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer hover:bg-gray-50 transition rounded-b-2xl md:rounded-none"
+                      >
+                        <User className="w-5 h-5 text-gray-400 mr-3" />
+                        <div className="text-left">
+                          <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">Who</p>
+                          <p className="text-charcoal font-bold text-sm mt-0.5 whitespace-nowrap">
+                            {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {activeDropdown === 'guests' && (
+                        <div className="absolute right-0 top-full mt-3 w-72 bg-white border border-sand-200 rounded-3xl shadow-2xl z-50 p-6 space-y-5">
+                          {/* Adults Row */}
+                          <div className="flex items-center justify-between">
+                            <div className="text-left">
+                              <p className="text-sm font-bold text-charcoal">Adults</p>
+                              <p className="text-xs text-gray-400 font-semibold mt-0.5">Age 13 or above</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setGuestCounts({ ...guestCounts, adults: Math.max(1, guestCounts.adults - 1) })}
+                                className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                              >
+                                -
+                              </button>
+                              <span className="w-4 text-center text-sm font-bold text-charcoal">{guestCounts.adults}</span>
+                              <button
+                                type="button"
+                                onClick={() => setGuestCounts({ ...guestCounts, adults: guestCounts.adults + 1 })}
+                                className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                          
+                          {/* Children Row */}
+                          <div className="flex items-center justify-between">
+                            <div className="text-left">
+                              <p className="text-sm font-bold text-charcoal">Children</p>
+                              <p className="text-xs text-gray-400 font-semibold mt-0.5">Ages 2–12</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setGuestCounts({ ...guestCounts, children: Math.max(0, guestCounts.children - 1) })}
+                                className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                              >
+                                -
+                              </button>
+                              <span className="w-4 text-center text-sm font-bold text-charcoal">{guestCounts.children}</span>
+                              <button
+                                type="button"
+                                onClick={() => setGuestCounts({ ...guestCounts, children: guestCounts.children + 1 })}
+                                className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     
@@ -1517,22 +1692,18 @@ const LandingPage = () => {
                     <div className="p-2 w-full md:w-auto">
                       <button
                         onClick={handleSearch}
-                        className="w-full md:w-auto bg-terracotta hover:bg-terracotta/90 text-white py-3 md:py-4 md:px-8 rounded-xl md:rounded-full transition-all duration-300 flex items-center justify-center shadow-md"
+                        className="w-full md:w-auto bg-terracotta hover:bg-terracotta/90 text-white py-3 md:py-4 md:px-8 rounded-xl md:rounded-full transition-all duration-300 flex items-center justify-center shadow-md cursor-pointer"
                       >
                         <Search className="w-5 h-5 text-white" />
                       </button>
                     </div>
                   </div>
-                </div>
               </div>
             </div>
 
 
           </div>
-
-
-
-          {/* ── Dot indicators ── */}
+{/* ── Dot indicators ── */}
           <div className="flex items-center space-x-2 mt-8">
             {heroSlides.map((_, idx) => (
               <button
@@ -1848,7 +2019,7 @@ const LandingPage = () => {
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               >
                 <span className="text-2xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">
-                  x-space360<span className="text-terracotta">.in</span>
+                  X-space360<span className="text-terracotta">.in</span>
                 </span>
               </div>
               <p className="text-charcoal-light text-lg mb-8 max-w-md leading-relaxed">

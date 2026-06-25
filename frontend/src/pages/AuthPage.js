@@ -147,7 +147,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                className="flex items-center space-x-3 cursor-pointer group w-fit" 
                onClick={() => navigate('/')}
             >
-               <span className="text-2xl font-black text-white tracking-tight hover:text-white/95 transition">x-space360<span className="text-terracotta">.in</span></span>
+               <span className="text-2xl font-black text-white tracking-tight hover:text-white/95 transition">X-space360<span className="text-terracotta">.in</span></span>
             </div>
 
            <div className="animate-slide-up">
@@ -187,7 +187,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
            {/* Logo (Mobile Only) */}
            <div className="lg:hidden text-center mb-10">
               <span className="text-3xl font-black text-charcoal tracking-tight hover:text-terracotta transition cursor-pointer" onClick={() => navigate('/')}>
-                 x-space360<span className="text-terracotta">.in</span>
+                 X-space360<span className="text-terracotta">.in</span>
               </span>
            </div>
 
