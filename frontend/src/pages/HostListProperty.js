@@ -353,6 +353,9 @@ const initialForm = {
   smoking_allowed: false,
   instant_booking: false,
   subscription_plan_id: '',
+  has_cook: false,
+  cook_price: '',
+  has_self_cook: false,
   veg_price: '',
   non_veg_price: '',
   guest_size: '',
@@ -489,6 +492,9 @@ const HostListProperty = () => {
             smoking_allowed: !!p.smoking_allowed,
             instant_booking: !!p.instant_booking,
             subscription_plan_id: p.subscription_id || '',
+            has_cook: !!p.has_cook,
+            cook_price: p.cook_price !== null && p.cook_price !== undefined ? String(p.cook_price) : '',
+            has_self_cook: !!p.has_self_cook,
             veg_price: p.veg_price !== null && p.veg_price !== undefined ? String(p.veg_price) : '',
             non_veg_price: p.non_veg_price !== null && p.non_veg_price !== undefined ? String(p.non_veg_price) : '',
             guest_size: p.guest_size !== null && p.guest_size !== undefined ? String(p.guest_size) : '',
@@ -812,6 +818,9 @@ const HostListProperty = () => {
         if (!form.minimum_stay_days || form.minimum_stay_days < 1) {
           return `Minimum duration must be at least 1 ${form.category === 'residential' ? 'night' : rateUnit}`;
         }
+        if (form.has_cook && (!form.cook_price || Number(form.cook_price) <= 0)) {
+          return 'Please specify a cook price per day';
+        }
       }
     }
     if (k === 'amenities' && form.amenities.length === 0) {
@@ -1017,6 +1026,9 @@ const HostListProperty = () => {
       smoking_allowed: form.smoking_allowed,
       instant_booking: form.instant_booking,
       subscription_id: form.subscription_plan_id,
+      has_cook: form.has_cook,
+      cook_price: form.cook_price ? Number(form.cook_price) : null,
+      has_self_cook: form.has_self_cook,
       veg_price: form.veg_price ? Number(form.veg_price) : null,
       non_veg_price: form.non_veg_price ? Number(form.non_veg_price) : null,
       guest_size: form.guest_size ? Number(form.guest_size) : null,
@@ -1536,6 +1548,37 @@ const HostListProperty = () => {
                     <Toggle label="Pet-friendly" testid="pricing-pet" checked={form.pet_friendly} onChange={(v) => update({ pet_friendly: v })} />
                     <Toggle label="Smoking allowed" testid="pricing-smoking" checked={form.smoking_allowed} onChange={(v) => update({ smoking_allowed: v })} />
                   </div>
+                  <div className="border-t border-sand-200 pt-4 mt-4">
+                    <h3 className="text-sm font-bold text-charcoal mb-3 uppercase tracking-wider">Cook Service</h3>
+                    <div className="bg-sand-50 p-4 rounded-2xl border border-sand-200 space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                        <Toggle 
+                          label="Cook service available at property" 
+                          testid="pricing-cook-available" 
+                          checked={form.has_cook} 
+                          onChange={(v) => update({ has_cook: v, cook_price: v ? form.cook_price : '' })} 
+                        />
+                        {form.has_cook && (
+                          <Input 
+                            type="number" 
+                            label="Cook Price per day (₹)" 
+                            testid="pricing-cook-price" 
+                            value={form.cook_price} 
+                            onChange={(v) => update({ cook_price: v })} 
+                            placeholder="500" 
+                          />
+                        )}
+                      </div>
+                      <div className="border-t border-sand-200/60 pt-3">
+                        <Toggle 
+                          label="Self cooking option available (Guests can cook themselves)" 
+                          testid="pricing-self-cook" 
+                          checked={form.has_self_cook} 
+                          onChange={(v) => update({ has_self_cook: v })} 
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </>
               )}
             </div>
@@ -1941,6 +1984,8 @@ const HostListProperty = () => {
               {form.video_url && <ReviewBlock label="Walkthrough Video" value="Attached" />}
               {form.youtube_short_url && <ReviewBlock label="YouTube Short" value="Attached" />}
               {form.youtube_long_url && <ReviewBlock label="YouTube Video" value="Attached" />}
+              <ReviewBlock label="Cook Available" value={form.has_cook ? `Yes (₹${form.cook_price || 0}/day)` : 'No'} />
+              <ReviewBlock label="Self Cooking Allowed" value={form.has_self_cook ? 'Yes' : 'No'} />
               <ReviewBlock label="Plan" value={hasActiveSubscription ? 'Active Subscription' : (plans.find((p) => p.plan_id === form.subscription_plan_id)?.plan_name || '—')} />
 
               <button

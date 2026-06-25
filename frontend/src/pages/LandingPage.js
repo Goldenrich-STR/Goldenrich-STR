@@ -893,15 +893,15 @@ const LandingPage = () => {
 
   const heroSlides = [
     {
-      src: '/videos/hero/pexels-akshay-mr-187831647-12414221.jpg',
+      src: '/videos/hero/pexels-akshay-mr-187831647-12414221.webp',
       label: 'Luxury Villas with Pools'
     },
     {
-      src: '/videos/hero/pexels-shahfaizanfilms-30077915.jpg',
+      src: '/videos/hero/pexels-shahfaizanfilms-30077915.webp',
       label: 'Seaside Green Villas'
     },
     {
-      src: '/videos/hero/pexels-thevisionaryvows-33485971.jpg',
+      src: '/videos/hero/pexels-thevisionaryvows-33485971.webp',
       label: 'Premium Holiday Stays'
     }
   ];

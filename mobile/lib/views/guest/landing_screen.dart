@@ -96,6 +96,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => Container(
                         height: 220,
+                        width: double.infinity,
                         color: AppTheme.stone,
                         child: const Icon(Icons.local_offer, size: 64, color: AppTheme.primary),
                       ),
@@ -301,6 +302,27 @@ class _LandingScreenState extends State<LandingScreen> {
             // 7. FOOTER
             _buildFooter(context),
           ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AppShell(initialIndex: 3),
+            ),
+          );
+        },
+        backgroundColor: AppTheme.primary,
+        icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white),
+        label: Text(
+          'MAYUR AI',
+          style: GoogleFonts.manrope(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+            letterSpacing: 0.5,
+          ),
         ),
       ),
     );
@@ -781,6 +803,8 @@ class _LandingScreenState extends State<LandingScreen> {
                                             : 'https://images.unsplash.com/photo-1503174971373-b1f69850bded',
                                         fit: BoxFit.cover,
                                         errorBuilder: (context, error, stackTrace) => Container(
+                                          width: double.infinity,
+                                          height: double.infinity,
                                           color: AppTheme.stone,
                                           child: const Icon(Icons.holiday_village_outlined, color: AppTheme.primary, size: 24),
                                         ),

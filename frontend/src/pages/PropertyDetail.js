@@ -13,6 +13,7 @@ import {
   Wind,
   Car,
   Utensils,
+  ChefHat,
   Waves,
   Dumbbell,
   Tv,
@@ -1367,6 +1368,52 @@ const PropertyDetail = () => {
                 <p className="text-charcoal-muted font-medium text-sm leading-relaxed whitespace-pre-line bg-white p-6 rounded-2xl border border-sand-200">
                   {property.house_rules}
                 </p>
+              </div>
+            )}
+
+            {/* Cook Service Section */}
+            {(property.has_cook || property.has_self_cook) && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-black text-charcoal mb-4 flex items-center">
+                   {lang === 'mr' ? 'स्वयंपाकी आणि स्वयंपाक पर्याय' : lang === 'hi' ? 'रसोइया और खाना पकाने के विकल्प' : 'Cook & Kitchen Service'}
+                   <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
+                </h2>
+                <div className="space-y-4">
+                  {property.has_cook && (
+                    <div className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium flex items-center space-x-6">
+                      <div className="bg-terracotta/10 p-4 rounded-full text-terracotta">
+                        <Utensils className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-black text-charcoal mb-1">
+                          {lang === 'mr' ? 'स्वयंपाकी उपलब्ध आहे' : lang === 'hi' ? 'रसोइया उपलब्ध है' : 'Cook Available'}
+                        </h3>
+                        <p className="text-charcoal-muted font-medium text-sm">
+                          {lang === 'mr' ? `घरगुती जेवणासाठी स्वयंपाकी सेवा उपलब्ध आहे. दर: ₹${property.cook_price}/दिवस` : 
+                           lang === 'hi' ? `घर के बने खाने के लिए रसोइया उपलब्ध है। दर: ₹${property.cook_price}/दिन` : 
+                           `Personal cook service available for home-cooked meals. Rate: ₹${property.cook_price}/day`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {property.has_self_cook && (
+                    <div className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium flex items-center space-x-6">
+                      <div className="bg-emerald-500/10 p-4 rounded-full text-emerald-600">
+                        <ChefHat className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-black text-charcoal mb-1">
+                          {lang === 'mr' ? 'स्वतः स्वयंपाक करण्याची परवानगी आहे' : lang === 'hi' ? 'स्वयं खाना पकाने की अनुमति है' : 'Self Cooking Allowed'}
+                        </h3>
+                        <p className="text-charcoal-muted font-medium text-sm">
+                          {lang === 'mr' ? 'अतिथी त्यांच्या स्वतःच्या जेवणासाठी स्वयंपाकघराचा वापर करू शकतात (मोफत/समाविष्ट).' : 
+                           lang === 'hi' ? 'अतिथि अपने भोजन के लिए रसोईघर का उपयोग कर सकते हैं (मुफ़्त/शामिल)।' : 
+                           'Guests can use the kitchen facility to prepare their own meals (Free/Included).'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

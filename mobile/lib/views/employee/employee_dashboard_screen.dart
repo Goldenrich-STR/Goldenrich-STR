@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../config.dart';
 import '../../providers/verification_provider.dart';
 import '../../theme.dart';
 import '../../services/api_service.dart';
@@ -51,17 +52,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
   }
 
   String _getImageUrl(String? path) {
-    if (path == null || path.isEmpty) {
-      return 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85';
-    }
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path;
-    }
-    final baseUrl = _apiService.baseUrl;
-    if (path.startsWith('/')) {
-      return '$baseUrl$path';
-    }
-    return '$baseUrl/$path';
+    return AppConfig.resolveImageUrl(path);
   }
 
   void _showActionDialog(String verificationId, bool approve) {

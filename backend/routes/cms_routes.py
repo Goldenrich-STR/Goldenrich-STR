@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Response
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List, Optional
 from models.cms import CMSContent, CMSUpdate, HeroSection
@@ -365,6 +365,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
 
 @router.get("/landing-page")
 async def get_landing_page_content(
+    response: Response,
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all active landing page content (public)."""
@@ -382,6 +383,9 @@ async def get_landing_page_content(
         for item in content:
             section = item["section"]
             organized_content[section] = item["content_data"]
+        
+        # Set cache-control header for public landing page CMS content (5 minutes)
+        response.headers["Cache-Control"] = "public, max-age=300"
         
         return organized_content
     

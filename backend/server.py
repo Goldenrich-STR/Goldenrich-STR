@@ -80,17 +80,34 @@ app.include_router(ai_agent_router, prefix="/api")
 # still call /auth/*; keep those working while the canonical API remains /api/auth/*.
 app.include_router(auth_router)
 
+# Custom StaticFiles subclass to enforce browser caching headers dynamically
+class DynamicCacheStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        filename = path.lower()
+        if filename.endswith(('.css', '.js')):
+            response.headers["Cache-Control"] = "public, max-age=2592000"  # 30 Days
+        elif filename.endswith(('.webp', '.jpg', '.jpeg', '.png', '.svg', '.gif', '.woff', '.woff2', '.ttf', '.otf', '.eot', '.mp4', '.webm')):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"  # 1 Year
+        else:
+            response.headers["Cache-Control"] = "public, max-age=86400"  # 1 Day default
+        return response
+
 # Static files: serve uploaded property images
 _uploads_dir = ROOT_DIR / "uploads"
 _uploads_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/api/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
+app.mount("/api/uploads", DynamicCacheStaticFiles(directory=str(_uploads_dir)), name="uploads")
 
 @app.get("/download-apk")
 async def download_apk():
-    apk_path = r"d:\FinalSTR\Goldenrich-STR\mobile\build\app\outputs\flutter-apk\app-debug.apk"
-    if os.path.exists(apk_path):
+    release_apk = r"d:\FinalSTR\Goldenrich-STR\mobile\build\app\outputs\flutter-apk\app-release.apk"
+    debug_apk = r"d:\FinalSTR\Goldenrich-STR\mobile\build\app\outputs\flutter-apk\app-debug.apk"
+    
+    selected_apk = release_apk if os.path.exists(release_apk) else debug_apk
+    
+    if os.path.exists(selected_apk):
         return FileResponse(
-            apk_path,
+            selected_apk,
             media_type="application/vnd.android.package-archive",
             filename="GoldenrichSTR.apk"
         )
@@ -210,7 +227,7 @@ async def startup_sequence():
             "external_calendars", "property_verifications", 
             "transactions", "payouts", "refunds", "reviews", 
             "notifications", "subscription_plans", "subscriptions", "cms_content", "leads", "coupons",
-            "deleted_properties", "search_logs", "ai_calls", "ai_agents"
+            "deleted_properties", "search_logs", "ai_calls", "ai_agents", "calendar_sync_logs"
         ]
         for table in tables:
             await db_instance.ensure_table(table)
@@ -244,6 +261,8 @@ async def startup_sequence():
         await db_instance.password_reset_tokens.create_index("expires_at")
         await db_instance.bookings.create_index([("property_id", 1), ("check_in_date", 1), ("check_out_date", 1)])
         await db_instance.blocked_dates.create_index([("property_id", 1), ("start_date", 1), ("end_date", 1)])
+        await db_instance.blocked_dates.create_index([("property_id", 1), ("source_id", 1), ("external_uid", 1)])
+        await db_instance.calendar_sync_logs.create_index([("property_id", 1), ("synced_at", -1)])
         await db_instance.bookings.create_index([("booking_status", 1), ("soft_lock_expires_at", 1)])
         await db_instance.ai_agents.create_index("agent_id", unique=True)
         
@@ -274,12 +293,13 @@ async def startup_sequence():
     except Exception as e:
         logger.error(f"Failed to start review reminder: {e}")
 
-    # 6. Start iCal sweeper
+    # 6. Start iCal scheduler
     try:
-        from services.ical_sync import start_ical_sync
-        start_ical_sync(db_instance)
+        from services.calendar_scheduler import start_calendar_scheduler
+
+        start_calendar_scheduler(db_instance)
     except Exception as e:
-        logger.error(f"Failed to start iCal sweeper: {e}")
+        logger.error(f"Failed to start calendar scheduler: {e}")
 
     # 7. Start payout sweeper
     try:
@@ -301,6 +321,13 @@ async def startup_sequence():
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    try:
+        from services.calendar_scheduler import shutdown_calendar_scheduler
+
+        shutdown_calendar_scheduler()
+    except Exception as e:
+        logger.warning(f"Failed to stop calendar scheduler: {e}")
+
     if client:
         client.close()
     if hasattr(db_instance, 'pool') and db_instance.pool:
@@ -330,7 +357,7 @@ _frontend_build_dir = ROOT_DIR.parent / "frontend" / "build"
 if _frontend_build_dir.exists():
     app.mount(
         "/static",
-        StaticFiles(directory=str(_frontend_build_dir / "static")),
+        DynamicCacheStaticFiles(directory=str(_frontend_build_dir / "static")),
         name="frontend-static",
     )
 
@@ -338,5 +365,20 @@ if _frontend_build_dir.exists():
     async def serve_frontend(full_path: str):
         requested_file = _frontend_build_dir / full_path
         if requested_file.is_file():
-            return FileResponse(str(requested_file))
-        return FileResponse(str(_frontend_build_dir / "index.html"))
+            filename = full_path.lower()
+            response = FileResponse(str(requested_file))
+            if filename == "index.html" or filename == "service-worker.js":
+                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+                response.headers["Pragma"] = "no-cache"
+                response.headers["Expires"] = "0"
+            elif filename.endswith(('.webp', '.jpg', '.jpeg', '.png', '.svg', '.ico')):
+                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            elif filename.endswith(('.js', '.css')):
+                response.headers["Cache-Control"] = "public, max-age=2592000"
+            return response
+        
+        index_response = FileResponse(str(_frontend_build_dir / "index.html"))
+        index_response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        index_response.headers["Pragma"] = "no-cache"
+        index_response.headers["Expires"] = "0"
+        return index_response

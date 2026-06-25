@@ -191,7 +191,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
               </span>
            </div>
 
-           <div className="mb-5 text-center lg:text-left">
+           <div className="mb-5 text-center">
               <h3 className="text-4xl font-black text-charcoal tracking-tighter mb-2 leading-none">
                  {isAdminLogin ? 'Admin Console' : (isLogin ? 'Welcome Back' : 'Create Account')}
               </h3>
@@ -204,7 +204,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
            <div className="space-y-5">
               {/* Toggle Switch */}
               {!isAdminLogin && (
-                 <div className="flex bg-sand-200 p-1.5 rounded-2xl border border-sand-300 shadow-inner max-w-sm mx-auto lg:mx-0">
+                 <div className="flex bg-sand-200 p-1.5 rounded-2xl border border-sand-300 shadow-inner max-w-sm mx-auto">
                     <button
                        onClick={() => { setIsLogin(true); setError(''); setSuccess(''); }}
                        className={`flex-1 py-4 rounded-xl font-black text-[10px] tracking-[0.15em] uppercase transition-all duration-500 ${

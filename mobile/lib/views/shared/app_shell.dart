@@ -11,6 +11,7 @@ import '../guest/guest_browse_screen.dart';
 import '../guest/guest_bookings_screen.dart';
 import '../guest/landing_screen.dart';
 import '../guest/property_detail_screen.dart';
+import '../guest/ai_chat_screen.dart';
 import '../host/host_dashboard_screen.dart';
 import '../broker/broker_dashboard_screen.dart';
 import '../employee/employee_dashboard_screen.dart';
@@ -82,7 +83,7 @@ class _AppShellState extends State<AppShell> {
           title: 'Trips',
           message: 'Please sign in to view and manage your property bookings.',
         ),
-        const _MessagesTab(isAuthenticated: false),
+        const AIChatScreen(),
         const _UnauthenticatedPlaceholder(
           title: 'Profile',
           message: 'Please sign in to view your profile and account settings.',
@@ -92,7 +93,7 @@ class _AppShellState extends State<AppShell> {
         BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'Explore'),
         BottomNavigationBarItem(icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
         BottomNavigationBarItem(icon: Icon(Icons.luggage_outlined), label: 'Trips'),
-        BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline_rounded), label: 'Messages'),
+        BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
         BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'Log In'),
       ];
     } else {
@@ -102,14 +103,14 @@ class _AppShellState extends State<AppShell> {
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
           const GuestBookingsScreen(),
-          const _MessagesTab(isAuthenticated: true),
+          const AIChatScreen(),
           _ProfileTab(user: user, auth: auth),
         ];
         navItems = [
           const BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'Explore'),
           const BottomNavigationBarItem(icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
           const BottomNavigationBarItem(icon: Icon(Icons.luggage_outlined), label: 'Trips'),
-          const BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline_rounded), label: 'Messages'),
+          const BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
           BottomNavigationBarItem(icon: const Icon(Icons.person_outline_rounded), label: user.fullName.split(' ')[0]),
         ];
       } else if (role == 'host') {
@@ -495,6 +496,7 @@ class _WishlistsTab extends StatelessWidget {
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, _, __) => Container(
                                   height: 200,
+                                  width: double.infinity,
                                   color: AppTheme.stone,
                                   child: const Icon(Icons.home, size: 40, color: AppTheme.secondary),
                                 ),

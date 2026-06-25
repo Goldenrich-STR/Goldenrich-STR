@@ -64,33 +64,85 @@ class EmailService:
 
     def _variables_for(self, template: str, data: Dict, subject: str, title: str, cta_url: str) -> Dict:
         name = data.get("name") or data.get("guest_name") or data.get("host_name") or "there"
+        email = data.get("email") or data.get("email_address") or data.get("Email") or ""
+        mobile = data.get("mobile") or data.get("phone") or data.get("Mobile") or ""
+        property_title = data.get("property_title") or data.get("property_name") or data.get("title") or ""
+        booking_id = data.get("booking_id") or data.get("Booking_ID") or ""
+        booking_date = data.get("booking_date") or data.get("created_at") or data.get("Booking_Date") or ""
+        check_in_date = data.get("check_in_date") or data.get("Check_In_Date") or ""
+        check_out_date = data.get("check_out_date") or data.get("Check_Out_Date") or ""
+        guests = data.get("number_of_guests") or data.get("guests") or data.get("Guests") or ""
+        total_amount = data.get("total_amount") or data.get("amount") or data.get("Total_Amount") or ""
+        refund_amount = data.get("refund_amount") or data.get("Refund_Amount") or ""
+        plan_name = data.get("plan_name") or data.get("Plan_Name") or ""
+        payment_id = data.get("payment_id") or data.get("Payment_ID") or ""
+        invoice_id = data.get("invoice_id") or data.get("transaction_id") or data.get("Invoice_ID") or ""
+        reason = data.get("reason") or data.get("Reason") or ""
+        remarks = data.get("remarks") or data.get("Remarks") or reason
+        reset_link = cta_url if template == "password_reset" else data.get("reset_link", "")
         variables = {
             "name": name,
             "host_name": data.get("host_name") or name,
             "guest_name": data.get("guest_name") or name,
             "customer_name": data.get("customer_name") or name,
-            "property_name": data.get("property_title") or data.get("title") or "",
-            "property_title": data.get("property_title") or data.get("title") or "",
-            "booking_id": data.get("booking_id") or "",
-            "booking_date": data.get("booking_date") or data.get("created_at") or "",
-            "check_in_date": data.get("check_in_date") or "",
-            "check_out_date": data.get("check_out_date") or "",
-            "number_of_guests": data.get("number_of_guests") or data.get("guests") or "",
-            "amount": data.get("total_amount") or data.get("amount") or "",
-            "total_amount": data.get("total_amount") or data.get("amount") or "",
-            "refund_amount": data.get("refund_amount") or "",
+            "email": email,
+            "email_address": email,
+            "mobile": mobile,
+            "phone": mobile,
+            "property_name": property_title,
+            "property_title": property_title,
+            "booking_id": booking_id,
+            "booking_date": booking_date,
+            "check_in_date": check_in_date,
+            "check_out_date": check_out_date,
+            "number_of_guests": guests,
+            "guests": guests,
+            "amount": total_amount,
+            "total_amount": total_amount,
+            "refund_amount": refund_amount,
             "refund_id": data.get("refund_id") or "",
-            "plan_name": data.get("plan_name") or "",
-            "payment_id": data.get("payment_id") or "",
-            "invoice_id": data.get("invoice_id") or data.get("transaction_id") or "",
-            "reason": data.get("reason") or "",
-            "remarks": data.get("remarks") or data.get("reason") or "",
-            "reset_link": cta_url if template == "password_reset" else data.get("reset_link", ""),
+            "plan_name": plan_name,
+            "payment_id": payment_id,
+            "invoice_id": invoice_id,
+            "reason": reason,
+            "remarks": remarks,
+            "reset_link": reset_link,
             "action_url": cta_url,
             "support_email": "support@x-space360.com",
             "subject": subject,
             "title": title,
         }
+        title_case_aliases = {
+            "Name": name,
+            "Host_Name": data.get("host_name") or name,
+            "Guest_Name": data.get("guest_name") or name,
+            "Customer_Name": data.get("customer_name") or name,
+            "Email": email,
+            "Email_Address": email,
+            "Mobile": mobile,
+            "Phone": mobile,
+            "Property_Name": property_title,
+            "Property_Title": property_title,
+            "Booking_ID": booking_id,
+            "Booking_Date": booking_date,
+            "Check_In_Date": check_in_date,
+            "Check_Out_Date": check_out_date,
+            "Guests": guests,
+            "Number_Of_Guests": guests,
+            "Amount": total_amount,
+            "Total_Amount": total_amount,
+            "Refund_Amount": refund_amount,
+            "Refund_ID": data.get("refund_id") or "",
+            "Plan_Name": plan_name,
+            "Payment_ID": payment_id,
+            "Invoice_ID": invoice_id,
+            "Reason": reason,
+            "Remarks": remarks,
+            "Reset_Link": reset_link,
+            "Action_URL": cta_url,
+            "Support_Email": "support@x-space360.com",
+        }
+        variables.update(title_case_aliases)
         for index, value in enumerate(list(variables.values())[:20], start=1):
             variables[f"var{index}"] = value
             variables[f"VAR{index}"] = value

@@ -683,8 +683,8 @@ const HostDashboard = () => {
 
         {/* Purchase Subscription Modal */}
         {showPurchaseModal && (
-          <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[100] flex items-center justify-center p-6 overflow-y-auto">
-            <div className="bg-sand-50 rounded-[3rem] p-10 max-w-4xl w-full shadow-2xl animate-scale-up">
+          <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[100] flex justify-center overflow-y-auto p-4 md:p-10">
+            <div className="my-auto bg-sand-50 rounded-[3rem] p-10 max-w-4xl w-full shadow-2xl animate-scale-up">
                <div className="flex justify-between items-start mb-10">
                   <div>
                     <h3 className="text-3xl font-black text-charcoal tracking-tight mb-2">Subscription Required</h3>

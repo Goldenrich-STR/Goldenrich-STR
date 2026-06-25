@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Bot } from 'lucide-react';
+import { apiClient } from '../services/api';
 
 const TRANSLATIONS = {
   en: {
@@ -346,6 +347,75 @@ const ChatbotWidget = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
+  const getOfflineReply = (text) => {
+    const lower = text.toLowerCase();
+    const current = TRANSLATIONS[lang];
+    const smartReply = getSmartReply(lower, current, lang);
+
+    if (smartReply) {
+      return smartReply;
+    } else if (lower.includes('onboard') || lower.includes('step') || lower.includes('listing flow')) {
+      return current.onboardingText;
+    } else if (lower.includes('host') || lower.includes('list') || lower.includes('जागा') || lower.includes('सूचीबद्ध')) {
+      return current.hostText;
+    } else if (lower.includes('plan') || lower.includes('pricing') || lower.includes('subscription') || lower.includes('वर्ग') || lower.includes('योजना')) {
+      return current.plansText;
+    } else if (lower.includes('book') || lower.includes('refund') || lower.includes('cancel') || lower.includes('payment') || lower.includes('बुकिंग') || lower.includes('रिफंड')) {
+      return current.bookingsText;
+    } else if (lower.includes('verify') || lower.includes('physical') || lower.includes('सत्यापन') || lower.includes('तपासणी')) {
+      return current.verifyText;
+    } else if (lower.includes('contact') || lower.includes('support') || lower.includes('phone') || lower.includes('email') || lower.includes('helpline')) {
+      return current.contactText;
+    } else if (
+      lower.includes('diagnose') || 
+      lower.includes('issue') || 
+      lower.includes('status') || 
+      lower.includes('error') || 
+      lower.includes('problem') || 
+      lower.includes('fail') || 
+      lower.includes('not working') ||
+      lower.includes('तपासणी') ||
+      lower.includes('समस्या') ||
+      lower.includes('खराब')
+    ) {
+      return current.diagnosticsText;
+    } else if (lower.includes('manali') || lower.includes('cottage') || lower.includes('powai') || lower.includes('apartment') || lower.includes('featured')) {
+      if (lang === 'mr') {
+        return `आम्ही संपूर्ण भारतात उत्कृष्ट लक्झरी जागा ऑफर करतो:
+* **Powai Lakeview Apartment (मुंबई):** तलावाच्या बाजूला सुंदर फ्लॅट (₹44,800/रात्र).
+* **Hill Cottage, Manali (हिमाचल):** डोंगरांच्या कुशीतील विला (₹6,800/रात्र).
+* **Skyline Studio, Bandra (मुंबई):** समुद्रकिनारी प्रीमियम स्टुडिओ (₹7,200/रात्र).
+* **Sea Breeze Villa, Anjuna (गोवा):** प्रायव्हेट पूलसह अलिशान विला (₹18,500/रात्र).
+
+तुम्ही वर दिलेल्या मुख्य सर्च बॉक्समध्ये शोधू शकता!`;
+      } else if (lang === 'hi') {
+        return `हम पूरे भारत में प्रीमियम प्रॉपर्टीज प्रदान करते हैं:
+* **Powai Lakeview Apartment (मुंबई):** झील के सामने सुंदर फ्लैट (₹44,800/रात)।
+* **Hill Cottage, Manali (हिमाचल):** पहाड़ों के बीच स्थित विला (₹6,800/रात)।
+* **Skyline Studio, Bandra (मुंबई):** समुद्र के सामने प्रीमियम स्टूडियो (₹7,200/रात)।
+* **Sea Breeze Villa, Anjuna (गोवा):** प्राइवेट पूल के साथ आलीशान विला (₹18,500/रात)।
+
+आप ऊपर दिए गए सर्च बॉक्स का उपयोग करके इन्हें खोज सकते हैं!`;
+      } else {
+        return `We offer premium featured listings across India:
+* **Powai Lakeview Apartment (Mumbai):** A luxury modern space overlooking the lake (₹44,800/night).
+* **Hill Cottage, Manali (Himachal):** A breathtaking mountain retreat (₹6,800/night).
+* **Skyline Studio, Bandra (Mumbai):** Elite sea-facing studio (₹7,200/night).
+* **Sea Breeze Villa, Anjuna (Goa):** Exquisite beachfront villa with private pool (₹18,500/night).
+
+You can search and filter these directly in the main search pill above!`;
+      }
+    } else if (lower.includes('hi') || lower.includes('hello') || lower.includes('hey') || lower.includes('namaste') || lower.includes('नमस्ते')) {
+      return lang === 'mr' 
+        ? "हॅलो! मी MAYUR आहे. आज मी तुम्हाला जागा लिस्ट करण्यात, बुकिंग करण्यात किंवा सिस्टीम स्टेटस तपासायला मदत करू शकतो?"
+        : lang === 'hi' 
+        ? "नमस्ते! मैं MAYUR हूँ। आज मैं आपको संपत्ति लिस्ट करने, बुकिंग करने या सिस्टम स्थिति जांचने में मदद कर सकता हूँ?"
+        : "Hello! I am MAYUR. Today I can help you list properties, book stays, or inspect website diagnostics status?";
+    } else {
+      return current.fallbackText;
+    }
+  };
+
   const handleSend = (textToSend) => {
     const text = textToSend || inputText;
     if (!text.trim()) return;
@@ -367,93 +437,50 @@ const ChatbotWidget = () => {
     // Trigger typing indicator
     setIsTyping(true);
 
-    setTimeout(() => {
-      setIsTyping(false);
-      let replyText = "";
-      
-      const lower = text.toLowerCase();
-      const current = TRANSLATIONS[lang];
-      const smartReply = getSmartReply(lower, current, lang);
+    const recentMessages = messages.slice(-6);
+    const history = recentMessages.map(msg => ({
+      role: msg.type === 'user' ? 'user' : 'model',
+      text: msg.text
+    }));
 
-      if (smartReply) {
-        replyText = smartReply;
-      } else if (lower.includes('onboard') || lower.includes('step') || lower.includes('listing flow')) {
-        replyText = current.onboardingText;
-      } else if (lower.includes('host') || lower.includes('list') || lower.includes('जागा') || lower.includes('सूचीबद्ध')) {
-        replyText = current.hostText;
-      } else if (lower.includes('plan') || lower.includes('pricing') || lower.includes('subscription') || lower.includes('वर्ग') || lower.includes('योजना')) {
-        replyText = current.plansText;
-      } else if (lower.includes('book') || lower.includes('refund') || lower.includes('cancel') || lower.includes('payment') || lower.includes('बुकिंग') || lower.includes('रिफंड')) {
-        replyText = current.bookingsText;
-      } else if (lower.includes('verify') || lower.includes('physical') || lower.includes('सत्यापन') || lower.includes('तपासणी')) {
-        replyText = current.verifyText;
-      } else if (lower.includes('contact') || lower.includes('support') || lower.includes('phone') || lower.includes('email') || lower.includes('helpline')) {
-        replyText = current.contactText;
-      } else if (
-        lower.includes('diagnose') || 
-        lower.includes('issue') || 
-        lower.includes('status') || 
-        lower.includes('error') || 
-        lower.includes('problem') || 
-        lower.includes('fail') || 
-        lower.includes('not working') ||
-        lower.includes('तपासणी') ||
-        lower.includes('समस्या') ||
-        lower.includes('खराब')
-      ) {
-        replyText = current.diagnosticsText;
-      } else if (lower.includes('manali') || lower.includes('cottage') || lower.includes('powai') || lower.includes('apartment') || lower.includes('featured')) {
-        if (lang === 'mr') {
-          replyText = `आम्ही संपूर्ण भारतात उत्कृष्ट लक्झरी जागा ऑफर करतो:
-* **Powai Lakeview Apartment (मुंबई):** तलावाच्या बाजूला सुंदर फ्लॅट (₹44,800/रात्र).
-* **Hill Cottage, Manali (हिमाचल):** डोंगरांच्या कुशीतील विला (₹6,800/रात्र).
-* **Skyline Studio, Bandra (मुंबई):** समुद्रकिनारी प्रीमियम स्टुडिओ (₹7,200/रात्र).
-* **Sea Breeze Villa, Anjuna (गोवा):** प्रायव्हेट पूलसह अलिशान विला (₹18,500/रात्र).
+    apiClient.post('/ai-calls/chat', { message: text, history })
+      .then((response) => {
+        setIsTyping(false);
+        const replyText = response.data.response || response.data;
 
-तुम्ही वर दिलेल्या मुख्य सर्च बॉक्समध्ये शोधू शकता!`;
-        } else if (lang === 'hi') {
-          replyText = `हम पूरे भारत में प्रीमियम प्रॉपर्टीज प्रदान करते हैं:
-* **Powai Lakeview Apartment (मुंबई):** झील के सामने सुंदर फ्लैट (₹44,800/रात)।
-* **Hill Cottage, Manali (हिमाचल):** पहाड़ों के बीच स्थित विला (₹6,800/रात)।
-* **Skyline Studio, Bandra (मुंबई):** समुद्र के सामने प्रीमियम स्टूडियो (₹7,200/रात)।
-* **Sea Breeze Villa, Anjuna (गोवा):** प्राइवेट पूल के साथ आलीशान विला (₹18,500/रात)।
-
-आप ऊपर दिए गए सर्च बॉक्स का उपयोग करके इन्हें खोज सकते हैं!`;
-        } else {
-          replyText = `We offer premium featured listings across India:
-* **Powai Lakeview Apartment (Mumbai):** A luxury modern space overlooking the lake (₹44,800/night).
-* **Hill Cottage, Manali (Himachal):** A breathtaking mountain retreat (₹6,800/night).
-* **Skyline Studio, Bandra (Mumbai):** Elite sea-facing studio (₹7,200/night).
-* **Sea Breeze Villa, Anjuna (Goa):** Exquisite beachfront villa with private pool (₹18,500/night).
-
-You can search and filter these directly in the main search pill above!`;
+        if (replyText.includes("running in offline mode") || replyText.includes("connectivity issues")) {
+          // If offline message is returned, use local rules
+          const localReply = getOfflineReply(text);
+          addBotMessage(localReply);
+          return;
         }
-      } else if (lower.includes('hi') || lower.includes('hello') || lower.includes('hey') || lower.includes('namaste') || lower.includes('नमस्ते')) {
-        replyText = lang === 'mr' 
-          ? "हॅलो! मी MAYUR आहे. आज मी तुम्हाला जागा लिस्ट करण्यात, बुकिंग करण्यात किंवा सिस्टीम स्टेटस तपासायला मदत करू शकतो?"
-          : lang === 'hi' 
-          ? "नमस्ते! मैं MAYUR हूँ। आज मैं आपको संपत्ति लिस्ट करने, बुकिंग करने या सिस्टम स्थिति जांचने में मदद कर सकता हूँ?"
-          : "Hello! I am MAYUR. Today I can help you list properties, book stays, or inspect website diagnostics status?";
-      } else {
-        replyText = current.fallbackText;
-      }
 
-      const botMsg = {
-        id: `bot_${Date.now()}`,
-        type: 'bot',
-        text: replyText,
-        time: new Date()
-      };
-      setMessages(prev => [...prev, botMsg]);
+        addBotMessage(replyText);
+      })
+      .catch((err) => {
+        console.error("AI chat API failed, falling back to offline rules:", err);
+        setIsTyping(false);
+        const localReply = getOfflineReply(text);
+        addBotMessage(localReply);
+      });
+  };
 
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const cleanText = replyText.replace(/[\*#_`]/g, '');
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.lang = lang === 'hi' ? 'hi-IN' : lang === 'mr' ? 'mr-IN' : 'en-IN';
-        window.speechSynthesis.speak(utterance);
-      }
-    }, 1000);
+  const addBotMessage = (replyText) => {
+    const botMsg = {
+      id: `bot_${Date.now()}`,
+      type: 'bot',
+      text: replyText,
+      time: new Date()
+    };
+    setMessages(prev => [...prev, botMsg]);
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const cleanText = replyText.replace(/[\*#_`]/g, '');
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = lang === 'hi' ? 'hi-IN' : lang === 'mr' ? 'mr-IN' : 'en-IN';
+      window.speechSynthesis.speak(utterance);
+    }
   };
 
   const handleKeyPress = (e) => {

@@ -217,3 +217,105 @@ async def delete_agent(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete AI agent"
         )
+
+from pydantic import BaseModel
+from typing import List, Optional
+
+class ChatRequest(BaseModel):
+    message: str
+    history: Optional[List[dict]] = []
+
+@router.post("/chat")
+async def chat_with_ai(payload: ChatRequest):
+    """Chat with MAYUR AI Assistant powered by Google Gemini (public endpoint)."""
+    try:
+        import os
+        import json
+        import urllib.request
+        import asyncio
+        from dotenv import load_dotenv
+        from pathlib import Path
+
+        # Explicitly reload .env to ensure the latest key is read
+        env_path = Path(__file__).resolve().parent.parent / '.env'
+        load_dotenv(env_path, override=True)
+
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+        if not gemini_key:
+            # Fallback if no key is configured
+            return {
+                "response": "Namaste! I am currently running in offline mode. For support, please contact us at +91 8484826247 or email support@x-space360.com."
+            }
+
+        # Build contents with system instruction + history + current message
+        system_instruction = (
+            "You are MAYUR, the friendly, professional, and knowledgeable AI assistant for X-Space360, "
+            "a premium short-term rental (STR) platform in India. "
+            "Your goal is to help users find luxury properties, explain booking/cancellation/refund policies, "
+            "assist hosts in listing properties, and answer questions about physical verification, relationship managers, "
+            "and host subscription plans.\n\n"
+            "Here is the platform knowledge you must use:\n"
+            "- Onboarding: Register Host account -> Select subscription -> List property -> Physical verification audit by Relationship Manager (RM) -> Go Live with verified green trust badge.\n"
+            "- Plans: Standard (single listing, ₹500 refundable registration fee), Growth (multiple properties, priority verification, WhatsApp alerts), Elite (dedicated RM, 24/7 hotline, featured home ranking).\n"
+            "- Booking & Refund: 5-minute soft lock during checkout. Payments handled via Razorpay. Refund: 100% refund up to 7 days before check-in, 50% up to 48 hours, strict/no-refund thereafter.\n"
+            "- Physical Verification: RM physically audits every property's coordinates, amenities, safety, and quality checks.\n"
+            "- Contact: Support helpline +91 8484826247, email support@x-space360.com, office in Nashik, Maharashtra.\n\n"
+            "Be polite, helpful, and concise. Respond in the same language the user uses to chat (English, Hindi, Marathi, etc.)."
+        )
+
+        contents = []
+        if payload.history:
+            for turn in payload.history:
+                role = turn.get("role")
+                text = turn.get("text") or turn.get("message")
+                if role in ["user", "model"] and text:
+                    contents.append({
+                        "role": role,
+                        "parts": [{"text": text}]
+                    })
+        
+        # Append current user message
+        contents.append({
+            "role": "user",
+            "parts": [{"text": payload.message}]
+        })
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={gemini_key}"
+        
+        # We pass the systemInstruction as part of the config in the Gemini 1.5 API
+        request_body = {
+            "contents": contents,
+            "systemInstruction": {
+                "parts": [{"text": system_instruction}]
+            },
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 2048
+            }
+        }
+
+        headers = {"Content-Type": "application/json"}
+
+        def perform_request():
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(request_body).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=12.0) as response:
+                return json.loads(response.read().decode("utf-8"))
+
+        result = await asyncio.to_thread(perform_request)
+        
+        try:
+            bot_response = result["candidates"][0]["content"]["parts"][0]["text"].strip()
+            return {"response": bot_response}
+        except (KeyError, IndexError) as parse_err:
+            logger.error(f"Failed to parse Gemini response: {result}. Error: {parse_err}")
+            return {"response": "Sorry, I am having trouble processing that right now. Please try again."}
+
+    except Exception as e:
+        logger.error(f"Error in chat_with_ai: {e}")
+        return {"response": "I'm experiencing connectivity issues. Please contact our support helpline +91 8484826247."}
+

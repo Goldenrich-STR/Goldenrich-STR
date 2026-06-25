@@ -3168,12 +3168,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
   // Helper method for profile images
   String _getFullImageUrl(String? path) {
-    if (path == null || path.isEmpty) return '';
-    if (path.startsWith('http')) return path;
-    final baseUrl = AppConfig.activeBaseUrl;
-    final cleanBase = baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
-    final cleanPath = path.startsWith('/') ? path : '/$path';
-    return '$cleanBase$cleanPath';
+    return AppConfig.resolveImageUrl(path);
   }
 
   // Lightbox built-in document viewer
