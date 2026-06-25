@@ -242,7 +242,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
               {isLogin ? (
                  <form onSubmit={handleLogin} className="space-y-8 animate-slide-up">
                     <div className="space-y-3">
-                       <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Identity (Email Address)</label>
+                       <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Email Address</label>
                        <div className="relative group">
                           <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-sand-400 group-focus-within:text-terracotta transition-all z-10" />
                           <input
@@ -253,7 +253,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              value={loginData.email}
                              onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
                              className="w-full pl-16 pr-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm placeholder:text-sand-300 placeholder:font-semibold"
-                             placeholder="name@exclusive.com"
+                             placeholder="email@example.com"
                              required
                           />
                        </div>
@@ -261,8 +261,8 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     
                     <div className="space-y-3">
                        <div className="flex justify-between items-center px-1">
-                          <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase">Security Access</label>
-                          <button type="button" className="text-[10px] font-black text-terracotta uppercase tracking-wider hover:underline underline-offset-4">Forgot Access?</button>
+                          <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase">Password</label>
+                          <button type="button" className="text-[10px] font-black text-terracotta uppercase tracking-wider hover:underline underline-offset-4">Forgot Password?</button>
                        </div>
                        <div className="relative group">
                           <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-sand-400 group-focus-within:text-terracotta transition-all z-10" />
@@ -285,7 +285,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                        disabled={loading}
                        className="btn-premium w-full py-5 text-base tracking-widest shadow-elevated rounded-2xl"
                     >
-                       {loading ? 'CALIBRATING ACCESS...' : 'SIGN IN'}
+                       {loading ? 'SIGNING IN...' : 'SIGN IN'}
                     </button>
 
                     <div className="text-center mt-3">
@@ -312,7 +312,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              className="w-full py-5 rounded-2xl border-2 border-sand-200 bg-white text-charcoal hover:border-terracotta hover:text-terracotta transition-all shadow-sm font-black text-[11px] uppercase tracking-[0.18em] inline-flex items-center justify-center gap-3"
                           >
                              <Building2 className="w-5 h-5" />
-                             <span>Login with GRP SSO</span>
+                             <span>Login with Single Sign-On</span>
                           </button>
                        </div>
                     )}
@@ -322,7 +322,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     {!showOTPVerification ? (
                        <div className="space-y-4">
                           <div className="space-y-3 pt-1 text-center">
-                             <label className="block text-[11px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Select Professional Role</label>
+                             <label className="block text-[11px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Select Role</label>
                              <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto">
                                 {['guest', 'host', 'broker'].map(role => (
                                    <button
@@ -341,14 +341,14 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                          : 'border-sand-200 bg-white text-charcoal-muted hover:border-terracotta'
                                       }`}
                                    >
-                                      {role === 'guest' ? 'Explorer' : role === 'host' ? 'Owner' : 'Broker'}
+                                      {role === 'guest' ? 'Guest' : role === 'host' ? 'Host' : 'Broker'}
                                    </button>
                                 ))}
                              </div>
                           </div>
 
                           <div className="space-y-2">
-                             <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Full Legal Name</label>
+                             <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Full Name</label>
                              <input
                                 id="register-full-name"
                                 name="full_name"
@@ -364,7 +364,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                              <div className="space-y-2">
-                                <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Work Email</label>
+                                <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Email Address</label>
                                 <input
                                    id="register-email"
                                    name="email"
@@ -373,7 +373,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    value={registerData.email}
                                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
                                    className="w-full px-6 py-3.5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
-                                   placeholder="email@work.com"
+                                   placeholder="email@example.com"
                                    required
                                 />
                              </div>
@@ -395,7 +395,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                              <div className="space-y-2">
-                                <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Set Password</label>
+                                <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Password</label>
                                 <input
                                    id="register-password"
                                    name="password"
@@ -499,7 +499,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                  className="group inline-flex items-center space-x-4 text-charcoal-muted hover:text-terracotta transition-colors font-black text-[10px] uppercase tracking-[0.4em]"
               >
                  <ArrowLeft className="w-5 h-5 group-hover:-translate-x-2 transition-transform duration-500" />
-                 <span>Back to discovery portal</span>
+                 <span>Back to Home</span>
               </button>
            </div>
         </div>
