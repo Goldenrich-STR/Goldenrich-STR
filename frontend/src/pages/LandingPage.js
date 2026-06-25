@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import SEO from '../components/SEO';
 import ChatbotWidget from '../components/ChatbotWidget';
 import LanguageSelector from '../components/LanguageSelector';
 import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
@@ -1208,6 +1209,7 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] font-sans text-[#2A2A2A] overflow-x-hidden selection:bg-terracotta/20">
+      <SEO type="website" seo={cmsContent?.seo} breadcrumbs={[{ name: "Home", url: "/" }]} />
       {/* Navbar */}
       <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-white px-6 md:px-12 lg:px-20 h-20">
         {/* Left Logo */}

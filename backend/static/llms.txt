@@ -1,0 +1,62 @@
+# X-Space360
+
+> Premium Short-Term Rentals, Luxury Staycations, Office Spaces, and Event Venues in India.
+
+## Description
+X-Space360 is an Indian PropTech marketplace connecting guests, hosts, property owners, and businesses through a unified property booking platform. Users can search, compare, book, and manage short-term rental properties across India.
+
+## AI Website Profile
+- **Website Name**: X-Space360
+- **Brand Name**: X-Space360
+- **Official URL**: https://x-space360.in
+- **Business Category**: PropTech / Hospitality Marketplace
+- **Industry**: Real Estate & Accommodation
+- **Country**: India
+- **Languages**: English, Hindi, Marathi (multilingual ready)
+- **Supported Cities**: Mumbai, Pune, Goa, Nashik, Udaipur, Manali (expanding nationwide)
+- **Target Audience**: Corporate clients, leisure travelers, event organizers, property hosts, and real estate owners.
+
+## Services
+- Property Buying
+- Property Selling
+- Short-Term Rentals
+- Villa Booking
+- Apartment Booking
+- Resort Booking
+- Hotel Booking
+- Homestay Booking
+- Commercial Space Booking
+- Office Space Booking
+- Coworking Space Booking
+- Event Venue Booking
+- Property Listing
+- Host Registration
+- Property Management
+- Vacation Rentals
+
+## Supported Property Types
+- Apartment
+- Villa
+- Hotel
+- Resort
+- Farmhouse
+- Homestay
+- Studio
+- Office
+- Commercial Space
+- Event Venue
+- Holiday Home
+- Vacation Rental
+
+## Important URLs
+- **Homepage**: https://x-space360.in/
+- **Properties / Browse**: https://x-space360.in/guest/browse
+- **Become a Host**: https://x-space360.in/register?role=host
+- **User Dashboard / Host Console**: https://x-space360.in/login
+- **About Us**: https://x-space360.in/
+- **Contact Support**: https://x-space360.in/
+- **Privacy Policy**: https://x-space360.in/
+- **Terms of Service**: https://x-space360.in/
+- **FAQs**: https://x-space360.in/
+- **Sitemap**: https://x-space360.in/sitemap.xml
+- **Android APK Download**: https://uat.x-space360.in/api/download-apk

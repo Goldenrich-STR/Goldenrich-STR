@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star } from 'lucide-react';
 import { authAPI, apiClient } from '../services/api';
 import LegalLinks from '../components/LegalLinks';
+import SEO from '../components/SEO';
 
 const AuthPage = ({ isAdminLogin = false }) => {
   const navigate = useNavigate();
@@ -131,6 +132,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
 
   return (
     <div className="h-screen bg-sand-50 flex overflow-hidden selection:bg-terracotta selection:text-white font-outfit">
+      <SEO
+        title={isAdminLogin ? "Admin Sign In" : (isLogin ? "Sign In" : "Register")}
+        robots="noindex,nofollow"
+      />
       {/* Left Panel: Visual/Branding (Desktop Only) */}
       <div className="hidden lg:flex lg:w-5/12 relative bg-charcoal overflow-hidden border-r border-sand-200 h-full">
         <div className="absolute inset-0 z-0">

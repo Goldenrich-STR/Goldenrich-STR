@@ -3,8 +3,9 @@ Allow: /
 Disallow: /admin/
 Disallow: /dashboard/
 Disallow: /api/
-Disallow: /private/
 Disallow: /auth/
-Disallow: /sso/
+Disallow: /internal/
+Disallow: /private/
+Disallow: /temp/
 
 Sitemap: https://x-space360.in/sitemap.xml
