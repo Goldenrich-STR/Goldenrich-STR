@@ -246,8 +246,13 @@ async def search_properties(
         seo_desc = "Discover top short-term rentals, villas, offices, and venues in India."
         
         if city:
-            seo_title = f"Properties in {city.strip().capitalize()} | X-Space360"
-            seo_desc = f"Find and book the best villas, apartments, and commercial spaces in {city.strip().capitalize()} with transparent pricing."
+            city_lower = city.strip().lower()
+            if city_lower == "nashik":
+                seo_title = "X-Space360 | Luxury Short-term Rentals in Nashik, Maharashtra"
+                seo_desc = "Book premium villas, commercial spaces & event venues in Nashik. Residential, co-working & banquet halls for short-term rent. Starts ₹6,000/night."
+            else:
+                seo_title = f"Properties in {city.strip().capitalize()} | X-Space360"
+                seo_desc = f"Find and book the best villas, apartments, and commercial spaces in {city.strip().capitalize()} with transparent pricing."
         elif category:
             cat_label = "Residential Stays" if category.value == "residential" else "Commercial Spaces" if category.value == "commercial" else "Event Venues"
             seo_title = f"{cat_label} | X-Space360"
