@@ -20,6 +20,7 @@ import {
   Star,
   Heart,
   Share2,
+  Menu,
 } from 'lucide-react';
 
 // Fix Leaflet default marker icon for webpack/CRA
@@ -280,6 +281,7 @@ const GuestBrowse = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState(VIEW_MODES.GRID);
   const [hoveredId, setHoveredId] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const [wishlist, setWishlist] = useState(() => {
     try {
@@ -466,7 +468,7 @@ const GuestBrowse = () => {
   const indiaCenter = [20.5937, 78.9629];  return (
     <div className="min-h-screen bg-sand-50 flex flex-col selection:bg-terracotta selection:text-white">
       {/* Header */}
-      <header className="glass px-4 md:px-8 py-4 border-b border-sand-200" data-testid="guest-header">
+      <header className="relative z-40 glass px-4 md:px-8 py-4 border-b border-sand-200" data-testid="guest-header">
         <div className="w-full flex justify-between items-center gap-2">
           <div 
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
@@ -474,7 +476,7 @@ const GuestBrowse = () => {
           >
             <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">x-space360<span className="text-terracotta">.in</span></span>
           </div>
-          <div className="flex items-center space-x-4 md:space-x-6">
+          <div className="hidden md:flex items-center space-x-4 md:space-x-6">
             {/* Language Selector */}
             <div className="relative flex items-center">
               <LanguageSelector
@@ -530,8 +532,81 @@ const GuestBrowse = () => {
               </button>
             )}
           </div>
+          
+          {/* Mobile Hamburger Icon */}
+          <div className="md:hidden flex items-center">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="text-charcoal hover:text-terracotta transition p-2">
+              <Menu className="w-7 h-7" />
+            </button>
+          </div>
         </div>
       </header>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-[100] bg-white flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-charcoal md:hidden">
+          <div className="flex justify-between items-center mb-12">
+            <h1 className="text-2xl font-black tracking-tight cursor-pointer text-charcoal" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
+              x-space360<span className="text-terracotta">.in</span>
+            </h1>
+            <button onClick={() => setIsMobileMenuOpen(false)} className="text-charcoal hover:text-terracotta transition p-2 bg-sand-100 rounded-full">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          
+          <div className="flex flex-col space-y-6 flex-1">
+            <button
+              onClick={() => { setIsMobileMenuOpen(false); setShowWishlistOnly(prev => !prev); }}
+              className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-sand-200"
+            >
+              <span>{showWishlistOnly ? 'Show All Spaces' : 'Wishlist'}</span>
+              <Heart className={`w-6 h-6 ${showWishlistOnly ? 'text-red-500 fill-red-500' : 'text-charcoal-muted'}`} />
+            </button>
+            <div className="py-2 border-b border-sand-200 flex items-center justify-between">
+              <span className="text-2xl font-bold">Language</span>
+              <LanguageSelector
+                currentLang={lang}
+                onLanguageChange={(newLang) => {
+                  setLang(newLang);
+                  localStorage.setItem('preferredLanguage', newLang);
+                }}
+              />
+            </div>
+
+            {user ? (
+              <>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/bookings'); }}
+                  className="text-left text-2xl font-bold text-terracotta py-2 border-b border-sand-200"
+                >
+                  {t('myBookings')}
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); logout(); }}
+                  className="mt-8 bg-sand-200 hover:bg-sand-300 text-charcoal font-bold py-4 rounded-xl text-center transition"
+                >
+                  {t('signOut')}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }}
+                  className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-sand-200"
+                >
+                  {t('signIn')}
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/register'); }}
+                  className="mt-8 bg-terracotta hover:bg-terracotta-hover text-white font-bold py-4 rounded-xl text-center shadow-lg transition"
+                >
+                  Get Started
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Top Search Bar */}
       <div className="bg-white/80 backdrop-blur sticky top-0 z-30 px-4 md:px-8 py-4 border-b border-sand-200 shadow-sm">
@@ -541,7 +616,7 @@ const GuestBrowse = () => {
             className="flex flex-col lg:flex-row items-center bg-white rounded-[2rem] lg:rounded-full border border-sand-200 shadow-premium p-2 gap-2 w-full"
           >
             {/* Destination */}
-            <div className="flex-1 flex flex-col px-6 py-2 hover:bg-sand-50 rounded-full cursor-pointer transition-colors relative w-full lg:w-auto">
+            <div className="flex-1 flex flex-col px-4 lg:px-6 py-2 lg:py-2 hover:bg-sand-50 rounded-t-2xl lg:rounded-full cursor-pointer transition-colors relative w-full lg:w-auto border-b border-sand-100 lg:border-none">
               <label htmlFor="browse-destination" className="text-[10px] font-black text-charcoal uppercase tracking-widest cursor-pointer">{t('destination')}</label>
               <input
                 id="browse-destination"
@@ -558,7 +633,7 @@ const GuestBrowse = () => {
             <div className="hidden lg:block w-[1px] h-10 bg-sand-200"></div>
 
             {/* Check In */}
-            <div className="flex-1 flex flex-col px-6 py-2 hover:bg-sand-50 rounded-full cursor-pointer transition-colors relative w-full lg:w-auto">
+            <div className="flex-1 flex flex-col px-4 lg:px-6 py-2 lg:py-2 hover:bg-sand-50 cursor-pointer transition-colors relative w-full lg:w-auto border-b border-sand-100 lg:border-none">
               <label htmlFor="browse-check-in" className="text-[10px] font-black text-charcoal uppercase tracking-widest cursor-pointer">{t('checkIn')}</label>
               <input
                 id="browse-check-in"
@@ -577,7 +652,7 @@ const GuestBrowse = () => {
             <div className="hidden lg:block w-[1px] h-10 bg-sand-200"></div>
 
             {/* Check Out */}
-            <div className="flex-1 flex flex-col px-6 py-2 hover:bg-sand-50 rounded-full cursor-pointer transition-colors relative w-full lg:w-auto">
+            <div className="flex-1 flex flex-col px-4 lg:px-6 py-2 lg:py-2 hover:bg-sand-50 cursor-pointer transition-colors relative w-full lg:w-auto border-b border-sand-100 lg:border-none">
               <label htmlFor="browse-check-out" className="text-[10px] font-black text-charcoal uppercase tracking-widest cursor-pointer">{t('checkOut')}</label>
               <input
                 id="browse-check-out"
@@ -596,7 +671,7 @@ const GuestBrowse = () => {
             <div className="hidden lg:block w-[1px] h-10 bg-sand-200"></div>
 
             {/* Category */}
-            <div className="flex-1 flex flex-col px-6 py-2 hover:bg-sand-50 rounded-full cursor-pointer transition-colors relative w-full lg:w-auto">
+            <div className="flex-1 flex flex-col px-4 lg:px-6 py-2 lg:py-2 hover:bg-sand-50 cursor-pointer transition-colors relative w-full lg:w-auto border-b border-sand-100 lg:border-none">
               <label htmlFor="browse-category" className="text-[10px] font-black text-charcoal uppercase tracking-widest cursor-pointer">{t('type')}</label>
               <select
                 id="browse-category"

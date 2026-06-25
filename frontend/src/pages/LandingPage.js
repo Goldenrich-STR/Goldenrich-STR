@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import ChatbotWidget from '../components/ChatbotWidget';
@@ -889,6 +889,7 @@ const LandingPage = () => {
   const [selectedPost, setSelectedPost] = useState(null);
   const [activeVideo, setActiveVideo] = useState(0);
   const [prevVideo, setPrevVideo] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const heroSlides = [
     {
@@ -1246,14 +1247,99 @@ const LandingPage = () => {
           )}
         </div>
 
-        {/* Right — Get the app */}
-        <div className="flex items-center">
-          <button onClick={() => navigate('/login')} className="hidden md:flex items-center space-x-2 border border-white/50 rounded-full px-5 py-2 hover:bg-white/20 transition backdrop-blur-sm shadow-sm text-white">
+        {/* Right — Get the app (Desktop) */}
+        <div className="hidden md:flex items-center">
+          <button onClick={() => navigate('/login')} className="flex items-center space-x-2 border border-white/50 rounded-full px-5 py-2 hover:bg-white/20 transition backdrop-blur-sm shadow-sm text-white">
             <span className="text-xs font-semibold uppercase tracking-widest">Get the app</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        {/* Mobile Hamburger Icon */}
+        <div className="md:hidden flex items-center">
+          <button onClick={() => setIsMobileMenuOpen(true)} className="text-white hover:text-terracotta transition p-2">
+            <Menu className="w-8 h-8 drop-shadow-md" />
+          </button>
+        </div>
       </nav>
+
+      {/* Mobile Menu Overlay */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-white md:hidden">
+          <div className="flex justify-between items-center mb-12">
+            <h1 className="text-2xl font-black tracking-tight cursor-pointer text-white" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
+              x-space360<span className="text-terracotta">.in</span>
+            </h1>
+            <button onClick={() => setIsMobileMenuOpen(false)} className="text-white hover:text-terracotta transition p-2 bg-white/10 rounded-full">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          
+          <div className="flex flex-col space-y-6 flex-1">
+            <button
+              onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse'); }}
+              className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-white/10"
+            >
+              Discover
+            </button>
+            <button
+              onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }}
+              className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-white/10"
+            >
+              <span>Wishlist</span>
+              <Heart className="w-6 h-6 text-red-500 fill-red-500" />
+            </button>
+            <button
+              onClick={() => { setIsMobileMenuOpen(false); setShowHowItWorksModal(true); }}
+              className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-white/10"
+            >
+              How It Works
+            </button>
+            <div className="py-2 border-b border-white/10 flex items-center justify-between">
+              <span className="text-2xl font-bold">Language</span>
+              <LanguageSelector
+                currentLang={lang}
+                onLanguageChange={(newLang) => {
+                  setLang(newLang);
+                  localStorage.setItem('preferredLanguage', newLang);
+                }}
+              />
+            </div>
+
+            {user ? (
+              <>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/dashboard'); }}
+                  className="text-left text-2xl font-bold text-terracotta py-2 border-b border-white/10"
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); handleSignOut(); }}
+                  className="mt-8 bg-white/10 hover:bg-white/20 text-white font-bold py-4 rounded-xl text-center transition"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }}
+                  className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-white/10"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/register'); }}
+                  className="mt-8 bg-terracotta hover:bg-terracotta-hover text-white font-bold py-4 rounded-xl text-center shadow-lg transition"
+                >
+                  Get Started
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ===== PREMIUM VIDEO SLIDER HERO ===== */}
       <style>{`
@@ -1321,7 +1407,7 @@ const LandingPage = () => {
                   <div className="flex flex-col md:flex-row items-center bg-white rounded-2xl md:rounded-full w-full">
                     
                     {/* Location */}
-                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:flex-1 cursor-pointer rounded-t-2xl md:rounded-l-full hover:bg-gray-50 transition">
+                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:flex-1 cursor-pointer rounded-t-2xl md:rounded-l-full border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
                       <MapPin className="w-5 h-5 text-gray-400 mr-3" />
                       <div className="w-full">
                         <input
@@ -1339,7 +1425,7 @@ const LandingPage = () => {
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
                     
                     {/* Check-in */}
-                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer hover:bg-gray-50 transition">
+                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
                       <Calendar className="w-5 h-5 text-gray-400 mr-3" />
                       <div className="w-full">
                         <input
@@ -1359,7 +1445,7 @@ const LandingPage = () => {
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
                     
                     {/* Check-out */}
-                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer hover:bg-gray-50 transition">
+                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
                       <Calendar className="w-5 h-5 text-gray-400 mr-3" />
                       <div className="w-full">
                         <input
@@ -1379,7 +1465,7 @@ const LandingPage = () => {
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
                     
                     {/* Guests */}
-                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer hover:bg-gray-50 transition">
+                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
                       <User className="w-5 h-5 text-gray-400 mr-3" />
                       <div className="flex items-center gap-1">
                         <input
@@ -1433,9 +1519,9 @@ const LandingPage = () => {
       </div>
 
       {/* ── Category Shortcut Strip ── */}
-      <div className="w-full bg-[#FDFCF8] relative z-20 py-12 border-b border-sand-100">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="flex items-center justify-center gap-10 md:gap-20">
+      <div className="w-full bg-[#FDFCF8] relative z-20 py-8 md:py-12 border-b border-sand-100">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="flex flex-row items-start justify-center gap-3 md:gap-20">
             {[
               {
                 label: 'Residential',
@@ -1468,14 +1554,14 @@ const LandingPage = () => {
               <button
                 key={category}
                 onClick={() => navigate(`/guest/browse?category=${category}`)}
-                className="group flex flex-col items-center gap-3 cursor-pointer"
+                className="group flex flex-col items-center gap-2 md:gap-3 cursor-pointer w-28 md:w-auto"
               >
-                <div className={`w-20 h-20 rounded-full ${bg} flex items-center justify-center ring-4 ${ring} shadow-xl ${shadow} group-hover:scale-110 group-hover:shadow-2xl transition-all duration-300 active:scale-95`}>
-                  <Icon className="w-9 h-9 text-white" />
+                <div className={`w-14 h-14 md:w-20 md:h-20 rounded-full ${bg} flex items-center justify-center ring-4 ${ring} shadow-xl ${shadow} group-hover:scale-110 group-hover:shadow-2xl transition-all duration-300 active:scale-95`}>
+                  <Icon className="w-6 h-6 md:w-9 md:h-9 text-white" />
                 </div>
-                <div className="text-center">
-                  <p className="text-charcoal font-black text-[14px] tracking-tight">{label}</p>
-                  <p className="text-gray-400 text-[11px] font-medium mt-0.5">{desc}</p>
+                <div className="text-center px-1">
+                  <p className="text-charcoal font-black text-[11px] md:text-[14px] tracking-tight leading-snug">{label}</p>
+                  <p className="text-gray-400 text-[9px] md:text-[11px] font-medium mt-0.5 leading-tight">{desc}</p>
                 </div>
               </button>
             ))}
@@ -1517,11 +1603,11 @@ const LandingPage = () => {
           )}
 
           {/* Ready to Host Section */}
-          <div className="bg-[#1a1a1a] rounded-[2.5rem] p-12 md:p-16 text-center text-white mb-32 relative overflow-hidden shadow-2xl">
+          <div className="bg-[#1a1a1a] rounded-[2rem] md:rounded-[2.5rem] p-8 md:p-16 text-center text-white mb-24 md:mb-32 relative overflow-hidden shadow-2xl">
             <div className="absolute top-0 right-0 w-80 h-80 bg-terracotta/10 rounded-full blur-3xl -mr-28 -mt-28"></div>
             <div className="relative z-10 max-w-3xl mx-auto">
               <h3 
-                className="text-4xl md:text-5xl font-black mb-6 leading-tight tracking-tight"
+                className="text-3xl md:text-5xl font-black mb-4 md:mb-6 leading-tight tracking-tight"
                 dangerouslySetInnerHTML={{ __html: t('readyToHost') }}
               />
               <p className="text-gray-300 text-base md:text-lg font-medium leading-relaxed mb-10 max-w-2xl mx-auto">
