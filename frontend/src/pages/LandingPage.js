@@ -890,6 +890,37 @@ const LandingPage = () => {
   const [activeVideo, setActiveVideo] = useState(0);
   const [prevVideo, setPrevVideo] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const [activeBlog, setActiveBlog] = useState(0);
+
+  const scrollToSlide = (containerId, index) => {
+    const container = document.getElementById(containerId);
+    if (container && container.children[index]) {
+      const child = container.children[index];
+      const leftOffset = child.offsetLeft - container.offsetLeft - (window.innerWidth < 768 ? 16 : 32);
+      container.scrollTo({ left: leftOffset, behavior: 'smooth' });
+    }
+  };
+
+  const handleSliderScroll = (e, indexSetter) => {
+    const container = e.target;
+    const children = container.children;
+    if (!children || children.length === 0) return;
+    
+    let closestIndex = 0;
+    let minDistance = Infinity;
+    const containerLeft = container.scrollLeft + container.offsetLeft;
+    
+    for (let i = 0; i < children.length; i++) {
+      const childLeft = children[i].offsetLeft;
+      const distance = Math.abs(childLeft - containerLeft);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestIndex = i;
+      }
+    }
+    indexSetter(closestIndex);
+  };
 
   const heroSlides = [
     {
@@ -1627,121 +1658,180 @@ const LandingPage = () => {
             </div>
           </div>
 
-          {/* Testimonials (Loved by Guests & Hosts) */}
+                    {/* Testimonials (Loved by Guests & Hosts) */}
           <div className="mb-32 text-center">
             <span className="text-xs font-black tracking-[0.2em] text-terracotta uppercase">{t('guestStories')}</span>
             <h3 className="text-4xl font-bold text-charcoal mt-3 mb-4 tracking-tight">{t('lovedByGuests')}</h3>
-            <p className="text-gray-505 text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('testimonialsSub')}</p>
+            <p className="text-gray-550 text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('testimonialsSub')}</p>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                {
-                  stars: 5,
-                  text: "Golden Rich Stay spaces are absolutely stunning. The Wi-Fi is blazing fast and the locations are perfect for work-cations.",
-                  author: "Ananya Sen",
-                  role: "Consultant & Remote Worker",
-                  avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100"
-                },
-                {
-                  stars: 5,
-                  text: "Listing my commercial space was incredibly smooth. The automated payout verification is rock solid.",
-                  author: "Rohan Deshmukh",
-                  role: "Property Host",
-                  avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"
-                },
-                {
-                  stars: 5,
-                  text: "Booked an event venue for our product launch. The geo-coordinates and Leaflet mapping made it easy for everyone to find.",
-                  author: "Priya Nair",
-                  role: "Event Organizer",
-                  avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100"
-                }
-              ].map((item, idx) => (
-                <div key={idx} className="bg-white rounded-[2rem] p-8 border border-sand-200/50 shadow-md text-left flex flex-col justify-between hover:shadow-xl transition-all duration-300">
-                  <div>
-                    <div className="flex items-center space-x-1 text-amber-500 mb-6">
-                      {[...Array(item.stars)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 fill-current" />
-                      ))}
-                    </div>
-                    <p className="text-charcoal-light italic font-medium leading-relaxed mb-8">
-                      "{item.text}"
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <img src={item.avatar} alt={item.author} className="w-12 h-12 rounded-full object-cover" />
+            <div className="max-w-7xl mx-auto relative px-4 md:px-8">
+              <div 
+                id="slider-testimonials" 
+                onScroll={(e) => handleSliderScroll(e, setActiveTestimonial)}
+                className="flex overflow-x-auto pb-10 px-4 md:px-8 gap-6 no-scrollbar snap-x scroll-smooth"
+              >
+                {(cmsContent?.testimonials?.items?.map(item => ({
+                  stars: item.rating || 5,
+                  text: item.comment || item.text || "",
+                  author: item.name || item.author || "",
+                  role: item.role || "",
+                  avatar: item.avatar_url || item.avatar || ""
+                })) || [
+                  {
+                    stars: 5,
+                    text: "Golden Rich Stay spaces are absolutely stunning. The Wi-Fi is blazing fast and the locations are perfect for work-cations.",
+                    author: "Ananya Sen",
+                    role: "Consultant & Remote Worker",
+                    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100"
+                  },
+                  {
+                    stars: 5,
+                    text: "Listing my commercial space was incredibly smooth. The automated payout verification is rock solid.",
+                    author: "Rohan Deshmukh",
+                    role: "Property Host",
+                    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100"
+                  },
+                  {
+                    stars: 5,
+                    text: "Booked an event venue for our product launch. The geo-coordinates and Leaflet mapping made it easy for everyone to find.",
+                    author: "Priya Nair",
+                    role: "Event Organizer",
+                    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100"
+                  }
+                ]).map((item, idx) => (
+                  <div key={idx} className="bg-white rounded-[2rem] p-8 border border-sand-200/50 shadow-md text-left flex flex-col justify-between hover:shadow-xl transition-all duration-300 min-w-[280px] sm:min-w-[320px] md:min-w-[360px] snap-center flex-1">
                     <div>
-                      <h4 className="font-bold text-charcoal text-sm">{item.author}</h4>
-                      <p className="text-gray-400 text-xs font-semibold">{item.role}</p>
+                      <div className="flex items-center space-x-1 text-amber-500 mb-6">
+                        {[...Array(item.stars)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                      </div>
+                      <p className="text-charcoal-light italic font-medium leading-relaxed mb-8">
+                        "{item.text}"
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <img src={item.avatar} alt={item.author} className="w-12 h-12 rounded-full object-cover" />
+                      <div>
+                        <h4 className="font-bold text-charcoal text-sm">{item.author}</h4>
+                        <p className="text-gray-400 text-xs font-semibold">{item.role}</p>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+
+              {/* ── Testimonials Dot indicators ── */}
+              <div className="flex justify-center mt-2">
+                <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-full flex items-center justify-center gap-2.5 shadow-md">
+                  {(cmsContent?.testimonials?.items || [1, 2, 3]).map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => scrollToSlide('slider-testimonials', idx)}
+                      className={`rounded-full transition-all duration-300 ${
+                        idx === activeTestimonial
+                          ? 'w-8 h-2 bg-terracotta'
+                          : 'w-2 h-2 bg-white/40 hover:bg-white/70'
+                      }`}
+                    />
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
-
           {/* Blogs Section (Our Journal) */}
           <div className="mb-32 text-center">
             <span className="text-xs font-black tracking-[0.2em] text-terracotta uppercase">{t('ourJournal')}</span>
             <h3 className="text-4xl font-bold text-charcoal mt-3 mb-4 tracking-tight">{t('latestBlog')}</h3>
-            <p className="text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('blogSub')}</p>
+            <p className="text-gray-505 text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('blogSub')}</p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
-              {[
-                {
-                  id: 'p1',
-                  title: 'The Future of Short-Term Rentals in India',
-                  excerpt: 'How shifting preferences and hybrid work models are driving growth in STR spaces.',
-                  date: 'June 10, 2026',
-                  author: 'Amit Sharma',
-                  img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800'
-                },
-                {
-                  id: 'p2',
-                  title: 'Design Tips to Maximize Your Property Yield',
-                  excerpt: 'Curate your space to appeal to high-end travelers with styling and amenity upgrades.',
-                  date: 'June 05, 2026',
-                  author: 'Neha Patel',
-                  img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800'
-                },
-                {
-                  id: 'p3',
-                  title: 'Top 5 Weekend Escapes Near Mumbai & Nashik',
-                  excerpt: 'Explore the most beautiful villa retreats and holiday home collections for your next vacation.',
-                  date: 'May 28, 2026',
-                  author: 'Vikram Singh',
-                  img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800'
-                }
-              ].map((post) => (
-                <div 
-                  key={post.id} 
-                  onClick={() => setSelectedPost({
-                    id: post.id,
-                    title: post.title,
-                    excerpt: post.excerpt,
-                    date: post.date,
-                    author: post.author,
-                    image_url: post.img,
-                    read_time: '5 min read'
-                  })}
-                  className="bg-white rounded-[2rem] overflow-hidden border border-sand-200/50 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col h-full"
-                >
-                  <div className="h-48 overflow-hidden relative">
-                    <img src={post.img} alt={post.title} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="p-6 flex-1 flex flex-col justify-between">
-                    <div>
-                      <span className="text-[10px] font-black text-terracotta uppercase tracking-wider">{post.date}</span>
-                      <h4 className="font-bold text-lg text-charcoal mt-2 mb-3 leading-snug hover:text-terracotta transition-colors line-clamp-2">{post.title}</h4>
-                      <p className="text-gray-500 text-sm font-medium leading-relaxed line-clamp-2 mb-4">{post.excerpt}</p>
+            <div className="max-w-7xl mx-auto relative px-4 md:px-8">
+              <div 
+                id="slider-blogs" 
+                onScroll={(e) => handleSliderScroll(e, setActiveBlog)}
+                className="flex overflow-x-auto pb-10 px-4 md:px-8 gap-6 no-scrollbar snap-x scroll-smooth"
+              >
+                {(cmsContent?.blog?.posts?.map(post => ({
+                  id: post.id,
+                  title: post.title,
+                  excerpt: post.excerpt,
+                  date: post.date,
+                  author: post.author,
+                  img: post.image_url || post.img || "",
+                  read_time: post.read_time || "5 min read"
+                })) || [
+                  {
+                    id: 'p1',
+                    title: 'The Future of Short-Term Rentals in India',
+                    excerpt: 'How shifting preferences and hybrid work models are driving growth in STR spaces.',
+                    date: 'June 10, 2026',
+                    author: 'Amit Sharma',
+                    img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800'
+                  },
+                  {
+                    id: 'p2',
+                    title: 'Design Tips to Maximize Your Property Yield',
+                    excerpt: 'Curate your space to appeal to high-end travelers with styling and amenity upgrades.',
+                    date: 'June 05, 2026',
+                    author: 'Neha Patel',
+                    img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800'
+                  },
+                  {
+                    id: 'p3',
+                    title: 'Top 5 Weekend Escapes Near Mumbai & Nashik',
+                    excerpt: 'Explore the most beautiful villa retreats and holiday home collections for your next vacation.',
+                    date: 'May 28, 2026',
+                    author: 'Vikram Singh',
+                    img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800'
+                  }
+                ]).map((post, idx) => (
+                  <div 
+                    key={post.id || idx} 
+                    onClick={() => setSelectedPost({
+                      id: post.id,
+                      title: post.title,
+                      excerpt: post.excerpt,
+                      date: post.date,
+                      author: post.author,
+                      image_url: post.img,
+                      read_time: post.read_time || '5 min read'
+                    })}
+                    className="bg-white rounded-[2rem] overflow-hidden border border-sand-200/50 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col min-w-[280px] sm:min-w-[320px] md:min-w-[360px] snap-center flex-1 text-left"
+                  >
+                    <div className="h-48 overflow-hidden relative">
+                      <img src={post.img} alt={post.title} className="w-full h-full object-cover" />
                     </div>
-                    <div className="flex items-center justify-between pt-4 border-t border-sand-100">
-                      <span className="text-xs font-bold text-charcoal-muted">By {post.author}</span>
-                      <span className="text-xs font-black text-terracotta uppercase tracking-wider">{t('readArticle')}</span>
+                    <div className="p-6 flex-1 flex flex-col justify-between">
+                      <div>
+                        <span className="text-[10px] font-black text-terracotta uppercase tracking-wider">{post.date}</span>
+                        <h4 className="font-bold text-lg text-charcoal mt-2 mb-3 leading-snug hover:text-terracotta transition-colors line-clamp-2">{post.title}</h4>
+                        <p className="text-gray-550 text-gray-500 text-sm font-medium leading-relaxed line-clamp-2 mb-4">{post.excerpt}</p>
+                      </div>
+                      <div className="flex items-center justify-between pt-4 border-t border-sand-100">
+                        <span className="text-xs font-bold text-charcoal-muted">By {post.author}</span>
+                        <span className="text-xs font-black text-terracotta uppercase tracking-wider">{t('readArticle')}</span>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+
+              {/* ── Blogs Dot indicators ── */}
+              <div className="flex justify-center mt-2">
+                <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-full flex items-center justify-center gap-2.5 shadow-md">
+                  {(cmsContent?.blog?.posts || [1, 2, 3]).map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => scrollToSlide('slider-blogs', idx)}
+                      className={`rounded-full transition-all duration-300 ${
+                        idx === activeBlog
+                          ? 'w-8 h-2 bg-terracotta'
+                          : 'w-2 h-2 bg-white/40 hover:bg-white/70'
+                      }`}
+                    />
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
 
