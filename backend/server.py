@@ -75,6 +75,8 @@ app.include_router(review_router, prefix="/api")
 app.include_router(webhook_router, prefix="/api")
 app.include_router(coupon_router, prefix="/api")
 app.include_router(ai_agent_router, prefix="/api")
+from routes.seo_routes import router as seo_router
+app.include_router(seo_router)
 
 # Backward-compatible auth aliases. Some deployed/cached frontend bundles may
 # still call /auth/*; keep those working while the canonical API remains /api/auth/*.

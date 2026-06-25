@@ -5,6 +5,7 @@ import L from 'leaflet';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, getImageUrl } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
+import SEO from '../components/SEO';
 import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 import {
   Building2,
@@ -275,6 +276,7 @@ const GuestBrowse = () => {
   }, []);
 
   const [properties, setProperties] = useState([]);
+  const [seoData, setSeoData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -407,6 +409,7 @@ const GuestBrowse = () => {
     try {
       const res = await propertyAPI.searchProperties(buildParams());
       setProperties(res.data.properties || []);
+      setSeoData(res.data.seo || null);
     } catch (e) {
       console.error(e);
       setError(e.response?.data?.detail || 'Failed to load properties');
@@ -463,8 +466,33 @@ const GuestBrowse = () => {
     [displayedProperties]
   );
 
+  const seoBreadcrumbs = [
+    { name: "Home", url: "/" },
+    { name: "Browse", url: "/guest/browse" }
+  ];
+  if (filters.category) {
+    seoBreadcrumbs.push({
+      name: filters.category === "residential" ? "Residential" : filters.category === "commercial" ? "Commercial" : "Event Venues",
+      url: `/guest/browse?category=${filters.category}`
+    });
+  }
+  if (filters.city) {
+    seoBreadcrumbs.push({
+      name: filters.city,
+      url: `/guest/browse?city=${filters.city}`
+    });
+  }
+
   const indiaCenter = [20.5937, 78.9629];  return (
     <div className="min-h-screen bg-sand-50 flex flex-col selection:bg-terracotta selection:text-white">
+      <SEO
+        title={filters.city ? `Properties in ${filters.city}` : "Browse Properties"}
+        description="Browse luxury villas, premium offices, event spaces, and short-term rentals on X-Space360."
+        type="listing"
+        data={{ properties: displayedProperties }}
+        breadcrumbs={seoBreadcrumbs}
+        seo={seoData}
+      />
       {/* Header */}
       <header className="glass px-4 md:px-8 py-4 border-b border-sand-200" data-testid="guest-header">
         <div className="w-full flex justify-between items-center gap-2">
