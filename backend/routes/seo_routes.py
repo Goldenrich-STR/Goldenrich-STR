@@ -85,9 +85,10 @@ async def get_static_sitemap():
     <priority>{item['priority']}</priority>
   </url>""")
         
+    xml_body = "\n".join(xml_entries)
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{"\n".join(xml_entries)}
+{xml_body}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
@@ -130,9 +131,10 @@ async def get_properties_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error generating properties sitemap: {e}")
         
+    xml_body = "\n".join(xml_entries)
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{"\n".join(xml_entries)}
+{xml_body}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
@@ -160,9 +162,10 @@ async def get_blogs_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error generating blogs sitemap: {e}")
         
+    xml_body = "\n".join(xml_entries)
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{"\n".join(xml_entries)}
+{xml_body}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
@@ -187,9 +190,10 @@ async def get_cities_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error generating cities sitemap: {e}")
         
+    xml_body = "\n".join(xml_entries)
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{"\n".join(xml_entries)}
+{xml_body}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
@@ -218,9 +222,10 @@ async def get_categories_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error generating categories sitemap: {e}")
         
+    xml_body = "\n".join(xml_entries)
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{"\n".join(xml_entries)}
+{xml_body}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
@@ -250,9 +255,10 @@ async def get_hosts_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
     except Exception as e:
         logger.error(f"Error generating hosts sitemap: {e}")
         
+    xml_body = "\n".join(xml_entries)
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-{"\n".join(xml_entries)}
+{xml_body}
 </urlset>"""
     return Response(content=xml, media_type="application/xml")
 
