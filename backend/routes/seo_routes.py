@@ -97,8 +97,11 @@ async def get_properties_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
     xml_entries = []
     
     try:
-        # Fetch active (live) properties
-        properties = await db.properties.find({"status": "live"}).to_list(length=100000)
+        # Fetch active (live) properties with projection to optimize database memory usage
+        properties = await db.properties.find(
+            {"status": "live"},
+            {"property_id": 1, "title": 1, "updated_at": 1}
+        ).to_list(length=100000)
         
         for prop in properties:
             prop_id = prop.get("property_id")
@@ -228,8 +231,11 @@ async def get_hosts_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
     now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
     try:
-        # Fetch hosts
-        hosts = await db.users.find({"role": "host"}).to_list(length=10000)
+        # Fetch hosts with projection to optimize memory
+        hosts = await db.users.find(
+            {"role": "host"},
+            {"user_id": 1, "full_name": 1}
+        ).to_list(length=10000)
         for host in hosts:
             host_id = host.get("user_id")
             full_name = host.get("full_name", "")
