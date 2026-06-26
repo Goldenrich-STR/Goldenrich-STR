@@ -108,10 +108,24 @@ class EmailService:
             "remarks": remarks,
             "reset_link": reset_link,
             "action_url": cta_url,
+            "cta_url": cta_url,
+            "button_url": cta_url,
+            "button_link": cta_url,
+            "link": cta_url,
+            "url": cta_url,
+            "redirect_url": cta_url,
+            "login_url": cta_url,
+            "dashboard_url": cta_url,
+            "property_url": data.get("property_url") or cta_url,
+            "booking_url": data.get("booking_url") or cta_url,
+            "invoice_url": data.get("invoice_url") or cta_url,
             "support_email": "support@x-space360.com",
             "subject": subject,
             "title": title,
         }
+        for key, value in data.items():
+            if isinstance(key, str) and key not in variables:
+                variables[key] = value
         title_case_aliases = {
             "Name": name,
             "Host_Name": data.get("host_name") or name,
@@ -140,6 +154,19 @@ class EmailService:
             "Remarks": remarks,
             "Reset_Link": reset_link,
             "Action_URL": cta_url,
+            "CTA_URL": cta_url,
+            "Cta_Url": cta_url,
+            "Button_URL": cta_url,
+            "Button_Link": cta_url,
+            "Link": cta_url,
+            "URL": cta_url,
+            "Url": cta_url,
+            "Redirect_URL": cta_url,
+            "Login_URL": cta_url,
+            "Dashboard_URL": cta_url,
+            "Property_URL": data.get("property_url") or cta_url,
+            "Booking_URL": data.get("booking_url") or cta_url,
+            "Invoice_URL": data.get("invoice_url") or cta_url,
             "Support_Email": "support@x-space360.com",
         }
         variables.update(title_case_aliases)
