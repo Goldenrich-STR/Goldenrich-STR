@@ -59,7 +59,7 @@ const EmployeeDashboard = () => {
   ] : [];
 
   return (
-    <div className="min-h-screen bg-sand-50">
+    <div className="min-h-screen bg-stone">
       {/* Header */}
       <header className="header-glass px-4 md:px-8 lg:px-12 py-4" data-testid="employee-header">
         <div className="w-full flex justify-between items-center">
@@ -67,7 +67,7 @@ const EmployeeDashboard = () => {
             className="flex items-center space-x-3 cursor-pointer group"
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
+            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
           </div>
           <div className="flex items-center space-x-6">
             <span className="text-charcoal-light">RM: {user?.full_name}</span>
@@ -91,7 +91,7 @@ const EmployeeDashboard = () => {
 
       <div className="w-full px-4 md:px-8 lg:px-12 py-8 mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-4xl font-extrabold text-charcoal" data-testid="dashboard-title">
+          <h2 className="text-4xl font-semibold tracking-tight text-charcoal" data-testid="dashboard-title">
             Employee (RM) Dashboard
           </h2>
         </div>
@@ -167,7 +167,7 @@ const EmployeeDashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <button
                       onClick={() => setActiveTab('verifications')}
-                      className="flex items-center space-x-3 p-4 bg-sand-50 rounded-lg hover:bg-sand-100 transition"
+                      className="flex items-center space-x-3 p-4 bg-stone rounded-lg hover:bg-gray-50 transition"
                       data-testid="action-review"
                     >
                       <FileCheck className="w-6 h-6 text-terracotta" />
@@ -175,7 +175,7 @@ const EmployeeDashboard = () => {
                     </button>
                     <button
                       onClick={() => setActiveTab('brokers')}
-                      className="flex items-center space-x-3 p-4 bg-sand-50 rounded-lg hover:bg-sand-100 transition"
+                      className="flex items-center space-x-3 p-4 bg-stone rounded-lg hover:bg-gray-50 transition"
                       data-testid="action-brokers"
                     >
                       <Users className="w-6 h-6 text-sage" />
@@ -183,7 +183,7 @@ const EmployeeDashboard = () => {
                     </button>
                     <button
                       onClick={() => setActiveTab('reports')}
-                      className="flex items-center space-x-3 p-4 bg-sand-50 rounded-lg hover:bg-sand-100 transition"
+                      className="flex items-center space-x-3 p-4 bg-stone rounded-lg hover:bg-gray-50 transition"
                       data-testid="action-reports"
                     >
                       <FileText className="w-6 h-6 text-terracotta" />
@@ -338,7 +338,7 @@ const VerificationReviewSection = () => {
           <button
             type="button"
             onClick={() => setReviewNotice('')}
-            className="text-green-700/70 hover:text-green-900 font-black"
+            className="text-green-700/70 hover:text-green-900 font-bold tracking-tight"
             aria-label="Dismiss notice"
           >
             ×
@@ -440,7 +440,7 @@ const VerificationReviewSection = () => {
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -450,7 +450,7 @@ const VerificationReviewSection = () => {
               <button 
                 onClick={() => setCurrentPage(p => Math.min(Math.ceil(verifications.length / itemsPerPage), p + 1))}
                 disabled={currentPage === Math.ceil(verifications.length / itemsPerPage)}
-                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -465,7 +465,7 @@ const VerificationReviewSection = () => {
       )}
 
       {/* Verification History Section */}
-      <div className="mt-12 pt-8 border-t border-sand-200">
+      <div className="mt-12 pt-8 border-t border-gray-100">
         <div className="dashboard-card mb-6">
           <h3 className="text-2xl font-bold text-charcoal mb-2">Reviewed & Resolved Verifications</h3>
           <p className="text-charcoal-light">History of all verification reports approved or rejected</p>
@@ -478,14 +478,14 @@ const VerificationReviewSection = () => {
         ) : historyVerifications.length > 0 ? (
           <div className="space-y-4" data-testid="verification-history-list">
             {historyVerifications.map((verification) => (
-              <div key={verification.verification_id} className="dashboard-card bg-sand-50/50 border border-sand-200" data-testid={`history-${verification.verification_id}`}>
+              <div key={verification.verification_id} className="dashboard-card bg-stone/50 border border-gray-100" data-testid={`history-${verification.verification_id}`}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4 flex-1">
                     {verification.property_details && (
                       <img
                         src={getImageUrl(verification.property_details.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                         alt={verification.property_details.title}
-                        className="w-20 h-20 rounded-lg object-cover border border-sand-200"
+                        className="w-20 h-20 rounded-lg object-cover border border-gray-100"
                       />
                     )}
                     <div className="flex-1">
@@ -493,7 +493,7 @@ const VerificationReviewSection = () => {
                         <h4 className="font-bold text-charcoal text-base">
                           {verification.property_details?.title || 'Property'}
                         </h4>
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold tracking-tight uppercase tracking-widest ${
                           verification.status === 'approved' || verification.rm_approved === true ? 'bg-green-100 text-green-800' :
                           verification.status === 'rejected' || verification.rm_approved === false ? 'bg-red-100 text-red-800' :
                           'bg-yellow-100 text-yellow-800'
@@ -531,7 +531,7 @@ const VerificationReviewSection = () => {
                     </button>
                     <button
                       onClick={() => handleExportReport(verification.verification_id)}
-                      className="flex items-center space-x-2 px-3 py-1.5 bg-sand-100 text-charcoal-light hover:text-charcoal rounded-lg transition font-bold text-xs"
+                      className="flex items-center space-x-2 px-3 py-1.5 bg-gray-50 text-charcoal-light hover:text-charcoal rounded-lg transition font-bold text-xs"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>Export</span>
@@ -542,7 +542,7 @@ const VerificationReviewSection = () => {
             ))}
           </div>
         ) : (
-          <div className="dashboard-card text-center py-8 bg-sand-50/50">
+          <div className="dashboard-card text-center py-8 bg-stone/50">
             <p className="text-charcoal-light">No verification history found</p>
           </div>
         )}
@@ -554,7 +554,7 @@ const VerificationReviewSection = () => {
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-premium animate-slide-up max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h3 className="text-2xl font-black text-charcoal">Verification Report</h3>
+                <h3 className="text-2xl font-bold tracking-tight text-charcoal">Verification Report</h3>
                 <p className="text-charcoal-light">
                   {selectedVerification.property_details?.title} | {selectedVerification.property_details?.city}
                 </p>
@@ -562,7 +562,7 @@ const VerificationReviewSection = () => {
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => handleExportReport(selectedVerification.verification_id)}
-                  className="flex items-center space-x-2 px-3 py-2 bg-sand-100 text-charcoal-light hover:text-terracotta rounded-xl transition font-bold text-xs"
+                  className="flex items-center space-x-2 px-3 py-2 bg-gray-50 text-charcoal-light hover:text-terracotta rounded-xl transition font-bold text-xs"
                   title="Export Professional Report"
                 >
                   <Download className="w-4 h-4" />
@@ -570,7 +570,7 @@ const VerificationReviewSection = () => {
                 </button>
                 <button 
                   onClick={() => setSelectedVerification(null)}
-                  className="p-2 hover:bg-sand-100 rounded-full transition"
+                  className="p-2 hover:bg-gray-50 rounded-full transition"
                 >
                   <XCircle className="w-6 h-6 text-charcoal-muted" />
                 </button>
@@ -580,8 +580,8 @@ const VerificationReviewSection = () => {
             <div className="space-y-8">
               {/* Info grid */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 bg-sand-50 rounded-2xl">
-                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Property Details</p>
+                <div className="p-4 bg-stone rounded-2xl">
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Property Details</p>
                   <p className="font-mono text-xs font-bold text-charcoal break-all" title={selectedVerification.property_id || ''}>
                     ID: {selectedVerification.property_id || 'N/A'}
                   </p>
@@ -589,15 +589,15 @@ const VerificationReviewSection = () => {
                     Host: {selectedVerification.owner_id || 'N/A'}
                   </p>
                 </div>
-                <div className="p-4 bg-sand-50 rounded-2xl">
-                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Assigned Broker</p>
+                <div className="p-4 bg-stone rounded-2xl">
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Assigned Broker</p>
                   <p className="font-bold text-charcoal">{selectedVerification.broker_details?.full_name || 'N/A'}</p>
                   <p className="font-mono text-[10px] text-charcoal-light mt-1 break-all" title={selectedVerification.broker_id || ''}>
                     ID: {selectedVerification.broker_id || 'N/A'}
                   </p>
                 </div>
-                <div className="p-4 bg-sand-50 rounded-2xl">
-                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Visit Date</p>
+                <div className="p-4 bg-stone rounded-2xl">
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Visit Date</p>
                   <p className="font-bold text-charcoal">
                     {new Date(selectedVerification.completed_at || selectedVerification.created_at).toLocaleDateString('en-IN', {
                       day: 'numeric', month: 'long', year: 'numeric'
@@ -608,8 +608,8 @@ const VerificationReviewSection = () => {
 
               {/* Property Details Info Section */}
               {selectedVerification.property_details && (
-                <div className="p-6 bg-sand-50/50 rounded-2xl border border-sand-200/60 space-y-4">
-                  <h4 className="text-xs font-black text-charcoal uppercase tracking-widest border-b border-sand-200 pb-2">
+                <div className="p-6 bg-stone/50 rounded-2xl border border-gray-100/60 space-y-4">
+                  <h4 className="text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest border-b border-gray-100 pb-2">
                     Property Specifications & Listing Info
                   </h4>
                   
@@ -624,7 +624,7 @@ const VerificationReviewSection = () => {
                               key={i}
                               src={getImageUrl(pureUrl)}
                               alt={`Property View ${i + 1}`}
-                              className="w-48 h-32 object-cover rounded-2xl border border-sand-200/80 shadow-sm hover:shadow-md hover:scale-[1.02] transition-all duration-300 cursor-pointer shrink-0"
+                              className="w-48 h-32 object-cover rounded-2xl border border-gray-100/80 shadow-sm hover:shadow-subtle hover:scale-[1.02] transition-all duration-300 cursor-pointer shrink-0"
                               onClick={() => window.open(getImageUrl(pureUrl), '_blank')}
                             />
                           );
@@ -635,31 +635,31 @@ const VerificationReviewSection = () => {
                   
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                     <div>
-                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Property Type</p>
+                      <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Property Type</p>
                       <p className="font-bold text-charcoal">
                         {formatPropertyTypeLabel(selectedVerification.property_details.property_type) || 'N/A'}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Category</p>
+                      <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Category</p>
                       <p className="font-bold text-charcoal">
                         {formatCategoryLabel(selectedVerification.property_details.category) || 'N/A'}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">BHK / Config</p>
+                      <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">BHK / Config</p>
                       <p className="font-bold text-charcoal">
                         {formatDisplayLabel(selectedVerification.property_details.bhk_type) || 'N/A'}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Area (Sqft)</p>
+                      <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Area (Sqft)</p>
                       <p className="font-bold text-charcoal">
                         {selectedVerification.property_details.area_sqft ? `${selectedVerification.property_details.area_sqft} sqft` : 'N/A'}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Price / Pricing Cycle</p>
+                      <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Price / Pricing Cycle</p>
                       <p className="font-bold text-terracotta">
                         {selectedVerification.property_details.price_per_night !== undefined 
                           ? `₹${selectedVerification.property_details.price_per_night} / ${selectedVerification.property_details.pricing_cycle || 'night'}` 
@@ -667,7 +667,7 @@ const VerificationReviewSection = () => {
                       </p>
                     </div>
                     <div>
-                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Location Status</p>
+                      <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Location Status</p>
                       <p className="font-bold text-charcoal truncate" title={`${selectedVerification.property_details.address}, ${selectedVerification.property_details.city}`}>
                         {selectedVerification.property_details.city || 'N/A'}
                       </p>
@@ -675,19 +675,19 @@ const VerificationReviewSection = () => {
                     {selectedVerification.property_details.category === 'event_venue' && (
                       <>
                         <div>
-                          <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Veg Plate Price</p>
+                          <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Veg Plate Price</p>
                           <p className="font-bold text-charcoal">
                             {selectedVerification.property_details.veg_price ? `₹${selectedVerification.property_details.veg_price}` : 'N/A'}
                           </p>
                         </div>
                         <div>
-                          <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Non-Veg Plate Price</p>
+                          <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Non-Veg Plate Price</p>
                           <p className="font-bold text-charcoal">
                             {selectedVerification.property_details.non_veg_price ? `₹${selectedVerification.property_details.non_veg_price}` : 'N/A'}
                           </p>
                         </div>
                         <div>
-                          <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Max Guest Size</p>
+                          <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Max Guest Size</p>
                           <p className="font-bold text-charcoal">
                             {selectedVerification.property_details.guest_size || 'N/A'}
                           </p>
@@ -699,7 +699,7 @@ const VerificationReviewSection = () => {
                   {/* Detailed Description */}
                   {selectedVerification.property_details.description && (
                     <div className="pt-2">
-                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider mb-1">Description</p>
+                      <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider mb-1">Description</p>
                       <p className="text-xs text-charcoal-light leading-relaxed">
                         {formatReadableText(selectedVerification.property_details.description)}
                       </p>
@@ -709,7 +709,7 @@ const VerificationReviewSection = () => {
                   {/* Full Address */}
                   {selectedVerification.property_details.address && (
                     <div className="pt-2">
-                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider mb-1">Full Address</p>
+                      <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider mb-1">Full Address</p>
                       <p className="text-xs text-charcoal-light leading-relaxed">
                         {selectedVerification.property_details.address}, {selectedVerification.property_details.city}, {selectedVerification.property_details.state} - {selectedVerification.property_details.pin_code}
                       </p>
@@ -719,10 +719,10 @@ const VerificationReviewSection = () => {
                   {/* Amenities */}
                   {selectedVerification.property_details.amenities && selectedVerification.property_details.amenities.length > 0 && (
                     <div className="pt-2">
-                      <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider mb-2">Amenities</p>
+                      <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider mb-2">Amenities</p>
                       <div className="flex flex-wrap gap-1.5">
                         {selectedVerification.property_details.amenities.map((amenity, i) => (
-                          <span key={i} className="px-2 py-1 bg-white border border-sand-200 rounded-lg text-[10px] font-semibold text-charcoal capitalize">
+                          <span key={i} className="px-2 py-1 bg-white border border-gray-100 rounded-lg text-[10px] font-semibold text-charcoal capitalize">
                             {formatDisplayLabel(amenity)}
                           </span>
                         ))}
@@ -734,21 +734,21 @@ const VerificationReviewSection = () => {
 
               {/* Checklist */}
               <div>
-                <h4 className="text-sm font-black text-charcoal uppercase tracking-widest mb-4">Verification Checklist Audit</h4>
+                <h4 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest mb-4">Verification Checklist Audit</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Object.entries(selectedVerification.checklist || {}).map(([key, value]) => (
-                    <div key={key} className="flex flex-col p-4 bg-white border border-sand-200 rounded-2xl hover:shadow-md transition">
+                    <div key={key} className="flex flex-col p-4 bg-white border border-gray-100 rounded-2xl hover:shadow-subtle transition">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-sm font-bold text-charcoal">{formatDisplayLabel(key)}</span>
                         {value ? (
                           <div className="flex items-center space-x-1 text-green-600">
                             <CheckCircle className="w-3 h-3" />
-                            <span className="text-[8px] font-black uppercase">Broker Verified</span>
+                            <span className="text-[8px] font-bold tracking-tight uppercase">Broker Verified</span>
                           </div>
                         ) : (
                           <div className="flex items-center space-x-1 text-red-600">
                             <XCircle className="w-3 h-3" />
-                            <span className="text-[8px] font-black uppercase">Broker Failed</span>
+                            <span className="text-[8px] font-bold tracking-tight uppercase">Broker Failed</span>
                           </div>
                         )}
                       </div>
@@ -758,7 +758,7 @@ const VerificationReviewSection = () => {
                           onClick={() => {
                             setReviewNotice(`${formatDisplayLabel(key)} marked as approved for this review.`);
                           }}
-                          className="flex-1 py-2 bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-green-100 transition flex items-center justify-center space-x-1"
+                          className="flex-1 py-2 bg-green-50 text-green-700 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded-xl hover:bg-green-100 transition flex items-center justify-center space-x-1"
                         >
                           <CheckCircle className="w-3 h-3" />
                           <span>Approve</span>
@@ -768,7 +768,7 @@ const VerificationReviewSection = () => {
                             setRejectReason(`Rejected Point: ${formatDisplayLabel(key).toUpperCase()} - `);
                             setShowRejectReasonModal(true);
                           }}
-                          className="flex-1 py-2 bg-red-50 text-red-700 text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-red-100 transition flex items-center justify-center space-x-1"
+                          className="flex-1 py-2 bg-red-50 text-red-700 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded-xl hover:bg-red-100 transition flex items-center justify-center space-x-1"
                         >
                           <XCircle className="w-3 h-3" />
                           <span>Reject</span>
@@ -782,7 +782,7 @@ const VerificationReviewSection = () => {
               {/* Broker Remarks */}
               {selectedVerification.broker_remarks && (
                 <div className="p-6 bg-terracotta/5 rounded-2xl border border-terracotta/10">
-                  <h4 className="text-sm font-black text-terracotta uppercase tracking-widest mb-2">Broker Remarks</h4>
+                  <h4 className="text-sm font-bold tracking-tight text-terracotta uppercase tracking-widest mb-2">Broker Remarks</h4>
                   <p className="text-charcoal leading-relaxed italic">"{selectedVerification.broker_remarks}"</p>
                 </div>
               )}
@@ -790,7 +790,7 @@ const VerificationReviewSection = () => {
               {/* Geo-tagged Photos */}
               {selectedVerification.geo_tagged_photos && selectedVerification.geo_tagged_photos.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-black text-charcoal uppercase tracking-widest mb-4">
+                  <h4 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest mb-4">
                     Geo-tagged Evidence ({selectedVerification.geo_tagged_photos.length})
                   </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -798,7 +798,7 @@ const VerificationReviewSection = () => {
                       <div 
                         key={idx} 
                         onClick={() => window.open(getImageUrl(photo.photo_url || photo.url), '_blank')}
-                        className="group relative aspect-square rounded-xl overflow-hidden bg-sand-100 cursor-pointer hover:ring-4 hover:ring-terracotta/20 transition"
+                        className="group relative aspect-square rounded-xl overflow-hidden bg-gray-50 cursor-pointer hover:ring-4 hover:ring-terracotta/20 transition"
                       >
                         <img 
                           src={getImageUrl(photo.photo_url || photo.url)} 
@@ -818,7 +818,7 @@ const VerificationReviewSection = () => {
               {/* Video Link */}
               {selectedVerification.video_url && (
                 <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                  <h4 className="text-sm font-black text-blue-800 uppercase tracking-widest mb-2">Property Video Tour</h4>
+                  <h4 className="text-sm font-bold tracking-tight text-blue-800 uppercase tracking-widest mb-2">Property Video Tour</h4>
                   <a 
                     href={selectedVerification.video_url} 
                     target="_blank" 
@@ -833,10 +833,10 @@ const VerificationReviewSection = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex space-x-4 mt-8 pt-8 border-t border-sand-200">
+            <div className="flex space-x-4 mt-8 pt-8 border-t border-gray-100">
               <button 
                 onClick={() => setShowRejectReasonModal(true)}
-                className="flex-1 py-4 bg-red-50 text-red-600 font-black uppercase tracking-widest rounded-2xl hover:bg-red-100 transition flex items-center justify-center space-x-2"
+                className="flex-1 py-4 bg-red-50 text-red-600 font-bold tracking-tight uppercase tracking-widest rounded-2xl hover:bg-red-100 transition flex items-center justify-center space-x-2"
               >
                 <XCircle className="w-5 h-5" />
                 <span>Reject Report</span>
@@ -847,7 +847,7 @@ const VerificationReviewSection = () => {
                   setApproveError('');
                   setShowApproveModal(true);
                 }}
-                className="flex-1 py-4 bg-green-600 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-green-700 shadow-lg shadow-green-200 transition flex items-center justify-center space-x-2"
+                className="flex-1 py-4 bg-green-600 text-white font-bold tracking-tight uppercase tracking-widest rounded-2xl hover:bg-green-700 shadow-premium shadow-green-200 transition flex items-center justify-center space-x-2"
               >
                 <CheckCircle className="w-5 h-5" />
                 <span>Approve Report</span>
@@ -860,19 +860,19 @@ const VerificationReviewSection = () => {
       {/* Custom Approval Remarks Modal */}
       {showApproveModal && (
         <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[110] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-elevated animate-scale-in">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
-              <h3 className="text-2xl font-black text-charcoal">Approve Report</h3>
+              <h3 className="text-2xl font-bold tracking-tight text-charcoal">Approve Report</h3>
               <p className="text-charcoal-light text-sm mt-1">
                 Add optional RM remarks before forwarding this verification to admin.
               </p>
             </div>
 
             <textarea
-              className="w-full border-2 border-sand-200 rounded-2xl p-4 focus:border-green-500 outline-none transition min-h-[120px] text-charcoal font-medium"
+              className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-green-500 outline-none transition min-h-[120px] text-charcoal font-medium"
               placeholder="Add remarks, if applicable..."
               value={approveRemarks}
               onChange={(e) => setApproveRemarks(e.target.value)}
@@ -901,7 +901,7 @@ const VerificationReviewSection = () => {
                 type="button"
                 onClick={handleApprove}
                 disabled={approving}
-                className="flex-1 py-4 bg-green-600 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-green-700 shadow-lg shadow-green-200 transition disabled:opacity-60"
+                className="flex-1 py-4 bg-green-600 text-white font-bold tracking-tight uppercase tracking-widest rounded-2xl hover:bg-green-700 shadow-premium shadow-green-200 transition disabled:opacity-60"
               >
                 {approving ? 'Approving...' : 'Confirm Approve'}
               </button>
@@ -913,17 +913,17 @@ const VerificationReviewSection = () => {
       {/* Custom Rejection Reason Modal */}
       {showRejectReasonModal && (
         <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[110] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-scale-in">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-elevated animate-scale-in">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertCircle className="w-8 h-8 text-red-600" />
               </div>
-              <h3 className="text-2xl font-black text-charcoal">Rejection Reason</h3>
+              <h3 className="text-2xl font-bold tracking-tight text-charcoal">Rejection Reason</h3>
               <p className="text-charcoal-light text-sm mt-1">Please provide a detailed reason for rejecting this verification report.</p>
             </div>
             
             <textarea
-              className="w-full border-2 border-sand-200 rounded-2xl p-4 focus:border-red-500 outline-none transition min-h-[120px] text-charcoal font-medium"
+              className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-red-500 outline-none transition min-h-[120px] text-charcoal font-medium"
               placeholder="e.g. Geo-tagged photos do not match property location..."
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
@@ -941,7 +941,7 @@ const VerificationReviewSection = () => {
               </button>
               <button 
                 onClick={handleReject}
-                className="flex-1 py-4 bg-red-600 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-red-700 shadow-lg shadow-red-200 transition"
+                className="flex-1 py-4 bg-red-600 text-white font-bold tracking-tight uppercase tracking-widest rounded-2xl hover:bg-red-700 shadow-premium shadow-red-200 transition"
               >
                 Confirm Reject
               </button>
@@ -1037,7 +1037,7 @@ const BrokersSection = () => {
                     <div className="grid grid-cols-3 gap-2 mt-3">
                       <div 
                         onClick={() => handleShowOwners(broker)}
-                        className="text-center p-2 bg-sand-50 rounded hover:bg-sand-100 hover:shadow-sm cursor-pointer transition-all duration-300 border border-transparent hover:border-terracotta/20"
+                        className="text-center p-2 bg-stone rounded hover:bg-gray-50 hover:shadow-sm cursor-pointer transition-all duration-300 border border-transparent hover:border-terracotta/20"
                         title="Click to view assigned Owners"
                       >
                         <p className="text-lg font-bold text-terracotta">{broker.stats.owners}</p>
@@ -1045,13 +1045,13 @@ const BrokersSection = () => {
                       </div>
                       <div 
                         onClick={() => handleShowProperties(broker)}
-                        className="text-center p-2 bg-sand-50 rounded hover:bg-sand-100 hover:shadow-sm cursor-pointer transition-all duration-300 border border-transparent hover:border-sage/20"
+                        className="text-center p-2 bg-stone rounded hover:bg-gray-50 hover:shadow-sm cursor-pointer transition-all duration-300 border border-transparent hover:border-sage/20"
                         title="Click to view Broker's Property Portfolio"
                       >
                         <p className="text-lg font-bold text-sage">{broker.stats.properties}</p>
                         <p className="text-xs text-charcoal-light hover:text-sage transition-colors">Properties</p>
                       </div>
-                      <div className="text-center p-2 bg-sand-50 rounded">
+                      <div className="text-center p-2 bg-stone rounded">
                         <p className="text-lg font-bold text-terracotta">{broker.stats.pending_verifications}</p>
                         <p className="text-xs text-charcoal-light">Pending</p>
                       </div>
@@ -1075,7 +1075,7 @@ const BrokersSection = () => {
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-premium animate-slide-up max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h3 className="text-2xl font-black text-charcoal">Assigned Owners</h3>
+                <h3 className="text-2xl font-bold tracking-tight text-charcoal">Assigned Owners</h3>
                 <p className="text-charcoal-light text-xs font-bold uppercase tracking-widest mt-1">
                   Portfolio of Broker: {selectedBrokerForOwners.full_name} ({selectedBrokerForOwners.lg_code || 'N/A'})
                 </p>
@@ -1085,7 +1085,7 @@ const BrokersSection = () => {
                   setSelectedBrokerForOwners(null);
                   setBrokerOwners([]);
                 }}
-                className="p-2 hover:bg-sand-100 rounded-full transition"
+                className="p-2 hover:bg-gray-50 rounded-full transition"
               >
                 <XCircle className="w-6 h-6 text-charcoal-muted" />
               </button>
@@ -1098,17 +1098,17 @@ const BrokersSection = () => {
             ) : brokerOwners.length > 0 ? (
               <div className="space-y-4">
                 {brokerOwners.map((owner) => (
-                  <div key={owner.user_id} className="p-6 bg-sand-50 rounded-2xl border border-sand-200 hover:border-terracotta transition-all duration-300">
+                  <div key={owner.user_id} className="p-6 bg-stone rounded-2xl border border-gray-100 hover:border-terracotta transition-all duration-300">
                     <div className="flex items-start space-x-4">
                       <img
                         src={owner.profile_image || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e'}
                         alt={owner.full_name}
-                        className="w-16 h-16 rounded-2xl object-cover border border-sand-200 shadow-sm"
+                        className="w-16 h-16 rounded-2xl object-cover border border-gray-100 shadow-sm"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <h4 className="font-bold text-charcoal text-lg truncate">{owner.full_name}</h4>
-                          <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                          <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest ${
                             owner.kyc_status === 'approved' ? 'bg-green-100 text-green-800' :
                             owner.kyc_status === 'rejected' ? 'bg-red-100 text-red-800' :
                             'bg-yellow-100 text-yellow-800'
@@ -1119,14 +1119,14 @@ const BrokersSection = () => {
                         <p className="text-xs text-charcoal-light font-medium mt-1">{owner.email}</p>
                         <p className="text-xs text-charcoal-light font-medium">{owner.phone}</p>
                         
-                        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-sand-200">
+                        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
                           <div>
-                            <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">City / Location</p>
+                            <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">City / Location</p>
                             <p className="text-xs font-bold text-charcoal mt-0.5">{owner.city || 'Not Specified'}</p>
                           </div>
                           <div>
-                            <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Reg. Fee Payment</p>
-                            <span className={`inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded mt-0.5 ${
+                            <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Reg. Fee Payment</p>
+                            <span className={`inline-block text-[9px] font-bold tracking-tight uppercase tracking-wider px-2 py-0.5 rounded mt-0.5 ${
                               owner.registration_fee_paid ? 'bg-sage/20 text-sage-dark' : 'bg-red-50 text-red-600'
                             }`}>
                               {owner.registration_fee_paid ? 'PAID' : 'UNPAID'}
@@ -1145,7 +1145,7 @@ const BrokersSection = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 bg-sand-50 rounded-2xl border-2 border-dashed border-sand-200">
+              <div className="text-center py-12 bg-stone rounded-2xl border-2 border-dashed border-gray-100">
                 <Users className="w-12 h-12 text-charcoal-light mx-auto mb-3" />
                 <p className="text-charcoal-light font-bold">No Owners assigned to this broker yet.</p>
               </div>
@@ -1160,7 +1160,7 @@ const BrokersSection = () => {
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-premium animate-slide-up max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h3 className="text-2xl font-black text-charcoal">Property Portfolio</h3>
+                <h3 className="text-2xl font-bold tracking-tight text-charcoal">Property Portfolio</h3>
                 <p className="text-charcoal-light text-xs font-bold uppercase tracking-widest mt-1">
                   Properties of Broker: {selectedBrokerForProperties.full_name} ({selectedBrokerForProperties.lg_code || 'N/A'})
                 </p>
@@ -1170,7 +1170,7 @@ const BrokersSection = () => {
                   setSelectedBrokerForProperties(null);
                   setBrokerProperties([]);
                 }}
-                className="p-2 hover:bg-sand-100 rounded-full transition"
+                className="p-2 hover:bg-gray-50 rounded-full transition"
               >
                 <XCircle className="w-6 h-6 text-charcoal-muted" />
               </button>
@@ -1183,17 +1183,17 @@ const BrokersSection = () => {
             ) : brokerProperties.length > 0 ? (
               <div className="space-y-4">
                 {brokerProperties.map((property) => (
-                  <div key={property.property_id} className="p-6 bg-sand-50 rounded-2xl border border-sand-200 hover:border-sage transition-all duration-300">
+                  <div key={property.property_id} className="p-6 bg-stone rounded-2xl border border-gray-100 hover:border-sage transition-all duration-300">
                     <div className="flex items-start space-x-4">
                       <img
                         src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                         alt={property.title}
-                        className="w-24 h-24 rounded-2xl object-cover border border-sand-200 shadow-sm"
+                        className="w-24 h-24 rounded-2xl object-cover border border-gray-100 shadow-sm"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <h4 className="font-bold text-charcoal text-lg truncate">{property.title}</h4>
-                          <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                          <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest ${
                             property.status === 'live' ? 'bg-green-100 text-green-800' :
                             property.status === 'rejected' ? 'bg-red-100 text-red-800' :
                             property.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
@@ -1205,13 +1205,13 @@ const BrokersSection = () => {
                         <p className="text-xs text-charcoal-light font-medium mt-1">{property.city}, {property.state}</p>
                         <p className="text-xs text-charcoal-muted font-mono mt-1">Property ID: {property.property_id}</p>
                         
-                        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-sand-200">
+                        <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
                           <div>
-                            <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Category</p>
+                            <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Category</p>
                             <p className="text-xs font-bold text-charcoal mt-0.5">{formatCategoryLabel(property.category) || 'N/A'}</p>
                           </div>
                           <div>
-                            <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">BHK Type</p>
+                            <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">BHK Type</p>
                             <p className="text-xs font-bold text-charcoal mt-0.5">{formatDisplayLabel(property.bhk_type) || 'N/A'}</p>
                           </div>
                         </div>
@@ -1228,7 +1228,7 @@ const BrokersSection = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12 bg-sand-50 rounded-2xl border-2 border-dashed border-sand-200">
+              <div className="text-center py-12 bg-stone rounded-2xl border-2 border-dashed border-gray-100">
                 <Building2 className="w-12 h-12 text-charcoal-light mx-auto mb-3" />
                 <p className="text-charcoal-light font-bold">No properties assigned to this broker yet.</p>
               </div>
@@ -1336,7 +1336,7 @@ const ReportsSection = () => {
             {reportType === 'properties_not_booked' && reportData.properties && (
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {reportData.properties.map((property) => (
-                  <div key={property.property_id} className="p-4 bg-sand-50 rounded-lg">
+                  <div key={property.property_id} className="p-4 bg-stone rounded-lg">
                     <h5 className="font-semibold text-charcoal">{property.title}</h5>
                     <p className="text-sm text-charcoal-light">
                       {property.city} | {formatDisplayLabel(property.bhk_type)} | ₹{property.price_per_night}{
@@ -1357,7 +1357,7 @@ const ReportsSection = () => {
             {reportType === 'broker_portfolio_summary' && reportData.brokers && (
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {reportData.brokers.map((broker, idx) => (
-                  <div key={idx} className="p-4 bg-sand-50 rounded-lg grid grid-cols-4 gap-4">
+                  <div key={idx} className="p-4 bg-stone rounded-lg grid grid-cols-4 gap-4">
                     <div>
                       <p className="font-semibold text-charcoal">{broker.broker_name}</p>
                       <p className="text-xs text-charcoal-light">{broker.lg_code}</p>

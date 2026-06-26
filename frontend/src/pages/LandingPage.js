@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset } from 'lucide-react';
+import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2 } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
@@ -593,12 +593,12 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
 
   return (
     <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md flex items-center justify-center z-[99999] p-4 md:p-6 transition-all duration-300 animate-fade-in">
-      <div className="bg-white rounded-[2.5rem] max-w-5xl w-full max-h-[85vh] overflow-hidden shadow-2xl border border-sand-200 flex flex-col relative animate-scale-up">
+      <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[85vh] overflow-hidden shadow-elevated border border-gray-100 flex flex-col relative animate-scale-up">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-6 right-6 z-10 w-10 h-10 rounded-full bg-sand-100 hover:bg-terracotta hover:text-white flex items-center justify-center transition-all text-charcoal shadow-sm hover:scale-105 active:scale-95"
+          className="absolute top-6 right-6 z-10 w-10 h-10 rounded-full bg-gray-50 hover:bg-terracotta hover:text-white flex items-center justify-center transition-all text-charcoal shadow-sm hover:scale-[1.02] active:scale-95"
           title="Close modal"
         >
           <X className="w-5 h-5" />
@@ -607,10 +607,10 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
         <div className="overflow-y-auto p-6 md:p-10 custom-scrollbar w-full h-full flex flex-col">
           {/* Modal Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-terracotta/10 text-terracotta font-extrabold text-[10px] uppercase tracking-[0.2em] mb-4 animate-pulse">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-terracotta/10 text-terracotta font-semibold tracking-tight text-[10px] uppercase tracking-[0.2em] mb-4 animate-pulse">
             {t('modalJourney')}
           </span>
-          <h3 className="text-3xl md:text-5xl font-black text-charcoal tracking-tight mb-4">
+          <h3 className="text-3xl md:text-5xl font-bold tracking-tight text-charcoal tracking-tight mb-4">
             {t('modalTitle')}
           </h3>
           <p className="text-charcoal-light font-medium text-base md:text-lg leading-relaxed">
@@ -641,23 +641,23 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
                   className="flex flex-col items-center group focus:outline-none"
                 >
                   <div 
-                    className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-500 transform ${
+                    className={`w-16 h-16 rounded-full flex items-center justify-center shadow-premium transition-all duration-500 transform ${
                       isActive 
                         ? 'bg-terracotta text-white scale-110 ring-4 ring-terracotta/20 animate-pulse'
                         : isCompleted
                         ? 'bg-sage text-white'
-                        : 'bg-white border-2 border-sand-300 text-charcoal hover:border-terracotta/50'
+                        : 'bg-white border-2 border-gray-200 text-charcoal hover:border-terracotta/50'
                     }`}
                   >
                     <IconComponent className="w-6 h-6" />
                   </div>
-                  <span className={`text-[10px] font-black uppercase tracking-widest mt-3 transition-colors ${
-                    isActive ? 'text-terracotta font-black' : 'text-charcoal-muted group-hover:text-charcoal'
+                  <span className={`text-[10px] font-bold tracking-tight uppercase tracking-widest mt-3 transition-colors ${
+                    isActive ? 'text-terracotta font-bold tracking-tight' : 'text-charcoal-muted group-hover:text-charcoal'
                   }`}>
                     {t('step')} {step.id}
                   </span>
                   <span className={`text-[9px] font-bold mt-1 text-center hidden sm:inline-block max-w-[90px] truncate ${
-                    isActive ? 'text-terracotta font-black' : 'text-charcoal-muted/70'
+                    isActive ? 'text-terracotta font-bold tracking-tight' : 'text-charcoal-muted/70'
                   }`}>
                     {step.shortTitle}
                   </span>
@@ -668,17 +668,17 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
         </div>
 
         {/* Active Step Details Panel with dynamic transitions */}
-        <div className="bg-sand-50/70 border border-sand-200/80 rounded-[2rem] p-6 md:p-8 mb-8 grid md:grid-cols-12 gap-8 items-center min-h-[320px] transition-all duration-500 transform">
+        <div className="bg-stone/70 border border-gray-100/80 rounded-2xl p-6 md:p-8 mb-8 grid md:grid-cols-12 gap-8 items-center min-h-[320px] transition-all duration-500 transform">
           
           {/* Left Column: Descriptions */}
           <div className="md:col-span-7 space-y-4 animate-slide-up">
-            <span className="inline-block px-3 py-1 rounded-full bg-sage/10 text-sage font-extrabold text-[9px] uppercase tracking-widest">
+            <span className="inline-block px-3 py-1 rounded-full bg-sage/10 text-sage font-semibold tracking-tight text-[9px] uppercase tracking-widest">
               {t('activeStage').replace('{stage}', activeStep)}
             </span>
-            <h4 className="text-2xl md:text-3xl font-black text-charcoal tracking-tight transition-all duration-300">
+            <h4 className="text-2xl md:text-3xl font-bold tracking-tight text-charcoal tracking-tight transition-all duration-300">
               {currentStepData.heading}
             </h4>
-            <p className="text-sm font-extrabold text-terracotta italic font-serif">
+            <p className="text-sm font-semibold tracking-tight text-terracotta italic font-serif">
               {currentStepData.subtitle}
             </p>
             <p className="text-charcoal-light text-sm font-semibold leading-relaxed">
@@ -688,7 +688,7 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
             <div className="space-y-2 pt-2">
               {currentStepData.bullets.map((bullet, idx) => (
                 <div key={idx} className="flex items-start space-x-3 text-xs font-bold text-charcoal-muted">
-                  <span className="text-terracotta font-black mt-0.5">•</span>
+                  <span className="text-terracotta font-bold tracking-tight mt-0.5">•</span>
                   <span>{bullet}</span>
                 </div>
               ))}
@@ -697,26 +697,26 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
 
           {/* Right Column: Visual Dashboard Mockup Card */}
           <div className="md:col-span-5 flex justify-center animate-fade-in">
-            <div className="bg-white border border-sand-200/80 rounded-2xl p-6 shadow-md w-full max-w-[280px] transform hover:rotate-1 hover:scale-105 transition-all duration-300">
+            <div className="bg-white border border-gray-100/80 rounded-2xl p-6 shadow-subtle w-full max-w-[280px] transform hover:rotate-1 hover:scale-[1.02] transition-all duration-300">
               {activeStep === 1 && (
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3 border-b border-sand-100 pb-3">
-                    <div className="w-10 h-10 rounded-full bg-sage/20 flex items-center justify-center text-sage font-black">
+                    <div className="w-10 h-10 rounded-full bg-sage/20 flex items-center justify-center text-sage font-bold tracking-tight">
                       U
                     </div>
                     <div>
-                      <h6 className="text-xs font-black text-charcoal">{t('hostAccountSetup')}</h6>
+                      <h6 className="text-xs font-bold tracking-tight text-charcoal">{t('hostAccountSetup')}</h6>
                       <p className="text-[9px] text-sage font-bold uppercase tracking-wider">{t('awaitingVerification')}</p>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <div className="h-6 bg-sand-50 rounded border border-sand-100 flex items-center justify-between px-2.5">
+                    <div className="h-6 bg-stone rounded border border-sand-100 flex items-center justify-between px-2.5">
                       <span className="text-[9px] text-charcoal-muted font-bold">{t('aadhaarId')}</span>
-                      <span className="text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-black">{t('uploaded')}</span>
+                      <span className="text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold tracking-tight">{t('uploaded')}</span>
                     </div>
-                    <div className="h-6 bg-sand-50 rounded border border-sand-100 flex items-center justify-between px-2.5">
+                    <div className="h-6 bg-stone rounded border border-sand-100 flex items-center justify-between px-2.5">
                       <span className="text-[9px] text-charcoal-muted font-bold">{t('smsAuth')}</span>
-                      <span className="text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-black">{t('verified')}</span>
+                      <span className="text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-bold tracking-tight">{t('verified')}</span>
                     </div>
                   </div>
                 </div>
@@ -725,27 +725,27 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
               {activeStep === 2 && (
                 <div className="space-y-4">
                   <div className="flex justify-between items-center border-b border-sand-100 pb-3">
-                    <h6 className="text-xs font-black text-charcoal">{t('activePlans')}</h6>
-                    <span className="text-[8px] bg-terracotta/10 text-terracotta px-1.5 py-0.5 rounded-full font-black">{t('trialEnabled')}</span>
+                    <h6 className="text-xs font-bold tracking-tight text-charcoal">{t('activePlans')}</h6>
+                    <span className="text-[8px] bg-terracotta/10 text-terracotta px-1.5 py-0.5 rounded-full font-bold tracking-tight">{t('trialEnabled')}</span>
                   </div>
                   <div className="border border-terracotta bg-terracotta/5 rounded-xl p-3 text-center space-y-1">
-                    <p className="text-[9px] text-charcoal-muted font-black uppercase tracking-wider">{t('standardPlan')}</p>
-                    <p className="text-lg font-black text-terracotta">₹500 <span className="text-[10px] text-charcoal-muted font-medium">{t('threeMosFree')}</span></p>
-                    <div className="w-full bg-terracotta text-white py-1 rounded text-[8px] font-black uppercase tracking-widest mt-2">{t('selected')}</div>
+                    <p className="text-[9px] text-charcoal-muted font-bold tracking-tight uppercase tracking-wider">{t('standardPlan')}</p>
+                    <p className="text-lg font-bold tracking-tight text-terracotta">₹500 <span className="text-[10px] text-charcoal-muted font-medium">{t('threeMosFree')}</span></p>
+                    <div className="w-full bg-terracotta text-white py-1 rounded text-[8px] font-bold tracking-tight uppercase tracking-widest mt-2">{t('selected')}</div>
                   </div>
                 </div>
               )}
 
               {activeStep === 3 && (
                 <div className="space-y-4">
-                  <h6 className="text-xs font-black text-charcoal border-b border-sand-100 pb-3">{t('dynamicListingBuilder')}</h6>
+                  <h6 className="text-xs font-bold tracking-tight text-charcoal border-b border-sand-100 pb-3">{t('dynamicListingBuilder')}</h6>
                   <div className="space-y-2">
-                    <div className="h-3 bg-sand-100 rounded w-3/4"></div>
-                    <div className="h-3 bg-sand-100 rounded w-1/2"></div>
+                    <div className="h-3 bg-gray-50 rounded w-3/4"></div>
+                    <div className="h-3 bg-gray-50 rounded w-1/2"></div>
                     <div className="grid grid-cols-3 gap-2 pt-2">
-                      <div className="aspect-square bg-sand-100 rounded border border-sand-200 flex items-center justify-center text-[10px] text-charcoal-muted font-black">🏠</div>
-                      <div className="aspect-square bg-sand-100 rounded border border-sand-200 flex items-center justify-center text-[10px] text-charcoal-muted font-black">📍</div>
-                      <div className="aspect-square bg-sand-100 rounded border border-sand-200 flex items-center justify-center text-[10px] text-charcoal-muted font-black">📸</div>
+                      <div className="aspect-square bg-gray-50 rounded border border-gray-100 flex items-center justify-center text-[10px] text-charcoal-muted font-bold tracking-tight">🏠</div>
+                      <div className="aspect-square bg-gray-50 rounded border border-gray-100 flex items-center justify-center text-[10px] text-charcoal-muted font-bold tracking-tight">📍</div>
+                      <div className="aspect-square bg-gray-50 rounded border border-gray-100 flex items-center justify-center text-[10px] text-charcoal-muted font-bold tracking-tight">📸</div>
                     </div>
                   </div>
                 </div>
@@ -755,12 +755,12 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
                 <div className="space-y-4">
                   <div className="flex items-center space-x-2 border-b border-sand-100 pb-3">
                     <div className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-ping"></div>
-                    <h6 className="text-xs font-black text-charcoal">{t('rmInspectionScheduled')}</h6>
+                    <h6 className="text-xs font-bold tracking-tight text-charcoal">{t('rmInspectionScheduled')}</h6>
                   </div>
-                  <div className="bg-sand-50 rounded-xl p-3 border border-sand-100 text-center space-y-1">
-                    <p className="text-[9px] text-charcoal font-black">{t('rmInspectorName')}</p>
+                  <div className="bg-stone rounded-xl p-3 border border-sand-100 text-center space-y-1">
+                    <p className="text-[9px] text-charcoal font-bold tracking-tight">{t('rmInspectorName')}</p>
                     <p className="text-[8px] text-charcoal-muted font-bold">{t('coordSync')}</p>
-                    <div className="text-[8px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-black inline-block mt-2">{t('auditInProgress')}</div>
+                    <div className="text-[8px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded font-bold tracking-tight inline-block mt-2">{t('auditInProgress')}</div>
                   </div>
                 </div>
               )}
@@ -768,8 +768,8 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
               {activeStep === 5 && (
                 <div className="space-y-4">
                   <div className="flex justify-between items-center border-b border-sand-100 pb-3">
-                    <h6 className="text-xs font-black text-charcoal">{t('payoutSummary')}</h6>
-                    <span className="text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-black">{t('settled')}</span>
+                    <h6 className="text-xs font-bold tracking-tight text-charcoal">{t('payoutSummary')}</h6>
+                    <span className="text-[8px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold tracking-tight">{t('settled')}</span>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-[9px] font-bold">
@@ -780,7 +780,7 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
                       <span className="text-charcoal-muted">{t('gstRemittance')}</span>
                       <span className="text-charcoal">₹2,820</span>
                     </div>
-                    <div className="border-t border-dashed border-sand-200 pt-2 flex justify-between text-xs font-black text-sage">
+                    <div className="border-t border-dashed border-gray-100 pt-2 flex justify-between text-xs font-bold tracking-tight text-sage">
                       <span>{t('netPayout')}</span>
                       <span>₹15,680</span>
                     </div>
@@ -793,9 +793,9 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
         </div>
 
         {/* Interactive Guidelines Panel */}
-        <div className="grid md:grid-cols-2 gap-8 bg-sand-50 rounded-3xl p-6 md:p-8 mb-8 border border-sand-200">
+        <div className="grid md:grid-cols-2 gap-8 bg-stone rounded-3xl p-6 md:p-8 mb-8 border border-gray-100">
           <div>
-            <h4 className="font-black text-charcoal uppercase tracking-wider text-xs mb-4 flex items-center space-x-2">
+            <h4 className="font-bold tracking-tight text-charcoal uppercase tracking-wider text-xs mb-4 flex items-center space-x-2">
               <ClipboardList className="w-4 h-4 text-terracotta" />
               <span>{t('onboardingGuidelines')}</span>
             </h4>
@@ -815,7 +815,7 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
           </div>
 
           <div>
-            <h4 className="font-black text-charcoal uppercase tracking-wider text-xs mb-4 flex items-center space-x-2">
+            <h4 className="font-bold tracking-tight text-charcoal uppercase tracking-wider text-xs mb-4 flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-sage" />
               <span>{t('securePayments')}</span>
             </h4>
@@ -846,7 +846,7 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
               onClose();
               navigate(user ? '/dashboard' : '/register');
             }}
-            className="btn-premium px-12 py-4 text-base shadow-lg hover:scale-105 active:scale-95 transition-transform duration-300"
+            className="btn-premium px-12 py-4 text-base shadow-premium hover:scale-[1.02] active:scale-95 transition-transform duration-300"
           >
             {user ? t('goHostDashboard') : t('startHostingNow')}
           </button>
@@ -865,6 +865,25 @@ const SUGGESTED_DESTINATIONS = [
   { city: "North Goa", state: "Goa", desc: "Popular beach destination", icon: Waves },
   { city: "Nashik", state: "Maharashtra", desc: "Near you", icon: Compass },
   { city: "Karjat", state: "Maharashtra", desc: "A hidden gem", icon: Home }
+];
+
+const PREMIUM_COLLECTIONS = [
+  { id: 'villas-resorts', label: 'Villas & Resorts', image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=600', query: 'residential' },
+  { id: 'residential-stays', label: 'Residential Stays', image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=600', query: 'residential' },
+  { id: 'commercial-spaces', label: 'Commercial Spaces', image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=600', query: 'commercial' },
+  { id: 'wedding-venues', label: 'Wedding Venues', image: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=600', query: 'event_venue' },
+  { id: 'banquet-halls', label: 'Banquet Halls', image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600', query: 'event_venue' }
+];
+
+const STANDARD_FEATURES = [
+  { label: 'Personalised Celebrations', icon: PartyPopper },
+  { label: 'Caretaker Onsite', icon: UserCheck },
+  { label: 'In-house Chef', icon: ChefHat },
+  { label: 'Local Experiences', icon: Compass },
+  { label: 'Private Pool', icon: Waves },
+  { label: 'Butler Service', icon: ConciergeBell },
+  { label: 'Games & Recreation', icon: Gamepad2 },
+  { label: 'Green Open Spaces', icon: Trees }
 ];
 
 const LandingPage = () => {
@@ -1116,7 +1135,7 @@ const LandingPage = () => {
               <IconComponent className="w-6 h-6 text-terracotta" />
             </div>
             <div>
-              <h3 className="text-[22px] font-black text-charcoal tracking-tight uppercase leading-none mb-1.5">{title}</h3>
+              <h3 className="text-[22px] font-bold tracking-tight text-charcoal tracking-tight uppercase leading-none mb-1.5">{title}</h3>
               <p className="text-gray-500 text-[13px] font-medium">{subtitle}</p>
             </div>
           </div>
@@ -1139,7 +1158,7 @@ const LandingPage = () => {
               <div 
                 key={item.property_id || index} 
                 onClick={() => navigate(`/property/${item.property_id}`)}
-                className="bg-white rounded-[2rem] p-4 cursor-pointer hover:-translate-y-2 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 min-w-[300px] md:min-w-[340px] snap-center flex flex-col group/card"
+                className="bg-white rounded-2xl p-4 cursor-pointer hover:-translate-y-1 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 min-w-[300px] md:min-w-[340px] snap-center flex flex-col group/card"
               >
                 <div className="relative h-[220px] rounded-2xl overflow-hidden mb-5">
                   <img 
@@ -1157,13 +1176,13 @@ const LandingPage = () => {
                   <div className="absolute top-4 right-4 flex space-x-2 z-20">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(item); }}
-                      className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-110 transition cursor-pointer"
+                      className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.03] transition cursor-pointer"
                     >
                       <Share2 className="w-4 h-4 text-gray-600 hover:text-green-600" />
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                      className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-110 transition cursor-pointer"
+                      className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.03] transition cursor-pointer"
                     >
                       <Heart className={`w-4 h-4 ${wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-gray-600 hover:text-terracotta'}`} />
                     </button>
@@ -1186,10 +1205,10 @@ const LandingPage = () => {
                   
                   <div className="mt-auto border-t border-gray-100 pt-4 flex justify-between items-center">
                     <div>
-                      <p className="text-terracotta font-black text-xl">₹ {(item.price || item.price_per_night || 0).toLocaleString('en-IN')}</p>
+                      <p className="text-terracotta font-bold tracking-tight text-xl">₹ {(item.price || item.price_per_night || 0).toLocaleString('en-IN')}</p>
                       <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest mt-0.5">PER NIGHT</p>
                     </div>
-                    <div className="w-10 h-10 rounded-full bg-sand-50 border border-sand-200 flex items-center justify-center group-hover/card:bg-terracotta group-hover/card:border-terracotta transition-all duration-300 shadow-sm">
+                    <div className="w-10 h-10 rounded-full bg-stone border border-gray-100 flex items-center justify-center group-hover/card:bg-terracotta group-hover/card:border-terracotta transition-all duration-300 shadow-sm">
                       <Search className="w-4 h-4 text-charcoal group-hover/card:text-white transition-colors" />
                     </div>
                   </div>
@@ -1200,7 +1219,7 @@ const LandingPage = () => {
             {/* View All Card */}
             <div 
               onClick={() => navigate(`/guest/browse?category=${categoryKey}`)}
-              className="min-w-[200px] md:min-w-[240px] border border-dashed border-terracotta/30 rounded-[2rem] flex flex-col items-center justify-center cursor-pointer hover:bg-terracotta/5 hover:border-terracotta/50 transition-all duration-300 snap-center group/viewall"
+              className="min-w-[200px] md:min-w-[240px] border border-dashed border-terracotta/30 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-terracotta/5 hover:border-terracotta/50 transition-all duration-300 snap-center group/viewall"
             >
               <div className="w-14 h-14 rounded-full bg-terracotta/10 flex items-center justify-center mb-4 group-hover/viewall:scale-110 transition-transform">
                 <ArrowRight className="w-5 h-5 text-terracotta" />
@@ -1221,13 +1240,13 @@ const LandingPage = () => {
       <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-white px-6 md:px-12 lg:px-20 h-20">
         {/* Left Logo */}
         <div className="flex items-center">
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight cursor-pointer drop-shadow-md text-white hover:text-white/95 transition" onClick={() => navigate('/')}>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight tracking-tight cursor-pointer drop-shadow-subtle text-white hover:text-white/95 transition" onClick={() => navigate('/')}>
             X-space360<span className="text-terracotta">.in</span>
           </h1>
         </div>
 
         {/* Center Pill Links — Glass Transparent style */}
-        <div className="hidden md:flex h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-white/95 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-lg self-center">
+        <div className="hidden md:flex h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-white/95 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-premium self-center">
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
@@ -1262,13 +1281,13 @@ const LandingPage = () => {
             <>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="hover:text-terracotta transition font-black text-terracotta"
+                className="hover:text-terracotta transition font-bold tracking-tight text-terracotta"
               >
                 Dashboard
               </button>
               <button
                 onClick={handleSignOut}
-                className="bg-terracotta hover:bg-terracotta-hover text-white px-4 py-1.5 rounded-full transition shadow-md"
+                className="bg-terracotta hover:bg-terracotta-hover text-white px-4 py-1.5 rounded-full transition shadow-subtle"
               >
                 Sign Out
               </button>
@@ -1283,7 +1302,7 @@ const LandingPage = () => {
               </button>
               <button
                 onClick={() => navigate('/register')}
-                className="bg-terracotta hover:bg-terracotta-hover text-white px-4 py-1.5 rounded-full transition shadow-md"
+                className="bg-terracotta hover:bg-terracotta-hover text-white px-4 py-1.5 rounded-full transition shadow-subtle"
               >
                 Get Started
               </button>
@@ -1302,7 +1321,7 @@ const LandingPage = () => {
         {/* Mobile Hamburger Icon */}
         <div className="md:hidden flex items-center">
           <button onClick={() => setIsMobileMenuOpen(true)} className="text-white hover:text-terracotta transition p-2">
-            <Menu className="w-8 h-8 drop-shadow-md" />
+            <Menu className="w-8 h-8 drop-shadow-subtle" />
           </button>
         </div>
       </nav>
@@ -1311,7 +1330,7 @@ const LandingPage = () => {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-white md:hidden">
           <div className="flex justify-between items-center mb-12">
-            <h1 className="text-2xl font-black tracking-tight cursor-pointer text-white" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
+            <h1 className="text-2xl font-bold tracking-tight tracking-tight cursor-pointer text-white" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
               X-space360<span className="text-terracotta">.in</span>
             </h1>
             <button onClick={() => setIsMobileMenuOpen(false)} className="text-white hover:text-terracotta transition p-2 bg-white/10 rounded-full">
@@ -1375,7 +1394,7 @@ const LandingPage = () => {
                 </button>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); navigate('/register'); }}
-                  className="mt-8 bg-terracotta hover:bg-terracotta-hover text-white font-bold py-4 rounded-xl text-center shadow-lg transition"
+                  className="mt-8 bg-terracotta hover:bg-terracotta-hover text-white font-bold py-4 rounded-xl text-center shadow-premium transition"
                 >
                   Get Started
                 </button>
@@ -1406,7 +1425,7 @@ const LandingPage = () => {
         <div className="absolute inset-0 bg-black/50 z-20" />
 
         {/* ── Solid Bottom Divider Strip ── */}
-        <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#FDFCF8] border-t border-sand-200/40 z-20" />
+        <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#FDFCF8] border-t border-gray-100/40 z-20" />
 
         {/* ── Hero Content ── */}
         <div className="relative z-30 max-w-7xl mx-auto px-6 md:px-12 lg:px-20 h-full flex flex-col justify-center pt-24 pb-12 text-left">
@@ -1421,7 +1440,7 @@ const LandingPage = () => {
               </div>
 
               {/* Headline */}
-              <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] text-white drop-shadow-xl max-w-2xl">
+              <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] text-white drop-shadow-premium max-w-2xl">
                 Explore your place<br />
                 to stay
               </h2>
@@ -1434,7 +1453,7 @@ const LandingPage = () => {
                 )}
 
                 {/* Capsule Search Bar */}
-                <div className="flex flex-col md:flex-row items-center bg-white rounded-2xl md:rounded-full w-full shadow-2xl border border-gray-100 relative z-50">
+                <div className="flex flex-col md:flex-row items-center bg-white rounded-2xl md:rounded-full w-full shadow-elevated border border-gray-100 relative z-50">
                     
                     {/* Location */}
                     <div className="relative flex-1 w-full">
@@ -1444,7 +1463,7 @@ const LandingPage = () => {
                       >
                         <MapPin className="w-5 h-5 text-gray-400 mr-3" />
                         <div className="w-full text-left">
-                          <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">Where</p>
+                          <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">Where</p>
                           <input
                             id="landing-destination"
                             name="destination"
@@ -1464,8 +1483,8 @@ const LandingPage = () => {
 
                       {/* Airbnb-style Suggested Destinations Dropdown */}
                       {activeDropdown === 'location' && (
-                        <div className="absolute left-0 top-full mt-3 w-80 bg-white border border-sand-200 rounded-3xl shadow-2xl z-50 p-4 max-h-96 overflow-y-auto">
-                          <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-3 px-2">Suggested destinations</p>
+                        <div className="absolute left-0 top-full mt-3 w-80 bg-white border border-gray-100 rounded-3xl shadow-elevated z-50 p-4 max-h-96 overflow-y-auto">
+                          <p className="text-xs font-bold tracking-tight text-gray-400 uppercase tracking-wider mb-3 px-2">Suggested destinations</p>
                           <div className="space-y-1">
                             {SUGGESTED_DESTINATIONS.filter(dest => 
                               !locationQuery || 
@@ -1479,9 +1498,9 @@ const LandingPage = () => {
                                   setLocationQuery(dest.city);
                                   setActiveDropdown(null);
                                 }}
-                                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-sand-50 transition text-left"
+                                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-stone transition text-left"
                               >
-                                <div className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
                                   {dest.icon ? <dest.icon className="w-5 h-5 text-gray-500" /> : <MapPin className="w-5 h-5 text-gray-500" />}
                                 </div>
                                 <div>
@@ -1507,7 +1526,7 @@ const LandingPage = () => {
                     <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
                       <Calendar className="w-5 h-5 text-gray-400 mr-3" />
                       <div className="w-full text-left">
-                        <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">When</p>
+                        <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
                         <input
                           id="landing-check-in"
                           name="checkIn"
@@ -1528,7 +1547,7 @@ const LandingPage = () => {
                     <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
                       <Calendar className="w-5 h-5 text-gray-400 mr-3" />
                       <div className="w-full text-left">
-                        <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">When</p>
+                        <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
                         <input
                           id="landing-check-out"
                           name="checkOut"
@@ -1555,7 +1574,7 @@ const LandingPage = () => {
                       >
                         <User className="w-5 h-5 text-gray-400 mr-3" />
                         <div className="text-left">
-                          <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">Who</p>
+                          <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">Who</p>
                           <p className="text-charcoal font-bold text-sm mt-0.5 whitespace-nowrap">
                             {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
                           </p>
@@ -1563,7 +1582,7 @@ const LandingPage = () => {
                       </div>
                       
                       {activeDropdown === 'guests' && (
-                        <div className="absolute right-0 top-full mt-3 w-72 bg-white border border-sand-200 rounded-3xl shadow-2xl z-50 p-6 space-y-5">
+                        <div className="absolute right-0 top-full mt-3 w-72 bg-white border border-gray-100 rounded-3xl shadow-elevated z-50 p-6 space-y-5">
                           {/* Adults Row */}
                           <div className="flex items-center justify-between">
                             <div className="text-left">
@@ -1622,7 +1641,7 @@ const LandingPage = () => {
                     <div className="p-2 w-full md:w-auto">
                       <button
                         onClick={handleSearch}
-                        className="w-full md:w-auto bg-terracotta hover:bg-terracotta/90 text-white py-3 md:py-4 md:px-8 rounded-xl md:rounded-full transition-all duration-300 flex items-center justify-center shadow-md cursor-pointer"
+                        className="w-full md:w-auto bg-terracotta hover:bg-terracotta/90 text-white py-3 md:py-4 md:px-8 rounded-xl md:rounded-full transition-all duration-300 flex items-center justify-center shadow-subtle cursor-pointer"
                       >
                         <Search className="w-5 h-5 text-white" />
                       </button>
@@ -1675,11 +1694,11 @@ const LandingPage = () => {
                 onClick={() => navigate(`/guest/browse?category=${category}`)}
                 className="group flex flex-col items-center gap-2 md:gap-3 cursor-pointer w-28 md:w-auto"
               >
-                <div className={`w-14 h-14 md:w-20 md:h-20 rounded-full ${bg} flex items-center justify-center ring-4 ${ring} shadow-xl ${shadow} group-hover:scale-110 group-hover:shadow-2xl transition-all duration-300 active:scale-95`}>
+                <div className={`w-14 h-14 md:w-20 md:h-20 rounded-full ${bg} flex items-center justify-center ring-4 ${ring} shadow-premium ${shadow} group-hover:scale-[1.03] group-hover:shadow-elevated transition-all duration-300 active:scale-95`}>
                   <Icon className="w-6 h-6 md:w-9 md:h-9 text-white" />
                 </div>
                 <div className="text-center px-1">
-                  <p className="text-charcoal font-black text-[11px] md:text-[14px] tracking-tight leading-snug">{label}</p>
+                  <p className="text-charcoal font-bold tracking-tight text-[11px] md:text-[14px] tracking-tight leading-snug">{label}</p>
                   <p className="text-gray-400 text-[9px] md:text-[11px] font-medium mt-0.5 leading-tight">{desc}</p>
                 </div>
               </button>
@@ -1691,6 +1710,56 @@ const LandingPage = () => {
       {/* Content Section */}
       <div className="w-full bg-[#FDFCF8] relative z-20 pb-32 pt-14">
         <div className="max-w-7xl mx-auto px-8">
+          {/* Choose a Collection Slider */}
+          <div className="mb-24 relative group">
+            <div className="flex items-center justify-between mb-8 px-4 md:px-0">
+              <h3 className="text-3xl md:text-4xl font-bold text-charcoal tracking-tight">Discover Our Collections</h3>
+              
+              {/* Navigation Arrows */}
+              <div className="hidden md:flex space-x-3">
+                <button onClick={() => scrollSlider('left', 'slider-collections')} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button onClick={() => scrollSlider('right', 'slider-collections')} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm">
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div 
+              id="slider-collections"
+              className="flex overflow-x-auto pb-8 gap-6 no-scrollbar snap-x scroll-smooth px-4 md:px-0"
+            >
+              {PREMIUM_COLLECTIONS.map((collection) => (
+                <button
+                  key={collection.id}
+                  onClick={() => navigate(`/guest/browse?category=${collection.query}`)}
+                  className="relative flex-none w-72 md:w-80 aspect-[4/5] rounded-3xl overflow-hidden group cursor-pointer snap-center shadow-subtle hover:shadow-premium transition-all duration-500"
+                >
+                  <img 
+                    src={collection.image} 
+                    alt={collection.label}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-charcoal/90 via-charcoal/20 to-transparent"></div>
+                  
+                  <div className="absolute inset-0 p-6 flex flex-col justify-end text-left">
+                    <p className="text-white/80 text-xs font-bold uppercase tracking-widest mb-2 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">Explore</p>
+                    <h4 className="text-white text-2xl font-serif italic font-bold leading-tight group-hover:-translate-y-1 transition-transform duration-300">
+                      {collection.label}
+                    </h4>
+                  </div>
+                </button>
+              ))}
+            </div>
+            
+            {/* Simple static line indicator for scroll */}
+            <div className="flex justify-center mt-4 hidden md:flex">
+              <div className="w-48 h-1 bg-sand-200 rounded-full overflow-hidden relative">
+                <div className="w-16 h-full bg-terracotta/40 rounded-full absolute left-0" />
+              </div>
+            </div>
+          </div>
           {/* Residential Collection Slider */}
           {renderPropertySlider(
             'slider-residential',
@@ -1721,12 +1790,13 @@ const LandingPage = () => {
             properties.event_venue
           )}
 
+
           {/* Ready to Host Section */}
-          <div className="bg-[#1a1a1a] rounded-[2rem] md:rounded-[2.5rem] p-8 md:p-16 text-center text-white mb-24 md:mb-32 relative overflow-hidden shadow-2xl">
+          <div className="bg-[#1a1a1a] rounded-2xl md:rounded-3xl p-8 md:p-16 text-center text-white mb-24 md:mb-32 relative overflow-hidden shadow-elevated">
             <div className="absolute top-0 right-0 w-80 h-80 bg-terracotta/10 rounded-full blur-3xl -mr-28 -mt-28"></div>
             <div className="relative z-10 max-w-3xl mx-auto">
               <h3 
-                className="text-3xl md:text-5xl font-black mb-4 md:mb-6 leading-tight tracking-tight"
+                className="text-3xl md:text-5xl font-bold text-terracotta tracking-tight mb-4 md:mb-6 leading-tight tracking-tight"
                 dangerouslySetInnerHTML={{ __html: t('readyToHost') }}
               />
               <p className="text-gray-300 text-base md:text-lg font-medium leading-relaxed mb-10 max-w-2xl mx-auto">
@@ -1735,7 +1805,7 @@ const LandingPage = () => {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                 <button 
                   onClick={() => navigate(user ? '/dashboard' : '/register')}
-                  className="bg-terracotta hover:bg-terracotta-hover text-white font-bold px-8 py-4 rounded-full transition shadow-lg w-full sm:w-auto text-sm uppercase tracking-wider"
+                  className="bg-terracotta hover:bg-terracotta-hover text-white font-bold px-8 py-4 rounded-full transition shadow-premium w-full sm:w-auto text-sm uppercase tracking-wider"
                 >
                   {t('listProperty')}
                 </button>
@@ -1748,7 +1818,7 @@ const LandingPage = () => {
 
                     {/* Testimonials (Loved by Guests & Hosts) */}
           <div className="mb-32 text-center">
-            <span className="text-xs font-black tracking-[0.2em] text-terracotta uppercase">{t('guestStories')}</span>
+            <span className="text-xs font-bold tracking-tight tracking-[0.2em] text-terracotta uppercase">{t('guestStories')}</span>
             <h3 className="text-4xl font-bold text-charcoal mt-3 mb-4 tracking-tight">{t('lovedByGuests')}</h3>
             <p className="text-gray-550 text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('testimonialsSub')}</p>
             
@@ -1787,7 +1857,7 @@ const LandingPage = () => {
                     avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100"
                   }
                 ]).map((item, idx) => (
-                  <div key={idx} className="bg-white rounded-[2rem] p-8 border border-sand-200/50 shadow-md text-left flex flex-col justify-between hover:shadow-xl transition-all duration-300 min-w-[280px] sm:min-w-[320px] md:min-w-[360px] snap-center flex-1">
+                  <div key={idx} className="bg-white rounded-2xl p-8 border border-gray-100 shadow-subtle text-left flex flex-col justify-between hover:shadow-premium transition-all duration-300 min-w-[280px] sm:min-w-[320px] md:min-w-[360px] snap-center flex-1">
                     <div>
                       <div className="flex items-center space-x-1 text-amber-500 mb-6">
                         {[...Array(item.stars)].map((_, i) => (
@@ -1811,15 +1881,15 @@ const LandingPage = () => {
 
               {/* ── Testimonials Dot indicators ── */}
               <div className="flex justify-center mt-2">
-                <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-full flex items-center justify-center gap-2.5 shadow-md">
+                <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-full flex items-center justify-center gap-2.5 shadow-subtle">
                   {(cmsContent?.testimonials?.items || [1, 2, 3]).map((_, idx) => (
                     <button
                       key={idx}
                       onClick={() => scrollToSlide('slider-testimonials', idx)}
                       className={`rounded-full transition-all duration-300 ${
                         idx === activeTestimonial
-                          ? 'w-8 h-2 bg-terracotta'
-                          : 'w-2 h-2 bg-white/40 hover:bg-white/70'
+                          ? 'w-2.5 h-2.5 bg-terracotta/60'
+                          : 'w-2 h-2 bg-white/30 hover:bg-white/50'
                       }`}
                     />
                   ))}
@@ -1829,7 +1899,7 @@ const LandingPage = () => {
           </div>
           {/* Blogs Section (Our Journal) */}
           <div className="mb-32 text-center">
-            <span className="text-xs font-black tracking-[0.2em] text-terracotta uppercase">{t('ourJournal')}</span>
+            <span className="text-xs font-bold tracking-tight tracking-[0.2em] text-terracotta uppercase">{t('ourJournal')}</span>
             <h3 className="text-4xl font-bold text-charcoal mt-3 mb-4 tracking-tight">{t('latestBlog')}</h3>
             <p className="text-gray-505 text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('blogSub')}</p>
 
@@ -1884,20 +1954,20 @@ const LandingPage = () => {
                       image_url: post.img,
                       read_time: post.read_time || '5 min read'
                     })}
-                    className="bg-white rounded-[2rem] overflow-hidden border border-sand-200/50 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col min-w-[280px] sm:min-w-[320px] md:min-w-[360px] snap-center flex-1 text-left"
+                    className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-premium hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col min-w-[280px] sm:min-w-[320px] md:min-w-[360px] snap-center flex-1 text-left"
                   >
                     <div className="h-48 overflow-hidden relative">
                       <img src={post.img} alt={post.title} className="w-full h-full object-cover" />
                     </div>
                     <div className="p-6 flex-1 flex flex-col justify-between">
                       <div>
-                        <span className="text-[10px] font-black text-terracotta uppercase tracking-wider">{post.date}</span>
+                        <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-wider">{post.date}</span>
                         <h4 className="font-bold text-lg text-charcoal mt-2 mb-3 leading-snug hover:text-terracotta transition-colors line-clamp-2">{post.title}</h4>
                         <p className="text-gray-550 text-gray-500 text-sm font-medium leading-relaxed line-clamp-2 mb-4">{post.excerpt}</p>
                       </div>
                       <div className="flex items-center justify-between pt-4 border-t border-sand-100">
                         <span className="text-xs font-bold text-charcoal-muted">By {post.author}</span>
-                        <span className="text-xs font-black text-terracotta uppercase tracking-wider">{t('readArticle')}</span>
+                        <span className="text-xs font-bold tracking-tight text-terracotta uppercase tracking-wider">{t('readArticle')}</span>
                       </div>
                     </div>
                   </div>
@@ -1906,15 +1976,15 @@ const LandingPage = () => {
 
               {/* ── Blogs Dot indicators ── */}
               <div className="flex justify-center mt-2">
-                <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-full flex items-center justify-center gap-2.5 shadow-md">
+                <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-full flex items-center justify-center gap-2.5 shadow-subtle">
                   {(cmsContent?.blog?.posts || [1, 2, 3]).map((_, idx) => (
                     <button
                       key={idx}
                       onClick={() => scrollToSlide('slider-blogs', idx)}
                       className={`rounded-full transition-all duration-300 ${
                         idx === activeBlog
-                          ? 'w-8 h-2 bg-terracotta'
-                          : 'w-2 h-2 bg-white/40 hover:bg-white/70'
+                          ? 'w-2.5 h-2.5 bg-terracotta/60'
+                          : 'w-2 h-2 bg-white/30 hover:bg-white/50'
                       }`}
                     />
                   ))}
@@ -1927,7 +1997,7 @@ const LandingPage = () => {
         </div>
       </div>
 
-<footer className="bg-white border-t border-sand-200 pt-16 md:pt-20 pb-12">
+<footer className="bg-white border-t border-gray-100 pt-16 md:pt-20 pb-12">
         <div className="w-full px-6 md:px-10 xl:px-16 2xl:px-24">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_repeat(4,minmax(0,1fr))] gap-x-10 xl:gap-x-16 2xl:gap-x-20 gap-y-12 mb-16">
             <div>
@@ -1935,7 +2005,7 @@ const LandingPage = () => {
                 className="flex items-center space-x-3 mb-8 cursor-pointer group"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               >
-                <span className="text-2xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">
+                <span className="text-2xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">
                   X-space360<span className="text-terracotta">.in</span>
                 </span>
               </div>
@@ -1943,23 +2013,23 @@ const LandingPage = () => {
                 {footerData.brand_description || t('footerSub')}
               </p>
               <div className="flex space-x-4">
-                 <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
+                 <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
                     <Facebook className="w-4 h-4" />
                  </a>
-                 <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
+                 <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
                     <Instagram className="w-4 h-4" />
                  </a>
-                 <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
+                 <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
                     <Twitter className="w-4 h-4" />
                  </a>
-                 <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
+                 <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
                     <Linkedin className="w-4 h-4" />
                  </a>
               </div>
             </div>
             {footerSections.map((section, index) => (
               <div key={`${section.heading}-${index}`} className="min-w-0">
-                <h5 className="font-black text-charcoal uppercase tracking-[0.18em] text-xs mb-8 leading-snug">{section.heading || `Section ${index + 1}`}</h5>
+                <h5 className="font-bold tracking-tight text-charcoal uppercase tracking-[0.18em] text-xs mb-8 leading-snug">{section.heading || `Section ${index + 1}`}</h5>
                 <ul className="space-y-4">
                   {section.items.map((item, itemIndex) => (
                     <li key={itemIndex}>
@@ -1980,7 +2050,7 @@ const LandingPage = () => {
                   ))}
                   {index === 3 && (section.resolution_text || footerData.resolution_text) && (
                     <li>
-                      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-charcoal-muted leading-relaxed">
+                      <p className="text-[10px] font-bold tracking-tight uppercase tracking-[0.14em] text-charcoal-muted leading-relaxed">
                         {section.resolution_text || footerData.resolution_text}
                       </p>
                     </li>
@@ -1989,7 +2059,7 @@ const LandingPage = () => {
               </div>
             ))}
           </div>
-          <div className="pt-12 border-t border-sand-200 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="pt-12 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
             <p className="text-charcoal-muted font-bold text-sm tracking-wide uppercase">{t('precision')}</p>
             <div className="flex space-x-8 text-sm font-bold text-charcoal-muted uppercase tracking-widest">
                <button type="button" onClick={() => setFooterPopup({ title: footerData.privacy_label || 'Privacy Policy', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text })} className="hover:text-terracotta">
@@ -2005,16 +2075,16 @@ const LandingPage = () => {
 
       {showFaqModal && (
         <div className="fixed inset-0 z-[120] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="bg-white rounded-3xl shadow-2xl border border-sand-200 w-full max-w-2xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
+          <div className="bg-white rounded-3xl shadow-elevated border border-gray-100 w-full max-w-2xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
             <div className="flex items-start justify-between gap-6 mb-7">
               <div>
-                <h3 className="text-2xl font-black text-charcoal">{footerData.faq_title || 'Frequently Asked Questions'}</h3>
+                <h3 className="text-2xl font-bold tracking-tight text-charcoal">{footerData.faq_title || 'Frequently Asked Questions'}</h3>
                 <p className="text-sm text-charcoal-muted mt-1">Quick answers for guests and hosts.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowFaqModal(false)}
-                className="w-10 h-10 rounded-full border border-sand-200 text-charcoal-muted hover:text-charcoal hover:bg-sand-50 transition flex items-center justify-center"
+                className="w-10 h-10 rounded-full border border-gray-100 text-charcoal-muted hover:text-charcoal hover:bg-stone transition flex items-center justify-center"
                 aria-label="Close FAQs"
               >
                 <X className="w-5 h-5" />
@@ -2022,8 +2092,8 @@ const LandingPage = () => {
             </div>
             <div className="space-y-4">
               {footerFaqItems.map((item, index) => (
-                <div key={index} className="rounded-2xl border border-sand-200 bg-sand-50/60 p-5">
-                  <h4 className="font-black text-charcoal mb-2">{item.question || `Question ${index + 1}`}</h4>
+                <div key={index} className="rounded-2xl border border-gray-100 bg-stone/60 p-5">
+                  <h4 className="font-bold tracking-tight text-charcoal mb-2">{item.question || `Question ${index + 1}`}</h4>
                   <p className="text-sm text-charcoal-light leading-relaxed">{item.answer || 'Answer coming soon.'}</p>
                 </div>
               ))}
@@ -2034,13 +2104,13 @@ const LandingPage = () => {
 
       {footerPopup && (
         <div className="fixed inset-0 z-[120] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="bg-white rounded-3xl shadow-2xl border border-sand-200 w-full max-w-xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
+          <div className="bg-white rounded-3xl shadow-elevated border border-gray-100 w-full max-w-xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
             <div className="flex items-start justify-between gap-6 mb-6">
-              <h3 className="text-2xl font-black text-charcoal">{footerPopup.title}</h3>
+              <h3 className="text-2xl font-bold tracking-tight text-charcoal">{footerPopup.title}</h3>
               <button
                 type="button"
                 onClick={() => setFooterPopup(null)}
-                className="w-10 h-10 rounded-full border border-sand-200 text-charcoal-muted hover:text-charcoal hover:bg-sand-50 transition flex items-center justify-center"
+                className="w-10 h-10 rounded-full border border-gray-100 text-charcoal-muted hover:text-charcoal hover:bg-stone transition flex items-center justify-center"
                 aria-label="Close footer details"
               >
                 <X className="w-5 h-5" />
@@ -2150,7 +2220,7 @@ const LandingPage = () => {
                 onClick={() => setSelectedPost(null)}
               >
                 <div 
-                  className="bg-white rounded-[2.5rem] max-w-5xl w-full max-h-[85vh] md:max-h-[80vh] overflow-hidden shadow-2xl border border-sand-200 flex flex-col md:flex-row relative animate-scale-up" 
+                  className="bg-white rounded-3xl max-w-5xl w-full max-h-[85vh] md:max-h-[80vh] overflow-hidden shadow-elevated border border-gray-100 flex flex-col md:flex-row relative animate-scale-up" 
                   onClick={(e) => e.stopPropagation()}
                 >
                   
@@ -2159,17 +2229,17 @@ const LandingPage = () => {
                     <img 
                       src={getImageUrl(selectedPost.image_url)} 
                       alt={selectedPost.title} 
-                      className="w-full h-full object-cover opacity-90 transition-transform duration-700 hover:scale-105"
+                      className="w-full h-full object-cover opacity-90 transition-transform duration-700 hover:scale-[1.02]"
                     />
                     {/* Gradient Overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-charcoal-deep/90 via-charcoal-deep/40 to-transparent z-10"></div>
                     
                     {/* Floating Info inside Image Column */}
                     <div className="absolute bottom-6 left-6 right-6 z-20 text-white">
-                      <span className="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-black uppercase tracking-widest text-white mb-3 shadow-sm">
+                      <span className="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-bold tracking-tight uppercase tracking-widest text-white mb-3 shadow-sm">
                         {selectedPost.read_time || '5 min read'}
                       </span>
-                      <h4 className="text-lg md:text-xl font-black font-serif italic text-sand-100 leading-tight">
+                      <h4 className="text-lg md:text-xl font-bold tracking-tight font-serif italic text-sand-100 leading-tight">
                         "Curated perspectives on short-term rentals and spaces."
                       </h4>
                     </div>
@@ -2181,7 +2251,7 @@ const LandingPage = () => {
                     {/* Header Controls */}
                     <div className="flex items-center justify-between p-6 md:p-8 pb-4 border-b border-sand-100">
                       {/* Date & Tagline */}
-                      <div className="flex items-center space-x-2 text-xs font-black text-terracotta uppercase tracking-[0.2em]">
+                      <div className="flex items-center space-x-2 text-xs font-bold tracking-tight text-terracotta uppercase tracking-[0.2em]">
                         <span>{t('ourJournal')}</span>
                         <span className="text-charcoal-muted font-normal">•</span>
                         <span className="text-charcoal-muted">{selectedPost.date}</span>
@@ -2190,7 +2260,7 @@ const LandingPage = () => {
                       {/* Close Button inside header controls */}
                       <button
                         onClick={() => setSelectedPost(null)}
-                        className="w-10 h-10 rounded-full bg-sand-100 hover:bg-terracotta hover:text-white flex items-center justify-center transition-all text-charcoal shadow-sm hover:scale-105 active:scale-95"
+                        className="w-10 h-10 rounded-full bg-gray-50 hover:bg-terracotta hover:text-white flex items-center justify-center transition-all text-charcoal shadow-sm hover:scale-[1.02] active:scale-95"
                         title="Close article"
                       >
                         <X className="w-5 h-5" />
@@ -2201,17 +2271,17 @@ const LandingPage = () => {
                     <div className="overflow-y-auto px-6 md:px-8 py-6 custom-scrollbar flex-1 space-y-6">
                       
                       {/* Title */}
-                      <h3 className="text-2xl md:text-3xl font-black text-charcoal tracking-tight leading-tight">
+                      <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-charcoal tracking-tight leading-tight">
                         {selectedPost.title}
                       </h3>
 
                       {/* Author Info */}
-                      <div className="flex items-center space-x-3 bg-sand-50/70 border border-sand-200/50 rounded-2xl p-4">
-                        <div className="w-10 h-10 rounded-full bg-sage text-white flex items-center justify-center text-sm font-black shadow-sm shrink-0">
+                      <div className="flex items-center space-x-3 bg-stone/70 border border-gray-100 rounded-2xl p-4">
+                        <div className="w-10 h-10 rounded-full bg-sage text-white flex items-center justify-center text-sm font-bold tracking-tight shadow-sm shrink-0">
                           {selectedPost.author?.[0] || 'A'}
                         </div>
                         <div>
-                          <p className="text-sm font-black text-charcoal leading-tight">{selectedPost.author}</p>
+                          <p className="text-sm font-bold tracking-tight text-charcoal leading-tight">{selectedPost.author}</p>
                           <p className="text-[11px] text-charcoal-muted font-bold uppercase tracking-wider mt-0.5">X-Space360 Editorial Desk</p>
                         </div>
                       </div>
@@ -2220,7 +2290,7 @@ const LandingPage = () => {
                       <div className="text-charcoal-light font-semibold text-sm md:text-base leading-relaxed space-y-5">
                         {selectedPost.id === 'p1' ? (
                           <>
-                            <p className="first-letter:text-5xl first-letter:font-black first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
+                            <p className="first-letter:text-5xl first-letter:font-bold tracking-tight first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
                               The real estate landscape is undergoing a massive paradigm shift. Traditional long-term leasing, once the gold standard of property investment, is rapidly losing ground to the dynamic world of short-term rentals (STRs). With the rise of hybrid work models, digital nomadism, and a growing consumer preference for unique, home-like experiences over standardized hotel rooms, properties listed on platforms like X-Space360 are seeing unprecedented demand.
                             </p>
                             <p>
@@ -2235,7 +2305,7 @@ const LandingPage = () => {
                           </>
                         ) : selectedPost.id === 'p2' ? (
                           <>
-                            <p className="first-letter:text-5xl first-letter:font-black first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
+                            <p className="first-letter:text-5xl first-letter:font-bold tracking-tight first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
                               Aesthetics are no longer optional—they are the key driver of your property's daily listing value. In a crowded marketplace, guests browse with their eyes first. If your listing features premium design, curated color palettes, and thoughtful lighting, it immediately commands attention. More importantly, as remote and hybrid work becomes a permanent fixture of modern professional life, integrating a functional, high-end workspace into your rental is one of the highest-ROI improvements you can make.
                             </p>
                             <p>
@@ -2250,7 +2320,7 @@ const LandingPage = () => {
                           </>
                         ) : (
                           <>
-                            <p className="first-letter:text-5xl first-letter:font-black first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
+                            <p className="first-letter:text-5xl first-letter:font-bold tracking-tight first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
                               {selectedPost.excerpt}
                             </p>
                             <p>
@@ -2275,14 +2345,14 @@ const LandingPage = () => {
       <div className="fixed top-1/2 -translate-y-1/2 right-8 flex flex-col space-y-3 z-50">
         <button 
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-white/70 hover:-translate-y-1 transition-all duration-300 cursor-pointer border border-white/20"
+          className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center shadow-premium hover:bg-white/70 hover:-translate-y-1 transition-all duration-300 cursor-pointer border border-white/20"
           title="Scroll to Top"
         >
           <ChevronUp className="w-5 h-5 text-charcoal" />
         </button>
         <button 
           onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
-          className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-white/70 hover:translate-y-1 transition-all duration-300 cursor-pointer border border-white/20"
+          className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center shadow-premium hover:bg-white/70 hover:translate-y-1 transition-all duration-300 cursor-pointer border border-white/20"
           title="Scroll to Bottom"
         >
           <ChevronDown className="w-5 h-5 text-charcoal" />

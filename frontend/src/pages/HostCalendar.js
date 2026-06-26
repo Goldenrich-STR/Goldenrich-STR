@@ -320,12 +320,14 @@ const HostCalendar = () => {
   const minDateStr = toISO(new Date());
 
   return (
-    <div className="min-h-screen bg-sand-50">
+    <div className="min-h-screen bg-stone">
       <header className="header-glass px-6 py-4" data-testid="host-calendar-header">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <CalendarIcon className="w-6 h-6 text-terracotta" />
-            <h1 className="text-xl font-bold text-charcoal">X-Space360 - Calendar</h1>
+        <div className="w-full flex justify-between items-center">
+          <div 
+            className="flex items-center space-x-3 cursor-pointer group" 
+            onClick={() => navigate('/')}
+          >
+            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
           </div>
           <div className="flex items-center space-x-4">
             <button
@@ -344,10 +346,10 @@ const HostCalendar = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="w-full px-4 md:px-8 lg:px-12 py-8 mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-4xl font-extrabold text-charcoal" data-testid="calendar-title">
+            <h2 className="text-4xl font-semibold tracking-tight text-charcoal" data-testid="calendar-title">
               Property Calendar
             </h2>
             <p className="text-charcoal-light mt-1">
@@ -360,7 +362,7 @@ const HostCalendar = () => {
               <select
                 value={selectedPropertyId}
                 onChange={(e) => setSelectedPropertyId(e.target.value)}
-                className="appearance-none border border-sand-200 rounded-xl px-4 py-2.5 pr-10 bg-white font-bold text-sm text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20 transition-all shadow-sm cursor-pointer"
+                className="appearance-none border border-gray-100 rounded-xl px-4 py-2.5 pr-10 bg-white font-bold text-sm text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20 transition-all shadow-sm cursor-pointer"
                 data-testid="property-selector"
               >
                 {properties.length === 0 && (
@@ -379,7 +381,7 @@ const HostCalendar = () => {
             <button
               onClick={handleExportICal}
               disabled={!selectedPropertyId}
-              className="px-5 py-2.5 bg-white border border-sand-200 rounded-xl font-bold text-sm text-charcoal hover:text-terracotta hover:border-terracotta flex items-center justify-center gap-2 transition-all shadow-sm active:scale-98 disabled:opacity-50 disabled:pointer-events-none"
+              className="px-5 py-2.5 bg-white border border-gray-100 rounded-xl font-bold text-sm text-charcoal hover:text-terracotta hover:border-terracotta flex items-center justify-center gap-2 transition-all shadow-sm active:scale-98 disabled:opacity-50 disabled:pointer-events-none"
               data-testid="export-ical-btn"
             >
               <Download className="w-4 h-4 text-terracotta" />
@@ -411,8 +413,8 @@ const HostCalendar = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Calendar Grid */}
-            <div className="lg:col-span-2 dashboard-card p-6 bg-white rounded-3xl border border-sand-200/80 shadow-sm">
-              <div className="flex items-center justify-between mb-6 bg-sand-50/50 p-2 rounded-2xl border border-sand-100">
+            <div className="lg:col-span-2 dashboard-card p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm">
+              <div className="flex items-center justify-between mb-6 bg-stone/50 p-2 rounded-2xl border border-sand-100">
                 <button
                   onClick={goPrev}
                   className="p-2.5 rounded-xl hover:bg-white hover:shadow-sm transition-all text-charcoal hover:text-terracotta active:scale-95"
@@ -420,7 +422,7 @@ const HostCalendar = () => {
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
-                <h3 className="text-xl font-black text-charcoal tracking-wide flex items-center gap-2" data-testid="cal-month-label">
+                <h3 className="text-xl font-bold tracking-tight text-charcoal tracking-wide flex items-center gap-2" data-testid="cal-month-label">
                   <CalendarIcon className="w-5 h-5 text-terracotta/70" />
                   {MONTH_NAMES[month - 1]} {year}
                 </h3>
@@ -433,7 +435,7 @@ const HostCalendar = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-7 gap-2.5 text-center text-xs font-black uppercase tracking-wider text-charcoal-light mb-3">
+              <div className="grid grid-cols-7 gap-2.5 text-center text-xs font-bold tracking-tight uppercase tracking-wider text-charcoal-light mb-3">
                 {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d) => (
                   <div key={d} className="py-2">{d}</div>
                 ))}
@@ -448,7 +450,7 @@ const HostCalendar = () => {
                 <div className="grid grid-cols-7 gap-2.5" data-testid="calendar-grid">
                   {cells.map((d, idx) => {
                     if (!d) return (
-                      <div key={idx} className="h-24 bg-sand-100/30 border border-sand-100/50 rounded-xl relative overflow-hidden" />
+                      <div key={idx} className="h-24 bg-gray-50/30 border border-sand-100/50 rounded-xl relative overflow-hidden" />
                     );
                     const dayEvents = eventsForDay(d);
                     const isToday = toISO(d) === toISO(new Date());
@@ -457,12 +459,12 @@ const HostCalendar = () => {
                     return (
                       <div
                         key={idx}
-                        className={`h-24 border rounded-xl p-2 text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] hover:shadow-md ${
+                        className={`h-24 border rounded-xl p-2 text-left flex flex-col justify-between transition-all duration-300 hover:scale-[1.02] hover:shadow-subtle ${
                           hasBooking
                             ? 'bg-red-50/70 border-red-200'
                             : hasBlocked
                             ? 'bg-gray-50 border-gray-200'
-                            : 'bg-white border-sand-200/85 hover:border-terracotta/40'
+                            : 'bg-white border-gray-100/85 hover:border-terracotta/40'
                         } ${
                           isToday 
                             ? 'border-terracotta ring-2 ring-terracotta/20 shadow-sm shadow-terracotta/10' 
@@ -471,9 +473,9 @@ const HostCalendar = () => {
                         data-testid={`day-${toISO(d)}`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className={`text-xs font-black ${
+                          <span className={`text-xs font-bold tracking-tight ${
                             isToday 
-                              ? 'bg-terracotta text-white w-6 h-6 rounded-full flex items-center justify-center font-extrabold shadow-sm shadow-terracotta/20' 
+                              ? 'bg-terracotta text-white w-6 h-6 rounded-full flex items-center justify-center font-semibold tracking-tight shadow-sm shadow-terracotta/20' 
                               : 'text-charcoal'
                           }`}>
                             {d.getDate()}
@@ -486,7 +488,7 @@ const HostCalendar = () => {
                           {dayEvents.slice(0, 2).map((ev) => (
                             <div
                               key={ev.event_id + toISO(d)}
-                              className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-lg truncate transition-all duration-200 hover:brightness-95 flex items-center gap-1 shadow-sm"
+                              className="text-[9px] font-bold tracking-tight uppercase tracking-wider px-2 py-0.5 rounded-lg truncate transition-all duration-200 hover:brightness-95 flex items-center gap-1 shadow-sm"
                               style={{ 
                                 backgroundColor: (SOURCE_LABELS[ev.source]?.color || ev.color) + '22', 
                                 color: SOURCE_LABELS[ev.source]?.color || ev.color, 
@@ -510,8 +512,8 @@ const HostCalendar = () => {
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-4 mt-6 p-4 bg-sand-50/50 rounded-xl border border-sand-100/50 text-xs text-charcoal-light">
-                <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md border border-sand-300 bg-white" />Available</span>
+              <div className="flex flex-wrap items-center gap-4 mt-6 p-4 bg-stone/50 rounded-xl border border-sand-100/50 text-xs text-charcoal-light">
+                <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md border border-gray-200 bg-white" />Available</span>
                 <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md bg-gray-300 shadow-sm shadow-gray-300/20" />Blocked</span>
                 <span className="flex items-center gap-2"><span className="w-3.5 h-3.5 rounded-md bg-red-500 shadow-sm shadow-red-500/20" />Booked</span>
               </div>
@@ -520,10 +522,10 @@ const HostCalendar = () => {
             {/* Side Panel */}
             <div className="space-y-6">
               {/* Block Dates */}
-              <div className="bg-white rounded-3xl p-6 border border-sand-200/80 shadow-sm">
+              <div className="bg-white rounded-3xl p-6 border border-gray-100/80 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-black text-charcoal">Block Dates</h3>
+                    <h3 className="text-lg font-bold tracking-tight text-charcoal">Block Dates</h3>
                     <p className="text-xs text-charcoal-light">Prevent bookings on specific days</p>
                   </div>
                   <button
@@ -541,46 +543,46 @@ const HostCalendar = () => {
                 </div>
 
                 {showBlockForm && (
-                  <form onSubmit={handleBlockDates} className="space-y-4 p-4 bg-sand-50/50 rounded-2xl border border-sand-100 mb-4 animate-in slide-in-from-top-4 duration-200" data-testid="block-form">
+                  <form onSubmit={handleBlockDates} className="space-y-4 p-4 bg-stone/50 rounded-2xl border border-sand-100 mb-4 animate-in slide-in-from-top-4 duration-200" data-testid="block-form">
                     <div>
-                      <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-1">Start Date</label>
+                      <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-1">Start Date</label>
                       <input
                         type="date"
                         value={blockStart}
                         onChange={(e) => setBlockStart(e.target.value)}
                         min={minDateStr}
                         required
-                        className="w-full border border-sand-200 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
+                        className="w-full border border-gray-100 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
                         data-testid="block-start-input"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-1">End Date</label>
+                      <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-1">End Date</label>
                       <input
                         type="date"
                         value={blockEnd}
                         onChange={(e) => setBlockEnd(e.target.value)}
                         min={blockStart || minDateStr}
                         required
-                        className="w-full border border-sand-200 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
+                        className="w-full border border-gray-100 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
                         data-testid="block-end-input"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-1">Reason (If Applicable)</label>
+                      <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-1">Reason (If Applicable)</label>
                       <input
                         type="text"
                         value={blockReason}
                         onChange={(e) => setBlockReason(e.target.value)}
                         placeholder="Maintenance, personal use, etc."
-                        className="w-full border border-sand-200 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
+                        className="w-full border border-gray-100 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
                         data-testid="block-reason-input"
                       />
                     </div>
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="w-full py-3 bg-terracotta text-white rounded-xl font-bold text-sm hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-md shadow-terracotta/15 disabled:opacity-50"
+                      className="w-full py-3 bg-terracotta text-white rounded-xl font-bold text-sm hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-subtle shadow-terracotta/15 disabled:opacity-50"
                       data-testid="submit-block-btn"
                     >
                       {submitting ? 'Blocking…' : 'Block Dates'}
@@ -590,14 +592,14 @@ const HostCalendar = () => {
 
                 <div className="mt-4 space-y-2.5 max-h-64 overflow-y-auto pr-1" data-testid="blocked-dates-list">
                   {allManualBlocks.length === 0 && (
-                    <div className="text-center py-6 bg-sand-50/50 rounded-2xl border border-dashed border-sand-200">
+                    <div className="text-center py-6 bg-stone/50 rounded-2xl border border-dashed border-gray-100">
                       <p className="text-xs text-charcoal-light">No manual blocks yet.</p>
                     </div>
                   )}
                   {allManualBlocks.map((blk) => (
                     <div
                       key={blk.blocked_date_id}
-                      className="flex items-center justify-between border border-sand-100 rounded-2xl p-3 bg-sand-50/30 hover:bg-sand-50 transition-colors group"
+                      className="flex items-center justify-between border border-sand-100 rounded-2xl p-3 bg-stone/30 hover:bg-stone transition-colors group"
                       data-testid={`blocked-${blk.blocked_date_id}`}
                     >
                       <button
@@ -631,10 +633,10 @@ const HostCalendar = () => {
               </div>
 
               {/* X-Space360 iCal Feed */}
-              <div className="bg-white rounded-3xl p-6 border border-sand-200/80 shadow-sm">
+              <div className="bg-white rounded-3xl p-6 border border-gray-100/80 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-black text-charcoal">X-Space360 iCal Link</h3>
+                    <h3 className="text-lg font-bold tracking-tight text-charcoal">X-Space360 iCal Link</h3>
                     <p className="text-xs text-charcoal-light">Paste this link on Airbnb, Vrbo, etc.</p>
                   </div>
                   <div className="p-2.5 rounded-xl bg-green-50 text-green-700">
@@ -643,7 +645,7 @@ const HostCalendar = () => {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="rounded-2xl border border-sand-200 bg-sand-50/50 p-3">
+                  <div className="rounded-2xl border border-gray-100 bg-stone/50 p-3">
                     <input
                       type="text"
                       value={icalFeedUrl}
@@ -658,7 +660,7 @@ const HostCalendar = () => {
                       type="button"
                       onClick={copyICalFeedUrl}
                       disabled={!icalFeedUrl}
-                      className="py-3 bg-terracotta text-white rounded-xl font-bold text-sm hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-md shadow-terracotta/15 disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="py-3 bg-terracotta text-white rounded-xl font-bold text-sm hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-subtle shadow-terracotta/15 disabled:opacity-50 flex items-center justify-center gap-2"
                       data-testid="copy-ical-feed-btn"
                     >
                       {copiedFeedUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -668,7 +670,7 @@ const HostCalendar = () => {
                       type="button"
                       onClick={rotateICalFeedUrl}
                       disabled={!icalFeedUrl}
-                      className="py-3 bg-white border border-sand-200 text-charcoal rounded-xl font-bold text-sm hover:text-terracotta hover:border-terracotta active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="py-3 bg-white border border-gray-100 text-charcoal rounded-xl font-bold text-sm hover:text-terracotta hover:border-terracotta active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                       data-testid="rotate-ical-feed-btn"
                     >
                       <RefreshCw className="w-4 h-4" />
@@ -682,10 +684,10 @@ const HostCalendar = () => {
               </div>
 
               {/* External Calendars */}
-              <div className="bg-white rounded-3xl p-6 border border-sand-200/80 shadow-sm">
+              <div className="bg-white rounded-3xl p-6 border border-gray-100/80 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-black text-charcoal">External Calendars (iCal)</h3>
+                    <h3 className="text-lg font-bold tracking-tight text-charcoal">External Calendars (iCal)</h3>
                     <p className="text-xs text-charcoal-light">Sync with Airbnb, Vrbo, etc.</p>
                   </div>
                   <button
@@ -693,7 +695,7 @@ const HostCalendar = () => {
                     className={`p-2.5 rounded-xl transition-all active:scale-95 flex items-center justify-center ${
                       showExternalForm 
                         ? 'bg-red-50 text-red-600 hover:bg-red-100' 
-                        : 'bg-sand-100 text-charcoal hover:bg-sand-200'
+                        : 'bg-gray-50 text-charcoal hover:bg-sand-200'
                     }`}
                     data-testid="toggle-external-form-btn"
                     title={showExternalForm ? 'Cancel' : 'Add Calendar'}
@@ -703,14 +705,14 @@ const HostCalendar = () => {
                 </div>
 
                 {showExternalForm && (
-                  <form onSubmit={handleAddExternal} className="space-y-4 p-4 bg-sand-50/50 rounded-2xl border border-sand-100 mb-4 animate-in slide-in-from-top-4 duration-200" data-testid="external-form">
+                  <form onSubmit={handleAddExternal} className="space-y-4 p-4 bg-stone/50 rounded-2xl border border-sand-100 mb-4 animate-in slide-in-from-top-4 duration-200" data-testid="external-form">
                     <input
                       type="text"
                       value={extName}
                       onChange={(e) => setExtName(e.target.value)}
                       placeholder="Source name (e.g. Airbnb)"
                       required
-                      className="w-full border border-sand-200 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
+                      className="w-full border border-gray-100 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
                       data-testid="ext-name-input"
                     />
                     <input
@@ -719,23 +721,23 @@ const HostCalendar = () => {
                       onChange={(e) => setExtUrl(e.target.value)}
                       placeholder="https://… .ics URL"
                       required
-                      className="w-full border border-sand-200 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
+                      className="w-full border border-gray-100 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
                       data-testid="ext-url-input"
                     />
                     <div>
-                      <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-1">Calendar Color</label>
+                      <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-1">Calendar Color</label>
                       <input
                         type="color"
                         value={extColor}
                         onChange={(e) => setExtColor(e.target.value)}
-                        className="w-full h-10 border border-sand-200 rounded-xl cursor-pointer bg-white"
+                        className="w-full h-10 border border-gray-100 rounded-xl cursor-pointer bg-white"
                         data-testid="ext-color-input"
                       />
                     </div>
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="w-full py-3 bg-terracotta text-white rounded-xl font-bold text-sm hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-md shadow-terracotta/15 disabled:opacity-50"
+                      className="w-full py-3 bg-terracotta text-white rounded-xl font-bold text-sm hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-subtle shadow-terracotta/15 disabled:opacity-50"
                       data-testid="submit-external-btn"
                     >
                       {submitting ? 'Adding…' : 'Add Calendar'}
@@ -745,14 +747,14 @@ const HostCalendar = () => {
 
                 <div className="mt-4 space-y-3" data-testid="external-list">
                   {externalCalendars.length === 0 && (
-                    <div className="text-center py-6 bg-sand-50/50 rounded-2xl border border-dashed border-sand-200">
+                    <div className="text-center py-6 bg-stone/50 rounded-2xl border border-dashed border-gray-100">
                       <p className="text-xs text-charcoal-light">No external calendars added.</p>
                     </div>
                   )}
                   {externalCalendars.map((c) => (
                     <div
                       key={c.calendar_id}
-                      className="border border-sand-150 rounded-2xl p-4 bg-sand-50/30 hover:bg-sand-50 transition-colors group"
+                      className="border border-sand-150 rounded-2xl p-4 bg-stone/30 hover:bg-stone transition-colors group"
                       data-testid={`ext-cal-${c.calendar_id}`}
                     >
                       <div className="flex items-center justify-between">
@@ -782,7 +784,7 @@ const HostCalendar = () => {
                           </button>
                         </div>
                       </div>
-                      <div className="mt-2 text-[10px] font-black uppercase tracking-wider flex items-center space-x-2">
+                      <div className="mt-2 text-[10px] font-bold tracking-tight uppercase tracking-wider flex items-center space-x-2">
                         <span
                           className={`px-2.5 py-0.5 rounded-full ${
                             c.sync_status === 'success'

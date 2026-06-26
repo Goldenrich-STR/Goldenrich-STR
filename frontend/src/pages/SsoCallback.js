@@ -27,7 +27,7 @@ const SsoCallback = () => {
   }
 
   return (
-    <div className="min-h-screen bg-sand-50 flex items-center justify-center">
+    <div className="min-h-screen bg-stone flex items-center justify-center">
       <div className="text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-terracotta mx-auto mb-4"></div>
         <p className="text-charcoal-light">Signing you in...</p>

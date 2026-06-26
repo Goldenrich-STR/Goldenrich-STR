@@ -24,7 +24,7 @@ const HostBookings = lazy(() => import("./pages/HostBookings"));
 const SsoCallback = lazy(() => import("./pages/SsoCallback"));
 
 const ScreenLoading = () => (
-  <div className="min-h-screen bg-sand-50 flex items-center justify-center">
+  <div className="min-h-screen bg-stone flex items-center justify-center">
     <div className="text-center animate-pulse">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-terracotta mx-auto mb-4"></div>
       <p className="text-charcoal-light text-sm font-medium tracking-wide">Loading Screen...</p>
@@ -38,7 +38,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-sand-50 flex items-center justify-center">
+      <div className="min-h-screen bg-stone flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-terracotta mx-auto mb-4"></div>
           <p className="text-charcoal-light">Loading...</p>
@@ -105,12 +105,12 @@ const GlobalAlertDialog = () => {
 
   return (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-charcoal/60 backdrop-blur-sm px-4">
-      <div className="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl border border-sand-200 animate-scale-in">
+      <div className="w-full max-w-md rounded-3xl bg-white p-7 shadow-elevated border border-gray-100 animate-scale-in">
         <div className="mb-6">
           <div className="w-12 h-12 rounded-2xl bg-terracotta/10 flex items-center justify-center mb-4">
-            <span className="text-2xl font-black text-terracotta">!</span>
+            <span className="text-2xl font-bold tracking-tight text-terracotta">!</span>
           </div>
-          <h2 className="text-xl font-black text-charcoal mb-2">X-Space360</h2>
+          <h2 className="text-xl font-bold tracking-tight text-charcoal mb-2">X-Space360</h2>
           <p className="text-sm font-medium text-charcoal-muted leading-relaxed whitespace-pre-wrap">
             {message}
           </p>
@@ -122,7 +122,7 @@ const GlobalAlertDialog = () => {
               setOpen(false);
               setMessage('');
             }}
-            className="px-8 py-3 rounded-2xl bg-terracotta text-white text-xs font-black uppercase tracking-widest shadow-premium hover:bg-terracotta-dark transition"
+            className="px-8 py-3 rounded-2xl bg-terracotta text-white text-xs font-bold tracking-tight uppercase tracking-widest shadow-premium hover:bg-terracotta-dark transition"
             autoFocus
           >
             OK
@@ -257,9 +257,9 @@ function App() {
               <Route
                 path="*"
                 element={
-                  <div className="min-h-screen bg-sand-50 flex items-center justify-center">
+                  <div className="min-h-screen bg-stone flex items-center justify-center">
                     <div className="text-center">
-                      <h1 className="text-6xl font-extrabold text-terracotta mb-4">404</h1>
+                      <h1 className="text-6xl font-semibold tracking-tight text-terracotta mb-4">404</h1>
                       <p className="text-charcoal-light mb-6">Page not found</p>
                       <a href="/" className="btn-primary">
                         Go Home

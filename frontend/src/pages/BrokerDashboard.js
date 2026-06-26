@@ -62,7 +62,7 @@ const BrokerDashboard = () => {
   ] : [];
 
   return (
-    <div className="min-h-screen bg-sand-50 selection:bg-terracotta selection:text-white">
+    <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
       {/* Header */}
       <header className="glass px-4 md:px-8 lg:px-12 py-4 sticky top-0 z-50">
         <div className="w-full flex justify-between items-center">
@@ -70,17 +70,14 @@ const BrokerDashboard = () => {
             className="flex items-center space-x-3 cursor-pointer group" 
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
-            <h1 className="text-xl font-black text-charcoal tracking-tighter">
-              BROKER<span className="text-terracotta">PORTAL</span>
-            </h1>
+            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
           </div>
           <div className="flex items-center space-x-6">
-            <div className="flex items-center space-x-4 px-4 py-2 bg-white/50 border border-sand-200 rounded-full shadow-sm">
-               <div className="w-7 h-7 rounded-full bg-sage flex items-center justify-center text-[10px] font-black text-white">
+            <div className="flex items-center space-x-4 px-4 py-2 bg-white/50 border border-gray-100 rounded-full shadow-sm">
+               <div className="w-7 h-7 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
                   {user?.full_name?.[0]}
                </div>
-               <span className="text-[10px] font-black text-charcoal uppercase tracking-widest">{user?.full_name}</span>
+               <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">{user?.full_name}</span>
             </div>
             <button
               onClick={() => {
@@ -89,7 +86,7 @@ const BrokerDashboard = () => {
                   logout();
                 }, 50);
               }}
-              className="flex items-center space-x-2 text-[10px] font-black text-terracotta uppercase tracking-[0.2em] hover:underline transition-all"
+              className="flex items-center space-x-2 text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-[0.2em] hover:underline transition-all"
               data-testid="logout-btn"
             >
               <LogOut className="w-4 h-4" />
@@ -102,18 +99,18 @@ const BrokerDashboard = () => {
       <div className="w-full px-4 md:px-8 lg:px-12 py-10 mx-auto">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12 animate-fade-in">
           <div>
-            <h2 className="text-4xl font-black text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
+            <h2 className="text-4xl font-bold tracking-tight text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
               Operational Command
             </h2>
             <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Global overview of your owner network and properties</p>
           </div>
           <div className="flex items-center space-x-4">
-             <div className="p-3 bg-white border border-sand-200 rounded-2xl shadow-sm cursor-pointer hover:shadow-premium transition-all">
+             <div className="p-3 bg-white border border-gray-100 rounded-2xl shadow-sm cursor-pointer hover:shadow-premium transition-all">
                 <Bell className="w-5 h-5 text-charcoal" />
              </div>
              <button className="btn-premium px-8 py-4 shadow-premium">
                 <Plus className="w-5 h-5 mr-2" />
-                <span className="text-sm font-black uppercase tracking-widest">New Verification</span>
+                <span className="text-sm font-bold tracking-tight uppercase tracking-widest">New Verification</span>
              </button>
           </div>
         </div>
@@ -131,10 +128,10 @@ const BrokerDashboard = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-3 px-6 py-4 rounded-2xl font-black text-[10px] tracking-widest transition-all duration-300 ${
+              className={`flex items-center space-x-3 px-6 py-4 rounded-2xl font-bold tracking-tight text-[10px] tracking-widest transition-all duration-300 ${
                 activeTab === tab.id
                   ? 'bg-charcoal text-white shadow-elevated'
-                  : 'bg-white text-charcoal-muted border border-sand-200 hover:border-terracotta'
+                  : 'bg-white text-charcoal-muted border border-gray-100 hover:border-terracotta'
               }`}
               data-testid={`tab-${tab.id}`}
             >
@@ -156,15 +153,15 @@ const BrokerDashboard = () => {
                   {/* Stats Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12" data-testid="stats-grid">
                     {statCards.map((stat, idx) => (
-                      <div key={idx} className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium group hover:border-terracotta transition-all duration-500" data-testid={`stat-card-${idx}`}>
-                        <div className="bg-sand-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-terracotta/5 transition-colors">
+                      <div key={idx} className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium group hover:border-terracotta transition-all duration-500" data-testid={`stat-card-${idx}`}>
+                        <div className="bg-stone w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-terracotta/5 transition-colors">
                            <stat.icon className="w-6 h-6 text-terracotta" />
                         </div>
-                        <p className="text-3xl font-black text-charcoal tracking-tighter mb-1">{stat.value}</p>
-                        <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em]">{stat.label}</p>
+                        <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">{stat.value}</p>
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">{stat.label}</p>
                         {stat.subtext && (
                           <div className="mt-4 pt-4 border-t border-sand-100 flex items-center justify-between">
-                             <span className="text-[9px] font-black text-sage-dark bg-sage/10 px-2 py-0.5 rounded-full">{stat.subtext}</span>
+                             <span className="text-[9px] font-bold tracking-tight text-sage-dark bg-sage/10 px-2 py-0.5 rounded-full">{stat.subtext}</span>
                           </div>
                         )}
                       </div>
@@ -179,7 +176,7 @@ const BrokerDashboard = () => {
                            <Clock className="w-8 h-8 text-terracotta" />
                         </div>
                         <div>
-                          <p className="text-xl font-black text-charcoal tracking-tight mb-1">
+                          <p className="text-xl font-bold tracking-tight text-charcoal tracking-tight mb-1">
                             {stats.verifications.pending} Physical Inspections Required
                           </p>
                           <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Site visits must be completed for remote RM review</p>
@@ -195,8 +192,8 @@ const BrokerDashboard = () => {
                   )}
 
                   {/* Quick Actions */}
-                  <div className="bg-charcoal rounded-[2.5rem] p-10 shadow-elevated" data-testid="quick-actions">
-                    <h3 className="text-xl font-black text-white tracking-tight mb-8">System Shortcuts</h3>
+                  <div className="bg-charcoal rounded-3xl p-10 shadow-elevated" data-testid="quick-actions">
+                    <h3 className="text-xl font-bold tracking-tight text-white tracking-tight mb-8">System Shortcuts</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {[
                         { id: 'leads', label: 'GENERATE LEAD', icon: Target, color: 'text-terracotta' },
@@ -211,7 +208,7 @@ const BrokerDashboard = () => {
                         >
                           <div className="flex items-center space-x-4">
                              <action.icon className={`w-6 h-6 ${action.color}`} />
-                             <span className="text-[10px] font-black text-white/80 group-hover:text-charcoal uppercase tracking-[0.2em]">{action.label}</span>
+                             <span className="text-[10px] font-bold tracking-tight text-white/80 group-hover:text-charcoal uppercase tracking-[0.2em]">{action.label}</span>
                           </div>
                           <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-charcoal group-hover:translate-x-1 transition-all" />
                         </button>
@@ -266,7 +263,7 @@ const MyOwnersSection = () => {
   return (
     <div data-testid="owners-section" className="animate-slide-up">
       <div className="flex items-center mb-8">
-         <h3 className="text-2xl font-black text-charcoal tracking-tight">Owner Network</h3>
+         <h3 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">Owner Network</h3>
          <div className="ml-4 h-px flex-1 bg-sand-200"></div>
       </div>
 
@@ -277,7 +274,7 @@ const MyOwnersSection = () => {
       ) : owners.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6" data-testid="owners-list">
           {owners.map((owner) => (
-            <div key={owner.user_id} className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium hover:border-terracotta transition-all duration-300 group" data-testid={`owner-${owner.user_id}`}>
+            <div key={owner.user_id} className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium hover:border-terracotta transition-all duration-300 group" data-testid={`owner-${owner.user_id}`}>
               <div className="flex items-start space-x-6">
                 <div className="relative flex-shrink-0">
                    <div className="absolute inset-0 bg-terracotta blur-xl opacity-0 group-hover:opacity-20 transition-opacity"></div>
@@ -289,8 +286,8 @@ const MyOwnersSection = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
-                    <h4 className="text-lg font-black text-charcoal truncate">{owner.full_name}</h4>
-                    <span className={`inline-flex px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full ${
+                    <h4 className="text-lg font-bold tracking-tight text-charcoal truncate">{owner.full_name}</h4>
+                    <span className={`inline-flex px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
                       owner.kyc_status === 'approved' ? 'bg-sage/10 text-sage-dark' : 'bg-amber-100 text-amber-700'
                     }`}>
                       KYC: {owner.kyc_status}
@@ -299,14 +296,14 @@ const MyOwnersSection = () => {
                   <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-1">{owner.email}</p>
                   <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-3">{owner.phone}</p>
                   
-                  <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-sand-200">
+                  <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
                     <div>
-                      <p className="text-[8px] font-black text-charcoal-muted uppercase tracking-wider">City / Location</p>
+                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">City / Location</p>
                       <p className="text-xs font-bold text-charcoal mt-0.5">{owner.city || 'Not Specified'}</p>
                     </div>
                     <div>
-                      <p className="text-[8px] font-black text-charcoal-muted uppercase tracking-wider">Registration Payment</p>
-                      <span className={`inline-block text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded mt-0.5 ${
+                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Registration Payment</p>
+                      <span className={`inline-block text-[8px] font-bold tracking-tight uppercase tracking-wider px-2 py-0.5 rounded mt-0.5 ${
                         owner.registration_fee_paid ? 'bg-sage/20 text-sage-dark' : 'bg-red-50 text-red-600'
                       }`}>
                         {owner.registration_fee_paid ? 'PAID' : 'UNPAID'}
@@ -314,8 +311,8 @@ const MyOwnersSection = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-sand-200">
-                    <span className="inline-flex px-3 py-1 bg-sand-50 text-terracotta text-[9px] font-black uppercase tracking-widest rounded-full border border-sand-200">
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                    <span className="inline-flex px-3 py-1 bg-stone text-terracotta text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full border border-gray-100">
                       {owner.property_count || 0} Assets
                     </span>
                     <span className="text-[9px] text-charcoal-muted font-bold">
@@ -330,9 +327,9 @@ const MyOwnersSection = () => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-sand-300">
+        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
           <Users className="w-16 h-16 text-sand-200 mx-auto mb-6" />
-          <h4 className="text-xl font-black text-charcoal mb-2">No Owners Assigned</h4>
+          <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Owners Assigned</h4>
           <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">You haven't been assigned any property owners yet.</p>
         </div>
       )}
@@ -367,7 +364,7 @@ const PropertiesSection = () => {
   return (
     <div data-testid="properties-section" className="animate-slide-up">
       <div className="flex items-center mb-8">
-         <h3 className="text-2xl font-black text-charcoal tracking-tight">Property Inventory</h3>
+         <h3 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">Property Inventory</h3>
          <div className="ml-4 h-px flex-1 bg-sand-200"></div>
       </div>
 
@@ -381,33 +378,33 @@ const PropertiesSection = () => {
             {[...properties]
               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((property) => (
-              <div key={property.property_id} className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium group hover:border-terracotta transition-all duration-300" data-testid={`property-${property.property_id}`}>
+              <div key={property.property_id} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium group hover:border-terracotta transition-all duration-300" data-testid={`property-${property.property_id}`}>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div className="flex items-center space-x-6">
                     <div className="relative overflow-hidden w-24 h-24 rounded-2xl">
                       <img
                         src={getImageUrl(property.images[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                         alt={property.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
                       />
                       <div className="absolute inset-0 bg-charcoal/10"></div>
                     </div>
                     <div>
-                      <h4 className="text-lg font-black text-charcoal mb-1">{property.title}</h4>
+                      <h4 className="text-lg font-bold tracking-tight text-charcoal mb-1">{property.title}</h4>
                       <div className="flex items-center space-x-3 text-charcoal-muted mb-3">
                          <MapPin className="w-3 h-3" />
                          <span className="text-[10px] font-bold uppercase tracking-widest">{property.city} · {formatCategoryLabel(property.category)}</span>
                       </div>
                       <div className="flex items-center space-x-4">
-                         <span className="text-lg font-black text-terracotta tracking-tight">₹{property.price_per_night} <span className="text-[10px] text-charcoal-muted uppercase">
+                         <span className="text-lg font-bold tracking-tight text-terracotta tracking-tight">₹{property.price_per_night} <span className="text-[10px] text-charcoal-muted uppercase">
                            {property.category === 'commercial' || property.category === 'event_venue'
                              ? (property.pricing_cycle === 'hourly' ? '/hr' : property.pricing_cycle === 'weekly' ? '/week' : property.pricing_cycle === 'monthly' ? '/month' : '/day')
                              : '/night'}
                          </span></span>
-                         <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                         <span className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest ${
                            property.status === 'live' ? 'bg-sage/10 text-sage-dark' :
                            property.status === 'pending_verification' ? 'bg-amber-100 text-amber-700' :
-                           'bg-sand-100 text-charcoal-muted'
+                           'bg-gray-50 text-charcoal-muted'
                          }`}>
                            {property.status.replace('_', ' ')}
                          </span>
@@ -416,7 +413,7 @@ const PropertiesSection = () => {
                   </div>
                   <button 
                     onClick={() => setSelectedProperty(property)}
-                    className="px-6 py-3 bg-charcoal text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
+                    className="px-6 py-3 bg-charcoal text-white rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
                   >
                      View Details
                   </button>
@@ -429,17 +426,17 @@ const PropertiesSection = () => {
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <span className="text-xs font-black text-charcoal uppercase tracking-widest">
+              <span className="text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">
                 Page {currentPage} of {Math.ceil(properties.length / itemsPerPage)}
               </span>
               <button 
                 onClick={() => setCurrentPage(p => Math.min(Math.ceil(properties.length / itemsPerPage), p + 1))}
                 disabled={currentPage === Math.ceil(properties.length / itemsPerPage)}
-                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -447,9 +444,9 @@ const PropertiesSection = () => {
           )}
         </div>
       ) : (
-        <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-sand-300">
+        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
           <Building2 className="w-16 h-16 text-sand-200 mx-auto mb-6" />
-          <h4 className="text-xl font-black text-charcoal mb-2">No Properties Registered</h4>
+          <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Properties Registered</h4>
           <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Global inventory is currently empty.</p>
         </div>
       )}
@@ -491,7 +488,7 @@ const VerificationsSection = () => {
   return (
     <div data-testid="verifications-section" className="animate-slide-up">
       <div className="flex items-center mb-8">
-         <h3 className="text-2xl font-black text-charcoal tracking-tight">Inspection Queue</h3>
+         <h3 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">Inspection Queue</h3>
          <div className="ml-4 h-px flex-1 bg-sand-200"></div>
       </div>
 
@@ -500,9 +497,9 @@ const VerificationsSection = () => {
            {[1,2].map(i => <div key={i} className="h-40 bg-white rounded-3xl animate-pulse"></div>)}
         </div>
       ) : tasks.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-sand-300" data-testid="verifications-empty">
+        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200" data-testid="verifications-empty">
           <FileCheck className="w-16 h-16 text-sand-200 mx-auto mb-6" />
-          <h4 className="text-xl font-black text-charcoal mb-2">Queue Clear</h4>
+          <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">Queue Clear</h4>
           <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">No pending physical site inspections assigned.</p>
         </div>
       ) : (
@@ -516,7 +513,7 @@ const VerificationsSection = () => {
               return (
                 <div
                   key={task.verification_id}
-                  className="bg-white rounded-[2rem] p-8 border border-sand-200 shadow-premium hover:border-terracotta transition-all duration-300 group"
+                  className="bg-white rounded-2xl p-8 border border-gray-100 shadow-premium hover:border-terracotta transition-all duration-300 group"
                   data-testid={`verification-task-${task.property_id}`}
                 >
                   <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
@@ -525,18 +522,18 @@ const VerificationsSection = () => {
                         <img
                           src={getImageUrl(pd.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                           alt={pd.title}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                          className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
                         />
                         <div className="absolute inset-0 bg-charcoal/10"></div>
                       </div>
                       <div>
-                        <h4 className="text-xl font-black text-charcoal mb-1">{pd.title || 'Property'}</h4>
+                        <h4 className="text-xl font-bold tracking-tight text-charcoal mb-1">{pd.title || 'Property'}</h4>
                         <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-4">
                           {pd.city}{pd.address ? ` · ${pd.address}` : ''}
                         </p>
                         <div className="flex items-center space-x-3">
                           <span
-                            className={`px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full ${
+                            className={`px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
                               task.status === 'pending'
                                 ? 'bg-amber-100 text-amber-700'
                                 : task.status === 'in_progress'
@@ -551,7 +548,7 @@ const VerificationsSection = () => {
                           </span>
                           {task.rm_reviewed && (
                             <span
-                              className={`px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full ${
+                              className={`px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
                                 task.rm_approved
                                   ? 'bg-sage/20 text-sage-dark'
                                   : 'bg-terracotta/20 text-terracotta'
@@ -588,17 +585,17 @@ const VerificationsSection = () => {
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <span className="text-xs font-black text-charcoal uppercase tracking-widest">
+              <span className="text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">
                 Page {currentPage} of {Math.ceil(tasks.length / itemsPerPage)}
               </span>
               <button 
                 onClick={() => setCurrentPage(p => Math.min(Math.ceil(tasks.length / itemsPerPage), p + 1))}
                 disabled={currentPage === Math.ceil(tasks.length / itemsPerPage)}
-                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -880,7 +877,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
       data-testid="submit-verification-modal"
     >
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-sand-200 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
           <div>
             <h3 className="text-xl font-bold text-charcoal">
               Submit Visit — {task.property_details?.title || 'Property'}
@@ -898,20 +895,20 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
 
         <div className="p-6 space-y-6">
           {/* Property Details & Images */}
-          <div className="border border-sand-200 rounded-2xl p-4 bg-sand-50/50">
+          <div className="border border-gray-100 rounded-2xl p-4 bg-stone/50">
             <h4 className="font-bold text-charcoal mb-3">Property Details</h4>
             
             {/* Property Images Gallery */}
             {task.property_details?.images && task.property_details.images.length > 0 && (
               <div className="mb-4">
-                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Property Images</p>
+                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">Property Images</p>
                 <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-sand-300">
                   {task.property_details.images.map((img, idx) => (
                     <img 
                       key={idx}
                       src={getImageUrl(img)} 
                       alt={`Property Image ${idx + 1}`} 
-                      className="w-32 h-24 object-cover rounded-xl border border-sand-200 shadow-sm flex-shrink-0"
+                      className="w-32 h-24 object-cover rounded-xl border border-gray-100 shadow-sm flex-shrink-0"
                     />
                   ))}
                 </div>
@@ -971,13 +968,13 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
             <h4 className="font-bold text-charcoal mb-3">Inspection Checklist</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="checklist">
               {Object.entries(checklist).map(([key, val]) => (
-                <div key={key} className={`flex flex-col p-3 rounded-xl border-2 transition-colors ${val ? 'bg-green-50 border-green-200' : 'bg-sand-50 border-sand-200 hover:border-sand-300'}`}>
+                <div key={key} className={`flex flex-col p-3 rounded-xl border-2 transition-colors ${val ? 'bg-green-50 border-green-200' : 'bg-stone border-gray-100 hover:border-gray-200'}`}>
                   <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={val}
                       onChange={() => toggle(key)}
-                      className="w-5 h-5 text-terracotta border-sand-300 rounded focus:ring-terracotta cursor-pointer"
+                      className="w-5 h-5 text-terracotta border-gray-200 rounded focus:ring-terracotta cursor-pointer"
                       data-testid={`check-${key}`}
                     />
                     <span className={`text-sm font-bold capitalize ${val ? 'text-green-800' : 'text-charcoal'}`}>
@@ -1007,10 +1004,10 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
             <div className="space-y-3 mb-2">
               <div>
                 <label className="block text-xs font-semibold text-charcoal-muted mb-1">
-                  Photo <span className="text-terracotta ml-2 font-black uppercase tracking-widest text-[9px]">(Add One geo-tagged photo)</span>
+                  Photo <span className="text-terracotta ml-2 font-bold tracking-tight uppercase tracking-widest text-[9px]">(Add One geo-tagged photo)</span>
                 </label>
                 <div className="flex items-center space-x-4">
-                  <label className="flex-1 text-center py-3 px-4 rounded-xl border-2 border-sand-200 text-sm font-bold text-charcoal hover:bg-sand-100 cursor-pointer transition-colors">
+                  <label className="flex-1 text-center py-3 px-4 rounded-xl border-2 border-gray-100 text-sm font-bold text-charcoal hover:bg-gray-50 cursor-pointer transition-colors">
                     <input
                       type="file"
                       accept="image/png,image/jpeg,image/webp,image/gif"
@@ -1044,7 +1041,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
                       <button 
                         type="button"
                         onClick={stopCamera}
-                        className="flex-1 py-3 bg-sand-100 text-charcoal font-bold rounded-lg hover:bg-sand-200 transition-colors"
+                        className="flex-1 py-3 bg-gray-50 text-charcoal font-bold rounded-lg hover:bg-sand-200 transition-colors"
                       >
                         Cancel
                       </button>
@@ -1091,7 +1088,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
             <button
               onClick={addPhoto}
               disabled={uploading || submitting}
-              className="mt-4 flex items-center justify-center px-6 py-3 bg-terracotta/10 text-terracotta border-2 border-terracotta/20 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-terracotta hover:text-white transition-all disabled:opacity-50"
+              className="mt-4 flex items-center justify-center px-6 py-3 bg-terracotta/10 text-terracotta border-2 border-terracotta/20 rounded-xl text-xs font-bold tracking-tight uppercase tracking-widest hover:bg-terracotta hover:text-white transition-all disabled:opacity-50"
               data-testid="add-photo-btn"
             >
               {uploading ? 'UPLOADING...' : '+ Add photo to list'}
@@ -1102,14 +1099,14 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
                 {photos.map((p, idx) => (
                   <li
                     key={idx}
-                    className="flex items-center justify-between bg-sand-50 px-3 py-2 rounded text-sm"
+                    className="flex items-center justify-between bg-stone px-3 py-2 rounded text-sm"
                     data-testid={`photo-item-${idx}`}
                   >
                     <div className="flex items-center space-x-3 min-w-0">
                       <img
                         src={p.photo_url}
                         alt={`Geo-tagged ${idx + 1}`}
-                        className="w-12 h-12 rounded object-cover flex-shrink-0 border border-sand-200"
+                        className="w-12 h-12 rounded object-cover flex-shrink-0 border border-gray-100"
                       />
                       <span className="text-xs text-charcoal-muted truncate">
                         ({p.latitude.toFixed(4)}, {p.longitude.toFixed(4)})
@@ -1161,10 +1158,10 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
           )}
         </div>
 
-        <div className="sticky bottom-0 bg-white border-t border-sand-200 px-6 py-4 flex items-center justify-end space-x-3">
+        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-end space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-sand-300 text-charcoal hover:bg-sand-50"
+            className="px-4 py-2 rounded-lg border border-gray-200 text-charcoal hover:bg-stone"
             data-testid="modal-cancel"
           >
             Cancel
@@ -1288,7 +1285,7 @@ const LeadsSection = () => {
     <div data-testid="leads-section" className="animate-slide-up">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
         <div className="flex items-center flex-1">
-           <h3 className="text-2xl font-black text-charcoal tracking-tight">Lead Pipeline</h3>
+           <h3 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">Lead Pipeline</h3>
            <div className="ml-4 h-px flex-1 bg-sand-200"></div>
         </div>
         <button
@@ -1302,12 +1299,12 @@ const LeadsSection = () => {
       </div>
 
       {showAddForm && (
-        <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium mb-12 animate-slide-down" data-testid="add-lead-form">
-          <h4 className="text-xl font-black text-charcoal tracking-tight mb-6">Add New Lead</h4>
+        <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium mb-12 animate-slide-down" data-testid="add-lead-form">
+          <h4 className="text-xl font-bold tracking-tight text-charcoal tracking-tight mb-6">Add New Lead</h4>
           <form onSubmit={handleCreateLead} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Full Name *</label>
+                <label className="block text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">Full Name *</label>
                 <input
                   type="text"
                   required
@@ -1319,7 +1316,7 @@ const LeadsSection = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Phone Number *</label>
+                <label className="block text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">Phone Number *</label>
                 <input
                   type="tel"
                   required
@@ -1331,7 +1328,7 @@ const LeadsSection = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Email Address</label>
+                <label className="block text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">Email Address</label>
                 <input
                   type="email"
                   value={formData.email}
@@ -1342,7 +1339,7 @@ const LeadsSection = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">City *</label>
+                <label className="block text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">City *</label>
                 <input
                   type="text"
                   required
@@ -1354,7 +1351,7 @@ const LeadsSection = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Property Type *</label>
+                <label className="block text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">Property Type *</label>
                 <select
                   value={formData.property_type}
                   onChange={(e) => setFormData({ ...formData, property_type: e.target.value })}
@@ -1367,7 +1364,7 @@ const LeadsSection = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">From Date</label>
+                <label className="block text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">From Date</label>
                 <input
                   type="date"
                   value={formData.from_date}
@@ -1377,7 +1374,7 @@ const LeadsSection = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">To Date</label>
+                <label className="block text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">To Date</label>
                 <input
                   type="date"
                   value={formData.to_date}
@@ -1387,7 +1384,7 @@ const LeadsSection = () => {
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Selected Property</label>
+                <label className="block text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">Selected Property</label>
                 <select
                   value={formData.property_id}
                   onChange={handlePropertyChange}
@@ -1404,7 +1401,7 @@ const LeadsSection = () => {
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Lead Notes</label>
+              <label className="block text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">Lead Notes</label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -1426,7 +1423,7 @@ const LeadsSection = () => {
                   setShowAddForm(false);
                   setError('');
                 }}
-                className="px-6 py-3 border border-sand-300 text-charcoal rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-sand-50 transition-all"
+                className="px-6 py-3 border border-gray-200 text-charcoal rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-stone transition-all"
               >
                 Cancel
               </button>
@@ -1450,14 +1447,14 @@ const LeadsSection = () => {
       ) : leads.length > 0 ? (
         <div className="grid grid-cols-1 gap-4" data-testid="leads-list">
           {leads.map((lead) => (
-            <div key={lead.lead_id} className="bg-white rounded-2xl p-6 border border-sand-200 shadow-premium hover:border-terracotta transition-all duration-300 group" data-testid={`lead-${lead.lead_id}`}>
+            <div key={lead.lead_id} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-premium hover:border-terracotta transition-all duration-300 group" data-testid={`lead-${lead.lead_id}`}>
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                 <div className="flex items-center space-x-6">
-                   <div className="w-12 h-12 rounded-xl bg-sand-50 flex items-center justify-center text-terracotta group-hover:bg-terracotta group-hover:text-white transition-all">
+                   <div className="w-12 h-12 rounded-xl bg-stone flex items-center justify-center text-terracotta group-hover:bg-terracotta group-hover:text-white transition-all">
                       <Target className="w-6 h-6" />
                    </div>
                    <div>
-                      <h4 className="text-lg font-black text-charcoal mb-0.5">{lead.full_name}</h4>
+                      <h4 className="text-lg font-bold tracking-tight text-charcoal mb-0.5">{lead.full_name}</h4>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                          <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">{lead.phone} · {lead.email}</p>
                          <div className="flex items-center space-x-2 text-[10px] font-bold text-terracotta">
@@ -1465,7 +1462,7 @@ const LeadsSection = () => {
                             <span className="uppercase tracking-widest">{lead.city} · {formatPropertyTypeLabel(lead.property_type)}</span>
                          </div>
                          {lead.from_date && lead.to_date && (
-                            <div className="flex items-center space-x-1 text-[9px] font-black text-sage-dark bg-sage/10 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                            <div className="flex items-center space-x-1 text-[9px] font-bold tracking-tight text-sage-dark bg-sage/10 px-2 py-0.5 rounded-full uppercase tracking-widest">
                                <span>📅 {(() => {
                                   const fDate = new Date(lead.from_date);
                                   const tDate = new Date(lead.to_date);
@@ -1477,7 +1474,7 @@ const LeadsSection = () => {
                             </div>
                          )}
                          {lead.property_title && (
-                            <div className="flex items-center space-x-1 text-[9px] font-black text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full uppercase tracking-widest border border-amber-100">
+                            <div className="flex items-center space-x-1 text-[9px] font-bold tracking-tight text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full uppercase tracking-widest border border-amber-100">
                                <span>🏠 {lead.property_title}</span>
                             </div>
                          )}
@@ -1485,7 +1482,7 @@ const LeadsSection = () => {
                    </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                   <span className={`px-4 py-2 text-[9px] font-black uppercase tracking-[0.1em] rounded-full ${
+                   <span className={`px-4 py-2 text-[9px] font-bold tracking-tight uppercase tracking-[0.1em] rounded-full ${
                      lead.status === 'converted' ? 'bg-sage/10 text-sage-dark' :
                      lead.status === 'contacted' ? 'bg-blue-100 text-blue-700' :
                      lead.status === 'lost' ? 'bg-red-50 text-terracotta' :
@@ -1505,9 +1502,9 @@ const LeadsSection = () => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-sand-300">
+        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
           <Target className="w-16 h-16 text-sand-200 mx-auto mb-6" />
-          <h4 className="text-xl font-black text-charcoal mb-2">No Active Leads</h4>
+          <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Active Leads</h4>
           <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest mb-8">Start your outreach to populate your pipeline.</p>
           <button onClick={() => setShowAddForm(true)} className="btn-premium px-10 py-4 shadow-premium">
             Generate First Lead
@@ -1543,32 +1540,32 @@ const CommissionsSection = () => {
   return (
     <div data-testid="commissions-section" className="animate-slide-up">
       <div className="flex items-center mb-10">
-         <h3 className="text-2xl font-black text-charcoal tracking-tight">Financial Performance</h3>
+         <h3 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">Financial Performance</h3>
          <div className="ml-4 h-px flex-1 bg-sand-200"></div>
       </div>
 
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium">
+          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium">
             <div className="w-12 h-12 bg-sage/10 rounded-2xl flex items-center justify-center mb-6">
                <IndianRupee className="w-6 h-6 text-sage-dark" />
             </div>
-            <p className="text-3xl font-black text-charcoal tracking-tighter mb-1">₹{(summary.total_earned / 100).toLocaleString('en-IN')}</p>
-            <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Total Revenue</p>
+            <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">₹{(summary.total_earned / 100).toLocaleString('en-IN')}</p>
+            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Total Revenue</p>
           </div>
-          <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium">
+          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium">
             <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-6">
                <CheckCircle className="w-6 h-6 text-blue-600" />
             </div>
-            <p className="text-3xl font-black text-charcoal tracking-tighter mb-1">₹{(summary.paid / 100).toLocaleString('en-IN')}</p>
-            <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Settled</p>
+            <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">₹{(summary.paid / 100).toLocaleString('en-IN')}</p>
+            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Settled</p>
           </div>
-          <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium">
+          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium">
             <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-6">
                <Clock className="w-6 h-6 text-amber-600" />
             </div>
-            <p className="text-3xl font-black text-charcoal tracking-tighter mb-1">₹{(summary.pending / 100).toLocaleString('en-IN')}</p>
-            <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Pending Settlement</p>
+            <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">₹{(summary.pending / 100).toLocaleString('en-IN')}</p>
+            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Pending Settlement</p>
           </div>
         </div>
       )}
@@ -1578,28 +1575,28 @@ const CommissionsSection = () => {
            {[1,2,3].map(i => <div key={i} className="h-20 bg-white rounded-3xl animate-pulse"></div>)}
         </div>
       ) : commissions.length > 0 ? (
-        <div className="bg-white rounded-[2.5rem] overflow-hidden border border-sand-200 shadow-premium" data-testid="commissions-list">
+        <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-premium" data-testid="commissions-list">
            <table className="w-full text-left border-collapse">
               <thead>
-                 <tr className="bg-sand-50 border-b border-sand-200">
-                    <th className="px-8 py-5 text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Transaction ID</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Yield</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-charcoal-muted uppercase tracking-widest text-right">Status</th>
+                 <tr className="bg-stone border-b border-gray-100">
+                    <th className="px-8 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Transaction ID</th>
+                    <th className="px-8 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Yield</th>
+                    <th className="px-8 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest text-right">Status</th>
                  </tr>
               </thead>
               <tbody>
                  {commissions.map((commission) => (
-                    <tr key={commission.commission_id} className="border-b border-sand-100 hover:bg-sand-50/50 transition-colors">
+                    <tr key={commission.commission_id} className="border-b border-sand-100 hover:bg-stone/50 transition-colors">
                        <td className="px-8 py-6">
-                          <p className="text-sm font-black text-charcoal mb-0.5">{commission.booking_id}</p>
+                          <p className="text-sm font-bold tracking-tight text-charcoal mb-0.5">{commission.booking_id}</p>
                           <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Source: {commission.booking_source}</p>
                        </td>
                        <td className="px-8 py-6">
-                          <p className="text-sm font-black text-terracotta mb-0.5">₹{(commission.commission_amount / 100).toFixed(2)}</p>
+                          <p className="text-sm font-bold tracking-tight text-terracotta mb-0.5">₹{(commission.commission_amount / 100).toFixed(2)}</p>
                           <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{commission.commission_percentage}% of ₹{(commission.booking_amount / 100).toFixed(2)}</p>
                        </td>
                        <td className="px-8 py-6 text-right">
-                          <span className={`inline-flex px-4 py-1.5 text-[9px] font-black uppercase tracking-widest rounded-full ${
+                          <span className={`inline-flex px-4 py-1.5 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
                              commission.payment_status === 'paid' ? 'bg-sage/10 text-sage-dark' : 'bg-amber-100 text-amber-700'
                           }`}>
                              {commission.payment_status}
@@ -1611,9 +1608,9 @@ const CommissionsSection = () => {
            </table>
         </div>
       ) : (
-        <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-sand-300">
+        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
           <IndianRupee className="w-16 h-16 text-sand-200 mx-auto mb-6" />
-          <h4 className="text-xl font-black text-charcoal mb-2">No Commissions Yet</h4>
+          <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Commissions Yet</h4>
           <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Earnings will appear here as bookings are finalized.</p>
         </div>
       )}
@@ -1642,14 +1639,14 @@ const PropertyDetailsModal = ({ property, onClose }) => {
 
   return createPortal(
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-elevated animate-in zoom-in-95 duration-200">
         {/* Sticky Header */}
-        <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-sand-200 px-8 py-5 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white/95 backdrop-blur border-b border-gray-100 px-8 py-5 flex items-center justify-between z-10">
           <div>
-            <span className="text-[9px] font-black text-terracotta bg-terracotta/10 px-2.5 py-1 rounded-full uppercase tracking-wider">
+            <span className="text-[9px] font-bold tracking-tight text-terracotta bg-terracotta/10 px-2.5 py-1 rounded-full uppercase tracking-wider">
               {formatCategoryLabel(property.category)} · {formatPropertyTypeLabel(property.property_type)}
             </span>
-            <h3 className="text-xl font-black text-charcoal mt-2 tracking-tight">
+            <h3 className="text-xl font-bold tracking-tight text-charcoal mt-2 tracking-tight">
               {property.title}
             </h3>
           </div>
@@ -1665,7 +1662,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
           {/* Photo Gallery */}
           {propertyImages.length > 0 && (
             <div className="space-y-3">
-              <div className="relative h-96 w-full rounded-2xl overflow-hidden bg-sand-100">
+              <div className="relative h-96 w-full rounded-2xl overflow-hidden bg-gray-50">
                 <img
                   src={getImageUrl(propertyImages[activeImageIdx])}
                   alt={property.title}
@@ -1679,7 +1676,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                       key={idx}
                       onClick={() => setActiveImageIdx(idx)}
                       className={`relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all ${
-                        activeImageIdx === idx ? 'border-terracotta scale-95 shadow-md' : 'border-transparent hover:border-sand-300'
+                        activeImageIdx === idx ? 'border-terracotta scale-95 shadow-subtle' : 'border-transparent hover:border-gray-200'
                       }`}
                     >
                       <img
@@ -1699,36 +1696,36 @@ const PropertyDetailsModal = ({ property, onClose }) => {
             {/* Left/Middle Column - Details */}
             <div className="lg:col-span-2 space-y-6">
               <div>
-                <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider mb-2">Description</h4>
+                <h4 className="text-xs font-bold tracking-tight uppercase text-charcoal-muted tracking-wider mb-2">Description</h4>
                 <p className="text-sm text-charcoal-muted leading-relaxed whitespace-pre-line">
                   {formatReadableText(property.description)}
                 </p>
               </div>
 
               {/* Specifications */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 bg-sand-50 rounded-2xl border border-sand-200">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-5 bg-stone rounded-2xl border border-gray-100">
                 <div>
-                  <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider block">BHK / Size</span>
-                  <span className="text-sm font-black text-charcoal mt-1 block">{formatDisplayLabel(property.bhk_type) || '—'}</span>
+                  <span className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider block">BHK / Size</span>
+                  <span className="text-sm font-bold tracking-tight text-charcoal mt-1 block">{formatDisplayLabel(property.bhk_type) || '—'}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider block">Area (sq.ft)</span>
-                  <span className="text-sm font-black text-charcoal mt-1 block">{property.area_sqft ? `${property.area_sqft} sqft` : '—'}</span>
+                  <span className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider block">Area (sq.ft)</span>
+                  <span className="text-sm font-bold tracking-tight text-charcoal mt-1 block">{property.area_sqft ? `${property.area_sqft} sqft` : '—'}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider block">Pricing Mode</span>
-                  <span className="text-sm font-black text-charcoal mt-1 block">{formatDisplayLabel(property.pricing_cycle || 'day')}</span>
+                  <span className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider block">Pricing Mode</span>
+                  <span className="text-sm font-bold tracking-tight text-charcoal mt-1 block">{formatDisplayLabel(property.pricing_cycle || 'day')}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider block">Min Stay</span>
-                  <span className="text-sm font-black text-charcoal mt-1 block">{property.minimum_stay_days || 1} {property.pricing_cycle === 'hourly' ? 'hours' : 'days'}</span>
+                  <span className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider block">Min Stay</span>
+                  <span className="text-sm font-bold tracking-tight text-charcoal mt-1 block">{property.minimum_stay_days || 1} {property.pricing_cycle === 'hourly' ? 'hours' : 'days'}</span>
                 </div>
               </div>
 
               {/* Location Detail */}
               <div className="space-y-3">
-                <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider">Location Info</h4>
-                <div className="p-5 bg-white border border-sand-200 rounded-2xl space-y-3">
+                <h4 className="text-xs font-bold tracking-tight uppercase text-charcoal-muted tracking-wider">Location Info</h4>
+                <div className="p-5 bg-white border border-gray-100 rounded-2xl space-y-3">
                   <div className="flex items-start space-x-2">
                     <MapPin className="w-5 h-5 text-terracotta mt-0.5 flex-shrink-0" />
                     <div>
@@ -1757,13 +1754,13 @@ const PropertyDetailsModal = ({ property, onClose }) => {
 
               {/* Amenities */}
               <div>
-                <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider mb-3">Amenities</h4>
+                <h4 className="text-xs font-bold tracking-tight uppercase text-charcoal-muted tracking-wider mb-3">Amenities</h4>
                 <div className="flex flex-wrap gap-2">
                   {property.amenities && property.amenities.length > 0 ? (
                     property.amenities.map((amenity, idx) => (
                       <span
                         key={idx}
-                        className="px-3.5 py-1.5 bg-sand-100 text-charcoal text-xs font-bold rounded-full border border-sand-200 capitalize"
+                        className="px-3.5 py-1.5 bg-gray-50 text-charcoal text-xs font-bold rounded-full border border-gray-100 capitalize"
                       >
                         {formatDisplayLabel(amenity)}
                       </span>
@@ -1777,7 +1774,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
               {/* Nearby Places */}
               {property.nearby_places && property.nearby_places.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider mb-3">Nearby Famous Places</h4>
+                  <h4 className="text-xs font-bold tracking-tight uppercase text-charcoal-muted tracking-wider mb-3">Nearby Famous Places</h4>
                   <div className="flex flex-wrap gap-1.5">
                     {property.nearby_places.map((place, idx) => (
                       <span
@@ -1794,7 +1791,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
               {/* Package Details for Event Venues */}
               {property.category === 'event_venue' && property.packages && property.packages.length > 0 && (
                 <div className="space-y-4">
-                  <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider">
+                  <h4 className="text-xs font-bold tracking-tight uppercase text-charcoal-muted tracking-wider">
                     Food Package Items
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1804,10 +1801,10 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                       if (entries.length === 0) return null;
                       
                       return (
-                        <div key={idx} className="bg-white rounded-2xl border border-sand-200 overflow-hidden shadow-sm">
+                        <div key={idx} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
                           <div className={`flex items-center px-5 py-4 ${isVeg ? 'bg-green-50/50' : 'bg-red-50/50'} border-b ${isVeg ? 'border-green-100' : 'border-red-100'}`}>
                             <div className={`w-3 h-3 ${isVeg ? 'bg-green-500' : 'bg-red-500'} ${isVeg ? 'rounded-sm' : 'rounded-full'} mr-3 border ${isVeg ? 'border-green-700' : 'border-red-700'}`}></div>
-                            <h3 className={`text-sm font-black uppercase tracking-widest ${isVeg ? 'text-green-900' : 'text-red-900'}`}>
+                            <h3 className={`text-sm font-bold tracking-tight uppercase tracking-widest ${isVeg ? 'text-green-900' : 'text-red-900'}`}>
                               {isVeg ? 'Vegetarian Package' : 'Non-Vegetarian Package'}
                             </h3>
                           </div>
@@ -1819,7 +1816,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                                     <CheckCircle className="w-4 h-4 text-emerald-500 mr-2 flex-shrink-0" />
                                     {formatDisplayLabel(item)}
                                   </span>
-                                  <span className="text-xs font-black bg-sand-100 text-charcoal px-2 py-0.5 rounded-full">
+                                  <span className="text-xs font-bold tracking-tight bg-gray-50 text-charcoal px-2 py-0.5 rounded-full">
                                     x{count}
                                   </span>
                                 </li>
@@ -1837,31 +1834,31 @@ const PropertyDetailsModal = ({ property, onClose }) => {
             {/* Right Column - Pricing and Rules */}
             <div className="space-y-6">
               {/* Pricing Box */}
-              <div className="bg-charcoal text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
+              <div className="bg-charcoal text-white rounded-3xl p-6 shadow-premium relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-terracotta/10 rounded-full translate-x-8 -translate-y-8"></div>
-                <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Pricing & Policy</span>
+                <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-white/50">Pricing & Policy</span>
                 
                 {property.category === 'event_venue' ? (
                   <div className="mt-4 space-y-4">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-white/60">Venue Rent</p>
-                      <p className="text-3xl font-black text-terracotta tracking-tight">₹{property.price_per_night?.toLocaleString('en-IN')} <span className="text-xs text-white/60">/day</span></p>
+                      <p className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-white/60">Venue Rent</p>
+                      <p className="text-3xl font-bold tracking-tight text-terracotta tracking-tight">₹{property.price_per_night?.toLocaleString('en-IN')} <span className="text-xs text-white/60">/day</span></p>
                     </div>
                     <div className="grid grid-cols-2 gap-4 pt-3 border-t border-white/10">
                       <div>
-                        <p className="text-[9px] font-black uppercase tracking-wider text-white/60">Veg Plate</p>
-                        <p className="text-lg font-black text-white">₹{property.veg_price || '—'}</p>
+                        <p className="text-[9px] font-bold tracking-tight uppercase tracking-wider text-white/60">Veg Plate</p>
+                        <p className="text-lg font-bold tracking-tight text-white">₹{property.veg_price || '—'}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] font-black uppercase tracking-wider text-white/60">Non-Veg Plate</p>
-                        <p className="text-lg font-black text-white">₹{property.non_veg_price || '—'}</p>
+                        <p className="text-[9px] font-bold tracking-tight uppercase tracking-wider text-white/60">Non-Veg Plate</p>
+                        <p className="text-lg font-bold tracking-tight text-white">₹{property.non_veg_price || '—'}</p>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="mt-4">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-white/60">Base Price</p>
-                    <p className="text-3xl font-black text-terracotta tracking-tight">
+                    <p className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-white/60">Base Price</p>
+                    <p className="text-3xl font-bold tracking-tight text-terracotta tracking-tight">
                       ₹{property.price_per_night?.toLocaleString('en-IN')}{' '}
                       <span className="text-xs text-white/60">
                         /{formatDisplayLabel(property.pricing_cycle || 'night')}
@@ -1873,19 +1870,19 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                 <div className="mt-6 pt-6 border-t border-white/10 space-y-3">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-white/60 font-bold uppercase tracking-wider">Instant Booking</span>
-                    <span className={`px-2 py-0.5 font-black uppercase tracking-wider rounded text-[9px] ${property.instant_booking ? 'bg-sage text-white' : 'bg-white/10 text-white/60'}`}>
+                    <span className={`px-2 py-0.5 font-bold tracking-tight uppercase tracking-wider rounded text-[9px] ${property.instant_booking ? 'bg-sage text-white' : 'bg-white/10 text-white/60'}`}>
                       {property.instant_booking ? 'YES' : 'NO'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-white/60 font-bold uppercase tracking-wider">Pet-Friendly</span>
-                    <span className={`px-2 py-0.5 font-black uppercase tracking-wider rounded text-[9px] ${property.pet_friendly ? 'bg-sage text-white' : 'bg-white/10 text-white/60'}`}>
+                    <span className={`px-2 py-0.5 font-bold tracking-tight uppercase tracking-wider rounded text-[9px] ${property.pet_friendly ? 'bg-sage text-white' : 'bg-white/10 text-white/60'}`}>
                       {property.pet_friendly ? 'YES' : 'NO'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-white/60 font-bold uppercase tracking-wider">Smoking Allowed</span>
-                    <span className={`px-2 py-0.5 font-black uppercase tracking-wider rounded text-[9px] ${property.smoking_allowed ? 'bg-sage text-white' : 'bg-white/10 text-white/60'}`}>
+                    <span className={`px-2 py-0.5 font-bold tracking-tight uppercase tracking-wider rounded text-[9px] ${property.smoking_allowed ? 'bg-sage text-white' : 'bg-white/10 text-white/60'}`}>
                       {property.smoking_allowed ? 'YES' : 'NO'}
                     </span>
                   </div>
@@ -1893,8 +1890,8 @@ const PropertyDetailsModal = ({ property, onClose }) => {
               </div>
 
               {/* House Rules / Venue Policies */}
-              <div className="bg-sand-50 p-6 rounded-3xl border border-sand-200">
-                <h4 className="text-xs font-black uppercase text-charcoal-muted tracking-wider mb-3">
+              <div className="bg-stone p-6 rounded-3xl border border-gray-100">
+                <h4 className="text-xs font-bold tracking-tight uppercase text-charcoal-muted tracking-wider mb-3">
                   {property.category === 'event_venue' ? 'Venue Inclusions / Policies' : 'House Rules'}
                 </h4>
                 {venueRules ? (
@@ -1902,7 +1899,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                     {/* Timings */}
                     {(venueRules.timings_morning_start || venueRules.timings_afternoon_start || venueRules.timings_evening_start) && (
                       <div className="space-y-1">
-                        <span className="text-[10px] font-black text-charcoal uppercase tracking-wider block">Operating Hours</span>
+                        <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-wider block">Operating Hours</span>
                         {venueRules.timings_morning_start && (
                           <p>Morning Slot: {venueRules.timings_morning_start} to {venueRules.timings_morning_end}</p>
                         )}
@@ -1918,20 +1915,20 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                     <div className="grid grid-cols-2 gap-4">
                       {venueRules.taxes && (
                         <div>
-                          <span className="text-[10px] font-black text-charcoal uppercase tracking-wider block">Taxes</span>
+                          <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-wider block">Taxes</span>
                           <p>{venueRules.taxes}%</p>
                         </div>
                       )}
                       {venueRules.rooms_count && (
                         <div>
-                          <span className="text-[10px] font-black text-charcoal uppercase tracking-wider block">Rooms</span>
+                          <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-wider block">Rooms</span>
                           <p>{venueRules.rooms_count} rooms (avg ₹{venueRules.room_price}/room)</p>
                         </div>
                       )}
                     </div>
                     {/* Food & Alcohol */}
                     <div className="space-y-1">
-                      <span className="text-[10px] font-black text-charcoal uppercase tracking-wider block">Restrictions</span>
+                      <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-wider block">Restrictions</span>
                       <p>Food provided by venue: {venueRules.food_venue ? 'Yes' : 'No'}</p>
                       <p>Outside food allowed: {venueRules.food_outside ? 'Yes' : 'No'}</p>
                       <p>Alcohol allowed: {venueRules.alcohol_allowed ? 'Yes' : 'No'}</p>

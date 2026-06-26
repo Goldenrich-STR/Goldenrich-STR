@@ -221,18 +221,15 @@ const HostBookings = () => {
   }, [bookings]);
 
   return (
-    <div className="min-h-screen bg-sand-50">
+    <div className="min-h-screen bg-stone">
       {/* Header matching HostDashboard.js */}
       <header className="header-glass sticky top-0 z-50 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center w-full">
+        <div className="w-full flex justify-between items-center">
           <div 
             className="flex items-center space-x-3 cursor-pointer group" 
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
-            <h1 className="text-xl font-black text-charcoal tracking-tighter">
-              HOST<span className="text-terracotta">CENTRAL</span>
-            </h1>
+            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
           </div>
           <div className="flex items-center space-x-6">
             <nav className="hidden md:flex items-center space-x-6">
@@ -245,7 +242,7 @@ const HostBookings = () => {
                  <button
                    key={item.label}
                    onClick={() => navigate(item.path)}
-                   className={`text-[10px] font-black tracking-[0.2em] transition-colors ${
+                   className={`text-[10px] font-bold tracking-tight tracking-[0.2em] transition-colors ${
                      item.path === '/host/bookings' 
                        ? 'text-terracotta border-b border-terracotta pb-0.5' 
                        : 'text-charcoal-muted hover:text-terracotta'
@@ -267,7 +264,7 @@ const HostBookings = () => {
                     logout();
                   }, 50);
                 }} 
-                className="text-xs font-black text-terracotta hover:underline tracking-widest uppercase cursor-pointer"
+                className="text-xs font-bold tracking-tight text-terracotta hover:underline tracking-widest uppercase cursor-pointer"
               >
                 Logout
               </button>
@@ -277,17 +274,17 @@ const HostBookings = () => {
       </header>
 
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="w-full px-4 md:px-8 lg:px-12 py-12 mx-auto">
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div>
-            <h2 className="text-4xl font-extrabold text-charcoal tracking-tight" data-testid="page-title">
+            <h2 className="text-4xl font-semibold tracking-tight text-charcoal tracking-tight" data-testid="page-title">
               Bookings Manager
             </h2>
             <p className="text-charcoal-muted text-sm font-medium mt-1">Track reservations, view guests and monitor earnings per property.</p>
           </div>
           <button
             onClick={() => navigate('/host/dashboard')}
-            className="px-5 py-2.5 bg-white border border-sand-200 rounded-xl font-bold text-sm text-charcoal hover:text-terracotta hover:border-terracotta flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98]"
+            className="px-5 py-2.5 bg-white border border-gray-100 rounded-xl font-bold text-sm text-charcoal hover:text-terracotta hover:border-terracotta flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98]"
           >
             <ArrowLeft className="w-4 h-4 text-terracotta" />
             <span>Dashboard</span>
@@ -303,53 +300,53 @@ const HostBookings = () => {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-charcoal-muted">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-terracotta border-sand-200 mb-4"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-terracotta border-gray-100 mb-4"></div>
             <span className="text-sm font-bold uppercase tracking-wider">Loading bookings data…</span>
           </div>
         ) : (
           <>
             {/* Overview Stats Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
-              <div className="dashboard-card p-6 bg-white rounded-3xl border border-sand-200/80 shadow-sm flex flex-col justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-charcoal-light">Active Properties</span>
+              <div className="dashboard-card p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
+                <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-light">Active Properties</span>
                 <div className="flex items-baseline justify-between mt-4">
-                  <span className="text-3xl font-black text-charcoal">{summaryStats.propertiesCount}</span>
+                  <span className="text-3xl font-bold tracking-tight text-charcoal">{summaryStats.propertiesCount}</span>
                   <div className="p-2 rounded-xl bg-terracotta/5 text-terracotta">
                     <Building className="w-5 h-5" />
                   </div>
                 </div>
               </div>
-              <div className="dashboard-card p-6 bg-white rounded-3xl border border-sand-200/80 shadow-sm flex flex-col justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-charcoal-light">Total Bookings</span>
+              <div className="dashboard-card p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
+                <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-light">Total Bookings</span>
                 <div className="flex items-baseline justify-between mt-4">
-                  <span className="text-3xl font-black text-charcoal">{summaryStats.totalReservations}</span>
+                  <span className="text-3xl font-bold tracking-tight text-charcoal">{summaryStats.totalReservations}</span>
                   <div className="p-2 rounded-xl bg-indigo-500/5 text-indigo-500">
                     <CalendarDays className="w-5 h-5" />
                   </div>
                 </div>
               </div>
-              <div className="dashboard-card p-6 bg-white rounded-3xl border border-sand-200/80 shadow-sm flex flex-col justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-charcoal-light">Confirmed Stays</span>
+              <div className="dashboard-card p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
+                <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-light">Confirmed Stays</span>
                 <div className="flex items-baseline justify-between mt-4">
-                  <span className="text-3xl font-black text-charcoal">{summaryStats.confirmedStays}</span>
+                  <span className="text-3xl font-bold tracking-tight text-charcoal">{summaryStats.confirmedStays}</span>
                   <div className="p-2 rounded-xl bg-emerald-500/5 text-emerald-500">
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
                 </div>
               </div>
-              <div className="dashboard-card p-6 bg-white rounded-3xl border border-sand-200/80 shadow-sm flex flex-col justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-charcoal-light">Pending Payments</span>
+              <div className="dashboard-card p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
+                <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-light">Pending Payments</span>
                 <div className="flex items-baseline justify-between mt-4">
-                  <span className="text-3xl font-black text-charcoal">{summaryStats.pendingPayment}</span>
+                  <span className="text-3xl font-bold tracking-tight text-charcoal">{summaryStats.pendingPayment}</span>
                   <div className="p-2 rounded-xl bg-amber-500/5 text-amber-500">
                     <Clock className="w-5 h-5 animate-pulse" />
                   </div>
                 </div>
               </div>
-              <div className="dashboard-card p-6 bg-white rounded-3xl border border-sand-200/80 shadow-sm flex flex-col justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-charcoal-light">Gross Booking Value</span>
+              <div className="dashboard-card p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
+                <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-light">Gross Booking Value</span>
                 <div className="flex items-baseline justify-between mt-4">
-                  <span className="text-xl sm:text-2xl font-black text-charcoal">
+                  <span className="text-xl sm:text-2xl font-bold tracking-tight text-charcoal">
                     ₹{Math.round(summaryStats.totalRevenue).toLocaleString('en-IN')}
                   </span>
                   <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
@@ -360,7 +357,7 @@ const HostBookings = () => {
             </div>
 
             {/* Filter and Search Section */}
-            <div className="bg-white rounded-3xl p-5 border border-sand-200/80 shadow-sm mb-8 flex flex-col sm:flex-row gap-4 items-center justify-between">
+            <div className="bg-white rounded-3xl p-5 border border-gray-100/80 shadow-sm mb-8 flex flex-col sm:flex-row gap-4 items-center justify-between">
               <div className="relative w-full sm:max-w-md">
                 <Search className="w-4 h-4 text-charcoal-light absolute left-4 top-1/2 -translate-y-1/2" />
                 <input
@@ -368,19 +365,19 @@ const HostBookings = () => {
                   placeholder="Search by property title, city or Booking ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3 border border-sand-200 rounded-2xl text-sm font-semibold text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all bg-sand-50/30"
+                  className="w-full pl-11 pr-4 py-3 border border-gray-100 rounded-2xl text-sm font-semibold text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all bg-stone/30"
                 />
               </div>
 
               <div className="flex items-center space-x-3 w-full sm:w-auto shrink-0 justify-end">
-                <div className="flex items-center space-x-2 text-xs font-black uppercase tracking-wider text-charcoal-muted">
+                <div className="flex items-center space-x-2 text-xs font-bold tracking-tight uppercase tracking-wider text-charcoal-muted">
                   <Filter className="w-3.5 h-3.5" />
                   <span>Status:</span>
                 </div>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="appearance-none border border-sand-200 rounded-xl px-4 py-2.5 pr-10 bg-white font-bold text-xs text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20 transition-all shadow-sm cursor-pointer"
+                  className="appearance-none border border-gray-100 rounded-xl px-4 py-2.5 pr-10 bg-white font-bold text-xs text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20 transition-all shadow-sm cursor-pointer"
                 >
                   <option value="all">ALL RESERVATIONS</option>
                   <option value="confirmed">CONFIRMED</option>
@@ -393,11 +390,11 @@ const HostBookings = () => {
 
             {/* Property list with grouped Bookings */}
             {groupedData.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-3xl border border-sand-200 shadow-sm px-6">
-                <div className="w-16 h-16 bg-sand-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm px-6">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Building2 className="w-8 h-8 text-charcoal-muted" />
                 </div>
-                <h3 className="text-lg font-black text-charcoal mb-2 uppercase tracking-wide">No Bookings Match Criteria</h3>
+                <h3 className="text-lg font-bold tracking-tight text-charcoal mb-2 uppercase tracking-wide">No Bookings Match Criteria</h3>
                 <p className="text-charcoal-muted text-sm font-semibold max-w-sm mx-auto">
                   Adjust your search or filter status to view other properties or bookings.
                 </p>
@@ -412,28 +409,28 @@ const HostBookings = () => {
                   return (
                     <div 
                       key={group.property_id}
-                      className="bg-white rounded-3xl border border-sand-200 overflow-hidden shadow-premium"
+                      className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-premium"
                     >
                       {/* Property header row */}
                       <div 
-                        className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-sand-50/40 border-b border-sand-200 cursor-pointer select-none"
+                        className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-stone/40 border-b border-gray-100 cursor-pointer select-none"
                         onClick={() => toggleExpand(group.property_id)}
                       >
                         <div className="flex items-center space-x-4">
                           <img 
                             src={getImageUrl(image)} 
                             alt={property.title} 
-                            className="w-16 h-16 rounded-2xl object-cover border border-sand-200/80 shadow-sm"
+                            className="w-16 h-16 rounded-2xl object-cover border border-gray-100/80 shadow-sm"
                           />
                           <div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-terracotta block">
+                            <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-terracotta block">
                               {property.city}, {property.state}
                             </span>
-                            <h3 className="text-lg font-black text-charcoal leading-tight mt-0.5 hover:text-terracotta transition-colors">
+                            <h3 className="text-lg font-bold tracking-tight text-charcoal leading-tight mt-0.5 hover:text-terracotta transition-colors">
                               {property.title}
                             </h3>
                             <div className="flex items-center space-x-3 text-xs font-bold text-charcoal-muted mt-2 flex-wrap gap-y-1.5">
-                              <span className="bg-charcoal/5 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">
+                              <span className="bg-charcoal/5 px-2 py-0.5 rounded text-[10px] font-bold tracking-tight uppercase tracking-wider">
                                 {group.stats.total} Total Reservation{group.stats.total === 1 ? '' : 's'}
                               </span>
                               {group.stats.confirmed > 0 && (
@@ -498,11 +495,11 @@ const HostBookings = () => {
                                   {/* Guest & Stay Details */}
                                   <div className="flex-1 space-y-4">
                                     <div className="flex items-center justify-between lg:justify-start gap-4">
-                                      <span className="text-xs font-mono font-black uppercase text-charcoal-muted bg-sand-100 px-2 py-1 rounded">
+                                      <span className="text-xs font-mono font-bold tracking-tight uppercase text-charcoal-muted bg-gray-50 px-2 py-1 rounded">
                                         ID: {b.booking_id}
                                       </span>
                                       
-                                      <span className={`text-[10px] font-black uppercase tracking-widest flex items-center space-x-1 px-3 py-1 border rounded-full ${badge.cls}`}>
+                                      <span className={`text-[10px] font-bold tracking-tight uppercase tracking-widest flex items-center space-x-1 px-3 py-1 border rounded-full ${badge.cls}`}>
                                         <BadgeIcon className="w-3.5 h-3.5" />
                                         <span>{badge.label}</span>
                                       </span>
@@ -513,7 +510,7 @@ const HostBookings = () => {
                                           return (
                                             <button
                                               onClick={() => setSelectedCall(matchingCall)}
-                                              className="inline-flex items-center text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full transition-all cursor-pointer shadow-sm ml-2"
+                                              className="inline-flex items-center text-[10px] font-bold tracking-tight uppercase tracking-wider text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full transition-all cursor-pointer shadow-sm ml-2"
                                             >
                                               <Phone className="w-3 h-3 mr-1 text-emerald-600 animate-pulse" /> AI Call Log 📞
                                             </button>
@@ -525,10 +522,10 @@ const HostBookings = () => {
 
                                     {/* Stay Schedule */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                      <div className="flex items-center space-x-3 bg-sand-50/50 p-3 rounded-2xl border border-sand-150">
+                                      <div className="flex items-center space-x-3 bg-stone/50 p-3 rounded-2xl border border-sand-150">
                                         <Calendar className="w-5 h-5 text-terracotta/70 shrink-0" />
                                         <div>
-                                          <span className="text-[9px] font-black text-charcoal-light uppercase tracking-wider block">Duration</span>
+                                          <span className="text-[9px] font-bold tracking-tight text-charcoal-light uppercase tracking-wider block">Duration</span>
                                           <span className="text-xs font-bold text-charcoal">
                                             {b.check_in_date} to {b.check_out_date}
                                           </span>
@@ -536,10 +533,10 @@ const HostBookings = () => {
                                         </div>
                                       </div>
 
-                                      <div className="flex items-center space-x-3 bg-sand-50/50 p-3 rounded-2xl border border-sand-150">
+                                      <div className="flex items-center space-x-3 bg-stone/50 p-3 rounded-2xl border border-sand-150">
                                         <Users className="w-5 h-5 text-terracotta/70 shrink-0" />
                                         <div>
-                                          <span className="text-[9px] font-black text-charcoal-light uppercase tracking-wider block">Guests</span>
+                                          <span className="text-[9px] font-bold tracking-tight text-charcoal-light uppercase tracking-wider block">Guests</span>
                                           <span className="text-xs font-bold text-charcoal">
                                             {b.number_of_guests} Guest{b.number_of_guests === 1 ? '' : 's'}
                                           </span>
@@ -548,10 +545,10 @@ const HostBookings = () => {
 
                                       {/* Food Preference & Slot (Event Venues) */}
                                       {(b.food_preference || b.selected_slot) && (
-                                        <div className="flex items-center space-x-3 bg-sand-50/50 p-3 rounded-2xl border border-sand-150">
+                                        <div className="flex items-center space-x-3 bg-stone/50 p-3 rounded-2xl border border-sand-150">
                                           <Utensils className="w-5 h-5 text-terracotta/70 shrink-0" />
                                           <div>
-                                            <span className="text-[9px] font-black text-charcoal-light uppercase tracking-wider block">Preferences</span>
+                                            <span className="text-[9px] font-bold tracking-tight text-charcoal-light uppercase tracking-wider block">Preferences</span>
                                             <span className="text-xs font-bold text-charcoal capitalize">
                                               {b.selected_slot && `Slot: ${b.selected_slot}`}
                                               {b.selected_slot && b.food_preference && ` | `}
@@ -563,8 +560,8 @@ const HostBookings = () => {
                                     </div>
                                     
                                     {/* Guest Profile Section (from backend enrich) */}
-                                    <div className="p-4 bg-sand-50/30 rounded-2xl border border-sand-150/70">
-                                      <span className="text-[9px] font-black text-charcoal-light uppercase tracking-wider block mb-2">Guest Profile</span>
+                                    <div className="p-4 bg-stone/30 rounded-2xl border border-sand-150/70">
+                                      <span className="text-[9px] font-bold tracking-tight text-charcoal-light uppercase tracking-wider block mb-2">Guest Profile</span>
                                       {b.guest ? (
                                         <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-xs">
                                           <div className="font-bold text-charcoal text-sm">{b.guest.full_name}</div>
@@ -584,7 +581,7 @@ const HostBookings = () => {
                                   </div>
 
                                   {/* Pricing details and revenue */}
-                                  <div className="w-full lg:w-64 bg-sand-50/30 rounded-2xl p-4 border border-sand-150/80 flex flex-col justify-between">
+                                  <div className="w-full lg:w-64 bg-stone/30 rounded-2xl p-4 border border-sand-150/80 flex flex-col justify-between">
                                     <div className="space-y-2 text-xs">
                                       <div className="flex justify-between font-semibold text-charcoal-muted">
                                         <span>Base Price:</span>
@@ -604,20 +601,20 @@ const HostBookings = () => {
                                           <span>-₹{Math.round(b.discount_amount).toLocaleString('en-IN')}</span>
                                         </div>
                                       )}
-                                      <div className="border-t border-sand-200 pt-2 flex justify-between font-black text-charcoal text-sm">
+                                      <div className="border-t border-gray-100 pt-2 flex justify-between font-bold tracking-tight text-charcoal text-sm">
                                         <span>Total Amount:</span>
                                         <span>₹{Math.round(b.total_amount || 0).toLocaleString('en-IN')}</span>
                                       </div>
                                     </div>
 
-                                    <div className="mt-4 pt-3 border-t border-sand-200/60 flex items-center justify-between">
+                                    <div className="mt-4 pt-3 border-t border-gray-100/60 flex items-center justify-between">
                                       <div>
-                                        <span className="text-[9px] font-black text-charcoal-light uppercase tracking-wider block">Payment Type</span>
+                                        <span className="text-[9px] font-bold tracking-tight text-charcoal-light uppercase tracking-wider block">Payment Type</span>
                                         <span className="text-xs font-bold text-charcoal capitalize">{b.payment_type || 'Full'}</span>
                                       </div>
                                       <div className="text-right">
-                                        <span className="text-[9px] font-black text-charcoal-light uppercase tracking-wider block">Paid Amount</span>
-                                        <span className="text-sm font-black text-emerald-600">₹{Math.round(b.paid_amount || 0).toLocaleString('en-IN')}</span>
+                                        <span className="text-[9px] font-bold tracking-tight text-charcoal-light uppercase tracking-wider block">Paid Amount</span>
+                                        <span className="text-sm font-bold tracking-tight text-emerald-600">₹{Math.round(b.paid_amount || 0).toLocaleString('en-IN')}</span>
                                       </div>
                                     </div>
                                   </div>
@@ -673,12 +670,12 @@ const AICallModal = ({ call, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/60 backdrop-blur-md transition-all duration-300">
-      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-sand-200 flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-elevated border border-gray-100 flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="bg-gradient-to-r from-charcoal to-neutral-805 p-6 text-white flex justify-between items-center">
           <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-terracotta">Voice AI Concierge</span>
-            <h3 className="text-xl font-black tracking-tight">{call.agent_name}</h3>
+            <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-terracotta">Voice AI Concierge</span>
+            <h3 className="text-xl font-bold tracking-tight tracking-tight">{call.agent_name}</h3>
           </div>
           <button 
             onClick={onClose} 
@@ -689,29 +686,29 @@ const AICallModal = ({ call, onClose }) => {
         </div>
 
         {/* Call Info details */}
-        <div className="p-6 bg-sand-50/50 border-b border-sand-200 text-xs font-semibold text-charcoal-muted grid grid-cols-2 gap-4">
+        <div className="p-6 bg-stone/50 border-b border-gray-100 text-xs font-semibold text-charcoal-muted grid grid-cols-2 gap-4">
           <div>
-            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Recipient</span>
+            <span className="block text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light">Recipient</span>
             <span className="text-charcoal text-sm font-bold">{call.recipient_name} ({call.role})</span>
           </div>
           <div>
-            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Phone number</span>
+            <span className="block text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light">Phone number</span>
             <span className="text-charcoal text-sm font-bold">{call.phone}</span>
           </div>
           <div>
-            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Duration</span>
+            <span className="block text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light">Duration</span>
             <span className="text-charcoal text-sm font-bold">{call.duration_seconds} seconds</span>
           </div>
           <div>
-            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Status</span>
-            <span className="inline-flex items-center text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-md text-[10px] font-black uppercase mt-1">
+            <span className="block text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light">Status</span>
+            <span className="inline-flex items-center text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight uppercase mt-1">
               ● Connected
             </span>
           </div>
         </div>
 
         {/* Audio Visualizer & Player */}
-        <div className="p-6 border-b border-sand-100 flex flex-col items-center justify-center bg-sand-50/30">
+        <div className="p-6 border-b border-sand-100 flex flex-col items-center justify-center bg-stone/30">
           {/* Wave visualizer */}
           <div className="flex items-end justify-center gap-1.5 h-16 mb-6 w-full px-12">
             {Array.from({ length: 28 }).map((_, i) => {
@@ -735,7 +732,7 @@ const AICallModal = ({ call, onClose }) => {
             <span className="text-xs font-bold font-mono text-charcoal-muted">{formatTime(progress)}</span>
             <button
               onClick={() => setIsPlaying(!isPlaying)}
-              className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all cursor-pointer shadow-md flex items-center gap-2 ${
+              className={`px-6 py-2.5 rounded-xl font-bold tracking-tight text-xs uppercase tracking-widest transition-all cursor-pointer shadow-subtle flex items-center gap-2 ${
                 isPlaying 
                   ? 'bg-charcoal hover:bg-neutral-800 text-white' 
                   : 'bg-terracotta hover:bg-terracotta-dark text-white'
@@ -758,11 +755,11 @@ const AICallModal = ({ call, onClose }) => {
 
         {/* Transcription bubble */}
         <div className="p-6 overflow-y-auto flex-1 bg-white min-h-[160px] max-h-[300px]">
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-charcoal-muted mb-3 flex items-center gap-1">
+          <h4 className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-muted mb-3 flex items-center gap-1">
             <Volume2 className="w-3.5 h-3.5" /> Call Transcription Script
           </h4>
-          <div className="bg-sand-50 p-4 rounded-2xl border border-sand-200/50 text-sm font-medium text-charcoal leading-relaxed relative">
-            <div className="absolute top-3 left-4 text-xs text-terracotta font-black uppercase tracking-wider text-[9px] mb-1">
+          <div className="bg-stone p-4 rounded-2xl border border-gray-100 text-sm font-medium text-charcoal leading-relaxed relative">
+            <div className="absolute top-3 left-4 text-xs text-terracotta font-bold tracking-tight uppercase tracking-wider text-[9px] mb-1">
               Mayur Voice AI
             </div>
             <p className="mt-4 italic">

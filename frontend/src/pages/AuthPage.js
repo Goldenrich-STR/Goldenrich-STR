@@ -131,13 +131,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
   };
 
   return (
-    <div className="h-screen bg-sand-50 flex overflow-hidden selection:bg-terracotta selection:text-white font-outfit">
+    <div className="h-screen bg-stone flex overflow-hidden selection:bg-terracotta selection:text-white">
       <SEO
         title={isAdminLogin ? "Admin Sign In" : (isLogin ? "Sign In" : "Register")}
         robots="noindex,nofollow"
       />
       {/* Left Panel: Visual/Branding (Desktop Only) */}
-      <div className="hidden lg:flex lg:w-5/12 relative bg-charcoal overflow-hidden border-r border-sand-200 h-full">
+      <div className="hidden lg:flex lg:w-5/12 relative bg-charcoal overflow-hidden border-r border-gray-100 h-full">
         <div className="absolute inset-0 z-0">
           <img
             src="/videos/login%20image/pexels-veer-patel-2161481449-37547129.jpg"
@@ -152,15 +152,15 @@ const AuthPage = ({ isAdminLogin = false }) => {
                className="flex items-center space-x-3 cursor-pointer group w-fit" 
                onClick={() => navigate('/')}
             >
-               <span className="text-2xl font-black text-white tracking-tight hover:text-white/95 transition">X-space360<span className="text-terracotta">.in</span></span>
+               <span className="text-2xl font-bold tracking-tight text-white tracking-tight hover:text-white/95 transition">X-space360<span className="text-terracotta">.in</span></span>
             </div>
 
            <div className="animate-slide-up">
               <div className="flex items-center space-x-2 text-terracotta mb-6">
                  {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 fill-current" />)}
-                 <span className="text-[10px] font-black tracking-[0.3em] text-white/60 ml-2 uppercase">Elite Network</span>
+                 <span className="text-[10px] font-bold tracking-tight tracking-[0.3em] text-white/60 ml-2 uppercase">Elite Network</span>
               </div>
-              <h2 className="text-6xl font-black text-white tracking-tighter leading-none mb-8">
+              <h2 className="text-6xl font-bold tracking-tight text-white tracking-tighter leading-none mb-8">
                  Enter the world of <br />
                  <span className="text-terracotta italic font-serif lowercase pr-4">premium</span> hospitality.
               </h2>
@@ -171,16 +171,16 @@ const AuthPage = ({ isAdminLogin = false }) => {
 
            <div className="flex items-center space-x-12">
               <div className="flex flex-col">
-                 <span className="text-3xl font-black text-white tracking-tighter">500+</span>
-                 <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Properties</span>
+                 <span className="text-3xl font-bold tracking-tight text-white tracking-tighter">500+</span>
+                 <span className="text-[10px] font-bold tracking-tight text-white/40 uppercase tracking-widest">Properties</span>
               </div>
               <div className="flex flex-col">
-                 <span className="text-3xl font-black text-white tracking-tighter">12K+</span>
-                 <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Guests</span>
+                 <span className="text-3xl font-bold tracking-tight text-white tracking-tighter">12K+</span>
+                 <span className="text-[10px] font-bold tracking-tight text-white/40 uppercase tracking-widest">Guests</span>
               </div>
               <div className="flex flex-col">
-                 <span className="text-3xl font-black text-white tracking-tighter">98%</span>
-                 <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Satisfaction</span>
+                 <span className="text-3xl font-bold tracking-tight text-white tracking-tighter">98%</span>
+                 <span className="text-[10px] font-bold tracking-tight text-white/40 uppercase tracking-widest">Satisfaction</span>
               </div>
            </div>
         </div>
@@ -191,13 +191,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
         <div className="w-full max-w-xl animate-fade-in">
            {/* Logo (Mobile Only) */}
            <div className="lg:hidden text-center mb-10">
-              <span className="text-3xl font-black text-charcoal tracking-tight hover:text-terracotta transition cursor-pointer" onClick={() => navigate('/')}>
+              <span className="text-3xl font-bold tracking-tight text-charcoal tracking-tight hover:text-terracotta transition cursor-pointer" onClick={() => navigate('/')}>
                  X-space360<span className="text-terracotta">.in</span>
               </span>
            </div>
 
            <div className="mb-5 text-center">
-              <h3 className="text-4xl font-black text-charcoal tracking-tighter mb-2 leading-none">
+              <h3 className="text-4xl font-bold tracking-tight text-charcoal tracking-tighter mb-2 leading-none">
                  {isAdminLogin ? 'Admin Console' : (isLogin ? 'Welcome Back' : 'Create Account')}
               </h3>
               <p className="text-charcoal-muted font-bold text-[10px] uppercase tracking-[0.25em]">
@@ -209,10 +209,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
            <div className="space-y-5">
               {/* Toggle Switch */}
               {!isAdminLogin && (
-                 <div className="flex bg-sand-200 p-1.5 rounded-2xl border border-sand-300 shadow-inner max-w-sm mx-auto">
+                 <div className="flex bg-sand-200 p-1.5 rounded-2xl border border-gray-200 shadow-inner max-w-sm mx-auto">
                     <button
                        onClick={() => { setIsLogin(true); setError(''); setSuccess(''); }}
-                       className={`flex-1 py-4 rounded-xl font-black text-[10px] tracking-[0.15em] uppercase transition-all duration-500 ${
+                       className={`flex-1 py-4 rounded-xl font-bold tracking-tight text-[10px] tracking-[0.15em] uppercase transition-all duration-500 ${
                           isLogin ? 'bg-white text-terracotta shadow-premium scale-100' : 'text-charcoal-muted hover:text-charcoal scale-95 opacity-60'
                        }`}
                     >
@@ -220,7 +220,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     </button>
                     <button
                        onClick={() => { setIsLogin(false); setError(''); setSuccess(''); setShowOTPVerification(false); }}
-                       className={`flex-1 py-4 rounded-xl font-black text-[10px] tracking-[0.15em] uppercase transition-all duration-500 ${
+                       className={`flex-1 py-4 rounded-xl font-bold tracking-tight text-[10px] tracking-[0.15em] uppercase transition-all duration-500 ${
                           !isLogin ? 'bg-white text-terracotta shadow-premium scale-100' : 'text-charcoal-muted hover:text-charcoal scale-95 opacity-60'
                        }`}
                     >
@@ -232,13 +232,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
               {/* Status Messages */}
               {error && (
                  <div className="bg-red-50 border-l-4 border-terracotta p-6 rounded-2xl animate-shake shadow-sm">
-                    <p className="text-[10px] font-black text-terracotta uppercase tracking-widest mb-1">Security Alert</p>
+                    <p className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest mb-1">Security Alert</p>
                     <p className="text-sm font-bold text-charcoal leading-relaxed">{error}</p>
                  </div>
               )}
               {success && (
                  <div className="bg-sage/10 border-l-4 border-sage-dark p-6 rounded-2xl shadow-sm">
-                    <p className="text-[10px] font-black text-sage-dark uppercase tracking-widest mb-1">System Notification</p>
+                    <p className="text-[10px] font-bold tracking-tight text-sage-dark uppercase tracking-widest mb-1">System Notification</p>
                     <p className="text-sm font-bold text-charcoal leading-relaxed">{success}</p>
                  </div>
               )}
@@ -247,7 +247,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
               {isLogin ? (
                  <form onSubmit={handleLogin} className="space-y-8 animate-slide-up">
                     <div className="space-y-3">
-                       <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Email Address</label>
+                       <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Email Address</label>
                        <div className="relative group">
                           <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-sand-400 group-focus-within:text-terracotta transition-all z-10" />
                           <input
@@ -257,7 +257,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              autoComplete="email"
                              value={loginData.email}
                              onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                             className="w-full pl-16 pr-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm placeholder:text-sand-300 placeholder:font-semibold"
+                             className="w-full pl-16 pr-8 py-5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm placeholder:text-sand-300 placeholder:font-semibold"
                              placeholder="email@example.com"
                              required
                           />
@@ -266,8 +266,8 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     
                     <div className="space-y-3">
                        <div className="flex justify-between items-center px-1">
-                          <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase">Password</label>
-                          <button type="button" className="text-[10px] font-black text-terracotta uppercase tracking-wider hover:underline underline-offset-4">Forgot Password?</button>
+                          <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase">Password</label>
+                          <button type="button" className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-wider hover:underline underline-offset-4">Forgot Password?</button>
                        </div>
                        <div className="relative group">
                           <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-sand-400 group-focus-within:text-terracotta transition-all z-10" />
@@ -278,7 +278,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              autoComplete="current-password"
                              value={loginData.password}
                              onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                             className="w-full pl-16 pr-8 py-5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm placeholder:text-sand-300 placeholder:font-semibold"
+                             className="w-full pl-16 pr-8 py-5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm placeholder:text-sand-300 placeholder:font-semibold"
                              placeholder="••••••••"
                              required
                           />
@@ -293,31 +293,20 @@ const AuthPage = ({ isAdminLogin = false }) => {
                        {loading ? 'SIGNING IN...' : 'SIGN IN'}
                     </button>
 
-                    <div className="text-center mt-3">
-                       <span className="text-xs font-semibold text-charcoal-muted">If you are a broker? </span>
-                       <button
-                          type="button"
-                          onClick={handleGoldenRichSso}
-                          className="text-xs font-black text-terracotta hover:underline underline-offset-4"
-                       >
-                          Login
-                       </button>
-                    </div>
-
                     {!isAdminLogin && (
                        <div className="space-y-5 pt-2">
                           <div className="flex items-center gap-4">
                              <div className="h-px flex-1 bg-sand-200"></div>
-                             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-charcoal-muted">or</span>
+                             <span className="text-[10px] font-bold tracking-tight uppercase tracking-[0.25em] text-charcoal-muted">or</span>
                              <div className="h-px flex-1 bg-sand-200"></div>
                           </div>
                           <button
                              type="button"
                              onClick={handleGoldenRichSso}
-                             className="w-full py-5 rounded-2xl border-2 border-sand-200 bg-white text-charcoal hover:border-terracotta hover:text-terracotta transition-all shadow-sm font-black text-[11px] uppercase tracking-[0.18em] inline-flex items-center justify-center gap-3"
+                             className="w-full py-5 rounded-2xl border-2 border-gray-100 bg-white text-charcoal hover:border-terracotta hover:text-terracotta transition-all shadow-sm font-bold tracking-tight text-[11px] uppercase tracking-[0.18em] inline-flex items-center justify-center gap-3"
                           >
                              <Building2 className="w-5 h-5" />
-                             <span>Login with Single Sign-On</span>
+                             <span>Login with GRP</span>
                           </button>
                        </div>
                     )}
@@ -327,7 +316,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     {!showOTPVerification ? (
                        <div className="space-y-4">
                           <div className="space-y-3 pt-1 text-center">
-                             <label className="block text-[11px] font-black text-charcoal-muted uppercase tracking-[0.2em]">Select Role</label>
+                             <label className="block text-[11px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Select Role</label>
                              <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto">
                                 {['guest', 'host', 'broker'].map(role => (
                                    <button
@@ -340,10 +329,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                             setRegisterData({ ...registerData, role });
                                          }
                                       }}
-                                      className={`py-3 rounded-2xl border-2 font-black text-[11px] uppercase tracking-widest transition-all duration-500 ${
+                                      className={`py-3 rounded-2xl border-2 font-bold tracking-tight text-[11px] uppercase tracking-widest transition-all duration-500 ${
                                          registerData.role === role 
                                          ? 'border-terracotta bg-terracotta text-white shadow-elevated scale-[1.02]' 
-                                         : 'border-sand-200 bg-white text-charcoal-muted hover:border-terracotta'
+                                         : 'border-gray-100 bg-white text-charcoal-muted hover:border-terracotta'
                                       }`}
                                    >
                                       {role === 'guest' ? 'Guest' : role === 'host' ? 'Host' : 'Broker'}
@@ -353,7 +342,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                           </div>
 
                           <div className="space-y-2">
-                             <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Full Name</label>
+                             <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Full Name</label>
                              <input
                                 id="register-full-name"
                                 name="full_name"
@@ -361,7 +350,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                 autoComplete="name"
                                 value={registerData.full_name}
                                 onChange={(e) => setRegisterData({ ...registerData, full_name: e.target.value })}
-                                className="w-full px-6 py-3.5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
                                 placeholder="Your full name"
                                 required
                              />
@@ -369,7 +358,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                              <div className="space-y-2">
-                                <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Email Address</label>
+                                <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Email Address</label>
                                 <input
                                    id="register-email"
                                    name="email"
@@ -377,13 +366,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    autoComplete="email"
                                    value={registerData.email}
                                    onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                                   className="w-full px-6 py-3.5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                   className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
                                    placeholder="email@example.com"
                                    required
                                 />
                              </div>
                              <div className="space-y-2">
-                                <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Phone Number</label>
+                                <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Phone Number</label>
                                 <input
                                    id="register-phone"
                                    name="phone"
@@ -391,7 +380,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    autoComplete="tel"
                                    value={registerData.phone}
                                    onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
-                                   className="w-full px-6 py-3.5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                   className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
                                    placeholder="+91..."
                                    required
                                 />
@@ -400,7 +389,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                              <div className="space-y-2">
-                                <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">Password</label>
+                                <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Password</label>
                                 <input
                                    id="register-password"
                                    name="password"
@@ -408,13 +397,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    autoComplete="new-password"
                                    value={registerData.password}
                                    onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                                   className="w-full px-6 py-3.5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                   className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
                                    placeholder="••••••••"
                                    required
                                 />
                              </div>
                              <div className="space-y-2">
-                                <label className="block text-[11px] font-black text-charcoal tracking-[0.15em] uppercase ml-1">City</label>
+                                <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">City</label>
                                 <input
                                    id="register-city"
                                    name="city"
@@ -422,23 +411,23 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    autoComplete="address-level2"
                                    value={registerData.city}
                                    onChange={(e) => setRegisterData({ ...registerData, city: e.target.value })}
-                                   className="w-full px-6 py-3.5 bg-white border-2 border-sand-200 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                   className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
                                    placeholder="Your City"
                                 />
                              </div>
                           </div>
                           
-                          <div className="flex items-start space-x-3 p-4 bg-sand-100 rounded-2xl border border-sand-200 group cursor-pointer">
+                          <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-2xl border border-gray-100 group cursor-pointer">
                              <input
                                 id="register-terms"
                                 name="terms_accepted"
                                 type="checkbox"
                                 checked={registerData.terms_accepted}
                                 onChange={(e) => setRegisterData({ ...registerData, terms_accepted: e.target.checked })}
-                                className="mt-1 w-5 h-5 text-terracotta rounded-lg border-sand-300 focus:ring-terracotta cursor-pointer flex-shrink-0"
+                                className="mt-1 w-5 h-5 text-terracotta rounded-lg border-gray-200 focus:ring-terracotta cursor-pointer flex-shrink-0"
                                 required
                              />
-                             <label className="text-[10px] text-charcoal-muted font-black leading-relaxed uppercase tracking-widest cursor-pointer">
+                             <label className="text-[10px] text-charcoal-muted font-bold tracking-tight leading-relaxed uppercase tracking-widest cursor-pointer">
                                 I accept the <LegalLinks />.
                              </label>
                           </div>
@@ -455,10 +444,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     ) : (
                        <div className="space-y-9 text-center animate-fade-in">
                           <div className="flex flex-col items-center">
-                             <div className="w-22 h-22 bg-terracotta/10 rounded-[2rem] flex items-center justify-center mb-6 border-4 border-terracotta/20 shadow-premium">
+                             <div className="w-22 h-22 bg-terracotta/10 rounded-2xl flex items-center justify-center mb-6 border-4 border-terracotta/20 shadow-premium">
                                 <ShieldCheck className="w-11 h-11 text-terracotta" />
                              </div>
-                             <h3 className="text-4xl font-black text-charcoal tracking-tighter">Verification</h3>
+                             <h3 className="text-4xl font-bold tracking-tight text-charcoal tracking-tighter">Verification</h3>
                           </div>
 
                           <div className="flex justify-center">
@@ -469,7 +458,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                 autoComplete="one-time-code"
                                 value={otp}
                                 onChange={(e) => setOtp(e.target.value)}
-                                className="w-full max-w-[320px] text-center text-4xl font-black tracking-[0.6em] py-7 bg-white rounded-[2rem] border-2 border-sand-200 focus:border-terracotta focus:ring-12 focus:ring-terracotta/5 transition-all outline-none text-charcoal shadow-inner"
+                                className="w-full max-w-[320px] text-center text-4xl font-bold tracking-tight tracking-[0.6em] py-7 bg-white rounded-2xl border-2 border-gray-100 focus:border-terracotta focus:ring-12 focus:ring-terracotta/5 transition-all outline-none text-charcoal shadow-inner"
                                 placeholder="000000"
                                 maxLength={6}
                              />
@@ -487,7 +476,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              <button
                                 onClick={sendOTP}
                                 disabled={loading}
-                                className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.3em] hover:text-terracotta transition-colors block mx-auto underline-offset-4 hover:underline"
+                                className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.3em] hover:text-terracotta transition-colors block mx-auto underline-offset-4 hover:underline"
                              >
                                 Request New Key
                              </button>
@@ -498,10 +487,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
               )}
            </div>
 
-           <div className="text-center mt-6 pt-5 border-t border-sand-200">
+           <div className="text-center mt-6 pt-5 border-t border-gray-100">
               <button
                  onClick={() => navigate('/')}
-                 className="group inline-flex items-center space-x-4 text-charcoal-muted hover:text-terracotta transition-colors font-black text-[10px] uppercase tracking-[0.4em]"
+                 className="group inline-flex items-center space-x-4 text-charcoal-muted hover:text-terracotta transition-colors font-bold tracking-tight text-[10px] uppercase tracking-[0.4em]"
               >
                  <ArrowLeft className="w-5 h-5 group-hover:-translate-x-2 transition-transform duration-500" />
                  <span>Back to Home</span>

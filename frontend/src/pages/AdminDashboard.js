@@ -130,7 +130,7 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
   return (
     <div className="relative" ref={containerRef}>
       <div 
-        className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus-within:border-terracotta outline-none transition font-semibold text-charcoal bg-white flex justify-between items-center cursor-pointer select-none"
+        className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus-within:border-terracotta outline-none transition font-semibold text-charcoal bg-white flex justify-between items-center cursor-pointer select-none"
         onClick={() => setIsOpen(!isOpen)}
       >
         <span className={value ? "text-charcoal" : "text-sand-300 font-normal"}>
@@ -140,12 +140,12 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
       </div>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-premium border border-sand-200 p-4 w-72 z-[150] animate-slide-up">
+        <div className="absolute right-0 mt-2 bg-white/95 backdrop-blur-md rounded-2xl shadow-premium border border-gray-100 p-4 w-72 z-[150] animate-slide-up">
           <div className="flex items-center justify-between mb-4">
             <button 
               type="button"
               onClick={handlePrevMonth}
-              className="p-1.5 hover:bg-sand-100 rounded-lg transition text-charcoal font-black text-sm"
+              className="p-1.5 hover:bg-gray-50 rounded-lg transition text-charcoal font-bold tracking-tight text-sm"
             >
               &larr;
             </button>
@@ -153,7 +153,7 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
               <select 
                 value={currentMonth}
                 onChange={e => setCurrentMonth(parseInt(e.target.value))}
-                className="bg-transparent text-sm font-black text-charcoal uppercase tracking-wider outline-none cursor-pointer hover:text-terracotta transition"
+                className="bg-transparent text-sm font-bold tracking-tight text-charcoal uppercase tracking-wider outline-none cursor-pointer hover:text-terracotta transition"
               >
                 {months.map((m, idx) => (
                   <option key={m} value={idx} className="text-charcoal bg-white normal-case font-bold">{m}</option>
@@ -162,7 +162,7 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
               <select 
                 value={currentYear}
                 onChange={e => setCurrentYear(parseInt(e.target.value))}
-                className="bg-transparent text-sm font-black text-charcoal tracking-wide outline-none cursor-pointer hover:text-terracotta transition"
+                className="bg-transparent text-sm font-bold tracking-tight text-charcoal tracking-wide outline-none cursor-pointer hover:text-terracotta transition"
               >
                 {years.map(y => (
                   <option key={y} value={y} className="text-charcoal bg-white font-bold">{y}</option>
@@ -172,7 +172,7 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
             <button 
               type="button"
               onClick={handleNextMonth}
-              className="p-1.5 hover:bg-sand-100 rounded-lg transition text-charcoal font-black text-sm"
+              className="p-1.5 hover:bg-gray-50 rounded-lg transition text-charcoal font-bold tracking-tight text-sm"
             >
               &rarr;
             </button>
@@ -180,7 +180,7 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
 
           <div className="grid grid-cols-7 text-center mb-2">
             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-              <div key={day} className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">{day}</div>
+              <div key={day} className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">{day}</div>
             ))}
           </div>
 
@@ -195,10 +195,10 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
                   type="button"
                   key={`day-${day}`}
                   onClick={() => handleDaySelect(day)}
-                  className={`h-8 w-8 text-xs font-black rounded-lg transition-all flex items-center justify-center ${
+                  className={`h-8 w-8 text-xs font-bold tracking-tight rounded-lg transition-all flex items-center justify-center ${
                     active
                       ? 'bg-terracotta text-white shadow-elevated scale-105'
-                      : 'hover:bg-sand-100 text-charcoal'
+                      : 'hover:bg-gray-50 text-charcoal'
                   }`}
                 >
                   {day}
@@ -211,14 +211,14 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
             <button 
               type="button"
               onClick={handleClear}
-              className="text-[10px] font-black text-charcoal-muted hover:text-charcoal uppercase tracking-widest transition"
+              className="text-[10px] font-bold tracking-tight text-charcoal-muted hover:text-charcoal uppercase tracking-widest transition"
             >
               Clear
             </button>
             <button 
               type="button"
               onClick={handleToday}
-              className="text-[10px] font-black text-terracotta hover:text-terracotta-dark uppercase tracking-widest transition"
+              className="text-[10px] font-bold tracking-tight text-terracotta hover:text-terracotta-dark uppercase tracking-widest transition"
             >
               Today
             </button>
@@ -293,7 +293,7 @@ const AdminDashboard = () => {
   ] : [];
 
   return (
-    <div className="min-h-screen bg-sand-50">
+    <div className="min-h-screen bg-stone">
       {/* Header */}
       <header className="header-glass px-4 md:px-8 lg:px-12 py-4" data-testid="admin-header">
         <div className="w-full flex justify-between items-center">
@@ -301,7 +301,7 @@ const AdminDashboard = () => {
             className="flex items-center space-x-3 cursor-pointer group"
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">
+            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">
               X-space360<span className="text-terracotta">.in</span>
             </span>
           </div>
@@ -334,7 +334,7 @@ const AdminDashboard = () => {
 
       <div className="w-full px-4 md:px-8 lg:px-12 py-8 mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-4xl font-extrabold text-charcoal" data-testid="dashboard-title">
+          <h2 className="text-4xl font-semibold tracking-tight text-charcoal" data-testid="dashboard-title">
             Dashboard Overview
           </h2>
         </div>
@@ -438,7 +438,7 @@ const AdminDashboard = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <button
                       onClick={() => setActiveTab('users')}
-                      className="flex items-center space-x-3 p-4 bg-sand-50 rounded-lg hover:bg-sand-100 transition"
+                      className="flex items-center space-x-3 p-4 bg-stone rounded-lg hover:bg-gray-50 transition"
                       data-testid="action-manage-users"
                     >
                       <Users className="w-6 h-6 text-terracotta" />
@@ -446,7 +446,7 @@ const AdminDashboard = () => {
                     </button>
                     <button
                       onClick={() => setActiveTab('properties')}
-                      className="flex items-center space-x-3 p-4 bg-sand-50 rounded-lg hover:bg-sand-100 transition"
+                      className="flex items-center space-x-3 p-4 bg-stone rounded-lg hover:bg-gray-50 transition"
                       data-testid="action-review-properties"
                     >
                       <Building2 className="w-6 h-6 text-sage" />
@@ -454,7 +454,7 @@ const AdminDashboard = () => {
                     </button>
                     <button
                       onClick={() => setActiveTab('cms')}
-                      className="flex items-center space-x-3 p-4 bg-sand-50 rounded-lg hover:bg-sand-100 transition"
+                      className="flex items-center space-x-3 p-4 bg-stone rounded-lg hover:bg-gray-50 transition"
                       data-testid="action-edit-cms"
                     >
                       <TrendingUp className="w-6 h-6 text-terracotta" />
@@ -934,7 +934,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
       ) : (
         <div className="space-y-4" data-testid="users-list">
           {users.map((user) => (
-            <div key={user.user_id} className="dashboard-card hover:shadow-md transition-all group" data-testid={`user-${user.user_id}`}>
+            <div key={user.user_id} className="dashboard-card hover:shadow-subtle transition-all group" data-testid={`user-${user.user_id}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="relative">
@@ -942,10 +942,10 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                       <img
                         src={getImageUrl(user.profile_image)}
                         alt={user.full_name}
-                        className="w-14 h-14 rounded-full object-cover border-2 border-sand-200"
+                        className="w-14 h-14 rounded-full object-cover border-2 border-gray-100"
                       />
                     ) : (
-                      <div className="w-14 h-14 rounded-full bg-terracotta/10 border-2 border-sand-200 flex items-center justify-center font-black text-terracotta text-lg uppercase">
+                      <div className="w-14 h-14 rounded-full bg-terracotta/10 border-2 border-gray-100 flex items-center justify-center font-bold tracking-tight text-terracotta text-lg uppercase">
                         {user.full_name ? user.full_name.charAt(0) : '?'}
                       </div>
                     )}
@@ -955,15 +955,15 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                     <h4 className="font-bold text-charcoal text-lg">{user.full_name}</h4>
                     <p className="text-sm text-charcoal-light">{user.email} | {user.phone}</p>
                     <div className="flex items-center space-x-2 mt-1">
-                      <span className="inline-block px-2 py-0.5 bg-terracotta/10 text-terracotta text-[10px] font-black uppercase tracking-wider rounded">
+                      <span className="inline-block px-2 py-0.5 bg-terracotta/10 text-terracotta text-[10px] font-bold tracking-tight uppercase tracking-wider rounded">
                         {user.role}
                       </span>
                       {user.role === 'host' && (
-                        <span className={`inline-block px-2 py-0.5 text-[10px] font-black uppercase tracking-wider rounded border ${
+                        <span className={`inline-block px-2 py-0.5 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded border ${
                           user.kyc_status === 'approved' ? 'bg-green-50 text-green-600 border-green-200' :
                           user.kyc_status === 'rejected' ? 'bg-red-50 text-red-600 border-red-200' :
                           user.kyc_status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-200 animate-pulse' :
-                          'bg-sand-100 text-charcoal-light border-sand-200'
+                          'bg-gray-50 text-charcoal-light border-gray-100'
                         }`}>
                           KYC: {user.kyc_status || 'unverified'}
                         </span>
@@ -977,7 +977,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                         <span className="text-xs text-charcoal-muted">in {user.city}</span>
                       )}
                       {user.created_at && (
-                        <span className="inline-block px-2 py-0.5 bg-sand-100 text-charcoal-muted text-[10px] font-medium rounded flex items-center">
+                        <span className="inline-block px-2 py-0.5 bg-gray-50 text-charcoal-muted text-[10px] font-medium rounded flex items-center">
                           <Clock className="w-3 h-3 mr-1 text-charcoal-muted/70" />
                           Registered: {formatUserDate(user.created_at)}
                         </span>
@@ -1024,7 +1024,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
           
           {/* Pagination Controls */}
           {totalUsers > usersPerPage && (
-            <div className="flex justify-between items-center bg-white px-6 py-4 rounded-[2rem] border border-sand-200 mt-6 flex-wrap gap-4">
+            <div className="flex justify-between items-center bg-white px-6 py-4 rounded-2xl border border-gray-100 mt-6 flex-wrap gap-4">
               <p className="text-xs text-charcoal-muted">
                 Showing <span className="font-bold text-charcoal">{(currentPage - 1) * usersPerPage + 1}</span> to{' '}
                 <span className="font-bold text-charcoal">
@@ -1037,7 +1037,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   type="button"
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="p-2 rounded-xl border border-sand-200 text-charcoal-light hover:bg-sand-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 rounded-xl border border-gray-100 text-charcoal-light hover:bg-stone transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -1054,10 +1054,10 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                         key={pageNum}
                         type="button"
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`w-8 h-8 rounded-xl text-xs font-black transition-colors ${
+                        className={`w-8 h-8 rounded-xl text-xs font-bold tracking-tight transition-colors ${
                           currentPage === pageNum
                             ? 'bg-terracotta text-white font-bold'
-                            : 'border border-sand-200 text-charcoal hover:bg-sand-50'
+                            : 'border border-gray-100 text-charcoal hover:bg-stone'
                         }`}
                       >
                         {pageNum}
@@ -1076,7 +1076,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   type="button"
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(totalUsers / usersPerPage)))}
                   disabled={currentPage === Math.ceil(totalUsers / usersPerPage)}
-                  className="p-2 rounded-xl border border-sand-200 text-charcoal-light hover:bg-sand-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 rounded-xl border border-gray-100 text-charcoal-light hover:bg-stone transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -1090,10 +1090,10 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
       {showAddModal && (
         <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-xl w-full shadow-premium animate-slide-up overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-sand-200">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
               <div>
-                <h3 className="text-2xl font-black text-charcoal leading-none mb-1">Create New User</h3>
-                <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Register professional nodes in the STR network</span>
+                <h3 className="text-2xl font-bold tracking-tight text-charcoal leading-none mb-1">Create New User</h3>
+                <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Register professional nodes in the STR network</span>
               </div>
               <div className="w-10 h-10 rounded-xl bg-terracotta/10 flex items-center justify-center text-terracotta">
                 <Shield className="w-5 h-5" />
@@ -1102,27 +1102,27 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
             
             <form onSubmit={handleCreateUser} className="space-y-6">
               {/* Profile Image Upload Component */}
-              <div className="bg-sand-50/50 border border-sand-200/80 rounded-2xl p-5 mb-4 transition-all duration-300 animate-slide-up">
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-3">Profile Image</label>
+              <div className="bg-stone/50 border border-gray-100/80 rounded-2xl p-5 mb-4 transition-all duration-300 animate-slide-up">
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-3">Profile Image</label>
                 {newUser.profile_image ? (
                   <div className="flex items-center space-x-4">
                     <div className="relative group">
                       <img 
                         src={getImageUrl(newUser.profile_image)} 
                         alt="Preview" 
-                        className="w-16 h-16 rounded-full object-cover border-2 border-terracotta/80 shadow-md group-hover:opacity-90 transition-opacity"
+                        className="w-16 h-16 rounded-full object-cover border-2 border-terracotta/80 shadow-subtle group-hover:opacity-90 transition-opacity"
                       />
                       <button 
                         type="button"
                         onClick={() => setNewUser(prev => ({ ...prev, profile_image: '' }))}
-                        className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center shadow transition-transform hover:scale-110 active:scale-95"
+                        className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center shadow transition-transform hover:scale-[1.03] active:scale-95"
                         title="Remove Image"
                       >
                         <span className="font-bold text-xs">×</span>
                       </button>
                     </div>
                     <div>
-                      <span className="text-[10px] font-black text-sage-dark uppercase tracking-widest block mb-0.5">Uploaded</span>
+                      <span className="text-[10px] font-bold tracking-tight text-sage-dark uppercase tracking-widest block mb-0.5">Uploaded</span>
                       <span className="text-xs font-bold text-charcoal-light block">Image successfully registered</span>
                     </div>
                   </div>
@@ -1133,10 +1133,10 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                       accept="image/*"
                       onChange={handleImageUpload}
                       disabled={uploading}
-                      className="w-full text-xs text-charcoal-light file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-black file:uppercase file:tracking-wider file:bg-terracotta/10 file:text-terracotta hover:file:bg-terracotta/20 cursor-pointer disabled:opacity-50"
+                      className="w-full text-xs text-charcoal-light file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-bold tracking-tight file:uppercase file:tracking-wider file:bg-terracotta/10 file:text-terracotta hover:file:bg-terracotta/20 cursor-pointer disabled:opacity-50"
                     />
                     {uploading ? (
-                      <span className="text-[10px] font-black text-terracotta uppercase tracking-widest animate-pulse">Uploading to node server...</span>
+                      <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest animate-pulse">Uploading to node server...</span>
                     ) : (
                       <span className="text-[9px] font-medium text-charcoal-muted">Supported formats: PNG, JPG, JPEG, WEBP, GIF (Max 8MB)</span>
                     )}
@@ -1145,11 +1145,11 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               </div>
 
               <div>
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Full Name</label>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Full Name</label>
                 <input 
                   required
                   placeholder="John Doe"
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                   value={newUser.full_name}
                   onChange={e => setNewUser({...newUser, full_name: e.target.value})}
                 />
@@ -1157,21 +1157,21 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Email Address</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Email Address</label>
                   <input 
                     type="email" required
                     placeholder="john@example.com"
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                     value={newUser.email}
                     onChange={e => setNewUser({...newUser, email: e.target.value})}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Phone Number</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Phone Number</label>
                   <input 
                     required
                     placeholder="+91..."
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                     value={newUser.phone}
                     onChange={e => setNewUser({...newUser, phone: e.target.value})}
                   />
@@ -1179,11 +1179,11 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               </div>
 
               <div>
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Password</label>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Password</label>
                 <input 
                   type="password" required
                   placeholder="••••••••"
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                   value={newUser.password}
                   onChange={e => setNewUser({...newUser, password: e.target.value})}
                 />
@@ -1191,9 +1191,9 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Role</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Role</label>
                   <select 
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-black text-[11px] uppercase tracking-wider text-charcoal bg-white"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-bold tracking-tight text-[11px] uppercase tracking-wider text-charcoal bg-white"
                     value={newUser.role}
                     onChange={e => setNewUser({...newUser, role: e.target.value})}
                   >
@@ -1205,11 +1205,11 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">City</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">City</label>
                   <input 
                     required
                     placeholder="e.g. Mumbai"
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                     value={newUser.city}
                     onChange={e => setNewUser({...newUser, city: e.target.value})}
                   />
@@ -1218,18 +1218,18 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className={newUser.role === 'admin' ? "col-span-2" : ""}>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">State</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">State</label>
                   <input 
                     required
                     placeholder="e.g. Maharashtra"
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                     value={newUser.state}
                     onChange={e => setNewUser({...newUser, state: e.target.value})}
                   />
                 </div>
                 {newUser.role !== 'admin' && (
                   <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Birthdate</label>
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Birthdate</label>
                     <PremiumDatePicker 
                       value={newUser.birthdate}
                       onChange={dateStr => setNewUser({...newUser, birthdate: dateStr})}
@@ -1242,21 +1242,21 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               {(newUser.role === 'broker' || newUser.role === 'employee') && (
                 <div className="grid grid-cols-2 gap-4 animate-slide-up">
                   <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Franchise</label>
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Franchise</label>
                     <input 
                       required
                       placeholder="e.g. Golden"
-                      className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                       value={newUser.franchise}
                       onChange={e => setNewUser({...newUser, franchise: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Branch</label>
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Branch</label>
                     <input 
                       required
                       placeholder="e.g. Bandra"
-                      className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                       value={newUser.branch}
                       onChange={e => setNewUser({...newUser, branch: e.target.value})}
                     />
@@ -1265,21 +1265,21 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               )}
 
               {/* Dynamic UID Preview Box */}
-              <div className="bg-sand-100/60 border border-sand-200 rounded-2xl p-4 flex items-center justify-between shadow-inner">
+              <div className="bg-gray-50/60 border border-gray-100 rounded-2xl p-4 flex items-center justify-between shadow-inner">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-xl bg-sage/10 flex items-center justify-center">
                     <Shield className="w-5 h-5 text-sage-dark" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block mb-0.5">System Generated UID</span>
-                    <span className="font-mono font-black text-sm text-charcoal tracking-wider uppercase block">{newUser.uid || 'GENERATING...'}</span>
+                    <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-0.5">System Generated UID</span>
+                    <span className="font-mono font-bold tracking-tight text-sm text-charcoal tracking-wider uppercase block">{newUser.uid || 'GENERATING...'}</span>
                   </div>
                 </div>
-                <span className="text-[9px] font-black bg-sage text-white px-2.5 py-1 rounded-full uppercase tracking-wider">Secure</span>
+                <span className="text-[9px] font-bold tracking-tight bg-sage text-white px-2.5 py-1 rounded-full uppercase tracking-wider">Secure</span>
               </div>
 
-              <div className="flex space-x-3 pt-4 border-t border-sand-200">
-                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-4 font-black text-xs text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition-all">Cancel</button>
+              <div className="flex space-x-3 pt-4 border-t border-gray-100">
+                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-4 font-bold tracking-tight text-xs text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition-all">Cancel</button>
                 <button type="submit" className="flex-1 btn-premium py-4 shadow-elevated">Create User</button>
               </div>
             </form>
@@ -1291,10 +1291,10 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
       {showEditModal && editUser && (
         <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-xl w-full shadow-premium animate-slide-up overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-sand-200">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
               <div>
-                <h3 className="text-2xl font-black text-charcoal leading-none mb-1">Edit User Details</h3>
-                <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Update network user profile parameters</span>
+                <h3 className="text-2xl font-bold tracking-tight text-charcoal leading-none mb-1">Edit User Details</h3>
+                <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Update network user profile parameters</span>
               </div>
               <div className="w-10 h-10 rounded-xl bg-terracotta/10 flex items-center justify-center text-terracotta">
                 <Edit className="w-5 h-5" />
@@ -1303,27 +1303,27 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
             
             <form onSubmit={handleEditUserSubmit} className="space-y-6">
               {/* Profile Image Upload Component */}
-              <div className="bg-sand-50/50 border border-sand-200/80 rounded-2xl p-5 mb-4 transition-all duration-300 animate-slide-up">
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-3">Profile Image</label>
+              <div className="bg-stone/50 border border-gray-100/80 rounded-2xl p-5 mb-4 transition-all duration-300 animate-slide-up">
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-3">Profile Image</label>
                 {editUser.profile_image ? (
                   <div className="flex items-center space-x-4">
                     <div className="relative group">
                       <img 
                         src={getImageUrl(editUser.profile_image)} 
                         alt="Preview" 
-                        className="w-16 h-16 rounded-full object-cover border-2 border-terracotta/80 shadow-md group-hover:opacity-90 transition-opacity"
+                        className="w-16 h-16 rounded-full object-cover border-2 border-terracotta/80 shadow-subtle group-hover:opacity-90 transition-opacity"
                       />
                       <button 
                         type="button"
                         onClick={() => setEditUser(prev => ({ ...prev, profile_image: '' }))}
-                        className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center shadow transition-transform hover:scale-110 active:scale-95"
+                        className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center shadow transition-transform hover:scale-[1.03] active:scale-95"
                         title="Remove Image"
                       >
                         <span className="font-bold text-xs">×</span>
                       </button>
                     </div>
                     <div>
-                      <span className="text-[10px] font-black text-sage-dark uppercase tracking-widest block mb-0.5">Uploaded</span>
+                      <span className="text-[10px] font-bold tracking-tight text-sage-dark uppercase tracking-widest block mb-0.5">Uploaded</span>
                       <span className="text-xs font-bold text-charcoal-light block">Image successfully registered</span>
                     </div>
                   </div>
@@ -1334,10 +1334,10 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                       accept="image/*"
                       onChange={handleEditImageUpload}
                       disabled={uploading}
-                      className="w-full text-xs text-charcoal-light file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-black file:uppercase file:tracking-wider file:bg-terracotta/10 file:text-terracotta hover:file:bg-terracotta/20 cursor-pointer disabled:opacity-50"
+                      className="w-full text-xs text-charcoal-light file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-bold tracking-tight file:uppercase file:tracking-wider file:bg-terracotta/10 file:text-terracotta hover:file:bg-terracotta/20 cursor-pointer disabled:opacity-50"
                     />
                     {uploading ? (
-                      <span className="text-[10px] font-black text-terracotta uppercase tracking-widest animate-pulse">Uploading to node server...</span>
+                      <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest animate-pulse">Uploading to node server...</span>
                     ) : (
                       <span className="text-[9px] font-medium text-charcoal-muted">Supported formats: PNG, JPG, JPEG, WEBP, GIF (Max 8MB)</span>
                     )}
@@ -1346,11 +1346,11 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               </div>
 
               <div>
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Full Name</label>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Full Name</label>
                 <input 
                   required
                   placeholder="John Doe"
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                   value={editUser.full_name || ''}
                   onChange={e => setEditUser({...editUser, full_name: e.target.value})}
                 />
@@ -1358,21 +1358,21 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Email Address</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Email Address</label>
                   <input 
                     type="email" required
                     placeholder="john@example.com"
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                     value={editUser.email || ''}
                     onChange={e => setEditUser({...editUser, email: e.target.value})}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Phone Number</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Phone Number</label>
                   <input 
                     required
                     placeholder="+91..."
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                     value={editUser.phone || ''}
                     onChange={e => setEditUser({...editUser, phone: e.target.value})}
                   />
@@ -1380,11 +1380,11 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               </div>
 
               <div>
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Password (Leave blank to keep unchanged)</label>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Password (Leave blank to keep unchanged)</label>
                 <input 
                   type="password"
                   placeholder="••••••••"
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                   value={editUser.password || ''}
                   onChange={e => setEditUser({...editUser, password: e.target.value})}
                 />
@@ -1392,9 +1392,9 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Role</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Role</label>
                   <select 
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-black text-[11px] uppercase tracking-wider text-charcoal bg-white"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-bold tracking-tight text-[11px] uppercase tracking-wider text-charcoal bg-white"
                     value={editUser.role || 'guest'}
                     onChange={e => setEditUser({...editUser, role: e.target.value})}
                   >
@@ -1406,11 +1406,11 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">City</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">City</label>
                   <input 
                     required
                     placeholder="e.g. Mumbai"
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                     value={editUser.city || ''}
                     onChange={e => setEditUser({...editUser, city: e.target.value})}
                   />
@@ -1419,18 +1419,18 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className={editUser.role === 'admin' ? "col-span-2" : ""}>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">State</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">State</label>
                   <input 
                     required
                     placeholder="e.g. Maharashtra"
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                     value={editUser.state || ''}
                     onChange={e => setEditUser({...editUser, state: e.target.value})}
                   />
                 </div>
                 {editUser.role !== 'admin' && (
                   <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Birthdate</label>
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Birthdate</label>
                     <PremiumDatePicker 
                       value={editUser.birthdate ? editUser.birthdate.substring(0, 10) : ''}
                       onChange={dateStr => setEditUser({...editUser, birthdate: dateStr})}
@@ -1443,21 +1443,21 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               {(editUser.role === 'broker' || editUser.role === 'employee') && (
                 <div className="grid grid-cols-2 gap-4 animate-slide-up">
                   <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Franchise</label>
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Franchise</label>
                     <input 
                       required
                       placeholder="e.g. Golden"
-                      className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                       value={editUser.franchise || ''}
                       onChange={e => setEditUser({...editUser, franchise: e.target.value})}
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Branch</label>
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Branch</label>
                     <input 
                       required
                       placeholder="e.g. Bandra"
-                      className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                       value={editUser.branch || ''}
                       onChange={e => setEditUser({...editUser, branch: e.target.value})}
                     />
@@ -1467,18 +1467,18 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
               {editUser.role === 'host' && (
                 <div className="animate-slide-up">
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">LG Code (Assigned Broker)</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">LG Code (Assigned Broker)</label>
                   <input 
                     placeholder="e.g. MH01BUM001"
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
                     value={editUser.lg_code || ''}
                     onChange={e => setEditUser({...editUser, lg_code: e.target.value})}
                   />
                 </div>
               )}
 
-              <div className="flex space-x-3 pt-4 border-t border-sand-200">
-                <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-4 font-black text-xs text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition-all">Cancel</button>
+              <div className="flex space-x-3 pt-4 border-t border-gray-100">
+                <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-4 font-bold tracking-tight text-xs text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition-all">Cancel</button>
                 <button type="submit" className="flex-1 btn-premium py-4 shadow-elevated">Save Changes</button>
               </div>
             </form>
@@ -1496,39 +1496,39 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
             {viewUser.role === 'host' ? (
               // Enhanced Host KYC Review Dashboard
               <div>
-                <div className="flex items-center justify-between pb-6 mb-6 border-b border-sand-200">
+                <div className="flex items-center justify-between pb-6 mb-6 border-b border-gray-100">
                   <div className="flex items-center space-x-4">
                     {viewUser.profile_image ? (
                       <img
                         src={getImageUrl(viewUser.profile_image)}
                         alt={viewUser.full_name}
-                        className="w-16 h-16 rounded-full object-cover border-2 border-sand-200"
+                        className="w-16 h-16 rounded-full object-cover border-2 border-gray-100"
                       />
                     ) : (
-                      <div className="w-16 h-16 rounded-full bg-terracotta/10 border-2 border-sand-200 flex items-center justify-center font-black text-terracotta text-xl uppercase">
+                      <div className="w-16 h-16 rounded-full bg-terracotta/10 border-2 border-gray-100 flex items-center justify-center font-bold tracking-tight text-terracotta text-xl uppercase">
                         {viewUser.full_name ? viewUser.full_name.charAt(0) : '?'}
                       </div>
                     )}
                     <div>
-                      <h3 className="text-2xl font-black text-charcoal">{viewUser.full_name}</h3>
+                      <h3 className="text-2xl font-bold tracking-tight text-charcoal">{viewUser.full_name}</h3>
                       <p className="text-xs text-charcoal-muted uppercase tracking-widest font-bold">Host KYC Review Dashboard</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center space-x-3">
                     {viewUser.kyc_status === 'approved' ? (
-                      <span className="px-4 py-2 bg-green-50 text-green-600 rounded-full font-black text-xs uppercase tracking-widest border border-green-200">Approved</span>
+                      <span className="px-4 py-2 bg-green-50 text-green-600 rounded-full font-bold tracking-tight text-xs uppercase tracking-widest border border-green-200">Approved</span>
                     ) : viewUser.kyc_status === 'rejected' ? (
-                      <span className="px-4 py-2 bg-red-50 text-red-600 rounded-full font-black text-xs uppercase tracking-widest border border-red-200">Rejected</span>
+                      <span className="px-4 py-2 bg-red-50 text-red-600 rounded-full font-bold tracking-tight text-xs uppercase tracking-widest border border-red-200">Rejected</span>
                     ) : viewUser.kyc_status === 'pending' ? (
-                      <span className="px-4 py-2 bg-amber-50 text-amber-600 rounded-full font-black text-xs uppercase tracking-widest border border-amber-200 animate-pulse">Pending Review</span>
+                      <span className="px-4 py-2 bg-amber-50 text-amber-600 rounded-full font-bold tracking-tight text-xs uppercase tracking-widest border border-amber-200 animate-pulse">Pending Review</span>
                     ) : (
-                      <span className="px-4 py-2 bg-sand-100 text-charcoal-light rounded-full font-black text-xs uppercase tracking-widest border border-sand-200">Unverified</span>
+                      <span className="px-4 py-2 bg-gray-50 text-charcoal-light rounded-full font-bold tracking-tight text-xs uppercase tracking-widest border border-gray-100">Unverified</span>
                     )}
                     
                     <button
                       onClick={() => setViewUser(null)}
-                      className="p-2 hover:bg-sand-100 rounded-full text-charcoal-light hover:text-charcoal transition-colors border border-sand-200 flex items-center justify-center"
+                      className="p-2 hover:bg-gray-50 rounded-full text-charcoal-light hover:text-charcoal transition-colors border border-gray-100 flex items-center justify-center"
                       title="Back to List"
                     >
                       <X className="w-5 h-5" />
@@ -1539,43 +1539,43 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Left Column: Host Details */}
                   <div className="space-y-4">
-                    <h4 className="text-sm font-black text-charcoal uppercase tracking-widest border-b border-sand-100 pb-2">Host Information</h4>
+                    <h4 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest border-b border-sand-100 pb-2">Host Information</h4>
                     
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-sand-50 rounded-2xl">
-                        <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Email</p>
+                      <div className="p-4 bg-stone rounded-2xl">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Email</p>
                         <p className="text-sm font-bold text-charcoal break-all">{viewUser.email}</p>
                       </div>
-                      <div className="p-4 bg-sand-50 rounded-2xl">
-                        <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Phone</p>
+                      <div className="p-4 bg-stone rounded-2xl">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Phone</p>
                         <p className="text-sm font-bold text-charcoal">{viewUser.phone}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-sand-50 rounded-2xl">
-                        <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Location</p>
+                      <div className="p-4 bg-stone rounded-2xl">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Location</p>
                         <p className="text-sm font-bold text-charcoal">{viewUser.city || 'Not specified'}, {viewUser.state || ''}</p>
                       </div>
-                      <div className="p-4 bg-sand-50 rounded-2xl">
-                        <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Status</p>
+                      <div className="p-4 bg-stone rounded-2xl">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Status</p>
                         <p className={`text-sm font-bold ${viewUser.is_active ? 'text-green-600' : 'text-red-600'}`}>
                           {viewUser.is_active ? 'Active Account' : 'Inactive Account'}
                         </p>
                       </div>
                     </div>
 
-                    <div className="p-4 bg-sand-50 rounded-2xl">
-                      <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Host User ID / LG Code</p>
+                    <div className="p-4 bg-stone rounded-2xl">
+                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Host User ID / LG Code</p>
                       <p className="text-xs font-mono text-charcoal-light">{viewUser.user_id} {viewUser.lg_code ? `| LG: ${viewUser.lg_code}` : ''}</p>
                     </div>
 
                     {viewUser.role === 'host' && (
-                      <div className="p-4 bg-sand-50 rounded-2xl">
-                        <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Assigned Broker</p>
+                      <div className="p-4 bg-stone rounded-2xl">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Assigned Broker</p>
                         <div className="flex flex-col space-y-2 mt-2">
                           <select 
-                            className="w-full px-3 py-2 bg-white border border-sand-200 rounded-lg text-xs font-bold text-charcoal"
+                            className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs font-bold text-charcoal"
                             value={viewUser.broker_id || ''}
                             onChange={(e) => handleAssignBroker(viewUser.user_id, e.target.value)}
                           >
@@ -1596,11 +1596,11 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                     )}
 
                     {viewUser.role === 'broker' && (
-                      <div className="p-4 bg-sand-50 rounded-2xl">
-                        <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Assigned RM (Relationship Manager)</p>
+                      <div className="p-4 bg-stone rounded-2xl">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Assigned RM (Relationship Manager)</p>
                         <div className="flex flex-col space-y-2 mt-2">
                           <select 
-                            className="w-full px-3 py-2 bg-white border border-sand-200 rounded-lg text-xs font-bold text-charcoal"
+                            className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs font-bold text-charcoal"
                             value={viewUser.rm_id || ''}
                             onChange={(e) => handleAssignRM(viewUser.user_id, e.target.value)}
                           >
@@ -1622,13 +1622,13 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
                     {viewUser.kyc_remarks && (
                       <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-800">
-                        <p className="font-black uppercase tracking-wider text-[10px] mb-1">Rejection Remarks</p>
+                        <p className="font-bold tracking-tight uppercase tracking-wider text-[10px] mb-1">Rejection Remarks</p>
                         <p>{viewUser.kyc_remarks}</p>
                       </div>
                     )}
 
-                    <div className="p-4 bg-sand-50 rounded-2xl">
-                      <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Joined On</p>
+                    <div className="p-4 bg-stone rounded-2xl">
+                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Joined On</p>
                       <p className="text-sm font-bold text-charcoal">
                         {new Date(viewUser.created_at).toLocaleDateString('en-IN', {
                           day: 'numeric', month: 'long', year: 'numeric'
@@ -1639,18 +1639,18 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
                   {/* Right Column: KYC Uploads & Agreement */}
                   <div className="space-y-6">
-                    <h4 className="text-sm font-black text-charcoal uppercase tracking-widest border-b border-sand-100 pb-2">Uploaded Verification Documents</h4>
+                    <h4 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest border-b border-sand-100 pb-2">Uploaded Verification Documents</h4>
                     
                     {viewUser.kyc_documents && viewUser.kyc_documents.length > 0 ? (
                       <div className="grid grid-cols-2 gap-4">
                         {viewUser.kyc_documents.map((doc, idx) => (
-                          <div key={idx} className="p-4 bg-sand-50/50 border border-sand-200 rounded-2xl flex flex-col justify-between space-y-3">
+                          <div key={idx} className="p-4 bg-stone/50 border border-gray-100 rounded-2xl flex flex-col justify-between space-y-3">
                             <div className="flex justify-between items-start">
                               <div>
-                                <span className="text-[9px] font-black text-terracotta uppercase tracking-wider">Document</span>
+                                <span className="text-[9px] font-bold tracking-tight text-terracotta uppercase tracking-wider">Document</span>
                                 <h5 className="font-bold text-charcoal text-xs mt-0.5 capitalize">{doc.document_type.replace('_', ' ')}</h5>
                               </div>
-                              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                              <span className={`px-2 py-0.5 rounded text-[8px] font-bold tracking-tight uppercase tracking-widest ${
                                 doc.status === 'approved' ? 'bg-green-50 text-green-600 border border-green-200' :
                                 doc.status === 'rejected' ? 'bg-red-50 text-red-600 border border-red-200' :
                                 'bg-amber-50 text-amber-600 border border-amber-200 animate-pulse'
@@ -1661,19 +1661,19 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                             
                             {doc.status === 'rejected' && doc.rejection_reason && (
                               <div className="text-[10px] text-red-600 bg-red-50/50 p-2 rounded-xl border border-red-100 leading-normal">
-                                <span className="font-black uppercase tracking-wider text-[8px] block mb-0.5">Reason:</span>
+                                <span className="font-bold tracking-tight uppercase tracking-wider text-[8px] block mb-0.5">Reason:</span>
                                 {doc.rejection_reason}
                               </div>
                             )}
                             
                             {doc.document_type === 'gst_number' ? (
-                              <p className="text-xs font-mono bg-white p-2 rounded-xl border border-sand-200 text-center font-bold text-charcoal">{doc.document_url}</p>
+                              <p className="text-xs font-mono bg-white p-2 rounded-xl border border-gray-100 text-center font-bold text-charcoal">{doc.document_url}</p>
                             ) : (
                               <a
                                 href={getImageUrl(doc.document_url)}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="w-full py-2 bg-charcoal hover:bg-terracotta text-white rounded-xl text-[9px] font-black uppercase tracking-widest text-center transition-colors block"
+                                className="w-full py-2 bg-charcoal hover:bg-terracotta text-white rounded-xl text-[9px] font-bold tracking-tight uppercase tracking-widest text-center transition-colors block"
                               >
                                 View File
                               </a>
@@ -1683,7 +1683,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                               <button
                                 type="button"
                                 onClick={() => handleUpdateDocumentStatus(viewUser.user_id, doc.document_type, 'approved')}
-                                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                                className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold tracking-tight uppercase tracking-widest transition-all ${
                                   doc.status === 'approved'
                                     ? 'bg-green-600 text-white cursor-default'
                                     : 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-200'
@@ -1695,7 +1695,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                               <button
                                 type="button"
                                 onClick={() => setRejectDocState({ userId: viewUser.user_id, documentType: doc.document_type, reason: '' })}
-                                className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                                className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold tracking-tight uppercase tracking-widest transition-all ${
                                   doc.status === 'rejected'
                                     ? 'bg-red-600 text-white cursor-default'
                                     : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
@@ -1709,14 +1709,14 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                         ))}
                       </div>
                     ) : (
-                      <div className="p-8 text-center bg-sand-50 rounded-2xl border border-dashed border-sand-300">
+                      <div className="p-8 text-center bg-stone rounded-2xl border border-dashed border-gray-200">
                         <p className="text-xs text-charcoal-muted font-bold">No documents submitted yet.</p>
                       </div>
                     )}
 
                     {viewUser.agreement_signature && (
-                      <div className="p-5 bg-sand-50/50 border border-sand-200 rounded-2xl space-y-3">
-                        <h4 className="text-[10px] font-black text-charcoal uppercase tracking-widest border-b border-sand-100 pb-1">GR & Owner Agreement</h4>
+                      <div className="p-5 bg-stone/50 border border-gray-100 rounded-2xl space-y-3">
+                        <h4 className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest border-b border-sand-100 pb-1">GR & Owner Agreement</h4>
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
                             <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Owner Name</span>
@@ -1731,7 +1731,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                         </div>
                         <div className="text-[10px] mt-2">
                           <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Agreement Signature</span>
-                          <div className="bg-white border border-sand-200 p-3 rounded-xl flex items-center justify-center h-20 shadow-inner">
+                          <div className="bg-white border border-gray-100 p-3 rounded-xl flex items-center justify-center h-20 shadow-inner">
                             <img src={getImageUrl(viewUser.agreement_signature)} alt="Drawn Signature" className="max-h-16 object-contain" />
                           </div>
                         </div>
@@ -1741,7 +1741,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 </div>
 
                 {/* KYC Actions Row */}
-                <div className="mt-8 pt-6 border-t border-sand-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   {viewUser.kyc_status === 'pending' ? (
                     <>
                       <div className="text-xs text-charcoal-muted font-bold">
@@ -1750,13 +1750,13 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                       <div className="flex space-x-3 w-full sm:w-auto">
                         <button
                           onClick={() => handleRejectKYC(viewUser.user_id)}
-                          className="flex-1 sm:flex-none px-6 py-4 bg-red-50 text-red-600 hover:bg-red-100 rounded-2xl font-black text-xs uppercase tracking-widest transition-colors"
+                          className="flex-1 sm:flex-none px-6 py-4 bg-red-50 text-red-600 hover:bg-red-100 rounded-2xl font-bold tracking-tight text-xs uppercase tracking-widest transition-colors"
                         >
                           Reject KYC
                         </button>
                         <button
                           onClick={() => handleApproveKYC(viewUser.user_id)}
-                          className="flex-1 sm:flex-none px-8 py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-md"
+                          className="flex-1 sm:flex-none px-8 py-4 bg-green-600 hover:bg-green-700 text-white rounded-2xl font-bold tracking-tight text-xs uppercase tracking-widest transition-all shadow-subtle"
                         >
                           Approve KYC & Go Live
                         </button>
@@ -1773,7 +1773,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 <div className="flex justify-end mb-2">
                   <button
                     onClick={() => setViewUser(null)}
-                    className="p-2 hover:bg-sand-100 rounded-full text-charcoal-light hover:text-charcoal transition-colors border border-sand-200 flex items-center justify-center"
+                    className="p-2 hover:bg-gray-50 rounded-full text-charcoal-light hover:text-charcoal transition-colors border border-gray-100 flex items-center justify-center"
                     title="Close"
                   >
                     <X className="w-4 h-4" />
@@ -1787,45 +1787,45 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                       className="w-24 h-24 rounded-full object-cover border-4 border-sand-100 mb-4"
                     />
                   ) : (
-                    <div className="w-24 h-24 rounded-full bg-terracotta/10 border-4 border-sand-100 flex items-center justify-center font-black text-terracotta text-3xl uppercase mb-4">
+                    <div className="w-24 h-24 rounded-full bg-terracotta/10 border-4 border-sand-100 flex items-center justify-center font-bold tracking-tight text-terracotta text-3xl uppercase mb-4">
                       {viewUser.full_name ? viewUser.full_name.charAt(0) : '?'}
                     </div>
                   )}
-                  <h3 className="text-2xl font-black text-charcoal">{viewUser.full_name}</h3>
-                  <span className="inline-block px-3 py-1 bg-terracotta/10 text-terracotta text-xs font-black uppercase tracking-widest rounded-full mt-2">
+                  <h3 className="text-2xl font-bold tracking-tight text-charcoal">{viewUser.full_name}</h3>
+                  <span className="inline-block px-3 py-1 bg-terracotta/10 text-terracotta text-xs font-bold tracking-tight uppercase tracking-widest rounded-full mt-2">
                     {viewUser.role} Account
                   </span>
                 </div>
                 
                 <div className="space-y-4 mb-8">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-sand-50 rounded-2xl">
-                      <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Email</p>
+                    <div className="p-4 bg-stone rounded-2xl">
+                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Email</p>
                       <p className="text-sm font-bold text-charcoal break-all">{viewUser.email}</p>
                     </div>
-                    <div className="p-4 bg-sand-50 rounded-2xl">
-                      <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Phone</p>
+                    <div className="p-4 bg-stone rounded-2xl">
+                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Phone</p>
                       <p className="text-sm font-bold text-charcoal">{viewUser.phone}</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-sand-50 rounded-2xl">
-                      <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Location</p>
+                    <div className="p-4 bg-stone rounded-2xl">
+                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Location</p>
                       <p className="text-sm font-bold text-charcoal">{viewUser.city || 'Not specified'}</p>
                     </div>
-                    <div className="p-4 bg-sand-50 rounded-2xl">
-                      <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Status</p>
+                    <div className="p-4 bg-stone rounded-2xl">
+                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Status</p>
                       <p className={`text-sm font-bold ${viewUser.is_active ? 'text-green-600' : 'text-red-600'}`}>
                         {viewUser.is_active ? 'Active' : 'Inactive'}
                       </p>
                     </div>
                   </div>
-                  <div className="p-4 bg-sand-50 rounded-2xl">
-                    <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">User ID</p>
+                  <div className="p-4 bg-stone rounded-2xl">
+                    <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">User ID</p>
                     <p className="text-xs font-mono text-charcoal-light">{viewUser.user_id}</p>
                   </div>
-                  <div className="p-4 bg-sand-50 rounded-2xl">
-                    <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Joined On</p>
+                  <div className="p-4 bg-stone rounded-2xl">
+                    <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Joined On</p>
                     <p className="text-sm font-bold text-charcoal">
                       {new Date(viewUser.created_at).toLocaleDateString('en-IN', {
                         day: 'numeric', month: 'long', year: 'numeric'
@@ -1844,11 +1844,11 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
       {rejectDocState && (
         <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-premium animate-slide-up">
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-sand-200">
-              <h4 className="text-lg font-black text-charcoal">Reject Document</h4>
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
+              <h4 className="text-lg font-bold tracking-tight text-charcoal">Reject Document</h4>
               <button 
                 onClick={() => setRejectDocState(null)} 
-                className="p-1.5 hover:bg-sand-100 rounded-lg text-charcoal-light hover:text-charcoal transition"
+                className="p-1.5 hover:bg-gray-50 rounded-lg text-charcoal-light hover:text-charcoal transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1861,7 +1861,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
             <textarea
               required
               placeholder="e.g. Document is blurred or expired"
-              className="w-full border-2 border-sand-200 rounded-xl px-3 py-2 text-sm focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300 min-h-[80px]"
+              className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-sm focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300 min-h-[80px]"
               value={rejectDocState.reason || ''}
               onChange={e => setRejectDocState({ ...rejectDocState, reason: e.target.value })}
             />
@@ -1870,7 +1870,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               <button 
                 type="button" 
                 onClick={() => setRejectDocState(null)} 
-                className="flex-1 py-3 font-black text-[10px] text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition"
+                className="flex-1 py-3 font-bold tracking-tight text-[10px] text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition"
               >
                 Cancel
               </button>
@@ -1889,7 +1889,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   );
                   setRejectDocState(null);
                 }}
-                className="flex-1 btn-premium bg-red-600 hover:bg-red-700 border-red-600 py-3 shadow-elevated text-white font-black text-[10px] uppercase tracking-widest"
+                className="flex-1 btn-premium bg-red-600 hover:bg-red-700 border-red-600 py-3 shadow-elevated text-white font-bold tracking-tight text-[10px] uppercase tracking-widest"
               >
                 Reject Document
               </button>
@@ -2055,7 +2055,7 @@ const PropertyModeration = () => {
             {[...properties]
               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((property) => (
-              <div key={property.property_id} className="bg-white border border-[#F3F4F6] rounded-[24px] p-5 shadow-sm hover:shadow-md transition-all mb-4" data-testid={`property-${property.property_id}`}>
+              <div key={property.property_id} className="bg-white border border-[#F3F4F6] rounded-[24px] p-5 shadow-sm hover:shadow-subtle transition-all mb-4" data-testid={`property-${property.property_id}`}>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-center space-x-5 flex-1 min-w-0">
                     <img
@@ -2072,7 +2072,7 @@ const PropertyModeration = () => {
                         <span className="text-sm font-bold text-terracotta">₹{property.price_per_night}</span>
                         <span className="text-[11px] text-[#6B7280] ml-0.5">/night</span>
                         <span
-                          className={`ml-3 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                          className={`ml-3 px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-tight uppercase tracking-wider ${
                             property.status === 'live' ? 'bg-[#ECFDF5] text-[#10B981]' :
                             property.status === 'under_review' ? 'bg-[#DBEAFE] text-[#2563EB]' :
                             property.status === 'pending_verification' ? 'bg-[#FEF3C7] text-[#D97706]' :
@@ -2130,7 +2130,7 @@ const PropertyModeration = () => {
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -2140,7 +2140,7 @@ const PropertyModeration = () => {
               <button 
                 onClick={() => setCurrentPage(p => Math.min(Math.ceil(properties.length / itemsPerPage), p + 1))}
                 disabled={currentPage === Math.ceil(properties.length / itemsPerPage)}
-                className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
@@ -2160,8 +2160,8 @@ const PropertyModeration = () => {
           <div className="bg-white rounded-3xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-premium animate-slide-up">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h3 className="text-2xl font-black text-charcoal">{activeReviewProperty.title}</h3>
-                <p className="text-xs font-black text-charcoal-muted uppercase tracking-widest mt-1">
+                <h3 className="text-2xl font-bold tracking-tight text-charcoal">{activeReviewProperty.title}</h3>
+                <p className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mt-1">
                   Property Audit & Compliance Verification
                 </p>
               </div>
@@ -2176,7 +2176,7 @@ const PropertyModeration = () => {
             {/* Basic Info & Remarks */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-sm">
-                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1.5">Property Details</p>
+                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1.5">Property Details</p>
                 <p className="font-mono text-xs font-bold text-charcoal break-all" title={activeReviewProperty.property_id || ''}>
                   Property ID: {activeReviewProperty.property_id || 'N/A'}
                 </p>
@@ -2185,12 +2185,12 @@ const PropertyModeration = () => {
                 </p>
               </div>
               <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-sm">
-                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1.5">Assigned RM Details</p>
+                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1.5">Assigned RM Details</p>
                 <p className="font-mono text-[10px] font-bold text-charcoal break-all" title={activeReviewProperty.rm_id || ''}>RM ID: {activeReviewProperty.rm_id || 'N/A'}</p>
                 <p className="text-xs text-charcoal-light mt-1">RM Remarks: "{activeReviewProperty.rm_remarks || 'No remarks provided'}"</p>
               </div>
               <div className="bg-white border border-[#E5E7EB] rounded-2xl p-4 shadow-sm">
-                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1.5">Field Intelligence (Broker)</p>
+                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1.5">Field Intelligence (Broker)</p>
                 <p className="font-mono text-[10px] font-bold text-charcoal break-all" title={activeReviewProperty.broker_id || ''}>Broker ID: {activeReviewProperty.broker_id || 'N/A'}</p>
                 <p className="text-xs text-charcoal-light mt-1">Broker Remarks: "{activeReviewProperty.broker_remarks || 'No remarks provided'}"</p>
               </div>
@@ -2199,14 +2199,14 @@ const PropertyModeration = () => {
             {/* Property Images Gallery */}
             {activeReviewProperty.images && activeReviewProperty.images.length > 0 && (
               <div className="mb-6">
-                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Property Images</p>
+                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">Property Images</p>
                 <div className="flex space-x-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-sand-300">
                   {activeReviewProperty.images.map((img, idx) => (
                     <img 
                       key={idx}
                       src={getImageUrl(img)} 
                       alt={`Property Image ${idx + 1}`} 
-                      className="w-40 h-28 object-cover rounded-xl border border-sand-200 shadow-sm flex-shrink-0"
+                      className="w-40 h-28 object-cover rounded-xl border border-gray-100 shadow-sm flex-shrink-0"
                     />
                   ))}
                 </div>
@@ -2215,7 +2215,7 @@ const PropertyModeration = () => {
 
             {/* Detailed Info */}
             <div className="bg-white border border-[#E5E7EB] rounded-2xl p-5 shadow-sm mb-6">
-              <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-3">Listing Details</p>
+              <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-3">Listing Details</p>
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div>
@@ -2255,7 +2255,7 @@ const PropertyModeration = () => {
                   <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1.5">Amenities</span>
                   <div className="flex flex-wrap gap-1">
                     {activeReviewProperty.amenities.map((amenity, idx) => (
-                      <span key={idx} className="px-2.5 py-1 bg-sand-100 text-charcoal text-[10px] font-semibold rounded-md border border-sand-200">
+                      <span key={idx} className="px-2.5 py-1 bg-gray-50 text-charcoal text-[10px] font-semibold rounded-md border border-gray-100">
                         {formatDisplayLabel(amenity)}
                       </span>
                     ))}
@@ -2268,7 +2268,7 @@ const PropertyModeration = () => {
             {activeReviewProperty.video_url && (
               <div className="p-4 bg-white border border-[#E5E7EB] rounded-2xl shadow-sm mb-6 flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Walkthrough Video</p>
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Walkthrough Video</p>
                   <span className="text-xs text-charcoal-light font-semibold">RM uploaded evidence walkthrough video</span>
                 </div>
                 <a 
@@ -2284,7 +2284,7 @@ const PropertyModeration = () => {
 
             {/* Compliance Checklist Item Review */}
             <div className="mb-6">
-              <h4 className="text-xs font-black text-charcoal-muted uppercase tracking-widest mb-4">Compliance Checklist Audit</h4>
+              <h4 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-4">Compliance Checklist Audit</h4>
               <div className="space-y-3">
                 {Object.keys(CHECKLIST_LABELS).map((key) => {
                   const brokerRMVal = activeReviewProperty.checklist?.[key];
@@ -2295,7 +2295,7 @@ const PropertyModeration = () => {
                         <p className="text-sm font-bold text-charcoal">{CHECKLIST_LABELS[key]}</p>
                         <div className="flex items-center space-x-2 mt-1">
                           <span className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider">Broker Verdict:</span>
-                          <span className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center space-x-1 ${
+                          <span className={`text-[10px] font-bold tracking-tight uppercase tracking-wider px-2.5 py-0.5 rounded-full flex items-center space-x-1 ${
                             brokerRMVal 
                               ? 'bg-[#ECFDF5] text-[#10B981]' 
                               : 'bg-[#FEF2F2] text-[#EF4444]'
@@ -2340,7 +2340,7 @@ const PropertyModeration = () => {
             {/* Evidence Photos */}
             {activeReviewProperty.geo_tagged_photos && activeReviewProperty.geo_tagged_photos.length > 0 && (
               <div className="mb-8">
-                <h4 className="text-xs font-black text-charcoal-muted uppercase tracking-widest mb-4">Geo-Tagged Evidence Photos</h4>
+                <h4 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-4">Geo-Tagged Evidence Photos</h4>
                 <div className="grid grid-cols-2 gap-4">
                   {activeReviewProperty.geo_tagged_photos.map((photo, idx) => (
                     <div key={idx} className="relative group rounded-2xl overflow-hidden border border-[#E5E7EB] bg-white p-3 shadow-sm">
@@ -2379,7 +2379,7 @@ const PropertyModeration = () => {
                 <button 
                   type="button" 
                   onClick={() => handleFinalApprove(activeReviewProperty.property_id)} 
-                  className="px-6 py-3.5 bg-[#9A3412] hover:bg-[#7C2D12] text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                  className="px-6 py-3.5 bg-[#9A3412] hover:bg-[#7C2D12] text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all shadow-subtle hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
                 >
                   Approve & Go Live
                 </button>
@@ -2393,11 +2393,11 @@ const PropertyModeration = () => {
       {propertyRejectionState && (
         <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[150] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-premium animate-slide-up">
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-sand-200">
-              <h4 className="text-lg font-black text-charcoal">Reject Property Listing</h4>
+            <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
+              <h4 className="text-lg font-bold tracking-tight text-charcoal">Reject Property Listing</h4>
               <button 
                 onClick={() => setPropertyRejectionState(null)} 
-                className="p-1.5 hover:bg-sand-100 rounded-lg text-charcoal-light hover:text-charcoal transition"
+                className="p-1.5 hover:bg-gray-50 rounded-lg text-charcoal-light hover:text-charcoal transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -2410,7 +2410,7 @@ const PropertyModeration = () => {
             <textarea
               required
               placeholder="e.g. Incomplete verification documents or incorrect geo-coordinates"
-              className="w-full border-2 border-sand-200 rounded-xl px-3 py-2 text-sm focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300 min-h-[80px]"
+              className="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-sm focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300 min-h-[80px]"
               value={propertyRejectionState.reason || ''}
               onChange={e => setPropertyRejectionState({ ...propertyRejectionState, reason: e.target.value })}
             />
@@ -2419,7 +2419,7 @@ const PropertyModeration = () => {
               <button 
                 type="button" 
                 onClick={() => setPropertyRejectionState(null)} 
-                className="flex-1 py-3 font-black text-[10px] text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition"
+                className="flex-1 py-3 font-bold tracking-tight text-[10px] text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition"
               >
                 Cancel
               </button>
@@ -2436,7 +2436,7 @@ const PropertyModeration = () => {
                   );
                   setPropertyRejectionState(null);
                 }}
-                className="flex-1 btn-premium bg-red-600 hover:bg-red-700 border-red-600 py-3 shadow-elevated text-white font-black text-[10px] uppercase tracking-widest"
+                className="flex-1 btn-premium bg-red-600 hover:bg-red-700 border-red-600 py-3 shadow-elevated text-white font-bold tracking-tight text-[10px] uppercase tracking-widest"
               >
                 Reject Property
               </button>
@@ -2553,20 +2553,20 @@ const BookingManagement = () => {
           {bookings.map((booking) => (
             <div
               key={booking.booking_id}
-              className="dashboard-card hover:shadow-md transition-all border border-sand-200"
+              className="dashboard-card hover:shadow-subtle transition-all border border-gray-100"
               data-testid={`booking-${booking.booking_id}`}
             >
               {/* Card Header */}
-              <div className="flex flex-wrap items-center justify-between border-b border-sand-200 pb-4 mb-4 gap-2">
+              <div className="flex flex-wrap items-center justify-between border-b border-gray-100 pb-4 mb-4 gap-2">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-xl bg-terracotta/10 flex items-center justify-center text-terracotta">
                     <Calendar className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="text-xs font-black text-charcoal-muted uppercase tracking-widest block">
+                    <span className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">
                       Booking ID
                     </span>
-                    <span className="font-mono font-black text-charcoal tracking-wide text-sm">
+                    <span className="font-mono font-bold tracking-tight text-charcoal tracking-wide text-sm">
                       {booking.booking_id}
                     </span>
                   </div>
@@ -2577,7 +2577,7 @@ const BookingManagement = () => {
                     Booked on: {formatDate(booking.created_at)}
                   </span>
                   <span
-                    className={`px-3 py-1 text-xs font-black uppercase tracking-wider rounded-full border ${getStatusColor(
+                    className={`px-3 py-1 text-xs font-bold tracking-tight uppercase tracking-wider rounded-full border ${getStatusColor(
                       booking.booking_status
                     )}`}
                   >
@@ -2590,7 +2590,7 @@ const BookingManagement = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Section 1: Property Details */}
                 <div className="space-y-3">
-                  <h4 className="text-xs font-black text-charcoal-muted uppercase tracking-widest border-b border-sand-100 pb-1">
+                  <h4 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest border-b border-sand-100 pb-1">
                     Property Details
                   </h4>
                   {booking.property ? (
@@ -2599,10 +2599,10 @@ const BookingManagement = () => {
                         <img
                           src={getImageUrl(booking.property.images[0])}
                           alt={booking.property.title}
-                          className="w-16 h-16 rounded-xl object-cover border border-sand-200"
+                          className="w-16 h-16 rounded-xl object-cover border border-gray-100"
                         />
                       ) : (
-                        <div className="w-16 h-16 rounded-xl bg-sage/10 border border-sand-200 flex items-center justify-center text-sage font-bold">
+                        <div className="w-16 h-16 rounded-xl bg-sage/10 border border-gray-100 flex items-center justify-center text-sage font-bold">
                           STR
                         </div>
                       )}
@@ -2614,10 +2614,10 @@ const BookingManagement = () => {
                           {booking.property.city}
                         </p>
                         <div className="flex items-center space-x-2 mt-1">
-                          <span className="inline-block px-1.5 py-0.5 bg-sand-100 text-charcoal-muted text-[9px] font-black uppercase rounded">
+                          <span className="inline-block px-1.5 py-0.5 bg-gray-50 text-charcoal-muted text-[9px] font-bold tracking-tight uppercase rounded">
                             {booking.property.bhk_type}
                           </span>
-                          <span className="inline-block px-1.5 py-0.5 bg-sand-100 text-charcoal-muted text-[9px] font-black uppercase rounded">
+                          <span className="inline-block px-1.5 py-0.5 bg-gray-50 text-charcoal-muted text-[9px] font-bold tracking-tight uppercase rounded">
                             {formatCategoryLabel(booking.property.category)}
                           </span>
                         </div>
@@ -2633,7 +2633,7 @@ const BookingManagement = () => {
                 {/* Section 2: Owner & Guest Details */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:col-span-2">
                   <div className="space-y-2">
-                    <h4 className="text-xs font-black text-charcoal-muted uppercase tracking-widest border-b border-sand-100 pb-1">
+                    <h4 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest border-b border-sand-100 pb-1">
                       Property Owner (Host)
                     </h4>
                     {booking.host ? (
@@ -2656,7 +2656,7 @@ const BookingManagement = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <h4 className="text-xs font-black text-charcoal-muted uppercase tracking-widest border-b border-sand-100 pb-1">
+                    <h4 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest border-b border-sand-100 pb-1">
                       Guest (Booked By)
                     </h4>
                     {booking.guest ? (
@@ -2681,10 +2681,10 @@ const BookingManagement = () => {
               </div>
 
               {/* Card Footer */}
-              <div className="flex flex-wrap items-center justify-between border-t border-sand-200 mt-4 pt-4 bg-sand-50/50 -mx-6 -mb-6 px-6 py-4 rounded-b-2xl gap-4">
+              <div className="flex flex-wrap items-center justify-between border-t border-gray-100 mt-4 pt-4 bg-stone/50 -mx-6 -mb-6 px-6 py-4 rounded-b-2xl gap-4">
                 <div className="flex items-center space-x-6">
                   <div>
-                    <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block">
+                    <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">
                       Duration
                     </span>
                     <span className="text-xs font-bold text-charcoal">
@@ -2692,7 +2692,7 @@ const BookingManagement = () => {
                     </span>
                   </div>
                   <div>
-                    <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block">
+                    <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">
                       Guests
                     </span>
                     <span className="text-xs font-bold text-charcoal">
@@ -2703,10 +2703,10 @@ const BookingManagement = () => {
 
                 <div className="flex items-center space-x-4 mt-2 sm:mt-0 ml-auto md:ml-0">
                   <div className="text-right">
-                    <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block">
+                    <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">
                       Total Paid
                     </span>
-                    <span className="text-lg font-black text-terracotta">
+                    <span className="text-lg font-bold tracking-tight text-terracotta">
                       ₹{(booking.total_amount || 0).toLocaleString('en-IN', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
@@ -2714,7 +2714,7 @@ const BookingManagement = () => {
                     </span>
                   </div>
                   <span
-                    className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded ${getPaymentStatusColor(
+                    className={`px-2.5 py-1 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded ${getPaymentStatusColor(
                       booking.payment_status
                     )}`}
                   >
@@ -2743,10 +2743,10 @@ const BookingManagement = () => {
       {selectedBooking && (
         <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-premium animate-slide-up">
-            <div className="flex justify-between items-start mb-6 border-b border-sand-200 pb-4">
+            <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
               <div>
-                <h3 className="text-2xl font-black text-charcoal">Booking Invoice Ledger</h3>
-                <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">
+                <h3 className="text-2xl font-bold tracking-tight text-charcoal">Booking Invoice Ledger</h3>
+                <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">
                   ID: {selectedBooking.booking_id}
                 </span>
               </div>
@@ -2760,13 +2760,13 @@ const BookingManagement = () => {
 
             <div className="space-y-6">
               {/* Status Row */}
-              <div className="flex justify-between items-center bg-sand-50 p-4 rounded-2xl border border-sand-200">
+              <div className="flex justify-between items-center bg-stone p-4 rounded-2xl border border-gray-100">
                 <div>
-                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">
                     Booking Status
                   </p>
                   <span
-                    className={`inline-block px-2.5 py-0.5 text-xs font-black uppercase tracking-wider rounded-full border mt-1 ${getStatusColor(
+                    className={`inline-block px-2.5 py-0.5 text-xs font-bold tracking-tight uppercase tracking-wider rounded-full border mt-1 ${getStatusColor(
                       selectedBooking.booking_status
                     )}`}
                   >
@@ -2774,11 +2774,11 @@ const BookingManagement = () => {
                   </span>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">
                     Payment Status
                   </p>
                   <span
-                    className={`inline-block px-2 py-0.5 text-xs font-black uppercase tracking-wider rounded mt-1 ${getPaymentStatusColor(
+                    className={`inline-block px-2 py-0.5 text-xs font-bold tracking-tight uppercase tracking-wider rounded mt-1 ${getPaymentStatusColor(
                       selectedBooking.payment_status
                     )}`}
                   >
@@ -2789,16 +2789,16 @@ const BookingManagement = () => {
 
               {/* Dates & Guest */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-sand-50 rounded-2xl">
-                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">
+                <div className="p-4 bg-stone rounded-2xl">
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">
                     Check-in Date
                   </p>
                   <p className="text-sm font-bold text-charcoal">
                     {formatDate(selectedBooking.check_in_date)}
                   </p>
                 </div>
-                <div className="p-4 bg-sand-50 rounded-2xl">
-                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">
+                <div className="p-4 bg-stone rounded-2xl">
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">
                     Check-out Date
                   </p>
                   <p className="text-sm font-bold text-charcoal">
@@ -2809,10 +2809,10 @@ const BookingManagement = () => {
 
               {/* Breakdown Ledger */}
               <div className="space-y-3">
-                <h4 className="text-xs font-black text-charcoal-muted uppercase tracking-widest">
+                <h4 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">
                   Financial Breakdown
                 </h4>
-                <div className="border border-sand-200 rounded-2xl p-4 space-y-2.5 font-semibold text-sm">
+                <div className="border border-gray-100 rounded-2xl p-4 space-y-2.5 font-semibold text-sm">
                   <div className="flex justify-between text-charcoal-light">
                     <span>Base Amount</span>
                     <span>
@@ -2847,7 +2847,7 @@ const BookingManagement = () => {
                       </span>
                     </div>
                   )}
-                  <div className="border-t border-sand-200 pt-2.5 flex justify-between font-black text-charcoal text-base">
+                  <div className="border-t border-gray-100 pt-2.5 flex justify-between font-bold tracking-tight text-charcoal text-base">
                     <span>Total Amount</span>
                     <span className="text-terracotta">
                       ₹{(selectedBooking.total_amount || 0).toLocaleString('en-IN', {
@@ -2860,8 +2860,8 @@ const BookingManagement = () => {
 
               {/* Transactions details if paid */}
               {(selectedBooking.razorpay_order_id || selectedBooking.razorpay_payment_id) && (
-                <div className="p-4 bg-sand-50 rounded-2xl space-y-1">
-                  <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">
+                <div className="p-4 bg-stone rounded-2xl space-y-1">
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">
                     Razorpay Gateway Credentials
                   </p>
                   {selectedBooking.razorpay_order_id && (
@@ -3057,13 +3057,13 @@ const CMSManagement = () => {
     <div className="space-y-6" data-testid="cms-management">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h3 className="text-2xl font-black text-charcoal">Landing Page CMS Settings</h3>
+          <h3 className="text-2xl font-bold tracking-tight text-charcoal">Landing Page CMS Settings</h3>
           <p className="text-sm text-charcoal-light">Manage Hero section, Blog posts, Guest testimonials, and onboarding steps data.</p>
         </div>
       </div>
 
       {/* Sub-tab Navigation */}
-      <div className="flex flex-wrap gap-2.5 p-1.5 bg-sand-100/60 rounded-2xl mb-8 w-fit max-w-full">
+      <div className="flex flex-wrap gap-2.5 p-1.5 bg-gray-50/60 rounded-2xl mb-8 w-fit max-w-full">
         {[
           { id: 'hero', label: 'Hero Details', icon: Sparkles },
           { id: 'how_it_works', label: 'How It Works', icon: ListTodo },
@@ -3080,7 +3080,7 @@ const CMSManagement = () => {
               onClick={() => setActiveSubTab(tab.id)}
               className={`flex items-center space-x-2 px-5 py-3 text-xs font-bold uppercase tracking-wider rounded-xl transition-all duration-300 ${
                 isActive
-                  ? 'bg-terracotta text-white shadow-md shadow-terracotta/20 scale-[1.02]'
+                  ? 'bg-terracotta text-white shadow-subtle shadow-terracotta/20 scale-[1.02]'
                   : 'text-charcoal-muted hover:text-charcoal hover:bg-sand-200/50'
               }`}
             >
@@ -3092,7 +3092,7 @@ const CMSManagement = () => {
       </div>
 
       {/* Form Content */}
-      <div className="bg-white/90 backdrop-blur-md rounded-3xl p-8 border border-sand-200/80 shadow-premium transition-all duration-300 hover:shadow-2xl">
+      <div className="bg-white/90 backdrop-blur-md rounded-3xl p-8 border border-gray-100/80 shadow-premium transition-all duration-300 hover:shadow-elevated">
         
         {/* HERO TAB */}
         {activeSubTab === 'hero' && (
@@ -3102,25 +3102,25 @@ const CMSManagement = () => {
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-lg font-black text-charcoal">Hero Section Configuration</h4>
+                <h4 className="text-lg font-bold tracking-tight text-charcoal">Hero Section Configuration</h4>
                 <p className="text-xs text-charcoal-muted font-medium">Configure the main above-the-fold content of your homepage.</p>
               </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="relative group">
-                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Sub Tag</label>
+                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Sub Tag</label>
                 <input
-                  className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm"
                   value={heroData.sub_tag}
                   onChange={e => setHeroData({ ...heroData, sub_tag: e.target.value })}
                   placeholder="e.g. Luxury Rentals India"
                 />
               </div>
               <div className="relative group">
-                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Rating Display Text</label>
+                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Rating Display Text</label>
                 <input
-                  className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm"
                   value={heroData.rating}
                   onChange={e => setHeroData({ ...heroData, rating: e.target.value })}
                   placeholder="e.g. 4.9/5 Rating"
@@ -3129,9 +3129,9 @@ const CMSManagement = () => {
             </div>
 
             <div className="relative group">
-              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Heading Title (HTML Supported)</label>
+              <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Heading Title (HTML Supported)</label>
               <input
-                className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
+                className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm"
                 value={heroData.title}
                 onChange={e => setHeroData({ ...heroData, title: e.target.value })}
                 placeholder="e.g. Elevate Your Living"
@@ -3143,10 +3143,10 @@ const CMSManagement = () => {
             </div>
 
             <div className="relative group">
-              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Subtitle / Paragraph Description</label>
+              <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Subtitle / Paragraph Description</label>
               <textarea
                 rows={3}
-                className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm leading-relaxed"
+                className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm leading-relaxed"
                 value={heroData.subtitle}
                 onChange={e => setHeroData({ ...heroData, subtitle: e.target.value })}
                 placeholder="Describe your platform values and offerings..."
@@ -3154,9 +3154,9 @@ const CMSManagement = () => {
             </div>
 
             <div className="relative group">
-              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Trusted By Text</label>
+              <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Trusted By Text</label>
               <input
-                className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
+                className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm"
                 value={heroData.trusted_text}
                 onChange={e => setHeroData({ ...heroData, trusted_text: e.target.value })}
                 placeholder="e.g. Trusted by 10,000+ happy families across India"
@@ -3164,17 +3164,17 @@ const CMSManagement = () => {
             </div>
 
             <div className="relative group">
-              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Hero Background Image</label>
+              <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Hero Background Image</label>
               <div className="flex items-stretch space-x-3">
                 <div className="relative flex-1">
                   <input
-                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3.5 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
+                    className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3.5 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm"
                     value={heroData.image_url}
                     onChange={e => setHeroData({ ...heroData, image_url: e.target.value })}
                     placeholder="Image URL"
                   />
                 </div>
-                <label className="btn-premium px-6 flex items-center justify-center space-x-2 text-sm font-semibold rounded-2xl cursor-pointer hover:shadow-lg transition-all duration-300">
+                <label className="btn-premium px-6 flex items-center justify-center space-x-2 text-sm font-semibold rounded-2xl cursor-pointer hover:shadow-premium transition-all duration-300">
                   <UploadCloud className="w-4 h-4" />
                   <span>Upload Image</span>
                   <input
@@ -3187,8 +3187,8 @@ const CMSManagement = () => {
               </div>
               
               {heroData.image_url && (
-                <div className="mt-5 relative group overflow-hidden rounded-2xl border border-sand-200/80 shadow-md aspect-video max-h-64">
-                  <img src={getImageUrl(heroData.image_url)} alt="Hero Preview" className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500" />
+                <div className="mt-5 relative group overflow-hidden rounded-2xl border border-gray-100/80 shadow-subtle aspect-video max-h-64">
+                  <img src={getImageUrl(heroData.image_url)} alt="Hero Preview" className="w-full h-full object-cover group-hover:scale-[1.02] transition-all duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end p-4">
                     <span className="text-white text-xs font-semibold tracking-wide bg-charcoal/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">Active Hero Background</span>
                   </div>
@@ -3200,7 +3200,7 @@ const CMSManagement = () => {
               <button
                 onClick={() => handleSave('hero', heroData)}
                 disabled={saving}
-                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-md shadow-terracotta/15 active:scale-95 transition-all"
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-subtle shadow-terracotta/15 active:scale-95 transition-all"
               >
                 {saving ? (
                   <>
@@ -3226,20 +3226,20 @@ const CMSManagement = () => {
                 <ListTodo className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-lg font-black text-charcoal">How It Works Steps</h4>
+                <h4 className="text-lg font-bold tracking-tight text-charcoal">How It Works Steps</h4>
                 <p className="text-xs text-charcoal-muted font-medium">Configure onboarding steps and bullet points displayed on the landing page.</p>
               </div>
             </div>
 
             <div className="space-y-6">
               {howItWorksData.steps?.map((step, index) => (
-                <div key={step.id} className="p-6 bg-sand-50/50 rounded-3xl border border-sand-200/80 space-y-5 hover:bg-white hover:shadow-lg transition-all duration-300">
-                  <div className="flex justify-between items-center pb-3 border-b border-sand-200/60">
+                <div key={step.id} className="p-6 bg-stone/50 rounded-3xl border border-gray-100/80 space-y-5 hover:bg-white hover:shadow-premium transition-all duration-300">
+                  <div className="flex justify-between items-center pb-3 border-b border-gray-100/60">
                     <div className="flex items-center space-x-2.5">
-                      <span className="w-6 h-6 rounded-full bg-terracotta text-white flex items-center justify-center text-xs font-black">
+                      <span className="w-6 h-6 rounded-full bg-terracotta text-white flex items-center justify-center text-xs font-bold tracking-tight">
                         {step.id}
                       </span>
-                      <span className="text-sm font-black text-charcoal uppercase tracking-wider">
+                      <span className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-wider">
                         Step Configuration
                       </span>
                     </div>
@@ -3247,9 +3247,9 @@ const CMSManagement = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
-                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Short Title (Tab)</label>
+                      <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Short Title (Tab)</label>
                       <input
-                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                        className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={step.shortTitle}
                         onChange={e => {
                           const updated = [...howItWorksData.steps];
@@ -3259,9 +3259,9 @@ const CMSManagement = () => {
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Heading Title</label>
+                      <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Heading Title</label>
                       <input
-                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                        className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={step.heading}
                         onChange={e => {
                           const updated = [...howItWorksData.steps];
@@ -3274,9 +3274,9 @@ const CMSManagement = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Subtitle</label>
+                      <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Subtitle</label>
                       <input
-                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                        className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={step.subtitle}
                         onChange={e => {
                           const updated = [...howItWorksData.steps];
@@ -3286,9 +3286,9 @@ const CMSManagement = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Lucide Icon Name</label>
+                      <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Lucide Icon Name</label>
                       <select
-                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm appearance-none cursor-pointer"
+                        className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm appearance-none cursor-pointer"
                         value={step.icon_name}
                         onChange={e => {
                           const updated = [...howItWorksData.steps];
@@ -3306,10 +3306,10 @@ const CMSManagement = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Step Detailed Paragraph</label>
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Step Detailed Paragraph</label>
                     <textarea
                       rows={2}
-                      className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm leading-relaxed"
+                      className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm leading-relaxed"
                       value={step.paragraph}
                       onChange={e => {
                         const updated = [...howItWorksData.steps];
@@ -3320,12 +3320,12 @@ const CMSManagement = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Bullet Points</label>
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Bullet Points</label>
                     <div className="space-y-3">
                       {step.bullets?.map((bullet, bIndex) => (
                         <div key={bIndex} className="flex items-center space-x-2.5 group/bullet">
                           <input
-                            className="flex-1 border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2 bg-white outline-none transition font-semibold text-charcoal text-xs"
+                            className="flex-1 border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2 bg-white outline-none transition font-semibold text-charcoal text-xs"
                             value={bullet}
                             onChange={e => {
                               const updatedSteps = [...howItWorksData.steps];
@@ -3356,7 +3356,7 @@ const CMSManagement = () => {
                           updatedSteps[index] = { ...updatedSteps[index], bullets: updatedBullets };
                           setHowItWorksData({ steps: updatedSteps });
                         }}
-                        className="text-xs font-black text-emerald-600 uppercase tracking-wider hover:text-emerald-700 hover:underline flex items-center space-x-1.5 py-1"
+                        className="text-xs font-bold tracking-tight text-emerald-600 uppercase tracking-wider hover:text-emerald-700 hover:underline flex items-center space-x-1.5 py-1"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>Add Bullet Point</span>
@@ -3371,7 +3371,7 @@ const CMSManagement = () => {
               <button
                 onClick={() => handleSave('how_it_works', howItWorksData)}
                 disabled={saving}
-                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-md shadow-terracotta/15 active:scale-95 transition-all"
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-subtle shadow-terracotta/15 active:scale-95 transition-all"
               >
                 {saving ? (
                   <>
@@ -3398,7 +3398,7 @@ const CMSManagement = () => {
                   <Heart className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-lg font-black text-charcoal">Guest Testimonials</h4>
+                  <h4 className="text-lg font-bold tracking-tight text-charcoal">Guest Testimonials</h4>
                   <p className="text-xs text-charcoal-muted font-medium">Manage testimonials and reviews from your hosts and guests.</p>
                 </div>
               </div>
@@ -3417,7 +3417,7 @@ const CMSManagement = () => {
                   ];
                   setTestimonialsData({ items: updatedItems });
                 }}
-                className="btn-premium px-5 py-2.5 rounded-2xl flex items-center space-x-1.5 text-xs font-black uppercase tracking-wider"
+                className="btn-premium px-5 py-2.5 rounded-2xl flex items-center space-x-1.5 text-xs font-bold tracking-tight uppercase tracking-wider"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Testimonial</span>
@@ -3426,7 +3426,7 @@ const CMSManagement = () => {
 
             <div className="grid grid-cols-1 gap-6">
               {testimonialsData.items?.map((item, index) => (
-                <div key={item.id || index} className="p-6 bg-sand-50/50 rounded-3xl border border-sand-200/80 space-y-5 relative group hover:bg-white hover:shadow-lg transition-all duration-300">
+                <div key={item.id || index} className="p-6 bg-stone/50 rounded-3xl border border-gray-100/80 space-y-5 relative group hover:bg-white hover:shadow-premium transition-all duration-300">
                   <button
                     onClick={() => {
                       const updatedItems = testimonialsData.items.filter((_, idx) => idx !== index);
@@ -3440,9 +3440,9 @@ const CMSManagement = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
-                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Author Name</label>
+                      <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Author Name</label>
                       <input
-                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                        className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={item.name}
                         onChange={e => {
                           const updated = [...testimonialsData.items];
@@ -3452,9 +3452,9 @@ const CMSManagement = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Role / Subtitle</label>
+                      <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Role / Subtitle</label>
                       <input
-                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                        className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={item.role}
                         onChange={e => {
                           const updated = [...testimonialsData.items];
@@ -3464,9 +3464,9 @@ const CMSManagement = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Rating Stars (1-5)</label>
+                      <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Rating Stars (1-5)</label>
                       <select
-                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm cursor-pointer"
+                        className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm cursor-pointer"
                         value={item.rating}
                         onChange={e => {
                           const updated = [...testimonialsData.items];
@@ -3484,10 +3484,10 @@ const CMSManagement = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Comment Text</label>
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Comment Text</label>
                     <textarea
                       rows={2.5}
-                      className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm leading-relaxed"
+                      className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm leading-relaxed"
                       value={item.comment}
                       onChange={e => {
                         const updated = [...testimonialsData.items];
@@ -3498,10 +3498,10 @@ const CMSManagement = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Avatar Image</label>
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Avatar Image</label>
                     <div className="flex items-stretch space-x-3">
                       <input
-                        className="flex-1 border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                        className="flex-1 border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={item.avatar_url}
                         onChange={e => {
                           const updated = [...testimonialsData.items];
@@ -3522,7 +3522,7 @@ const CMSManagement = () => {
                       </label>
                     </div>
                     {item.avatar_url && (
-                      <div className="mt-3.5 flex items-center space-x-3.5 bg-white p-2.5 rounded-2xl border border-sand-200 w-fit shadow-sm">
+                      <div className="mt-3.5 flex items-center space-x-3.5 bg-white p-2.5 rounded-2xl border border-gray-100 w-fit shadow-sm">
                         <img src={getImageUrl(item.avatar_url)} alt="Avatar" className="w-12 h-12 rounded-full object-cover border border-sand-150 shadow-inner" />
                         <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider flex items-center space-x-1">
                           <Check className="w-3 h-3 text-emerald-500" />
@@ -3539,7 +3539,7 @@ const CMSManagement = () => {
               <button
                 onClick={() => handleSave('testimonials', testimonialsData)}
                 disabled={saving}
-                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-md shadow-terracotta/15 active:scale-95 transition-all"
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-subtle shadow-terracotta/15 active:scale-95 transition-all"
               >
                 {saving ? (
                   <>
@@ -3565,17 +3565,17 @@ const CMSManagement = () => {
                 <Phone className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-lg font-black text-charcoal">Footer</h4>
+                <h4 className="text-lg font-bold tracking-tight text-charcoal">Footer</h4>
                 <p className="text-xs text-charcoal-muted font-medium">Edit public footer brand copy and four configurable sections.</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
-                <label className="text-[11px] font-black text-charcoal uppercase tracking-widest block mb-2">Brand Description</label>
+                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">Brand Description</label>
                 <textarea
                   rows={3}
-                  className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                   value={footerData.brand_description || ''}
                   onChange={e => setFooterData({ ...footerData, brand_description: e.target.value })}
                 />
@@ -3605,44 +3605,44 @@ const CMSManagement = () => {
                     updateSection({ items: nextItems });
                   };
                   return (
-                    <div key={index} className="rounded-3xl border border-sand-200 bg-sand-50/60 p-5 space-y-4">
+                    <div key={index} className="rounded-3xl border border-gray-100 bg-stone/60 p-5 space-y-4">
                       <div className="flex items-center justify-between gap-3">
-                        <h5 className="text-sm font-black text-charcoal uppercase tracking-widest">Section {index + 1}</h5>
+                        <h5 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest">Section {index + 1}</h5>
                         <button
                           type="button"
                           onClick={() => updateSection({ items: [...section.items, { label: 'New Label', action_type: isActionSection ? 'link' : 'text', link: '', text: '' }] })}
-                          className="px-3 py-2 rounded-xl bg-terracotta text-white text-[10px] font-black uppercase tracking-widest"
+                          className="px-3 py-2 rounded-xl bg-terracotta text-white text-[10px] font-bold tracking-tight uppercase tracking-widest"
                         >
                           Add Label
                         </button>
                       </div>
                       <div>
-                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Section Heading</label>
-                        <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.heading || ''} onChange={e => updateSection({ heading: e.target.value })} />
+                        <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Section Heading</label>
+                        <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.heading || ''} onChange={e => updateSection({ heading: e.target.value })} />
                       </div>
                       <div className="space-y-4">
                         {section.items.map((item, itemIndex) => (
-                          <div key={itemIndex} className="rounded-2xl border border-sand-200 bg-white p-4 space-y-3">
+                          <div key={itemIndex} className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3">
                             <div className="flex items-center justify-between gap-3">
-                              <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Label {itemIndex + 1}</span>
+                              <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Label {itemIndex + 1}</span>
                               {section.items.length > 1 && (
                                 <button
                                   type="button"
                                   onClick={() => updateSection({ items: section.items.filter((_, i) => i !== itemIndex) })}
-                                  className="text-[10px] font-black text-red-600 uppercase tracking-widest"
+                                  className="text-[10px] font-bold tracking-tight text-red-600 uppercase tracking-widest"
                                 >
                                   Remove
                                 </button>
                               )}
                             </div>
                             <div>
-                              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Label</label>
-                              <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.label || ''} onChange={e => updateItem(itemIndex, { label: e.target.value })} />
+                              <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Label</label>
+                              <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.label || ''} onChange={e => updateItem(itemIndex, { label: e.target.value })} />
                             </div>
                             {isActionSection && (
                               <div>
-                                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Action Type</label>
-                                <select className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.action_type || 'link'} onChange={e => updateItem(itemIndex, { action_type: e.target.value })}>
+                                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Action Type</label>
+                                <select className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.action_type || 'link'} onChange={e => updateItem(itemIndex, { action_type: e.target.value })}>
                                   <option value="link">Link Redirect</option>
                                   <option value="text">Text Popup</option>
                                 </select>
@@ -3650,13 +3650,13 @@ const CMSManagement = () => {
                             )}
                             {(isActionSection ? item.action_type === 'text' : true) ? (
                               <div>
-                                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">{isActionSection ? 'Popup Text' : 'Text'}</label>
-                                <textarea rows={4} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.text || ''} onChange={e => updateItem(itemIndex, { text: e.target.value })} />
+                                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">{isActionSection ? 'Popup Text' : 'Text'}</label>
+                                <textarea rows={4} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.text || ''} onChange={e => updateItem(itemIndex, { text: e.target.value })} />
                               </div>
                             ) : (
                               <div>
-                                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Redirect Link</label>
-                                <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.link || ''} onChange={e => updateItem(itemIndex, { link: e.target.value })} placeholder="/guest/browse or https://..." />
+                                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Redirect Link</label>
+                                <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.link || ''} onChange={e => updateItem(itemIndex, { link: e.target.value })} placeholder="/guest/browse or https://..." />
                               </div>
                             )}
                           </div>
@@ -3664,9 +3664,9 @@ const CMSManagement = () => {
                       </div>
                       {isGrievanceSection && (
                         <div>
-                          <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Resolution Line</label>
+                          <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Resolution Line</label>
                           <input
-                            className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                            className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                             value={section.resolution_text || footerData.resolution_text || ''}
                             onChange={e => {
                               updateSection({ resolution_text: e.target.value });
@@ -3680,32 +3680,32 @@ const CMSManagement = () => {
                   );
                 })}
               </div>
-              <div className="md:col-span-2 rounded-3xl border border-sand-200 bg-sand-50/60 p-5 space-y-4">
-                <h5 className="text-sm font-black text-charcoal uppercase tracking-widest">Footer Legal Links</h5>
+              <div className="md:col-span-2 rounded-3xl border border-gray-100 bg-stone/60 p-5 space-y-4">
+                <h5 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest">Footer Legal Links</h5>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Privacy Label</label>
-                    <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_label || ''} onChange={e => setFooterData({ ...footerData, privacy_label: e.target.value })} />
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Privacy Label</label>
+                    <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_label || ''} onChange={e => setFooterData({ ...footerData, privacy_label: e.target.value })} />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Terms Label</label>
-                    <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_label || ''} onChange={e => setFooterData({ ...footerData, terms_label: e.target.value })} />
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Terms Label</label>
+                    <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_label || ''} onChange={e => setFooterData({ ...footerData, terms_label: e.target.value })} />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Check-in Instructions Label</label>
-                    <input className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.checkin_label || ''} onChange={e => setFooterData({ ...footerData, checkin_label: e.target.value })} />
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Check-in Instructions Label</label>
+                    <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.checkin_label || ''} onChange={e => setFooterData({ ...footerData, checkin_label: e.target.value })} />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Privacy Policy Text</label>
-                    <textarea rows={5} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_text || ''} onChange={e => setFooterData({ ...footerData, privacy_text: e.target.value })} />
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Privacy Policy Text</label>
+                    <textarea rows={5} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_text || ''} onChange={e => setFooterData({ ...footerData, privacy_text: e.target.value })} />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Terms & Conditions Text</label>
-                    <textarea rows={5} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_text || ''} onChange={e => setFooterData({ ...footerData, terms_text: e.target.value })} />
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Terms & Conditions Text</label>
+                    <textarea rows={5} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_text || ''} onChange={e => setFooterData({ ...footerData, terms_text: e.target.value })} />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Check-in Instructions Text</label>
-                    <textarea rows={5} className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.checkin_text || ''} onChange={e => setFooterData({ ...footerData, checkin_text: e.target.value })} />
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Check-in Instructions Text</label>
+                    <textarea rows={5} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.checkin_text || ''} onChange={e => setFooterData({ ...footerData, checkin_text: e.target.value })} />
                   </div>
                 </div>
               </div>
@@ -3715,7 +3715,7 @@ const CMSManagement = () => {
               <button
                 onClick={() => handleSave('footer', footerData)}
                 disabled={saving}
-                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-md shadow-terracotta/15 active:scale-95 transition-all"
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-subtle shadow-terracotta/15 active:scale-95 transition-all"
               >
                 {saving ? (
                   <>
@@ -3742,7 +3742,7 @@ const CMSManagement = () => {
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-lg font-black text-charcoal">Journal Blog Posts</h4>
+                  <h4 className="text-lg font-bold tracking-tight text-charcoal">Journal Blog Posts</h4>
                   <p className="text-xs text-charcoal-muted font-medium">Manage property insights, local guide articles, and platform updates.</p>
                 </div>
               </div>
@@ -3762,7 +3762,7 @@ const CMSManagement = () => {
                   ];
                   setBlogData({ posts: updatedPosts });
                 }}
-                className="btn-premium px-5 py-2.5 rounded-2xl flex items-center space-x-1.5 text-xs font-black uppercase tracking-wider"
+                className="btn-premium px-5 py-2.5 rounded-2xl flex items-center space-x-1.5 text-xs font-bold tracking-tight uppercase tracking-wider"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Blog Post</span>
@@ -3771,7 +3771,7 @@ const CMSManagement = () => {
 
             <div className="grid grid-cols-1 gap-8">
               {blogData.posts?.map((post, index) => (
-                <div key={post.id || index} className="p-6 bg-sand-50/50 rounded-3xl border border-sand-200/80 space-y-5 relative group hover:bg-white hover:shadow-lg transition-all duration-300">
+                <div key={post.id || index} className="p-6 bg-stone/50 rounded-3xl border border-gray-100/80 space-y-5 relative group hover:bg-white hover:shadow-premium transition-all duration-300">
                   <button
                     onClick={() => {
                       const updatedPosts = blogData.posts.filter((_, idx) => idx !== index);
@@ -3785,9 +3785,9 @@ const CMSManagement = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                      <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Article Title</label>
+                      <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Article Title</label>
                       <input
-                        className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                        className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={post.title}
                         onChange={e => {
                           const updated = [...blogData.posts];
@@ -3798,9 +3798,9 @@ const CMSManagement = () => {
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Author</label>
+                        <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Author</label>
                         <input
-                          className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
+                          className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
                           value={post.author}
                           onChange={e => {
                             const updated = [...blogData.posts];
@@ -3810,9 +3810,9 @@ const CMSManagement = () => {
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Date</label>
+                        <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Date</label>
                         <input
-                          className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
+                          className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
                           value={post.date}
                           onChange={e => {
                             const updated = [...blogData.posts];
@@ -3822,9 +3822,9 @@ const CMSManagement = () => {
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Read Time</label>
+                        <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Read Time</label>
                         <input
-                          className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
+                          className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
                           value={post.read_time}
                           onChange={e => {
                             const updated = [...blogData.posts];
@@ -3837,10 +3837,10 @@ const CMSManagement = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Excerpt Summary</label>
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Excerpt Summary</label>
                     <textarea
                       rows={2.5}
-                      className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm leading-relaxed"
+                      className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm leading-relaxed"
                       value={post.excerpt}
                       onChange={e => {
                         const updated = [...blogData.posts];
@@ -3851,10 +3851,10 @@ const CMSManagement = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Cover Image</label>
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Cover Image</label>
                     <div className="flex items-stretch space-x-3">
                       <input
-                        className="flex-1 border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                        className="flex-1 border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                         value={post.image_url}
                         onChange={e => {
                           const updated = [...blogData.posts];
@@ -3875,8 +3875,8 @@ const CMSManagement = () => {
                       </label>
                     </div>
                     {post.image_url && (
-                      <div className="mt-4 relative group overflow-hidden rounded-2xl border border-sand-200/80 shadow-md aspect-video max-h-40 w-fit">
-                        <img src={getImageUrl(post.image_url)} alt="Cover Preview" className="w-64 h-full object-cover group-hover:scale-105 transition-all duration-500" />
+                      <div className="mt-4 relative group overflow-hidden rounded-2xl border border-gray-100/80 shadow-subtle aspect-video max-h-40 w-fit">
+                        <img src={getImageUrl(post.image_url)} alt="Cover Preview" className="w-64 h-full object-cover group-hover:scale-[1.02] transition-all duration-500" />
                         <div className="absolute top-2 left-2 bg-charcoal/50 backdrop-blur-sm border border-white/10 px-2 py-1 rounded-lg text-[9px] text-white font-bold uppercase tracking-wider">
                           Cover Preview
                         </div>
@@ -3891,7 +3891,7 @@ const CMSManagement = () => {
               <button
                 onClick={() => handleSave('blog', blogData)}
                 disabled={saving}
-                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-md shadow-terracotta/15 active:scale-95 transition-all"
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-subtle shadow-terracotta/15 active:scale-95 transition-all"
               >
                 {saving ? (
                   <>
@@ -3917,7 +3917,7 @@ const CMSManagement = () => {
                 <Tag className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="text-lg font-black text-charcoal">Promotional Offer Banner</h4>
+                <h4 className="text-lg font-bold tracking-tight text-charcoal">Promotional Offer Banner</h4>
                 <p className="text-xs text-charcoal-muted font-medium">Configure the pop-up promotional banner shown to unauthenticated guests.</p>
               </div>
             </div>
@@ -3925,9 +3925,9 @@ const CMSManagement = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-6">
                 <div className="relative group">
-                  <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Offer Title</label>
+                  <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Offer Title</label>
                   <input
-                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
+                    className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm"
                     value={offerData.title}
                     onChange={e => setOfferData({ ...offerData, title: e.target.value })}
                     placeholder="e.g. Special Launch Offer! Get 20% Off"
@@ -3935,16 +3935,16 @@ const CMSManagement = () => {
                 </div>
 
                 <div className="relative group">
-                  <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Call To Action Button Text</label>
+                  <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Call To Action Button Text</label>
                   <input
-                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
+                    className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm"
                     value={offerData.button_text}
                     onChange={e => setOfferData({ ...offerData, button_text: e.target.value })}
                     placeholder="e.g. Claim 20% Discount"
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-4 bg-sand-50/50 rounded-2xl border border-sand-200">
+                <div className="flex items-center justify-between p-4 bg-stone/50 rounded-2xl border border-gray-100">
                   <div>
                     <h5 className="text-sm font-bold text-charcoal">Offer Active Status</h5>
                     <p className="text-xs text-charcoal-muted font-medium">Toggle whether guests see this offer banner on landing.</p>
@@ -3966,10 +3966,10 @@ const CMSManagement = () => {
 
               <div className="space-y-6">
                 <div className="relative group">
-                  <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Offer Description / Subtitle</label>
+                  <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Offer Description / Subtitle</label>
                   <textarea
                     rows={4}
-                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3.5 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm leading-relaxed"
+                    className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3.5 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm leading-relaxed"
                     value={offerData.description}
                     onChange={e => setOfferData({ ...offerData, description: e.target.value })}
                     placeholder="Describe your special discounts, exclusive perks, or member benefits here..."
@@ -3979,17 +3979,17 @@ const CMSManagement = () => {
             </div>
 
             <div className="relative group">
-              <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Offer Banner Image</label>
+              <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Offer Banner Image</label>
               <div className="flex items-stretch space-x-3">
                 <div className="relative flex-1">
                   <input
-                    className="w-full border border-sand-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3.5 outline-none transition-all duration-300 font-semibold text-charcoal bg-sand-50/20 focus:bg-white text-sm"
+                    className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3.5 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm"
                     value={offerData.image_url}
                     onChange={e => setOfferData({ ...offerData, image_url: e.target.value })}
                     placeholder="Image URL"
                   />
                 </div>
-                <label className="btn-premium px-6 flex items-center justify-center space-x-2 text-sm font-semibold rounded-2xl cursor-pointer hover:shadow-lg transition-all duration-300">
+                <label className="btn-premium px-6 flex items-center justify-center space-x-2 text-sm font-semibold rounded-2xl cursor-pointer hover:shadow-premium transition-all duration-300">
                   <UploadCloud className="w-4 h-4" />
                   <span>Upload Banner</span>
                   <input
@@ -4002,8 +4002,8 @@ const CMSManagement = () => {
               </div>
               
               {offerData.image_url && (
-                <div className="mt-5 relative group overflow-hidden rounded-2xl border border-sand-200/80 shadow-md max-h-56 max-w-lg animate-fadeIn">
-                  <img src={getImageUrl(offerData.image_url)} alt="Offer Preview" className="w-full object-cover group-hover:scale-105 transition-all duration-500" />
+                <div className="mt-5 relative group overflow-hidden rounded-2xl border border-gray-100/80 shadow-subtle max-h-56 max-w-lg animate-fadeIn">
+                  <img src={getImageUrl(offerData.image_url)} alt="Offer Preview" className="w-full object-cover group-hover:scale-[1.02] transition-all duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end p-4">
                     <span className="text-white text-xs font-semibold tracking-wide bg-charcoal/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">Active Offer Banner Preview</span>
                   </div>
@@ -4015,7 +4015,7 @@ const CMSManagement = () => {
               <button
                 onClick={() => handleSave('offer', offerData)}
                 disabled={saving}
-                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-md shadow-terracotta/15 active:scale-95 transition-all"
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-subtle shadow-terracotta/15 active:scale-95 transition-all"
               >
                 {saving ? (
                   <>
@@ -4119,7 +4119,7 @@ const SubscriptionManagement = () => {
             <div key={plan.plan_id} className="dashboard-card relative group">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <span className="inline-block px-2 py-1 bg-sage/10 text-sage-dark text-[10px] font-black uppercase tracking-widest rounded mb-2">
+                  <span className="inline-block px-2 py-1 bg-sage/10 text-sage-dark text-[10px] font-bold tracking-tight uppercase tracking-widest rounded mb-2">
                     {plan.plan_type}
                   </span>
                   <h4 className="text-lg font-bold text-charcoal">{plan.plan_name}</h4>
@@ -4152,10 +4152,10 @@ const SubscriptionManagement = () => {
                 </div>
               </div>
               <p className="text-sm text-charcoal-light mb-6 line-clamp-2">{plan.description}</p>
-              <div className="space-y-2 pt-4 border-t border-sand-200">
+              <div className="space-y-2 pt-4 border-t border-gray-100">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-charcoal-muted font-bold uppercase">Monthly</span>
-                  <span className="text-lg font-black text-terracotta">₹{(plan.price_monthly || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-lg font-bold tracking-tight text-terracotta">₹{(plan.price_monthly || 0).toLocaleString('en-IN')}</span>
                 </div>
               </div>
             </div>
@@ -4167,24 +4167,24 @@ const SubscriptionManagement = () => {
       {showAddModal && (
         <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-premium animate-slide-up">
-            <h3 className="text-2xl font-black text-charcoal mb-6">
+            <h3 className="text-2xl font-bold tracking-tight text-charcoal mb-6">
               {newPlan.plan_id ? 'Edit Plan' : 'New Subscription Plan'}
             </h3>
             <form onSubmit={handleCreatePlan} className="space-y-4">
               <div>
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Plan Name</label>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Plan Name</label>
                 <input 
                   required
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
                   value={newPlan.plan_name}
                   onChange={e => setNewPlan({...newPlan, plan_name: e.target.value})}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">BHK Type</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">BHK Type</label>
                   <select 
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
                     value={newPlan.plan_type}
                     onChange={e => setNewPlan({...newPlan, plan_type: e.target.value})}
                   >
@@ -4198,29 +4198,29 @@ const SubscriptionManagement = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Monthly Price</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Monthly Price</label>
                   <input 
                     type="number" required
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
                     value={newPlan.price_monthly}
                     onChange={e => setNewPlan({...newPlan, price_monthly: Number(e.target.value)})}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Annual Price</label>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Annual Price</label>
                 <input 
                   type="number" required
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
                   value={newPlan.price_annual}
                   onChange={e => setNewPlan({...newPlan, price_annual: Number(e.target.value)})}
                 />
               </div>
               <div>
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Description</label>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Description</label>
                 <textarea 
                   required rows={3}
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
                   value={newPlan.description}
                   onChange={e => setNewPlan({...newPlan, description: e.target.value})}
                 />
@@ -4240,21 +4240,21 @@ const SubscriptionManagement = () => {
       {viewPlan && (
         <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-premium animate-slide-up">
-            <h3 className="text-2xl font-black text-charcoal mb-2">{viewPlan.plan_name}</h3>
-            <span className="inline-block px-3 py-1 bg-sage/10 text-sage-dark text-[10px] font-black uppercase tracking-widest rounded-full mb-6">
+            <h3 className="text-2xl font-bold tracking-tight text-charcoal mb-2">{viewPlan.plan_name}</h3>
+            <span className="inline-block px-3 py-1 bg-sage/10 text-sage-dark text-[10px] font-bold tracking-tight uppercase tracking-widest rounded-full mb-6">
               {viewPlan.plan_type} Configuration
             </span>
             <div className="space-y-4 mb-8">
-              <div className="p-4 bg-sand-50 rounded-2xl">
-                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Monthly Cost</p>
-                <p className="text-2xl font-black text-terracotta">₹{(viewPlan.price_monthly || 0).toLocaleString('en-IN')}</p>
+              <div className="p-4 bg-stone rounded-2xl">
+                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Monthly Cost</p>
+                <p className="text-2xl font-bold tracking-tight text-terracotta">₹{(viewPlan.price_monthly || 0).toLocaleString('en-IN')}</p>
               </div>
-              <div className="p-4 bg-sand-50 rounded-2xl">
-                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Annual Cost</p>
-                <p className="text-2xl font-black text-terracotta">₹{(viewPlan.price_annual || 0).toLocaleString('en-IN')}</p>
+              <div className="p-4 bg-stone rounded-2xl">
+                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Annual Cost</p>
+                <p className="text-2xl font-bold tracking-tight text-terracotta">₹{(viewPlan.price_annual || 0).toLocaleString('en-IN')}</p>
               </div>
               <div>
-                <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-2">Description</p>
+                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">Description</p>
                 <p className="text-sm text-charcoal leading-relaxed">{viewPlan.description}</p>
               </div>
             </div>

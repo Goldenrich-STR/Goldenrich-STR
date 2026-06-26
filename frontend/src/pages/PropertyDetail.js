@@ -375,19 +375,19 @@ const ReviewForm = ({ user, propertyId, t, setProperty, onSuccess }) => {
   if (!user || user.role !== 'guest') return null;
 
   return (
-    <div className="mb-12 bg-white p-8 md:p-10 rounded-[2.5rem] border border-sand-200 shadow-premium animate-fade-in relative overflow-hidden">
+    <div className="mb-12 bg-white p-8 md:p-10 rounded-3xl border border-gray-100 shadow-premium animate-fade-in relative overflow-hidden">
       <div className="absolute top-0 right-0 w-64 h-64 bg-terracotta/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
-      <h3 className="text-2xl font-black text-charcoal mb-8 tracking-tight relative z-10">Leave a Review</h3>
+      <h3 className="text-2xl font-bold tracking-tight text-charcoal mb-8 tracking-tight relative z-10">Leave a Review</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mb-10 relative z-10">
         {Object.entries(subRatings).map(([key, val]) => (
-          <div key={key} className="flex justify-between items-center bg-sand-50/80 p-5 rounded-2xl border border-sand-100 hover:border-terracotta/30 transition-all duration-300 hover:shadow-sm">
-            <span className="text-xs font-black text-charcoal-muted uppercase tracking-widest">{t(key) || key.replace('_', ' ')}</span>
+          <div key={key} className="flex justify-between items-center bg-stone/80 p-5 rounded-2xl border border-sand-100 hover:border-terracotta/30 transition-all duration-300 hover:shadow-sm">
+            <span className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">{t(key) || key.replace('_', ' ')}</span>
             <div className="flex space-x-1">
               {[1, 2, 3, 4, 5].map((n) => (
                 <Star 
                   key={n} 
                   onClick={() => setSubRatings(prev => ({ ...prev, [key]: n }))}
-                  className={`w-5 h-5 cursor-pointer transform hover:scale-110 active:scale-95 transition-transform ${n <= val ? 'fill-amber-400 text-amber-400 drop-shadow-sm' : 'text-sand-200 hover:text-sand-300'}`} 
+                  className={`w-5 h-5 cursor-pointer transform hover:scale-[1.03] active:scale-95 transition-transform ${n <= val ? 'fill-amber-400 text-amber-400 drop-shadow-sm' : 'text-sand-200 hover:text-sand-300'}`} 
                 />
               ))}
             </div>
@@ -398,11 +398,11 @@ const ReviewForm = ({ user, propertyId, t, setProperty, onSuccess }) => {
         value={reviewComment}
         onChange={(e) => setReviewComment(e.target.value)}
         placeholder="Share details of your own experience at this property..."
-        className="w-full p-6 bg-sand-50/80 border border-sand-200 rounded-3xl mb-8 text-sm font-medium text-charcoal focus:outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20 transition-all shadow-sm relative z-10 placeholder:text-sand-400"
+        className="w-full p-6 bg-stone/80 border border-gray-100 rounded-3xl mb-8 text-sm font-medium text-charcoal focus:outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20 transition-all shadow-sm relative z-10 placeholder:text-sand-400"
         rows={4}
       />
       <div className="flex justify-end relative z-10">
-        <button onClick={submitReview} className="btn-primary py-4 px-10 text-sm font-black tracking-widest shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <button onClick={submitReview} className="btn-primary py-4 px-10 text-sm font-bold tracking-tight tracking-widest shadow-premium hover:shadow-premium hover:-translate-y-1 transition-all duration-300">
           Submit Review
         </button>
       </div>
@@ -971,7 +971,7 @@ const PropertyDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-sand-50 flex items-center justify-center">
+      <div className="min-h-screen bg-stone flex items-center justify-center">
         <p className="text-charcoal-light">{t('loadingProperty')}</p>
       </div>
     );
@@ -979,7 +979,7 @@ const PropertyDetail = () => {
 
   if (error || !property) {
     return (
-      <div className="min-h-screen bg-sand-50 flex items-center justify-center">
+      <div className="min-h-screen bg-stone flex items-center justify-center">
         <div className="text-center">
           <Building2 className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
           <p className="text-charcoal mb-4">{error || t('propertyNotFound')}</p>
@@ -1004,7 +1004,7 @@ const PropertyDetail = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-sand-50 selection:bg-terracotta selection:text-white">
+    <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
       <SEO
         title={property.title}
         description={property.description}
@@ -1019,7 +1019,7 @@ const PropertyDetail = () => {
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
+            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
           </div>
           <div className="flex items-center space-x-4 md:space-x-6">
             <LanguageSelector
@@ -1031,14 +1031,14 @@ const PropertyDetail = () => {
             />
             <button
               onClick={() => navigate(-1)}
-              className="text-sm font-black text-charcoal-muted hover:text-terracotta uppercase tracking-widest transition-colors flex items-center space-x-2"
+              className="text-sm font-bold tracking-tight text-charcoal-muted hover:text-terracotta uppercase tracking-widest transition-colors flex items-center space-x-2"
               data-testid="back-btn"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>{t('back')}</span>
             </button>
             {user && (
-              <button onClick={logout} className="px-4 py-2 bg-charcoal text-white text-xs font-black uppercase tracking-widest rounded-lg hover:bg-terracotta transition-all">
+              <button onClick={logout} className="px-4 py-2 bg-charcoal text-white text-xs font-bold tracking-tight uppercase tracking-widest rounded-lg hover:bg-terracotta transition-all">
                 {t('signOut')}
               </button>
             )}
@@ -1049,23 +1049,23 @@ const PropertyDetail = () => {
       <div className="max-w-7xl mx-auto px-8 py-8">
         <div className="mb-8 animate-fade-in">
            <div className="flex items-center space-x-2 mb-3">
-              <span className="px-3 py-1 bg-terracotta/10 text-terracotta text-[10px] font-black uppercase tracking-[0.2em] rounded-full">
+              <span className="px-3 py-1 bg-terracotta/10 text-terracotta text-[10px] font-bold tracking-tight uppercase tracking-[0.2em] rounded-full">
                 {formatCategoryLabel(property.category)}
               </span>
               {property.instant_booking && (
-                <span className="flex items-center text-amber-500 text-[10px] font-black uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+                <span className="flex items-center text-amber-500 text-[10px] font-bold tracking-tight uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
                   <Zap className="w-3 h-3 mr-1 fill-current" /> {t('instant')}
                 </span>
               )}
            </div>
-           <h1 className="text-4xl lg:text-5xl font-black text-charcoal tracking-tight leading-tight mb-4" data-testid="property-title">
+           <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight mb-4" data-testid="property-title">
              {property.title}
            </h1>
            <div className="flex items-center text-charcoal-muted font-bold text-sm flex-wrap gap-6">
              <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{property.address}, {property.city}</span>
              <div className="flex items-center space-x-1">
                 <Star className="w-4 h-4 text-amber-500 fill-current" />
-                <span className="text-charcoal font-black">{property.rating ? property.rating.toFixed(1) : 'New'}</span>
+                <span className="text-charcoal font-bold tracking-tight">{property.rating ? property.rating.toFixed(1) : 'New'}</span>
                 <span className="text-charcoal-muted ml-1 underline cursor-pointer">{property.review_count || 0} Reviews</span>
              </div>
            </div>
@@ -1103,7 +1103,7 @@ const PropertyDetail = () => {
               )}
               
               <div className="absolute bottom-6 right-6 glass px-4 py-2 rounded-full border border-white/30 shadow-premium">
-                 <span className="text-[10px] font-black text-charcoal uppercase tracking-widest">
+                 <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">
                     {imgIdx + 1} / {images.length} {t('photos')}
                  </span>
               </div>
@@ -1123,7 +1123,7 @@ const PropertyDetail = () => {
               className="absolute bottom-6 right-6 glass px-6 py-3 rounded-2xl border border-white/40 shadow-premium flex items-center space-x-2 hover:bg-white transition-all group/btn"
             >
                <Grid className="w-4 h-4 text-terracotta group-hover/btn:rotate-90 transition-transform" />
-               <span className="text-xs font-black text-charcoal uppercase tracking-widest">{t('showAllPhotos')}</span>
+               <span className="text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">{t('showAllPhotos')}</span>
             </button>
           </div>
         </div>
@@ -1133,7 +1133,7 @@ const PropertyDetail = () => {
           <div className="lg:col-span-2 space-y-12 animate-slide-up" style={{ animationDelay: '200ms' }}>
             {/* Host Profile */}
             {property.host && (
-              <div className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium flex items-center justify-between group">
+              <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex items-center justify-between group">
                 <div className="flex items-center space-x-5">
                   <div className="relative">
                     <img
@@ -1149,7 +1149,7 @@ const PropertyDetail = () => {
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-charcoal leading-tight">{t('hostedBy').replace('{name}', property.host.full_name)}</h3>
+                    <h3 className="text-lg font-bold tracking-tight text-charcoal leading-tight">{t('hostedBy').replace('{name}', property.host.full_name)}</h3>
                     <div className="flex items-center mt-1 space-x-3">
                        <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">{t('superhost')}</span>
                        <span className="w-1 h-1 rounded-full bg-sand-300"></span>
@@ -1162,7 +1162,7 @@ const PropertyDetail = () => {
                 {property.host.phone ? (
                   <a
                     href={`tel:${property.host.phone}`}
-                    className="px-5 py-2 border-2 border-charcoal rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-charcoal hover:text-white transition-all flex items-center gap-1.5 cursor-pointer decoration-none"
+                    className="px-5 py-2 border-2 border-charcoal rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-charcoal hover:text-white transition-all flex items-center gap-1.5 cursor-pointer decoration-none"
                     style={{ textDecoration: 'none' }}
                   >
                     {property.host.phone}
@@ -1170,7 +1170,7 @@ const PropertyDetail = () => {
                 ) : (
                   <button
                     disabled
-                    className="px-5 py-2 border-2 border-sand-300 text-charcoal-muted rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 cursor-not-allowed bg-sand-100/80"
+                    className="px-5 py-2 border-2 border-gray-200 text-charcoal-muted rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest flex items-center gap-1.5 cursor-not-allowed bg-gray-50/80"
                     title="Host contact details will be unlocked after booking confirmation"
                   >
                     <Lock className="w-3.5 h-3.5" />
@@ -1188,16 +1188,16 @@ const PropertyDetail = () => {
                  { label: t('config'), value: getBhkTypeLabel(property.category, property.bhk_type, property.max_guests) },
                  { label: t('status'), value: t('verified').toUpperCase() }
                ].map((stat) => (
-                 <div key={stat.label} className="bg-sand-100/50 rounded-2xl p-4 border border-sand-200">
-                    <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] mb-1">{stat.label}</p>
-                    <p className="text-sm font-black text-charcoal">{stat.value}</p>
+                 <div key={stat.label} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100">
+                    <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">{stat.label}</p>
+                    <p className="text-sm font-bold tracking-tight text-charcoal">{stat.value}</p>
                  </div>
                ))}
             </div>
 
             {/* Description */}
             <div className="prose prose-sand max-w-none">
-              <h2 className="text-2xl font-black text-charcoal mb-4 flex items-center">
+              <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
                  {t('aboutThisSpace')}
                  <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
               </h2>
@@ -1209,15 +1209,15 @@ const PropertyDetail = () => {
             {/* Videos & Virtual Tours Section */}
             {(property.video_url || property.youtube_short_url || property.youtube_long_url) && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-black text-charcoal mb-4 flex items-center">
+                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
                    Videos & Virtual Tours
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {property.video_url && (
-                    <div className="bg-white rounded-3xl p-4 border border-sand-200 shadow-premium space-y-3">
-                      <h3 className="text-xs font-black text-charcoal-muted uppercase tracking-widest">Walkthrough Video</h3>
+                    <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-premium space-y-3">
+                      <h3 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Walkthrough Video</h3>
                       <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black">
                         <video
                           src={getImageUrl(property.video_url)}
@@ -1229,8 +1229,8 @@ const PropertyDetail = () => {
                   )}
 
                   {property.youtube_long_url && (
-                    <div className="bg-white rounded-3xl p-4 border border-sand-200 shadow-premium space-y-3">
-                      <h3 className="text-xs font-black text-charcoal-muted uppercase tracking-widest">Full YouTube Tour</h3>
+                    <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-premium space-y-3">
+                      <h3 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Full YouTube Tour</h3>
                       <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black">
                         <iframe
                           src={getYouTubeEmbedUrl(property.youtube_long_url)}
@@ -1245,8 +1245,8 @@ const PropertyDetail = () => {
                   )}
 
                   {property.youtube_short_url && (
-                    <div className="bg-white rounded-3xl p-4 border border-sand-200 shadow-premium space-y-3 md:col-span-2 max-w-sm mx-auto w-full">
-                      <h3 className="text-xs font-black text-charcoal-muted uppercase tracking-widest text-center">YouTube Short Tour</h3>
+                    <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-premium space-y-3 md:col-span-2 max-w-sm mx-auto w-full">
+                      <h3 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest text-center">YouTube Short Tour</h3>
                       <div className="aspect-[9/16] w-full rounded-2xl overflow-hidden bg-black max-h-[500px]">
                         <iframe
                           src={getYouTubeEmbedUrl(property.youtube_short_url)}
@@ -1266,22 +1266,22 @@ const PropertyDetail = () => {
             {/* Event Details */}
             {property.category === 'event_venue' && (
               <div>
-                <h2 className="text-2xl font-black text-charcoal mb-6 flex items-center">
+                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-6 flex items-center">
                    Event Venue Details
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-sand-50 rounded-2xl p-4 border border-sand-200 shadow-sm flex flex-col justify-center items-center text-center">
-                     <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] mb-1">Veg Price</p>
-                     <p className="text-xl font-black text-terracotta">₹{property.veg_price || 0} <span className="text-xs text-charcoal-light">/ plate</span></p>
+                  <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
+                     <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Veg Price</p>
+                     <p className="text-xl font-bold tracking-tight text-terracotta">₹{property.veg_price || 0} <span className="text-xs text-charcoal-light">/ plate</span></p>
                   </div>
-                  <div className="bg-sand-50 rounded-2xl p-4 border border-sand-200 shadow-sm flex flex-col justify-center items-center text-center">
-                     <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] mb-1">Non-Veg Price</p>
-                     <p className="text-xl font-black text-terracotta">₹{property.non_veg_price || 0} <span className="text-xs text-charcoal-light">/ plate</span></p>
+                  <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
+                     <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Non-Veg Price</p>
+                     <p className="text-xl font-bold tracking-tight text-terracotta">₹{property.non_veg_price || 0} <span className="text-xs text-charcoal-light">/ plate</span></p>
                   </div>
-                  <div className="bg-sand-50 rounded-2xl p-4 border border-sand-200 shadow-sm flex flex-col justify-center items-center text-center">
-                     <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] mb-1">Venue Rent</p>
-                     <p className="text-xl font-black text-charcoal">₹{property.price_per_night || 0} <span className="text-xs text-charcoal-light">/ day</span></p>
+                  <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
+                     <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Venue Rent</p>
+                     <p className="text-xl font-bold tracking-tight text-charcoal">₹{property.price_per_night || 0} <span className="text-xs text-charcoal-light">/ day</span></p>
                   </div>
                 </div>
                 {property.packages && property.packages.length > 0 && (
@@ -1292,10 +1292,10 @@ const PropertyDetail = () => {
                       if (entries.length === 0) return null;
                       
                       return (
-                        <div key={idx} className="bg-white rounded-2xl border border-sand-200 overflow-hidden shadow-sm">
+                        <div key={idx} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
                           <div className={`flex items-center px-5 py-4 ${isVeg ? 'bg-green-50/50' : 'bg-red-50/50'} border-b ${isVeg ? 'border-green-100' : 'border-red-100'}`}>
                             <div className={`w-3 h-3 ${isVeg ? 'bg-green-500' : 'bg-red-500'} ${isVeg ? 'rounded-sm' : 'rounded-full'} mr-3 border ${isVeg ? 'border-green-700' : 'border-red-700'}`}></div>
-                            <h3 className={`text-sm font-black uppercase tracking-widest ${isVeg ? 'text-green-900' : 'text-red-900'}`}>
+                            <h3 className={`text-sm font-bold tracking-tight uppercase tracking-widest ${isVeg ? 'text-green-900' : 'text-red-900'}`}>
                               {isVeg ? 'Vegetarian Package' : 'Non-Vegetarian Package'}
                             </h3>
                           </div>
@@ -1307,7 +1307,7 @@ const PropertyDetail = () => {
                                     <CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2 flex-shrink-0" />
                                     {item}
                                   </span>
-                                  <span className="text-xs font-black bg-sand-100 text-charcoal px-2 py-0.5 rounded-full">
+                                  <span className="text-xs font-bold tracking-tight bg-gray-50 text-charcoal px-2 py-0.5 rounded-full">
                                     x{count}
                                   </span>
                                 </li>
@@ -1325,7 +1325,7 @@ const PropertyDetail = () => {
             {/* Venue Policies Section */}
             {property.category === 'event_venue' && property.house_rules && property.house_rules.startsWith('{') && (
               <div className="mb-8">
-                <h2 className="text-2xl font-black text-charcoal mb-6 flex items-center">
+                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-6 flex items-center">
                    Venue Policies
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
@@ -1364,9 +1364,9 @@ const PropertyDetail = () => {
                         const displayVal = formatVenuePolicyValue(key, val);
                         if (!displayVal) return null;
                         return (
-                          <div key={key} className="bg-white p-4 rounded-2xl border border-sand-200 flex items-center justify-between">
+                          <div key={key} className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center justify-between">
                             <span className="text-sm font-bold text-charcoal-muted truncate mr-2">{label}</span>
-                            <span className="text-sm font-black text-charcoal">{displayVal}</span>
+                            <span className="text-sm font-bold tracking-tight text-charcoal">{displayVal}</span>
                           </div>
                         );
                       });
@@ -1381,11 +1381,11 @@ const PropertyDetail = () => {
             {/* Non-Event House Rules Section */}
             {property.category !== 'event_venue' && property.house_rules && !property.house_rules.startsWith('{') && (
               <div className="mb-8">
-                <h2 className="text-2xl font-black text-charcoal mb-4 flex items-center">
+                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
                    House Rules
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
-                <p className="text-charcoal-muted font-medium text-sm leading-relaxed whitespace-pre-line bg-white p-6 rounded-2xl border border-sand-200">
+                <p className="text-charcoal-muted font-medium text-sm leading-relaxed whitespace-pre-line bg-white p-6 rounded-2xl border border-gray-100">
                   {property.house_rules}
                 </p>
               </div>
@@ -1394,18 +1394,18 @@ const PropertyDetail = () => {
             {/* Cook Service Section */}
             {(property.has_cook || property.has_self_cook) && (
               <div className="mb-8">
-                <h2 className="text-2xl font-black text-charcoal mb-4 flex items-center">
+                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
                    {lang === 'mr' ? 'स्वयंपाकी आणि स्वयंपाक पर्याय' : lang === 'hi' ? 'रसोइया और खाना पकाने के विकल्प' : 'Cook & Kitchen Service'}
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
                 <div className="space-y-4">
                   {property.has_cook && (
-                    <div className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium flex items-center space-x-6">
+                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex items-center space-x-6">
                       <div className="bg-terracotta/10 p-4 rounded-full text-terracotta">
                         <Utensils className="w-8 h-8" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-black text-charcoal mb-1">
+                        <h3 className="text-lg font-bold tracking-tight text-charcoal mb-1">
                           {lang === 'mr' ? 'स्वयंपाकी उपलब्ध आहे' : lang === 'hi' ? 'रसोइया उपलब्ध है' : 'Cook Available'}
                         </h3>
                         <p className="text-charcoal-muted font-medium text-sm">
@@ -1417,12 +1417,12 @@ const PropertyDetail = () => {
                     </div>
                   )}
                   {property.has_self_cook && (
-                    <div className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium flex items-center space-x-6">
+                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex items-center space-x-6">
                       <div className="bg-emerald-500/10 p-4 rounded-full text-emerald-600">
                         <ChefHat className="w-8 h-8" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-black text-charcoal mb-1">
+                        <h3 className="text-lg font-bold tracking-tight text-charcoal mb-1">
                           {lang === 'mr' ? 'स्वतः स्वयंपाक करण्याची परवानगी आहे' : lang === 'hi' ? 'स्वयं खाना पकाने की अनुमति है' : 'Self Cooking Allowed'}
                         </h3>
                         <p className="text-charcoal-muted font-medium text-sm">
@@ -1439,7 +1439,7 @@ const PropertyDetail = () => {
 
             {/* Amenities Section */}
             <div>
-              <h2 className="text-2xl font-black text-charcoal mb-6 flex items-center">
+              <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-6 flex items-center">
                  {t('essentialAmenities')}
                  <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
               </h2>
@@ -1449,9 +1449,9 @@ const PropertyDetail = () => {
                   return (
                     <div
                       key={a}
-                      className="flex items-center space-x-4 p-4 bg-white border border-sand-200 rounded-2xl group hover:border-terracotta transition-colors"
+                      className="flex items-center space-x-4 p-4 bg-white border border-gray-100 rounded-2xl group hover:border-terracotta transition-colors"
                     >
-                      <div className="bg-sand-50 p-2.5 rounded-xl group-hover:bg-terracotta/5 transition-colors">
+                      <div className="bg-stone p-2.5 rounded-xl group-hover:bg-terracotta/5 transition-colors">
                          <Icon className="w-5 h-5 text-terracotta" />
                       </div>
                       <span className="text-sm font-bold text-charcoal tracking-tight">
@@ -1466,19 +1466,19 @@ const PropertyDetail = () => {
             {/* Nearby Famous Places Section */}
             {property.nearby_places && property.nearby_places.length > 0 && (
               <div className="animate-slide-up">
-                <h2 className="text-2xl font-black text-charcoal mb-6 flex items-center">
+                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-6 flex items-center">
                    Nearby Attractions
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
-                <div className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium">
+                <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium">
                   <div className="flex items-center space-x-2 mb-4">
                     <Sparkles className="w-5 h-5 text-terracotta animate-pulse" />
-                    <span className="text-xs font-black text-charcoal uppercase tracking-widest">Famous places near this property</span>
+                    <span className="text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">Famous places near this property</span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {property.nearby_places.map((place, idx) => (
-                      <div key={idx} className="flex items-center space-x-3 p-3 bg-sand-50 rounded-2xl border border-sand-100 hover:border-terracotta/30 transition-colors">
-                        <div className="w-8 h-8 rounded-xl bg-terracotta/10 flex items-center justify-center text-terracotta font-black text-xs">
+                      <div key={idx} className="flex items-center space-x-3 p-3 bg-stone rounded-2xl border border-sand-100 hover:border-terracotta/30 transition-colors">
+                        <div className="w-8 h-8 rounded-xl bg-terracotta/10 flex items-center justify-center text-terracotta font-bold tracking-tight text-xs">
                           {idx + 1}
                         </div>
                         <span className="text-sm font-bold text-charcoal">{place}</span>
@@ -1491,7 +1491,7 @@ const PropertyDetail = () => {
                         href={property.google_maps_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center space-x-2 text-xs font-black text-terracotta hover:text-charcoal uppercase tracking-widest transition-colors"
+                        className="inline-flex items-center space-x-2 text-xs font-bold tracking-tight text-terracotta hover:text-charcoal uppercase tracking-widest transition-colors"
                       >
                         <span>View on Google Maps</span>
                         <ChevronRight className="w-4 h-4" />
@@ -1504,24 +1504,24 @@ const PropertyDetail = () => {
 
             {/* Interactive Availability Calendar */}
             <div>
-              <h2 className="text-2xl font-black text-charcoal mb-6 flex items-center">
+              <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-6 flex items-center">
                  {t('availability')}
                  <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
               </h2>
-              <div className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium" data-testid="availability-calendar">
+              <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium" data-testid="availability-calendar">
                 <div className="flex items-center justify-between mb-8">
                   <button
                     onClick={goPrev}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-sand-50 transition-colors border border-sand-200"
+                    className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-stone transition-colors border border-gray-100"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="text-xl font-black text-charcoal tracking-tight">
+                  <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight">
                     {(MONTH_NAMES_LOCALIZED[lang] || MONTH_NAMES_LOCALIZED['en'])[calMonth - 1]} {calYear}
                   </span>
                   <button
                     onClick={goNext}
-                    className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-sand-50 transition-colors border border-sand-200"
+                    className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-stone transition-colors border border-gray-100"
                   >
                     <ChevronRight className="w-5 h-5" />
                   </button>
@@ -1529,7 +1529,7 @@ const PropertyDetail = () => {
                 
                 <div className="grid grid-cols-7 text-center mb-4">
                   {(WEEKDAYS_LOCALIZED[lang] || WEEKDAYS_LOCALIZED['en']).map((d) => (
-                    <div key={d} className="text-[10px] font-black text-charcoal-muted tracking-[0.2em]">{d}</div>
+                    <div key={d} className="text-[10px] font-bold tracking-tight text-charcoal-muted tracking-[0.2em]">{d}</div>
                   ))}
                 </div>
                 
@@ -1552,9 +1552,9 @@ const PropertyDetail = () => {
                         key={idx}
                         disabled={disabled}
                         onClick={() => handleDayClick(d)}
-                        className={`h-14 rounded-2xl text-sm font-black transition-all relative overflow-hidden group ${
+                        className={`h-14 rounded-2xl text-sm font-bold tracking-tight transition-all relative overflow-hidden group ${
                           past
-                            ? 'text-charcoal-muted/30 bg-sand-50 cursor-not-allowed'
+                            ? 'text-charcoal-muted/30 bg-stone cursor-not-allowed'
                             : booked
                             ? 'text-red-600 bg-red-50/80 hover:bg-red-50 border border-dashed border-red-200 cursor-pointer'
                             : manuallyBlocked
@@ -1563,14 +1563,14 @@ const PropertyDetail = () => {
                             ? 'bg-charcoal text-white shadow-elevated scale-105 z-10'
                             : inRange
                             ? 'bg-terracotta/10 text-terracotta'
-                            : 'hover:bg-sand-100 text-charcoal'
+                            : 'hover:bg-gray-50 text-charcoal'
                         }`}
                       >
                         {d.getDate()}
                         {booked && <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-red-500"></div>}
                         {manuallyBlocked && <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-gray-500"></div>}
-                        {isStart && <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] uppercase font-black opacity-50">{t('inLabel')}</div>}
-                        {isEnd && <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] uppercase font-black opacity-50">{t('outLabel')}</div>}
+                        {isStart && <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] uppercase font-bold tracking-tight opacity-50">{t('inLabel')}</div>}
+                        {isEnd && <div className="absolute top-2 left-1/2 -translate-x-1/2 text-[8px] uppercase font-bold tracking-tight opacity-50">{t('outLabel')}</div>}
                       </button>
                     );
                   })}
@@ -1578,20 +1578,20 @@ const PropertyDetail = () => {
                 
                 <div className="mt-8 flex flex-wrap gap-6 border-t border-sand-100 pt-6">
                    <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 rounded-full border border-sand-300"></div>
-                      <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">{t('available')}</span>
+                      <div className="w-3 h-3 rounded-full border border-gray-200"></div>
+                      <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">{t('available')}</span>
                    </div>
                    <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 rounded-full bg-gray-300 border border-gray-400"></div>
-                      <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Blocked</span>
+                      <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Blocked</span>
                    </div>
                    <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Booked</span>
+                      <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Booked</span>
                    </div>
                    <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 rounded-full bg-charcoal"></div>
-                      <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">{t('selected')}</span>
+                      <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">{t('selected')}</span>
                    </div>
                 </div>
               </div>
@@ -1599,14 +1599,14 @@ const PropertyDetail = () => {
 
             {/* Reviews Section */}
             <div>
-               <h2 className="text-2xl font-black text-charcoal mb-8 flex items-center">
+               <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-8 flex items-center">
                  {t('reviews')}
                  <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                </h2>
                
                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
                   <div className="bg-charcoal text-white rounded-3xl p-8 flex flex-col items-center justify-center text-center">
-                     <span className="text-5xl font-black mb-2">{property.rating ? property.rating.toFixed(1) : '0.0'}</span>
+                     <span className="text-5xl font-bold tracking-tight mb-2">{property.rating ? property.rating.toFixed(1) : '0.0'}</span>
                      <div className="flex space-x-1 mb-2">
                         {[1,2,3,4,5].map(n => <Star key={n} className={`w-4 h-4 ${n <= (property.rating || 0) ? 'fill-amber-400 text-amber-400' : 'text-gray-600'}`} />)}
                      </div>
@@ -1616,7 +1616,7 @@ const PropertyDetail = () => {
                   <div className="md:col-span-2 grid grid-cols-2 gap-x-8 gap-y-4">
                      {Object.entries(reviewSummary.sub_avgs || { cleanliness: 4.9, communication: 4.8, value: 4.7, accuracy: 4.8 }).map(([k, v]) => (
                         <div key={k} className="space-y-1">
-                           <div className="flex justify-between items-center text-[10px] font-black text-charcoal uppercase tracking-widest">
+                           <div className="flex justify-between items-center text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">
                               <span>{t(k)}</span>
                               <span>{Number(v).toFixed(1)}</span>
                            </div>
@@ -1633,20 +1633,20 @@ const PropertyDetail = () => {
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {reviews.length === 0 ? (
-                    <div className="col-span-2 py-12 text-center bg-white rounded-3xl border-2 border-dashed border-sand-300">
-                       <p className="font-black text-charcoal-muted uppercase tracking-widest text-sm">{t('noReviews')}</p>
+                    <div className="col-span-2 py-12 text-center bg-white rounded-3xl border-2 border-dashed border-gray-200">
+                       <p className="font-bold tracking-tight text-charcoal-muted uppercase tracking-widest text-sm">{t('noReviews')}</p>
                     </div>
                   ) : (
                     reviews.map((r) => (
-                      <div key={r.review_id} className="bg-white rounded-3xl p-6 border border-sand-200 shadow-sm hover:shadow-premium transition-all group">
+                      <div key={r.review_id} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-premium transition-all group">
                          <div className="flex items-center justify-between mb-4">
                             <div className="flex items-center space-x-3">
-                               <div className="w-10 h-10 rounded-xl bg-terracotta flex items-center justify-center text-white font-black">
+                               <div className="w-10 h-10 rounded-xl bg-terracotta flex items-center justify-center text-white font-bold tracking-tight">
                                   {(r.guest_display_name || 'G')[0]}
                                </div>
                                <div>
                                   <h4 className="font-bold text-charcoal leading-none">{r.guest_display_name || 'Verified Guest'}</h4>
-                                  <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">
+                                  <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">
                                      {new Date(r.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
                                   </span>
                                </div>
@@ -1674,19 +1674,19 @@ const PropertyDetail = () => {
                 <div>
                   {property.category === 'event_venue' ? (
                     <>
-                      <span className="text-3xl font-black text-charcoal tracking-tight">
+                      <span className="text-3xl font-bold tracking-tight text-charcoal tracking-tight">
                         ₹{property.price_per_night?.toLocaleString('en-IN') || 0}
                       </span>
-                      <span className="text-xs font-black text-charcoal-muted uppercase tracking-widest ml-1">
+                      <span className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest ml-1">
                         / day venue rent
                       </span>
                     </>
                   ) : (
                     <>
-                      <span className="text-3xl font-black text-charcoal tracking-tight">
+                      <span className="text-3xl font-bold tracking-tight text-charcoal tracking-tight">
                         ₹{property.price_per_night?.toLocaleString('en-IN') || 0}
                       </span>
-                      <span className="text-xs font-black text-charcoal-muted uppercase tracking-widest ml-1">
+                      <span className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest ml-1">
                         {property.category === 'commercial' 
                           ? (property.pricing_cycle === 'hourly' ? ` / ${t('hour')}` : property.pricing_cycle === 'weekly' ? ` / ${t('week')}` : property.pricing_cycle === 'monthly' ? ` / ${t('month')}` : ` / ${t('day')}`)
                           : ` / ${t('night')}`}
@@ -1697,53 +1697,53 @@ const PropertyDetail = () => {
                 {property.instant_booking && (
                    <div className="flex items-center space-x-1 text-amber-500">
                       <Zap className="w-3.5 h-3.5 fill-current" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">{t('rapidBook')}</span>
+                      <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest">{t('rapidBook')}</span>
                    </div>
                 )}
               </div>
 
-              <div className="bg-sand-50/80 rounded-2xl border border-sand-200 mb-6">
+              <div className="bg-stone/80 rounded-2xl border border-gray-100 mb-6">
                 <div className="grid grid-cols-2 divide-x divide-sand-200">
                   <button 
                     onClick={() => document.getElementById('cal-trigger')?.focus()}
                     className="p-4 text-left hover:bg-white transition-colors group rounded-tl-2xl"
                   >
-                    <label className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest mb-1 block group-hover:text-terracotta transition-colors">{t('checkIn')}</label>
+                    <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block group-hover:text-terracotta transition-colors">{t('checkIn')}</label>
                     <input
                       type="date"
                       id="cal-trigger"
                       value={checkIn}
                       min={todayISO}
                       onChange={(e) => setCheckIn(e.target.value)}
-                      className="w-full text-xs font-black text-charcoal bg-transparent outline-none cursor-pointer"
+                      className="w-full text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none cursor-pointer"
                     />
                   </button>
                   <button 
                     onClick={() => document.getElementById('cal-trigger-out')?.focus()}
                     className="p-4 text-left hover:bg-white transition-colors group rounded-tr-2xl"
                   >
-                    <label className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest mb-1 block group-hover:text-terracotta transition-colors">{t('checkOut')}</label>
+                    <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block group-hover:text-terracotta transition-colors">{t('checkOut')}</label>
                     <input
                       type="date"
                       id="cal-trigger-out"
                       value={checkOut}
                       min={checkIn || todayISO}
                       onChange={(e) => setCheckOut(e.target.value)}
-                      className="w-full text-xs font-black text-charcoal bg-transparent outline-none cursor-pointer"
+                      className="w-full text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none cursor-pointer"
                     />
                   </button>
                 </div>
-                <div className="p-4 border-t border-sand-200 flex flex-col hover:bg-white transition-colors group gap-4 rounded-b-2xl">
+                <div className="p-4 border-t border-gray-100 flex flex-col hover:bg-white transition-colors group gap-4 rounded-b-2xl">
                   <div className="flex items-center w-full justify-between">
                     <div className="flex items-center w-full">
                       <Users className="w-4 h-4 text-charcoal-muted mr-3" />
                       <div className="w-full">
                         <div className="mb-1 flex items-center justify-between gap-3">
-                          <label className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest block">
+                          <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">
                             {property.category === 'commercial' ? 'Total Staff' : t('totalGuests')}
                           </label>
                           {property.category !== 'event_venue' && property.category !== 'commercial' && (
-                            <span className="text-[10px] font-black text-terracotta uppercase tracking-widest shrink-0">
+                            <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest shrink-0">
                               {t('maxGuests').replace('{count}', maxGuests)}
                             </span>
                           )}
@@ -1752,7 +1752,7 @@ const PropertyDetail = () => {
                           <div className="relative w-full">
                             <button
                               onClick={() => setShowGuestDropdown(!showGuestDropdown)}
-                              className="w-full text-left text-xs font-black text-charcoal bg-transparent outline-none cursor-pointer flex justify-between items-center"
+                              className="w-full text-left text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none cursor-pointer flex justify-between items-center"
                             >
                               <span>
                                 {Number(guests) === 100 ? 'Less than 100' :
@@ -1771,7 +1771,7 @@ const PropertyDetail = () => {
                                   className="fixed inset-0 z-40" 
                                   onClick={() => setShowGuestDropdown(false)}
                                 ></div>
-                                <div className="absolute top-full left-0 mt-2 w-full min-w-[160px] bg-white border border-sand-200 rounded-xl shadow-premium z-50 overflow-hidden py-1 animate-fade-in">
+                                <div className="absolute top-full left-0 mt-2 w-full min-w-[160px] bg-white border border-gray-100 rounded-xl shadow-premium z-50 overflow-hidden py-1 animate-fade-in">
                                   {[
                                     { v: 100, l: 'Less than 100' },
                                     { v: 200, l: '100-200' },
@@ -1783,7 +1783,7 @@ const PropertyDetail = () => {
                                     <div
                                       key={opt.v}
                                       onClick={() => { setGuests(opt.v); setShowGuestDropdown(false); }}
-                                      className={`px-4 py-2.5 text-xs font-bold cursor-pointer hover:bg-sand-50 transition-colors ${Number(guests) === opt.v ? 'text-terracotta bg-terracotta/5' : 'text-charcoal'}`}
+                                      className={`px-4 py-2.5 text-xs font-bold cursor-pointer hover:bg-stone transition-colors ${Number(guests) === opt.v ? 'text-terracotta bg-terracotta/5' : 'text-charcoal'}`}
                                     >
                                       {opt.l}
                                     </div>
@@ -1802,7 +1802,7 @@ const PropertyDetail = () => {
                               const nextGuests = Math.max(1, Math.min(maxGuests, Number(e.target.value) || 1));
                               setGuests(nextGuests);
                             }}
-                            className="w-16 text-xs font-black text-charcoal bg-transparent outline-none"
+                            className="w-16 text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none"
                           />
                         ) : (
                           <div className="mt-3 space-y-4">
@@ -1840,7 +1840,7 @@ const PropertyDetail = () => {
                             ].map((item) => (
                               <div key={item.key} className="flex items-center justify-between">
                                 <div>
-                                  <div className="text-sm font-black text-charcoal leading-tight">{item.title}</div>
+                                  <div className="text-sm font-bold tracking-tight text-charcoal leading-tight">{item.title}</div>
                                   <div className="text-xs font-medium text-charcoal-muted mt-0.5">{item.subtitle}</div>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -1848,7 +1848,7 @@ const PropertyDetail = () => {
                                     type="button"
                                     onClick={item.onMinus}
                                     disabled={item.minusDisabled}
-                                    className="w-8 h-8 rounded-full bg-sand-100 text-charcoal-muted flex items-center justify-center transition-colors hover:bg-sand-200 disabled:opacity-40 disabled:hover:bg-sand-100"
+                                    className="w-8 h-8 rounded-full bg-gray-50 text-charcoal-muted flex items-center justify-center transition-colors hover:bg-sand-200 disabled:opacity-40 disabled:hover:bg-gray-50"
                                     aria-label={`Decrease ${item.title}`}
                                   >
                                     <Minus className="w-4 h-4" />
@@ -1858,7 +1858,7 @@ const PropertyDetail = () => {
                                     type="button"
                                     onClick={item.onPlus}
                                     disabled={item.plusDisabled}
-                                    className="w-8 h-8 rounded-full bg-sand-100 text-charcoal flex items-center justify-center transition-colors hover:bg-sand-200 disabled:opacity-40 disabled:hover:bg-sand-100"
+                                    className="w-8 h-8 rounded-full bg-gray-50 text-charcoal flex items-center justify-center transition-colors hover:bg-sand-200 disabled:opacity-40 disabled:hover:bg-gray-50"
                                     aria-label={`Increase ${item.title}`}
                                   >
                                     <Plus className="w-4 h-4" />
@@ -1871,7 +1871,7 @@ const PropertyDetail = () => {
                       </div>
                     </div>
                     {property.category === 'commercial' && (
-                      <span className="text-[10px] font-black text-terracotta uppercase tracking-widest shrink-0 ml-4">
+                      <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest shrink-0 ml-4">
                         {`MAX ${maxGuests} STAFF`}
                       </span>
                     )}
@@ -1879,20 +1879,20 @@ const PropertyDetail = () => {
 
                   {property.category === 'event_venue' && (
                     <div className="w-full mt-2 pt-3 border-t border-sand-100 flex flex-col space-y-3">
-                      <label className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest block">Food Preference</label>
+                      <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Food Preference</label>
                       <div className="flex flex-col space-y-3">
                         <div 
                           onClick={() => setFoodPreference('veg')}
-                          className="flex items-center justify-between cursor-pointer group hover:bg-sand-50 p-2 -mx-2 rounded-lg transition-colors"
+                          className="flex items-center justify-between cursor-pointer group hover:bg-stone p-2 -mx-2 rounded-lg transition-colors"
                         >
                           <div className="flex items-center space-x-3">
-                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${foodPreference === 'veg' ? 'border-green-500' : 'border-sand-300'}`}>
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${foodPreference === 'veg' ? 'border-green-500' : 'border-gray-200'}`}>
                               {foodPreference === 'veg' && <div className="w-2 h-2 rounded-full bg-green-500" />}
                             </div>
                             <span className="text-sm font-semibold text-charcoal">Vegetarian</span>
                           </div>
                           <div className="text-right flex items-center space-x-2">
-                            <span className="text-lg font-black text-charcoal relative">
+                            <span className="text-lg font-bold tracking-tight text-charcoal relative">
                               ₹{property.veg_price || 0}
                               {/* Strike-through effect line requested in image */}
                               <div className="absolute top-1/2 left-0 w-full h-[2px] bg-charcoal transform -translate-y-1/2 rotate-[-10deg]"></div>
@@ -1902,16 +1902,16 @@ const PropertyDetail = () => {
                         </div>
                         <div 
                           onClick={() => setFoodPreference('non_veg')}
-                          className="flex items-center justify-between cursor-pointer group hover:bg-sand-50 p-2 -mx-2 rounded-lg transition-colors"
+                          className="flex items-center justify-between cursor-pointer group hover:bg-stone p-2 -mx-2 rounded-lg transition-colors"
                         >
                           <div className="flex items-center space-x-3">
-                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${foodPreference === 'non_veg' ? 'border-red-500' : 'border-sand-300'}`}>
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${foodPreference === 'non_veg' ? 'border-red-500' : 'border-gray-200'}`}>
                               {foodPreference === 'non_veg' && <div className="w-2 h-2 rounded-full bg-red-500" />}
                             </div>
                             <span className="text-sm font-semibold text-charcoal">Non Vegetarian</span>
                           </div>
                           <div className="text-right flex items-center space-x-2">
-                            <span className="text-lg font-black text-charcoal relative">
+                            <span className="text-lg font-bold tracking-tight text-charcoal relative">
                               ₹{property.non_veg_price || 0}
                               {/* Strike-through effect line requested in image */}
                               <div className="absolute top-1/2 left-0 w-full h-[2px] bg-charcoal transform -translate-y-1/2 rotate-[-10deg]"></div>
@@ -1924,16 +1924,16 @@ const PropertyDetail = () => {
                   )}
                   {property.category === 'event_venue' && (
                     <div className="w-full mt-2 pt-3 border-t border-sand-100 flex flex-col space-y-3">
-                      <label className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest block">Select Timing Slot</label>
+                      <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Select Timing Slot</label>
                       <div className="flex flex-col space-y-2">
                         {availableSlots.map(slot => (
                           <div 
                             key={slot.key}
                             onClick={() => setSelectedSlot(slot.key)}
-                            className={`flex items-center justify-between cursor-pointer hover:bg-sand-50/50 px-3 py-2.5 rounded-xl border-2 transition-all ${selectedSlot === slot.key ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 bg-white'}`}
+                            className={`flex items-center justify-between cursor-pointer hover:bg-stone/50 px-3 py-2.5 rounded-xl border-2 transition-all ${selectedSlot === slot.key ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 bg-white'}`}
                           >
                             <div className="flex items-center space-x-3">
-                              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${selectedSlot === slot.key ? 'border-terracotta' : 'border-sand-300'}`}>
+                              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${selectedSlot === slot.key ? 'border-terracotta' : 'border-gray-200'}`}>
                                 {selectedSlot === slot.key && <div className="w-2 h-2 rounded-full bg-terracotta" />}
                               </div>
                               <span className="text-xs font-bold text-charcoal">{slot.label}</span>
@@ -1947,7 +1947,7 @@ const PropertyDetail = () => {
               </div>
 
               {bookingError && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-[10px] font-black uppercase tracking-widest rounded-xl p-3 mb-4 animate-shake">
+                <div className="bg-red-50 border border-red-200 text-red-700 text-[10px] font-bold tracking-tight uppercase tracking-widest rounded-xl p-3 mb-4 animate-shake">
                   {bookingError}
                 </div>
               )}
@@ -1960,7 +1960,7 @@ const PropertyDetail = () => {
                         <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
                           ₹{property.price_per_night?.toLocaleString('en-IN')} × {nights} {property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')} (Venue)
                         </span>
-                        <span className="text-sm font-black text-charcoal">₹{((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</span>
+                        <span className="text-sm font-bold tracking-tight text-charcoal">₹{((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
@@ -1974,7 +1974,7 @@ const PropertyDetail = () => {
                             Number(guests) || 100
                           } Guests × {nights} {property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')}{nights !== 1 ? 's' : ''} (Food)
                         </span>
-                        <span className="text-sm font-black text-charcoal">₹{(
+                        <span className="text-sm font-bold tracking-tight text-charcoal">₹{(
                           (foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)) * 
                           (guests === 100 ? 100 : guests === 200 ? 200 : guests === 300 ? 300 : guests === 400 ? 400 : guests === 500 ? 500 : guests === 600 ? 600 : Number(guests) || 100) * nights
                         ).toLocaleString('en-IN')}</span>
@@ -1989,42 +1989,42 @@ const PropertyDetail = () => {
                             : t('night')
                         }
                       </span>
-                      <span className="text-sm font-black text-charcoal">₹{baseAmount.toLocaleString('en-IN')}</span>
+                      <span className="text-sm font-bold tracking-tight text-charcoal">₹{baseAmount.toLocaleString('en-IN')}</span>
                     </div>
                   )}
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">{t('premiumServiceFee')}</span>
-                    <span className="text-sm font-black text-charcoal">₹{Math.round(serviceFee).toLocaleString('en-IN')}</span>
+                    <span className="text-sm font-bold tracking-tight text-charcoal">₹{Math.round(serviceFee).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">Taxes & GST ({taxPercent}%)</span>
-                    <span className="text-sm font-black text-charcoal">₹{Math.round(taxes).toLocaleString('en-IN')}</span>
+                    <span className="text-sm font-bold tracking-tight text-charcoal">₹{Math.round(taxes).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="border-t-2 border-sand-100 pt-4 flex justify-between items-center">
-                    <span className="text-base font-black text-charcoal uppercase tracking-tighter">{t('totalAmount')}</span>
-                    <span className="text-2xl font-black text-terracotta" data-testid="total-amount">₹{Math.round(total).toLocaleString('en-IN')}</span>
+                    <span className="text-base font-bold tracking-tight text-charcoal uppercase tracking-tighter">{t('totalAmount')}</span>
+                    <span className="text-2xl font-bold tracking-tight text-terracotta" data-testid="total-amount">₹{Math.round(total).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => setBookingPaymentType('advance')}
-                      className={`text-left p-3 rounded-2xl border-2 transition-all ${bookingPaymentType === 'advance' ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 bg-white hover:border-sand-300'}`}
+                      className={`text-left p-3 rounded-2xl border-2 transition-all ${bookingPaymentType === 'advance' ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 bg-white hover:border-gray-200'}`}
                     >
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-charcoal-muted">Pay {advancePercent}% Advance</span>
-                      <span className="block text-lg font-black text-terracotta mt-1">Rs.{advanceAmount.toLocaleString('en-IN')}</span>
+                      <span className="block text-[9px] font-bold tracking-tight uppercase tracking-widest text-charcoal-muted">Pay {advancePercent}% Advance</span>
+                      <span className="block text-lg font-bold tracking-tight text-terracotta mt-1">Rs.{advanceAmount.toLocaleString('en-IN')}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setBookingPaymentType('full')}
-                      className={`text-left p-3 rounded-2xl border-2 transition-all ${bookingPaymentType === 'full' ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 bg-white hover:border-sand-300'}`}
+                      className={`text-left p-3 rounded-2xl border-2 transition-all ${bookingPaymentType === 'full' ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 bg-white hover:border-gray-200'}`}
                     >
-                      <span className="block text-[9px] font-black uppercase tracking-widest text-charcoal-muted">Pay Full Amount</span>
-                      <span className="block text-lg font-black text-charcoal mt-1">Rs.{Math.round(total).toLocaleString('en-IN')}</span>
+                      <span className="block text-[9px] font-bold tracking-tight uppercase tracking-widest text-charcoal-muted">Pay Full Amount</span>
+                      <span className="block text-lg font-bold tracking-tight text-charcoal mt-1">Rs.{Math.round(total).toLocaleString('en-IN')}</span>
                     </button>
                   </div>
-                  <div className="bg-sand-50 border border-sand-200 rounded-2xl px-4 py-3 flex justify-between items-center">
-                    <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Pay Now</span>
-                    <span className="text-xl font-black text-terracotta">Rs.{amountDueNow.toLocaleString('en-IN')}</span>
+                  <div className="bg-stone border border-gray-100 rounded-2xl px-4 py-3 flex justify-between items-center">
+                    <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Pay Now</span>
+                    <span className="text-xl font-bold tracking-tight text-terracotta">Rs.{amountDueNow.toLocaleString('en-IN')}</span>
                   </div>
                   
                   {availableCoupons.length > 0 && (
@@ -2035,7 +2035,7 @@ const PropertyDetail = () => {
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {availableCoupons.map(coupon => (
-                          <span key={coupon.coupon_id} className="inline-flex items-center px-2 py-1 bg-white border border-sage/30 rounded-md text-xs font-black text-charcoal tracking-wide">
+                          <span key={coupon.coupon_id} className="inline-flex items-center px-2 py-1 bg-white border border-sage/30 rounded-md text-xs font-bold tracking-tight text-charcoal tracking-wide">
                             {coupon.code}
                             <span className="text-terracotta ml-1">
                               ({coupon.discount_type === 'percentage' ? `${coupon.discount_value}% OFF` : `₹${coupon.discount_value} OFF`})
@@ -2069,7 +2069,7 @@ const PropertyDetail = () => {
                 <button
                   onClick={() => setShowQuotationModal(true)}
                   disabled={!checkIn || !checkOut || nights === 0}
-                  className="w-full mt-3 py-3 border-2 border-charcoal text-charcoal hover:bg-charcoal hover:text-white font-black text-xs uppercase tracking-widest rounded-2xl transition-all disabled:opacity-50"
+                  className="w-full mt-3 py-3 border-2 border-charcoal text-charcoal hover:bg-charcoal hover:text-white font-bold tracking-tight text-xs uppercase tracking-widest rounded-2xl transition-all disabled:opacity-50"
                 >
                   Get Quotation
                 </button>
@@ -2087,8 +2087,8 @@ const PropertyDetail = () => {
 
         {/* Recommended Properties */}
         {recommended.length > 0 && (
-          <div className="mt-16 pt-16 border-t border-sand-200 animate-slide-up">
-            <h2 className="text-3xl font-black text-charcoal tracking-tight mb-8">
+          <div className="mt-16 pt-16 border-t border-gray-100 animate-slide-up">
+            <h2 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight mb-8">
               {t('similarProperties').replace('{city}', property.city)}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -2103,19 +2103,19 @@ const PropertyDetail = () => {
                       navigate(`/guest/properties/${prop.property_id}`);
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
-                    className="bg-white rounded-[2rem] border border-sand-200 overflow-hidden shadow-sm hover:shadow-premium hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col h-full"
+                    className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-premium hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col h-full"
                   >
                     <div className="relative aspect-[4/3] w-full overflow-hidden">
                       <img 
                         src={propImg} 
                         alt={prop.title} 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
                       />
-                      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest text-charcoal shadow-sm">
+                      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest text-charcoal shadow-sm">
                         {formatCategoryLabel(prop.category)}
                       </div>
                       {prop.instant_booking && (
-                        <div className="absolute top-4 right-4 bg-amber-500 text-white p-1.5 rounded-full shadow-md">
+                        <div className="absolute top-4 right-4 bg-amber-500 text-white p-1.5 rounded-full shadow-subtle">
                           <Zap className="w-3.5 h-3.5 fill-current" />
                         </div>
                       )}
@@ -2123,7 +2123,7 @@ const PropertyDetail = () => {
                     <div className="p-6 flex flex-col flex-1 justify-between">
                       <div>
                         <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-black text-charcoal text-base tracking-tight leading-snug line-clamp-1 group-hover:text-terracotta transition-colors">
+                          <h3 className="font-bold tracking-tight text-charcoal text-base tracking-tight leading-snug line-clamp-1 group-hover:text-terracotta transition-colors">
                             {prop.title}
                           </h3>
                         </div>
@@ -2134,15 +2134,15 @@ const PropertyDetail = () => {
                       </div>
                       <div className="pt-4 border-t border-sand-100 flex justify-between items-center mt-auto">
                         <div>
-                          <span className="text-lg font-black text-charcoal">₹{prop.price_per_night?.toLocaleString('en-IN')}</span>
-                          <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-wider ml-1">
+                          <span className="text-lg font-bold tracking-tight text-charcoal">₹{prop.price_per_night?.toLocaleString('en-IN')}</span>
+                          <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider ml-1">
                             {prop.category === 'event_venue' ? '/ day' : prop.category === 'commercial' ? '/ day' : '/ night'}
                           </span>
                         </div>
                         {prop.rating && (
                           <div className="flex items-center space-x-1">
                             <Star className="w-3.5 h-3.5 text-amber-500 fill-current" />
-                            <span className="text-xs font-black text-charcoal">{prop.rating.toFixed(1)}</span>
+                            <span className="text-xs font-bold tracking-tight text-charcoal">{prop.rating.toFixed(1)}</span>
                           </div>
                         )}
                       </div>
@@ -2162,15 +2162,15 @@ const PropertyDetail = () => {
             <div className="flex items-center space-x-4">
               <button 
                 onClick={() => setShowGallery(false)}
-                className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center hover:bg-sand-200 transition-colors"
+                className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center hover:bg-sand-200 transition-colors"
               >
                 <ChevronLeft className="w-6 h-6" />
               </button>
-              <h2 className="text-xl font-black text-charcoal tracking-tight">{t('photoTour')}</h2>
+              <h2 className="text-xl font-bold tracking-tight text-charcoal tracking-tight">{t('photoTour')}</h2>
             </div>
             <div className="flex items-center space-x-4">
-               <button className="p-3 rounded-full hover:bg-sand-100 transition-colors"><Star className="w-5 h-5" /></button>
-               <button onClick={() => setShowGallery(false)} className="p-3 rounded-full hover:bg-sand-100 transition-colors"><X className="w-6 h-6" /></button>
+               <button className="p-3 rounded-full hover:bg-gray-50 transition-colors"><Star className="w-5 h-5" /></button>
+               <button onClick={() => setShowGallery(false)} className="p-3 rounded-full hover:bg-gray-50 transition-colors"><X className="w-6 h-6" /></button>
             </div>
           </div>
 
@@ -2186,7 +2186,7 @@ const PropertyDetail = () => {
                   <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-transparent group-hover:border-terracotta transition-all shadow-sm">
                     <img src={getImageUrl(groupedImages[cat][0])} alt="" className="w-full h-full object-cover" />
                   </div>
-                  <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest group-hover:text-charcoal">{cat}</span>
+                  <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest group-hover:text-charcoal">{cat}</span>
                 </button>
               ))}
             </div>
@@ -2198,7 +2198,7 @@ const PropertyDetail = () => {
                    <div className="w-10 h-10 rounded-xl bg-terracotta/10 flex items-center justify-center text-terracotta">
                       <Camera className="w-5 h-5" />
                    </div>
-                   <h3 className="text-3xl font-black text-charcoal tracking-tight">{cat}</h3>
+                   <h3 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight">{cat}</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {groupedImages[cat].map((url, idx) => (
@@ -2219,16 +2219,16 @@ const PropertyDetail = () => {
 
       {showQuotationModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-charcoal/60 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in">
-          <div className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden border border-sand-200 shadow-elevated animate-in zoom-in-95 duration-300">
+          <div className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden border border-gray-100 shadow-elevated animate-in zoom-in-95 duration-300">
             {/* Header */}
-            <div className="px-8 py-6 border-b border-sand-100 flex justify-between items-center bg-sand-50/50">
+            <div className="px-8 py-6 border-b border-sand-100 flex justify-between items-center bg-stone/50">
               <div className="flex items-center space-x-3">
                 <Sparkles className="w-5 h-5 text-terracotta" />
-                <h3 className="text-xl font-black text-charcoal tracking-tight">Booking Quotation</h3>
+                <h3 className="text-xl font-bold tracking-tight text-charcoal tracking-tight">Booking Quotation</h3>
               </div>
               <button 
                 onClick={() => setShowQuotationModal(false)}
-                className="w-8 h-8 rounded-full bg-sand-100 flex items-center justify-center hover:bg-sand-200 transition-colors"
+                className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center hover:bg-sand-200 transition-colors"
               >
                 <X className="w-5 h-5 text-charcoal" />
               </button>
@@ -2239,7 +2239,7 @@ const PropertyDetail = () => {
               {/* Branding Header */}
               <div className="flex justify-between items-start border-b border-sand-100 pb-6">
                 <div>
-                  <h4 className="text-xl font-black text-charcoal tracking-tight">X-SPACE360</h4>
+                  <h4 className="text-xl font-bold tracking-tight text-charcoal tracking-tight">X-SPACE360</h4>
                   <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider">Premium Venue Booking & Hospitality</p>
                 </div>
                 <div className="text-right">
@@ -2249,50 +2249,50 @@ const PropertyDetail = () => {
               </div>
               
               {/* Event details */}
-              <div className="grid grid-cols-2 gap-6 bg-sand-50/80 p-5 rounded-2xl border border-sand-100 text-sm">
+              <div className="grid grid-cols-2 gap-6 bg-stone/80 p-5 rounded-2xl border border-sand-100 text-sm">
                 <div>
-                  <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Venue Details</p>
-                  <p className="font-black text-charcoal">{property.title}</p>
+                  <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Venue Details</p>
+                  <p className="font-bold tracking-tight text-charcoal">{property.title}</p>
                   <p className="text-xs text-charcoal-muted font-semibold mt-0.5">{property.address}, {property.city}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Guest Details</p>
-                  <p className="font-black text-charcoal">{user?.full_name || 'Valued Guest'}</p>
+                  <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Guest Details</p>
+                  <p className="font-bold tracking-tight text-charcoal">{user?.full_name || 'Valued Guest'}</p>
                   <p className="text-xs text-charcoal-muted font-semibold mt-0.5">{user?.email || 'N/A'}</p>
                 </div>
               </div>
 
               {/* Slot & Dates */}
               <div className="grid grid-cols-3 gap-4 text-sm">
-                <div className="bg-sand-50/50 p-4 rounded-xl border border-sand-100">
-                  <p className="text-[8px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Duration</p>
-                  <p className="font-black text-charcoal">{nights} Day{nights > 1 ? 's' : ''}</p>
+                <div className="bg-stone/50 p-4 rounded-xl border border-sand-100">
+                  <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Duration</p>
+                  <p className="font-bold tracking-tight text-charcoal">{nights} Day{nights > 1 ? 's' : ''}</p>
                 </div>
-                <div className="bg-sand-50/50 p-4 rounded-xl border border-sand-100">
-                  <p className="text-[8px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Dates</p>
-                  <p className="font-black text-charcoal">{checkIn} to {checkOut}</p>
+                <div className="bg-stone/50 p-4 rounded-xl border border-sand-100">
+                  <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Dates</p>
+                  <p className="font-bold tracking-tight text-charcoal">{checkIn} to {checkOut}</p>
                 </div>
-                <div className="bg-sand-50/50 p-4 rounded-xl border border-sand-100">
-                  <p className="text-[8px] font-black text-charcoal-muted uppercase tracking-widest mb-1">Selected Slot</p>
-                  <p className="font-black text-charcoal capitalize">{selectedSlot || 'N/A'}</p>
+                <div className="bg-stone/50 p-4 rounded-xl border border-sand-100">
+                  <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Selected Slot</p>
+                  <p className="font-bold tracking-tight text-charcoal capitalize">{selectedSlot || 'N/A'}</p>
                 </div>
               </div>
 
               {/* Pricing Table */}
-              <div className="border border-sand-200 rounded-2xl overflow-hidden text-sm">
-                <div className="bg-sand-50 px-5 py-3 border-b border-sand-200 grid grid-cols-3 font-black text-[9px] text-charcoal-muted uppercase tracking-widest">
+              <div className="border border-gray-100 rounded-2xl overflow-hidden text-sm">
+                <div className="bg-stone px-5 py-3 border-b border-gray-100 grid grid-cols-3 font-bold tracking-tight text-[9px] text-charcoal-muted uppercase tracking-widest">
                   <span className="col-span-2">Item Description</span>
                   <span className="text-right">Amount</span>
                 </div>
                 <div className="divide-y divide-sand-100 px-5 font-semibold text-charcoal">
                   <div className="py-3 grid grid-cols-3">
                     <span className="col-span-2">Venue Rent (₹{property.price_per_night?.toLocaleString('en-IN')} × {nights} days)</span>
-                    <span className="text-right font-black">₹{((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</span>
+                    <span className="text-right font-bold tracking-tight">₹{((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</span>
                   </div>
                   {property.category === 'event_venue' && (
                     <div className="py-3 grid grid-cols-3">
                       <span className="col-span-2">Catering (₹{(foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)).toLocaleString('en-IN')} × {guests} Guests × {nights} days - {foodPreference === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'})</span>
-                      <span className="text-right font-black">₹{(
+                      <span className="text-right font-bold tracking-tight">₹{(
                         (foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)) * 
                         guests * nights
                       ).toLocaleString('en-IN')}</span>
@@ -2300,46 +2300,46 @@ const PropertyDetail = () => {
                   )}
                   <div className="py-3 grid grid-cols-3">
                     <span className="col-span-2">Premium Service Fee (10%)</span>
-                    <span className="text-right font-black">₹{Math.round(serviceFee).toLocaleString('en-IN')}</span>
+                    <span className="text-right font-bold tracking-tight">₹{Math.round(serviceFee).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="py-3 grid grid-cols-3">
                     <span className="col-span-2">Taxes & GST ({taxPercent}%)</span>
-                    <span className="text-right font-black">₹{Math.round(taxes).toLocaleString('en-IN')}</span>
+                    <span className="text-right font-bold tracking-tight">₹{Math.round(taxes).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
-                <div className="bg-sand-50/80 px-5 py-4 border-t border-sand-200 grid grid-cols-3 font-black">
+                <div className="bg-stone/80 px-5 py-4 border-t border-gray-100 grid grid-cols-3 font-bold tracking-tight">
                   <span className="col-span-2 text-charcoal uppercase tracking-wider text-xs">Total Estimated Cost</span>
                   <span className="text-right text-terracotta text-lg">₹{Math.round(total).toLocaleString('en-IN')}</span>
                 </div>
               </div>
 
               {/* Payment Type Selection */}
-              <div className="bg-sand-50/40 p-5 rounded-2xl border border-sand-200 space-y-3">
-                <p className="text-[10px] font-black text-charcoal uppercase tracking-widest">Select Payment Mode</p>
+              <div className="bg-stone/40 p-5 rounded-2xl border border-gray-100 space-y-3">
+                <p className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">Select Payment Mode</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div 
                     onClick={() => setQuotationPaymentType('advance')}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${quotationPaymentType === 'advance' ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 hover:bg-sand-50/50 bg-white'}`}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${quotationPaymentType === 'advance' ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 hover:bg-stone/50 bg-white'}`}
                   >
-                    <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest">Pay {advancePercent}% Advance</span>
-                    <span className="text-xl font-black text-terracotta mt-2">Rs.{advanceAmount.toLocaleString('en-IN')}</span>
+                    <span className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Pay {advancePercent}% Advance</span>
+                    <span className="text-xl font-bold tracking-tight text-terracotta mt-2">Rs.{advanceAmount.toLocaleString('en-IN')}</span>
                   </div>
                   <div 
                     onClick={() => setQuotationPaymentType('full')}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${quotationPaymentType === 'full' ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 hover:bg-sand-50/50 bg-white'}`}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${quotationPaymentType === 'full' ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 hover:bg-stone/50 bg-white'}`}
                   >
-                    <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest">Pay Full Amount</span>
-                    <span className="text-xl font-black text-charcoal mt-2">₹{Math.round(total).toLocaleString('en-IN')}</span>
+                    <span className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Pay Full Amount</span>
+                    <span className="text-xl font-bold tracking-tight text-charcoal mt-2">₹{Math.round(total).toLocaleString('en-IN')}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Footer Buttons */}
-            <div className="px-8 py-6 border-t border-sand-100 bg-sand-50/50 flex flex-col sm:flex-row gap-3">
+            <div className="px-8 py-6 border-t border-sand-100 bg-stone/50 flex flex-col sm:flex-row gap-3">
               <button 
                 onClick={handleDownloadQuotation}
-                className="flex-1 py-4 bg-white border-2 border-charcoal text-charcoal font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-charcoal hover:text-white transition-all flex items-center justify-center space-x-2"
+                className="flex-1 py-4 bg-white border-2 border-charcoal text-charcoal font-bold tracking-tight text-xs uppercase tracking-widest rounded-2xl hover:bg-charcoal hover:text-white transition-all flex items-center justify-center space-x-2"
               >
                 <span>Download Quotation</span>
               </button>
@@ -2348,7 +2348,7 @@ const PropertyDetail = () => {
                   setShowQuotationModal(false);
                   handleBookNowWithQuotation();
                 }}
-                className="flex-1 py-4 bg-terracotta text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-terracotta-dark shadow-lg hover:shadow-xl transition-all"
+                className="flex-1 py-4 bg-terracotta text-white font-bold tracking-tight text-xs uppercase tracking-widest rounded-2xl hover:bg-terracotta-dark shadow-premium hover:shadow-premium transition-all"
               >
                 Confirm & Pay ({quotationPaymentType === 'advance' ? `${advancePercent}% Advance` : 'Full'})
               </button>

@@ -36,9 +36,9 @@ const AdminAccount = () => {
   }, [user, navigate]);
 
   return (
-    <div className="min-h-screen bg-sand-50" data-testid="admin-account-page">
+    <div className="min-h-screen bg-stone" data-testid="admin-account-page">
       <header className="header-glass px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="w-full flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => navigate('/admin/dashboard')}
@@ -60,7 +60,7 @@ const AdminAccount = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="w-full px-6 py-6">
         <nav className="flex flex-wrap gap-2 mb-6" data-testid="account-tabs">
           {TABS.map((t) => (
             <button
@@ -69,7 +69,7 @@ const AdminAccount = () => {
               className={`px-4 py-2 rounded-full text-sm font-semibold transition ${
                 tab === t.id
                   ? 'bg-terracotta text-white'
-                  : 'bg-white text-charcoal hover:bg-sand-100 border border-sand-200'
+                  : 'bg-white text-charcoal hover:bg-gray-50 border border-gray-100'
               }`}
               data-testid={`tab-${t.id}`}
             >
@@ -136,7 +136,7 @@ const OverviewTab = () => {
     <div className="space-y-6" data-testid="overview-tab">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => (
-          <div key={c.label} className="dashboard-card border border-sand-200 shadow-sm hover:shadow transition bg-white p-5 rounded-2xl" data-testid={c.testid}>
+          <div key={c.label} className="dashboard-card border border-gray-100 shadow-sm hover:shadow transition bg-white p-5 rounded-2xl" data-testid={c.testid}>
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-xs uppercase tracking-wider text-charcoal-muted font-bold">{c.label}</p>
@@ -152,10 +152,10 @@ const OverviewTab = () => {
                     Pending: <span className="font-semibold text-yellow-700 ml-1">{c.pendingValue}</span>
                   </p>
                 )}
-                <p className="text-2xl font-black text-charcoal mt-2">{c.value}</p>
+                <p className="text-2xl font-bold tracking-tight text-charcoal mt-2">{c.value}</p>
                 {c.sub && <p className="text-xs text-charcoal-light mt-1.5 font-medium">{c.sub}</p>}
               </div>
-              <div className="p-2.5 rounded-xl bg-sand-50 border border-sand-100">
+              <div className="p-2.5 rounded-xl bg-stone border border-sand-100">
                 <c.icon className="w-5 h-5 text-terracotta" />
               </div>
             </div>
@@ -261,7 +261,7 @@ const TransactionsTab = () => {
 
   return (
     <div className="space-y-6" data-testid="transactions-tab">
-      <div className="dashboard-card border border-sand-200 shadow-sm rounded-2xl bg-white p-5">
+      <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-5">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex-1 min-w-[280px] relative">
             <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -272,7 +272,7 @@ const TransactionsTab = () => {
               placeholder="Search Customer Name / Phone / Email / Booking / Payment ID..."
               value={filters.q}
               onChange={(e) => handleFilterChange({ ...filters, q: e.target.value })}
-              className="input-field pl-11 w-full bg-sand-50/50 focus:bg-white border border-sand-300 focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 rounded-xl transition text-sm py-2.5"
+              className="input-field pl-11 w-full bg-stone/50 focus:bg-white border border-gray-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 rounded-xl transition text-sm py-2.5"
               data-testid="filter-q"
             />
           </div>
@@ -280,7 +280,7 @@ const TransactionsTab = () => {
           <select
             value={filters.type}
             onChange={(e) => handleFilterChange({ ...filters, type: e.target.value })}
-            className="input-field w-52 bg-white border border-sand-300 rounded-xl py-2.5 text-sm"
+            className="input-field w-52 bg-white border border-gray-200 rounded-xl py-2.5 text-sm"
             data-testid="filter-type"
           >
             <option value="">All transaction types</option>
@@ -294,7 +294,7 @@ const TransactionsTab = () => {
           <select
             value={filters.status}
             onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })}
-            className="input-field w-44 bg-white border border-sand-300 rounded-xl py-2.5 text-sm"
+            className="input-field w-44 bg-white border border-gray-200 rounded-xl py-2.5 text-sm"
             data-testid="filter-status"
           >
             <option value="">All statuses</option>
@@ -308,7 +308,7 @@ const TransactionsTab = () => {
               type="date"
               value={filters.start}
               onChange={(e) => handleFilterChange({ ...filters, start: e.target.value })}
-              className="input-field w-40 bg-white border border-sand-300 rounded-xl py-2 text-sm"
+              className="input-field w-40 bg-white border border-gray-200 rounded-xl py-2 text-sm"
               data-testid="filter-start"
             />
             <span className="text-charcoal-muted text-xs font-bold">to</span>
@@ -316,7 +316,7 @@ const TransactionsTab = () => {
               type="date"
               value={filters.end}
               onChange={(e) => handleFilterChange({ ...filters, end: e.target.value })}
-              className="input-field w-40 bg-white border border-sand-300 rounded-xl py-2 text-sm"
+              className="input-field w-40 bg-white border border-gray-200 rounded-xl py-2 text-sm"
               data-testid="filter-end"
             />
           </div>
@@ -332,7 +332,7 @@ const TransactionsTab = () => {
         </div>
       </div>
 
-      <div className="dashboard-card border border-sand-200 shadow-sm rounded-2xl bg-white p-6 overflow-hidden">
+      <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-6 overflow-hidden">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-bold text-charcoal" data-testid="transactions-count">
             {loading ? 'Syncing transactions...' : `${total} Transactions Found`}
@@ -351,7 +351,7 @@ const TransactionsTab = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left border-collapse" data-testid="transactions-table">
                 <thead>
-                  <tr className="border-b border-sand-200 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-sand-50/50">
+                  <tr className="border-b border-gray-100 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-stone/50">
                     <th className="py-3 px-4 rounded-l-xl">Date & Time</th>
                     <th className="py-3 px-4">Customer Details</th>
                     <th className="py-3 px-4">Type</th>
@@ -366,7 +366,7 @@ const TransactionsTab = () => {
                   {items.map((t) => (
                     <tr
                       key={t.transaction_id}
-                      className="hover:bg-sand-50/30 transition text-charcoal"
+                      className="hover:bg-stone/30 transition text-charcoal"
                       data-testid={`txn-${t.transaction_id}`}
                     >
                       <td className="py-4 px-4 whitespace-nowrap text-xs font-medium text-charcoal-light">
@@ -381,15 +381,15 @@ const TransactionsTab = () => {
                         <div className="text-xs text-charcoal-light mt-0.5">{t.user?.phone || '—'}</div>
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap">
-                        <span className="px-2.5 py-1 rounded-lg bg-sand-100 text-charcoal text-xs font-bold uppercase tracking-wider">
+                        <span className="px-2.5 py-1 rounded-lg bg-gray-50 text-charcoal text-xs font-bold uppercase tracking-wider">
                           {t.type.replaceAll('_', ' ')}
                         </span>
                       </td>
-                      <td className="py-4 px-4 font-black text-sm text-charcoal whitespace-nowrap">
+                      <td className="py-4 px-4 font-bold tracking-tight text-sm text-charcoal whitespace-nowrap">
                         {fmtINR(t.amount)}
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold uppercase tracking-wide ${
+                        <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold tracking-tight uppercase tracking-wide ${
                           t.status === 'success' ? 'bg-green-100 text-green-700' :
                           t.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                           'bg-red-100 text-red-700'
@@ -406,7 +406,7 @@ const TransactionsTab = () => {
                           {/* Invoice Button */}
                           <button
                             onClick={() => setSelectedInvoiceTxn(t)}
-                            className="px-3 py-2 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 flex items-center space-x-1.5 transition text-xs font-bold shadow-sm"
+                            className="px-3 py-2 rounded-xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone flex items-center space-x-1.5 transition text-xs font-bold shadow-sm"
                             title="View & Print Invoice"
                           >
                             <FileText className="w-4 h-4 text-terracotta" />
@@ -417,7 +417,7 @@ const TransactionsTab = () => {
                           <div className="relative inline-block text-left">
                             <button
                               onClick={() => setActiveShareId(activeShareId === t.transaction_id ? null : t.transaction_id)}
-                              className="px-3 py-2 rounded-xl border border-sand-300 hover:border-sage text-charcoal hover:bg-sand-50 flex items-center space-x-1.5 transition text-xs font-bold shadow-sm"
+                              className="px-3 py-2 rounded-xl border border-gray-200 hover:border-sage text-charcoal hover:bg-stone flex items-center space-x-1.5 transition text-xs font-bold shadow-sm"
                               title="Share Invoice with Customer"
                             >
                               <Share2 className="w-4 h-4 text-sage" />
@@ -425,17 +425,17 @@ const TransactionsTab = () => {
                             </button>
 
                             {activeShareId === t.transaction_id && (
-                              <div className="absolute right-0 mt-1.5 w-40 rounded-xl bg-white border border-sand-200 shadow-xl z-20 overflow-hidden divide-y divide-sand-100 animate-in fade-in slide-in-from-top-1 duration-150">
+                              <div className="absolute right-0 mt-1.5 w-40 rounded-xl bg-white border border-gray-100 shadow-premium z-20 overflow-hidden divide-y divide-sand-100 animate-in fade-in slide-in-from-top-1 duration-150">
                                 <button
                                   onClick={() => handleShareInvoice(t.transaction_id, 'whatsapp')}
-                                  className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-sand-50 flex items-center space-x-2.5 transition font-bold"
+                                  className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-stone flex items-center space-x-2.5 transition font-bold"
                                 >
                                   <MessageSquare className="w-4 h-4 text-green-600" />
                                   <span>via WhatsApp</span>
                                 </button>
                                 <button
                                   onClick={() => handleShareInvoice(t.transaction_id, 'email')}
-                                  className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-sand-50 flex items-center space-x-2.5 transition font-bold"
+                                  className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-stone flex items-center space-x-2.5 transition font-bold"
                                 >
                                   <Mail className="w-4 h-4 text-blue-600" />
                                   <span>via Email</span>
@@ -449,7 +449,7 @@ const TransactionsTab = () => {
                         {sharingStatus && sharingStatus.id === t.transaction_id && (
                           <div className="mt-2 text-center">
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm border ${
-                              sharingStatus.type === 'loading' ? 'bg-sand-100 text-charcoal border-sand-200' :
+                              sharingStatus.type === 'loading' ? 'bg-gray-50 text-charcoal border-gray-100' :
                               sharingStatus.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' :
                               'bg-red-50 text-red-700 border-red-200'
                             }`}>
@@ -467,16 +467,16 @@ const TransactionsTab = () => {
             {/* Pagination Controls */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-sand-100 no-print" data-testid="transactions-pagination">
               <p className="text-xs text-charcoal-muted font-semibold">
-                Showing <span className="font-extrabold text-charcoal">{(page - 1) * LIMIT + 1}</span> to{' '}
-                <span className="font-extrabold text-charcoal">{Math.min(page * LIMIT, total)}</span> of{' '}
-                <span className="font-extrabold text-charcoal">{total}</span> transactions
+                Showing <span className="font-semibold tracking-tight text-charcoal">{(page - 1) * LIMIT + 1}</span> to{' '}
+                <span className="font-semibold tracking-tight text-charcoal">{Math.min(page * LIMIT, total)}</span> of{' '}
+                <span className="font-semibold tracking-tight text-charcoal">{total}</span> transactions
               </p>
               
               <div className="flex items-center space-x-1.5">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-1.5 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-sand-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  className="px-3 py-1.5 rounded-xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
                   data-testid="pagination-prev"
                 >
                   <span>Previous</span>
@@ -507,10 +507,10 @@ const TransactionsTab = () => {
                       <button
                         key={`page-${p}`}
                         onClick={() => setPage(p)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition shadow-sm ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold tracking-tight transition shadow-sm ${
                           page === p
                             ? 'bg-terracotta text-white'
-                            : 'border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50'
+                            : 'border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone'
                         }`}
                         data-testid={`pagination-page-${p}`}
                       >
@@ -522,7 +522,7 @@ const TransactionsTab = () => {
                 <button
                   onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / LIMIT)), p + 1))}
                   disabled={page * LIMIT >= total}
-                  className="px-3 py-1.5 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-sand-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  className="px-3 py-1.5 rounded-xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
                   data-testid="pagination-next"
                 >
                   <span>Next</span>
@@ -636,7 +636,7 @@ const PayoutsTab = () => {
         <button
           onClick={sweep}
           disabled={busy}
-          className="px-4 py-2 rounded-lg bg-sand-100 text-charcoal font-semibold hover:bg-sand-200 disabled:opacity-60"
+          className="px-4 py-2 rounded-lg bg-gray-50 text-charcoal font-semibold hover:bg-sand-200 disabled:opacity-60"
           data-testid="sweep-eligibility-btn"
         >
           Re-scan for eligible
@@ -664,7 +664,7 @@ const PayoutsTab = () => {
           <>
             <table className="w-full text-sm" data-testid="payouts-table">
               <thead className="text-left text-charcoal-muted uppercase text-xs tracking-wider">
-                <tr className="border-b border-sand-200">
+                <tr className="border-b border-gray-100">
                   <th className="py-2 pr-3">Host</th>
                   <th className="py-2 pr-3">Property</th>
                   <th className="py-2 pr-3">Gross</th>
@@ -740,7 +740,7 @@ const PayoutsTab = () => {
                         )}
                         <button
                           onClick={() => setSelectedPayout(p)}
-                          className="px-2.5 py-1 rounded-lg border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 text-xs font-semibold transition shadow-sm"
+                          className="px-2.5 py-1 rounded-lg border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone text-xs font-semibold transition shadow-sm"
                           data-testid={`details-${p.payout_id}`}
                         >
                           Details
@@ -755,16 +755,16 @@ const PayoutsTab = () => {
             {/* Pagination Controls */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-sand-100 no-print" data-testid="payouts-pagination">
               <p className="text-xs text-charcoal-muted font-semibold">
-                Showing <span className="font-extrabold text-charcoal">{(page - 1) * LIMIT + 1}</span> to{' '}
-                <span className="font-extrabold text-charcoal">{Math.min(page * LIMIT, total)}</span> of{' '}
-                <span className="font-extrabold text-charcoal">{total}</span> payouts
+                Showing <span className="font-semibold tracking-tight text-charcoal">{(page - 1) * LIMIT + 1}</span> to{' '}
+                <span className="font-semibold tracking-tight text-charcoal">{Math.min(page * LIMIT, total)}</span> of{' '}
+                <span className="font-semibold tracking-tight text-charcoal">{total}</span> payouts
               </p>
               
               <div className="flex items-center space-x-1.5">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-1.5 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-sand-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  className="px-3 py-1.5 rounded-xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
                   data-testid="payouts-pagination-prev"
                 >
                   <span>Previous</span>
@@ -795,10 +795,10 @@ const PayoutsTab = () => {
                       <button
                         key={`page-${p}`}
                         onClick={() => setPage(p)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition shadow-sm ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold tracking-tight transition shadow-sm ${
                           page === p
                             ? 'bg-terracotta text-white'
-                            : 'border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50'
+                            : 'border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone'
                         }`}
                         data-testid={`payouts-pagination-page-${p}`}
                       >
@@ -810,7 +810,7 @@ const PayoutsTab = () => {
                 <button
                   onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / LIMIT)), p + 1))}
                   disabled={page * LIMIT >= total}
-                  className="px-3 py-1.5 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-sand-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  className="px-3 py-1.5 rounded-xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
                   data-testid="payouts-pagination-next"
                 >
                   <span>Next</span>
@@ -841,9 +841,9 @@ const PayoutDetailsModal = ({ payout, onClose, onProcess, busy }) => {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" data-testid="payout-details-modal">
-      <div className="bg-white rounded-2xl max-w-md w-full border border-sand-200 shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl max-w-md w-full border border-gray-100 shadow-elevated overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-sand-200 flex items-center justify-between bg-sand-50/50">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-stone/50">
           <div className="flex items-center space-x-2">
             <Wallet className="w-5 h-5 text-terracotta" />
             <h3 className="text-md font-bold text-charcoal">Payout Details</h3>
@@ -856,9 +856,9 @@ const PayoutDetailsModal = ({ payout, onClose, onProcess, busy }) => {
         {/* Content */}
         <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
           {/* Status Banner */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-sand-50 border border-sand-100">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-stone border border-sand-100">
             <span className="text-xs uppercase tracking-wider text-charcoal-muted font-bold">Payout Status</span>
-            <span className={`px-2.5 py-1 rounded-lg text-xs font-extrabold uppercase tracking-wide ${
+            <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold tracking-tight uppercase tracking-wide ${
               p.status === 'paid' ? 'bg-green-100 text-green-700' :
               p.status === 'eligible' ? 'bg-yellow-100 text-yellow-700' :
               p.status === 'processing' ? 'bg-blue-100 text-blue-700' :
@@ -869,7 +869,7 @@ const PayoutDetailsModal = ({ payout, onClose, onProcess, busy }) => {
           {/* Host Info */}
           <div>
             <h4 className="text-xs uppercase font-bold tracking-wider text-charcoal-muted mb-2">Host Information</h4>
-            <div className="bg-sand-50/50 rounded-xl p-3.5 border border-sand-100 space-y-1.5 text-xs text-charcoal">
+            <div className="bg-stone/50 rounded-xl p-3.5 border border-sand-100 space-y-1.5 text-xs text-charcoal">
               <div className="flex justify-between">
                 <span className="text-charcoal-light">Name:</span>
                 <span className="font-semibold">{host.full_name || '—'}</span>
@@ -890,16 +890,16 @@ const PayoutDetailsModal = ({ payout, onClose, onProcess, busy }) => {
             <h4 className="text-xs uppercase font-bold tracking-wider text-charcoal-muted mb-2">
               Payment Destination Details
             </h4>
-            <div className="bg-sand-50/50 rounded-xl p-3.5 border border-sand-100 space-y-2 text-xs text-charcoal">
-              <div className="flex justify-between border-b border-sand-200/60 pb-1.5">
+            <div className="bg-stone/50 rounded-xl p-3.5 border border-sand-100 space-y-2 text-xs text-charcoal">
+              <div className="flex justify-between border-b border-gray-100/60 pb-1.5">
                 <span className="text-charcoal-light">Preferred Method:</span>
-                <span className="font-extrabold uppercase text-terracotta tracking-wider">
+                <span className="font-semibold tracking-tight uppercase text-terracotta tracking-wider">
                   {pref.preferred || p.destination_type || 'upi'}
                 </span>
               </div>
-              <div className="flex justify-between border-b border-sand-200/60 pb-1.5">
+              <div className="flex justify-between border-b border-gray-100/60 pb-1.5">
                 <span className="text-charcoal-light">Payout Cycle:</span>
-                <span className="font-extrabold uppercase text-indigo-600 tracking-wider">
+                <span className="font-semibold tracking-tight uppercase text-indigo-600 tracking-wider">
                   {pref.payout_cycle || 'daily'}
                 </span>
               </div>
@@ -907,7 +907,7 @@ const PayoutDetailsModal = ({ payout, onClose, onProcess, busy }) => {
               {(pref.preferred === 'upi' || (!pref.preferred && p.destination_type === 'upi')) ? (
                 <div className="flex justify-between items-center py-0.5">
                   <span className="text-charcoal-light">UPI ID / VPA:</span>
-                  <span className="font-mono font-bold text-sm select-all bg-white px-2 py-0.5 rounded border border-sand-200/80">
+                  <span className="font-mono font-bold text-sm select-all bg-white px-2 py-0.5 rounded border border-gray-100/80">
                     {pref.upi_vpa || p.destination_ref || '—'}
                   </span>
                 </div>
@@ -919,13 +919,13 @@ const PayoutDetailsModal = ({ payout, onClose, onProcess, busy }) => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-charcoal-light">Account Number:</span>
-                    <span className="font-mono font-bold text-sm select-all bg-white px-2 py-0.5 rounded border border-sand-200/80">
+                    <span className="font-mono font-bold text-sm select-all bg-white px-2 py-0.5 rounded border border-gray-100/80">
                       {pref.bank_account_number || p.destination_ref || '—'}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-charcoal-light">IFSC Code:</span>
-                    <span className="font-mono font-bold uppercase select-all bg-white px-2 py-0.5 rounded border border-sand-200/80">
+                    <span className="font-mono font-bold uppercase select-all bg-white px-2 py-0.5 rounded border border-gray-100/80">
                       {pref.bank_ifsc || p.destination_ifsc || '—'}
                     </span>
                   </div>
@@ -940,7 +940,7 @@ const PayoutDetailsModal = ({ payout, onClose, onProcess, busy }) => {
           {/* Booking & Financial Info */}
           <div>
             <h4 className="text-xs uppercase font-bold tracking-wider text-charcoal-muted mb-2">Financial Summary</h4>
-            <div className="bg-sand-50/50 rounded-xl p-3.5 border border-sand-100 space-y-2 text-xs text-charcoal">
+            <div className="bg-stone/50 rounded-xl p-3.5 border border-sand-100 space-y-2 text-xs text-charcoal">
               <div className="flex justify-between">
                 <span className="text-charcoal-light">Property:</span>
                 <span className="font-semibold">{p.property?.title || '—'}</span>
@@ -949,7 +949,7 @@ const PayoutDetailsModal = ({ payout, onClose, onProcess, busy }) => {
                 <span className="text-charcoal-light">Booking ID:</span>
                 <span className="font-mono text-charcoal-muted">{p.booking_id}</span>
               </div>
-              <div className="flex justify-between border-t border-sand-200/60 pt-2">
+              <div className="flex justify-between border-t border-gray-100/60 pt-2">
                 <span className="text-charcoal-light">Gross Booking Amount:</span>
                 <span>{fmtINR(p.gross_amount)}</span>
               </div>
@@ -957,7 +957,7 @@ const PayoutDetailsModal = ({ payout, onClose, onProcess, busy }) => {
                 <span className="text-charcoal-light">Platform Fee (10%):</span>
                 <span className="text-charcoal-muted">-{fmtINR(p.platform_fee)}</span>
               </div>
-              <div className="flex justify-between border-t border-sand-200/60 pt-2 font-bold">
+              <div className="flex justify-between border-t border-gray-100/60 pt-2 font-bold">
                 <span className="text-charcoal">Net Payout Amount:</span>
                 <span className="text-sm text-terracotta">{fmtINR(p.net_amount)}</span>
               </div>
@@ -968,7 +968,7 @@ const PayoutDetailsModal = ({ payout, onClose, onProcess, busy }) => {
           {(p.razorpay_payout_id || p.failure_reason) && (
             <div>
               <h4 className="text-xs uppercase font-bold tracking-wider text-charcoal-muted mb-2">Transaction Info</h4>
-              <div className="bg-sand-50/50 rounded-xl p-3.5 border border-sand-100 text-xs text-charcoal">
+              <div className="bg-stone/50 rounded-xl p-3.5 border border-sand-100 text-xs text-charcoal">
                 {p.razorpay_payout_id && (
                   <div className="flex justify-between">
                     <span className="text-charcoal-light">Razorpay Payout ID:</span>
@@ -986,10 +986,10 @@ const PayoutDetailsModal = ({ payout, onClose, onProcess, busy }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-sand-200 flex items-center justify-end space-x-3 bg-sand-50/50">
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end space-x-3 bg-stone/50">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl border border-sand-300 text-charcoal hover:bg-sand-100 transition text-xs font-semibold"
+            className="px-4 py-2 rounded-xl border border-gray-200 text-charcoal hover:bg-gray-50 transition text-xs font-semibold"
           >
             Close
           </button>
@@ -1064,7 +1064,7 @@ const RefundsTab = () => {
           <>
             <table className="w-full text-sm" data-testid="refunds-table">
               <thead className="text-left text-charcoal-muted uppercase text-xs tracking-wider">
-                <tr className="border-b border-sand-200">
+                <tr className="border-b border-gray-100">
                   <th className="py-2 pr-3">Date</th>
                   <th className="py-2 pr-3">Booking</th>
                   <th className="py-2 pr-3">Guest</th>
@@ -1100,7 +1100,7 @@ const RefundsTab = () => {
                     <td className="py-2 pr-3">{fmtINR(r.original_amount)}</td>
                     <td className="py-2 pr-3 font-bold">{fmtINR(r.refund_amount)}</td>
                     <td className="py-2 pr-3 text-xs">
-                      <span className="px-2 py-0.5 rounded bg-sand-100 font-semibold">
+                      <span className="px-2 py-0.5 rounded bg-gray-50 font-semibold">
                         {r.policy_tier} · {r.refund_percent}%
                       </span>
                     </td>
@@ -1120,16 +1120,16 @@ const RefundsTab = () => {
             {/* Pagination Controls */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-sand-100 no-print" data-testid="refunds-pagination">
               <p className="text-xs text-charcoal-muted font-semibold">
-                Showing <span className="font-extrabold text-charcoal">{(page - 1) * LIMIT + 1}</span> to{' '}
-                <span className="font-extrabold text-charcoal">{Math.min(page * LIMIT, total)}</span> of{' '}
-                <span className="font-extrabold text-charcoal">{total}</span> refunds
+                Showing <span className="font-semibold tracking-tight text-charcoal">{(page - 1) * LIMIT + 1}</span> to{' '}
+                <span className="font-semibold tracking-tight text-charcoal">{Math.min(page * LIMIT, total)}</span> of{' '}
+                <span className="font-semibold tracking-tight text-charcoal">{total}</span> refunds
               </p>
               
               <div className="flex items-center space-x-1.5">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-1.5 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-sand-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  className="px-3 py-1.5 rounded-xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
                   data-testid="refunds-pagination-prev"
                 >
                   <span>Previous</span>
@@ -1160,10 +1160,10 @@ const RefundsTab = () => {
                       <button
                         key={`page-${p}`}
                         onClick={() => setPage(p)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition shadow-sm ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold tracking-tight transition shadow-sm ${
                           page === p
                             ? 'bg-terracotta text-white'
-                            : 'border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50'
+                            : 'border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone'
                         }`}
                         data-testid={`refunds-pagination-page-${p}`}
                       >
@@ -1175,7 +1175,7 @@ const RefundsTab = () => {
                 <button
                   onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / LIMIT)), p + 1))}
                   disabled={page * LIMIT >= total}
-                  className="px-3 py-1.5 rounded-xl border border-sand-300 hover:border-terracotta text-charcoal hover:bg-sand-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-sand-300 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  className="px-3 py-1.5 rounded-xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
                   data-testid="refunds-pagination-next"
                 >
                   <span>Next</span>
@@ -1218,7 +1218,7 @@ const InitiateRefundModal = ({ onClose, onDone }) => {
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" data-testid="refund-modal">
       <div className="bg-white rounded-2xl max-w-md w-full">
-        <div className="px-6 py-4 border-b border-sand-200 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-bold text-charcoal">Initiate refund</h3>
           <button onClick={onClose} data-testid="refund-modal-close">
             <XCircle className="w-5 h-5 text-charcoal-light" />
@@ -1263,10 +1263,10 @@ const InitiateRefundModal = ({ onClose, onDone }) => {
           </div>
           {error && <p className="text-sm text-red-600" data-testid="refund-error">{error}</p>}
         </div>
-        <div className="px-6 py-4 border-t border-sand-200 flex items-center justify-end space-x-3">
+        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-end space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-sand-300 text-charcoal hover:bg-sand-50"
+            className="px-4 py-2 rounded-lg border border-gray-200 text-charcoal hover:bg-stone"
             data-testid="refund-cancel"
           >
             Cancel
@@ -1332,7 +1332,7 @@ const TopHostsTab = () => {
                 <div className="text-xs text-charcoal-muted">+ {fmtINR(h.platform_take_paise)} platform</div>
               </div>
             </div>
-            <div className="h-2 rounded bg-sand-100 overflow-hidden">
+            <div className="h-2 rounded bg-gray-50 overflow-hidden">
               <div
                 className="h-full bg-terracotta"
                 style={{ width: `${(h.gross_paise / max) * 100}%` }}
@@ -1389,7 +1389,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
         }
       `}</style>
       
-      <div id="printable-invoice" className="bg-white rounded-2xl max-w-lg w-full border border-sand-200 shadow-2xl p-6 relative overflow-hidden flex flex-col">
+      <div id="printable-invoice" className="bg-white rounded-2xl max-w-lg w-full border border-gray-100 shadow-elevated p-6 relative overflow-hidden flex flex-col">
         {/* Close Button */}
         <button 
           onClick={onClose} 
@@ -1399,15 +1399,15 @@ const InvoiceModal = ({ transaction, onClose }) => {
         </button>
 
         {/* Invoice Header */}
-        <div className="text-center pb-6 border-b border-dashed border-sand-300">
-          <div className="text-xs uppercase tracking-widest text-terracotta font-extrabold mb-1">Tax Invoice</div>
-          <h2 className="text-2xl font-black text-charcoal tracking-tight">X-SPACE360</h2>
+        <div className="text-center pb-6 border-b border-dashed border-gray-200">
+          <div className="text-xs uppercase tracking-widest text-terracotta font-semibold tracking-tight mb-1">Tax Invoice</div>
+          <h2 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">X-SPACE360</h2>
           <p className="text-xs text-charcoal-muted mt-1">Short-Term Rentals Platform · India</p>
           <p className="text-xs text-charcoal-light">GSTIN: 27AAAAA1111A1Z1</p>
         </div>
 
         {/* Invoice Info */}
-        <div className="grid grid-cols-2 gap-4 py-6 text-xs border-b border-dashed border-sand-300">
+        <div className="grid grid-cols-2 gap-4 py-6 text-xs border-b border-dashed border-gray-200">
           <div>
             <div className="text-charcoal-muted uppercase font-bold tracking-wider mb-1">Customer Details</div>
             <div className="font-bold text-charcoal text-sm">{user.full_name || '—'}</div>
@@ -1427,7 +1427,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
           <div className="text-xs text-charcoal-muted uppercase font-bold tracking-wider mb-3">Itemized Details</div>
           <table className="w-full text-xs text-left">
             <thead>
-              <tr className="border-b border-sand-200 text-charcoal-muted font-bold">
+              <tr className="border-b border-gray-100 text-charcoal-muted font-bold">
                 <th className="py-2">Description</th>
                 <th className="py-2 text-right">Taxable Val.</th>
                 <th className="py-2 text-right">GST (18%)</th>
@@ -1451,13 +1451,13 @@ const InvoiceModal = ({ transaction, onClose }) => {
           </table>
 
           {/* GST breakdown table */}
-          <div className="mt-6 bg-sand-50/50 rounded-xl p-4 border border-sand-100 text-xs">
+          <div className="mt-6 bg-stone/50 rounded-xl p-4 border border-sand-100 text-xs">
             <div className="font-bold text-charcoal-muted uppercase tracking-wider mb-2 text-[10px]">Tax Breakdown</div>
-            <div className="flex justify-between py-1 border-b border-sand-200/60">
+            <div className="flex justify-between py-1 border-b border-gray-100/60">
               <span className="text-charcoal-light">CGST (9%)</span>
               <span className="font-medium text-charcoal">₹{cgst.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between py-1 border-b border-sand-200/60">
+            <div className="flex justify-between py-1 border-b border-gray-100/60">
               <span className="text-charcoal-light">SGST (9%)</span>
               <span className="font-medium text-charcoal">₹{sgst.toFixed(2)}</span>
             </div>
@@ -1469,13 +1469,13 @@ const InvoiceModal = ({ transaction, onClose }) => {
         </div>
 
         {/* Invoice Footer Details */}
-        <div className="border-t border-dashed border-sand-300 pt-6">
+        <div className="border-t border-dashed border-gray-200 pt-6">
           <div className="flex justify-between items-center mb-4">
-            <span className="text-charcoal font-black text-sm uppercase tracking-wider">Total Amount Paid</span>
-            <span className="text-2xl font-black text-terracotta">₹{amountINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+            <span className="text-charcoal font-bold tracking-tight text-sm uppercase tracking-wider">Total Amount Paid</span>
+            <span className="text-2xl font-bold tracking-tight text-terracotta">₹{amountINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
           </div>
 
-          <div className="bg-sand-50 rounded-xl p-3 text-[11px] text-charcoal-muted flex items-center justify-between">
+          <div className="bg-stone rounded-xl p-3 text-[11px] text-charcoal-muted flex items-center justify-between">
             <div>
               <div><span className="font-semibold">Payment Method:</span> Razorpay Online Gateway</div>
               <div><span className="font-semibold">Payment Status:</span> SUCCESS</div>
@@ -1491,7 +1491,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
         <div className="mt-6 flex justify-end space-x-3 no-print">
           <button 
             onClick={onClose}
-            className="px-4 py-2 border border-sand-300 text-charcoal rounded-xl text-xs font-semibold hover:bg-sand-100 transition"
+            className="px-4 py-2 border border-gray-200 text-charcoal rounded-xl text-xs font-semibold hover:bg-gray-50 transition"
           >
             Close
           </button>
