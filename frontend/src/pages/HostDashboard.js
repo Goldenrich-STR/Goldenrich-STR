@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, getImageUrl, accountAPI, uploadAPI, loadRazorpaySdk } from '../services/api';
-import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2, Clock, Users, Landmark, Briefcase, User } from 'lucide-react';
 import { NotificationBell } from '../components/NotificationCenter';
 import LegalLinks from '../components/LegalLinks';
 
@@ -26,10 +26,12 @@ const HostDashboard = () => {
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [verificationSubmitting, setVerificationSubmitting] = useState(false);
   
-  // KYC Documents Form State
+    // KYC Documents Form State
   const [aadharCard, setAadharCard] = useState('');
   const [propertyProof, setPropertyProof] = useState('');
   const [cancelledCheque, setCancelledCheque] = useState('');
+  const [societyNoc, setSocietyNoc] = useState('');
+  const [shopAct, setShopAct] = useState('');
   const [gstCertificate, setGstCertificate] = useState('');
   const [gstNumber, setGstNumber] = useState('');
   const [agreementOwnerName, setAgreementOwnerName] = useState('');
@@ -37,12 +39,14 @@ const HostDashboard = () => {
   const [agreementSignature, setAgreementSignature] = useState('');
   const [verificationConsent, setVerificationConsent] = useState(false);
   
-  // File uploading states
+    // File uploading states
   const [uploadingDocs, setUploadingDocs] = useState({
     aadhar: false,
     property: false,
     cheque: false,
-    gst: false
+    gst: false,
+    society: false,
+    shop_act: false
   });
 
   // Canvas drawing states
@@ -54,6 +58,31 @@ const HostDashboard = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Pre-populate KYC fields from user data if they exist
+  useEffect(() => {
+    if (user && user.kyc_documents) {
+      const aadhar = user.kyc_documents.find(d => d.document_type === 'aadhar_card')?.document_url || '';
+      const prop = user.kyc_documents.find(d => d.document_type === 'property_proof')?.document_url || '';
+      const cheque = user.kyc_documents.find(d => d.document_type === 'cancelled_cheque')?.document_url || '';
+            const society = user.kyc_documents.find(d => d.document_type === 'society_noc')?.document_url || '';
+      const shopActVal = user.kyc_documents.find(d => d.document_type === 'shop_act')?.document_url || '';
+      const gstCert = user.kyc_documents.find(d => d.document_type === 'gst_certificate')?.document_url || '';
+      const gstNum = user.kyc_documents.find(d => d.document_type === 'gst_number')?.document_url || '';
+      
+      setAadharCard(aadhar);
+      setPropertyProof(prop);
+      setCancelledCheque(cheque);
+      setSocietyNoc(society);
+      setShopAct(shopActVal);
+      setGstCertificate(gstCert);
+      setGstNumber(gstNum);
+      
+      if (user.agreement_owner_name) setAgreementOwnerName(user.agreement_owner_name);
+      if (user.agreement_owner_address) setAgreementOwnerAddress(user.agreement_owner_address);
+      if (user.agreement_signature) setAgreementSignature(user.agreement_signature);
+    }
+  }, [user, showVerificationModal]);
 
   const fetchData = async () => {
     try {
@@ -94,11 +123,22 @@ const HostDashboard = () => {
     if (!file) return;
     setUploadingDocs(prev => ({ ...prev, [docType]: true }));
     try {
-      const res = await uploadAPI.uploadImage(file);
+      const res = await uploadAPI.uploadDocument(file);
       if (docType === 'aadhar') setAadharCard(res.url);
       else if (docType === 'property') setPropertyProof(res.url);
       else if (docType === 'cheque') setCancelledCheque(res.url);
       else if (docType === 'gst') setGstCertificate(res.url);
+      else if (docType === 'society') setSocietyNoc(res.url);
+      else if (docType === 'shop_act') setShopAct(res.url);
+      
+      // Save draft immediately to backend database
+      await accountAPI.saveDraftDocument({
+        document_type: docType,
+        document_url: res.url
+      });
+      
+      // Refresh user context to sync state
+      await refreshUser();
     } catch (err) {
       alert(`Failed to upload ${docType}: ` + (err.response?.data?.detail || err.message));
     } finally {
@@ -205,8 +245,18 @@ const HostDashboard = () => {
       const sigFile = new File([u8arr], 'signature.png', { type: mime });
       
       setUploadingDocs(prev => ({ ...prev, gst: true })); // temp loading state
-      const res = await uploadAPI.uploadImage(sigFile);
+      const res = await uploadAPI.uploadDocument(sigFile);
       setAgreementSignature(res.url);
+      
+      // Save draft agreement to backend
+      await accountAPI.saveDraftAgreement({
+        agreement_owner_name: agreementOwnerName,
+        agreement_owner_address: agreementOwnerAddress,
+        agreement_signature: res.url
+      });
+      
+      await refreshUser();
+      
       setShowAgreementModal(false);
       alert('Agreement signed successfully!');
     } catch (err) {
@@ -218,7 +268,7 @@ const HostDashboard = () => {
 
   const handleVerifySubmit = async (e) => {
     e.preventDefault();
-    if (!aadharCard || !propertyProof || !cancelledCheque || !agreementSignature) {
+            if (!aadharCard || !propertyProof || !cancelledCheque || !societyNoc || !shopAct || !agreementSignature) {
       alert('Please upload all mandatory documents and sign the agreement.');
       return;
     }
@@ -228,10 +278,12 @@ const HostDashboard = () => {
     }
     setVerificationSubmitting(true);
     try {
-      await accountAPI.submitHostVerification({
+            await accountAPI.submitHostVerification({
         aadhar_card: aadharCard,
         property_proof: propertyProof,
         cancelled_cheque: cancelledCheque,
+        society_noc: societyNoc || null,
+        shop_act: shopAct || null,
         gst_certificate: gstCertificate || null,
         gst_number: gstNumber || null,
         agreement_owner_name: agreementOwnerName,
@@ -251,6 +303,160 @@ const HostDashboard = () => {
     } finally {
       setVerificationSubmitting(false);
     }
+  };
+
+  const getDocStatus = (docType) => {
+    if (!user || !user.kyc_documents) return null;
+    const doc = user.kyc_documents.find(d => d.document_type === docType);
+    return doc ? doc.status : null;
+  };
+  
+  const getDocRejectionReason = (docType) => {
+    if (!user || !user.kyc_documents) return null;
+    const doc = user.kyc_documents.find(d => d.document_type === docType);
+    return doc ? doc.rejection_reason : null;
+  };
+
+  const renderDocCard = (number, title, description, docType, value, accept, isMandatory, Icon) => {
+        const backendDocTypeMap = {
+      aadhar: 'aadhar_card',
+      property: 'property_proof',
+      cheque: 'cancelled_cheque',
+      society: 'society_noc',
+      shop_act: 'shop_act',
+      gst: 'gst_certificate'
+    };
+    const dbType = backendDocTypeMap[docType];
+    const docStatus = getDocStatus(dbType);
+    const rejectionReason = getDocRejectionReason(dbType);
+
+    return (
+            <div className="bg-white rounded-none border border-sand-200 p-6 shadow-sm flex flex-col justify-between min-h-[18rem] h-auto relative overflow-hidden transition-all duration-300 hover:shadow-premium hover:border-terracotta group">
+        {/* Corner Badge */}
+        <div className="absolute top-0 left-0 bg-terracotta text-white font-black text-[10px] tracking-wider px-3.5 py-1.5 rounded-none shadow-sm">
+          {number}
+        </div>
+
+        <div className="flex flex-col items-center flex-1 w-full">
+          {/* Square Icon Container */}
+          <div className="w-14 h-14 rounded-none bg-sand-50 border border-sand-200 flex items-center justify-center mb-4 group-hover:bg-terracotta/5 transition-colors">
+            <Icon className="w-6 h-6 text-terracotta" />
+          </div>
+
+          <h4 className="text-sm font-black text-charcoal text-center mb-1">
+            {title} {isMandatory && <span className="text-red-500 font-bold ml-1">*</span>}
+          </h4>
+          <p className="text-[11px] text-charcoal-muted font-bold text-center mb-4 leading-normal max-w-[90%]">{description}</p>
+          
+          {/* Optional GST Input for GST Card */}
+                              {docType === 'gst' && (
+            <div className="w-full mb-3 text-left">
+              <label className="text-[8px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">
+                GST Number (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="Enter GST Number"
+                value={gstNumber}
+                onChange={(e) => setGstNumber(e.target.value)}
+                className="w-full px-3 py-2 border border-sand-200 rounded-none text-[11px] outline-none focus:border-terracotta font-semibold"
+              />
+            </div>
+          )}
+
+          {/* Status badge */}
+          {value ? (
+            <div className="flex flex-col items-center mb-4 space-y-1">
+              {docStatus === 'approved' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 border border-green-200 rounded-full text-[9px] font-black uppercase tracking-wider">
+                  <Check className="w-3 h-3" />
+                  Verified
+                </span>
+              ) : docStatus === 'rejected' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-600 border border-red-200 rounded-full text-[9px] font-black uppercase tracking-wider">
+                  <AlertCircle className="w-3 h-3" />
+                  Rejected
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-[9px] font-black uppercase tracking-wider animate-pulse">
+                  <Clock className="w-3 h-3" />
+                  Pending
+                </span>
+              )}
+              {docStatus === 'rejected' && rejectionReason && (
+                <span className="text-[9px] text-red-500 font-bold max-w-[200px] text-center line-clamp-1" title={rejectionReason}>
+                  {rejectionReason}
+                </span>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+                  {/* Bottom Upload/Attachment area */}
+        {value ? (
+          <div className="bg-sand-50/80 border border-sand-200 rounded-none p-3 flex items-center justify-between mt-auto w-full">
+            <div className="flex items-center space-x-2 min-w-0">
+              <div className="bg-red-50 text-red-500 p-2 rounded-none flex-shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div className="text-left min-w-0">
+                <p className="text-[11px] font-black text-charcoal truncate max-w-[100px] sm:max-w-[120px]" title={getFileName(value)}>
+                  {getFileName(value)}
+                </p>
+                <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">
+                  Uploaded File
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <a
+                href={getImageUrl(value)}
+                target="_blank"
+                rel="noreferrer"
+                className="p-1.5 hover:bg-sand-200 rounded-none text-charcoal-muted hover:text-terracotta transition-colors"
+                title="View File"
+              >
+                <Eye className="w-4 h-4" />
+              </a>
+              
+              <label className="p-1.5 hover:bg-sand-200 rounded-none text-charcoal-muted hover:text-terracotta cursor-pointer transition-colors" title="Change File">
+                <Upload className="w-4 h-4" />
+                <input
+                  type="file"
+                  accept={accept}
+                  onChange={(e) => handleDocUpload(e.target.files[0], docType)}
+                  className="hidden"
+                  disabled={uploadingDocs[docType]}
+                />
+              </label>
+            </div>
+          </div>
+        ) : (
+          <label className="w-full border-2 border-dashed border-sand-300 hover:border-terracotta bg-white hover:bg-sand-50/50 rounded-none p-5 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 min-h-[7rem] mt-auto">
+            <div className="bg-sand-50 p-2.5 rounded-none mb-2 flex items-center justify-center">
+              {uploadingDocs[docType] ? (
+                <div className="w-4 h-4 border-2 border-terracotta border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4 text-charcoal-muted" />
+              )}
+            </div>
+            <span className="text-[10px] font-black text-charcoal uppercase tracking-wider text-center">
+              {uploadingDocs[docType] ? 'Uploading...' : 'Upload Document'}
+            </span>
+            <span className="text-[8px] text-charcoal-muted font-bold mt-0.5 text-center">
+              PDF, JPG or PNG (Max. 5MB)
+            </span>
+            <input
+              type="file"
+              accept={accept}
+              onChange={(e) => handleDocUpload(e.target.files[0], docType)}
+              className="hidden"
+              disabled={uploadingDocs[docType]}
+            />
+          </label>
+        )}
+      </div>
+    );
   };
 
   const unusedSubsCount = subscriptions.filter(s => !s.property_id && s.status === 'active').length;
@@ -733,12 +939,10 @@ const HostDashboard = () => {
           </div>
         )}
 
-        {/* Document Verification Modal */}
         {showVerificationModal && (
-          <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[100] flex items-center justify-center p-6 overflow-y-auto">
-            <div className="bg-stone rounded-[3rem] p-10 max-w-3xl w-full shadow-elevated animate-scale-up max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-start mb-8">
-                <div>
+          <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+            <div className="bg-stone rounded-[3rem] max-w-5xl w-full shadow-elevated animate-scale-up max-h-[90vh] flex flex-col overflow-hidden">
+              <div className="flex justify-between items-start p-10 pb-4 border-b border-gray-100 flex-shrink-0">
                   <h3 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight mb-2 flex items-center">
                     <FileText className="w-8 h-8 text-terracotta mr-3" />
                     Document Verification
@@ -750,7 +954,18 @@ const HostDashboard = () => {
                 </button>
               </div>
 
-              <form onSubmit={handleVerifySubmit} className="space-y-6">                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex-1 overflow-y-auto px-10 pb-10 pt-6 custom-modal-scrollbar">
+                <form onSubmit={handleVerifySubmit} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {renderDocCard("01", "KYC - Owner", "Aadhaar Card / PAN Card / Passport of owner", "aadhar", aadharCard, "image/*,application/pdf", true, User)}
+                  {renderDocCard("02", "Property Documents", "Property Tax / Water Tax / MSEB Bill", "property", propertyProof, "image/*,application/pdf", true, Building2)}
+                  {renderDocCard("03", "Society NOC", "If not a society, then Neighbour NOC", "society", societyNoc, "image/*,application/pdf", true, Users)}
+                  {renderDocCard("04", "Cancelled Cheque / Bank Statement", "Latest cancelled cheque or bank statement", "cheque", cancelledCheque, "image/*,application/pdf", true, Landmark)}
+                  {renderDocCard("05", "Shop Act License", "Shop Act registration copy of the business", "shop_act", shopAct, "image/*,application/pdf", true, FileText)}
+                  {renderDocCard("06", "GST Document", "GST Certificate / GST Registration (Optional)", "gst", gstCertificate, "image/*,application/pdf", false, Briefcase)}
+                </div>
+                <div style={{ display: 'none' }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    {/* Card 1: Aadhar Card */}
                    <div className="bg-white p-6 rounded-2xl border border-gray-100 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
                      <div>
@@ -882,6 +1097,7 @@ const HostDashboard = () => {
                    </div>
                  </div>
 
+                </div>
                 {/* Card 5: GR & Owner Agreement */}
                 <div className="bg-white p-6 rounded-2xl border border-gray-100 group hover:border-terracotta transition-all mt-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -916,6 +1132,8 @@ const HostDashboard = () => {
                   </div>
                 </div>
 
+
+
                 {/* Terms Consent */}
                 <label className="flex items-start gap-4 bg-white rounded-2xl border border-gray-100 p-5 cursor-pointer hover:border-terracotta transition-all">
                   <input
@@ -942,15 +1160,16 @@ const HostDashboard = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={verificationSubmitting || !aadharCard || !propertyProof || !cancelledCheque || !agreementSignature || !verificationConsent}
+                    disabled={verificationSubmitting || !aadharCard || !propertyProof || !cancelledCheque || !societyNoc || !shopAct || !agreementSignature || !verificationConsent}
                     className="flex-1 btn-premium py-4 shadow-premium disabled:opacity-40"
                   >
                     {verificationSubmitting ? 'Submitting...' : 'Submit for Verification'}
-                  </button>
+                                    </button>
                 </div>
               </form>
             </div>
           </div>
+        </div>
         )}
 
         {/* Agreement Signing Modal */}

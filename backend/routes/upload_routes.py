@@ -112,6 +112,74 @@ async def upload_image(
         "detected_kind": detected,
     }
 
+ALLOWED_DOC_EXT = {"png", "jpg", "jpeg", "webp", "gif", "pdf"}
+
+
+def _detect_document_kind(data: bytes) -> str | None:
+    if not data or len(data) < 4:
+        return None
+    if data.startswith(b"%PDF"):
+        return "pdf"
+    return _detect_image_kind(data)
+
+
+@router.post("/document")
+async def upload_document(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload a host verification document (PDF or image). Auth required."""
+    if not file.filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No filename")
+
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in ALLOWED_DOC_EXT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported file type .{ext}. Allowed: {', '.join(sorted(ALLOWED_DOC_EXT))}",
+        )
+
+    contents = await file.read()
+    if len(contents) > MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large (max {MAX_BYTES // (1024*1024)} MB)",
+        )
+
+    detected = _detect_document_kind(contents)
+    if detected is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File content does not match any supported document format (pdf, png, jpg, webp, gif)",
+        )
+
+    normalized_claim = "jpg" if ext in ("jpg", "jpeg") else ext
+    if detected != normalized_claim:
+        logger.warning(
+            f"Upload spoof rejected by {current_user['user_id']}: "
+            f"claimed=.{ext} detected={detected}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File content (.{detected}) does not match the .{ext} extension",
+        )
+
+    filename = f"{uuid4().hex}.{ext}"
+    target = UPLOAD_DIR / filename
+    target.write_bytes(contents)
+
+    logger.info(
+        f"Document uploaded by {current_user['user_id']}: {filename} ({len(contents)} bytes, kind={detected})"
+    )
+
+    return {
+        "filename": filename,
+        "url": _public_url(filename),
+        "size": len(contents),
+        "content_type": file.content_type,
+        "detected_kind": detected,
+    }
+
 
 # Video uploads configuration
 ALLOWED_VIDEO_EXT = {"mp4", "mov", "avi", "webm", "mkv"}

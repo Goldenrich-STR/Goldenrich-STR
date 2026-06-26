@@ -1183,10 +1183,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           const Divider(height: 1),
                           const SizedBox(height: 24),
 
-                          // Cook Service Section
-                          if (prop.hasCook || prop.hasSelfCook) ...[
+                          // Cook & Taxi Services Section
+                          if (prop.hasCook || prop.hasSelfCook || prop.hasTaxi) ...[
                             Text(
-                              'Cook & Kitchen Service',
+                              'Services & Kitchen',
                               style: GoogleFonts.manrope(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
@@ -1251,7 +1251,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   ],
                                 ),
                               ),
-                              if (prop.hasSelfCook) const SizedBox(height: 12),
+                              if (prop.hasSelfCook || prop.hasTaxi) const SizedBox(height: 12),
                             ],
                             if (prop.hasSelfCook) ...[
                               Container(
@@ -1305,6 +1305,65 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                         fontWeight: FontWeight.w800,
                                         color: const Color(0xFF10B981),
                                         fontSize: 15,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (prop.hasTaxi) const SizedBox(height: 12),
+                            ],
+                            if (prop.hasTaxi) ...[
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.stone,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppTheme.border, width: 1),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.local_taxi_rounded,
+                                        color: Colors.amber,
+                                        size: 24,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Taxi Service Available',
+                                            style: GoogleFonts.manrope(
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.charcoal,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Taxi or transportation service is available at this property.',
+                                            style: GoogleFonts.manrope(
+                                              color: AppTheme.charcoalMuted,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      'Available',
+                                      style: GoogleFonts.manrope(
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.amber.shade700,
+                                        fontSize: 14,
                                       ),
                                     ),
                                   ],

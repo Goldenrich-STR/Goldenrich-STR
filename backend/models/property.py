@@ -108,6 +108,7 @@ class Property(BaseModel):
     has_cook: bool = False
     cook_price: Optional[float] = None
     has_self_cook: bool = False
+    has_taxi: bool = False
     
     # Status
     status: PropertyStatus = PropertyStatus.DRAFT
@@ -169,6 +170,7 @@ class PropertyCreate(BaseModel):
     has_cook: bool = False
     cook_price: Optional[float] = None
     has_self_cook: bool = False
+    has_taxi: bool = False
     veg_price: Optional[float] = None
     non_veg_price: Optional[float] = None
     guest_size: Optional[int] = None
@@ -208,6 +210,7 @@ class PropertyUpdate(BaseModel):
     has_cook: Optional[bool] = None
     cook_price: Optional[float] = None
     has_self_cook: Optional[bool] = None
+    has_taxi: Optional[bool] = None
     veg_price: Optional[float] = None
     non_veg_price: Optional[float] = None
     guest_size: Optional[int] = None
