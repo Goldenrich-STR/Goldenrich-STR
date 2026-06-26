@@ -241,6 +241,39 @@ async def search_properties(
         # Set cache-control header for property search listings (15 minutes)
         response.headers["Cache-Control"] = "public, max-age=900"
 
+        # Build search-specific SEO metadata
+        seo_title = "Browse Stays & Venues | X-Space360"
+        seo_desc = "Discover top short-term rentals, villas, offices, and venues in India."
+        
+        if city:
+            city_lower = city.strip().lower()
+            if city_lower == "nashik":
+                seo_title = "X-Space360 | Luxury Short-term Rentals in Nashik, Maharashtra"
+                seo_desc = "Book premium villas, commercial spaces & event venues in Nashik. Residential, co-working & banquet halls for short-term rent. Starts ₹6,000/night."
+            else:
+                seo_title = f"Properties in {city.strip().capitalize()} | X-Space360"
+                seo_desc = f"Find and book the best villas, apartments, and commercial spaces in {city.strip().capitalize()} with transparent pricing."
+        elif category:
+            cat_label = "Residential Stays" if category.value == "residential" else "Commercial Spaces" if category.value == "commercial" else "Event Venues"
+            seo_title = f"{cat_label} | X-Space360"
+            seo_desc = f"Explore our premium selection of {cat_label} for your short-term stays, workspaces, and celebrations."
+
+        canonical_params = []
+        if city:
+            canonical_params.append(f"city={city.strip()}")
+        if category:
+            canonical_params.append(f"category={category.value}")
+        canonical_qs = ("?" + "&".join(canonical_params)) if canonical_params else ""
+        
+        seo_data = {
+            "title": seo_title,
+            "description": seo_desc,
+            "keywords": "rental properties, short term stays, villas, venues, co-working",
+            "canonical": f"https://x-space360.in/guest/browse{canonical_qs}",
+            "image": "https://x-space360.in/favicon_rich.jpg",
+            "robots": "index,follow"
+        }
+
         return {
             "properties": properties,
             "total": total,
@@ -261,6 +294,7 @@ async def search_properties(
                 "check_out": check_out,
                 "sort": sort,
             },
+            "seo": seo_data
         }
 
     except HTTPException:
@@ -340,6 +374,27 @@ async def get_property(
 
         # Set cache-control header for property details (30 minutes)
         response.headers["Cache-Control"] = "public, max-age=1800"
+
+        # Generate SEO metadata dynamically with fallback
+        title = property_dict.get("meta_title") or f"{property_dict.get('title')} in {property_dict.get('city')} | X-Space360"
+        description = property_dict.get("meta_description") or f"Book {property_dict.get('title')} in {property_dict.get('city')} with instant confirmation on X-Space360. Best short-term rental."
+        keywords = property_dict.get("meta_keywords") or f"{property_dict.get('property_type')}, {property_dict.get('city')}, holiday home, short term rental"
+        canonical = property_dict.get("canonical_url") or f"https://x-space360.in/property/{property_dict.get('property_id')}"
+        
+        images = property_dict.get("images") or []
+        first_image = images[0] if images else "favicon_rich.jpg"
+        image_url = property_dict.get("og_image") or (first_image if first_image.startswith("http") else f"https://x-space360.in/api/uploads/{first_image}")
+        
+        robots = property_dict.get("robots_index") or "index,follow"
+        
+        property_dict["seo"] = {
+            "title": title,
+            "description": description,
+            "keywords": keywords,
+            "canonical": canonical,
+            "image": image_url,
+            "robots": robots
+        }
 
         return property_dict
 

@@ -271,7 +271,7 @@ const BookingConfirmation = () => {
             onClick={() => navigate('/')}
           >
             <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">
-              x-space360<span className="text-terracotta">.in</span>
+              X-space360<span className="text-terracotta">.in</span>
             </span>
           </div>
           <button 

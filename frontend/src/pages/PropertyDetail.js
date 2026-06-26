@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
+import SEO from '../components/SEO';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
 import {
   ArrowLeft,
@@ -991,15 +992,34 @@ const PropertyDetail = () => {
   }
 
 
+  const seoData = {
+    ...property,
+    reviews: reviews
+  };
+  const seoBreadcrumbs = [
+    { name: "Home", url: "/" },
+    { name: property.category === "residential" ? "Residential" : property.category === "commercial" ? "Commercial" : "Event Venues", url: `/guest/browse?category=${property.category}` },
+    { name: property.city, url: `/guest/browse?city=${property.city}` },
+    { name: property.title, url: `/property/${property.property_id}` }
+  ];
+
   return (
     <div className="min-h-screen bg-sand-50 selection:bg-terracotta selection:text-white">
+      <SEO
+        title={property.title}
+        description={property.description}
+        type="property"
+        data={seoData}
+        breadcrumbs={seoBreadcrumbs}
+        seo={property?.seo}
+      />
       <header className="glass px-4 md:px-8 py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex justify-between items-center w-full gap-2">
           <div 
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">x-space360<span className="text-terracotta">.in</span></span>
+            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
           </div>
           <div className="flex items-center space-x-4 md:space-x-6">
             <LanguageSelector

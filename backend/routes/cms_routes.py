@@ -387,6 +387,16 @@ async def get_landing_page_content(
         # Set cache-control header for public landing page CMS content (5 minutes)
         response.headers["Cache-Control"] = "public, max-age=300"
         
+        # Organize SEO metadata
+        organized_content["seo"] = {
+            "title": "X-Space360 | Premium Short-term Rentals & Event Venues in India",
+            "description": "Discover and book premium villas, corporate offices, co-working spaces, and stunning event venues across India on X-Space360.",
+            "keywords": "short term rentals, luxury villas, event venues, banquet halls, co-working spaces, offices",
+            "canonical": "https://x-space360.in/",
+            "image": "https://x-space360.in/favicon_rich.jpg",
+            "robots": "index,follow"
+        }
+
         return organized_content
     
     except Exception as e:

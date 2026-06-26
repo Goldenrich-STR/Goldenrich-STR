@@ -490,7 +490,7 @@ You can search and filter these directly in the main search pill above!`;
   const currentTranslation = TRANSLATIONS[lang];
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9999] font-sans no-print">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[9999] font-sans no-print">
       {/* Floating Trigger Button */}
       {!isOpen && (
         <button
@@ -508,7 +508,7 @@ You can search and filter these directly in the main search pill above!`;
 
       {/* Chat Window Panel */}
       {isOpen && (
-        <div className="w-[380px] sm:w-[430px] h-[580px] rounded-3xl bg-white/95 backdrop-blur-md border border-sand-200/80 shadow-2xl flex flex-col overflow-hidden animate-scale-up">
+        <div className="w-[calc(100vw-2rem)] sm:w-[430px] h-[500px] sm:h-[580px] rounded-3xl bg-white/95 backdrop-blur-md border border-sand-200/80 shadow-2xl flex flex-col overflow-hidden animate-scale-up">
           {/* Header */}
           <div className="px-6 py-4 bg-charcoal text-white flex items-center justify-between border-b border-sand-800">
             <div className="flex items-center space-x-3">

@@ -2,6 +2,8 @@ import React, { Suspense, lazy } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { HelmetProvider } from "react-helmet-async";
+import SEO from "./components/SEO";
 
 // Pages (Code-splitted with dynamic lazy imports)
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -53,7 +55,12 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/" replace />;
   }
 
-  return children;
+  return (
+    <>
+      <SEO robots="noindex,nofollow" />
+      {children}
+    </>
+  );
 };
 
 // Role-based redirect
@@ -129,141 +136,143 @@ const GlobalAlertDialog = () => {
 function App() {
   return (
     <div className="App">
-      <BrowserRouter>
-        <AuthProvider>
-          <GlobalAlertDialog />
-          <Suspense fallback={<ScreenLoading />}>
-            <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<AuthPage />} />
-            <Route path="/register" element={<AuthPage />} />
-            <Route path="/admin" element={<AuthPage isAdminLogin={true} />} />
-            <Route path="/admin/login" element={<AuthPage isAdminLogin={true} />} />
-            <Route path="/property/:id" element={<PropertyDetail />} />
-            <Route path="/sso/goldenrich/callback" element={<SsoCallback />} />
+      <HelmetProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <GlobalAlertDialog />
+            <Suspense fallback={<ScreenLoading />}>
+              <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<AuthPage />} />
+              <Route path="/register" element={<AuthPage />} />
+              <Route path="/admin" element={<AuthPage isAdminLogin={true} />} />
+              <Route path="/admin/login" element={<AuthPage isAdminLogin={true} />} />
+              <Route path="/property/:id" element={<PropertyDetail />} />
+              <Route path="/sso/goldenrich/callback" element={<SsoCallback />} />
 
-            {/* Role-based Dashboard Redirect */}
-            <Route path="/dashboard" element={<RoleBasedRedirect />} />
+              {/* Role-based Dashboard Redirect */}
+              <Route path="/dashboard" element={<RoleBasedRedirect />} />
 
-            {/* Guest Routes */}
-            <Route path="/guest/browse" element={<GuestBrowse />} />
-            <Route
-              path="/guest/booking-confirmation"
-              element={
-                <ProtectedRoute allowedRoles={["guest"]}>
-                  <BookingConfirmation />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/guest/bookings"
-              element={
-                <ProtectedRoute allowedRoles={["guest"]}>
-                  <GuestBookings />
-                </ProtectedRoute>
-              }
-            />
+              {/* Guest Routes */}
+              <Route path="/guest/browse" element={<GuestBrowse />} />
+              <Route
+                path="/guest/booking-confirmation"
+                element={
+                  <ProtectedRoute allowedRoles={["guest"]}>
+                    <BookingConfirmation />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/guest/bookings"
+                element={
+                  <ProtectedRoute allowedRoles={["guest"]}>
+                    <GuestBookings />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Host Routes */}
-            <Route
-              path="/host/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={["host"]}>
-                  <HostDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/host/calendar"
-              element={
-                <ProtectedRoute allowedRoles={["host"]}>
-                  <HostCalendar />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/host/list-property"
-              element={
-                <ProtectedRoute allowedRoles={["host", "admin"]}>
-                  <HostListProperty />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/host/payouts"
-              element={
-                <ProtectedRoute allowedRoles={["host"]}>
-                  <HostPayouts />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/host/bookings"
-              element={
-                <ProtectedRoute allowedRoles={["host"]}>
-                  <HostBookings />
-                </ProtectedRoute>
-              }
-            />
+              {/* Host Routes */}
+              <Route
+                path="/host/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={["host"]}>
+                    <HostDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/host/calendar"
+                element={
+                  <ProtectedRoute allowedRoles={["host"]}>
+                    <HostCalendar />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/host/bookings"
+                element={
+                  <ProtectedRoute allowedRoles={["host"]}>
+                    <HostBookings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/host/payouts"
+                element={
+                  <ProtectedRoute allowedRoles={["host"]}>
+                    <HostPayouts />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/host/list-property"
+                element={
+                  <ProtectedRoute allowedRoles={["host"]}>
+                    <HostListProperty />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Broker Routes */}
-            <Route
-              path="/broker/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={["broker"]}>
-                  <BrokerDashboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* Employee Routes */}
+              <Route
+                path="/employee/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={["employee"]}>
+                    <EmployeeDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Employee Routes */}
-            <Route
-              path="/employee/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={["employee"]}>
-                  <EmployeeDashboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* Broker Routes */}
+              <Route
+                path="/broker/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={["broker"]}>
+                    <BrokerDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Admin Routes */}
-            <Route
-              path="/admin/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/account"
-              element={
-                <ProtectedRoute allowedRoles={["admin"]}>
-                  <AdminAccount />
-                </ProtectedRoute>
-              }
-            />
+              {/* Admin Routes */}
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/account"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminAccount />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* 404 */}
-            <Route
-              path="*"
-              element={
-                <div className="min-h-screen bg-sand-50 flex items-center justify-center">
-                  <div className="text-center">
-                    <h1 className="text-6xl font-extrabold text-terracotta mb-4">404</h1>
-                    <p className="text-charcoal-light mb-6">Page not found</p>
-                    <a href="/" className="btn-primary">
-                      Go Home
-                    </a>
+              {/* 404 */}
+              <Route
+                path="*"
+                element={
+                  <div className="min-h-screen bg-sand-50 flex items-center justify-center">
+                    <div className="text-center">
+                      <h1 className="text-6xl font-extrabold text-terracotta mb-4">404</h1>
+                      <p className="text-charcoal-light mb-6">Page not found</p>
+                      <a href="/" className="btn-primary">
+                        Go Home
+                      </a>
+                    </div>
                   </div>
-                </div>
-              }
-            />
-          </Routes>
-        </Suspense>
-      </AuthProvider>
-      </BrowserRouter>
+                }
+              />
+            </Routes>
+          </Suspense>
+        </AuthProvider>
+        </BrowserRouter>
+      </HelmetProvider>
     </div>
   );
 }

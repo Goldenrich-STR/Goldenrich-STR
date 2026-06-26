@@ -76,7 +76,7 @@ const HostPayouts = () => {
             className="flex items-center space-x-3 cursor-pointer group" 
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">x-space360<span className="text-terracotta">.in</span></span>
+            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
             <h1 className="text-xl font-black text-charcoal tracking-tighter">
               HOST<span className="text-terracotta">CENTRAL</span>
             </h1>

@@ -1497,28 +1497,9 @@ class _LandingScreenState extends State<LandingScreen> {
   Widget _buildFooter(BuildContext context) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 32.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
       child: Column(
         children: [
-          Text(
-            'X-Space360.in',
-            style: GoogleFonts.outfit(
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-              color: AppTheme.charcoal,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Redefining short-term rentals in India through curation, technology, and superior service.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.manrope(
-              fontSize: 11,
-              color: AppTheme.charcoalMuted,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 24),
           const Divider(color: AppTheme.stone),
           const SizedBox(height: 16),
           Text(
