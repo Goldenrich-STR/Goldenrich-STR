@@ -369,15 +369,20 @@ async def update_kyc_status(
             if user and user.get("email") and user.get("role") == "host":
                 from services.email_service import email_service
                 template = "host_approved" if kyc_status.value == "approved" else "host_documents_rejected"
-                email_service.send_template(
+                email_result = email_service.send_template(
                     user["email"],
                     template,
                     {
-                        "name": user.get("full_name", "there"),
-                        "remarks": remarks or "",
-                        "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip() + "/host/dashboard",
-                    },
+                            "name": user.get("full_name", "there"),
+                            "remarks": remarks or "",
+                            "reason": remarks or "",
+                            "rejection_reason": remarks or "",
+                            "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip() + "/host/dashboard",
+                        },
                 )
+                logger.info("KYC status email result for %s: %s", user_id, email_result)
+                if not email_result.get("success"):
+                    logger.warning("KYC status email failed for %s: %s", user_id, email_result)
         except Exception as email_err:
             logger.warning("KYC status email failed for %s: %s", user_id, email_err)
         
@@ -441,15 +446,21 @@ async def update_kyc_document_status(
             try:
                 if user.get("email"):
                     from services.email_service import email_service
-                    email_service.send_template(
+                    email_result = email_service.send_template(
                         user["email"],
                         "host_documents_rejected",
                         {
                             "name": user.get("full_name", "there"),
+                            "document_type": payload.document_type,
                             "remarks": payload.rejection_reason or f"{payload.document_type} was rejected.",
+                            "reason": payload.rejection_reason or f"{payload.document_type} was rejected.",
+                            "rejection_reason": payload.rejection_reason or f"{payload.document_type} was rejected.",
                             "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip() + "/host/dashboard",
                         },
                     )
+                    logger.info("KYC document rejection email result for %s: %s", user_id, email_result)
+                    if not email_result.get("success"):
+                        logger.warning("KYC document rejection email failed for %s: %s", user_id, email_result)
             except Exception as email_err:
                 logger.warning("KYC document rejection email failed for %s: %s", user_id, email_err)
         

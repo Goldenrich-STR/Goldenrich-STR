@@ -23,6 +23,37 @@ def _text(value, fallback: str = "N/A") -> str:
     return html.escape(str(value))
 
 
+def _clean_msg91_value(value) -> str:
+    """Keep template variables plain so MSG91 does not render pasted code fences."""
+    if value is None:
+        return ""
+    text = str(value).strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].strip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    return text
+
+
+def _support_email() -> str:
+    return (
+        os.getenv("SUPPORT_EMAIL", "").strip()
+        or os.getenv("EMAIL_SUPPORT_ADDRESS", "").strip()
+        or "support@x-space360.com"
+    )
+
+
+def _support_phone() -> str:
+    return (
+        os.getenv("SUPPORT_PHONE", "").strip()
+        or os.getenv("SUPPORT_NUMBER", "").strip()
+        or "+91 8484826247"
+    )
+
+
 class EmailService:
     """SMTP-backed email notification service with X-Space360 templates."""
 
@@ -59,8 +90,37 @@ class EmailService:
         )
 
     def _template_id_for(self, template: str) -> str:
-        key = f"MSG91_EMAIL_TEMPLATE_{template.upper()}".replace("-", "_")
-        return os.getenv(key, "").strip()
+        normalized = template.upper().replace("-", "_")
+        candidates = [f"MSG91_EMAIL_TEMPLATE_{normalized}"]
+        aliases = {
+            "SUBSCRIPTION_EXPIRING": [
+                "MSG91_EMAIL_TEMPLATE_SUBSCRIPTION_RENEWAL_REMINDER",
+            ],
+            "SUBSCRIPTION_RENEWAL_REMINDER": [
+                "MSG91_EMAIL_TEMPLATE_SUBSCRIPTION_RENEWAL_REMINDER",
+                "MSG91_EMAIL_TEMPLATE_SUBSCRIPTION_EXPIRING",
+            ],
+            "PAYMENT_CONFIRMATION": [
+                "MSG91_EMAIL_TEMPLATE_PAYMENT_CONFIRMATION",
+                "MSG91_EMAIL_TEMPLATE_SUBSCRIPTION_ACTIVATED",
+            ],
+            "NEW_BOOKING": [
+                "MSG91_EMAIL_TEMPLATE_NEW_BOOKING",
+                "MSG91_EMAIL_TEMPLATE_BOOKING_CONFIRMATION",
+            ],
+            "TERMS_AND_CONDITIONS": [
+                "MSG91_EMAIL_TEMPLATE_TERMS_AND_CONDITIONS",
+            ],
+            "PRIVACY_POLICY_UPDATE": [
+                "MSG91_EMAIL_TEMPLATE_PRIVACY_POLICY_UPDATE",
+            ],
+        }
+        candidates.extend(aliases.get(normalized, []))
+        for key in candidates:
+            value = os.getenv(key, "").strip()
+            if value:
+                return value
+        return ""
 
     def _variables_for(self, template: str, data: Dict, subject: str, title: str, cta_url: str) -> Dict:
         name = data.get("name") or data.get("guest_name") or data.get("host_name") or "there"
@@ -80,6 +140,8 @@ class EmailService:
         reason = data.get("reason") or data.get("Reason") or ""
         remarks = data.get("remarks") or data.get("Remarks") or reason
         reset_link = cta_url if template == "password_reset" else data.get("reset_link", "")
+        support_email = data.get("support_email") or data.get("Support_Email") or _support_email()
+        support_phone = data.get("support_phone") or data.get("support_number") or data.get("Support_Number") or _support_phone()
         variables = {
             "name": name,
             "host_name": data.get("host_name") or name,
@@ -119,7 +181,16 @@ class EmailService:
             "property_url": data.get("property_url") or cta_url,
             "booking_url": data.get("booking_url") or cta_url,
             "invoice_url": data.get("invoice_url") or cta_url,
-            "support_email": "support@x-space360.com",
+            "upload_corrected_documents_url": cta_url,
+            "reupload_documents_url": cta_url,
+            "documents_url": cta_url,
+            "rejection_reason": remarks,
+            "reason_for_rejection": remarks,
+            "document_type": data.get("document_type") or data.get("Document_Type") or "",
+            "support_email": support_email,
+            "support_phone": support_phone,
+            "support_number": support_phone,
+            "contact_number": support_phone,
             "subject": subject,
             "title": title,
         }
@@ -167,13 +238,23 @@ class EmailService:
             "Property_URL": data.get("property_url") or cta_url,
             "Booking_URL": data.get("booking_url") or cta_url,
             "Invoice_URL": data.get("invoice_url") or cta_url,
-            "Support_Email": "support@x-space360.com",
+            "Upload_Corrected_Documents_URL": cta_url,
+            "Reupload_Documents_URL": cta_url,
+            "Documents_URL": cta_url,
+            "Rejection_Reason": remarks,
+            "Reason_For_Rejection": remarks,
+            "Reason_for_Rejection": remarks,
+            "Document_Type": data.get("document_type") or data.get("Document_Type") or "",
+            "Support_Email": support_email,
+            "Support_Phone": support_phone,
+            "Support_Number": support_phone,
+            "Contact_Number": support_phone,
         }
         variables.update(title_case_aliases)
         for index, value in enumerate(list(variables.values())[:20], start=1):
             variables[f"var{index}"] = value
             variables[f"VAR{index}"] = value
-        return {k: "" if v is None else str(v) for k, v in variables.items()}
+        return {k: _clean_msg91_value(v) for k, v in variables.items()}
 
     def _send_msg91_template(self, to_email: str, template: str, subject: str, title: str, cta_url: str, data: Dict) -> Dict:
         template_id = self._template_id_for(template)
@@ -353,6 +434,17 @@ class EmailService:
             title = "Subscription payment failed"
             body = f"<p>Dear {_text(name)},</p><p>We could not activate your subscription because the payment failed.</p>{details}<p>Please try again.</p>"
             cta_label = "Retry Payment"
+        elif template in {"subscription_expiring", "subscription_renewal_reminder"}:
+            days_remaining = data.get("days_remaining") or data.get("Days_Remaining") or ""
+            subject = "Subscription renewal reminder"
+            title = "Your subscription renewal is coming up"
+            body = f"<p>Dear {_text(name)},</p><p>Your X-Space360 subscription is due for renewal{f' in {_text(days_remaining)} days' if days_remaining else ''}.</p>{details}"
+            cta_label = "Renew Subscription"
+        elif template == "payment_confirmation":
+            subject = "Payment confirmation"
+            title = "Payment received"
+            body = f"<p>Dear {_text(name)},</p><p>Your payment has been received successfully.</p>{details}"
+            cta_label = "View Payment"
         elif template == "invoice_sent":
             subject = data.get("subject") or "Invoice from X-Space360"
             title = "Invoice shared"
@@ -381,6 +473,23 @@ class EmailService:
             subject = f"Booking cancelled - {property_title}"
             title = "Booking cancelled"
             body = f"<p>Dear {_text(name)},</p><p>Your booking has been cancelled.</p>{details}"
+        elif template == "new_booking":
+            subject = f"New booking - {property_title}"
+            title = "You have a new booking"
+            body = f"<p>Dear {_text(name)},</p><p>A new booking has been created for <strong>{_text(property_title)}</strong>.</p>{details}"
+            cta_label = "View Booking"
+        elif template == "terms_and_conditions":
+            subject = "Terms and conditions update"
+            title = "Terms and conditions updated"
+            body = f"<p>Dear {_text(name)},</p><p>Our terms and conditions have been updated. Please review the latest version.</p>"
+            cta_label = "Review Terms"
+            cta_url = data.get("terms_url") or os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/") + "/terms-and-conditions"
+        elif template == "privacy_policy_update":
+            subject = "Privacy policy update"
+            title = "Privacy policy updated"
+            body = f"<p>Dear {_text(name)},</p><p>Our privacy policy has been updated. Please review the latest version.</p>"
+            cta_label = "Review Privacy Policy"
+            cta_url = data.get("privacy_url") or os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/") + "/privacy-policy"
         else:
             body = f"<p>Dear {_text(name)},</p><p>{_text(data.get('message', 'You have a new update from X-Space360.'))}</p>{details}"
 
