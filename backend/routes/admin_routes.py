@@ -373,10 +373,12 @@ async def update_kyc_status(
                     user["email"],
                     template,
                     {
-                        "name": user.get("full_name", "there"),
-                        "remarks": remarks or "",
-                        "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip() + "/host/dashboard",
-                    },
+                            "name": user.get("full_name", "there"),
+                            "remarks": remarks or "",
+                            "reason": remarks or "",
+                            "rejection_reason": remarks or "",
+                            "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip() + "/host/dashboard",
+                        },
                 )
                 logger.info("KYC status email result for %s: %s", user_id, email_result)
                 if not email_result.get("success"):
@@ -451,6 +453,8 @@ async def update_kyc_document_status(
                             "name": user.get("full_name", "there"),
                             "document_type": payload.document_type,
                             "remarks": payload.rejection_reason or f"{payload.document_type} was rejected.",
+                            "reason": payload.rejection_reason or f"{payload.document_type} was rejected.",
+                            "rejection_reason": payload.rejection_reason or f"{payload.document_type} was rejected.",
                             "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip() + "/host/dashboard",
                         },
                     )

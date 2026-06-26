@@ -38,6 +38,22 @@ def _clean_msg91_value(value) -> str:
     return text
 
 
+def _support_email() -> str:
+    return (
+        os.getenv("SUPPORT_EMAIL", "").strip()
+        or os.getenv("EMAIL_SUPPORT_ADDRESS", "").strip()
+        or "support@x-space360.com"
+    )
+
+
+def _support_phone() -> str:
+    return (
+        os.getenv("SUPPORT_PHONE", "").strip()
+        or os.getenv("SUPPORT_NUMBER", "").strip()
+        or "+91 8484826247"
+    )
+
+
 class EmailService:
     """SMTP-backed email notification service with X-Space360 templates."""
 
@@ -124,6 +140,8 @@ class EmailService:
         reason = data.get("reason") or data.get("Reason") or ""
         remarks = data.get("remarks") or data.get("Remarks") or reason
         reset_link = cta_url if template == "password_reset" else data.get("reset_link", "")
+        support_email = data.get("support_email") or data.get("Support_Email") or _support_email()
+        support_phone = data.get("support_phone") or data.get("support_number") or data.get("Support_Number") or _support_phone()
         variables = {
             "name": name,
             "host_name": data.get("host_name") or name,
@@ -163,7 +181,16 @@ class EmailService:
             "property_url": data.get("property_url") or cta_url,
             "booking_url": data.get("booking_url") or cta_url,
             "invoice_url": data.get("invoice_url") or cta_url,
-            "support_email": "support@x-space360.com",
+            "upload_corrected_documents_url": cta_url,
+            "reupload_documents_url": cta_url,
+            "documents_url": cta_url,
+            "rejection_reason": remarks,
+            "reason_for_rejection": remarks,
+            "document_type": data.get("document_type") or data.get("Document_Type") or "",
+            "support_email": support_email,
+            "support_phone": support_phone,
+            "support_number": support_phone,
+            "contact_number": support_phone,
             "subject": subject,
             "title": title,
         }
@@ -211,7 +238,17 @@ class EmailService:
             "Property_URL": data.get("property_url") or cta_url,
             "Booking_URL": data.get("booking_url") or cta_url,
             "Invoice_URL": data.get("invoice_url") or cta_url,
-            "Support_Email": "support@x-space360.com",
+            "Upload_Corrected_Documents_URL": cta_url,
+            "Reupload_Documents_URL": cta_url,
+            "Documents_URL": cta_url,
+            "Rejection_Reason": remarks,
+            "Reason_For_Rejection": remarks,
+            "Reason_for_Rejection": remarks,
+            "Document_Type": data.get("document_type") or data.get("Document_Type") or "",
+            "Support_Email": support_email,
+            "Support_Phone": support_phone,
+            "Support_Number": support_phone,
+            "Contact_Number": support_phone,
         }
         variables.update(title_case_aliases)
         for index, value in enumerate(list(variables.values())[:20], start=1):
