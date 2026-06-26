@@ -517,7 +517,7 @@ const GuestBrowse = () => {
   }
 
   const indiaCenter = [20.5937, 78.9629];  return (
-    <div className="min-h-screen bg-sand-50 flex flex-col selection:bg-terracotta selection:text-white">
+    <div className="min-h-screen bg-stone flex flex-col selection:bg-terracotta selection:text-white">
       <SEO
         title={filters.city ? `Properties in ${filters.city}` : "Browse Properties"}
         description="Browse luxury villas, premium offices, event spaces, and short-term rentals on X-Space360."
@@ -527,13 +527,13 @@ const GuestBrowse = () => {
         seo={seoData}
       />
       {/* Header */}
-      <header className="relative z-40 glass px-4 md:px-8 py-4 border-b border-sand-200" data-testid="guest-header">
+      <header className="relative z-40 glass px-4 md:px-8 py-4 border-b border-gray-100" data-testid="guest-header">
         <div className="w-full flex justify-between items-center gap-2">
           <div 
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
+            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
           </div>
           <div className="hidden md:flex items-center space-x-4 md:space-x-6">
             {/* Language Selector */}
@@ -551,7 +551,7 @@ const GuestBrowse = () => {
 
             <button
               onClick={() => setShowWishlistOnly(prev => !prev)}
-              className={`text-[10px] font-black tracking-widest transition-colors uppercase flex items-center space-x-1 ${
+              className={`text-[10px] font-bold tracking-tight tracking-widest transition-colors uppercase flex items-center space-x-1 ${
                 showWishlistOnly ? 'text-red-500' : 'text-charcoal-muted hover:text-terracotta'
               }`}
             >
@@ -562,7 +562,7 @@ const GuestBrowse = () => {
             <div className="h-4 w-[1px] bg-sand-300"></div>
 
             {user && (
-              <div className="hidden sm:flex items-center space-x-3 px-4 py-1.5 bg-sand-100 rounded-full border border-sand-200">
+              <div className="hidden sm:flex items-center space-x-3 px-4 py-1.5 bg-gray-50 rounded-full border border-gray-100">
                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                  <span className="text-sm font-bold text-charcoal">{t('hi')}, {user.full_name?.split(' ')[0]}</span>
               </div>
@@ -571,13 +571,13 @@ const GuestBrowse = () => {
               <>
                 <button
                   onClick={() => navigate('/guest/bookings')}
-                  className="text-[10px] font-black text-charcoal-muted hover:text-terracotta tracking-widest transition-colors uppercase"
+                  className="text-[10px] font-bold tracking-tight text-charcoal-muted hover:text-terracotta tracking-widest transition-colors uppercase"
                 >
                   {t('myBookings')}
                 </button>
                 <button
                   onClick={logout}
-                  className="text-[10px] font-black text-terracotta hover:underline tracking-widest uppercase"
+                  className="text-[10px] font-bold tracking-tight text-terracotta hover:underline tracking-widest uppercase"
                 >
                   {t('signOut')}
                 </button>
@@ -605,10 +605,10 @@ const GuestBrowse = () => {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[100] bg-white flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-charcoal md:hidden">
           <div className="flex justify-between items-center mb-12">
-            <h1 className="text-2xl font-black tracking-tight cursor-pointer text-charcoal" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
+            <h1 className="text-2xl font-bold tracking-tight tracking-tight cursor-pointer text-charcoal" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
               X-space360<span className="text-terracotta">.in</span>
             </h1>
-            <button onClick={() => setIsMobileMenuOpen(false)} className="text-charcoal hover:text-terracotta transition p-2 bg-sand-100 rounded-full">
+            <button onClick={() => setIsMobileMenuOpen(false)} className="text-charcoal hover:text-terracotta transition p-2 bg-gray-50 rounded-full">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -616,12 +616,12 @@ const GuestBrowse = () => {
           <div className="flex flex-col space-y-6 flex-1">
             <button
               onClick={() => { setIsMobileMenuOpen(false); setShowWishlistOnly(prev => !prev); }}
-              className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-sand-200"
+              className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-gray-100"
             >
               <span>{showWishlistOnly ? 'Show All Spaces' : 'Wishlist'}</span>
               <Heart className={`w-6 h-6 ${showWishlistOnly ? 'text-red-500 fill-red-500' : 'text-charcoal-muted'}`} />
             </button>
-            <div className="py-2 border-b border-sand-200 flex items-center justify-between">
+            <div className="py-2 border-b border-gray-100 flex items-center justify-between">
               <span className="text-2xl font-bold">Language</span>
               <LanguageSelector
                 currentLang={lang}
@@ -636,7 +636,7 @@ const GuestBrowse = () => {
               <>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/bookings'); }}
-                  className="text-left text-2xl font-bold text-terracotta py-2 border-b border-sand-200"
+                  className="text-left text-2xl font-bold text-terracotta py-2 border-b border-gray-100"
                 >
                   {t('myBookings')}
                 </button>
@@ -651,13 +651,13 @@ const GuestBrowse = () => {
               <>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }}
-                  className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-sand-200"
+                  className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-gray-100"
                 >
                   {t('signIn')}
                 </button>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); navigate('/register'); }}
-                  className="mt-8 bg-terracotta hover:bg-terracotta-hover text-white font-bold py-4 rounded-xl text-center shadow-lg transition"
+                  className="mt-8 bg-terracotta hover:bg-terracotta-hover text-white font-bold py-4 rounded-xl text-center shadow-premium transition"
                 >
                   Get Started
                 </button>
@@ -668,7 +668,7 @@ const GuestBrowse = () => {
       )}
 
       {/* Top Search Bar */}
-      <div className="bg-white/80 backdrop-blur sticky top-0 z-30 px-4 md:px-8 py-4 border-b border-sand-200 shadow-sm relative">
+      <div className="bg-white/80 backdrop-blur sticky top-0 z-30 px-4 md:px-8 py-4 border-b border-gray-100 shadow-sm relative">
         {/* Transparent overlay to close active dropdowns on clicking outside */}
         {activeDropdown && (
           <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActiveDropdown(null)} />
@@ -677,7 +677,7 @@ const GuestBrowse = () => {
         <div className="w-full max-w-5xl mx-auto relative z-50">
           <form
             onSubmit={handleSearch}
-            className="flex flex-col md:flex-row items-center bg-white rounded-2xl md:rounded-full w-full shadow-2xl border border-gray-100 relative z-50 animate-fade-in"
+            className="flex flex-col md:flex-row items-center bg-white rounded-2xl md:rounded-full w-full shadow-elevated border border-gray-100 relative z-50 animate-fade-in"
           >
               
               {/* Location */}
@@ -688,7 +688,7 @@ const GuestBrowse = () => {
                 >
                   <MapPin className="w-5 h-5 text-gray-400 mr-3" />
                   <div className="w-full text-left">
-                    <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">Where</p>
+                    <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">Where</p>
                     <input
                       id="browse-destination"
                       name="destination"
@@ -708,8 +708,8 @@ const GuestBrowse = () => {
 
                 {/* Airbnb-style Suggested Destinations Dropdown */}
                 {activeDropdown === 'location' && (
-                  <div className="absolute left-0 top-full mt-3 w-80 bg-white border border-sand-200 rounded-3xl shadow-2xl z-50 p-4 max-h-96 overflow-y-auto">
-                    <p className="text-xs font-black text-gray-400 uppercase tracking-wider mb-3 px-2">Suggested destinations</p>
+                  <div className="absolute left-0 top-full mt-3 w-80 bg-white border border-gray-100 rounded-3xl shadow-elevated z-50 p-4 max-h-96 overflow-y-auto">
+                    <p className="text-xs font-bold tracking-tight text-gray-400 uppercase tracking-wider mb-3 px-2">Suggested destinations</p>
                     <div className="space-y-1">
                       {SUGGESTED_DESTINATIONS.filter(dest => 
                         !filters.city || 
@@ -723,9 +723,9 @@ const GuestBrowse = () => {
                             setFilters({ ...filters, city: dest.city });
                             setActiveDropdown(null);
                           }}
-                          className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-sand-50 transition text-left"
+                          className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-stone transition text-left"
                         >
-                          <div className="w-10 h-10 rounded-full bg-sand-100 flex items-center justify-center shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
                             {dest.icon ? <dest.icon className="w-5 h-5 text-gray-500" /> : <MapPin className="w-5 h-5 text-gray-500" />}
                           </div>
                           <div>
@@ -751,7 +751,7 @@ const GuestBrowse = () => {
               <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
                 <Calendar className="w-5 h-5 text-gray-400 mr-3" />
                 <div className="w-full text-left">
-                  <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">When</p>
+                  <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
                   <input
                     id="browse-check-in"
                     name="checkIn"
@@ -772,7 +772,7 @@ const GuestBrowse = () => {
               <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
                 <Calendar className="w-5 h-5 text-gray-400 mr-3" />
                 <div className="w-full text-left">
-                  <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">When</p>
+                  <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
                   <input
                     id="browse-check-out"
                     name="checkOut"
@@ -799,7 +799,7 @@ const GuestBrowse = () => {
                 >
                   <User className="w-5 h-5 text-gray-400 mr-3" />
                   <div className="text-left">
-                    <p className="text-xs text-gray-400 font-extrabold uppercase tracking-wider">Who</p>
+                    <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">Who</p>
                     <p className="text-charcoal font-bold text-sm mt-0.5 whitespace-nowrap">
                       {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
                     </p>
@@ -807,7 +807,7 @@ const GuestBrowse = () => {
                 </div>
                 
                 {activeDropdown === 'guests' && (
-                  <div className="absolute right-0 top-full mt-3 w-72 bg-white border border-sand-200 rounded-3xl shadow-2xl z-50 p-6 space-y-5">
+                  <div className="absolute right-0 top-full mt-3 w-72 bg-white border border-gray-100 rounded-3xl shadow-elevated z-50 p-6 space-y-5">
                     {/* Adults Row */}
                     <div className="flex items-center justify-between">
                       <div className="text-left">
@@ -883,7 +883,7 @@ const GuestBrowse = () => {
 
                 <button
                   type="submit"
-                  className="w-12 h-12 rounded-full bg-terracotta hover:bg-terracotta/90 text-white flex items-center justify-center transition-all duration-300 shadow-md cursor-pointer"
+                  className="w-12 h-12 rounded-full bg-terracotta hover:bg-terracotta/90 text-white flex items-center justify-center transition-all duration-300 shadow-subtle cursor-pointer"
                   title={t('findSpaces')}
                 >
                   <Search className="w-5 h-5 text-white" />
@@ -895,14 +895,14 @@ const GuestBrowse = () => {
       </div>
       {/* Advanced filters drawer */}
       {showFilters && (
-        <div className="bg-sand-50 border-b border-sand-200 px-4 md:px-8 py-8 animate-slide-up" data-testid="advanced-filters">
+        <div className="bg-stone border-b border-gray-100 px-4 md:px-8 py-8 animate-slide-up" data-testid="advanced-filters">
           <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('propertyType')}</label>
+              <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('propertyType')}</label>
               <select
                 value={filters.property_type}
                 onChange={(e) => setFilters({ ...filters, property_type: e.target.value })}
-                className="w-full bg-white border-sand-300 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none"
               >
                 {PROPERTY_TYPES.map((tOpt) => (
                   <option key={tOpt.value} value={tOpt.value}>{tOpt.label}</option>
@@ -910,13 +910,13 @@ const GuestBrowse = () => {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">
+              <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] ml-1">
                 {usesCommercialSizeFilter ? 'Size' : t('bhkConfig')}
               </label>
               <select
                 value={filters.bhk_type}
                 onChange={(e) => setFilters({ ...filters, bhk_type: e.target.value })}
-                className="w-full bg-white border-sand-300 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none"
               >
                 {configurationOptions.map((tOpt) => (
                   <option key={tOpt.value} value={tOpt.value}>{tOpt.label}</option>
@@ -924,14 +924,14 @@ const GuestBrowse = () => {
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('priceRange')}</label>
+              <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('priceRange')}</label>
               <div className="flex items-center space-x-3">
                  <input
                    type="number"
                    value={filters.min_price}
                    onChange={(e) => setFilters({ ...filters, min_price: e.target.value })}
                    placeholder="Min"
-                   className="w-full bg-white border-sand-300 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                   className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none"
                  />
                  <span className="text-sand-400 font-bold">−</span>
                  <input
@@ -939,13 +939,13 @@ const GuestBrowse = () => {
                    value={filters.max_price}
                    onChange={(e) => setFilters({ ...filters, max_price: e.target.value })}
                    placeholder="Max"
-                   className="w-full bg-white border-sand-300 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                   className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none"
                  />
               </div>
             </div>
 
             <div className="md:col-span-4 mt-4">
-              <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em] ml-1 mb-3 block">{t('essentialAmenities')}</label>
+              <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] ml-1 mb-3 block">{t('essentialAmenities')}</label>
               <div className="flex flex-wrap gap-2.5">
                 {AMENITY_OPTIONS.map((a) => {
                   const active = filters.amenities.includes(a);
@@ -957,7 +957,7 @@ const GuestBrowse = () => {
                       className={`text-xs font-bold px-4 py-2 rounded-full border-2 transition-all duration-300 ${
                         active
                           ? 'bg-terracotta border-terracotta text-white shadow-premium scale-105'
-                          : 'bg-white border-sand-200 text-charcoal-muted hover:border-sand-400'
+                          : 'bg-white border-gray-100 text-charcoal-muted hover:border-sand-400'
                       }`}
                     >
                       {a.charAt(0).toUpperCase() + a.slice(1).replace('_', ' ')}
@@ -967,7 +967,7 @@ const GuestBrowse = () => {
               </div>
             </div>
 
-            <div className="md:col-span-4 pt-6 border-t border-sand-200 flex flex-wrap items-center justify-between gap-6">
+            <div className="md:col-span-4 pt-6 border-t border-gray-100 flex flex-wrap items-center justify-between gap-6">
               <div className="flex items-center gap-8">
                  <label className="flex items-center space-x-3 group cursor-pointer">
                    <div className={`w-10 h-6 rounded-full p-1 transition-colors ${filters.instant_booking ? 'bg-terracotta' : 'bg-sand-300'}`}>
@@ -1005,7 +1005,7 @@ const GuestBrowse = () => {
                  <button
                    type="button"
                    onClick={clearFilters}
-                   className="text-sm font-black text-terracotta uppercase tracking-widest hover:underline px-4"
+                   className="text-sm font-bold tracking-tight text-terracotta uppercase tracking-widest hover:underline px-4"
                  >
                    {t('clearAll')}
                  </button>
@@ -1025,7 +1025,7 @@ const GuestBrowse = () => {
       {/* Results header */}
       <div className="px-4 md:px-8 py-8 w-full flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-3xl font-black text-charcoal tracking-tight">
+          <h2 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight">
              {loading ? t('searching') : (
                 <>
                    {displayedProperties.length} {displayedProperties.length === 1 ? t('spaceFound') : t('spacesFound')}
@@ -1039,11 +1039,11 @@ const GuestBrowse = () => {
 
         <div className="flex items-center gap-4">
           <div className="flex items-center space-x-2">
-             <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">{t('sortBy')}</span>
+             <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">{t('sortBy')}</span>
              <select
                value={filters.sort}
                onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-               className="bg-transparent border-none text-sm font-black text-charcoal outline-none cursor-pointer hover:text-terracotta transition-colors"
+               className="bg-transparent border-none text-sm font-bold tracking-tight text-charcoal outline-none cursor-pointer hover:text-terracotta transition-colors"
              >
                {SORT_OPTIONS.map((s) => (
                  <option key={s.value} value={s.value}>{t(s.value)}</option>
@@ -1053,7 +1053,7 @@ const GuestBrowse = () => {
 
           <div className="h-6 w-[1px] bg-sand-200"></div>
 
-          <div className="flex bg-sand-100 p-1 rounded-xl" data-testid="view-toggle">
+          <div className="flex bg-gray-50 p-1 rounded-xl" data-testid="view-toggle">
             {[
                { id: VIEW_MODES.GRID, icon: LayoutGrid },
                { id: VIEW_MODES.SPLIT, icon: Columns },
@@ -1078,15 +1078,15 @@ const GuestBrowse = () => {
       <div className="flex-1 px-4 md:px-8 pb-12 w-full">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-4">
-             <div className="w-12 h-12 border-4 border-sand-200 border-t-terracotta rounded-full animate-spin"></div>
-             <p className="font-black text-charcoal-muted uppercase tracking-[0.2em] text-xs">{t('curatingSpaces')}</p>
+             <div className="w-12 h-12 border-4 border-gray-100 border-t-terracotta rounded-full animate-spin"></div>
+             <p className="font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] text-xs">{t('curatingSpaces')}</p>
           </div>
         ) : displayedProperties.length === 0 ? (
-          <div className="text-center py-24 bg-white rounded-3xl border border-sand-200 shadow-premium">
-            <div className="w-20 h-20 bg-sand-50 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="text-center py-24 bg-white rounded-3xl border border-gray-100 shadow-premium">
+            <div className="w-20 h-20 bg-stone rounded-full flex items-center justify-center mx-auto mb-6">
                <Building2 className="w-10 h-10 text-sand-300" />
             </div>
-            <h3 className="text-2xl font-black text-charcoal mb-2">{showWishlistOnly ? "No Wishlisted Properties" : t('noMatches')}</h3>
+            <h3 className="text-2xl font-bold tracking-tight text-charcoal mb-2">{showWishlistOnly ? "No Wishlisted Properties" : t('noMatches')}</h3>
             <p className="text-charcoal-muted font-medium mb-8 max-w-sm mx-auto">
               {showWishlistOnly ? "You haven't added any spaces to your wishlist yet." : t('noMatchesSub')}
             </p>
@@ -1134,7 +1134,7 @@ const GuestBrowse = () => {
 
             {/* Interactive Map */}
             {(viewMode === VIEW_MODES.SPLIT || viewMode === VIEW_MODES.MAP) && (
-              <div className="rounded-3xl overflow-hidden border border-sand-200 h-full shadow-premium relative group">
+              <div className="rounded-3xl overflow-hidden border border-gray-100 h-full shadow-premium relative group">
                 <MapContainer
                   center={indiaCenter}
                   zoom={5}
@@ -1164,14 +1164,14 @@ const GuestBrowse = () => {
                             className="w-full h-24 object-cover rounded-lg mb-3 shadow-sm"
                             alt=""
                           />
-                          <h4 className="font-black text-charcoal leading-tight mb-1">{p.title}</h4>
+                          <h4 className="font-bold tracking-tight text-charcoal leading-tight mb-1">{p.title}</h4>
                           <div className="flex items-center text-charcoal-muted text-[10px] font-bold uppercase tracking-widest mb-3">
                              <MapPin className="w-3 h-3 mr-1" /> {p.city}
                           </div>
                           <div className="flex items-center justify-between pt-2 border-t border-sand-100">
                             <div>
-                              <span className="text-lg font-black text-terracotta">₹{p.price_per_night}</span>
-                              <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest ml-1">
+                              <span className="text-lg font-bold tracking-tight text-terracotta">₹{p.price_per_night}</span>
+                              <span className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest ml-1">
                                 {p.category === 'commercial' || p.category === 'event_venue'
                                   ? (p.pricing_cycle === 'hourly' ? `/ ${t('hour')}` : p.pricing_cycle === 'weekly' ? `/ ${t('week')}` : p.pricing_cycle === 'monthly' ? `/ ${t('month')}` : `/ ${t('day')}`)
                                   : `/ ${t('night')}`}
@@ -1179,7 +1179,7 @@ const GuestBrowse = () => {
                             </div>
                             <button
                               onClick={() => navigateToProperty(p.property_id)}
-                              className="px-3 py-1 bg-charcoal text-white text-[10px] font-black uppercase tracking-widest rounded-md"
+                              className="px-3 py-1 bg-charcoal text-white text-[10px] font-bold tracking-tight uppercase tracking-widest rounded-md"
                             >
                               {t('details')}
                             </button>
@@ -1191,7 +1191,7 @@ const GuestBrowse = () => {
                 </MapContainer>
                 {/* Map Control Floating Card */}
                 <div className="absolute top-4 right-4 z-[1000] glass px-4 py-2 rounded-xl border border-white/50 shadow-premium pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                   <p className="text-[10px] font-black text-charcoal uppercase tracking-widest">Interactive Region</p>
+                   <p className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">Interactive Region</p>
                 </div>
               </div>
             )}
@@ -1204,23 +1204,23 @@ const GuestBrowse = () => {
 
 const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlisted, onWishlistToggle, onShare }) => (
   <div
-    className={`card-premium group cursor-pointer ${compact ? 'flex h-48' : 'flex flex-col'} transition-all duration-500`}
+    className={`card-premium group cursor-pointer ${compact ? 'flex min-h-[240px]' : 'flex flex-col'} transition-all duration-500`}
     onClick={onClick}
     onMouseEnter={() => onHover && onHover(property.property_id)}
     onMouseLeave={() => onHover && onHover(null)}
     style={style}
   >
-    <div className={`relative overflow-hidden ${compact ? 'w-1/3' : 'h-72'} rounded-t-2xl`}>
+    <div className={`relative overflow-hidden ${compact ? 'w-1/3 rounded-l-2xl' : 'h-72 rounded-t-2xl'}`}>
       <img
         src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?w=800'}
         alt={property.title}
-        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
       
       <div className="absolute top-4 left-4 flex gap-2">
          <div className="glass px-3 py-1 rounded-full shadow-sm">
-            <span className="text-[10px] font-black uppercase tracking-widest text-charcoal">
+            <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal">
                {formatCategoryLabel(property.category)}
             </span>
          </div>
@@ -1233,7 +1233,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
               e.stopPropagation();
               onShare(property);
             }}
-            className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-white hover:scale-110 transition cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-subtle hover:bg-white hover:scale-[1.03] transition cursor-pointer"
             title="Share on WhatsApp"
          >
             <Share2 className="w-3.5 h-3.5 text-charcoal hover:text-green-600" />
@@ -1243,7 +1243,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
               e.stopPropagation();
               onWishlistToggle(property.property_id);
             }}
-            className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-md hover:bg-white hover:scale-110 transition cursor-pointer"
+            className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-subtle hover:bg-white hover:scale-[1.03] transition cursor-pointer"
             title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
          >
             <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'}`} />
@@ -1252,25 +1252,25 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
 
       <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
         {property.instant_booking && (
-           <div className="bg-amber-500 text-white p-1.5 rounded-lg shadow-lg" title="Instant Booking">
+           <div className="bg-amber-500 text-white p-1.5 rounded-lg shadow-premium" title="Instant Booking">
               <Zap className="w-3.5 h-3.5 fill-current" />
            </div>
         )}
-        <div className="ml-auto flex items-center text-white space-x-1.5 drop-shadow-md">
+        <div className="ml-auto flex items-center text-white space-x-1.5 drop-shadow-subtle">
            <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-           <span className="text-sm font-black text-white">4.8</span>
+           <span className="text-sm font-bold tracking-tight text-white">4.8</span>
            <span className="text-[10px] text-white/80 font-bold ml-1">(120 Reviews)</span>
         </div>
       </div>
     </div>
-    <div className={`p-5 flex flex-col justify-between ${compact ? 'w-2/3' : 'flex-1'} bg-white rounded-b-2xl`}>
+    <div className={`p-5 flex flex-col justify-between ${compact ? 'w-2/3 rounded-r-2xl' : 'flex-1 rounded-b-2xl'} bg-white`}>
       <div>
         <div className="flex items-center justify-between mb-2">
-           <span className="text-[10px] font-black text-sage-dark uppercase tracking-widest bg-sage/10 px-2 py-0.5 rounded">
+           <span className="text-[10px] font-bold tracking-tight text-sage-dark uppercase tracking-widest bg-sage/10 px-2 py-0.5 rounded">
               {formatPropertyTypeLabel(property.property_type) || 'Premium Stay'}
            </span>
         </div>
-        <h3 className="text-lg font-black text-charcoal mb-1 group-hover:text-terracotta transition-colors line-clamp-1">{property.title}</h3>
+        <h3 className="text-lg font-bold tracking-tight text-charcoal mb-1 group-hover:text-terracotta transition-colors line-clamp-1">{property.title}</h3>
         <div className="flex items-center text-charcoal-muted mb-3">
           <MapPin className="w-3.5 h-3.5 mr-1.5 text-sage" />
           <span className="text-xs font-semibold">{property.city}, {property.state}</span>
@@ -1279,22 +1279,22 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
         {/* Additional Property Info */}
         <div className="flex flex-wrap gap-2 mb-4">
            {property.guests && (
-             <div className="flex items-center space-x-1 bg-sand-50 border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted">
+             <div className="flex items-center space-x-1 bg-stone border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted">
                <span>{property.guests} Guests</span>
              </div>
            )}
            {property.bhk_type && (
-             <div className="flex items-center space-x-1 bg-sand-50 border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted uppercase">
+             <div className="flex items-center space-x-1 bg-stone border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted uppercase">
                <span>{property.bhk_type}</span>
              </div>
            )}
            {property.size_sqft && (
-             <div className="flex items-center space-x-1 bg-sand-50 border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted">
+             <div className="flex items-center space-x-1 bg-stone border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted">
                <span>{property.size_sqft} sqft</span>
              </div>
            )}
            {property.amenities?.slice(0, 2).map((a, i) => (
-             <div key={i} className="flex items-center space-x-1 bg-sand-50 border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted capitalize">
+             <div key={i} className="flex items-center space-x-1 bg-stone border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted capitalize">
                <span>{a.replace('_', ' ')}</span>
              </div>
            ))}
@@ -1303,16 +1303,16 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
       
       <div className="flex items-center justify-between pt-4 border-t border-sand-100">
         <div>
-          <span className="text-2xl font-black text-terracotta">
+          <span className="text-2xl font-bold tracking-tight text-terracotta">
             ₹{property.price_per_night}
           </span>
-          <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest ml-1">
+          <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest ml-1">
             {property.category === 'commercial' || property.category === 'event_venue'
               ? (property.pricing_cycle === 'hourly' ? `/ ${t('hour')}` : property.pricing_cycle === 'weekly' ? `/ ${t('week')}` : property.pricing_cycle === 'monthly' ? `/ ${t('month')}` : `/ ${t('day')}`)
               : `/ ${t('night')}`}
           </span>
         </div>
-        <div className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center group-hover:bg-terracotta group-hover:border-terracotta transition-all duration-300">
+        <div className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center group-hover:bg-terracotta group-hover:border-terracotta transition-all duration-300">
            <Search className="w-4 h-4 text-charcoal group-hover:text-white" />
         </div>
       </div>

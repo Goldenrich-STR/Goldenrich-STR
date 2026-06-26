@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, getImageUrl, accountAPI, uploadAPI, loadRazorpaySdk } from '../services/api';
-import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2, Clock, Users, Landmark, Briefcase, User } from 'lucide-react';
 import { NotificationBell } from '../components/NotificationCenter';
 import LegalLinks from '../components/LegalLinks';
 
@@ -26,10 +26,12 @@ const HostDashboard = () => {
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [verificationSubmitting, setVerificationSubmitting] = useState(false);
   
-  // KYC Documents Form State
+    // KYC Documents Form State
   const [aadharCard, setAadharCard] = useState('');
   const [propertyProof, setPropertyProof] = useState('');
   const [cancelledCheque, setCancelledCheque] = useState('');
+  const [societyNoc, setSocietyNoc] = useState('');
+  const [shopAct, setShopAct] = useState('');
   const [gstCertificate, setGstCertificate] = useState('');
   const [gstNumber, setGstNumber] = useState('');
   const [agreementOwnerName, setAgreementOwnerName] = useState('');
@@ -37,12 +39,14 @@ const HostDashboard = () => {
   const [agreementSignature, setAgreementSignature] = useState('');
   const [verificationConsent, setVerificationConsent] = useState(false);
   
-  // File uploading states
+    // File uploading states
   const [uploadingDocs, setUploadingDocs] = useState({
     aadhar: false,
     property: false,
     cheque: false,
-    gst: false
+    gst: false,
+    society: false,
+    shop_act: false
   });
 
   // Canvas drawing states
@@ -54,6 +58,31 @@ const HostDashboard = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Pre-populate KYC fields from user data if they exist
+  useEffect(() => {
+    if (user && user.kyc_documents) {
+      const aadhar = user.kyc_documents.find(d => d.document_type === 'aadhar_card')?.document_url || '';
+      const prop = user.kyc_documents.find(d => d.document_type === 'property_proof')?.document_url || '';
+      const cheque = user.kyc_documents.find(d => d.document_type === 'cancelled_cheque')?.document_url || '';
+            const society = user.kyc_documents.find(d => d.document_type === 'society_noc')?.document_url || '';
+      const shopActVal = user.kyc_documents.find(d => d.document_type === 'shop_act')?.document_url || '';
+      const gstCert = user.kyc_documents.find(d => d.document_type === 'gst_certificate')?.document_url || '';
+      const gstNum = user.kyc_documents.find(d => d.document_type === 'gst_number')?.document_url || '';
+      
+      setAadharCard(aadhar);
+      setPropertyProof(prop);
+      setCancelledCheque(cheque);
+      setSocietyNoc(society);
+      setShopAct(shopActVal);
+      setGstCertificate(gstCert);
+      setGstNumber(gstNum);
+      
+      if (user.agreement_owner_name) setAgreementOwnerName(user.agreement_owner_name);
+      if (user.agreement_owner_address) setAgreementOwnerAddress(user.agreement_owner_address);
+      if (user.agreement_signature) setAgreementSignature(user.agreement_signature);
+    }
+  }, [user, showVerificationModal]);
 
   const fetchData = async () => {
     try {
@@ -94,11 +123,22 @@ const HostDashboard = () => {
     if (!file) return;
     setUploadingDocs(prev => ({ ...prev, [docType]: true }));
     try {
-      const res = await uploadAPI.uploadImage(file);
+      const res = await uploadAPI.uploadDocument(file);
       if (docType === 'aadhar') setAadharCard(res.url);
       else if (docType === 'property') setPropertyProof(res.url);
       else if (docType === 'cheque') setCancelledCheque(res.url);
       else if (docType === 'gst') setGstCertificate(res.url);
+      else if (docType === 'society') setSocietyNoc(res.url);
+      else if (docType === 'shop_act') setShopAct(res.url);
+      
+      // Save draft immediately to backend database
+      await accountAPI.saveDraftDocument({
+        document_type: docType,
+        document_url: res.url
+      });
+      
+      // Refresh user context to sync state
+      await refreshUser();
     } catch (err) {
       alert(`Failed to upload ${docType}: ` + (err.response?.data?.detail || err.message));
     } finally {
@@ -205,8 +245,18 @@ const HostDashboard = () => {
       const sigFile = new File([u8arr], 'signature.png', { type: mime });
       
       setUploadingDocs(prev => ({ ...prev, gst: true })); // temp loading state
-      const res = await uploadAPI.uploadImage(sigFile);
+      const res = await uploadAPI.uploadDocument(sigFile);
       setAgreementSignature(res.url);
+      
+      // Save draft agreement to backend
+      await accountAPI.saveDraftAgreement({
+        agreement_owner_name: agreementOwnerName,
+        agreement_owner_address: agreementOwnerAddress,
+        agreement_signature: res.url
+      });
+      
+      await refreshUser();
+      
       setShowAgreementModal(false);
       alert('Agreement signed successfully!');
     } catch (err) {
@@ -218,7 +268,7 @@ const HostDashboard = () => {
 
   const handleVerifySubmit = async (e) => {
     e.preventDefault();
-    if (!aadharCard || !propertyProof || !cancelledCheque || !agreementSignature) {
+            if (!aadharCard || !propertyProof || !cancelledCheque || !societyNoc || !shopAct || !agreementSignature) {
       alert('Please upload all mandatory documents and sign the agreement.');
       return;
     }
@@ -228,10 +278,12 @@ const HostDashboard = () => {
     }
     setVerificationSubmitting(true);
     try {
-      await accountAPI.submitHostVerification({
+            await accountAPI.submitHostVerification({
         aadhar_card: aadharCard,
         property_proof: propertyProof,
         cancelled_cheque: cancelledCheque,
+        society_noc: societyNoc || null,
+        shop_act: shopAct || null,
         gst_certificate: gstCertificate || null,
         gst_number: gstNumber || null,
         agreement_owner_name: agreementOwnerName,
@@ -251,6 +303,160 @@ const HostDashboard = () => {
     } finally {
       setVerificationSubmitting(false);
     }
+  };
+
+  const getDocStatus = (docType) => {
+    if (!user || !user.kyc_documents) return null;
+    const doc = user.kyc_documents.find(d => d.document_type === docType);
+    return doc ? doc.status : null;
+  };
+  
+  const getDocRejectionReason = (docType) => {
+    if (!user || !user.kyc_documents) return null;
+    const doc = user.kyc_documents.find(d => d.document_type === docType);
+    return doc ? doc.rejection_reason : null;
+  };
+
+  const renderDocCard = (number, title, description, docType, value, accept, isMandatory, Icon) => {
+        const backendDocTypeMap = {
+      aadhar: 'aadhar_card',
+      property: 'property_proof',
+      cheque: 'cancelled_cheque',
+      society: 'society_noc',
+      shop_act: 'shop_act',
+      gst: 'gst_certificate'
+    };
+    const dbType = backendDocTypeMap[docType];
+    const docStatus = getDocStatus(dbType);
+    const rejectionReason = getDocRejectionReason(dbType);
+
+    return (
+            <div className="bg-white rounded-none border border-sand-200 p-6 shadow-sm flex flex-col justify-between min-h-[18rem] h-auto relative overflow-hidden transition-all duration-300 hover:shadow-premium hover:border-terracotta group">
+        {/* Corner Badge */}
+        <div className="absolute top-0 left-0 bg-terracotta text-white font-black text-[10px] tracking-wider px-3.5 py-1.5 rounded-none shadow-sm">
+          {number}
+        </div>
+
+        <div className="flex flex-col items-center flex-1 w-full">
+          {/* Square Icon Container */}
+          <div className="w-14 h-14 rounded-none bg-sand-50 border border-sand-200 flex items-center justify-center mb-4 group-hover:bg-terracotta/5 transition-colors">
+            <Icon className="w-6 h-6 text-terracotta" />
+          </div>
+
+          <h4 className="text-sm font-black text-charcoal text-center mb-1">
+            {title} {isMandatory && <span className="text-red-500 font-bold ml-1">*</span>}
+          </h4>
+          <p className="text-[11px] text-charcoal-muted font-bold text-center mb-4 leading-normal max-w-[90%]">{description}</p>
+          
+          {/* Optional GST Input for GST Card */}
+                              {docType === 'gst' && (
+            <div className="w-full mb-3 text-left">
+              <label className="text-[8px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">
+                GST Number (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="Enter GST Number"
+                value={gstNumber}
+                onChange={(e) => setGstNumber(e.target.value)}
+                className="w-full px-3 py-2 border border-sand-200 rounded-none text-[11px] outline-none focus:border-terracotta font-semibold"
+              />
+            </div>
+          )}
+
+          {/* Status badge */}
+          {value ? (
+            <div className="flex flex-col items-center mb-4 space-y-1">
+              {docStatus === 'approved' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 border border-green-200 rounded-full text-[9px] font-black uppercase tracking-wider">
+                  <Check className="w-3 h-3" />
+                  Verified
+                </span>
+              ) : docStatus === 'rejected' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-600 border border-red-200 rounded-full text-[9px] font-black uppercase tracking-wider">
+                  <AlertCircle className="w-3 h-3" />
+                  Rejected
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-[9px] font-black uppercase tracking-wider animate-pulse">
+                  <Clock className="w-3 h-3" />
+                  Pending
+                </span>
+              )}
+              {docStatus === 'rejected' && rejectionReason && (
+                <span className="text-[9px] text-red-500 font-bold max-w-[200px] text-center line-clamp-1" title={rejectionReason}>
+                  {rejectionReason}
+                </span>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+                  {/* Bottom Upload/Attachment area */}
+        {value ? (
+          <div className="bg-sand-50/80 border border-sand-200 rounded-none p-3 flex items-center justify-between mt-auto w-full">
+            <div className="flex items-center space-x-2 min-w-0">
+              <div className="bg-red-50 text-red-500 p-2 rounded-none flex-shrink-0">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div className="text-left min-w-0">
+                <p className="text-[11px] font-black text-charcoal truncate max-w-[100px] sm:max-w-[120px]" title={getFileName(value)}>
+                  {getFileName(value)}
+                </p>
+                <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">
+                  Uploaded File
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-1.5">
+              <a
+                href={getImageUrl(value)}
+                target="_blank"
+                rel="noreferrer"
+                className="p-1.5 hover:bg-sand-200 rounded-none text-charcoal-muted hover:text-terracotta transition-colors"
+                title="View File"
+              >
+                <Eye className="w-4 h-4" />
+              </a>
+              
+              <label className="p-1.5 hover:bg-sand-200 rounded-none text-charcoal-muted hover:text-terracotta cursor-pointer transition-colors" title="Change File">
+                <Upload className="w-4 h-4" />
+                <input
+                  type="file"
+                  accept={accept}
+                  onChange={(e) => handleDocUpload(e.target.files[0], docType)}
+                  className="hidden"
+                  disabled={uploadingDocs[docType]}
+                />
+              </label>
+            </div>
+          </div>
+        ) : (
+          <label className="w-full border-2 border-dashed border-sand-300 hover:border-terracotta bg-white hover:bg-sand-50/50 rounded-none p-5 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 min-h-[7rem] mt-auto">
+            <div className="bg-sand-50 p-2.5 rounded-none mb-2 flex items-center justify-center">
+              {uploadingDocs[docType] ? (
+                <div className="w-4 h-4 border-2 border-terracotta border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4 text-charcoal-muted" />
+              )}
+            </div>
+            <span className="text-[10px] font-black text-charcoal uppercase tracking-wider text-center">
+              {uploadingDocs[docType] ? 'Uploading...' : 'Upload Document'}
+            </span>
+            <span className="text-[8px] text-charcoal-muted font-bold mt-0.5 text-center">
+              PDF, JPG or PNG (Max. 5MB)
+            </span>
+            <input
+              type="file"
+              accept={accept}
+              onChange={(e) => handleDocUpload(e.target.files[0], docType)}
+              className="hidden"
+              disabled={uploadingDocs[docType]}
+            />
+          </label>
+        )}
+      </div>
+    );
   };
 
   const unusedSubsCount = subscriptions.filter(s => !s.property_id && s.status === 'active').length;
@@ -376,17 +582,14 @@ const HostDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-sand-50 selection:bg-terracotta selection:text-white">
+    <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
       <header className="glass px-4 md:px-8 lg:px-12 py-4 sticky top-0 z-50">
         <div className="w-full flex justify-between items-center">
           <div 
             className="flex items-center space-x-3 cursor-pointer group" 
             onClick={() => navigate('/')}
           >
-            <span className="text-2xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
-            <h1 className="text-xl font-black text-charcoal tracking-tighter">
-              HOST<span className="text-terracotta">CENTRAL</span>
-            </h1>
+            <span className="text-2xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
           </div>
           <div className="flex items-center space-x-6">
             <nav className="hidden md:flex items-center space-x-6">
@@ -398,7 +601,7 @@ const HostDashboard = () => {
                  <button
                    key={item.label}
                    onClick={() => navigate(item.path)}
-                   className="text-[10px] font-black text-charcoal-muted hover:text-terracotta tracking-[0.2em] transition-colors"
+                   className="text-[10px] font-bold tracking-tight text-charcoal-muted hover:text-terracotta tracking-[0.2em] transition-colors"
                  >
                    {item.label}
                  </button>
@@ -407,11 +610,11 @@ const HostDashboard = () => {
             <div className="h-6 w-px bg-sand-200"></div>
             <div className="flex items-center space-x-4">
               <NotificationBell />
-              <div className="flex items-center space-x-3 px-3 py-1.5 bg-white border border-sand-200 rounded-full shadow-sm">
-                 <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-black text-white">
+              <div className="flex items-center space-x-3 px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm">
+                 <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
                     {user?.full_name?.[0]}
                  </div>
-                 <span className="text-[10px] font-black text-charcoal uppercase tracking-widest">{user?.full_name?.split(' ')[0]}</span>
+                 <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">{user?.full_name?.split(' ')[0]}</span>
               </div>
               <button 
                 onClick={() => {
@@ -420,7 +623,7 @@ const HostDashboard = () => {
                     logout();
                   }, 50);
                 }} 
-                className="text-[10px] font-black text-terracotta uppercase tracking-widest hover:underline"
+                className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest hover:underline"
               >
                 Sign Out
               </button>
@@ -432,14 +635,14 @@ const HostDashboard = () => {
       <div className="w-full px-4 md:px-8 lg:px-12 py-10 mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 animate-fade-in">
           <div>
-            <h2 className="text-4xl font-black text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
+            <h2 className="text-4xl font-bold tracking-tight text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
               Your Portfolio
             </h2>
             <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Manage your properties and track performance</p>
           </div>
           <button
             onClick={handleListPropertyClick}
-            className={`flex items-center space-x-3 px-8 py-4 shadow-premium rounded-3xl font-black uppercase tracking-widest text-sm transition-all duration-500 ${
+            className={`flex items-center space-x-3 px-8 py-4 shadow-premium rounded-3xl font-bold tracking-tight uppercase tracking-widest text-sm transition-all duration-500 ${
               isLocked 
                 ? 'bg-sand-200 text-charcoal-muted hover:bg-sand-300' 
                 : 'btn-premium'
@@ -459,11 +662,11 @@ const HostDashboard = () => {
                 <Lock className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h4 className="font-black text-charcoal tracking-tight text-sm">Host Verification Pending Review</h4>
+                <h4 className="font-bold tracking-tight text-charcoal tracking-tight text-sm">Host Verification Pending Review</h4>
                 <p className="text-xs text-charcoal-muted mt-1">Your documents are under review. You can list new properties, but guest bookings will remain disabled until approved by the administrator.</p>
               </div>
             </div>
-            <span className="text-[10px] font-black uppercase tracking-widest bg-amber-500 text-white px-3 py-1.5 rounded-full">Under Review</span>
+            <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest bg-amber-500 text-white px-3 py-1.5 rounded-full">Under Review</span>
           </div>
         )}
 
@@ -474,13 +677,13 @@ const HostDashboard = () => {
                 <AlertCircle className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="font-black text-charcoal tracking-tight text-sm">Host Verification Rejected</h4>
+                <h4 className="font-bold tracking-tight text-charcoal tracking-tight text-sm">Host Verification Rejected</h4>
                 <p className="text-xs text-charcoal-muted mt-1">Rejection reason: <span className="font-bold text-red-700">{user.kyc_remarks || 'Invalid documents.'}</span>. Please update and re-submit your verification documents.</p>
               </div>
             </div>
             <button
               onClick={() => setShowVerificationModal(true)}
-              className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all self-start sm:self-auto shadow-md"
+              className="px-5 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest transition-all self-start sm:self-auto shadow-subtle"
             >
               Re-submit Documents
             </button>
@@ -492,14 +695,14 @@ const HostDashboard = () => {
           {stats.map((stat, idx) => (
             <div 
               key={idx} 
-              className="bg-white rounded-3xl p-8 border border-sand-200 shadow-premium group hover:border-terracotta transition-all duration-500" 
+              className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium group hover:border-terracotta transition-all duration-500" 
               data-testid={`stat-${idx}`}
             >
-              <div className="bg-sand-50 w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-terracotta/5 transition-colors">
+              <div className="bg-stone w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-terracotta/5 transition-colors">
                 <stat.icon className="w-6 h-6 text-terracotta" />
               </div>
-              <p className="text-4xl font-black text-charcoal tracking-tighter mb-1">{stat.value}</p>
-              <p className="text-[10px] font-black text-charcoal-muted uppercase tracking-[0.2em]">{stat.label}</p>
+              <p className="text-4xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">{stat.value}</p>
+              <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">{stat.label}</p>
             </div>
           ))}
         </div>
@@ -507,14 +710,14 @@ const HostDashboard = () => {
         {/* Properties List */}
         <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
           <div className="flex items-center mb-6">
-             <h3 className="text-xl font-black text-charcoal tracking-tight">Active Listings</h3>
+             <h3 className="text-xl font-bold tracking-tight text-charcoal tracking-tight">Active Listings</h3>
              <div className="ml-4 h-px flex-1 bg-sand-200"></div>
           </div>
 
           {loading ? (
             <div className="grid grid-cols-1 gap-4">
                {[1,2,3].map(i => (
-                 <div key={i} className="h-32 bg-white rounded-3xl border border-sand-200 animate-pulse"></div>
+                 <div key={i} className="h-32 bg-white rounded-3xl border border-gray-100 animate-pulse"></div>
                ))}
             </div>
           ) : properties.length > 0 ? (
@@ -526,17 +729,17 @@ const HostDashboard = () => {
                   .map((property) => (
                   <div 
                     key={property.property_id} 
-                    className="bg-white rounded-3xl p-5 border border-sand-200 shadow-sm hover:shadow-premium transition-all duration-300 flex flex-col h-full group" 
+                    className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-premium transition-all duration-300 flex flex-col h-full group" 
                     data-testid={`property-${property.property_id}`}
                   >
                     <div className="relative overflow-hidden w-full h-48 rounded-2xl mb-4">
                       <img
                         src={getImageUrl(property.images[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                         alt={property.title}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
                       />
                       <div className="absolute inset-0 bg-charcoal/10"></div>
-                      <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                      <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest ${
                         property.status === 'live' ? 'bg-sage text-white' :
                         property.status === 'pending_verification' ? 'bg-amber-500 text-white' :
                         'bg-charcoal text-white'
@@ -546,7 +749,7 @@ const HostDashboard = () => {
                     </div>
                     
                     <div className="flex-1">
-                      <h3 className="text-lg font-black text-charcoal mb-1 line-clamp-1" title={property.title}>{property.title}</h3>
+                      <h3 className="text-lg font-bold tracking-tight text-charcoal mb-1 line-clamp-1" title={property.title}>{property.title}</h3>
                       <div className="flex items-center text-charcoal-muted space-x-2 mb-4">
                          <MapPin className="w-3 h-3" />
                          <span className="text-[10px] font-bold uppercase tracking-widest">{property.city}</span>
@@ -562,7 +765,7 @@ const HostDashboard = () => {
                             alert('This property is not verified yet. Calendar will be available once the property is live.');
                           }
                         }}
-                        className={`flex-1 py-3 rounded-xl border-2 border-sand-200 text-[10px] font-black uppercase tracking-widest transition-all ${
+                        className={`flex-1 py-3 rounded-xl border-2 border-gray-100 text-[10px] font-bold tracking-tight uppercase tracking-widest transition-all ${
                           property.status === 'live' ? 'hover:border-charcoal' : 'opacity-50 cursor-not-allowed'
                         }`}
                         data-testid={`property-calendar-${property.property_id}`}
@@ -577,14 +780,14 @@ const HostDashboard = () => {
                             navigate(`/property/${property.property_id}`);
                           }
                         }}
-                        className="flex-1 py-3 rounded-xl bg-charcoal text-white text-[10px] font-black uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
+                        className="flex-1 py-3 rounded-xl bg-charcoal text-white text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
                       >
                         Manage
                       </button>
                     </div>
                     <button
                       onClick={() => openDeleteModal(property)}
-                      className="mt-3 w-full py-3 rounded-xl border-2 border-red-100 bg-red-50/60 text-red-600 text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 transition-all flex items-center justify-center gap-2"
+                      className="mt-3 w-full py-3 rounded-xl border-2 border-red-100 bg-red-50/60 text-red-600 text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 transition-all flex items-center justify-center gap-2"
                       data-testid={`property-delete-${property.property_id}`}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -599,17 +802,17 @@ const HostDashboard = () => {
                   <button 
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="text-xs font-black text-charcoal uppercase tracking-widest">
+                  <span className="text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">
                     Page {currentPage} of {Math.ceil(properties.length / itemsPerPage)}
                   </span>
                   <button 
                     onClick={() => setCurrentPage(p => Math.min(Math.ceil(properties.length / itemsPerPage), p + 1))}
                     disabled={currentPage === Math.ceil(properties.length / itemsPerPage)}
-                    className="w-10 h-10 rounded-full border border-sand-200 flex items-center justify-center text-charcoal hover:bg-sand-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="w-5 h-5" />
                   </button>
@@ -617,9 +820,9 @@ const HostDashboard = () => {
               )}
             </div>
           ) : (
-            <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-sand-300">
+            <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
               <Building2 className="w-16 h-16 text-sand-200 mx-auto mb-6" />
-              <h4 className="text-xl font-black text-charcoal mb-2">No Properties Listed</h4>
+              <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Properties Listed</h4>
               <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest mb-8">Ready to start earning? List your first home today.</p>
               <button
                 onClick={handleListPropertyClick}
@@ -633,20 +836,20 @@ const HostDashboard = () => {
 
         {deleteModal.isOpen && (
           <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[110] flex items-center justify-center p-6">
-            <div className="bg-white rounded-[2rem] p-8 max-w-lg w-full shadow-2xl animate-scale-up border border-red-100">
+            <div className="bg-white rounded-2xl p-8 max-w-lg w-full shadow-elevated animate-scale-up border border-red-100">
               <div className="flex items-start gap-4 mb-6">
                 <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center shrink-0">
                   <Trash2 className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-charcoal tracking-tight mb-1">Delete Property</h3>
+                  <h3 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight mb-1">Delete Property</h3>
                   <p className="text-xs text-charcoal-muted font-bold leading-relaxed">
                     This will permanently remove <span className="text-charcoal">{deleteModal.property?.title}</span> from your listings. A reason is required for audit records.
                   </p>
                 </div>
               </div>
 
-              <label className="block text-[10px] font-black uppercase tracking-widest text-charcoal-muted mb-2">
+              <label className="block text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-muted mb-2">
                 Reason for deletion
               </label>
               <textarea
@@ -654,7 +857,7 @@ const HostDashboard = () => {
                 onChange={(e) => setDeleteModal(prev => ({ ...prev, reason: e.target.value }))}
                 rows={4}
                 placeholder="Example: Duplicate listing, property no longer available, incorrect details..."
-                className="w-full rounded-2xl border-2 border-sand-200 bg-sand-50 px-4 py-3 text-sm font-semibold text-charcoal outline-none focus:border-terracotta transition-colors resize-none"
+                className="w-full rounded-2xl border-2 border-gray-100 bg-stone px-4 py-3 text-sm font-semibold text-charcoal outline-none focus:border-terracotta transition-colors resize-none"
                 disabled={deleteModal.deleting}
               />
               <p className="mt-2 text-[10px] font-bold text-charcoal-muted">
@@ -665,14 +868,14 @@ const HostDashboard = () => {
                 <button
                   onClick={closeDeleteModal}
                   disabled={deleteModal.deleting}
-                  className="flex-1 py-4 rounded-2xl border-2 border-sand-200 text-charcoal text-[10px] font-black uppercase tracking-widest hover:border-charcoal transition-all disabled:opacity-50"
+                  className="flex-1 py-4 rounded-2xl border-2 border-gray-100 text-charcoal text-[10px] font-bold tracking-tight uppercase tracking-widest hover:border-charcoal transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteProperty}
                   disabled={deleteModal.deleting || deleteModal.reason.trim().length < 10}
-                  className="flex-1 py-4 rounded-2xl bg-red-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 py-4 rounded-2xl bg-red-600 text-white text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-red-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {deleteModal.deleting ? 'Deleting...' : 'Delete Property'}
                 </button>
@@ -684,35 +887,35 @@ const HostDashboard = () => {
         {/* Purchase Subscription Modal */}
         {showPurchaseModal && (
           <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[100] flex justify-center overflow-y-auto p-4 md:p-10">
-            <div className="my-auto bg-sand-50 rounded-[3rem] p-10 max-w-4xl w-full shadow-2xl animate-scale-up">
+            <div className="my-auto bg-stone rounded-[3rem] p-10 max-w-4xl w-full shadow-elevated animate-scale-up">
                <div className="flex justify-between items-start mb-10">
                   <div>
-                    <h3 className="text-3xl font-black text-charcoal tracking-tight mb-2">Subscription Required</h3>
+                    <h3 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight mb-2">Subscription Required</h3>
                     <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">To list more properties, please purchase a plan</p>
                   </div>
-                  <button onClick={() => setShowPurchaseModal(false)} className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors border border-sand-200">
+                  <button onClick={() => setShowPurchaseModal(false)} className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors border border-gray-100">
                     <Plus className="w-6 h-6 rotate-45" />
                   </button>
                </div>
 
                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {plans.map(plan => (
-                    <div key={plan.plan_id} className="bg-white rounded-[2rem] p-8 border border-sand-200 hover:border-terracotta transition-all group flex flex-col h-full">
-                       <span className="inline-block px-3 py-1 bg-sand-50 rounded-full text-[9px] font-black uppercase tracking-widest text-charcoal-muted mb-4 group-hover:bg-terracotta/5 group-hover:text-terracotta transition-colors">
+                    <div key={plan.plan_id} className="bg-white rounded-2xl p-8 border border-gray-100 hover:border-terracotta transition-all group flex flex-col h-full">
+                       <span className="inline-block px-3 py-1 bg-stone rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest text-charcoal-muted mb-4 group-hover:bg-terracotta/5 group-hover:text-terracotta transition-colors">
                           {plan.plan_type} Configuration
                        </span>
-                       <h4 className="text-xl font-black text-charcoal mb-2">{plan.plan_name}</h4>
-                       <h4 className="text-xs font-black text-charcoal-muted mb-4 uppercase tracking-widest opacity-60">{plan.plan_id}</h4>
+                       <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">{plan.plan_name}</h4>
+                       <h4 className="text-xs font-bold tracking-tight text-charcoal-muted mb-4 uppercase tracking-widest opacity-60">{plan.plan_id}</h4>
                        <p className="text-xs text-charcoal-muted font-bold leading-relaxed mb-8 flex-1">{plan.description}</p>
                        <div className="mt-auto pt-6 border-t border-sand-100">
                           <div className="flex items-baseline space-x-1 mb-6">
-                             <span className="text-2xl font-black text-charcoal tracking-tighter">₹{plan.price_monthly.toLocaleString('en-IN')}</span>
+                             <span className="text-2xl font-bold tracking-tight text-charcoal tracking-tighter">₹{plan.price_monthly.toLocaleString('en-IN')}</span>
                              <span className="text-[10px] font-bold text-charcoal-muted uppercase">/mo</span>
                           </div>
                           <button 
                             disabled={purchasing}
                             onClick={() => handlePurchaseSubscription(plan)}
-                            className="w-full py-4 rounded-2xl bg-charcoal text-white text-[10px] font-black uppercase tracking-widest hover:bg-terracotta transition-all disabled:opacity-50"
+                            className="w-full py-4 rounded-2xl bg-charcoal text-white text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-terracotta transition-all disabled:opacity-50"
                           >
                             {purchasing ? 'Processing...' : 'Choose Plan'}
                           </button>
@@ -736,42 +939,51 @@ const HostDashboard = () => {
           </div>
         )}
 
-        {/* Document Verification Modal */}
         {showVerificationModal && (
-          <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[100] flex items-center justify-center p-6 overflow-y-auto">
-            <div className="bg-sand-50 rounded-[3rem] p-10 max-w-3xl w-full shadow-2xl animate-scale-up max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <h3 className="text-3xl font-black text-charcoal tracking-tight mb-2 flex items-center">
+          <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
+            <div className="bg-stone rounded-[3rem] max-w-5xl w-full shadow-elevated animate-scale-up max-h-[90vh] flex flex-col overflow-hidden">
+              <div className="flex justify-between items-start p-10 pb-4 border-b border-gray-100 flex-shrink-0">
+                  <h3 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight mb-2 flex items-center">
                     <FileText className="w-8 h-8 text-terracotta mr-3" />
                     Document Verification
                   </h3>
                   <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Please upload your documents to verify your host profile</p>
                 </div>
-                <button onClick={() => setShowVerificationModal(false)} className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors border border-sand-200">
+                <button onClick={() => setShowVerificationModal(false)} className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors border border-gray-100">
                   <Plus className="w-6 h-6 rotate-45" />
                 </button>
               </div>
 
-              <form onSubmit={handleVerifySubmit} className="space-y-6">                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex-1 overflow-y-auto px-10 pb-10 pt-6 custom-modal-scrollbar">
+                <form onSubmit={handleVerifySubmit} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {renderDocCard("01", "KYC - Owner", "Aadhaar Card / PAN Card / Passport of owner", "aadhar", aadharCard, "image/*,application/pdf", true, User)}
+                  {renderDocCard("02", "Property Documents", "Property Tax / Water Tax / MSEB Bill", "property", propertyProof, "image/*,application/pdf", true, Building2)}
+                  {renderDocCard("03", "Society NOC", "If not a society, then Neighbour NOC", "society", societyNoc, "image/*,application/pdf", true, Users)}
+                  {renderDocCard("04", "Cancelled Cheque / Bank Statement", "Latest cancelled cheque or bank statement", "cheque", cancelledCheque, "image/*,application/pdf", true, Landmark)}
+                  {renderDocCard("05", "Shop Act License", "Shop Act registration copy of the business", "shop_act", shopAct, "image/*,application/pdf", true, FileText)}
+                  {renderDocCard("06", "GST Document", "GST Certificate / GST Registration (Optional)", "gst", gstCertificate, "image/*,application/pdf", false, Briefcase)}
+                </div>
+                <div style={{ display: 'none' }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    {/* Card 1: Aadhar Card */}
-                   <div className="bg-white p-6 rounded-[2rem] border border-sand-200 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
+                   <div className="bg-white p-6 rounded-2xl border border-gray-100 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
                      <div>
                        <div className="flex justify-between items-start mb-4">
-                         <span className="text-[10px] font-black text-terracotta uppercase tracking-widest bg-terracotta/5 px-3 py-1 rounded-full">Mandatory</span>
+                         <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest bg-terracotta/5 px-3 py-1 rounded-full">Mandatory</span>
                          {aadharCard && <CheckCircle2 className="w-5 h-5 text-green-500" />}
                        </div>
-                       <h4 className="text-lg font-black text-charcoal mb-1">Aadhar Card</h4>
+                       <h4 className="text-lg font-bold tracking-tight text-charcoal mb-1">Aadhar Card</h4>
                        <p className="text-xs text-charcoal-muted font-bold">Upload front and back side in a single image or PDF.</p>
                        {aadharCard && (
-                         <div className="mt-2 text-xs text-sage font-medium truncate flex items-center bg-sand-50/50 px-2 py-1 rounded-lg border border-sand-200/50">
+                         <div className="mt-2 text-xs text-sage font-medium truncate flex items-center bg-stone/50 px-2 py-1 rounded-lg border border-gray-100">
                            <FileText className="w-3.5 h-3.5 mr-1.5 flex-shrink-0 text-sage" />
                            <span className="truncate" title={getFileName(aadharCard)}>{getFileName(aadharCard)}</span>
                          </div>
                        )}
                      </div>
                      <div className="mt-4">
-                       <label className="w-full flex items-center justify-center px-4 py-3 bg-sand-50 hover:bg-sand-100 text-charcoal font-bold text-[10px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-sand-200">
+                       <label className="w-full flex items-center justify-center px-4 py-3 bg-stone hover:bg-gray-50 text-charcoal font-bold text-[10px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-gray-100">
                          <Upload className="w-4 h-4 mr-2" />
                          {uploadingDocs.aadhar ? 'Uploading...' : aadharCard ? 'Update File' : 'Upload File'}
                          <input
@@ -786,23 +998,23 @@ const HostDashboard = () => {
                    </div>
 
                    {/* Card 2: Property Ownership Proof */}
-                   <div className="bg-white p-6 rounded-[2rem] border border-sand-200 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
+                   <div className="bg-white p-6 rounded-2xl border border-gray-100 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
                      <div>
                        <div className="flex justify-between items-start mb-4">
-                         <span className="text-[10px] font-black text-terracotta uppercase tracking-widest bg-terracotta/5 px-3 py-1 rounded-full">Mandatory</span>
+                         <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest bg-terracotta/5 px-3 py-1 rounded-full">Mandatory</span>
                          {propertyProof && <CheckCircle2 className="w-5 h-5 text-green-500" />}
                        </div>
-                       <h4 className="text-lg font-black text-charcoal mb-1">Property Ownership Proof</h4>
+                       <h4 className="text-lg font-bold tracking-tight text-charcoal mb-1">Property Ownership Proof</h4>
                        <p className="text-xs text-charcoal-muted font-bold">Electricity bill, index-2, registry document, etc.</p>
                        {propertyProof && (
-                         <div className="mt-2 text-xs text-sage font-medium truncate flex items-center bg-sand-50/50 px-2 py-1 rounded-lg border border-sand-200/50">
+                         <div className="mt-2 text-xs text-sage font-medium truncate flex items-center bg-stone/50 px-2 py-1 rounded-lg border border-gray-100">
                            <FileText className="w-3.5 h-3.5 mr-1.5 flex-shrink-0 text-sage" />
                            <span className="truncate" title={getFileName(propertyProof)}>{getFileName(propertyProof)}</span>
                          </div>
                        )}
                      </div>
                      <div className="mt-4">
-                       <label className="w-full flex items-center justify-center px-4 py-3 bg-sand-50 hover:bg-sand-100 text-charcoal font-bold text-[10px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-sand-200">
+                       <label className="w-full flex items-center justify-center px-4 py-3 bg-stone hover:bg-gray-50 text-charcoal font-bold text-[10px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-gray-100">
                          <Upload className="w-4 h-4 mr-2" />
                          {uploadingDocs.property ? 'Uploading...' : propertyProof ? 'Update File' : 'Upload File'}
                          <input
@@ -817,23 +1029,23 @@ const HostDashboard = () => {
                    </div>
 
                    {/* Card 3: Cancelled Cheque / Passbook */}
-                   <div className="bg-white p-6 rounded-[2rem] border border-sand-200 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
+                   <div className="bg-white p-6 rounded-2xl border border-gray-100 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
                      <div>
                        <div className="flex justify-between items-start mb-4">
-                         <span className="text-[10px] font-black text-terracotta uppercase tracking-widest bg-terracotta/5 px-3 py-1 rounded-full">Mandatory</span>
+                         <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest bg-terracotta/5 px-3 py-1 rounded-full">Mandatory</span>
                          {cancelledCheque && <CheckCircle2 className="w-5 h-5 text-green-500" />}
                        </div>
-                       <h4 className="text-lg font-black text-charcoal mb-1">Cancelled Cheque / Passbook</h4>
+                       <h4 className="text-lg font-bold tracking-tight text-charcoal mb-1">Cancelled Cheque / Passbook</h4>
                        <p className="text-xs text-charcoal-muted font-bold">To verify bank details for secure payouts.</p>
                        {cancelledCheque && (
-                         <div className="mt-2 text-xs text-sage font-medium truncate flex items-center bg-sand-50/50 px-2 py-1 rounded-lg border border-sand-200/50">
+                         <div className="mt-2 text-xs text-sage font-medium truncate flex items-center bg-stone/50 px-2 py-1 rounded-lg border border-gray-100">
                            <FileText className="w-3.5 h-3.5 mr-1.5 flex-shrink-0 text-sage" />
                            <span className="truncate" title={getFileName(cancelledCheque)}>{getFileName(cancelledCheque)}</span>
                          </div>
                        )}
                      </div>
                      <div className="mt-4">
-                       <label className="w-full flex items-center justify-center px-4 py-3 bg-sand-50 hover:bg-sand-100 text-charcoal font-bold text-[10px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-sand-200">
+                       <label className="w-full flex items-center justify-center px-4 py-3 bg-stone hover:bg-gray-50 text-charcoal font-bold text-[10px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-gray-100">
                          <Upload className="w-4 h-4 mr-2" />
                          {uploadingDocs.cheque ? 'Uploading...' : cancelledCheque ? 'Update File' : 'Upload File'}
                          <input
@@ -848,29 +1060,29 @@ const HostDashboard = () => {
                    </div>
 
                    {/* Card 4: GST Certificate or GST No */}
-                   <div className="bg-white p-6 rounded-[2rem] border border-sand-200 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
+                   <div className="bg-white p-6 rounded-2xl border border-gray-100 flex flex-col justify-between min-h-[12rem] h-auto group hover:border-terracotta transition-all">
                      <div>
                        <div className="flex justify-between items-start mb-2">
-                         <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest bg-sand-50 px-3 py-1 rounded-full">If Applicable</span>
+                         <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest bg-stone px-3 py-1 rounded-full">If Applicable</span>
                          {(gstCertificate || gstNumber) && <CheckCircle2 className="w-5 h-5 text-green-500" />}
                        </div>
-                       <h4 className="text-base font-black text-charcoal mb-1">GST Certificate / GST Number</h4>
+                       <h4 className="text-base font-bold tracking-tight text-charcoal mb-1">GST Certificate / GST Number</h4>
                        <input
                          type="text"
                          placeholder="Enter GST Number"
                          value={gstNumber}
                          onChange={(e) => setGstNumber(e.target.value)}
-                         className="w-full px-3 py-1.5 border border-sand-200 rounded-xl text-xs outline-none focus:border-terracotta mb-2"
+                         className="w-full px-3 py-1.5 border border-gray-100 rounded-xl text-xs outline-none focus:border-terracotta mb-2"
                        />
                        {gstCertificate && (
-                         <div className="mt-1 mb-2 text-xs text-sage font-medium truncate flex items-center bg-sand-50/50 px-2 py-1 rounded-lg border border-sand-200/50">
+                         <div className="mt-1 mb-2 text-xs text-sage font-medium truncate flex items-center bg-stone/50 px-2 py-1 rounded-lg border border-gray-100">
                            <FileText className="w-3.5 h-3.5 mr-1.5 flex-shrink-0 text-sage" />
                            <span className="truncate" title={getFileName(gstCertificate)}>{getFileName(gstCertificate)}</span>
                          </div>
                        )}
                      </div>
                      <div>
-                       <label className="w-full flex items-center justify-center px-4 py-2 bg-sand-50 hover:bg-sand-100 text-charcoal font-bold text-[9px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-sand-200">
+                       <label className="w-full flex items-center justify-center px-4 py-2 bg-stone hover:bg-gray-50 text-charcoal font-bold text-[9px] uppercase tracking-widest rounded-xl cursor-pointer transition-colors border border-gray-100">
                          <Upload className="w-3.5 h-3.5 mr-2" />
                          {uploadingDocs.gst ? 'Uploading...' : gstCertificate ? 'GST Certificate Uploaded' : 'Upload GST Certificate'}
                          <input
@@ -885,8 +1097,9 @@ const HostDashboard = () => {
                    </div>
                  </div>
 
+                </div>
                 {/* Card 5: GR & Owner Agreement */}
-                <div className="bg-white p-6 rounded-[2rem] border border-sand-200 group hover:border-terracotta transition-all mt-6">
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 group hover:border-terracotta transition-all mt-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="flex items-start space-x-4">
                       <div className="bg-terracotta/5 p-3 rounded-xl text-terracotta">
@@ -894,8 +1107,8 @@ const HostDashboard = () => {
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <h4 className="text-lg font-black text-charcoal">GR & Owner Agreement</h4>
-                          <span className="text-[10px] font-black text-terracotta uppercase tracking-widest bg-terracotta/5 px-2 py-0.5 rounded-md">Mandatory</span>
+                          <h4 className="text-lg font-bold tracking-tight text-charcoal">GR & Owner Agreement</h4>
+                          <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest bg-terracotta/5 px-2 py-0.5 rounded-md">Mandatory</span>
                         </div>
                         <p className="text-xs text-charcoal-muted font-bold mt-1">Review the STR platform agreement terms, enter details and sign.</p>
                       </div>
@@ -910,7 +1123,7 @@ const HostDashboard = () => {
                       <button
                         type="button"
                         onClick={() => setShowAgreementModal(true)}
-                        className="px-6 py-3 bg-charcoal hover:bg-terracotta text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md flex items-center"
+                        className="px-6 py-3 bg-charcoal hover:bg-terracotta text-white rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest transition-all shadow-subtle flex items-center"
                       >
                         <Edit3 className="w-4 h-4 mr-2" />
                         {agreementSignature ? 'Edit & Re-sign' : 'Review & Sign'}
@@ -919,13 +1132,15 @@ const HostDashboard = () => {
                   </div>
                 </div>
 
+
+
                 {/* Terms Consent */}
-                <label className="flex items-start gap-4 bg-white rounded-[2rem] border border-sand-200 p-5 cursor-pointer hover:border-terracotta transition-all">
+                <label className="flex items-start gap-4 bg-white rounded-2xl border border-gray-100 p-5 cursor-pointer hover:border-terracotta transition-all">
                   <input
                     type="checkbox"
                     checked={verificationConsent}
                     onChange={(e) => setVerificationConsent(e.target.checked)}
-                    className="mt-1 w-5 h-5 rounded border-sand-300 text-terracotta focus:ring-terracotta cursor-pointer"
+                    className="mt-1 w-5 h-5 rounded border-gray-200 text-terracotta focus:ring-terracotta cursor-pointer"
                     data-testid="host-verification-consent-checkbox"
                     required
                   />
@@ -935,42 +1150,43 @@ const HostDashboard = () => {
                 </label>
 
                 {/* Submit button */}
-                <div className="pt-6 border-t border-sand-200 flex space-x-4">
+                <div className="pt-6 border-t border-gray-100 flex space-x-4">
                   <button
                     type="button"
                     onClick={() => setShowVerificationModal(false)}
-                    className="flex-1 py-4 text-charcoal-muted hover:text-charcoal font-black text-xs uppercase tracking-widest transition-colors"
+                    className="flex-1 py-4 text-charcoal-muted hover:text-charcoal font-bold tracking-tight text-xs uppercase tracking-widest transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={verificationSubmitting || !aadharCard || !propertyProof || !cancelledCheque || !agreementSignature || !verificationConsent}
+                    disabled={verificationSubmitting || !aadharCard || !propertyProof || !cancelledCheque || !societyNoc || !shopAct || !agreementSignature || !verificationConsent}
                     className="flex-1 btn-premium py-4 shadow-premium disabled:opacity-40"
                   >
                     {verificationSubmitting ? 'Submitting...' : 'Submit for Verification'}
-                  </button>
+                                    </button>
                 </div>
               </form>
             </div>
           </div>
+        </div>
         )}
 
         {/* Agreement Signing Modal */}
         {showAgreementModal && (
           <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[110] flex items-center justify-center p-6 overflow-y-auto">
-            <div className="bg-white rounded-[3rem] p-10 max-w-2xl w-full shadow-2xl animate-scale-up max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-[3rem] p-10 max-w-2xl w-full shadow-elevated animate-scale-up max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-2xl font-black text-charcoal tracking-tight mb-1">X-Space360 Agreement</h3>
-                  <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest">Review and draw signature below</span>
+                  <h3 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight mb-1">X-Space360 Agreement</h3>
+                  <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Review and draw signature below</span>
                 </div>
-                <button onClick={() => setShowAgreementModal(false)} className="w-8 h-8 rounded-full bg-sand-100 flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors">
+                <button onClick={() => setShowAgreementModal(false)} className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors">
                   <Plus className="w-5 h-5 rotate-45" />
                 </button>
               </div>
 
-              <div className="bg-sand-50 p-6 rounded-2xl text-[11px] text-charcoal-light leading-relaxed h-48 overflow-y-auto mb-6 border border-sand-200 select-none">
+              <div className="bg-stone p-6 rounded-2xl text-[11px] text-charcoal-light leading-relaxed h-48 overflow-y-auto mb-6 border border-gray-100 select-none">
                 <p className="font-bold mb-2">SHORT-TERM RENTAL HOST AGREEMENT</p>
                 <p className="mb-2">This Short-Term Rental Agreement (the "Agreement") is entered into by and between the Property Owner (hereinafter referred to as the "Host") and X-Space360.</p>
                 <p className="mb-2">1. Listing Permission: The Host hereby grants X-Space360 the non-exclusive right to list and market their verified properties on the X-Space360 booking application and coordinate reservations.</p>
@@ -982,25 +1198,25 @@ const HostDashboard = () => {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5 font-bold">Owner Name (Full Name)</label>
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5 font-bold">Owner Name (Full Name)</label>
                     <input
                       type="text"
                       required
                       placeholder="Enter full legal name"
                       value={agreementOwnerName}
                       onChange={(e) => setAgreementOwnerName(e.target.value)}
-                      className="w-full border-2 border-sand-200 rounded-xl px-4 py-2.5 outline-none focus:border-terracotta font-semibold text-charcoal text-sm"
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 outline-none focus:border-terracotta font-semibold text-charcoal text-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1.5 font-bold">Owner Address</label>
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5 font-bold">Owner Address</label>
                     <input
                       type="text"
                       required
                       placeholder="Enter legal address"
                       value={agreementOwnerAddress}
                       onChange={(e) => setAgreementOwnerAddress(e.target.value)}
-                      className="w-full border-2 border-sand-200 rounded-xl px-4 py-2.5 outline-none focus:border-terracotta font-semibold text-charcoal text-sm"
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 outline-none focus:border-terracotta font-semibold text-charcoal text-sm"
                     />
                   </div>
                 </div>
@@ -1008,10 +1224,10 @@ const HostDashboard = () => {
                 <div>
                   <div className="flex justify-between items-center mb-1.5 flex-wrap gap-2">
                     <div className="flex items-center space-x-4 flex-wrap gap-2">
-                      <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest font-bold">Draw Signature</label>
+                      <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest font-bold">Draw Signature</label>
                       
                       {/* Pen thickness control */}
-                      <div className="flex items-center space-x-2 bg-sand-100/80 px-2 py-0.5 rounded-lg border border-sand-200">
+                      <div className="flex items-center space-x-2 bg-gray-50/80 px-2 py-0.5 rounded-lg border border-gray-100">
                         <span className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Pen:</span>
                         {[2, 3, 5, 8].map((size) => (
                           <button
@@ -1036,7 +1252,7 @@ const HostDashboard = () => {
                       </div>
 
                       {/* Box height control */}
-                      <div className="flex items-center space-x-1.5 bg-sand-100/80 px-2 py-0.5 rounded-lg border border-sand-200">
+                      <div className="flex items-center space-x-1.5 bg-gray-50/80 px-2 py-0.5 rounded-lg border border-gray-100">
                         <span className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Box:</span>
                         <button
                           type="button"
@@ -1046,7 +1262,7 @@ const HostDashboard = () => {
                               clearCanvas();
                             }
                           }}
-                          className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all ${
+                          className={`px-1.5 py-0.5 rounded text-[8px] font-bold tracking-tight uppercase tracking-wider transition-all ${
                             canvasHeight === 120 
                               ? 'bg-charcoal text-white' 
                               : 'text-charcoal-light hover:bg-sand-200'
@@ -1062,7 +1278,7 @@ const HostDashboard = () => {
                               clearCanvas();
                             }
                           }}
-                          className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider transition-all ${
+                          className={`px-1.5 py-0.5 rounded text-[8px] font-bold tracking-tight uppercase tracking-wider transition-all ${
                             canvasHeight === 200 
                               ? 'bg-charcoal text-white' 
                               : 'text-charcoal-light hover:bg-sand-200'
@@ -1076,12 +1292,12 @@ const HostDashboard = () => {
                     <button
                       type="button"
                       onClick={clearCanvas}
-                      className="text-[10px] font-black text-terracotta hover:underline uppercase tracking-wider"
+                      className="text-[10px] font-bold tracking-tight text-terracotta hover:underline uppercase tracking-wider"
                     >
                       Clear Signature
                     </button>
                   </div>
-                  <div className="border-2 border-dashed border-sand-300 rounded-2xl bg-sand-50/50 p-2 overflow-hidden flex justify-center items-center">
+                  <div className="border-2 border-dashed border-gray-200 rounded-2xl bg-stone/50 p-2 overflow-hidden flex justify-center items-center">
                     <canvas
                       ref={canvasRef}
                       width={500}
@@ -1093,7 +1309,7 @@ const HostDashboard = () => {
                       onTouchStart={startDrawing}
                       onTouchMove={draw}
                       onTouchEnd={stopDrawing}
-                      className="w-full bg-white rounded-xl shadow-inner border border-sand-200 cursor-crosshair touch-none transition-all duration-300"
+                      className="w-full bg-white rounded-xl shadow-inner border border-gray-100 cursor-crosshair touch-none transition-all duration-300"
                       style={{ height: `${canvasHeight}px` }}
                     />
                   </div>
@@ -1101,11 +1317,11 @@ const HostDashboard = () => {
                 </div>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-sand-200 flex space-x-4">
+              <div className="mt-8 pt-6 border-t border-gray-100 flex space-x-4">
                 <button
                   type="button"
                   onClick={() => setShowAgreementModal(false)}
-                  className="flex-1 py-4 text-charcoal-muted hover:text-charcoal font-black text-xs uppercase tracking-widest transition-colors"
+                  className="flex-1 py-4 text-charcoal-muted hover:text-charcoal font-bold tracking-tight text-xs uppercase tracking-widest transition-colors"
                 >
                   Cancel
                 </button>

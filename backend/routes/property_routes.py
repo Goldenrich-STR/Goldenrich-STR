@@ -922,5 +922,115 @@ async def generate_description(
     except Exception as e:
         logger.error(f"Error in generate_description: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to generate description")
+
+
+class GenerateTitleRequest(BaseModel):
+    category: Optional[str] = ""
+    property_type: Optional[str] = ""
+    bhk_type: Optional[str] = ""
+    city: Optional[str] = ""
+    amenities: Optional[List[str]] = []
+    area_sqft: Optional[int] = None
+    max_guests: Optional[int] = None
+
+
+@router.post("/generate-title")
+async def generate_title(
+    data: GenerateTitleRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        category = data.category or "residential"
+        property_type = data.property_type or ""
+        bhk_type = data.bhk_type or ""
+        city = data.city or ""
+        amenities = data.amenities or []
+        area_sqft = data.area_sqft
+        max_guests = data.max_guests
+
+        import os
+        import json
+        import urllib.request
+        import asyncio
+
+        openai_key = os.environ.get("OPENAI_API_KEY")
+        gemini_key = os.environ.get("GEMINI_API_KEY")
+
+        # Define a helper function to perform sync HTTP requests in a separate thread
+        def perform_request(url: str, payload: dict, headers: dict) -> dict:
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10.0) as response:
+                return json.loads(response.read().decode("utf-8"))
+
+        prompt = (
+            f"Generate a single, catchy, SEO-friendly title (around 5 to 8 words) for a short-term rental property listing with these details:\n"
+            f"- Category: {category}\n"
+            f"- Property Type: {property_type}\n"
+            f"- BHK / Size: {bhk_type}\n"
+            f"- Location: {city}\n"
+            f"- Area: {area_sqft} sq.ft\n"
+            f"- Max Guests capacity: {max_guests}\n"
+            f"- Amenities: {', '.join(amenities)}.\n"
+            f"Examples of good titles: 'Cozy 2BHK Apartment with Pool in Nashik', 'Modern 3BHK Villa near Beach, Goa', 'Elegant Office Space in Viman Nagar'.\n"
+            f"Output only the final title. Do not include markdown headers, quotes, or greetings like 'Sure, here is...'."
+        )
+
+        if gemini_key:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={gemini_key}"
+                payload = {"contents": [{"parts": [{"text": prompt}]}]}
+                headers = {"Content-Type": "application/json"}
+                
+                result = await asyncio.to_thread(perform_request, url, payload, headers)
+                title_text = result["candidates"][0]["content"]["parts"][0]["text"].strip().replace('"', '').replace("'", "")
+                if title_text:
+                    return {"title": title_text}
+            except Exception as ex:
+                logger.error(f"Gemini API title generation failed: {str(ex)}")
+
+        if openai_key:
+            try:
+                url = "https://api.openai.com/v1/chat/completions"
+                payload = {
+                    "model": "gpt-3.5-turbo",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.7
+                }
+                headers = {
+                    "Authorization": f"Bearer {openai_key}",
+                    "Content-Type": "application/json"
+                }
+                
+                result = await asyncio.to_thread(perform_request, url, payload, headers)
+                title_text = result["choices"][0]["message"]["content"].strip().replace('"', '').replace("'", "")
+                if title_text:
+                    return {"title": title_text}
+            except Exception as ex:
+                logger.error(f"OpenAI API title generation failed: {str(ex)}")
+
+        # Fallback to local smart template generator
+        clean_prop_type = property_type.replace("_", " ").title() if property_type else "Property"
+        clean_bhk = bhk_type.upper() if bhk_type else ""
+        clean_city = city.title() if city else "Local"
+        
+        feature = ""
+        if amenities:
+            nice_amenities = [a for a in amenities if a in ["wifi", "ac", "pool", "gym", "parking", "kitchen"]]
+            if nice_amenities:
+                feature = f" with {nice_amenities[0].upper()}"
+        
+        fallback_title = f"Premium {clean_bhk} {clean_prop_type}{feature} in {clean_city}"
+        if len(fallback_title) > 60:
+            fallback_title = fallback_title[:60]
+        return {"title": fallback_title}
+
+    except Exception as e:
+        logger.error(f"Error in generate_title: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate title")
         
 

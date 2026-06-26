@@ -64,13 +64,13 @@ const LegalLinks = ({ className = '' }) => {
 
       {modal && (
         <div className="fixed inset-0 z-[99999] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="bg-white rounded-3xl shadow-2xl border border-sand-200 w-full max-w-xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
+          <div className="bg-white rounded-3xl shadow-elevated border border-gray-100 w-full max-w-xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
             <div className="flex items-start justify-between gap-6 mb-6">
-              <h3 className="text-2xl font-black text-charcoal">{modal.title}</h3>
+              <h3 className="text-2xl font-bold tracking-tight text-charcoal">{modal.title}</h3>
               <button
                 type="button"
                 onClick={() => setModal(null)}
-                className="w-10 h-10 rounded-full border border-sand-200 text-charcoal-muted hover:text-charcoal hover:bg-sand-50 transition flex items-center justify-center"
+                className="w-10 h-10 rounded-full border border-gray-100 text-charcoal-muted hover:text-charcoal hover:bg-stone transition flex items-center justify-center"
                 aria-label="Close legal details"
               >
                 <X className="w-5 h-5" />

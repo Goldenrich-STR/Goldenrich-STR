@@ -129,6 +129,8 @@ class HostVerificationSubmit(BaseModel):
     aadhar_card: str
     property_proof: str
     cancelled_cheque: str
+    society_noc: Optional[str] = None
+    shop_act: Optional[str] = None
     gst_certificate: Optional[str] = None
     gst_number: Optional[str] = None
     agreement_owner_name: str
@@ -156,6 +158,10 @@ async def submit_host_verification(
         {"document_type": "property_proof", "document_url": payload.property_proof},
         {"document_type": "cancelled_cheque", "document_url": payload.cancelled_cheque},
     ]
+    if payload.society_noc:
+        docs.append({"document_type": "society_noc", "document_url": payload.society_noc})
+    if payload.shop_act:
+        docs.append({"document_type": "shop_act", "document_url": payload.shop_act})
     if payload.gst_certificate:
         docs.append({"document_type": "gst_certificate", "document_url": payload.gst_certificate})
     if payload.gst_number:
@@ -205,3 +211,94 @@ async def submit_host_verification(
         logger.warning(f"Failed to notify admins of host verification: {n_err}")
 
     return {"message": "Verification documents submitted successfully"}
+
+
+class HostDraftDocumentUpload(BaseModel):
+    document_type: str
+    document_url: str
+
+
+@router.patch("/kyc/documents/draft")
+async def save_draft_document(
+    payload: HostDraftDocumentUpload,
+    current_user: dict = Depends(require_host),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Save a draft KYC document for the host immediately upon uploading."""
+    accepted_at = datetime.now(timezone.utc)
+    doc_type = payload.document_type
+    mapping = {
+        "aadhar": "aadhar_card",
+        "property": "property_proof",
+        "cheque": "cancelled_cheque",
+        "society": "society_noc",
+        "shop_act": "shop_act",
+        "gst": "gst_certificate"
+    }
+    mapped_type = mapping.get(doc_type, doc_type)
+    
+    user = await db.users.find_one({"user_id": current_user["user_id"]})
+    if not user:
+        raise HTTPException(404, detail="User not found")
+        
+    current_docs = user.get("kyc_documents") or []
+    if not isinstance(current_docs, list):
+        current_docs = list(current_docs)
+        
+    # Check if doc type already exists in list, update it, or append new one
+    updated = False
+    for doc in current_docs:
+        if doc.get("document_type") == mapped_type:
+            doc["document_url"] = payload.document_url
+            doc["status"] = "pending"
+            doc["rejection_reason"] = None
+            doc["uploaded_at"] = accepted_at.isoformat()
+            updated = True
+            break
+            
+    if not updated:
+        current_docs.append({
+            "document_type": mapped_type,
+            "document_url": payload.document_url,
+            "status": "pending",
+            "rejection_reason": None,
+            "uploaded_at": accepted_at.isoformat()
+        })
+        
+    await db.users.update_one(
+        {"user_id": current_user["user_id"]},
+        {"$set": {"kyc_documents": current_docs, "updated_at": accepted_at}}
+    )
+    return {"message": "Draft document saved", "kyc_documents": current_docs}
+
+
+class HostDraftAgreementUpdate(BaseModel):
+    agreement_owner_name: Optional[str] = None
+    agreement_owner_address: Optional[str] = None
+    agreement_signature: Optional[str] = None
+
+
+@router.patch("/kyc/agreement/draft")
+async def save_draft_agreement(
+    payload: HostDraftAgreementUpdate,
+    current_user: dict = Depends(require_host),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Save draft agreement info (owner name, address, signature) immediately for the host."""
+    accepted_at = datetime.now(timezone.utc)
+    update_data = {}
+    if payload.agreement_owner_name is not None:
+        update_data["agreement_owner_name"] = payload.agreement_owner_name
+    if payload.agreement_owner_address is not None:
+        update_data["agreement_owner_address"] = payload.agreement_owner_address
+    if payload.agreement_signature is not None:
+        update_data["agreement_signature"] = payload.agreement_signature
+        update_data["agreement_signed_at"] = accepted_at.isoformat()
+        
+    if update_data:
+        update_data["updated_at"] = accepted_at
+        await db.users.update_one(
+            {"user_id": current_user["user_id"]},
+            {"$set": update_data}
+        )
+    return {"message": "Draft agreement updated successfully"}

@@ -19,7 +19,7 @@ const StarRow = ({ value, onChange, testId }) => (
         key={n}
         type="button"
         onClick={() => onChange(n)}
-        className="p-1 hover:scale-110 transition-transform"
+        className="p-1 hover:scale-[1.03] transition-transform"
         data-testid={`${testId}-${n}`}
         aria-label={`Rate ${n} star${n > 1 ? 's' : ''}`}
       >
@@ -92,7 +92,7 @@ const ReviewModal = ({ booking, onClose, onSubmitted }) => {
       data-testid="review-modal"
     >
       <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-sand-200 px-6 py-4 flex items-center justify-between">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
           <div>
             <h3 className="text-lg font-bold text-charcoal">How was your stay?</h3>
             <p className="text-xs text-charcoal-light">
@@ -185,10 +185,10 @@ const ReviewModal = ({ booking, onClose, onSubmitted }) => {
           )}
         </div>
 
-        <div className="sticky bottom-0 bg-white border-t border-sand-200 px-6 py-4 flex items-center justify-end space-x-3">
+        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex items-center justify-end space-x-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-sand-300 text-charcoal hover:bg-sand-50"
+            className="px-4 py-2 rounded-lg border border-gray-200 text-charcoal hover:bg-stone"
             data-testid="review-cancel"
           >
             Cancel

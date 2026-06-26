@@ -91,7 +91,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
       ></div>
 
       {/* Notification Panel */}
-      <div className="relative w-full max-w-md bg-white rounded-xl shadow-2xl max-h-[80vh] flex flex-col">
+      <div className="relative w-full max-w-md bg-white rounded-xl shadow-elevated max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-stone">
           <div className="flex items-center space-x-2">
@@ -116,7 +116,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
             )}
             <button
               onClick={onClose}
-              className="p-1 hover:bg-sand-50 rounded-full transition"
+              className="p-1 hover:bg-stone rounded-full transition"
               data-testid="close-notifications"
             >
               <X className="w-5 h-5 text-charcoal-light" />
@@ -136,7 +136,7 @@ const NotificationCenter = ({ isOpen, onClose }) => {
                 key={notification.notification_id}
                 className={`p-4 rounded-lg transition cursor-pointer ${
                   notification.status === 'read'
-                    ? 'bg-sand-50'
+                    ? 'bg-stone'
                     : 'bg-terracotta/5 border-l-4 border-terracotta'
                 }`}
                 onClick={() => {
@@ -310,7 +310,7 @@ export const NotificationBell = () => {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="relative p-2 hover:bg-sand-100 rounded-full transition"
+        className="relative p-2 hover:bg-gray-50 rounded-full transition"
         data-testid="notification-bell"
       >
         <Bell className="w-5 h-5 text-charcoal-light" />
@@ -330,7 +330,7 @@ export const NotificationBell = () => {
             }
           `}</style>
           <div 
-            className="fixed bottom-5 right-5 z-[9999] max-w-sm w-full bg-white border border-sand-200 rounded-2xl shadow-2xl p-4 flex items-start space-x-3"
+            className="fixed bottom-5 right-5 z-[9999] max-w-sm w-full bg-white border border-gray-100 rounded-2xl shadow-elevated p-4 flex items-start space-x-3"
             style={{ animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
           >
             <span className="text-2xl mt-0.5">{getNotificationIcon(activeToast.type)}</span>
@@ -340,7 +340,7 @@ export const NotificationBell = () => {
             </div>
             <button 
               onClick={() => setActiveToast(null)} 
-              className="p-1 hover:bg-sand-50 rounded-full transition-colors flex-shrink-0"
+              className="p-1 hover:bg-stone rounded-full transition-colors flex-shrink-0"
             >
               <X className="w-4 h-4 text-charcoal-light" />
             </button>

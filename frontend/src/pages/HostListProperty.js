@@ -217,7 +217,7 @@ const EditableItemName = ({ initialName, onRename }) => {
       onChange={(e) => setName(e.target.value)}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className="text-sm font-medium text-charcoal-muted bg-transparent border-none hover:bg-sand-100/50 focus:bg-sand-100/80 focus:ring-0 focus:border-sand-300 rounded px-2 py-1 w-48 transition-colors outline-none"
+      className="text-sm font-medium text-charcoal-muted bg-transparent border-none hover:bg-gray-50/50 focus:bg-gray-50/80 focus:ring-0 focus:border-gray-200 rounded px-2 py-1 w-48 transition-colors outline-none"
     />
   );
 };
@@ -263,7 +263,7 @@ const TimePicker12h = ({ value, onChange }) => {
   };
 
   return (
-    <div className="inline-flex items-center bg-white border border-sand-300 rounded-xl px-2 py-1.5 shadow-sm hover:border-terracotta/50 focus-within:border-terracotta focus-within:ring-1 focus-within:ring-terracotta/20 transition-all duration-200">
+    <div className="inline-flex items-center bg-white border border-gray-200 rounded-xl px-2 py-1.5 shadow-sm hover:border-terracotta/50 focus-within:border-terracotta focus-within:ring-1 focus-within:ring-terracotta/20 transition-all duration-200">
       <Clock className="w-3.5 h-3.5 text-charcoal-light flex-shrink-0 mr-1" />
       <div className="flex items-center space-x-0.5">
         <select
@@ -304,7 +304,7 @@ const TimePicker12h = ({ value, onChange }) => {
         <select
           value={period}
           onChange={(e) => handleSelectChange(hour || '12', minute || '00', e.target.value)}
-          className="appearance-none bg-none bg-transparent border-none text-xs text-charcoal font-black p-0 focus:ring-0 cursor-pointer outline-none text-center ml-0.5"
+          className="appearance-none bg-none bg-transparent border-none text-xs text-charcoal font-bold tracking-tight p-0 focus:ring-0 cursor-pointer outline-none text-center ml-0.5"
           style={{ 
             backgroundImage: 'none', 
             paddingRight: 0, 
@@ -356,6 +356,7 @@ const initialForm = {
   has_cook: false,
   cook_price: '',
   has_self_cook: false,
+  has_taxi: false,
   veg_price: '',
   non_veg_price: '',
   guest_size: '',
@@ -434,6 +435,7 @@ const HostListProperty = () => {
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
+  const [generatingTitle, setGeneratingTitle] = useState(false);
 
   useEffect(() => {
     if (editPropertyId) {
@@ -495,6 +497,7 @@ const HostListProperty = () => {
             has_cook: !!p.has_cook,
             cook_price: p.cook_price !== null && p.cook_price !== undefined ? String(p.cook_price) : '',
             has_self_cook: !!p.has_self_cook,
+            has_taxi: !!p.has_taxi,
             veg_price: p.veg_price !== null && p.veg_price !== undefined ? String(p.veg_price) : '',
             non_veg_price: p.non_veg_price !== null && p.non_veg_price !== undefined ? String(p.non_veg_price) : '',
             guest_size: p.guest_size !== null && p.guest_size !== undefined ? String(p.guest_size) : '',
@@ -995,6 +998,29 @@ const HostListProperty = () => {
     }
   };
 
+  const handleGenerateAITitle = async () => {
+    setGeneratingTitle(true);
+    setError('');
+    try {
+      const payload = {
+        category: form.category,
+        property_type: form.property_type,
+        bhk_type: form.bhk_type,
+        city: form.city,
+        amenities: form.amenities,
+        area_sqft: form.area_sqft ? Number(form.area_sqft) : null,
+        max_guests: form.max_guests ? Number(form.max_guests) : null,
+      };
+
+      const res = await propertyAPI.generateTitle(payload);
+      update({ title: res.data.title });
+    } catch (err) {
+      setError(formatError(err, 'Failed to generate AI title'));
+    } finally {
+      setGeneratingTitle(false);
+    }
+  };
+
   /* Helper to build payload */
   const buildPropertyPayload = () => {
     return {
@@ -1029,6 +1055,7 @@ const HostListProperty = () => {
       has_cook: form.has_cook,
       cook_price: form.cook_price ? Number(form.cook_price) : null,
       has_self_cook: form.has_self_cook,
+      has_taxi: form.has_taxi,
       veg_price: form.veg_price ? Number(form.veg_price) : null,
       non_veg_price: form.non_veg_price ? Number(form.non_veg_price) : null,
       guest_size: form.guest_size ? Number(form.guest_size) : null,
@@ -1177,12 +1204,12 @@ const HostListProperty = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-sand-50">
+      <div className="min-h-screen bg-stone">
         <Header user={user} logout={logout} navigate={navigate} />
         <div className="max-w-2xl mx-auto px-6 py-16 text-center">
           <div className="dashboard-card" data-testid="listing-success">
             <CheckCircle2 className="w-20 h-20 text-sage-dark mx-auto mb-4" />
-            <h2 className="text-3xl font-extrabold text-charcoal mb-2">Listing submitted!</h2>
+            <h2 className="text-3xl font-semibold tracking-tight text-charcoal mb-2">Listing submitted!</h2>
             <p className="text-charcoal-light mb-2">
               Your property <strong>{form.title}</strong> is now in the verification queue.
             </p>
@@ -1220,11 +1247,11 @@ const HostListProperty = () => {
   const currentStep = STEPS[step].key;
 
   return (
-    <div className="min-h-screen bg-sand-50">
+    <div className="min-h-screen bg-stone">
       <Header user={user} logout={logout} navigate={navigate} />
 
       <div className="max-w-4xl mx-auto px-6 py-6">
-        <h1 className="text-3xl font-extrabold text-charcoal mb-1" data-testid="form-title">
+        <h1 className="text-3xl font-semibold tracking-tight text-charcoal mb-1" data-testid="form-title">
           List your property
         </h1>
         <p className="text-charcoal-light text-sm mb-6">
@@ -1274,7 +1301,24 @@ const HostListProperty = () => {
           {currentStep === 'basics' && (
             <div className="space-y-4" data-testid="step-basics-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">Tell us about your place</h2>
-              <Input label="Title" testid="basics-title" value={form.title} onChange={(v) => update({ title: v })} placeholder="Cozy 2BHK with a sunset view" />
+              <Input label="Title" testid="basics-title" value={form.title} onChange={(v) => update({ title: v })} placeholder="" />
+              <div className="flex justify-between items-center -mt-2 mb-2 px-1">
+                <p className="text-xs text-terracotta font-semibold">ex. Cozy 2BHK with a sunset view</p>
+                <button
+                  type="button"
+                  onClick={handleGenerateAITitle}
+                  disabled={generatingTitle}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-terracotta/10 hover:bg-terracotta/20 text-terracotta rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                  data-testid="generate-ai-title"
+                >
+                  {generatingTitle ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  <span>{generatingTitle ? "Generating SEO Title..." : "Generate with AI"}</span>
+                </button>
+              </div>
               <Textarea label="Description" testid="basics-description" value={form.description} onChange={(v) => update({ description: v })} placeholder="Describe your space, neighbourhood, what makes it special…" rows={5} />
               <div className="flex justify-end mt-1">
                 <button
@@ -1432,26 +1476,26 @@ const HostListProperty = () => {
                     />
                   </div>
                   <div className="mt-6">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-3">
+                    <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-3">
                       Package Details (Veg & Non-Veg Inclusions)
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       {/* Veg Column */}
-                      <div className="bg-white rounded-xl border border-sand-300 overflow-hidden shadow-sm">
+                      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                         <div className="flex items-center px-4 py-3 bg-green-50 border-b border-green-200">
                           <div className="w-3 h-3 bg-green-500 rounded-sm mr-2 border border-green-700"></div>
                           <span className="font-bold text-green-900 text-sm tracking-wide">Vegetarian</span>
                         </div>
-                        <div className="flex items-center justify-between px-4 py-2 bg-sand-50/50 border-b border-sand-200">
-                          <span className="text-xs font-black text-charcoal">Food items</span>
+                        <div className="flex items-center justify-between px-4 py-2 bg-stone/50 border-b border-gray-100">
+                          <span className="text-xs font-bold tracking-tight text-charcoal">Food items</span>
                           <div className="text-right">
-                            <span className="text-xs font-black text-charcoal block">Package</span>
+                            <span className="text-xs font-bold tracking-tight text-charcoal block">Package</span>
                             <span className="text-[10px] font-bold text-charcoal-muted line-through">₹{form.veg_price || '1200'}/Plate</span>
                           </div>
                         </div>
                         <div className="divide-y divide-sand-100">
                           {vegItemsList.map((item) => (
-                            <div key={`veg-${item}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-sand-50/30 transition-colors">
+                            <div key={`veg-${item}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-stone/30 transition-colors">
                               <EditableItemName 
                                 initialName={item} 
                                 onRename={(newName) => handleRenameItem('veg', item, newName)} 
@@ -1470,21 +1514,21 @@ const HostListProperty = () => {
                       </div>
 
                       {/* Non-Veg Column */}
-                      <div className="bg-white rounded-xl border border-sand-300 overflow-hidden shadow-sm">
+                      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
                         <div className="flex items-center px-4 py-3 bg-red-50 border-b border-red-200">
                           <div className="w-3 h-3 bg-red-500 rounded-full mr-2 border border-red-700"></div>
                           <span className="font-bold text-red-900 text-sm tracking-wide">Non Vegetarian</span>
                         </div>
-                        <div className="flex items-center justify-between px-4 py-2 bg-sand-50/50 border-b border-sand-200">
-                          <span className="text-xs font-black text-charcoal">Food items</span>
+                        <div className="flex items-center justify-between px-4 py-2 bg-stone/50 border-b border-gray-100">
+                          <span className="text-xs font-bold tracking-tight text-charcoal">Food items</span>
                           <div className="text-right">
-                            <span className="text-xs font-black text-charcoal block">Package</span>
+                            <span className="text-xs font-bold tracking-tight text-charcoal block">Package</span>
                             <span className="text-[10px] font-bold text-charcoal-muted line-through">₹{form.non_veg_price || '1500'}/Plate</span>
                           </div>
                         </div>
                         <div className="divide-y divide-sand-100">
                           {nonVegItemsList.map((item) => (
-                            <div key={`nonveg-${item}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-sand-50/30 transition-colors">
+                            <div key={`nonveg-${item}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-stone/30 transition-colors">
                               <EditableItemName 
                                 initialName={item} 
                                 onRename={(newName) => handleRenameItem('non_veg', item, newName)} 
@@ -1548,9 +1592,9 @@ const HostListProperty = () => {
                     <Toggle label="Pet-friendly" testid="pricing-pet" checked={form.pet_friendly} onChange={(v) => update({ pet_friendly: v })} />
                     <Toggle label="Smoking allowed" testid="pricing-smoking" checked={form.smoking_allowed} onChange={(v) => update({ smoking_allowed: v })} />
                   </div>
-                  <div className="border-t border-sand-200 pt-4 mt-4">
-                    <h3 className="text-sm font-bold text-charcoal mb-3 uppercase tracking-wider">Cook Service</h3>
-                    <div className="bg-sand-50 p-4 rounded-2xl border border-sand-200 space-y-4">
+                  <div className="border-t border-gray-100 pt-4 mt-4">
+                    <h3 className="text-sm font-bold text-charcoal mb-3 uppercase tracking-wider">Additional Services</h3>
+                    <div className="bg-stone p-4 rounded-2xl border border-gray-100 space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                         <Toggle 
                           label="Cook service available at property" 
@@ -1569,12 +1613,20 @@ const HostListProperty = () => {
                           />
                         )}
                       </div>
-                      <div className="border-t border-sand-200/60 pt-3">
+                      <div className="border-t border-gray-100/60 pt-3">
                         <Toggle 
                           label="Self cooking option available (Guests can cook themselves)" 
                           testid="pricing-self-cook" 
                           checked={form.has_self_cook} 
                           onChange={(v) => update({ has_self_cook: v })} 
+                        />
+                      </div>
+                      <div className="border-t border-sand-200/60 pt-3">
+                        <Toggle 
+                          label="Taxi service available at property" 
+                          testid="pricing-taxi-available" 
+                          checked={form.has_taxi} 
+                          onChange={(v) => update({ has_taxi: v })} 
                         />
                       </div>
                     </div>
@@ -1599,7 +1651,7 @@ const HostListProperty = () => {
                       className={`text-sm px-4 py-2 rounded-full border transition ${
                         active
                           ? 'bg-terracotta text-white border-terracotta'
-                          : 'bg-white text-charcoal border-sand-300 hover:border-terracotta'
+                          : 'bg-white text-charcoal border-gray-200 hover:border-terracotta'
                       }`}
                       data-testid={`amenity-${a.value}`}
                     >
@@ -1610,13 +1662,13 @@ const HostListProperty = () => {
               </div>
 
               {form.category === 'event_venue' && (
-                <div className="mt-8 border-t border-sand-200 pt-6">
+                <div className="mt-8 border-t border-gray-100 pt-6">
                   <h2 className="text-xl font-bold text-charcoal mb-6">Venue policies</h2>
                   
                   <div className="space-y-6">
                     {/* Timings */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                      <div className="bg-white p-4 rounded-2xl border border-sand-200 shadow-sm transition-all hover:shadow-md">
+                      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-subtle">
                         <div className="flex items-center space-x-2 mb-3">
                           <div className="p-1.5 bg-amber-50 rounded-lg text-amber-600">
                             <Sun className="w-4 h-4" />
@@ -1634,7 +1686,7 @@ const HostListProperty = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="bg-white p-4 rounded-2xl border border-sand-200 shadow-sm transition-all hover:shadow-md">
+                      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-subtle">
                         <div className="flex items-center space-x-2 mb-3">
                           <div className="p-1.5 bg-orange-50 rounded-lg text-orange-600">
                             <SunDim className="w-4 h-4" />
@@ -1652,7 +1704,7 @@ const HostListProperty = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="bg-white p-4 rounded-2xl border border-sand-200 shadow-sm transition-all hover:shadow-md">
+                      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-subtle">
                         <div className="flex items-center space-x-2 mb-3">
                           <div className="p-1.5 bg-indigo-50 rounded-lg text-indigo-600">
                             <Moon className="w-4 h-4" />
@@ -1675,12 +1727,12 @@ const HostListProperty = () => {
                     {/* Taxes & Advance */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-2">Taxes (%)</label>
-                        <input type="text" className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all" placeholder="18.00" value={getVenuePolicies().taxes || ''} onChange={(e) => handleVenuePolicyChange('taxes', e.target.value)} />
+                        <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-2">Taxes (%)</label>
+                        <input type="text" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all" placeholder="18.00" value={getVenuePolicies().taxes || ''} onChange={(e) => handleVenuePolicyChange('taxes', e.target.value)} />
                       </div>
                       <div>
-                        <label className="text-[10px] font-black uppercase tracking-wider text-charcoal-light block mb-2">Advance Booking (%) (If Applicable)</label>
-                        <input type="text" className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all" placeholder="20" value={getVenuePolicies().advance || ''} onChange={(e) => handleVenuePolicyChange('advance', e.target.value)} />
+                        <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-2">Advance Booking (%) (If Applicable)</label>
+                        <input type="text" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all" placeholder="20" value={getVenuePolicies().advance || ''} onChange={(e) => handleVenuePolicyChange('advance', e.target.value)} />
                       </div>
                     </div>
 
@@ -1691,8 +1743,8 @@ const HostListProperty = () => {
                          <div className="flex items-center">
                            <Toggle label="Rooms Available" checked={getVenuePolicies().rooms_available || false} onChange={(v) => handleVenuePolicyChange('rooms_available', v)} />
                          </div>
-                         <input type="number" className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all" placeholder="No. of rooms" value={getVenuePolicies().rooms_count || ''} onChange={(e) => handleVenuePolicyChange('rooms_count', e.target.value)} />
-                         <input type="number" className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all" placeholder="Avg price per room (₹)" value={getVenuePolicies().room_price || ''} onChange={(e) => handleVenuePolicyChange('room_price', e.target.value)} />
+                         <input type="number" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all" placeholder="No. of rooms" value={getVenuePolicies().rooms_count || ''} onChange={(e) => handleVenuePolicyChange('rooms_count', e.target.value)} />
+                         <input type="number" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all" placeholder="Avg price per room (₹)" value={getVenuePolicies().room_price || ''} onChange={(e) => handleVenuePolicyChange('room_price', e.target.value)} />
                       </div>
                     </div>
 
@@ -1715,7 +1767,7 @@ const HostListProperty = () => {
                            <Toggle label="Outside alcohol allowed" checked={getVenuePolicies().alcohol_outside || false} onChange={(v) => handleVenuePolicyChange('alcohol_outside', v)} />
                            <Toggle label="Valet parking provided" checked={getVenuePolicies().parking_valet || false} onChange={(v) => handleVenuePolicyChange('parking_valet', v)} />
                          </div>
-                         <input type="text" className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm mt-4 outline-none focus:border-terracotta transition-all" placeholder="Parking space (e.g. 200 vehicles)" value={getVenuePolicies().parking_space || ''} onChange={(e) => handleVenuePolicyChange('parking_space', e.target.value)} />
+                         <input type="text" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm mt-4 outline-none focus:border-terracotta transition-all" placeholder="Parking space (e.g. 200 vehicles)" value={getVenuePolicies().parking_space || ''} onChange={(e) => handleVenuePolicyChange('parking_space', e.target.value)} />
                        </div>
                     </div>
 
@@ -1766,11 +1818,11 @@ const HostListProperty = () => {
                 {form.images.map((src, idx) => {
                   const [url, category] = src.split('#');
                   return (
-                    <div key={src + idx} className="relative group bg-white rounded-2xl border border-sand-200 overflow-hidden shadow-sm transition-all hover:shadow-premium">
+                    <div key={src + idx} className="relative group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm transition-all hover:shadow-premium">
                       <div className="relative h-48">
                         <img src={getImageUrl(url)} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
                         {idx === 0 && (
-                          <span className="absolute top-2 left-2 text-[10px] bg-terracotta text-white px-2 py-0.5 rounded-full font-black uppercase tracking-widest">
+                          <span className="absolute top-2 left-2 text-[10px] bg-terracotta text-white px-2 py-0.5 rounded-full font-bold tracking-tight uppercase tracking-widest">
                             COVER
                           </span>
                         )}
@@ -1783,8 +1835,8 @@ const HostListProperty = () => {
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
-                      <div className="p-4 bg-sand-50/50">
-                        <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest mb-1 block">Photo Category</label>
+                      <div className="p-4 bg-stone/50">
+                        <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block">Photo Category</label>
                         <select
                           value={category || 'Other'}
                           onChange={(e) => {
@@ -1792,7 +1844,7 @@ const HostListProperty = () => {
                             newImages[idx] = `${url}#${e.target.value}`;
                             update({ images: newImages });
                           }}
-                          className="w-full text-xs font-bold text-charcoal bg-white border border-sand-200 rounded-lg p-2 outline-none focus:border-terracotta transition-colors"
+                          className="w-full text-xs font-bold text-charcoal bg-white border border-gray-100 rounded-lg p-2 outline-none focus:border-terracotta transition-colors"
                         >
                           {PHOTO_CATEGORIES.map(cat => (
                             <option key={cat} value={cat}>{cat}</option>
@@ -1803,14 +1855,14 @@ const HostListProperty = () => {
                   );
                 })}
                 {form.images.length === 0 && (
-                  <div className="col-span-full border-2 border-dashed border-sand-300 rounded-lg p-8 text-center text-charcoal-light">
+                  <div className="col-span-full border-2 border-dashed border-gray-200 rounded-lg p-8 text-center text-charcoal-light">
                     No photos yet
                   </div>
                 )}
               </div>
 
               {/* Property Video & YouTube Links Section */}
-              <div className="mt-8 pt-8 border-t border-sand-200 space-y-6">
+              <div className="mt-8 pt-8 border-t border-gray-100 space-y-6">
                 <div>
                   <h3 className="text-lg font-bold text-charcoal flex items-center gap-2">
                     <Video className="w-5 h-5 text-terracotta" />
@@ -1846,13 +1898,13 @@ const HostListProperty = () => {
                 </div>
 
                 {form.video_url && (
-                  <div className="bg-white rounded-2xl border border-sand-200 p-4 shadow-sm flex items-center justify-between max-w-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between max-w-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
                     <div className="flex items-center space-x-3 overflow-hidden">
                       <div className="w-12 h-12 bg-terracotta/10 rounded-xl flex items-center justify-center text-terracotta flex-shrink-0">
                         <Video className="w-6 h-6" />
                       </div>
                       <div className="overflow-hidden">
-                        <span className="text-xs font-black text-charcoal-muted uppercase tracking-widest block">Uploaded Video</span>
+                        <span className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Uploaded Video</span>
                         <span className="text-sm font-semibold text-charcoal truncate block">{form.video_url}</span>
                       </div>
                     </div>
@@ -1876,7 +1928,7 @@ const HostListProperty = () => {
                       value={form.youtube_short_url || ''}
                       onChange={(e) => update({ youtube_short_url: e.target.value })}
                       placeholder="https://www.youtube.com/shorts/..."
-                      className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all shadow-sm"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all shadow-sm"
                     />
                   </div>
                   <div>
@@ -1888,7 +1940,7 @@ const HostListProperty = () => {
                       value={form.youtube_long_url || ''}
                       onChange={(e) => update({ youtube_long_url: e.target.value })}
                       placeholder="https://www.youtube.com/watch?v=..."
-                      className="w-full bg-white border border-sand-300 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all shadow-sm"
+                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all shadow-sm"
                     />
                   </div>
                 </div>
@@ -1921,7 +1973,7 @@ const HostListProperty = () => {
                           type="button"
                           onClick={() => update({ subscription_plan_id: p.plan_id })}
                           className={`text-left p-4 rounded-lg border-2 transition ${
-                            active ? 'border-terracotta bg-terracotta/5' : 'border-sand-200 hover:border-terracotta/50'
+                            active ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 hover:border-terracotta/50'
                           }`}
                           data-testid={`plan-${p.plan_id}`}
                         >
@@ -1986,6 +2038,7 @@ const HostListProperty = () => {
               {form.youtube_long_url && <ReviewBlock label="YouTube Video" value="Attached" />}
               <ReviewBlock label="Cook Available" value={form.has_cook ? `Yes (₹${form.cook_price || 0}/day)` : 'No'} />
               <ReviewBlock label="Self Cooking Allowed" value={form.has_self_cook ? 'Yes' : 'No'} />
+              <ReviewBlock label="Taxi Service Available" value={form.has_taxi ? 'Yes' : 'No'} />
               <ReviewBlock label="Plan" value={hasActiveSubscription ? 'Active Subscription' : (plans.find((p) => p.plan_id === form.subscription_plan_id)?.plan_name || '—')} />
 
               <button
@@ -2034,7 +2087,7 @@ const HostListProperty = () => {
       {/* Mock Payment Modal */}
       {mockPayment.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-elevated animate-in zoom-in-95 duration-200">
             <div className="p-8 text-center">
               <div className="w-20 h-20 bg-terracotta/10 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CreditCard className="w-10 h-10 text-terracotta" />
@@ -2047,7 +2100,7 @@ const HostListProperty = () => {
               
               <button
                 onClick={mockPayment.onConfirm}
-                className="w-full py-4 bg-terracotta text-white rounded-2xl font-bold text-lg hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-lg shadow-terracotta/20 mb-4"
+                className="w-full py-4 bg-terracotta text-white rounded-2xl font-bold text-lg hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-premium shadow-terracotta/20 mb-4"
               >
                 Confirm Demo Payment
               </button>
@@ -2058,7 +2111,7 @@ const HostListProperty = () => {
                 Cancel
               </button>
             </div>
-            <div className="bg-sand-50 p-4 text-center border-t border-sand-100">
+            <div className="bg-stone p-4 text-center border-t border-sand-100">
               <p className="text-sm text-sand-500 flex items-center justify-center gap-2">
                 <CheckCircle2 className="w-4 h-4" /> Secured Mock Transaction
               </p>
@@ -2144,7 +2197,7 @@ const Toggle = ({ label, testid, checked, onChange }) => (
 );
 
 const ReviewBlock = ({ label, value }) => (
-  <div className="flex justify-between border-b border-sand-200 py-2">
+  <div className="flex justify-between border-b border-gray-100 py-2">
     <span className="text-charcoal-light text-sm">{label}</span>
     <span className="text-charcoal text-sm font-semibold text-right max-w-[60%] truncate">{value || '—'}</span>
   </div>

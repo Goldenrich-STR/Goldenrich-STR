@@ -79,9 +79,9 @@ const CouponManagement = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-sand-200 shadow-sm">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
         <div>
-          <h2 className="text-2xl font-black text-charcoal">Coupon Codes</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-charcoal">Coupon Codes</h2>
           <p className="text-charcoal-muted">Create and manage discount codes for bookings and subscriptions.</p>
         </div>
         <button 
@@ -95,15 +95,15 @@ const CouponManagement = () => {
 
       {showForm && (
         <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] p-8 max-w-xl w-full shadow-premium animate-slide-up relative overflow-hidden">
+          <div className="bg-white rounded-2xl p-8 max-w-xl w-full shadow-premium animate-slide-up relative overflow-hidden">
             <div className="absolute top-0 right-0 w-64 h-64 bg-terracotta/5 rounded-full blur-3xl -mr-20 -mt-20"></div>
             
             <div className="flex justify-between items-center mb-8 relative z-10">
               <div>
-                <h3 className="text-2xl font-black text-charcoal tracking-tight">New Coupon Code</h3>
+                <h3 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">New Coupon Code</h3>
                 <p className="text-sm text-charcoal-muted mt-1">Configure your discount rules below.</p>
               </div>
-              <button onClick={() => setShowForm(false)} className="w-10 h-10 bg-sand-100 text-charcoal rounded-full flex items-center justify-center hover:bg-sand-200 transition">
+              <button onClick={() => setShowForm(false)} className="w-10 h-10 bg-gray-50 text-charcoal rounded-full flex items-center justify-center hover:bg-sand-200 transition">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -111,23 +111,23 @@ const CouponManagement = () => {
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-6 relative z-10">
               
               <div className="space-y-2">
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Coupon Code</label>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Coupon Code</label>
                 <input 
                   type="text" 
                   required
                   value={formData.code}
                   onChange={e => setFormData({...formData, code: e.target.value.toUpperCase()})}
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition uppercase"
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition uppercase"
                   placeholder="e.g. SUMMER2026"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Applied To</label>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Applied To</label>
                 <select 
                   value={formData.coupon_type}
                   onChange={e => setFormData({...formData, coupon_type: e.target.value})}
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
                 >
                   <option value="booking">Booking</option>
                   <option value="subscription">Subscription</option>
@@ -135,11 +135,11 @@ const CouponManagement = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Discount Type</label>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Discount Type</label>
                 <select 
                   value={formData.discount_type}
                   onChange={e => setFormData({...formData, discount_type: e.target.value})}
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
                 >
                   <option value="percentage">Percentage (%)</option>
                   <option value="fixed">Fixed Amount (₹)</option>
@@ -147,7 +147,7 @@ const CouponManagement = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Discount Value</label>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Discount Value</label>
                 <input 
                   type="number" 
                   required
@@ -155,18 +155,18 @@ const CouponManagement = () => {
                   step="0.01"
                   value={formData.discount_value}
                   onChange={e => setFormData({...formData, discount_value: e.target.value})}
-                  className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
                   placeholder={formData.discount_type === 'percentage' ? "e.g. 10" : "e.g. 500"}
                 />
               </div>
 
               {formData.coupon_type === 'booking' && (
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-xs font-black text-charcoal-muted uppercase tracking-widest block mb-1">Specific Property (Optional)</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Specific Property (Optional)</label>
                   <select 
                     value={formData.property_id}
                     onChange={e => setFormData({...formData, property_id: e.target.value})}
-                    className="w-full border-2 border-sand-200 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
                   >
                     <option value="">-- Apply to All Properties --</option>
                     {properties.map(p => (
@@ -179,11 +179,11 @@ const CouponManagement = () => {
                 </div>
               )}
 
-              <div className="md:col-span-2 flex space-x-4 pt-6 border-t border-sand-200 mt-4">
-                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-4 font-bold text-charcoal-muted bg-sand-50 hover:bg-sand-100 rounded-xl transition">
+              <div className="md:col-span-2 flex space-x-4 pt-6 border-t border-gray-100 mt-4">
+                <button type="button" onClick={() => setShowForm(false)} className="flex-1 py-4 font-bold text-charcoal-muted bg-stone hover:bg-gray-50 rounded-xl transition">
                   Cancel
                 </button>
-                <button type="submit" className="flex-1 btn-premium py-4 shadow-lg hover:-translate-y-1 transition-all duration-300">
+                <button type="submit" className="flex-1 btn-premium py-4 shadow-premium hover:-translate-y-1 transition-all duration-300">
                   Generate Coupon
                 </button>
               </div>
@@ -192,9 +192,9 @@ const CouponManagement = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-[2rem] border border-sand-200 shadow-sm overflow-hidden flex flex-col">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
         {/* Search and Filter Bar */}
-        <div className="p-5 border-b border-sand-200 bg-sand-50 flex flex-col md:flex-row items-center gap-4">
+        <div className="p-5 border-b border-gray-100 bg-stone flex flex-col md:flex-row items-center gap-4">
           <div className="flex-1 relative w-full">
             <Search className="w-5 h-5 text-charcoal-muted absolute left-4 top-1/2 -translate-y-1/2" />
             <input 
@@ -202,11 +202,11 @@ const CouponManagement = () => {
               placeholder="Search coupons by code or property ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-sand-200 outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20 text-sm font-bold text-charcoal placeholder:font-semibold placeholder:text-charcoal-light py-3 pl-11 pr-4 rounded-xl transition-all"
+              className="w-full bg-white border border-gray-100 outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20 text-sm font-bold text-charcoal placeholder:font-semibold placeholder:text-charcoal-light py-3 pl-11 pr-4 rounded-xl transition-all"
             />
           </div>
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <div className="flex items-center bg-white border border-sand-200 rounded-xl px-3 py-1 text-sm font-bold text-charcoal focus-within:border-terracotta focus-within:ring-2 focus-within:ring-terracotta/20 transition-all">
+            <div className="flex items-center bg-white border border-gray-100 rounded-xl px-3 py-1 text-sm font-bold text-charcoal focus-within:border-terracotta focus-within:ring-2 focus-within:ring-terracotta/20 transition-all">
               <Filter className="w-4 h-4 text-charcoal-muted mr-2" />
               <select
                 value={filterType}
@@ -218,7 +218,7 @@ const CouponManagement = () => {
                 <option value="subscription">Subscriptions</option>
               </select>
             </div>
-            <div className="flex items-center bg-white border border-sand-200 rounded-xl px-3 py-1 text-sm font-bold text-charcoal focus-within:border-terracotta focus-within:ring-2 focus-within:ring-terracotta/20 transition-all">
+            <div className="flex items-center bg-white border border-gray-100 rounded-xl px-3 py-1 text-sm font-bold text-charcoal focus-within:border-terracotta focus-within:ring-2 focus-within:ring-terracotta/20 transition-all">
               <select
                 value={filterStatus}
                 onChange={e => setFilterStatus(e.target.value)}
@@ -247,21 +247,21 @@ const CouponManagement = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-sand-50 border-b border-sand-200">
-                  <th className="px-6 py-4 text-xs font-black text-charcoal uppercase tracking-widest">Code</th>
-                  <th className="px-6 py-4 text-xs font-black text-charcoal uppercase tracking-widest">Type</th>
-                  <th className="px-6 py-4 text-xs font-black text-charcoal uppercase tracking-widest">Discount</th>
-                  <th className="px-6 py-4 text-xs font-black text-charcoal uppercase tracking-widest">Scope</th>
-                  <th className="px-6 py-4 text-xs font-black text-charcoal uppercase tracking-widest">Status</th>
+                <tr className="bg-stone border-b border-gray-100">
+                  <th className="px-6 py-4 text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">Code</th>
+                  <th className="px-6 py-4 text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">Type</th>
+                  <th className="px-6 py-4 text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">Discount</th>
+                  <th className="px-6 py-4 text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">Scope</th>
+                  <th className="px-6 py-4 text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sand-100">
                 {filteredCoupons.map((coupon) => (
-                  <tr key={coupon.coupon_id} className="hover:bg-sand-50/50 transition-colors">
+                  <tr key={coupon.coupon_id} className="hover:bg-stone/50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
                         <Tag className="w-4 h-4 text-terracotta" />
-                        <span className="font-black text-charcoal">{coupon.code}</span>
+                        <span className="font-bold tracking-tight text-charcoal">{coupon.code}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">

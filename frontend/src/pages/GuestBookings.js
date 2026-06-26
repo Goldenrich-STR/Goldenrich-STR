@@ -210,14 +210,14 @@ const GuestBookings = () => {
   }, [visible, currentPage]);
 
   return (
-    <div className="min-h-screen bg-sand-50">
-      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 px-4 md:px-8 py-4 border-b border-sand-200" data-testid="guest-header">
+    <div className="min-h-screen bg-stone">
+      <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 px-4 md:px-8 py-4 border-b border-gray-100" data-testid="guest-header">
         <div className="max-w-5xl mx-auto flex justify-between items-center w-full gap-2">
           <div 
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
+            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
           </div>
           <div className="flex items-center space-x-6">
             <span className="text-xs font-bold text-charcoal-muted hidden sm:inline">
@@ -225,7 +225,7 @@ const GuestBookings = () => {
             </span>
             <button
               onClick={() => navigate('/guest/browse')}
-              className="text-xs font-black text-charcoal-light hover:text-terracotta tracking-widest transition-colors uppercase cursor-pointer"
+              className="text-xs font-bold tracking-tight text-charcoal-light hover:text-terracotta tracking-widest transition-colors uppercase cursor-pointer"
               data-testid="browse-link"
             >
               Browse
@@ -237,7 +237,7 @@ const GuestBookings = () => {
                   logout();
                 }, 50);
               }} 
-              className="text-xs font-black text-terracotta hover:underline tracking-widest uppercase cursor-pointer"
+              className="text-xs font-bold tracking-tight text-terracotta hover:underline tracking-widest uppercase cursor-pointer"
             >
               Logout
             </button>
@@ -248,14 +248,14 @@ const GuestBookings = () => {
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div>
-            <h2 className="text-3xl font-black text-charcoal tracking-tight" data-testid="page-title">
+            <h2 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight" data-testid="page-title">
               My Bookings
             </h2>
             <p className="text-charcoal-muted text-sm font-medium mt-1">Manage your stays in one place.</p>
           </div>
           <button
             onClick={() => navigate('/guest/browse')}
-            className="px-6 py-3 rounded-xl border border-sand-300 text-xs font-black text-charcoal uppercase tracking-widest hover:border-sand-500 hover:bg-sand-50 transition-all shadow-sm cursor-pointer"
+            className="px-6 py-3 rounded-xl border border-gray-200 text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest hover:border-sand-500 hover:bg-stone transition-all shadow-sm cursor-pointer"
             data-testid="find-stay-btn"
           >
             Find a stay
@@ -263,7 +263,7 @@ const GuestBookings = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-8 border-b border-sand-200 mb-8" data-testid="tabs">
+        <div className="flex space-x-8 border-b border-gray-100 mb-8" data-testid="tabs">
           {TABS.map((t) => {
             const count = groups[t.key].length;
             const active = tab === t.key;
@@ -271,7 +271,7 @@ const GuestBookings = () => {
               <button
                 key={t.key}
                 onClick={() => setTab(t.key)}
-                className={`relative pb-4 text-sm font-black uppercase tracking-widest transition-all cursor-pointer ${
+                className={`relative pb-4 text-sm font-bold tracking-tight uppercase tracking-widest transition-all cursor-pointer ${
                   active
                     ? 'text-charcoal border-b-2 border-charcoal'
                     : 'text-charcoal-muted hover:text-charcoal border-b-2 border-transparent'
@@ -281,7 +281,7 @@ const GuestBookings = () => {
                 <span className="flex items-center gap-2">
                   {t.label}
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                    active ? 'bg-charcoal text-white' : 'bg-sand-100 text-charcoal-muted'
+                    active ? 'bg-charcoal text-white' : 'bg-gray-50 text-charcoal-muted'
                   }`}>
                     {count}
                   </span>
@@ -300,15 +300,15 @@ const GuestBookings = () => {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-charcoal-muted">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-terracotta border-sand-200 mb-4"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-terracotta border-gray-100 mb-4"></div>
             <span className="text-sm font-bold uppercase tracking-wider">Loading bookings…</span>
           </div>
         ) : visible.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-3xl border border-sand-200 shadow-sm px-6" data-testid="empty-state">
-            <div className="w-16 h-16 bg-sand-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm px-6" data-testid="empty-state">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
               <CalendarDays className="w-8 h-8 text-charcoal-muted" />
             </div>
-            <h3 className="text-lg font-black text-charcoal mb-2 uppercase tracking-wide">No Bookings Found</h3>
+            <h3 className="text-lg font-bold tracking-tight text-charcoal mb-2 uppercase tracking-wide">No Bookings Found</h3>
             <p className="text-charcoal-muted text-sm font-semibold mb-8 max-w-sm mx-auto">
               {tab === 'upcoming'
                 ? "You don't have any upcoming reservations. Time to plan your next getaway!"
@@ -318,7 +318,7 @@ const GuestBookings = () => {
             </p>
             <button 
               onClick={() => navigate('/guest/browse')} 
-              className="px-6 py-3 bg-charcoal text-white hover:bg-neutral-800 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-premium cursor-pointer"
+              className="px-6 py-3 bg-charcoal text-white hover:bg-neutral-800 rounded-xl text-xs font-bold tracking-tight uppercase tracking-widest transition-all shadow-premium cursor-pointer"
             >
               Find your next stay
             </button>
@@ -340,14 +340,14 @@ const GuestBookings = () => {
                 return (
                   <div
                     key={`${b.booking_id}-${idx}`}
-                    className="bg-white rounded-3xl border border-sand-200 overflow-hidden shadow-premium hover:shadow-premium-hover hover:scale-[1.01] transition-all duration-300 flex flex-col md:flex-row gap-6 p-6"
+                    className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-premium hover:shadow-premium-hover hover:scale-[1.01] transition-all duration-300 flex flex-col md:flex-row gap-6 p-6"
                     data-testid={`booking-${b.booking_id}`}
                   >
                     <div className="w-full md:w-56 h-48 md:h-40 rounded-2xl overflow-hidden shadow-sm relative group flex-shrink-0">
                       <img
                         src={image}
                         alt={property.title || 'Property'}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02] cursor-pointer"
                         onClick={() => property.property_id && navigate(`/property/${property.property_id}`)}
                       />
                     </div>
@@ -355,22 +355,22 @@ const GuestBookings = () => {
                       <div>
                         <div className="flex items-start justify-between gap-3 flex-wrap">
                           <div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-terracotta block mb-1">
+                            <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-terracotta block mb-1">
                               {property.city ? `${property.city}` : 'STAY'}{property.state ? `, ${property.state}` : ''}
                             </span>
                             <h3
-                              className="text-xl font-extrabold text-charcoal cursor-pointer hover:text-terracotta transition-colors leading-tight"
+                              className="text-xl font-semibold tracking-tight text-charcoal cursor-pointer hover:text-terracotta transition-colors leading-tight"
                               onClick={() => property.property_id && navigate(`/property/${property.property_id}`)}
                               data-testid={`booking-title-${b.booking_id}`}
                             >
                               {property.title || 'Property'}
                             </h3>
                           </div>
-                          <span className={`text-[10px] font-black uppercase tracking-widest flex items-center space-x-1 px-3 py-1 border rounded-full ${
+                          <span className={`text-[10px] font-bold tracking-tight uppercase tracking-widest flex items-center space-x-1 px-3 py-1 border rounded-full ${
                             statusKey === 'confirmed' ? 'bg-green-50 text-green-700 border-green-200' :
                             statusKey === 'soft_lock' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                             statusKey === 'cancelled' ? 'bg-red-50 text-red-700 border-red-200' :
-                            'bg-sand-100 text-charcoal-light border-sand-200'
+                            'bg-gray-50 text-charcoal-light border-gray-100'
                           }`}>
                             <Icon className="w-3.5 h-3.5" />
                             <span>{badge.label}</span>
@@ -391,7 +391,7 @@ const GuestBookings = () => {
                         </div>
                         
                         {b.booking_id === latestBookingId && b.created_at && (
-                          <div className="inline-flex items-center bg-terracotta/5 border border-terracotta/20 text-terracotta text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full mt-3 w-fit">
+                          <div className="inline-flex items-center bg-terracotta/5 border border-terracotta/20 text-terracotta text-[10px] font-bold tracking-tight uppercase tracking-widest px-3 py-1 rounded-full mt-3 w-fit">
                             <Clock className="w-3.5 h-3.5 mr-1 text-terracotta animate-pulse" />
                             Booked on: {new Date(b.created_at).toLocaleString('en-IN', {
                               day: '2-digit',
@@ -411,7 +411,7 @@ const GuestBookings = () => {
                               <div className="mt-3">
                                 <button
                                   onClick={() => setSelectedCall(matchingCall)}
-                                  className="inline-flex items-center text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-sm"
+                                  className="inline-flex items-center text-[10px] font-bold tracking-tight uppercase tracking-wider text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-full transition-all cursor-pointer shadow-sm"
                                 >
                                   <Phone className="w-3 h-3 mr-1.5 text-emerald-600" /> AI Voice Call Log 📞
                                 </button>
@@ -423,14 +423,14 @@ const GuestBookings = () => {
 
                         {/* Premium Refund Status Details */}
                         {b.booking_status === 'cancelled' && (
-                          <div className="mt-4 bg-sand-50 border border-sand-200/60 rounded-2xl p-4 text-xs space-y-2">
+                          <div className="mt-4 bg-stone border border-gray-100/60 rounded-2xl p-4 text-xs space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-charcoal-muted uppercase tracking-wider text-[10px]">Refund Status</span>
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border ${
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-tight uppercase tracking-wider border ${
                                 b.refund?.status === 'processed' ? 'bg-green-50 text-green-700 border-green-200' :
                                 b.refund?.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                                 b.refund?.status === 'failed' ? 'bg-red-50 text-red-700 border-red-200' :
-                                'bg-sand-100 text-charcoal-light border-sand-200'
+                                'bg-gray-50 text-charcoal-light border-gray-100'
                               }`}>
                                 {b.refund?.status || 'No Refund'}
                               </span>
@@ -472,8 +472,8 @@ const GuestBookings = () => {
                       
                       <div className="flex items-center justify-between pt-1 gap-4 flex-wrap">
                         <div>
-                          <span className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block">Total paid</span>
-                          <span className="text-xl font-black text-charcoal">
+                          <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Total paid</span>
+                          <span className="text-xl font-bold tracking-tight text-charcoal">
                             ₹{Math.round(b.total_amount || 0).toLocaleString('en-IN')}
                           </span>
                         </div>
@@ -481,7 +481,7 @@ const GuestBookings = () => {
                           {isSoftLock && (
                             <button
                               onClick={() => navigate(`/guest/booking-confirmation?booking_id=${b.booking_id}`)}
-                              className="px-5 py-2.5 bg-terracotta hover:bg-terracotta-dark text-white font-black text-xs uppercase tracking-widest rounded-xl transition flex items-center space-x-1.5 shadow-premium cursor-pointer"
+                              className="px-5 py-2.5 bg-terracotta hover:bg-terracotta-dark text-white font-bold tracking-tight text-xs uppercase tracking-widest rounded-xl transition flex items-center space-x-1.5 shadow-premium cursor-pointer"
                               data-testid={`pay-now-${b.booking_id}`}
                             >
                               <CreditCard className="w-4 h-4" />
@@ -491,7 +491,7 @@ const GuestBookings = () => {
                           {isUpcoming && (
                             <button
                               onClick={() => navigate(`/guest/booking-confirmation?booking_id=${b.booking_id}`)}
-                              className="px-4 py-2.5 bg-sand-100 hover:bg-sand-200 text-charcoal font-black text-xs uppercase tracking-widest rounded-xl transition border border-sand-300/50 shadow-sm cursor-pointer"
+                              className="px-4 py-2.5 bg-gray-50 hover:bg-sand-200 text-charcoal font-bold tracking-tight text-xs uppercase tracking-widest rounded-xl transition border border-gray-200/50 shadow-sm cursor-pointer"
                               data-testid={`view-${b.booking_id}`}
                             >
                               View details
@@ -501,7 +501,7 @@ const GuestBookings = () => {
                             <button
                               onClick={() => handleCancel(b)}
                               disabled={cancelling === b.booking_id}
-                              className="text-red-500 hover:text-red-700 font-black text-xs uppercase tracking-widest hover:underline disabled:opacity-50 transition px-2 cursor-pointer"
+                              className="text-red-500 hover:text-red-700 font-bold tracking-tight text-xs uppercase tracking-widest hover:underline disabled:opacity-50 transition px-2 cursor-pointer"
                               data-testid={`cancel-${b.booking_id}`}
                             >
                               {cancelling === b.booking_id ? 'Cancelling…' : 'Cancel'}
@@ -511,7 +511,7 @@ const GuestBookings = () => {
                             <>
                               {reviewedIds.has(b.booking_id) ? (
                                 <span
-                                  className="text-[10px] font-black uppercase tracking-widest flex items-center px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200"
+                                  className="text-[10px] font-bold tracking-tight uppercase tracking-widest flex items-center px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200"
                                   data-testid={`reviewed-tag-${b.booking_id}`}
                                 >
                                   <Star className="w-3.5 h-3.5 mr-1 fill-green-700 text-green-700" /> Reviewed
@@ -519,7 +519,7 @@ const GuestBookings = () => {
                               ) : (
                                 <button
                                   onClick={() => setReviewBooking(b)}
-                                  className="px-4 py-2.5 bg-charcoal text-white hover:bg-neutral-800 font-black text-xs uppercase tracking-widest rounded-xl transition shadow-premium cursor-pointer"
+                                  className="px-4 py-2.5 bg-charcoal text-white hover:bg-neutral-800 font-bold tracking-tight text-xs uppercase tracking-widest rounded-xl transition shadow-premium cursor-pointer"
                                   data-testid={`review-btn-${b.booking_id}`}
                                 >
                                   Leave a review
@@ -527,7 +527,7 @@ const GuestBookings = () => {
                               )}
                               <button
                                 onClick={() => property.property_id && navigate(`/property/${property.property_id}`)}
-                                className="px-4 py-2.5 bg-sand-100 hover:bg-sand-200 text-charcoal font-black text-xs uppercase tracking-widest rounded-xl transition border border-sand-300/50 shadow-sm cursor-pointer"
+                                className="px-4 py-2.5 bg-gray-50 hover:bg-sand-200 text-charcoal font-bold tracking-tight text-xs uppercase tracking-widest rounded-xl transition border border-gray-200/50 shadow-sm cursor-pointer"
                                 data-testid={`book-again-${b.booking_id}`}
                               >
                                 Book again
@@ -542,19 +542,19 @@ const GuestBookings = () => {
               })}
             </div>
             {visible.length > 0 && (
-              <div className="flex items-center justify-between border-t border-sand-200 pt-6 mt-8">
+              <div className="flex items-center justify-between border-t border-gray-100 pt-6 mt-8">
                 <div className="flex flex-1 justify-between sm:hidden">
                   <button
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                    className="relative inline-flex items-center rounded-xl border border-sand-300 bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-charcoal hover:bg-sand-50 disabled:opacity-40 transition cursor-pointer"
+                    className="relative inline-flex items-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold tracking-tight uppercase tracking-widest text-charcoal hover:bg-stone disabled:opacity-40 transition cursor-pointer"
                   >
                     Previous
                   </button>
                   <button
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                    className="relative ml-3 inline-flex items-center rounded-xl border border-sand-300 bg-white px-4 py-2 text-xs font-black uppercase tracking-widest text-charcoal hover:bg-sand-50 disabled:opacity-40 transition cursor-pointer"
+                    className="relative ml-3 inline-flex items-center rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs font-bold tracking-tight uppercase tracking-widest text-charcoal hover:bg-stone disabled:opacity-40 transition cursor-pointer"
                   >
                     Next
                   </button>
@@ -562,9 +562,9 @@ const GuestBookings = () => {
                 <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                   <div>
                     <p className="text-xs text-charcoal-muted font-bold uppercase tracking-wider">
-                      Showing <span className="font-black text-charcoal">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                      <span className="font-black text-charcoal">{Math.min(currentPage * itemsPerPage, visible.length)}</span> of{' '}
-                      <span className="font-black text-charcoal">{visible.length}</span> bookings
+                      Showing <span className="font-bold tracking-tight text-charcoal">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+                      <span className="font-bold tracking-tight text-charcoal">{Math.min(currentPage * itemsPerPage, visible.length)}</span> of{' '}
+                      <span className="font-bold tracking-tight text-charcoal">{visible.length}</span> bookings
                     </p>
                   </div>
                   <div>
@@ -572,7 +572,7 @@ const GuestBookings = () => {
                       <button
                         disabled={currentPage === 1}
                         onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                        className="w-9 h-9 flex items-center justify-center rounded-full border border-sand-300 bg-white text-charcoal-light hover:bg-sand-100 hover:text-charcoal disabled:opacity-30 disabled:hover:bg-transparent transition cursor-pointer"
+                        className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 bg-white text-charcoal-light hover:bg-gray-50 hover:text-charcoal disabled:opacity-30 disabled:hover:bg-transparent transition cursor-pointer"
                       >
                         <span className="sr-only">Previous</span>
                         <ChevronLeft className="h-4 w-4" />
@@ -585,10 +585,10 @@ const GuestBookings = () => {
                             key={pageNumber}
                             onClick={() => setCurrentPage(pageNumber)}
                             aria-current={isCurrent ? 'page' : undefined}
-                            className={`w-9 h-9 flex items-center justify-center rounded-full text-xs font-black transition cursor-pointer border ${
+                            className={`w-9 h-9 flex items-center justify-center rounded-full text-xs font-bold tracking-tight transition cursor-pointer border ${
                               isCurrent
                                 ? 'bg-charcoal border-charcoal text-white shadow-premium'
-                                : 'bg-white border-sand-300 text-charcoal hover:bg-sand-100'
+                                : 'bg-white border-gray-200 text-charcoal hover:bg-gray-50'
                             }`}
                           >
                             {pageNumber}
@@ -599,7 +599,7 @@ const GuestBookings = () => {
                       <button
                         disabled={currentPage === totalPages}
                         onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                        className="w-9 h-9 flex items-center justify-center rounded-full border border-sand-300 bg-white text-charcoal-light hover:bg-sand-100 hover:text-charcoal disabled:opacity-30 disabled:hover:bg-transparent transition cursor-pointer"
+                        className="w-9 h-9 flex items-center justify-center rounded-full border border-gray-200 bg-white text-charcoal-light hover:bg-gray-50 hover:text-charcoal disabled:opacity-30 disabled:hover:bg-transparent transition cursor-pointer"
                       >
                         <span className="sr-only">Next</span>
                         <ChevronRight className="h-4 w-4" />
@@ -626,29 +626,29 @@ const GuestBookings = () => {
 
       {cancellingBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/40 backdrop-blur-sm" data-testid="cancel-confirm-modal">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-premium border border-sand-200">
-            <h3 className="text-lg font-black text-charcoal text-center mb-6 uppercase tracking-wide leading-tight">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-premium border border-gray-100">
+            <h3 className="text-lg font-bold tracking-tight text-charcoal text-center mb-6 uppercase tracking-wide leading-tight">
               Are you sure you want to cancel?
             </h3>
             
             <div className="flex gap-3 mb-6">
               <button
                 onClick={confirmCancel}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition shadow-sm cursor-pointer"
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold tracking-tight text-xs uppercase tracking-widest rounded-xl transition shadow-sm cursor-pointer"
                 data-testid="confirm-cancel-yes"
               >
                 Yes
               </button>
               <button
                 onClick={() => setCancellingBooking(null)}
-                className="flex-1 py-3 bg-sand-100 hover:bg-sand-200 text-charcoal font-black text-xs uppercase tracking-widest rounded-xl transition border border-sand-300/50 shadow-sm cursor-pointer"
+                className="flex-1 py-3 bg-gray-50 hover:bg-sand-200 text-charcoal font-bold tracking-tight text-xs uppercase tracking-widest rounded-xl transition border border-gray-200/50 shadow-sm cursor-pointer"
                 data-testid="confirm-cancel-no"
               >
                 No
               </button>
             </div>
             
-            <p className="text-[11px] text-charcoal-muted font-bold text-center uppercase tracking-wider bg-sand-50 py-2.5 rounded-xl border border-sand-200/50">
+            <p className="text-[11px] text-charcoal-muted font-bold text-center uppercase tracking-wider bg-stone py-2.5 rounded-xl border border-gray-100">
               Note: The Price & Date may change
             </p>
           </div>
@@ -656,18 +656,18 @@ const GuestBookings = () => {
       )}
       {successNotification && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/40 backdrop-blur-sm" data-testid="refund-success-modal">
-          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-premium border border-sand-200 text-center animate-fade-in">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-premium border border-gray-100 text-center animate-fade-in">
             <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
               💸
             </div>
-            <h3 className="text-xl font-black text-charcoal mb-2 uppercase tracking-wide leading-tight">
+            <h3 className="text-xl font-bold tracking-tight text-charcoal mb-2 uppercase tracking-wide leading-tight">
               {successNotification.title}
             </h3>
             <p className="text-sm text-charcoal-light mb-6 leading-relaxed">
               {successNotification.message}
             </p>
             {successNotification.policy && (
-              <div className="mb-6 py-2 px-4 bg-sand-50 rounded-xl border border-sand-200 inline-block">
+              <div className="mb-6 py-2 px-4 bg-stone rounded-xl border border-gray-100 inline-block">
                 <span className="text-xs font-bold text-charcoal uppercase tracking-wider">
                   Policy applied: {successNotification.policy.replace('_', ' ')}
                 </span>
@@ -675,7 +675,7 @@ const GuestBookings = () => {
             )}
             <button
               onClick={() => setSuccessNotification(null)}
-              className="w-full py-3 bg-charcoal hover:bg-charcoal-dark text-white font-black text-xs uppercase tracking-widest rounded-xl transition shadow-md cursor-pointer"
+              className="w-full py-3 bg-charcoal hover:bg-charcoal-dark text-white font-bold tracking-tight text-xs uppercase tracking-widest rounded-xl transition shadow-subtle cursor-pointer"
               data-testid="refund-success-close"
             >
               Great
@@ -865,12 +865,12 @@ const AICallModal = ({ call, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/60 backdrop-blur-md transition-all duration-300">
-      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-sand-200 flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-elevated border border-gray-100 flex flex-col max-h-[90vh]">
         {/* Header */}
         <div className="bg-gradient-to-r from-charcoal to-neutral-805 p-6 text-white flex justify-between items-center">
           <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-terracotta">Voice AI Concierge</span>
-            <h3 className="text-xl font-black tracking-tight">{call.agent_name}</h3>
+            <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-terracotta">Voice AI Concierge</span>
+            <h3 className="text-xl font-bold tracking-tight tracking-tight">{call.agent_name}</h3>
           </div>
           <button 
             onClick={onClose} 
@@ -881,29 +881,29 @@ const AICallModal = ({ call, onClose }) => {
         </div>
 
         {/* Call Info details */}
-        <div className="p-6 bg-sand-50/50 border-b border-sand-200 text-xs font-semibold text-charcoal-muted grid grid-cols-2 gap-4">
+        <div className="p-6 bg-stone/50 border-b border-gray-100 text-xs font-semibold text-charcoal-muted grid grid-cols-2 gap-4">
           <div>
-            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Recipient</span>
+            <span className="block text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light">Recipient</span>
             <span className="text-charcoal text-sm font-bold">{call.recipient_name} ({call.role})</span>
           </div>
           <div>
-            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Phone number</span>
+            <span className="block text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light">Phone number</span>
             <span className="text-charcoal text-sm font-bold">{call.phone}</span>
           </div>
           <div>
-            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Duration</span>
+            <span className="block text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light">Duration</span>
             <span className="text-charcoal text-sm font-bold">{call.duration_seconds} seconds</span>
           </div>
           <div>
-            <span className="block text-[10px] font-black uppercase tracking-wider text-charcoal-light">Status</span>
-            <span className="inline-flex items-center text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-md text-[10px] font-black uppercase mt-1">
+            <span className="block text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light">Status</span>
+            <span className="inline-flex items-center text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight uppercase mt-1">
               ● Connected
             </span>
           </div>
         </div>
 
         {/* Audio Visualizer & Player */}
-        <div className="p-6 border-b border-sand-100 flex flex-col items-center justify-center bg-sand-50/30">
+        <div className="p-6 border-b border-sand-100 flex flex-col items-center justify-center bg-stone/30">
           {/* Wave visualizer */}
           <div className="flex items-end justify-center gap-1.5 h-16 mb-6 w-full px-12">
             {Array.from({ length: 28 }).map((_, i) => {
@@ -927,7 +927,7 @@ const AICallModal = ({ call, onClose }) => {
             <span className="text-xs font-bold font-mono text-charcoal-muted">{formatTime(progress)}</span>
             <button
               onClick={handlePlayPause}
-              className={`px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all cursor-pointer shadow-md flex items-center gap-2 ${
+              className={`px-6 py-2.5 rounded-xl font-bold tracking-tight text-xs uppercase tracking-widest transition-all cursor-pointer shadow-subtle flex items-center gap-2 ${
                 isPlaying 
                   ? 'bg-charcoal hover:bg-neutral-800 text-white' 
                   : 'bg-terracotta hover:bg-terracotta-dark text-white'
@@ -950,11 +950,11 @@ const AICallModal = ({ call, onClose }) => {
 
         {/* Transcription bubble */}
         <div className="p-6 overflow-y-auto flex-1 bg-white min-h-[160px] max-h-[300px]">
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-charcoal-muted mb-3 flex items-center gap-1">
+          <h4 className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-muted mb-3 flex items-center gap-1">
             <Volume2 className="w-3.5 h-3.5" /> Call Transcription Script
           </h4>
-          <div className="bg-sand-50 p-4 rounded-2xl border border-sand-200/50 text-sm font-medium text-charcoal leading-relaxed relative">
-            <div className="absolute top-3 left-4 text-xs text-terracotta font-black uppercase tracking-wider text-[9px] mb-1">
+          <div className="bg-stone p-4 rounded-2xl border border-gray-100 text-sm font-medium text-charcoal leading-relaxed relative">
+            <div className="absolute top-3 left-4 text-xs text-terracotta font-bold tracking-tight uppercase tracking-wider text-[9px] mb-1">
               Mayur Voice AI
             </div>
             <p className="mt-4 italic">

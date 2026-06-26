@@ -276,6 +276,23 @@ async def update_user(
         # Update broker_id
         if user_data.broker_id is not None:
             update_fields["broker_id"] = user_data.broker_id
+            
+            # Sync with their properties if user is a host
+            if user.get("role") == "host":
+                # Update all properties owned by this host
+                await db.properties.update_many(
+                    {"owner_id": user_id},
+                    {"$set": {"broker_id": user_data.broker_id, "updated_at": datetime.now(timezone.utc)}}
+                )
+                # Find all properties of this host to sync their verifications
+                props = await db.properties.find({"owner_id": user_id}, {"property_id": 1}).to_list(length=100)
+                prop_ids = [p["property_id"] for p in props if "property_id" in p]
+                if prop_ids:
+                    # Update all property verifications where status is pending or in_progress
+                    await db.property_verifications.update_many(
+                        {"property_id": {"$in": prop_ids}, "status": {"$in": ["pending", "in_progress"]}},
+                        {"$set": {"broker_id": user_data.broker_id, "updated_at": datetime.now(timezone.utc)}}
+                    )
 
         # Update rm_id
         if user_data.rm_id is not None:

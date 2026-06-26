@@ -166,6 +166,9 @@ export const propertyAPI = {
   generateDescription: (data) =>
     apiClient.post('/properties/generate-description', data),
   
+  generateTitle: (data) =>
+    apiClient.post('/properties/generate-title', data),
+  
   createProperty: (propertyData) =>
     apiClient.post('/properties/', propertyData),
   
@@ -239,6 +242,17 @@ export const uploadAPI = {
     const formData = new FormData();
     formData.append('file', uploadFile);
     const res = await apiClient.post('/upload/image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return {
+      ...res.data,
+      url: getImageUrl(res.data.url),
+    };
+  },
+  uploadDocument: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post('/upload/document', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return {
@@ -443,6 +457,10 @@ export const accountAPI = {
     }),
   submitHostVerification: (payload) =>
     apiClient.post('/host/submit-verification', payload),
+  saveDraftDocument: (payload) =>
+    apiClient.patch('/host/kyc/documents/draft', payload),
+  saveDraftAgreement: (payload) =>
+    apiClient.patch('/host/kyc/agreement/draft', payload),
 };
 
 // Reviews & Ratings — Phase 18
@@ -462,6 +480,8 @@ export const reviewAPI = {
 // CMS API
 export const cmsAPI = {
   getLandingPage: () => apiClient.get('/cms/landing-page'),
+  getSupportPage: () => apiClient.get('/cms/support-page'),
+  submitContactForm: (payload) => apiClient.post('/cms/contact', payload),
   getAdminContent: (page) => apiClient.get('/cms/admin/content', { params: page ? { page } : {} }),
   updateContent: (contentId, payload) => apiClient.patch(`/cms/admin/content/${contentId}`, payload),
   createContent: (payload) => apiClient.post('/cms/admin/content', payload),

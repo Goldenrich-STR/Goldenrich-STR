@@ -68,18 +68,15 @@ const HostPayouts = () => {
   };
 
   return (
-    <div className="min-h-screen bg-sand-50" data-testid="host-payouts-page">
+    <div className="min-h-screen bg-stone" data-testid="host-payouts-page">
       {/* Header matching Host Central branding */}
       <header className="header-glass sticky top-0 z-50 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex justify-between items-center w-full">
+        <div className="w-full flex justify-between items-center">
           <div 
             className="flex items-center space-x-3 cursor-pointer group" 
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-black text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
-            <h1 className="text-xl font-black text-charcoal tracking-tighter">
-              HOST<span className="text-terracotta">CENTRAL</span>
-            </h1>
+            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
           </div>
           <div className="flex items-center space-x-6">
             <nav className="hidden md:flex items-center space-x-6">
@@ -92,7 +89,7 @@ const HostPayouts = () => {
                  <button
                    key={item.label}
                    onClick={() => navigate(item.path)}
-                   className={`text-[10px] font-black tracking-[0.2em] transition-colors ${
+                   className={`text-[10px] font-bold tracking-tight tracking-[0.2em] transition-colors ${
                      item.path === '/host/payouts' 
                        ? 'text-terracotta border-b border-terracotta pb-0.5' 
                        : 'text-charcoal-muted hover:text-terracotta'
@@ -114,7 +111,7 @@ const HostPayouts = () => {
                     logout();
                   }, 50);
                 }} 
-                className="text-xs font-black text-terracotta hover:underline tracking-widest uppercase cursor-pointer"
+                className="text-xs font-bold tracking-tight text-terracotta hover:underline tracking-widest uppercase cursor-pointer"
               >
                 Logout
               </button>
@@ -124,17 +121,17 @@ const HostPayouts = () => {
       </header>
 
       {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto px-6 py-12 space-y-8">
+      <div className="w-full px-4 md:px-8 lg:px-12 py-12 mx-auto space-y-8">
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div>
-            <h2 className="text-4xl font-extrabold text-charcoal tracking-tight" data-testid="page-title">
+            <h2 className="text-4xl font-semibold tracking-tight text-charcoal tracking-tight" data-testid="page-title">
               Payouts Manager
             </h2>
             <p className="text-charcoal-muted text-sm font-medium mt-1">Configure payout destinations and track your earnings.</p>
           </div>
           <button
             onClick={() => navigate('/host/dashboard')}
-            className="px-5 py-2.5 bg-white border border-sand-200 rounded-xl font-bold text-sm text-charcoal hover:text-terracotta hover:border-terracotta flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98]"
+            className="px-5 py-2.5 bg-white border border-gray-100 rounded-xl font-bold text-sm text-charcoal hover:text-terracotta hover:border-terracotta flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98]"
             data-testid="back-to-host-dashboard"
           >
             <ArrowLeft className="w-4 h-4 text-terracotta" />
@@ -143,20 +140,20 @@ const HostPayouts = () => {
         </div>
 
         {/* Preference Card */}
-        <div className="bg-white rounded-3xl border border-sand-200 p-8 shadow-sm" data-testid="payout-preference-card">
+        <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm" data-testid="payout-preference-card">
           <div className="flex items-center space-x-3 mb-4">
             <div className="p-2.5 rounded-2xl bg-terracotta/5 text-terracotta">
               <Wallet className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-charcoal uppercase tracking-wide">Payout destination</h2>
+              <h2 className="text-xl font-bold tracking-tight text-charcoal uppercase tracking-wide">Payout destination</h2>
               <span className="text-xs text-charcoal-muted">Choose your preferred method to receive payouts</span>
             </div>
           </div>
           
-          <p className="text-sm font-semibold text-charcoal-muted mb-6 bg-sand-50/50 p-4 rounded-2xl border border-sand-150">
+          <p className="text-sm font-semibold text-charcoal-muted mb-6 bg-stone/50 p-4 rounded-2xl border border-sand-150">
             Pick how you'd like to receive payouts after guests check out. Platform fee is
-            <span className="text-terracotta font-black"> 10% </span> — you keep the remaining <span className="text-emerald-600 font-black">90%</span> of each booking.
+            <span className="text-terracotta font-bold tracking-tight"> 10% </span> — you keep the remaining <span className="text-emerald-600 font-bold tracking-tight">90%</span> of each booking.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -164,7 +161,7 @@ const HostPayouts = () => {
               className={`p-4 rounded-2xl border text-left flex items-start space-x-3 transition-all cursor-pointer ${
                 pref.preferred === 'upi'
                   ? 'border-terracotta bg-terracotta/5 ring-2 ring-terracotta/10 shadow-sm'
-                  : 'border-sand-200 hover:border-sand-300 bg-white'
+                  : 'border-gray-100 hover:border-gray-200 bg-white'
               }`}
             >
               <input
@@ -174,11 +171,11 @@ const HostPayouts = () => {
                 className="sr-only"
                 data-testid="pref-upi"
               />
-              <div className={`p-2.5 rounded-xl shrink-0 ${pref.preferred === 'upi' ? 'bg-terracotta text-white' : 'bg-sand-100 text-charcoal-muted'}`}>
+              <div className={`p-2.5 rounded-xl shrink-0 ${pref.preferred === 'upi' ? 'bg-terracotta text-white' : 'bg-gray-50 text-charcoal-muted'}`}>
                 <Wallet className="w-5 h-5" />
               </div>
               <div>
-                <div className="font-black text-charcoal text-sm">UPI / VPA</div>
+                <div className="font-bold tracking-tight text-charcoal text-sm">UPI / VPA</div>
                 <div className="text-xs text-charcoal-muted mt-0.5 font-medium">Receive instant transfers directly to your UPI ID.</div>
               </div>
             </label>
@@ -187,7 +184,7 @@ const HostPayouts = () => {
               className={`p-4 rounded-2xl border text-left flex items-start space-x-3 transition-all cursor-pointer ${
                 pref.preferred === 'bank'
                   ? 'border-terracotta bg-terracotta/5 ring-2 ring-terracotta/10 shadow-sm'
-                  : 'border-sand-200 hover:border-sand-300 bg-white'
+                  : 'border-gray-100 hover:border-gray-200 bg-white'
               }`}
             >
               <input
@@ -197,60 +194,60 @@ const HostPayouts = () => {
                 className="sr-only"
                 data-testid="pref-bank"
               />
-              <div className={`p-2.5 rounded-xl shrink-0 ${pref.preferred === 'bank' ? 'bg-terracotta text-white' : 'bg-sand-100 text-charcoal-muted'}`}>
+              <div className={`p-2.5 rounded-xl shrink-0 ${pref.preferred === 'bank' ? 'bg-terracotta text-white' : 'bg-gray-50 text-charcoal-muted'}`}>
                 <Building className="w-5 h-5" />
               </div>
               <div>
-                <div className="font-black text-charcoal text-sm">Bank account (IMPS/NEFT)</div>
+                <div className="font-bold tracking-tight text-charcoal text-sm">Bank account (IMPS/NEFT)</div>
                 <div className="text-xs text-charcoal-muted mt-0.5 font-medium">Direct transfer to checking or savings account.</div>
               </div>
             </label>
           </div>
 
-          <div className="bg-sand-50/30 p-6 rounded-2xl border border-sand-150 mb-6">
+          <div className="bg-stone/30 p-6 rounded-2xl border border-sand-150 mb-6">
             {pref.preferred === 'upi' ? (
               <div className="max-w-md">
-                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">UPI VPA Address</label>
+                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">UPI VPA Address</label>
                 <input
                   value={pref.upi_vpa}
                   onChange={(e) => setPref({ ...pref, upi_vpa: e.target.value })}
                   placeholder="name@bank"
-                  className="w-full px-4 py-3 border border-sand-200 rounded-xl text-sm font-semibold text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all bg-white"
+                  className="w-full px-4 py-3 border border-gray-100 rounded-xl text-sm font-semibold text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all bg-white"
                   data-testid="upi-vpa-input"
                 />
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="max-w-md">
-                  <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Account Holder Name</label>
+                  <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Account Holder Name</label>
                   <input
                     value={pref.bank_account_holder}
                     onChange={(e) => setPref({ ...pref, bank_account_holder: e.target.value })}
                     placeholder="Enter account holder name"
-                    className="w-full px-4 py-3 border border-sand-200 rounded-xl text-sm font-semibold text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all bg-white"
+                    className="w-full px-4 py-3 border border-gray-100 rounded-xl text-sm font-semibold text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all bg-white"
                     data-testid="bank-holder-input"
                   />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">
                       Account Number {masked && <span className="text-terracotta font-bold">(current: {masked})</span>}
                     </label>
                     <input
                       value={pref.bank_account_number}
                       onChange={(e) => setPref({ ...pref, bank_account_number: e.target.value })}
                       placeholder="Enter bank account number"
-                      className="w-full px-4 py-3 border border-sand-200 rounded-xl text-sm font-semibold text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all bg-white"
+                      className="w-full px-4 py-3 border border-gray-100 rounded-xl text-sm font-semibold text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all bg-white"
                       data-testid="bank-number-input"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">IFSC Code</label>
+                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">IFSC Code</label>
                     <input
                       value={pref.bank_ifsc}
                       onChange={(e) => setPref({ ...pref, bank_ifsc: e.target.value.toUpperCase() })}
                       placeholder="e.g. SBIN0001234"
-                      className="w-full px-4 py-3 border border-sand-200 rounded-xl text-sm font-semibold text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all bg-white"
+                      className="w-full px-4 py-3 border border-gray-100 rounded-xl text-sm font-semibold text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all bg-white"
                       data-testid="bank-ifsc-input"
                     />
                   </div>
@@ -261,7 +258,7 @@ const HostPayouts = () => {
 
           {/* Payout Cycle Section */}
           <div className="mt-8 mb-6 border-t border-sand-150 pt-6">
-            <h3 className="text-sm font-black text-charcoal uppercase tracking-wider mb-1">Payout Cycle</h3>
+            <h3 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-wider mb-1">Payout Cycle</h3>
             <p className="text-xs text-charcoal-muted mb-4 font-medium">Choose how frequently you want payouts to be released after guest check-out.</p>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -272,10 +269,10 @@ const HostPayouts = () => {
               ].map((cycle) => (
                 <label
                   key={cycle.value}
-                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer hover:shadow-md ${
+                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer hover:shadow-subtle ${
                     pref.payout_cycle === cycle.value
                       ? 'border-terracotta bg-terracotta/5 ring-2 ring-terracotta/10 shadow-sm'
-                      : 'border-sand-200 hover:border-sand-300 bg-white'
+                      : 'border-gray-100 hover:border-gray-200 bg-white'
                   }`}
                   data-testid={`cycle-${cycle.value}`}
                 >
@@ -287,7 +284,7 @@ const HostPayouts = () => {
                     className="sr-only"
                   />
                   <div>
-                    <div className="font-black text-charcoal text-sm">{cycle.label}</div>
+                    <div className="font-bold tracking-tight text-charcoal text-sm">{cycle.label}</div>
                     <div className="text-xs text-charcoal-muted mt-1 font-medium leading-relaxed">{cycle.desc}</div>
                   </div>
                 </label>
@@ -312,7 +309,7 @@ const HostPayouts = () => {
             <button
               onClick={save}
               disabled={saving}
-              className="px-6 py-3.5 bg-terracotta text-white font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-terracotta-dark transition-all shadow-sm active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+              className="px-6 py-3.5 bg-terracotta text-white font-bold tracking-tight text-xs uppercase tracking-widest rounded-2xl hover:bg-terracotta-dark transition-all shadow-sm active:scale-[0.98] disabled:opacity-60 cursor-pointer"
               data-testid="save-preference-btn"
             >
               {saving ? 'Saving…' : 'Save preference'}
@@ -321,30 +318,30 @@ const HostPayouts = () => {
         </div>
 
         {/* Payouts list */}
-        <div className="bg-white rounded-3xl border border-sand-200 p-8 shadow-sm" data-testid="my-payouts-card">
+        <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm" data-testid="my-payouts-card">
           <div className="flex items-center space-x-3 mb-6">
             <div className="p-2.5 rounded-2xl bg-indigo-50 text-indigo-600">
               <Wallet className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-charcoal uppercase tracking-wide">Your payouts</h2>
+              <h2 className="text-xl font-bold tracking-tight text-charcoal uppercase tracking-wide">Your payouts</h2>
               <span className="text-xs text-charcoal-muted">List of all payouts generated from bookings</span>
             </div>
           </div>
 
           {loading && (
             <div className="flex flex-col items-center justify-center py-12 text-charcoal-muted" data-testid="payouts-loading">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-terracotta border-sand-200 mb-4"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-terracotta border-gray-100 mb-4"></div>
               <span className="text-xs font-bold uppercase tracking-widest">Loading payouts data…</span>
             </div>
           )}
           
           {!loading && payouts.length === 0 && (
-            <div className="text-center py-16 bg-sand-50/20 rounded-2xl border border-dashed border-sand-300 px-6" data-testid="payouts-empty">
-              <div className="w-16 h-16 bg-sand-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="text-center py-16 bg-stone/20 rounded-2xl border border-dashed border-gray-200 px-6" data-testid="payouts-empty">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Wallet className="w-8 h-8 text-charcoal-muted" />
               </div>
-              <h3 className="text-sm font-black text-charcoal mb-1 uppercase tracking-wider">No Payouts Yet</h3>
+              <h3 className="text-sm font-bold tracking-tight text-charcoal mb-1 uppercase tracking-wider">No Payouts Yet</h3>
               <p className="text-charcoal-muted text-xs font-semibold max-w-xs mx-auto">
                 Payouts appear here automatically a day after a guest checks out of your property.
               </p>
@@ -352,10 +349,10 @@ const HostPayouts = () => {
           )}
 
           {!loading && payouts.length > 0 && (
-            <div className="overflow-x-auto rounded-2xl border border-sand-200">
+            <div className="overflow-x-auto rounded-2xl border border-gray-100">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="bg-sand-50/80 border-b border-sand-200 text-left text-[10px] font-black uppercase tracking-wider text-charcoal-muted">
+                  <tr className="bg-stone/80 border-b border-gray-100 text-left text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-muted">
                     <th className="py-4 px-4">Eligible since</th>
                     <th className="py-4 px-4">Property</th>
                     <th className="py-4 px-4 text-right">Gross</th>
@@ -368,7 +365,7 @@ const HostPayouts = () => {
                   {payouts.map((p) => (
                     <tr
                       key={p.payout_id}
-                      className="hover:bg-sand-50/30 transition-colors"
+                      className="hover:bg-stone/30 transition-colors"
                       data-testid={`my-payout-${p.payout_id}`}
                     >
                       <td className="py-4 px-4 font-semibold text-charcoal text-xs">
@@ -380,7 +377,7 @@ const HostPayouts = () => {
                       </td>
                       <td className="py-4 px-4">
                         <div className="font-bold text-charcoal">{p.property?.title || p.property_id}</div>
-                        <div className="text-[10px] font-black uppercase tracking-wider text-terracotta mt-0.5">{p.property?.city}</div>
+                        <div className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-terracotta mt-0.5">{p.property?.city}</div>
                       </td>
                       <td className="py-4 px-4 text-right font-semibold text-charcoal-muted text-xs">
                         {fmtINR(p.gross_amount)}
@@ -388,11 +385,11 @@ const HostPayouts = () => {
                       <td className="py-4 px-4 text-right font-semibold text-charcoal-muted text-xs">
                         {fmtINR(p.platform_fee)}
                       </td>
-                      <td className="py-4 px-4 text-right font-black text-emerald-600 text-sm">
+                      <td className="py-4 px-4 text-right font-bold tracking-tight text-emerald-600 text-sm">
                         {fmtINR(p.net_amount)}
                       </td>
                       <td className="py-4 px-4 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase tracking-wider border ${
                           p.status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
                           p.status === 'eligible' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
                           p.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
