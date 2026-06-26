@@ -23,6 +23,21 @@ def _text(value, fallback: str = "N/A") -> str:
     return html.escape(str(value))
 
 
+def _clean_msg91_value(value) -> str:
+    """Keep template variables plain so MSG91 does not render pasted code fences."""
+    if value is None:
+        return ""
+    text = str(value).strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].strip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines).strip()
+    return text
+
+
 class EmailService:
     """SMTP-backed email notification service with X-Space360 templates."""
 
@@ -202,7 +217,7 @@ class EmailService:
         for index, value in enumerate(list(variables.values())[:20], start=1):
             variables[f"var{index}"] = value
             variables[f"VAR{index}"] = value
-        return {k: "" if v is None else str(v) for k, v in variables.items()}
+        return {k: _clean_msg91_value(v) for k, v in variables.items()}
 
     def _send_msg91_template(self, to_email: str, template: str, subject: str, title: str, cta_url: str, data: Dict) -> Dict:
         template_id = self._template_id_for(template)
