@@ -955,16 +955,44 @@ const LandingPage = () => {
 
   const heroSlides = [
     {
-      src: '/videos/hero/pexels-akshay-mr-187831647-12414221.webp',
-      label: 'Luxury Villas with Pools'
+      src: '/videos/hero/pexels-thevisionaryvows-33485961.jpg',
+      tag: 'WEDDING VENUES',
+      tagColor: 'text-terracotta',
+      titlePrefix: 'Make Your Dream Wedding ',
+      titleHighlight: 'Unforgettable',
+      highlightColor: 'text-terracotta',
+      titleSuffix: '',
+      subtitle: 'Perfect venues for your perfect day'
     },
     {
-      src: '/videos/hero/pexels-shahfaizanfilms-30077915.webp',
-      label: 'Seaside Green Villas'
+      src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg',
+      tag: 'RESIDENTIAL SPACES',
+      tagColor: 'text-terracotta',
+      titlePrefix: 'Find Your Perfect Place to Call ',
+      titleHighlight: 'Home',
+      highlightColor: 'text-terracotta',
+      titleSuffix: '',
+      subtitle: 'Comfortable spaces for you and your family'
     },
     {
-      src: '/videos/hero/pexels-thevisionaryvows-33485971.webp',
-      label: 'Premium Holiday Stays'
+      src: '/videos/hero/pexels-contact-me-923323219715-262056873-12703092.jpg',
+      tag: 'COMMERCIAL SPACES',
+      tagColor: 'text-terracotta',
+      titlePrefix: 'Elevate Your ',
+      titleHighlight: 'Business',
+      highlightColor: 'text-terracotta',
+      titleSuffix: ' Presence',
+      subtitle: 'Right space to grow your business'
+    },
+    {
+      src: '/videos/hero/pexels-roman-odintsov-4870616.jpg',
+      tag: 'RESORT VILLAS',
+      tagColor: 'text-terracotta',
+      titlePrefix: 'Relax, Recharge & ',
+      titleHighlight: 'Rejuvenate',
+      highlightColor: 'text-terracotta',
+      titleSuffix: '',
+      subtitle: 'Luxury villas for your perfect getaway'
     }
   ];
 
@@ -1239,14 +1267,16 @@ const LandingPage = () => {
       {/* Navbar */}
       <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-white px-6 md:px-12 lg:px-20 h-20">
         {/* Left Logo */}
-        <div className="flex items-center">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight tracking-tight cursor-pointer drop-shadow-subtle text-white hover:text-white/95 transition" onClick={() => navigate('/')}>
-            X-space360<span className="text-terracotta">.in</span>
-          </h1>
+        <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
+          <div className="font-extrabold text-2xl md:text-3xl tracking-tighter">
+            <span className="text-white">X </span>
+            <span className="text-terracotta">SPACE</span>
+            <span className="text-white">360</span>
+          </div>
         </div>
 
         {/* Center Pill Links — Glass Transparent style */}
-        <div className="hidden md:flex h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-white/95 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-premium self-center">
+        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-white/95 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-premium">
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
@@ -1330,9 +1360,13 @@ const LandingPage = () => {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-white md:hidden">
           <div className="flex justify-between items-center mb-12">
-            <h1 className="text-2xl font-bold tracking-tight tracking-tight cursor-pointer text-white" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
-              X-space360<span className="text-terracotta">.in</span>
-            </h1>
+            <div className="cursor-pointer" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
+              <div className="font-extrabold text-3xl tracking-tighter">
+                <span className="text-white">X </span>
+                <span className="text-terracotta">SPACE</span>
+                <span className="text-white">360</span>
+              </div>
+            </div>
             <button onClick={() => setIsMobileMenuOpen(false)} className="text-white hover:text-terracotta transition p-2 bg-white/10 rounded-full">
               <X className="w-6 h-6" />
             </button>
@@ -1405,7 +1439,7 @@ const LandingPage = () => {
       )}
 
       {/* ===== PREMIUM SLIDING IMAGE HERO ===== */}
-      <div className="relative h-screen w-full z-30">
+      <div className="relative h-[80vh] min-h-[650px] w-full z-30">
         
         {/* ── Sliding/Fading Background Images ── */}
         {heroSlides.map((slide, index) => (
@@ -1421,11 +1455,26 @@ const LandingPage = () => {
           />
         ))}
 
-        {/* ── 50% dark overlay ── */}
-        <div className="absolute inset-0 bg-black/50 z-20" />
+        {/* ── 60% dark overlay ── */}
+        <div className="absolute inset-0 bg-black/60 z-20 transition-opacity duration-1000" />
 
         {/* ── Solid Bottom Divider Strip ── */}
         <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#FDFCF8] border-t border-gray-100/40 z-20" />
+
+        {/* ── Dot Slider Indicators ── */}
+        <div className="absolute bottom-12 left-0 right-0 z-30 flex justify-center items-center space-x-3">
+          {heroSlides.map((slide, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentHeroSlide(index)}
+              className={`w-3 h-3 rounded-full transition-all duration-300 shadow-sm ${
+                index === currentHeroSlide 
+                  ? `${slide.tagColor.replace('text-', 'bg-')} scale-125` 
+                  : 'bg-white/70 hover:bg-white'
+              }`}
+            />
+          ))}
+        </div>
 
         {/* ── Hero Content ── */}
         <div className="relative z-30 max-w-7xl mx-auto px-6 md:px-12 lg:px-20 h-full flex flex-col justify-center pt-24 pb-12 text-left">
@@ -1433,17 +1482,24 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end w-full">
             {/* Left side: Heading & Search Bar */}
             <div className="lg:col-span-12 flex flex-col items-start w-full">
-              {/* Premium STR tag pill */}
-              <div className="mb-6 inline-flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-5 py-2 text-white/80 text-xs font-semibold tracking-widest uppercase">
-                <span className="w-1.5 h-1.5 rounded-full bg-terracotta mr-2.5"></span>
-                Luxury Short-Term Rentals
-              </div>
 
-              {/* Headline */}
-              <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-[1.1] text-white drop-shadow-premium max-w-2xl">
-                Explore your place<br />
-                to stay
-              </h2>
+
+              {/* Dynamic Headline from Slider */}
+              <div className="flex flex-col space-y-2 mb-4 w-full" key={currentHeroSlide}>
+                 <span className={`text-xs md:text-sm font-bold tracking-[0.2em] uppercase drop-shadow-md ${heroSlides[currentHeroSlide].tagColor}`}>
+                    {heroSlides[currentHeroSlide].tag}
+                 </span>
+                 <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.15] text-white drop-shadow-premium max-w-4xl font-serif-hero mt-2">
+                   {heroSlides[currentHeroSlide].titlePrefix}
+                   <span className={`${heroSlides[currentHeroSlide].highlightColor}`}>
+                      {heroSlides[currentHeroSlide].titleHighlight}
+                   </span>
+                   {heroSlides[currentHeroSlide].titleSuffix}
+                 </h2>
+                 <p className="text-3xl md:text-5xl text-white/90 font-handwriting drop-shadow-md mt-4 pb-2">
+                   {heroSlides[currentHeroSlide].subtitle}
+                 </p>
+              </div>
 
               {/* ── Search Bar ── */}
               <div className="mt-8 w-full max-w-5xl relative">
@@ -2002,12 +2058,14 @@ const LandingPage = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_repeat(4,minmax(0,1fr))] gap-x-10 xl:gap-x-16 2xl:gap-x-20 gap-y-12 mb-16">
             <div>
               <div 
-                className="flex items-center space-x-3 mb-8 cursor-pointer group"
+                className="flex items-center mb-8 cursor-pointer group"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               >
-                <span className="text-2xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">
-                  X-space360<span className="text-terracotta">.in</span>
-                </span>
+                <div className="font-extrabold text-3xl tracking-tighter">
+                  <span className="text-gray-900">X </span>
+                  <span className="text-terracotta">SPACE</span>
+                  <span className="text-gray-900">360</span>
+                </div>
               </div>
               <p className="text-charcoal-light text-lg mb-8 max-w-md leading-relaxed">
                 {footerData.brand_description || t('footerSub')}

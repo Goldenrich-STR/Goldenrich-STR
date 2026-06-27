@@ -1,4 +1,6 @@
 @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Great+Vibes&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -75,6 +77,13 @@
 }
 
 @layer utilities {
+  .font-serif-hero {
+    font-family: 'Playfair Display', serif;
+  }
+  .font-handwriting {
+    font-family: 'Great Vibes', cursive;
+  }
+
   /* Custom scrollbar - Clean Apple Style */
   ::-webkit-scrollbar {
     width: 6px;
@@ -100,20 +109,49 @@
     @apply transition-all duration-300 border-gray-200 bg-white rounded-xl focus:border-charcoal focus:ring-1 focus:ring-charcoal outline-none placeholder:text-gray-400;
   }
 
-  /* X-Space360 full logo treatment */
+  /* X-Space360 full logo treatment (Inner Pages / Footer) */
   .brand-logo-full {
-    width: clamp(150px, 16vw, 240px) !important;
+    width: clamp(250px, 25vw, 400px) !important;
+    height: auto !important;
+    max-height: 120px !important;
+    object-fit: contain !important;
+    object-position: left center !important;
+    flex-shrink: 0 !important;
+    image-rendering: high-quality !important;
+  }
+
+  /* Medium logo for Footer / Dashboard (Uses cropped image) */
+  .brand-logo-medium {
+    width: clamp(180px, 20vw, 260px) !important;
     height: auto !important;
     max-height: 48px !important;
     object-fit: contain !important;
     object-position: left center !important;
     flex-shrink: 0 !important;
+    image-rendering: high-quality !important;
+  }
+
+  /* Large logo for Landing Page Navbar */
+  .brand-logo-large {
+    width: clamp(500px, 45vw, 900px) !important;
+    height: auto !important;
+    max-height: 280px !important;
+    object-fit: contain !important;
+    object-position: left center !important;
+    flex-shrink: 0 !important;
+    image-rendering: high-quality !important;
+    transform: translateY(16px) !important;
   }
 
   @media (max-width: 640px) {
     .brand-logo-full {
-      width: clamp(140px, 42vw, 200px) !important;
-      max-height: 40px !important;
+      width: clamp(180px, 30vw, 250px) !important;
+      max-height: 80px !important;
+    }
+    .brand-logo-large {
+      width: clamp(280px, 75vw, 450px) !important;
+      max-height: 140px !important;
+      transform: translateY(6px) !important;
     }
   }
 
