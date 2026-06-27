@@ -142,8 +142,20 @@ class EmailService:
         plan_name = data.get("plan_name") or data.get("Plan_Name") or ""
         payment_id = data.get("payment_id") or data.get("Payment_ID") or ""
         invoice_id = data.get("invoice_id") or data.get("transaction_id") or data.get("Invoice_ID") or ""
-        reason = data.get("reason") or data.get("Reason") or ""
-        remarks = data.get("remarks") or data.get("Remarks") or reason
+        reason = (
+            data.get("reason")
+            or data.get("Reason")
+            or data.get("rejection_reason")
+            or data.get("Rejection_Reason")
+            or ""
+        )
+        remarks = (
+            data.get("remarks")
+            or data.get("Remarks")
+            or data.get("rejection_reason")
+            or data.get("Rejection_Reason")
+            or reason
+        )
         reset_link = cta_url if template == "password_reset" else data.get("reset_link", "")
         support_email = data.get("support_email") or data.get("Support_Email") or _support_email()
         support_phone = data.get("support_phone") or data.get("support_number") or data.get("Support_Number") or _support_phone()
@@ -219,6 +231,7 @@ class EmailService:
                 variables[key] = value
         title_case_aliases = {
             "Name": name,
+            "User_Name": name,
             "Host_Name": data.get("host_name") or name,
             "Guest_Name": data.get("guest_name") or name,
             "Customer_Name": data.get("customer_name") or name,
@@ -287,6 +300,18 @@ class EmailService:
             "Contact_Number": support_phone,
         }
         variables.update(title_case_aliases)
+
+        # Exact Handlebars contract used by the MSG91 rejection template.
+        if template == "host_documents_rejected":
+            variables.update(
+                {
+                    "User_Name": name,
+                    "Rejection_Reason": remarks,
+                    "Document_Upload_Link": cta_url,
+                    "Support_Email": support_email,
+                    "Support_Number": support_phone,
+                }
+            )
         for index, value in enumerate(list(variables.values())[:20], start=1):
             variables[f"var{index}"] = value
             variables[f"VAR{index}"] = value
@@ -298,6 +323,14 @@ class EmailService:
             return {"success": False, "error": f"Missing MSG91 email template id for {template}"}
 
         variables = self._variables_for(template, data, subject, title, cta_url)
+        if template == "host_documents_rejected":
+            logger.info(
+                "MSG91 rejection values resolved: reason=%r upload_url=%r support_email=%r support_number=%r",
+                variables.get("Rejection_Reason"),
+                variables.get("Document_Upload_Link"),
+                variables.get("Support_Email"),
+                variables.get("Support_Number"),
+            )
         payload = {
             "domain": self.msg91_domain,
             "from": {"email": self.from_email, "name": self.from_name},
