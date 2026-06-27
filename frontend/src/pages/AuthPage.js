@@ -473,13 +473,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                 {loading ? 'AUTHENTICATING...' : 'SUBMIT'}
                              </button>
                              
-                             <button
+                              <button
                                 onClick={sendOTP}
                                 disabled={loading}
                                 className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.3em] hover:text-terracotta transition-colors block mx-auto underline-offset-4 hover:underline"
-                             >
-                                Request New Key
-                             </button>
+                              >
+                                REQUEST NEW OTP
+                              </button>
                           </div>
                        </div>
                     )}
