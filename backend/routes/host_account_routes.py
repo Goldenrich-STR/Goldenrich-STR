@@ -272,6 +272,47 @@ async def save_draft_document(
     return {"message": "Draft document saved", "kyc_documents": current_docs}
 
 
+@router.delete("/kyc/documents/draft/{document_type}")
+async def delete_rejected_draft_document(
+    document_type: str,
+    current_user: dict = Depends(require_host),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Remove a rejected KYC document so the host can upload a replacement."""
+    mapping = {
+        "aadhar": "aadhar_card",
+        "property": "property_proof",
+        "cheque": "cancelled_cheque",
+        "society": "society_noc",
+        "shop_act": "shop_act",
+        "gst": "gst_certificate"
+    }
+    mapped_type = mapping.get(document_type, document_type)
+    user = await db.users.find_one({"user_id": current_user["user_id"]})
+    if not user:
+        raise HTTPException(404, detail="User not found")
+
+    current_docs = list(user.get("kyc_documents") or [])
+    target = next(
+        (doc for doc in current_docs if doc.get("document_type") == mapped_type),
+        None,
+    )
+    if not target:
+        raise HTTPException(404, detail="Document not found")
+    if target.get("status") != "rejected":
+        raise HTTPException(409, detail="Only rejected documents can be removed")
+
+    remaining_docs = [
+        doc for doc in current_docs if doc.get("document_type") != mapped_type
+    ]
+    updated_at = datetime.now(timezone.utc)
+    await db.users.update_one(
+        {"user_id": current_user["user_id"]},
+        {"$set": {"kyc_documents": remaining_docs, "updated_at": updated_at}}
+    )
+    return {"message": "Rejected document removed", "kyc_documents": remaining_docs}
+
+
 class HostDraftAgreementUpdate(BaseModel):
     agreement_owner_name: Optional[str] = None
     agreement_owner_address: Optional[str] = None

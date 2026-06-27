@@ -146,6 +146,29 @@ const HostDashboard = () => {
     }
   };
 
+  const clearDocumentValue = (docType) => {
+    if (docType === 'aadhar') setAadharCard('');
+    else if (docType === 'property') setPropertyProof('');
+    else if (docType === 'cheque') setCancelledCheque('');
+    else if (docType === 'gst') setGstCertificate('');
+    else if (docType === 'society') setSocietyNoc('');
+    else if (docType === 'shop_act') setShopAct('');
+  };
+
+  const handleRejectedDocRemove = async (docType) => {
+    if (!window.confirm('Remove this rejected document and upload a new one?')) return;
+    setUploadingDocs(prev => ({ ...prev, [docType]: true }));
+    try {
+      await accountAPI.deleteRejectedDraftDocument(docType);
+      clearDocumentValue(docType);
+      await refreshUser();
+    } catch (err) {
+      alert('Failed to remove document: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setUploadingDocs(prev => ({ ...prev, [docType]: false }));
+    }
+  };
+
   // Canvas signature helpers
   const startDrawing = (e) => {
     if (e.cancelable) {
@@ -384,7 +407,7 @@ const HostDashboard = () => {
                 </span>
               )}
               {docStatus === 'rejected' && rejectionReason && (
-                <span className="text-[9px] text-red-500 font-bold max-w-[200px] text-center line-clamp-1" title={rejectionReason}>
+                <span className="text-[9px] text-red-600 font-bold max-w-[220px] text-center leading-relaxed" title={rejectionReason}>
                   {rejectionReason}
                 </span>
               )}
@@ -429,6 +452,18 @@ const HostDashboard = () => {
                   disabled={uploadingDocs[docType]}
                 />
               </label>
+              {docStatus === 'rejected' && (
+                <button
+                  type="button"
+                  onClick={() => handleRejectedDocRemove(docType)}
+                  disabled={uploadingDocs[docType]}
+                  className="p-1.5 hover:bg-red-100 text-red-500 disabled:opacity-50 transition-colors"
+                  title="Remove Rejected File"
+                  aria-label={`Remove rejected ${title}`}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         ) : (

@@ -462,6 +462,8 @@ export const accountAPI = {
     apiClient.post('/host/submit-verification', payload),
   saveDraftDocument: (payload) =>
     apiClient.patch('/host/kyc/documents/draft', payload),
+  deleteRejectedDraftDocument: (documentType) =>
+    apiClient.delete(`/host/kyc/documents/draft/${documentType}`),
   saveDraftAgreement: (payload) =>
     apiClient.patch('/host/kyc/agreement/draft', payload),
 };
