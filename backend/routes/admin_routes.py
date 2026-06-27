@@ -652,7 +652,12 @@ async def get_all_properties(
         if category:
             query["category"] = category
         
-        cursor = db.properties.find(query, {"_id": 0}).skip(skip).limit(limit)
+        cursor = (
+            db.properties.find(query, {"_id": 0})
+            .sort("created_at", -1)
+            .skip(skip)
+            .limit(limit)
+        )
         properties = await cursor.to_list(length=limit)
         total = await db.properties.count_documents(query)
         
@@ -680,7 +685,7 @@ async def get_pending_verifications(
         cursor = db.properties.find(
             {"status": {"$in": [PropertyStatus.PENDING_VERIFICATION.value, PropertyStatus.UNDER_REVIEW.value]}},
             {"_id": 0}
-        )
+        ).sort("submitted_at", -1)
         properties = await cursor.to_list(length=100)
         
         return {
@@ -706,7 +711,7 @@ async def get_awaiting_final_approval(
         cursor_v = db.property_verifications.find(
             {"rm_approved": True, "admin_reviewed": {"$ne": True}}, 
             {"_id": 0}
-        )
+        ).sort("reviewed_at", -1)
         verifications = await cursor_v.to_list(length=200)
         
         if not verifications:
@@ -725,6 +730,10 @@ async def get_awaiting_final_approval(
 
         # 3. Enrich properties with RM remarks and checklist from verification record
         v_map = {v["property_id"]: v for v in verifications}
+        review_order = {
+            verification["property_id"]: index
+            for index, verification in enumerate(verifications)
+        }
         for prop in properties:
             v_data = v_map.get(prop["property_id"])
             if v_data:
@@ -738,6 +747,9 @@ async def get_awaiting_final_approval(
                 prop["broker_id"] = v_data.get("broker_id")
                 prop["verification_id"] = v_data.get("verification_id")
 
+        properties.sort(
+            key=lambda prop: review_order.get(prop.get("property_id"), len(review_order))
+        )
         return {"properties": properties, "total": len(properties)}
 
     except Exception as e:
