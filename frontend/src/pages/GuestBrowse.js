@@ -530,10 +530,14 @@ const GuestBrowse = () => {
       <header className="relative z-40 glass px-4 md:px-8 py-4 border-b border-gray-100" data-testid="guest-header">
         <div className="w-full flex justify-between items-center gap-2">
           <div 
-            className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
+            className="flex items-center cursor-pointer shrink-0" 
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
+            <div className="font-extrabold text-2xl md:text-3xl tracking-tighter">
+              <span className="text-gray-900">X </span>
+              <span className="text-terracotta">SPACE</span>
+              <span className="text-gray-900">360</span>
+            </div>
           </div>
           <div className="hidden md:flex items-center space-x-4 md:space-x-6">
             {/* Language Selector */}
@@ -605,9 +609,13 @@ const GuestBrowse = () => {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[100] bg-white flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-charcoal md:hidden">
           <div className="flex justify-between items-center mb-12">
-            <h1 className="text-2xl font-bold tracking-tight tracking-tight cursor-pointer text-charcoal" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
-              X-space360<span className="text-terracotta">.in</span>
-            </h1>
+            <div className="cursor-pointer" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
+              <div className="font-extrabold text-2xl tracking-tighter">
+                <span className="text-gray-900">X </span>
+                <span className="text-terracotta">SPACE</span>
+                <span className="text-gray-900">360</span>
+              </div>
+            </div>
             <button onClick={() => setIsMobileMenuOpen(false)} className="text-charcoal hover:text-terracotta transition p-2 bg-gray-50 rounded-full">
               <X className="w-6 h-6" />
             </button>

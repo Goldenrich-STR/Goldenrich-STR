@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 120" fill="none">
+  <defs>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@800&amp;display=swap");
+      .logo-text { font-family: "Outfit", sans-serif; font-weight: 800; font-size: 76px; letter-spacing: -2px; }
+      .text-orange { fill: #f97316; }
+      .text-black { fill: #111827; }
+    </style>
+  </defs>
+
+  <!-- The X Icon -->
+  <g transform="translate(15, 20)">
+    <path d="M10,10 L70,70" stroke="#f97316" stroke-width="16" stroke-linecap="round" />
+    <path d="M10,70 L70,10" stroke="#f97316" stroke-width="16" stroke-linecap="round" />
+  </g>
+
+  <!-- SPACE360 Text -->
+  <text x="110" y="85" class="logo-text">
+    <tspan class="text-orange">SPACE</tspan><tspan class="text-black">360</tspan>
+  </text>
+</svg>
