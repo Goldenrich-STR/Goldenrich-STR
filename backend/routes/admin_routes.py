@@ -40,13 +40,18 @@ async def require_admin(current_user: dict = Depends(get_current_user)):
 async def get_all_users(
     role: Optional[UserRole] = None,
     search: Optional[str] = None,
+    email: Optional[str] = None,
+    phone: Optional[str] = None,
+    uid: Optional[str] = None,
+    location: Optional[str] = None,
     limit: int = 50,
     skip: int = 0,
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Get all users with filters."""
+    """Get all users with advanced filters."""
     try:
+        print(f"[DEBUG] get_all_users params: role={role}, search={search}, email={email}, phone={phone}, uid={uid}, location={location}")
         query = {}
         
         if role:
@@ -55,8 +60,26 @@ async def get_all_users(
         if search:
             query["$or"] = [
                 {"full_name": {"$regex": search, "$options": "i"}},
-                {"email": {"$regex": search, "$options": "i"}},
-                {"phone": {"$regex": search, "$options": "i"}}
+                {"user_id": {"$regex": search, "$options": "i"}},
+                {"uid": {"$regex": search, "$options": "i"}}
+            ]
+        
+        if email:
+            query["email"] = {"$regex": email, "$options": "i"}
+            
+        if phone:
+            query["phone"] = {"$regex": phone, "$options": "i"}
+            
+        if uid:
+            query["$or"] = [
+                {"user_id": {"$regex": uid, "$options": "i"}},
+                {"uid": {"$regex": uid, "$options": "i"}}
+            ]
+            
+        if location:
+            query["$or"] = [
+                {"city": {"$regex": location, "$options": "i"}},
+                {"state": {"$regex": location, "$options": "i"}}
             ]
         
         cursor = db.users.find(query, {"_id": 0, "password_hash": 0}).sort("created_at", -1).skip(skip).limit(limit)
@@ -75,6 +98,103 @@ async def get_all_users(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch users"
+        )
+
+@router.get("/users/export-csv")
+async def export_users_csv(
+    role: Optional[UserRole] = None,
+    search: Optional[str] = None,
+    email: Optional[str] = None,
+    phone: Optional[str] = None,
+    uid: Optional[str] = None,
+    location: Optional[str] = None,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Export filtered users to a CSV file."""
+    try:
+        query = {}
+        
+        if role:
+            query["role"] = role.value
+        
+        if search:
+            query["$or"] = [
+                {"full_name": {"$regex": search, "$options": "i"}},
+                {"user_id": {"$regex": search, "$options": "i"}},
+                {"uid": {"$regex": search, "$options": "i"}}
+            ]
+        
+        if email:
+            query["email"] = {"$regex": email, "$options": "i"}
+            
+        if phone:
+            query["phone"] = {"$regex": phone, "$options": "i"}
+            
+        if uid:
+            query["$or"] = [
+                {"user_id": {"$regex": uid, "$options": "i"}},
+                {"uid": {"$regex": uid, "$options": "i"}}
+            ]
+            
+        if location:
+            query["$or"] = [
+                {"city": {"$regex": location, "$options": "i"}},
+                {"state": {"$regex": location, "$options": "i"}}
+            ]
+            
+        cursor = db.users.find(query, {"_id": 0, "password_hash": 0}).sort("created_at", -1)
+        users = await cursor.to_list(length=10000)
+        
+        import csv
+        import io
+        from datetime import datetime, timezone
+        from fastapi.responses import StreamingResponse
+        
+        buf = io.StringIO()
+        fields = [
+            "user_id", "uid", "full_name", "email", "phone", "role", 
+            "city", "state", "franchise", "branch", "kyc_status", 
+            "is_active", "created_at"
+        ]
+        
+        writer = csv.DictWriter(buf, fieldnames=fields)
+        writer.writeheader()
+        
+        for u in users:
+            writer.writerow({
+                "user_id": u.get("user_id", ""),
+                "uid": u.get("uid", ""),
+                "full_name": u.get("full_name", ""),
+                "email": u.get("email", ""),
+                "phone": u.get("phone", ""),
+                "role": u.get("role", ""),
+                "city": u.get("city", ""),
+                "state": u.get("state", ""),
+                "franchise": u.get("franchise", ""),
+                "branch": u.get("branch", ""),
+                "kyc_status": u.get("kyc_status", ""),
+                "is_active": str(u.get("is_active", True)),
+                "created_at": (
+                    u["created_at"].isoformat()
+                    if isinstance(u.get("created_at"), datetime)
+                    else u.get("created_at", "")
+                )
+            })
+            
+        buf.seek(0)
+        filename = f"users_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
+        return StreamingResponse(
+            iter([buf.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+        
+    except Exception as e:
+        logger.error(f"Error exporting users CSV: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to export users CSV"
         )
 
 @router.get("/users/{user_id}")
@@ -170,10 +290,29 @@ async def create_user(
             )
         
         from utils.auth import hash_password
-        import uuid
         
-        # Determine the user_id (UID) to save
-        uid_val = user_data.uid or f"user_{uuid.uuid4().hex[:8]}"
+        # Determine the user_id (UID) using the new deterministic role-based format
+        role_prefix = "GST"
+        role_str = user_data.role.value if hasattr(user_data.role, "value") else str(user_data.role)
+        role_str_lower = role_str.lower()
+        if role_str_lower == "admin":
+            role_prefix = "ADM"
+        elif role_str_lower == "host":
+            role_prefix = "HST"
+        elif role_str_lower == "broker":
+            role_prefix = "BRK"
+        elif role_str_lower == "employee":
+            role_prefix = "EMP"
+            
+        now = datetime.now()
+        dd = now.strftime("%d")
+        mm = now.strftime("%m")
+        yyyy = now.strftime("%Y")
+        hh = now.strftime("%H")
+        min_str = now.strftime("%M")
+        generated_uid = f"{role_prefix} -{dd}{mm}{yyyy}{hh}{min_str}"
+        
+        uid_val = user_data.uid or generated_uid
         
         # If user is a broker, set their lg_code to their UID
         lg_code_val = uid_val if user_data.role.value == "broker" else user_data.lg_code

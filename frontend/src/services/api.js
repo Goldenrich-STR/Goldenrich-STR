@@ -498,6 +498,13 @@ export const couponAPI = {
 // Admin API
 export const adminAPI = {
   getSearchLogs: (params) => apiClient.get('/admin/search-logs', { params }),
+  downloadUsersCsv: async (params = {}) => {
+    const res = await apiClient.get('/admin/users/export-csv', {
+      params,
+      responseType: 'blob',
+    });
+    return res;
+  },
 };
 
 // AI Voice Calling Agent API

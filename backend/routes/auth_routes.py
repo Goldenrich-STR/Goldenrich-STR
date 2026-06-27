@@ -492,8 +492,30 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
                 )
             broker_id = broker["user_id"]
         
+        # Generate the deterministic role-based UID
+        role_prefix = "GST"
+        role_str_lower = role_str.lower()
+        if role_str_lower == "admin":
+            role_prefix = "ADM"
+        elif role_str_lower == "host":
+            role_prefix = "HST"
+        elif role_str_lower == "broker":
+            role_prefix = "BRK"
+        elif role_str_lower == "employee":
+            role_prefix = "EMP"
+            
+        now = datetime.now()
+        dd = now.strftime("%d")
+        mm = now.strftime("%m")
+        yyyy = now.strftime("%Y")
+        hh = now.strftime("%H")
+        min_str = now.strftime("%M")
+        generated_uid = f"{role_prefix} -{dd}{mm}{yyyy}{hh}{min_str}"
+
         # Create user object
         user = User(
+            user_id=generated_uid,
+            uid=generated_uid,
             email=user_data.email,
             phone=user_data.phone,
             password_hash=hashed_password,

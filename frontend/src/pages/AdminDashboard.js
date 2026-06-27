@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, subscriptionAPI, uploadAPI, getImageUrl, bookingAPI, cmsAPI, adminAPI } from '../services/api';
@@ -6,15 +6,17 @@ import {
   Users, Building2, Calendar, IndianRupee, CheckCircle, 
   X, XCircle, Clock, TrendingUp, BarChart3, LogOut, Plus, Trash, Zap,
   Edit, Eye as EyeIcon, Shield, ChevronLeft, ChevronRight, Tag,
-  Check, ListTodo, Heart, FileText, Sparkles, UploadCloud
+  Check, ListTodo, Heart, FileText, Sparkles, UploadCloud,
+  Mail, EyeOff, Lock, User, MapPin, Eye, Camera, Info, ArrowLeft,
+  Search, ChevronDown
 } from 'lucide-react';
 import CouponManagement from '../components/admin/CouponManagement';
 import SearchLogsManagement from '../components/admin/SearchLogsManagement';
 import AICallsManagement from '../components/admin/AICallsManagement';
-import { Phone, Volume2, HelpCircle } from 'lucide-react';
+import { Phone, Volume2, HelpCircle, Download, UserPlus } from 'lucide-react';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, formatReadableText } from '../lib/displayLabels';
 
-const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', required = false }) => {
+const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', required = false, leftIcon }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = React.useRef(null);
   
@@ -130,13 +132,20 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
   return (
     <div className="relative" ref={containerRef}>
       <div 
-        className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus-within:border-terracotta outline-none transition font-semibold text-charcoal bg-white flex justify-between items-center cursor-pointer select-none"
+        className="w-full border border-gray-200/80 rounded-2xl focus-within:border-terracotta outline-none transition bg-white flex items-center cursor-pointer select-none overflow-hidden"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <span className={value ? "text-charcoal" : "text-sand-300 font-normal"}>
-          {formatDisplay(value) || placeholder}
-        </span>
-        <Calendar className="w-4 h-4 text-charcoal-muted" />
+        {leftIcon && (
+          <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+            {leftIcon}
+          </div>
+        )}
+        <div className={`flex-1 flex justify-between items-center py-3 pr-4 pl-4`}>
+          <span className={value ? "text-charcoal font-semibold text-sm" : "text-gray-300 font-normal text-sm"}>
+            {formatDisplay(value) || placeholder}
+          </span>
+          <Calendar className="w-4 h-4 text-charcoal-muted" />
+        </div>
       </div>
 
       {isOpen && (
@@ -537,14 +546,30 @@ const formatError = (error, defaultMsg = 'An error occurred') => {
   return error.message || defaultMsg;
 };
 
+const INDIAN_STATES = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", 
+  "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", 
+  "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", 
+  "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", 
+  "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal",
+  "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+];
+
 // User Management Component
 const UserManagement = ({ roleFilter, setRoleFilter }) => {
   const [users, setUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [emailSearch, setEmailSearch] = useState('');
+  const [phoneSearch, setPhoneSearch] = useState('');
+  const [uidSearch, setUidSearch] = useState('');
+  const [locationSearch, setLocationSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(10);
   const [totalUsers, setTotalUsers] = useState(0);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddPassword, setShowAddPassword] = useState(false);
   const [viewUser, setViewUser] = useState(null);
   const [newUser, setNewUser] = useState({
     full_name: '',
@@ -563,6 +588,8 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
   const [uploading, setUploading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const fileInputRef = useRef(null);
   const [allBrokers, setAllBrokers] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
   const [rejectDocState, setRejectDocState] = useState(null);
@@ -630,52 +657,33 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [roleFilter]);
+  }, [roleFilter, searchTerm, emailSearch, phoneSearch, uidSearch, locationSearch]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [roleFilter, currentPage]);
+    const delayDebounceFn = setTimeout(() => {
+      fetchUsers();
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [roleFilter, searchTerm, emailSearch, phoneSearch, uidSearch, locationSearch, currentPage]);
 
   useEffect(() => {
     const generateUID = () => {
-      const { role, city, state, branch, franchise, birthdate } = newUser;
+      const { role } = newUser;
+      let rolePrefix = 'GST';
+      if (role === 'admin') rolePrefix = 'ADM';
+      else if (role === 'host') rolePrefix = 'HST';
+      else if (role === 'broker') rolePrefix = 'BRK';
+      else if (role === 'employee') rolePrefix = 'EMP';
       
-      const cleanState = (state || '').trim().substring(0, 2).toUpperCase();
-      const cleanCity = (city || '').trim().substring(0, 3).toUpperCase();
-      const cleanBranch = (branch || '').trim().substring(0, 3).toUpperCase();
-      const cleanFranchise = (franchise || '').trim().substring(0, 3).toUpperCase();
+      const now = new Date();
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const yyyy = String(now.getFullYear());
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
       
-      // Get series based on current role count
-      const roleUsers = users.filter(u => u.role === role);
-      const series = String(roleUsers.length + 1).padStart(3, '0');
-      
-      // Get birthdate month
-      let birthMonth = '00';
-      if (birthdate) {
-        const dateObj = new Date(birthdate);
-        if (!isNaN(dateObj.getTime())) {
-          birthMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-        }
-      }
-      
-      // Get registration date day
-      const regDay = String(new Date().getDate()).padStart(2, '0');
-      
-      let generated = '';
-      if (role === 'broker') {
-        generated = `${cleanState}${cleanCity}${cleanBranch}${cleanFranchise}BR${series}${birthMonth}${regDay}`;
-      } else if (role === 'employee') {
-        generated = `${cleanState}${cleanCity}${cleanBranch}${cleanFranchise}EMP${series}${birthMonth}${regDay}`;
-      } else if (role === 'admin') {
-        generated = `ADMIN${series}`;
-      } else if (role === 'host') {
-        generated = `HST${cleanState || 'XX'}${cleanCity || 'XXX'}${series}`;
-      } else { // guest
-        generated = `GST${cleanState || 'XX'}${cleanCity || 'XXX'}${series}`;
-      }
-      
-      // Enforce 30 chars limit
-      generated = generated.substring(0, 30);
+      const generated = `${rolePrefix} -${dd}${mm}${yyyy}${hh}${min}`;
       
       setNewUser(prev => {
         if (prev.uid !== generated) {
@@ -686,14 +694,43 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     };
     
     generateUID();
-  }, [newUser.role, newUser.city, newUser.state, newUser.branch, newUser.franchise, newUser.birthdate, users]);
+  }, [newUser.role]);
+
+  const getDisplayUID = (u) => {
+    if (!u) return '';
+    const idToCheck = u.uid || u.user_id || '';
+    if (/^[A-Z]{3} -\d{12}$/.test(idToCheck)) {
+      return idToCheck;
+    }
+    
+    const role = u.role || 'guest';
+    let rolePrefix = 'GST';
+    if (role === 'admin') rolePrefix = 'ADM';
+    else if (role === 'host') rolePrefix = 'HST';
+    else if (role === 'broker') rolePrefix = 'BRK';
+    else if (role === 'employee') rolePrefix = 'EMP';
+    
+    const regDate = u.created_at ? new Date(u.created_at) : new Date();
+    const dd = String(regDate.getDate()).padStart(2, '0');
+    const mm = String(regDate.getMonth() + 1).padStart(2, '0');
+    const yyyy = String(regDate.getFullYear());
+    const hh = String(regDate.getHours()).padStart(2, '0');
+    const min = String(regDate.getMinutes()).padStart(2, '0');
+    
+    return `${rolePrefix} -${dd}${mm}${yyyy}${hh}${min}`;
+  };
 
   const fetchUsers = async () => {
     try {
       const params = {
         limit: usersPerPage,
         skip: (currentPage - 1) * usersPerPage,
-        ...(roleFilter ? { role: roleFilter } : {})
+        role: roleFilter || undefined,
+        search: searchTerm || undefined,
+        email: emailSearch || undefined,
+        phone: phoneSearch || undefined,
+        uid: uidSearch || undefined,
+        location: locationSearch || undefined
       };
       const response = await apiClient.get('/admin/users', { params });
       setUsers(response.data.users || []);
@@ -897,25 +934,45 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     }
   };
 
+  const handleExportUsers = async () => {
+    try {
+      const params = {
+        role: roleFilter || undefined,
+        search: searchTerm || undefined,
+        email: emailSearch || undefined,
+        phone: phoneSearch || undefined,
+        uid: uidSearch || undefined,
+        location: locationSearch || undefined
+      };
+      const response = await adminAPI.downloadUsersCsv(params);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `users_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting users:', error);
+      alert('Failed to export users list');
+    }
+  };
+
   return (
     <div data-testid="user-management">
       <div className="dashboard-card mb-6">
         <div className="flex items-center justify-between">
           <h3 className="text-2xl font-bold text-charcoal">User Management</h3>
-          <div className="flex items-center space-x-4">
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="input-field w-48"
-              data-testid="role-filter"
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={handleExportUsers}
+              className="px-5 py-2 rounded-2xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-[#FAF9F6] flex items-center space-x-1.5 transition text-sm font-bold shadow-sm bg-white"
+              data-testid="export-users-csv-btn"
             >
-              <option value="">All Roles</option>
-              <option value="guest">Guests</option>
-              <option value="host">Hosts</option>
-              <option value="broker">Brokers</option>
-              <option value="employee">Employees</option>
-              <option value="admin">Admins</option>
-            </select>
+              <Download className="w-4 h-4 text-terracotta" />
+              <span>Export CSV</span>
+            </button>
             <button
               onClick={() => setShowAddModal(true)}
               className="btn-premium flex items-center space-x-2 py-2"
@@ -923,6 +980,78 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               <Plus className="w-4 h-4" />
               <span>Add User</span>
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Advanced Search & Filter Row */}
+      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-subtle mb-6 space-y-4">
+        <h4 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Search & Filter Users</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Name or UID Search */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-muted" />
+            <input
+              type="text"
+              placeholder="Name or UID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 bg-[#FAF9F6]/50 border border-gray-200/80 rounded-2xl focus:border-terracotta focus:bg-white outline-none text-sm text-charcoal font-semibold placeholder:font-normal transition-all"
+            />
+          </div>
+
+          {/* Email Search */}
+          <div className="relative">
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-muted" />
+            <input
+              type="text"
+              placeholder="Email ID..."
+              value={emailSearch}
+              onChange={(e) => setEmailSearch(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 bg-[#FAF9F6]/50 border border-gray-200/80 rounded-2xl focus:border-terracotta focus:bg-white outline-none text-sm text-charcoal font-semibold placeholder:font-normal transition-all"
+            />
+          </div>
+
+          {/* Phone Search */}
+          <div className="relative">
+            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-muted" />
+            <input
+              type="text"
+              placeholder="Mobile No..."
+              value={phoneSearch}
+              onChange={(e) => setPhoneSearch(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 bg-[#FAF9F6]/50 border border-gray-200/80 rounded-2xl focus:border-terracotta focus:bg-white outline-none text-sm text-charcoal font-semibold placeholder:font-normal transition-all"
+            />
+          </div>
+
+          {/* Location Search */}
+          <div className="relative">
+            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-muted" />
+            <input
+              type="text"
+              placeholder="City or State..."
+              value={locationSearch}
+              onChange={(e) => setLocationSearch(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 bg-[#FAF9F6]/50 border border-gray-200/80 rounded-2xl focus:border-terracotta focus:bg-white outline-none text-sm text-charcoal font-semibold placeholder:font-normal transition-all"
+            />
+          </div>
+
+          {/* Role Filter */}
+          <div className="relative">
+            <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-muted" />
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="w-full pl-11 pr-8 py-3 bg-[#FAF9F6]/50 border border-gray-200/80 rounded-2xl focus:border-terracotta focus:bg-white outline-none text-sm text-charcoal font-bold appearance-none cursor-pointer"
+            >
+              <option value="">All Roles</option>
+              <option value="admin">Admin</option>
+              <option value="host">Host</option>
+              <option value="broker">Broker</option>
+              <option value="employee">Employee</option>
+              <option value="guest">Guest</option>
+            </select>
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-muted pointer-events-none" />
           </div>
         </div>
       </div>
@@ -968,11 +1097,9 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                           KYC: {user.kyc_status || 'unverified'}
                         </span>
                       )}
-                      {user.user_id && (
-                        <span className="inline-block px-2 py-0.5 bg-sage/10 text-sage-dark text-[10px] font-mono tracking-wider rounded">
-                          UID: {user.user_id}
-                        </span>
-                      )}
+                      <span className="inline-block px-2 py-0.5 bg-charcoal/5 text-charcoal/80 text-[10px] font-mono tracking-wider rounded">
+                        UID: {getDisplayUID(user)}
+                      </span>
                       {user.city && (
                         <span className="text-xs text-charcoal-muted">in {user.city}</span>
                       )}
@@ -1088,144 +1215,210 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
       {/* Add User Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-xl w-full shadow-premium animate-slide-up overflow-y-auto max-h-[90vh]">
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-premium animate-slide-up overflow-y-auto max-h-[92vh]">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
-              <div>
-                <h3 className="text-2xl font-bold tracking-tight text-charcoal leading-none mb-1">Create New User</h3>
-                <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Register professional nodes in the STR network</span>
+              <div className="flex items-center space-x-3.5">
+                <div className="w-12 h-12 rounded-full bg-terracotta/5 border border-terracotta/10 flex items-center justify-center flex-shrink-0">
+                  <UserPlus className="w-6 h-6 text-terracotta" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold tracking-tight text-charcoal leading-none mb-1">Create New User</h3>
+                  <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mt-0.5">Register professional nodes in the STR network</span>
+                </div>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-terracotta/10 flex items-center justify-center text-terracotta">
+              <div className="w-10 h-10 rounded-xl bg-terracotta/5 border border-terracotta/10 flex items-center justify-center text-terracotta">
                 <Shield className="w-5 h-5" />
               </div>
             </div>
             
             <form onSubmit={handleCreateUser} className="space-y-6">
               {/* Profile Image Upload Component */}
-              <div className="bg-stone/50 border border-gray-100/80 rounded-2xl p-5 mb-4 transition-all duration-300 animate-slide-up">
+              <div className="bg-[#FAF9F6] border border-gray-100 rounded-2xl p-5 mb-4">
                 <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-3">Profile Image</label>
-                {newUser.profile_image ? (
-                  <div className="flex items-center space-x-4">
-                    <div className="relative group">
-                      <img 
-                        src={getImageUrl(newUser.profile_image)} 
-                        alt="Preview" 
-                        className="w-16 h-16 rounded-full object-cover border-2 border-terracotta/80 shadow-subtle group-hover:opacity-90 transition-opacity"
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => setNewUser(prev => ({ ...prev, profile_image: '' }))}
-                        className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center shadow transition-transform hover:scale-[1.03] active:scale-95"
-                        title="Remove Image"
-                      >
-                        <span className="font-bold text-xs">×</span>
-                      </button>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold tracking-tight text-sage-dark uppercase tracking-widest block mb-0.5">Uploaded</span>
-                      <span className="text-xs font-bold text-charcoal-light block">Image successfully registered</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col space-y-2">
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      disabled={uploading}
-                      className="w-full text-xs text-charcoal-light file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-bold tracking-tight file:uppercase file:tracking-wider file:bg-terracotta/10 file:text-terracotta hover:file:bg-terracotta/20 cursor-pointer disabled:opacity-50"
-                    />
-                    {uploading ? (
-                      <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest animate-pulse">Uploading to node server...</span>
+                <div className="flex items-center space-x-4">
+                  {/* Circular Preview */}
+                  <div className="relative flex-shrink-0">
+                    {newUser.profile_image ? (
+                      <div className="relative group">
+                        <img 
+                          src={getImageUrl(newUser.profile_image)} 
+                          alt="Preview" 
+                          className="w-20 h-20 rounded-full object-cover border-4 border-sand-100 shadow-subtle group-hover:opacity-90 transition-opacity"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setNewUser(prev => ({ ...prev, profile_image: '' }))}
+                          className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center shadow transition-transform hover:scale-[1.03]"
+                          title="Remove Image"
+                        >
+                          <span className="font-bold text-xs">×</span>
+                        </button>
+                      </div>
                     ) : (
-                      <span className="text-[9px] font-medium text-charcoal-muted">Supported formats: PNG, JPG, JPEG, WEBP, GIF (Max 8MB)</span>
+                      <div className="w-20 h-20 rounded-full bg-stone border-4 border-sand-100 flex items-center justify-center text-charcoal-muted relative">
+                        <Camera className="w-8 h-8 text-charcoal-muted/50" />
+                        <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-terracotta flex items-center justify-center text-white border-2 border-white shadow-sm">
+                          <Plus className="w-3.5 h-3.5" />
+                        </div>
+                      </div>
                     )}
                   </div>
-                )}
+
+                  {/* Choose File box */}
+                  <div className="flex-1 bg-white border border-gray-100 rounded-2xl p-4 flex flex-col justify-center min-h-[5rem]">
+                    <div className="flex items-center space-x-3">
+                      <label 
+                        htmlFor="add-user-avatar-upload"
+                        className="px-4 py-2 border border-gray-200 hover:border-terracotta text-charcoal hover:bg-[#FAF9F6] rounded-2xl font-bold transition text-xs shadow-sm bg-white flex items-center space-x-1.5 cursor-pointer"
+                      >
+                        <UploadCloud className="w-4 h-4 text-terracotta" />
+                        <span>Choose File</span>
+                      </label>
+                      <input 
+                        id="add-user-avatar-upload"
+                        type="file" 
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={uploading}
+                        className="hidden"
+                      />
+                      <span className="text-xs font-bold text-charcoal-light truncate max-w-[12rem]">
+                        {newUser.profile_image ? "Image uploaded" : (uploading ? "Uploading..." : "No file chosen")}
+                      </span>
+                    </div>
+                    <span className="text-[9px] font-medium text-charcoal-muted mt-2">Supported formats: PNG, JPG, JPEG, WEBP, GIF (Max 8MB)</span>
+                  </div>
+                </div>
               </div>
 
               <div>
                 <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Full Name</label>
-                <input 
-                  required
-                  placeholder="John Doe"
-                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                  value={newUser.full_name}
-                  onChange={e => setNewUser({...newUser, full_name: e.target.value})}
-                />
+                <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                  <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <input 
+                    required
+                    placeholder="Enter full name"
+                    className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                    value={newUser.full_name}
+                    onChange={e => setNewUser({...newUser, full_name: e.target.value})}
+                  />
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Email Address</label>
-                  <input 
-                    type="email" required
-                    placeholder="john@example.com"
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                    value={newUser.email}
-                    onChange={e => setNewUser({...newUser, email: e.target.value})}
-                  />
+                  <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                    <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <input 
+                      type="email" required
+                      placeholder="admin@x-space360.in"
+                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                      value={newUser.email}
+                      onChange={e => setNewUser({...newUser, email: e.target.value})}
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Phone Number</label>
-                  <input 
-                    required
-                    placeholder="+91..."
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                    value={newUser.phone}
-                    onChange={e => setNewUser({...newUser, phone: e.target.value})}
-                  />
+                  <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                    <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                      <Phone className="w-5 h-5" />
+                    </div>
+                    <input 
+                      required
+                      placeholder="+91 Enter phone number"
+                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                      value={newUser.phone}
+                      onChange={e => setNewUser({...newUser, phone: e.target.value})}
+                    />
+                  </div>
                 </div>
               </div>
 
               <div>
                 <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Password</label>
-                <input 
-                  type="password" required
-                  placeholder="••••••••"
-                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                  value={newUser.password}
-                  onChange={e => setNewUser({...newUser, password: e.target.value})}
-                />
+                <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                  <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <input 
+                    type={showAddPassword ? "text" : "password"} required
+                    placeholder="••••••••••••"
+                    className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm pr-12"
+                    value={newUser.password}
+                    onChange={e => setNewUser({...newUser, password: e.target.value})}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAddPassword(!showAddPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-charcoal-muted hover:text-charcoal transition-colors"
+                  >
+                    {showAddPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Role</label>
-                  <select 
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-bold tracking-tight text-[11px] uppercase tracking-wider text-charcoal bg-white"
-                    value={newUser.role}
-                    onChange={e => setNewUser({...newUser, role: e.target.value})}
-                  >
-                    <option value="guest">Guest</option>
-                    <option value="host">Host</option>
-                    <option value="broker">Broker</option>
-                    <option value="employee">Employee</option>
-                    <option value="admin">Admin</option>
-                  </select>
+                  <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                    <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                      <Shield className="w-5 h-5" />
+                    </div>
+                    <select 
+                      className="flex-1 px-4 py-3 outline-none text-charcoal font-bold bg-transparent w-full text-xs uppercase tracking-wider appearance-none cursor-pointer pr-10"
+                      value={newUser.role}
+                      onChange={e => setNewUser({...newUser, role: e.target.value})}
+                    >
+                      <option value="guest">Guest</option>
+                      <option value="host">Host</option>
+                      <option value="broker">Broker</option>
+                      <option value="employee">Employee</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <div className="absolute right-4 pointer-events-none text-charcoal-muted">
+                      <ChevronRight className="w-4 h-4 transform rotate-90" />
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">City</label>
-                  <input 
-                    required
-                    placeholder="e.g. Mumbai"
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                    value={newUser.city}
-                    onChange={e => setNewUser({...newUser, city: e.target.value})}
-                  />
+                  <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                    <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                      <MapPin className="w-5 h-5" />
+                    </div>
+                    <input 
+                      required
+                      placeholder="e.g. Mumbai"
+                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                      value={newUser.city}
+                      onChange={e => setNewUser({...newUser, city: e.target.value})}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className={newUser.role === 'admin' ? "col-span-2" : ""}>
                   <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">State</label>
-                  <input 
-                    required
-                    placeholder="e.g. Maharashtra"
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                    value={newUser.state}
-                    onChange={e => setNewUser({...newUser, state: e.target.value})}
-                  />
+                  <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                    <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                      <Building2 className="w-5 h-5" />
+                    </div>
+                    <input 
+                      required
+                      placeholder="e.g. Maharashtra"
+                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                      value={newUser.state}
+                      onChange={e => setNewUser({...newUser, state: e.target.value})}
+                    />
+                  </div>
                 </div>
                 {newUser.role !== 'admin' && (
                   <div>
@@ -1234,253 +1427,414 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                       value={newUser.birthdate}
                       onChange={dateStr => setNewUser({...newUser, birthdate: dateStr})}
                       required={newUser.role !== 'admin'}
+                      leftIcon={<Calendar className="w-5 h-5" />}
                     />
                   </div>
                 )}
               </div>
 
               {(newUser.role === 'broker' || newUser.role === 'employee') && (
-                <div className="grid grid-cols-2 gap-4 animate-slide-up">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up">
                   <div>
                     <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Franchise</label>
-                    <input 
-                      required
-                      placeholder="e.g. Golden"
-                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                      value={newUser.franchise}
-                      onChange={e => setNewUser({...newUser, franchise: e.target.value})}
-                    />
+                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <input 
+                        required
+                        placeholder="e.g. Golden"
+                        className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                        value={newUser.franchise}
+                        onChange={e => setNewUser({...newUser, franchise: e.target.value})}
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Branch</label>
-                    <input 
-                      required
-                      placeholder="e.g. Bandra"
-                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                      value={newUser.branch}
-                      onChange={e => setNewUser({...newUser, branch: e.target.value})}
-                    />
+                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                        <MapPin className="w-5 h-5" />
+                      </div>
+                      <input 
+                        required
+                        placeholder="e.g. Bandra"
+                        className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                        value={newUser.branch}
+                        onChange={e => setNewUser({...newUser, branch: e.target.value})}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* Dynamic UID Preview Box */}
-              <div className="bg-gray-50/60 border border-gray-100 rounded-2xl p-4 flex items-center justify-between shadow-inner">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-sage/10 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-sage-dark" />
+              <div className="bg-green-50/50 border border-green-200/50 rounded-2xl p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3.5">
+                    <div className="w-11 h-11 rounded-full bg-green-100/60 flex items-center justify-center text-green-700 flex-shrink-0">
+                      <CheckCircle className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold tracking-wider text-green-700/80 uppercase block mb-0.5">System Generated UID</span>
+                      <span className="font-mono font-bold text-sm text-green-700 tracking-wider uppercase block">{newUser.uid || 'GENERATING...'}</span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-0.5">System Generated UID</span>
-                    <span className="font-mono font-bold tracking-tight text-sm text-charcoal tracking-wider uppercase block">{newUser.uid || 'GENERATING...'}</span>
-                  </div>
+                  <span className="border border-green-200 bg-green-100/50 text-green-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Secure</span>
                 </div>
-                <span className="text-[9px] font-bold tracking-tight bg-sage text-white px-2.5 py-1 rounded-full uppercase tracking-wider">Secure</span>
+                <div className="flex items-center space-x-1.5 mt-3 px-1">
+                  <Check className="w-3.5 h-3.5 text-green-600" />
+                  <span className="text-[10px] font-bold text-green-700/80">This UID is unique and generated securely by the system.</span>
+                </div>
               </div>
 
-              <div className="flex space-x-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-4 font-bold tracking-tight text-xs text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition-all">Cancel</button>
-                <button type="submit" className="flex-1 btn-premium py-4 shadow-elevated">Create User</button>
+              <div className="flex items-center pt-4 border-t border-gray-100">
+                <button 
+                  type="button" 
+                  onClick={() => setShowAddModal(false)} 
+                  className="px-6 py-3 border border-gray-200 hover:border-gray-300 text-charcoal hover:bg-[#FAF9F6] rounded-2xl font-bold transition text-sm flex-1 mr-4"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-[2] bg-[#1A1816] hover:bg-[#2E2A26] text-white py-3.5 rounded-2xl font-bold transition flex items-center justify-center space-x-2 text-sm shadow-md"
+                >
+                  <UserPlus className="w-4 h-4 text-white/90" />
+                  <span>Create User</span>
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
       {/* Edit User Modal */}
       {showEditModal && editUser && (
-        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-xl w-full shadow-premium animate-slide-up overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+        <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-stone rounded-[2.5rem] max-w-3xl w-full shadow-elevated animate-scale-up max-h-[90vh] flex flex-col overflow-hidden border border-gray-100">
+            
+            {/* Header Area */}
+            <div className="flex justify-between items-center p-8 pb-4 border-b border-gray-100 flex-shrink-0 bg-white">
               <div>
-                <h3 className="text-2xl font-bold tracking-tight text-charcoal leading-none mb-1">Edit User Details</h3>
-                <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Update network user profile parameters</span>
+                <h3 className="text-2xl font-bold tracking-tight text-charcoal flex items-center">
+                  <User className="w-6 h-6 text-terracotta mr-2" />
+                  Edit User Details
+                </h3>
+                <p className="text-xs text-charcoal-muted font-bold uppercase tracking-widest mt-1">Update network user profile parameters</p>
               </div>
-              <div className="w-10 h-10 rounded-xl bg-terracotta/10 flex items-center justify-center text-terracotta">
-                <Edit className="w-5 h-5" />
-              </div>
+              <button 
+                type="button"
+                onClick={() => setShowEditModal(false)} 
+                className="w-10 h-10 rounded-full bg-stone flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors border border-gray-100"
+              >
+                <Plus className="w-6 h-6 rotate-45" />
+              </button>
             </div>
             
-            <form onSubmit={handleEditUserSubmit} className="space-y-6">
-              {/* Profile Image Upload Component */}
-              <div className="bg-stone/50 border border-gray-100/80 rounded-2xl p-5 mb-4 transition-all duration-300 animate-slide-up">
-                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-3">Profile Image</label>
-                {editUser.profile_image ? (
-                  <div className="flex items-center space-x-4">
-                    <div className="relative group">
-                      <img 
-                        src={getImageUrl(editUser.profile_image)} 
-                        alt="Preview" 
-                        className="w-16 h-16 rounded-full object-cover border-2 border-terracotta/80 shadow-subtle group-hover:opacity-90 transition-opacity"
+            <form onSubmit={handleEditUserSubmit} className="flex-1 flex flex-col overflow-hidden bg-white">
+              <div className="flex-1 overflow-y-auto px-8 py-6 space-y-6 custom-modal-scrollbar">
+                
+                {/* Profile Image Section */}
+                <div className="flex flex-col space-y-2">
+                  <span className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Profile Image</span>
+                  <div className="flex items-center space-x-6 bg-stone/40 p-4 rounded-2xl border border-gray-100 shadow-subtle">
+                    {/* Circular Avatar Preview Container */}
+                    <div 
+                      className="relative cursor-pointer group"
+                      onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                    >
+                      <div className="w-20 h-20 rounded-full bg-white border border-gray-100 flex items-center justify-center overflow-hidden shadow-subtle group-hover:opacity-90 transition-all">
+                        {editUser.profile_image ? (
+                          <img 
+                            src={getImageUrl(editUser.profile_image)} 
+                            alt="Profile" 
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Camera className="w-8 h-8 text-terracotta/50" />
+                        )}
+                      </div>
+                      {/* Plus Button */}
+                      <div className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-terracotta border-2 border-white flex items-center justify-center text-white shadow-subtle group-hover:scale-105 transition-transform">
+                        <span className="font-bold text-sm leading-none">+</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col space-y-2 flex-1">
+                      <div className="flex items-center space-x-3">
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                          className="px-4 py-2 border border-terracotta/30 bg-white text-terracotta rounded-xl font-bold text-xs hover:bg-terracotta/5 transition-colors uppercase tracking-wider"
+                        >
+                          Choose File
+                        </button>
+                        <span className="text-xs text-charcoal-muted font-medium truncate max-w-[200px]">
+                          {editUser.profile_image ? "Image successfully registered" : "No file chosen"}
+                        </span>
+                        {editUser.profile_image && (
+                          <button
+                            type="button"
+                            onClick={() => setEditUser(prev => ({ ...prev, profile_image: '' }))}
+                            className="text-red-500 hover:text-red-700 text-xs font-semibold underline"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        accept="image/*"
+                        onChange={handleEditImageUpload}
+                        disabled={uploading}
+                        className="hidden"
                       />
-                      <button 
-                        type="button"
-                        onClick={() => setEditUser(prev => ({ ...prev, profile_image: '' }))}
-                        className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center shadow transition-transform hover:scale-[1.03] active:scale-95"
-                        title="Remove Image"
+                      {uploading ? (
+                        <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest animate-pulse">Uploading to node server...</span>
+                      ) : (
+                        <span className="text-[9px] font-medium text-charcoal-muted">Supported formats: PNG, JPG, JPEG, WEBP, GIF (Max 8MB)</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Full Name */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Full Name</label>
+                  <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                    <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <input 
+                      required
+                      placeholder="John Doe"
+                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                      value={editUser.full_name || ''}
+                      onChange={e => setEditUser({...editUser, full_name: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                {/* Email & Phone */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Email Address</label>
+                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                        <Mail className="w-5 h-5" />
+                      </div>
+                      <input 
+                        type="email" required
+                        placeholder="john@example.com"
+                        className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                        value={editUser.email || ''}
+                        onChange={e => setEditUser({...editUser, email: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Phone Number</label>
+                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                        <Phone className="w-5 h-5" />
+                      </div>
+                      <input 
+                        required
+                        placeholder="+91..."
+                        className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                        value={editUser.phone || ''}
+                        onChange={e => setEditUser({...editUser, phone: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Password */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Password (Leave blank to keep unchanged)</label>
+                  <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                    <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                      <Lock className="w-5 h-5" />
+                    </div>
+                    <input 
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm pr-12"
+                      value={editUser.password || ''}
+                      onChange={e => setEditUser({...editUser, password: e.target.value})}
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 text-charcoal-muted hover:text-charcoal transition-colors cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Role & City */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Role</label>
+                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <select 
+                        className="flex-1 px-4 py-3 outline-none text-charcoal font-bold bg-transparent w-full text-xs uppercase tracking-wider appearance-none cursor-pointer pr-10"
+                        value={editUser.role || 'guest'}
+                        onChange={e => setEditUser({...editUser, role: e.target.value})}
                       >
-                        <span className="font-bold text-xs">×</span>
-                      </button>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold tracking-tight text-sage-dark uppercase tracking-widest block mb-0.5">Uploaded</span>
-                      <span className="text-xs font-bold text-charcoal-light block">Image successfully registered</span>
+                        <option value="guest">Guest</option>
+                        <option value="host">Host</option>
+                        <option value="broker">Broker</option>
+                        <option value="employee">Employee</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <div className="absolute right-4 pointer-events-none text-charcoal-muted">
+                        <ChevronRight className="w-4 h-4 transform rotate-90" />
+                      </div>
                     </div>
                   </div>
-                ) : (
-                  <div className="flex flex-col space-y-2">
-                    <input 
-                      type="file" 
-                      accept="image/*"
-                      onChange={handleEditImageUpload}
-                      disabled={uploading}
-                      className="w-full text-xs text-charcoal-light file:mr-4 file:py-2.5 file:px-5 file:rounded-xl file:border-0 file:text-xs file:font-bold tracking-tight file:uppercase file:tracking-wider file:bg-terracotta/10 file:text-terracotta hover:file:bg-terracotta/20 cursor-pointer disabled:opacity-50"
-                    />
-                    {uploading ? (
-                      <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest animate-pulse">Uploading to node server...</span>
-                    ) : (
-                      <span className="text-[9px] font-medium text-charcoal-muted">Supported formats: PNG, JPG, JPEG, WEBP, GIF (Max 8MB)</span>
-                    )}
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">City</label>
+                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                        <MapPin className="w-5 h-5" />
+                      </div>
+                      <input 
+                        required
+                        placeholder="e.g. Mumbai"
+                        className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                        value={editUser.city || ''}
+                        onChange={e => setEditUser({...editUser, city: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* State & Birthdate */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">State</label>
+                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <select 
+                        required
+                        className="flex-1 px-4 py-3 outline-none text-[#1A1A1A] font-semibold bg-transparent w-full text-sm appearance-none cursor-pointer pr-10"
+                        value={editUser.state || ''}
+                        onChange={e => setEditUser({...editUser, state: e.target.value})}
+                      >
+                        <option value="" disabled>Select State</option>
+                        {INDIAN_STATES.map(st => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                      <div className="absolute right-4 pointer-events-none text-charcoal-muted">
+                        <ChevronRight className="w-4 h-4 transform rotate-90" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {editUser.role !== 'admin' && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Birthdate</label>
+                      <PremiumDatePicker 
+                        value={editUser.birthdate ? editUser.birthdate.substring(0, 10) : ''}
+                        onChange={dateStr => setEditUser({...editUser, birthdate: dateStr})}
+                        required={editUser.role !== 'admin'}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Franchise & Branch (Conditional) */}
+                {(editUser.role === 'broker' || editUser.role === 'employee') && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-slide-up">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Franchise</label>
+                      <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                        <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                          <Building2 className="w-5 h-5" />
+                        </div>
+                        <input 
+                          required
+                          placeholder="e.g. Golden"
+                          className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                          value={editUser.franchise || ''}
+                          onChange={e => setEditUser({...editUser, franchise: e.target.value})}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Branch</label>
+                      <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                        <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                          <Building2 className="w-5 h-5" />
+                        </div>
+                        <input 
+                          required
+                          placeholder="e.g. Bandra"
+                          className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                          value={editUser.branch || ''}
+                          onChange={e => setEditUser({...editUser, branch: e.target.value})}
+                        />
+                      </div>
+                    </div>
                   </div>
                 )}
-              </div>
 
-              <div>
-                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Full Name</label>
-                <input 
-                  required
-                  placeholder="John Doe"
-                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                  value={editUser.full_name || ''}
-                  onChange={e => setEditUser({...editUser, full_name: e.target.value})}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Email Address</label>
-                  <input 
-                    type="email" required
-                    placeholder="john@example.com"
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                    value={editUser.email || ''}
-                    onChange={e => setEditUser({...editUser, email: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Phone Number</label>
-                  <input 
-                    required
-                    placeholder="+91..."
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                    value={editUser.phone || ''}
-                    onChange={e => setEditUser({...editUser, phone: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Password (Leave blank to keep unchanged)</label>
-                <input 
-                  type="password"
-                  placeholder="••••••••"
-                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                  value={editUser.password || ''}
-                  onChange={e => setEditUser({...editUser, password: e.target.value})}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Role</label>
-                  <select 
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-bold tracking-tight text-[11px] uppercase tracking-wider text-charcoal bg-white"
-                    value={editUser.role || 'guest'}
-                    onChange={e => setEditUser({...editUser, role: e.target.value})}
-                  >
-                    <option value="guest">Guest</option>
-                    <option value="host">Host</option>
-                    <option value="broker">Broker</option>
-                    <option value="employee">Employee</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">City</label>
-                  <input 
-                    required
-                    placeholder="e.g. Mumbai"
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                    value={editUser.city || ''}
-                    onChange={e => setEditUser({...editUser, city: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className={editUser.role === 'admin' ? "col-span-2" : ""}>
-                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">State</label>
-                  <input 
-                    required
-                    placeholder="e.g. Maharashtra"
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                    value={editUser.state || ''}
-                    onChange={e => setEditUser({...editUser, state: e.target.value})}
-                  />
-                </div>
-                {editUser.role !== 'admin' && (
-                  <div>
-                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Birthdate</label>
-                    <PremiumDatePicker 
-                      value={editUser.birthdate ? editUser.birthdate.substring(0, 10) : ''}
-                      onChange={dateStr => setEditUser({...editUser, birthdate: dateStr})}
-                      required={editUser.role !== 'admin'}
-                    />
+                {/* LG Code (Conditional) */}
+                {editUser.role === 'host' && (
+                  <div className="space-y-1 animate-slide-up">
+                    <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">LG Code (Assigned Broker)</label>
+                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                        <Shield className="w-5 h-5" />
+                      </div>
+                      <input 
+                        placeholder="e.g. MH01BUM001"
+                        className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                        value={editUser.lg_code || ''}
+                        onChange={e => setEditUser({...editUser, lg_code: e.target.value})}
+                      />
+                    </div>
                   </div>
                 )}
+
+                {/* Info Banner Note */}
+                <div className="bg-terracotta/5 border border-terracotta/10 rounded-2xl p-4 flex items-center space-x-3 text-xs text-terracotta font-semibold">
+                  <Info className="w-5 h-5 text-terracotta flex-shrink-0" />
+                  <span>Note: Ensure all information is accurate before saving changes.</span>
+                </div>
+
               </div>
 
-              {(editUser.role === 'broker' || editUser.role === 'employee') && (
-                <div className="grid grid-cols-2 gap-4 animate-slide-up">
-                  <div>
-                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Franchise</label>
-                    <input 
-                      required
-                      placeholder="e.g. Golden"
-                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                      value={editUser.franchise || ''}
-                      onChange={e => setEditUser({...editUser, franchise: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Branch</label>
-                    <input 
-                      required
-                      placeholder="e.g. Bandra"
-                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                      value={editUser.branch || ''}
-                      onChange={e => setEditUser({...editUser, branch: e.target.value})}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {editUser.role === 'host' && (
-                <div className="animate-slide-up">
-                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">LG Code (Assigned Broker)</label>
-                  <input 
-                    placeholder="e.g. MH01BUM001"
-                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-3 focus:border-terracotta outline-none transition font-semibold text-charcoal placeholder:font-normal placeholder:text-sand-300"
-                    value={editUser.lg_code || ''}
-                    onChange={e => setEditUser({...editUser, lg_code: e.target.value})}
-                  />
-                </div>
-              )}
-
-              <div className="flex space-x-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-4 font-bold tracking-tight text-xs text-charcoal-muted uppercase tracking-widest hover:text-charcoal transition-all">Cancel</button>
-                <button type="submit" className="flex-1 btn-premium py-4 shadow-elevated">Save Changes</button>
+              {/* Action Buttons */}
+              <div className="flex justify-end space-x-3 p-8 border-t border-gray-100/50 bg-stone/30 flex-shrink-0">
+                <button 
+                  type="button" 
+                  onClick={() => setShowEditModal(false)} 
+                  className="px-6 py-2.5 border border-gray-200 hover:bg-gray-50 rounded-xl text-xs font-bold tracking-widest uppercase text-charcoal-muted transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-6 py-2.5 bg-terracotta hover:bg-terracotta/90 text-white rounded-xl text-xs font-bold tracking-widest uppercase transition-all flex items-center space-x-2 shadow-subtle"
+                >
+                  <Check className="w-4 h-4 text-white" />
+                  <span>Save Changes</span>
+                </button>
               </div>
+
             </form>
           </div>
         </div>
@@ -1567,7 +1921,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
                     <div className="p-4 bg-stone rounded-2xl">
                       <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Host User ID / LG Code</p>
-                      <p className="text-xs font-mono text-charcoal-light">{viewUser.user_id} {viewUser.lg_code ? `| LG: ${viewUser.lg_code}` : ''}</p>
+                      <p className="text-xs font-mono text-charcoal-light">{getDisplayUID(viewUser)} {viewUser.lg_code ? `| LG: ${viewUser.lg_code}` : ''}</p>
                     </div>
 
                     {viewUser.role === 'host' && (
@@ -1773,7 +2127,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 <div className="flex justify-end mb-2">
                   <button
                     onClick={() => setViewUser(null)}
-                    className="p-2 hover:bg-gray-50 rounded-full text-charcoal-light hover:text-charcoal transition-colors border border-gray-100 flex items-center justify-center"
+                    className="w-8 h-8 rounded-full text-charcoal-light hover:text-charcoal hover:bg-gray-50 border border-gray-100 flex items-center justify-center transition-colors"
                     title="Close"
                   >
                     <X className="w-4 h-4" />
@@ -1792,48 +2146,100 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                     </div>
                   )}
                   <h3 className="text-2xl font-bold tracking-tight text-charcoal">{viewUser.full_name}</h3>
-                  <span className="inline-block px-3 py-1 bg-terracotta/10 text-terracotta text-xs font-bold tracking-tight uppercase tracking-widest rounded-full mt-2">
-                    {viewUser.role} Account
+                  <span className="inline-flex items-center space-x-1.5 px-3.5 py-1 bg-terracotta/10 text-terracotta text-xs font-bold tracking-tight uppercase tracking-widest rounded-full mt-2">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>{viewUser.role} Account</span>
                   </span>
                 </div>
                 
-                <div className="space-y-4 mb-8">
+                <div className="space-y-4 mb-6">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-stone rounded-2xl">
-                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Email</p>
-                      <p className="text-sm font-bold text-charcoal break-all">{viewUser.email}</p>
+                    <div className="flex items-center space-x-3.5 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                      <div className="w-10 h-10 rounded-xl bg-terracotta/5 border border-terracotta/10 flex items-center justify-center flex-shrink-0">
+                        <Mail className="w-5 h-5 text-terracotta" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-0.5">Email</p>
+                        <p className="text-sm font-bold text-charcoal break-all truncate" title={viewUser.email}>{viewUser.email}</p>
+                      </div>
                     </div>
-                    <div className="p-4 bg-stone rounded-2xl">
-                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Phone</p>
-                      <p className="text-sm font-bold text-charcoal">{viewUser.phone}</p>
+                    <div className="flex items-center space-x-3.5 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                      <div className="w-10 h-10 rounded-xl bg-terracotta/5 border border-terracotta/10 flex items-center justify-center flex-shrink-0">
+                        <Phone className="w-5 h-5 text-terracotta" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-0.5">Phone</p>
+                        <p className="text-sm font-bold text-charcoal truncate">{viewUser.phone}</p>
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 bg-stone rounded-2xl">
-                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Location</p>
-                      <p className="text-sm font-bold text-charcoal">{viewUser.city || 'Not specified'}</p>
+                    <div className="flex items-center space-x-3.5 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                      <div className="w-10 h-10 rounded-xl bg-terracotta/5 border border-terracotta/10 flex items-center justify-center flex-shrink-0">
+                        <MapPin className="w-5 h-5 text-terracotta" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-0.5">Location</p>
+                        <p className="text-sm font-bold text-charcoal truncate">{viewUser.city || 'Not specified'}</p>
+                      </div>
                     </div>
-                    <div className="p-4 bg-stone rounded-2xl">
-                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Status</p>
-                      <p className={`text-sm font-bold ${viewUser.is_active ? 'text-green-600' : 'text-red-600'}`}>
-                        {viewUser.is_active ? 'Active' : 'Inactive'}
+                    <div className="flex items-center space-x-3.5 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                      <div className="w-10 h-10 rounded-xl bg-terracotta/5 border border-terracotta/10 flex items-center justify-center flex-shrink-0">
+                        <span className={`w-3.5 h-3.5 rounded-full ${viewUser.is_active ? 'bg-green-600 animate-pulse' : 'bg-red-600'}`}></span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-0.5">Status</p>
+                        <p className={`text-sm font-bold ${viewUser.is_active ? 'text-green-600' : 'text-red-600'} truncate`}>
+                          {viewUser.is_active ? 'Active' : 'Inactive'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3.5 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                    <div className="w-10 h-10 rounded-xl bg-terracotta/5 border border-terracotta/10 flex items-center justify-center flex-shrink-0">
+                      <User className="w-5 h-5 text-terracotta" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-0.5">User ID</p>
+                      <p className="text-sm font-bold text-charcoal truncate">{getDisplayUID(viewUser)}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3.5 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                    <div className="w-10 h-10 rounded-xl bg-terracotta/5 border border-terracotta/10 flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-5 h-5 text-terracotta" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-0.5">Joined On</p>
+                      <p className="text-sm font-bold text-charcoal truncate">
+                        {new Date(viewUser.created_at).toLocaleDateString('en-IN', {
+                          day: 'numeric', month: 'long', year: 'numeric'
+                        })}
                       </p>
                     </div>
                   </div>
-                  <div className="p-4 bg-stone rounded-2xl">
-                    <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">User ID</p>
-                    <p className="text-xs font-mono text-charcoal-light">{viewUser.user_id}</p>
-                  </div>
-                  <div className="p-4 bg-stone rounded-2xl">
-                    <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Joined On</p>
-                    <p className="text-sm font-bold text-charcoal">
-                      {new Date(viewUser.created_at).toLocaleDateString('en-IN', {
-                        day: 'numeric', month: 'long', year: 'numeric'
-                      })}
-                    </p>
-                  </div>
                 </div>
-                <button onClick={() => setViewUser(null)} className="w-full btn-premium py-4">Close Details</button>
+
+                {/* Administrative Access Notice */}
+                <div className="flex items-start space-x-2.5 py-3 px-2 border-t border-gray-100 mt-5">
+                  <Shield className="w-4 h-4 text-terracotta/80 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-charcoal-muted font-medium">
+                    {viewUser.role === 'admin' && "This account has administrative access to the system."}
+                    {viewUser.role === 'broker' && "This account has broker privileges on the platform."}
+                    {viewUser.role === 'employee' && "This account has employee/RM permissions on the platform."}
+                    {viewUser.role === 'host' && "This account is registered as a host on the platform."}
+                    {viewUser.role === 'guest' && "This account has standard guest privileges."}
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => setViewUser(null)}
+                  className="w-full bg-[#1A1816] hover:bg-[#2E2A26] text-white py-3.5 rounded-2xl font-bold transition flex items-center justify-center space-x-2 text-sm shadow-md mt-6"
+                >
+                  <XCircle className="w-4.5 h-4.5 text-white/95" />
+                  <span>Close Details</span>
+                </button>
               </div>
             )}
           </div>

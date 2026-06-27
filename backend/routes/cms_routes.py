@@ -131,32 +131,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                 "section": "testimonials",
                 "content_type": "list",
                 "content_data": {
-                    "items": [
-                        {
-                            "id": "t1",
-                            "name": "Ananya Sen",
-                            "role": "Consultant & Remote Worker",
-                            "rating": 5,
-                            "comment": "X-Space360 spaces are absolutely stunning. The Wi-Fi is blazing fast and the locations are perfect for work-cations.",
-                            "avatar_url": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150"
-                        },
-                        {
-                            "id": "t2",
-                            "name": "Rohan Deshmukh",
-                            "role": "Property Host",
-                            "rating": 5,
-                            "comment": "Listing my commercial space was incredibly smooth. The automated payout verification is rock solid.",
-                            "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150"
-                        },
-                        {
-                            "id": "t3",
-                            "name": "Priya Nair",
-                            "role": "Event Organizer",
-                            "rating": 5,
-                            "comment": "Booked an event venue for our product launch. The geo-coordinates and Leaflet mapping made it easy for everyone to find.",
-                            "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150"
-                        }
-                    ]
+                    "items": []
                 },
                 "is_active": True,
                 "created_at": now,
@@ -168,26 +143,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                 "section": "blog",
                 "content_type": "list",
                 "content_data": {
-                    "posts": [
-                        {
-                            "id": "p1",
-                            "title": "Unlocking Passive Income: Why Short-Term Rentals Are Booming",
-                            "excerpt": "With the rise of remote work and hybrid business models, hosts are earning 3x more through flexible renting cycles compared to long-term leases.",
-                            "image_url": "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600",
-                            "author": "STR Insights Desk",
-                            "date": "May 15, 2026",
-                            "read_time": "5 min read"
-                        },
-                        {
-                            "id": "p2",
-                            "title": "Designing a Five-Star Workspace in Your Rental Property",
-                            "excerpt": "Aesthetics matter. Learn how incorporating warm sand colors, ergonomic setups, and premium lighting can justify a higher daily price point.",
-                            "image_url": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600",
-                            "author": "Design & Curation Team",
-                            "date": "May 18, 2026",
-                            "read_time": "7 min read"
-                        }
-                    ]
+                    "posts": []
                 },
                 "is_active": True,
                 "created_at": now,
