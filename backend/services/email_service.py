@@ -41,6 +41,8 @@ def _clean_msg91_value(value) -> str:
 def _support_email() -> str:
     return (
         os.getenv("SUPPORT_EMAIL", "").strip()
+        or os.getenv("CUSTOMER_SUPPORT_EMAIL", "").strip()
+        or os.getenv("CUSTOMER_SUPPORT_MAIL", "").strip()
         or os.getenv("EMAIL_SUPPORT_ADDRESS", "").strip()
         or "support@x-space360.com"
     )
@@ -49,6 +51,9 @@ def _support_email() -> str:
 def _support_phone() -> str:
     return (
         os.getenv("SUPPORT_PHONE", "").strip()
+        or os.getenv("CUSTOMER_SUPPORT_PHONE", "").strip()
+        or os.getenv("CUSTOMER_SUPPORT_NUMBER", "").strip()
+        or os.getenv("HELPLINE_NUMBER", "").strip()
         or os.getenv("SUPPORT_NUMBER", "").strip()
         or "+91 8484826247"
     )
@@ -142,6 +147,8 @@ class EmailService:
         reset_link = cta_url if template == "password_reset" else data.get("reset_link", "")
         support_email = data.get("support_email") or data.get("Support_Email") or _support_email()
         support_phone = data.get("support_phone") or data.get("support_number") or data.get("Support_Number") or _support_phone()
+        frontend_url = os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
+        dashboard_url = data.get("dashboard_url") or data.get("Dashboard_URL") or f"{frontend_url}/host/dashboard"
         variables = {
             "name": name,
             "host_name": data.get("host_name") or name,
@@ -170,26 +177,39 @@ class EmailService:
             "remarks": remarks,
             "reset_link": reset_link,
             "action_url": cta_url,
+            "action_link": cta_url,
             "cta_url": cta_url,
+            "cta_link": cta_url,
             "button_url": cta_url,
             "button_link": cta_url,
+            "button_link_url": cta_url,
             "link": cta_url,
             "url": cta_url,
             "redirect_url": cta_url,
             "login_url": cta_url,
-            "dashboard_url": cta_url,
+            "dashboard_url": dashboard_url,
+            "dashboard_link": dashboard_url,
             "property_url": data.get("property_url") or cta_url,
             "booking_url": data.get("booking_url") or cta_url,
             "invoice_url": data.get("invoice_url") or cta_url,
             "upload_corrected_documents_url": cta_url,
+            "upload_corrected_documents_link": cta_url,
             "reupload_documents_url": cta_url,
+            "reupload_documents_link": cta_url,
             "documents_url": cta_url,
+            "document_upload_link": cta_url,
+            "document_upload_url": cta_url,
             "rejection_reason": remarks,
             "reason_for_rejection": remarks,
             "document_type": data.get("document_type") or data.get("Document_Type") or "",
             "support_email": support_email,
+            "customer_support_email": support_email,
+            "customer_support_mail": support_email,
             "support_phone": support_phone,
             "support_number": support_phone,
+            "customer_support_phone": support_phone,
+            "customer_support_number": support_phone,
+            "helpline_number": support_phone,
             "contact_number": support_phone,
             "subject": subject,
             "title": title,
@@ -225,29 +245,45 @@ class EmailService:
             "Remarks": remarks,
             "Reset_Link": reset_link,
             "Action_URL": cta_url,
+            "Action_Url": cta_url,
+            "Action_Link": cta_url,
             "CTA_URL": cta_url,
             "Cta_Url": cta_url,
+            "CTA_Link": cta_url,
             "Button_URL": cta_url,
+            "Button_Url": cta_url,
             "Button_Link": cta_url,
+            "Button_Link_URL": cta_url,
             "Link": cta_url,
             "URL": cta_url,
             "Url": cta_url,
             "Redirect_URL": cta_url,
             "Login_URL": cta_url,
-            "Dashboard_URL": cta_url,
+            "Dashboard_URL": dashboard_url,
+            "Dashboard_Url": dashboard_url,
+            "Dashboard_Link": dashboard_url,
             "Property_URL": data.get("property_url") or cta_url,
             "Booking_URL": data.get("booking_url") or cta_url,
             "Invoice_URL": data.get("invoice_url") or cta_url,
             "Upload_Corrected_Documents_URL": cta_url,
+            "Upload_Corrected_Documents_Link": cta_url,
             "Reupload_Documents_URL": cta_url,
+            "Reupload_Documents_Link": cta_url,
             "Documents_URL": cta_url,
+            "Document_Upload_Link": cta_url,
+            "Document_Upload_URL": cta_url,
             "Rejection_Reason": remarks,
             "Reason_For_Rejection": remarks,
             "Reason_for_Rejection": remarks,
             "Document_Type": data.get("document_type") or data.get("Document_Type") or "",
             "Support_Email": support_email,
+            "Customer_Support_Email": support_email,
+            "Customer_Support_Mail": support_email,
             "Support_Phone": support_phone,
             "Support_Number": support_phone,
+            "Customer_Support_Phone": support_phone,
+            "Customer_Support_Number": support_phone,
+            "Helpline_Number": support_phone,
             "Contact_Number": support_phone,
         }
         variables.update(title_case_aliases)
@@ -274,6 +310,7 @@ class EmailService:
             "template_id": template_id,
         }
         headers = {"authkey": self.msg91_authkey, "Content-Type": "application/json"}
+        logger.info("MSG91 email variables for template %s: %s", template, sorted(variables.keys()))
         response = requests.post(self.msg91_api_url, json=payload, headers=headers, timeout=20)
         if 200 <= response.status_code < 300:
             logger.info("MSG91 email sent to %s via template %s: %s", to_email, template, response.text)

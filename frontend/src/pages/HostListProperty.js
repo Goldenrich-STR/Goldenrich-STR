@@ -356,6 +356,7 @@ const initialForm = {
   has_cook: false,
   cook_price: '',
   has_self_cook: false,
+  has_taxi: false,
   veg_price: '',
   non_veg_price: '',
   guest_size: '',
@@ -434,6 +435,7 @@ const HostListProperty = () => {
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
+  const [generatingTitle, setGeneratingTitle] = useState(false);
 
   useEffect(() => {
     if (editPropertyId) {
@@ -495,6 +497,7 @@ const HostListProperty = () => {
             has_cook: !!p.has_cook,
             cook_price: p.cook_price !== null && p.cook_price !== undefined ? String(p.cook_price) : '',
             has_self_cook: !!p.has_self_cook,
+            has_taxi: !!p.has_taxi,
             veg_price: p.veg_price !== null && p.veg_price !== undefined ? String(p.veg_price) : '',
             non_veg_price: p.non_veg_price !== null && p.non_veg_price !== undefined ? String(p.non_veg_price) : '',
             guest_size: p.guest_size !== null && p.guest_size !== undefined ? String(p.guest_size) : '',
@@ -995,6 +998,29 @@ const HostListProperty = () => {
     }
   };
 
+  const handleGenerateAITitle = async () => {
+    setGeneratingTitle(true);
+    setError('');
+    try {
+      const payload = {
+        category: form.category,
+        property_type: form.property_type,
+        bhk_type: form.bhk_type,
+        city: form.city,
+        amenities: form.amenities,
+        area_sqft: form.area_sqft ? Number(form.area_sqft) : null,
+        max_guests: form.max_guests ? Number(form.max_guests) : null,
+      };
+
+      const res = await propertyAPI.generateTitle(payload);
+      update({ title: res.data.title });
+    } catch (err) {
+      setError(formatError(err, 'Failed to generate AI title'));
+    } finally {
+      setGeneratingTitle(false);
+    }
+  };
+
   /* Helper to build payload */
   const buildPropertyPayload = () => {
     return {
@@ -1029,6 +1055,7 @@ const HostListProperty = () => {
       has_cook: form.has_cook,
       cook_price: form.cook_price ? Number(form.cook_price) : null,
       has_self_cook: form.has_self_cook,
+      has_taxi: form.has_taxi,
       veg_price: form.veg_price ? Number(form.veg_price) : null,
       non_veg_price: form.non_veg_price ? Number(form.non_veg_price) : null,
       guest_size: form.guest_size ? Number(form.guest_size) : null,
@@ -1274,7 +1301,24 @@ const HostListProperty = () => {
           {currentStep === 'basics' && (
             <div className="space-y-4" data-testid="step-basics-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">Tell us about your place</h2>
-              <Input label="Title" testid="basics-title" value={form.title} onChange={(v) => update({ title: v })} placeholder="Cozy 2BHK with a sunset view" />
+              <Input label="Title" testid="basics-title" value={form.title} onChange={(v) => update({ title: v })} placeholder="" />
+              <div className="flex justify-between items-center -mt-2 mb-2 px-1">
+                <p className="text-xs text-terracotta font-semibold">ex. Cozy 2BHK with a sunset view</p>
+                <button
+                  type="button"
+                  onClick={handleGenerateAITitle}
+                  disabled={generatingTitle}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-terracotta/10 hover:bg-terracotta/20 text-terracotta rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                  data-testid="generate-ai-title"
+                >
+                  {generatingTitle ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  <span>{generatingTitle ? "Generating SEO Title..." : "Generate with AI"}</span>
+                </button>
+              </div>
               <Textarea label="Description" testid="basics-description" value={form.description} onChange={(v) => update({ description: v })} placeholder="Describe your space, neighbourhood, what makes it special…" rows={5} />
               <div className="flex justify-end mt-1">
                 <button
@@ -1549,7 +1593,7 @@ const HostListProperty = () => {
                     <Toggle label="Smoking allowed" testid="pricing-smoking" checked={form.smoking_allowed} onChange={(v) => update({ smoking_allowed: v })} />
                   </div>
                   <div className="border-t border-gray-100 pt-4 mt-4">
-                    <h3 className="text-sm font-bold text-charcoal mb-3 uppercase tracking-wider">Cook Service</h3>
+                    <h3 className="text-sm font-bold text-charcoal mb-3 uppercase tracking-wider">Additional Services</h3>
                     <div className="bg-stone p-4 rounded-2xl border border-gray-100 space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                         <Toggle 
@@ -1575,6 +1619,14 @@ const HostListProperty = () => {
                           testid="pricing-self-cook" 
                           checked={form.has_self_cook} 
                           onChange={(v) => update({ has_self_cook: v })} 
+                        />
+                      </div>
+                      <div className="border-t border-sand-200/60 pt-3">
+                        <Toggle 
+                          label="Taxi service available at property" 
+                          testid="pricing-taxi-available" 
+                          checked={form.has_taxi} 
+                          onChange={(v) => update({ has_taxi: v })} 
                         />
                       </div>
                     </div>
@@ -1986,6 +2038,7 @@ const HostListProperty = () => {
               {form.youtube_long_url && <ReviewBlock label="YouTube Video" value="Attached" />}
               <ReviewBlock label="Cook Available" value={form.has_cook ? `Yes (₹${form.cook_price || 0}/day)` : 'No'} />
               <ReviewBlock label="Self Cooking Allowed" value={form.has_self_cook ? 'Yes' : 'No'} />
+              <ReviewBlock label="Taxi Service Available" value={form.has_taxi ? 'Yes' : 'No'} />
               <ReviewBlock label="Plan" value={hasActiveSubscription ? 'Active Subscription' : (plans.find((p) => p.plan_id === form.subscription_plan_id)?.plan_name || '—')} />
 
               <button

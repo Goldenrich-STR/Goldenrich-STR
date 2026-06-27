@@ -36,6 +36,7 @@ class PropertyModel {
   final bool hasCook;
   final double? cookPrice;
   final bool hasSelfCook;
+  final bool hasTaxi;
 
   PropertyModel({
     required this.propertyId,
@@ -73,6 +74,7 @@ class PropertyModel {
     required this.hasCook,
     this.cookPrice,
     required this.hasSelfCook,
+    required this.hasTaxi,
   });
 
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
@@ -113,6 +115,7 @@ class PropertyModel {
       hasCook: json['has_cook'] ?? false,
       cookPrice: (json['cook_price'] as num?)?.toDouble(),
       hasSelfCook: json['has_self_cook'] ?? false,
+      hasTaxi: json['has_taxi'] ?? false,
     );
   }
 
@@ -153,6 +156,7 @@ class PropertyModel {
       'has_cook': hasCook,
       'cook_price': cookPrice,
       'has_self_cook': hasSelfCook,
+      'has_taxi': hasTaxi,
     };
   }
 }

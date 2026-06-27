@@ -85,6 +85,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
   bool _hasCook = false;
   final _cookPriceController = TextEditingController();
   bool _hasSelfCook = false;
+  bool _hasTaxi = false;
 
   // Step 4: Amenities
   final List<String> _selectedAmenities = [];
@@ -273,6 +274,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       _hasCook = p.hasCook;
       if (p.cookPrice != null) _cookPriceController.text = p.cookPrice.toString();
       _hasSelfCook = p.hasSelfCook;
+      _hasTaxi = p.hasTaxi;
       
       if (p.vegPrice != null) _vegPriceController.text = p.vegPrice.toString();
       if (p.nonVegPrice != null) _nonVegPriceController.text = p.nonVegPrice.toString();
@@ -797,6 +799,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       'has_cook': _hasCook,
       'cook_price': _hasCook && _cookPriceController.text.isNotEmpty ? double.tryParse(_cookPriceController.text) : null,
       'has_self_cook': _hasSelfCook,
+      'has_taxi': _hasTaxi,
       'veg_price': _category == 'event_venue' ? double.tryParse(_vegPriceController.text) : null,
       'non_veg_price': _category == 'event_venue' ? double.tryParse(_nonVegPriceController.text) : null,
       'packages': _category == 'event_venue' ? [
@@ -895,6 +898,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       'has_cook': _hasCook,
       'cook_price': _hasCook && _cookPriceController.text.isNotEmpty ? double.tryParse(_cookPriceController.text) : null,
       'has_self_cook': _hasSelfCook,
+      'has_taxi': _hasTaxi,
       'veg_price': _category == 'event_venue' ? double.tryParse(_vegPriceController.text) : null,
       'non_veg_price': _category == 'event_venue' ? double.tryParse(_nonVegPriceController.text) : null,
       'packages': _category == 'event_venue' ? [
@@ -2428,7 +2432,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           const Divider(),
           const SizedBox(height: 12),
           const Text(
-            'Cook Service',
+            'Additional Services',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
           ),
           const SizedBox(height: 8),
@@ -2458,6 +2462,14 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
             _hasSelfCook,
             (val) => setState(() {
               _hasSelfCook = val;
+            }),
+          ),
+          const SizedBox(height: 8),
+          _buildCustomSwitchRow(
+            'Taxi Service Available',
+            _hasTaxi,
+            (val) => setState(() {
+              _hasTaxi = val;
             }),
           ),
         ],
@@ -3469,6 +3481,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                 ],
                 _buildReviewRow('Cook Available', _hasCook ? 'Yes (₹${_cookPriceController.text}/day)' : 'No'),
                 _buildReviewRow('Self Cook Allowed', _hasSelfCook ? 'Yes' : 'No'),
+                _buildReviewRow('Taxi Service Available', _hasTaxi ? 'Yes' : 'No'),
                 _buildReviewRow('Amenities', '${_selectedAmenities.length} selected'),
                 _buildReviewRow('Photos', '${_uploadedImages.length} uploaded'),
               ],

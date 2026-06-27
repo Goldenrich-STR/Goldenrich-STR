@@ -22,6 +22,7 @@ const EmployeeDashboard = lazy(() => import("./pages/EmployeeDashboard"));
 const HostPayouts = lazy(() => import("./pages/HostPayouts"));
 const HostBookings = lazy(() => import("./pages/HostBookings"));
 const SsoCallback = lazy(() => import("./pages/SsoCallback"));
+const SupportPage = lazy(() => import("./pages/SupportPage"));
 
 const ScreenLoading = () => (
   <div className="min-h-screen bg-stone flex items-center justify-center">
@@ -149,6 +150,7 @@ function App() {
               <Route path="/admin" element={<AuthPage isAdminLogin={true} />} />
               <Route path="/admin/login" element={<AuthPage isAdminLogin={true} />} />
               <Route path="/property/:id" element={<PropertyDetail />} />
+              <Route path="/support" element={<SupportPage />} />
               <Route path="/sso/goldenrich/callback" element={<SsoCallback />} />
 
               {/* Role-based Dashboard Redirect */}

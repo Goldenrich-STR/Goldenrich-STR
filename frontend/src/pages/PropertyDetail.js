@@ -1391,11 +1391,11 @@ const PropertyDetail = () => {
               </div>
             )}
 
-            {/* Cook Service Section */}
-            {(property.has_cook || property.has_self_cook) && (
+            {/* Cook & Taxi Services Section */}
+            {(property.has_cook || property.has_self_cook || property.has_taxi) && (
               <div className="mb-8">
                 <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
-                   {lang === 'mr' ? 'स्वयंपाकी आणि स्वयंपाक पर्याय' : lang === 'hi' ? 'रसोइया और खाना पकाने के विकल्प' : 'Cook & Kitchen Service'}
+                   {lang === 'mr' ? 'सेवा आणि स्वयंपाक पर्याय' : lang === 'hi' ? 'सेवाएं और रसोई विकल्प' : 'Services & Kitchen'}
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
                 <div className="space-y-4">
@@ -1429,6 +1429,23 @@ const PropertyDetail = () => {
                           {lang === 'mr' ? 'अतिथी त्यांच्या स्वतःच्या जेवणासाठी स्वयंपाकघराचा वापर करू शकतात (मोफत/समाविष्ट).' : 
                            lang === 'hi' ? 'अतिथि अपने भोजन के लिए रसोईघर का उपयोग कर सकते हैं (मुफ़्त/शामिल)।' : 
                            'Guests can use the kitchen facility to prepare their own meals (Free/Included).'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {property.has_taxi && (
+                    <div className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium flex items-center space-x-6">
+                      <div className="bg-amber-500/10 p-4 rounded-full text-amber-600">
+                        <Car className="w-8 h-8" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-black text-charcoal mb-1">
+                          {lang === 'mr' ? 'टॅक्सी सेवा उपलब्ध' : lang === 'hi' ? 'टैक्सी सेवा उपलब्ध' : 'Taxi Service Available'}
+                        </h3>
+                        <p className="text-charcoal-muted font-medium text-sm">
+                          {lang === 'mr' ? 'या मालमत्तेवर टॅक्सी किंवा वाहतूक सेवा उपलब्ध आहे (शुल्क लागू असू शकते).' : 
+                           lang === 'hi' ? 'इस संपत्ति पर टैक्सी या परिवहन सेवा उपलब्ध है (शुल्क लागू हो सकते हैं)।' : 
+                           'Taxi or transportation assistance service is available at this property (charges may apply).'}
                         </p>
                       </div>
                     </div>

@@ -512,7 +512,9 @@ const DEFAULT_FOOTER_DATA = {
   privacy_label: 'Privacy Policy',
   privacy_text: 'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.',
   terms_label: 'Terms & Conditions',
-  terms_text: 'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.'
+  terms_text: 'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.',
+  checkin_label: 'Check-In Instructions',
+  checkin_text: 'Standard check-in time starts at 2:00 PM. Please coordinate with your host at least 24 hours prior to arrival for key handover and coordinate exchange. Valid ID proof must be submitted at the time of check-in.'
 };
 
 // Custom Stateful & Interactive How It Works Modal Component
@@ -2125,6 +2127,9 @@ const LandingPage = () => {
                </button>
                <button type="button" onClick={() => setFooterPopup({ title: footerData.terms_label || 'Terms & Conditions', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text })} className="hover:text-terracotta">
                  {footerData.terms_label || 'Terms & Conditions'}
+               </button>
+               <button type="button" onClick={() => setFooterPopup({ title: footerData.checkin_label || 'Check-In Instructions', text: footerData.checkin_text || DEFAULT_FOOTER_DATA.checkin_text })} className="hover:text-terracotta">
+                 {footerData.checkin_label || 'Check-In Instructions'}
                </button>
             </div>
           </div>

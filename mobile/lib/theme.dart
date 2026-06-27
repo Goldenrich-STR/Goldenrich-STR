@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color background = Color(0xFFFDFCF8);
-  static const Color stone = Color(0xFFF5F5F0);
+  static const Color background = Color(0xFFFAF9F6); // Soft White
+  static const Color stone = Color(0xFFF1F5F9); // Light Neutral
   static const Color white = Color(0xFFFFFFFF);
-  static const Color charcoal = Color(0xFF2C2C2C);
-  static const Color charcoalLight = Color(0xFF5C5C5C);
-  static const Color charcoalMuted = Color(0xFF8C8C8C);
-  static const Color primary = Color(0xFFC05C4F); // Terracotta
-  static const Color primaryHover = Color(0xFFA94E42);
-  static const Color secondary = Color(0xFF788574); // Sage
-  static const Color border = Color(0xFFE5E5DF);
+  static const Color charcoal = Color(0xFF1E293B); // Slate-800
+  static const Color charcoalLight = Color(0xFF475569); // Slate-600
+  static const Color charcoalMuted = Color(0xFF64748B); // Slate-500
+  static const Color primary = Color(0xFFC5A059); // Gold
+  static const Color primaryHover = Color(0xFFB38F48);
+  static const Color secondary = Color(0xFF0F172A); // Deep Navy
+  static const Color border = Color(0xFFE2E8F0); // Subtle Border
   
   static ThemeData get lightTheme {
     return ThemeData(

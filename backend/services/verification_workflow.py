@@ -58,6 +58,7 @@ async def assign_broker(db: AsyncIOMotorDatabase, property_id: str, city: str) -
                         await db.property_verifications.update_one(
                             {"property_id": property_id},
                             {"$set": {
+                                "broker_id": chosen_broker["user_id"],
                                 "status": VerificationStatus.PENDING.value,
                                 "rm_reviewed": False,
                                 "rm_approved": False,
