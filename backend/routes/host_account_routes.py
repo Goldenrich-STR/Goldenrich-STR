@@ -299,7 +299,7 @@ async def delete_rejected_draft_document(
     )
     if not target:
         raise HTTPException(404, detail="Document not found")
-    if target.get("status") != "rejected":
+    if target.get("status") != "rejected" and user.get("kyc_status") != "rejected":
         raise HTTPException(409, detail="Only rejected documents can be removed")
 
     remaining_docs = [

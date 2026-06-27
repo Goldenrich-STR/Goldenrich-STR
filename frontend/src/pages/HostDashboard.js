@@ -352,6 +352,7 @@ const HostDashboard = () => {
     const dbType = backendDocTypeMap[docType];
     const docStatus = getDocStatus(dbType);
     const rejectionReason = getDocRejectionReason(dbType);
+    const canReplaceDocument = docStatus === 'rejected' || user?.kyc_status === 'rejected';
 
     return (
             <div className="bg-white rounded-none border border-sand-200 p-6 shadow-sm flex flex-col justify-between min-h-[18rem] h-auto relative overflow-hidden transition-all duration-300 hover:shadow-premium hover:border-terracotta group">
@@ -417,7 +418,8 @@ const HostDashboard = () => {
 
                   {/* Bottom Upload/Attachment area */}
         {value ? (
-          <div className="bg-sand-50/80 border border-sand-200 rounded-none p-3 flex items-center justify-between mt-auto w-full">
+          <>
+            <div className="bg-sand-50/80 border border-sand-200 rounded-none p-3 flex items-center justify-between mt-auto w-full">
             <div className="flex items-center space-x-2 min-w-0">
               <div className="bg-red-50 text-red-500 p-2 rounded-none flex-shrink-0">
                 <FileText className="w-5 h-5" />
@@ -452,7 +454,7 @@ const HostDashboard = () => {
                   disabled={uploadingDocs[docType]}
                 />
               </label>
-              {docStatus === 'rejected' && (
+              {canReplaceDocument && (
                 <button
                   type="button"
                   onClick={() => handleRejectedDocRemove(docType)}
@@ -465,7 +467,21 @@ const HostDashboard = () => {
                 </button>
               )}
             </div>
-          </div>
+            </div>
+            {canReplaceDocument && (
+              <label className="mt-2 w-full inline-flex items-center justify-center gap-2 border border-red-200 bg-red-50 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-red-600 cursor-pointer hover:bg-red-100 transition-colors">
+                <Upload className="w-3.5 h-3.5" />
+                {uploadingDocs[docType] ? 'Uploading...' : 'Replace Document'}
+                <input
+                  type="file"
+                  accept={accept}
+                  onChange={(e) => handleDocUpload(e.target.files[0], docType)}
+                  className="hidden"
+                  disabled={uploadingDocs[docType]}
+                />
+              </label>
+            )}
+          </>
         ) : (
           <label className="w-full border-2 border-dashed border-sand-300 hover:border-terracotta bg-white hover:bg-sand-50/50 rounded-none p-5 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 min-h-[7rem] mt-auto">
             <div className="bg-sand-50 p-2.5 rounded-none mb-2 flex items-center justify-center">
