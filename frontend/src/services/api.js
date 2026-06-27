@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const configuredBackendUrl = (process.env.REACT_APP_BACKEND_URL || '').trim().replace(/\/$/, '');
+const configuredBackendUrl = (process.env.REACT_APP_BACKEND_URL || '')
+  .trim()
+  .replace(/\/+$/, '')
+  .replace(/\/api$/i, '');
 const isBrowser = typeof window !== 'undefined';
 const isLocalPage = isBrowser && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 const pointsToLocalBackend = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredBackendUrl);
