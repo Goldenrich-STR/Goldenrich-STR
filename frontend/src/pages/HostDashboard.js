@@ -943,6 +943,7 @@ const HostDashboard = () => {
           <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
             <div className="bg-stone rounded-[3rem] max-w-5xl w-full shadow-elevated animate-scale-up max-h-[90vh] flex flex-col overflow-hidden">
               <div className="flex justify-between items-start p-10 pb-4 border-b border-gray-100 flex-shrink-0">
+                <div>
                   <h3 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight mb-2 flex items-center">
                     <FileText className="w-8 h-8 text-terracotta mr-3" />
                     Document Verification
