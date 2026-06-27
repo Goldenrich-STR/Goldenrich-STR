@@ -435,7 +435,6 @@ const HostListProperty = () => {
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
-  const [generatingTitle, setGeneratingTitle] = useState(false);
 
   useEffect(() => {
     if (editPropertyId) {
@@ -998,29 +997,6 @@ const HostListProperty = () => {
     }
   };
 
-  const handleGenerateAITitle = async () => {
-    setGeneratingTitle(true);
-    setError('');
-    try {
-      const payload = {
-        category: form.category,
-        property_type: form.property_type,
-        bhk_type: form.bhk_type,
-        city: form.city,
-        amenities: form.amenities,
-        area_sqft: form.area_sqft ? Number(form.area_sqft) : null,
-        max_guests: form.max_guests ? Number(form.max_guests) : null,
-      };
-
-      const res = await propertyAPI.generateTitle(payload);
-      update({ title: res.data.title });
-    } catch (err) {
-      setError(formatError(err, 'Failed to generate AI title'));
-    } finally {
-      setGeneratingTitle(false);
-    }
-  };
-
   /* Helper to build payload */
   const buildPropertyPayload = () => {
     return {
@@ -1302,22 +1278,8 @@ const HostListProperty = () => {
             <div className="space-y-4" data-testid="step-basics-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">Tell us about your place</h2>
               <Input label="Title" testid="basics-title" value={form.title} onChange={(v) => update({ title: v })} placeholder="" />
-              <div className="flex justify-between items-center -mt-2 mb-2 px-1">
+              <div className="-mt-2 mb-2 px-1">
                 <p className="text-xs text-terracotta font-semibold">ex. Cozy 2BHK with a sunset view</p>
-                <button
-                  type="button"
-                  onClick={handleGenerateAITitle}
-                  disabled={generatingTitle}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-terracotta/10 hover:bg-terracotta/20 text-terracotta rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
-                  data-testid="generate-ai-title"
-                >
-                  {generatingTitle ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                  ) : (
-                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                  )}
-                  <span>{generatingTitle ? "Generating SEO Title..." : "Generate with AI"}</span>
-                </button>
               </div>
               <Textarea label="Description" testid="basics-description" value={form.description} onChange={(v) => update({ description: v })} placeholder="Describe your space, neighbourhood, what makes it special…" rows={5} />
               <div className="flex justify-end mt-1">
