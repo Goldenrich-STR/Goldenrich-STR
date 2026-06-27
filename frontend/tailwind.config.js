@@ -25,10 +25,10 @@ module.exports = {
           deep: "#000000"
         },
         terracotta: {
-          DEFAULT: "#D9534F", // More refined, slightly softer but premium red/coral
-          hover: "#C9302C",
-          light: "#F2DEDE",
-          soft: "#F9F2F2"
+          DEFAULT: "#c05c4f", // Custom theme red/coral
+          hover: "#a34c41",
+          light: "#ebd1cf",
+          soft: "#f8ecea"
         },
         sage: {
           DEFAULT: "#6B7A68",
