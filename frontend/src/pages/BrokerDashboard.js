@@ -391,6 +391,7 @@ const PropertiesSection = () => {
                     </div>
                     <div>
                       <h4 className="text-lg font-bold tracking-tight text-charcoal mb-1">{property.title}</h4>
+                      <p className="text-[10px] text-charcoal-muted font-mono mb-1">Property ID: {property.property_id}</p>
                       <div className="flex items-center space-x-3 text-charcoal-muted mb-3">
                          <MapPin className="w-3 h-3" />
                          <span className="text-[10px] font-bold uppercase tracking-widest">{property.city} · {formatCategoryLabel(property.category)}</span>
@@ -528,6 +529,7 @@ const VerificationsSection = () => {
                       </div>
                       <div>
                         <h4 className="text-xl font-bold tracking-tight text-charcoal mb-1">{pd.title || 'Property'}</h4>
+                        <p className="text-[10px] text-charcoal-muted font-mono mb-1">Property ID: {task.property_id}</p>
                         <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-4">
                           {pd.city}{pd.address ? ` · ${pd.address}` : ''}
                         </p>

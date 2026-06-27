@@ -2471,6 +2471,9 @@ const PropertyModeration = () => {
                     />
                     <div className="min-w-0">
                       <h4 className="font-bold text-[#1F2937] text-base leading-snug truncate">{property.title}</h4>
+                      <p className="text-[10px] text-[#6B7280] font-mono mt-1 truncate" title={property.property_id}>
+                        Property ID: {property.property_id}
+                      </p>
                       <p className="text-xs text-[#6B7280] mt-1 font-medium truncate">
                         {property.city} | {formatDisplayLabel(property.bhk_type)} | {formatCategoryLabel(property.category)}
                       </p>

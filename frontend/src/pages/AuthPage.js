@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star } from 'lucide-react';
@@ -9,6 +9,10 @@ import SEO from '../components/SEO';
 const AuthPage = ({ isAdminLogin = false }) => {
   const navigate = useNavigate();
   const { login, register, logout } = useAuth();
+  const forcedLogoutHandled = useRef(false);
+  const searchParams = new URLSearchParams(window.location.search);
+  const forceLogin = searchParams.get('force_login') === '1';
+  const requestedNext = searchParams.get('next') || '';
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -33,6 +37,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
   const [showOTPVerification, setShowOTPVerification] = useState(false);
   const [otp, setOtp] = useState('');
 
+  useEffect(() => {
+    if (forceLogin && !forcedLogoutHandled.current) {
+      forcedLogoutHandled.current = true;
+      logout();
+    }
+  }, [forceLogin, logout]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -51,7 +62,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
       if (userRole === 'admin') {
         navigate('/admin/dashboard');
       } else if (userRole === 'host') {
-        navigate('/host/dashboard');
+        navigate(requestedNext.startsWith('/host/') ? requestedNext : '/host/dashboard');
       } else if (userRole === 'broker') {
         navigate('/broker/dashboard');
       } else if (userRole === 'employee') {

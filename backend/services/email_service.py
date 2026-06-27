@@ -132,6 +132,9 @@ class EmailService:
         email = data.get("email") or data.get("email_address") or data.get("Email") or ""
         mobile = data.get("mobile") or data.get("phone") or data.get("Mobile") or ""
         property_title = data.get("property_title") or data.get("property_name") or data.get("title") or ""
+        property_id = data.get("property_id") or data.get("Property_ID") or ""
+        approval_date = data.get("approval_date") or data.get("Approval_Date") or ""
+        published_date = data.get("published_date") or data.get("Published_Date") or approval_date
         booking_id = data.get("booking_id") or data.get("Booking_ID") or ""
         booking_date = data.get("booking_date") or data.get("created_at") or data.get("Booking_Date") or ""
         check_in_date = data.get("check_in_date") or data.get("Check_In_Date") or ""
@@ -172,6 +175,9 @@ class EmailService:
             "phone": mobile,
             "property_name": property_title,
             "property_title": property_title,
+            "property_id": property_id,
+            "approval_date": approval_date,
+            "published_date": published_date,
             "booking_id": booking_id,
             "booking_date": booking_date,
             "check_in_date": check_in_date,
@@ -241,6 +247,9 @@ class EmailService:
             "Phone": mobile,
             "Property_Name": property_title,
             "Property_Title": property_title,
+            "Property_ID": property_id,
+            "Approval_Date": approval_date,
+            "Published_Date": published_date,
             "Booking_ID": booking_id,
             "Booking_Date": booking_date,
             "Check_In_Date": check_in_date,

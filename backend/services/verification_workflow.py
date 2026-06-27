@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -310,6 +311,19 @@ async def on_rm_decision(db: AsyncIOMotorDatabase, verification: dict, approved:
 async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, approved: bool, reason: str = "") -> None:
     """Admin approved/rejected — notify host, broker, and RM with the outcome."""
     if approved:
+        approved_at = property_data.get("approved_at") or datetime.now(timezone.utc)
+        if isinstance(approved_at, str):
+            try:
+                approved_at = datetime.fromisoformat(approved_at.replace("Z", "+00:00"))
+            except ValueError:
+                pass
+        approval_date = (
+            approved_at.strftime("%d %B %Y")
+            if hasattr(approved_at, "strftime")
+            else str(approved_at)
+        )
+        frontend_url = os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
+        secure_dashboard_url = f"{frontend_url}/login?force_login=1&next=%2Fhost%2Fdashboard"
         await _notify(
             db,
             property_data["owner_id"],
@@ -319,7 +333,10 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
             {
                 "property_id": property_data["property_id"],
                 "property_title": property_data.get("title"),
-                "action_url": "/host/dashboard",
+                "approval_date": approval_date,
+                "published_date": approval_date,
+                "action_url": secure_dashboard_url,
+                "dashboard_url": secure_dashboard_url,
             },
         )
     else:

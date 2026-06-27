@@ -787,12 +787,13 @@ async def approve_property(
                 detail="Property must be approved by RM before admin final approval",
             )
 
+        approved_at = datetime.now(timezone.utc)
         await db.properties.update_one(
             {"property_id": property_id},
             {"$set": {
                 "status": PropertyStatus.LIVE.value,
-                "approved_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc)
+                "approved_at": approved_at,
+                "updated_at": approved_at
             }}
         )
 
@@ -815,7 +816,13 @@ async def approve_property(
         # Notify host
         try:
             from services.verification_workflow import on_admin_decision
-            asyncio.create_task(on_admin_decision(db, property_data, approved=True))
+            asyncio.create_task(
+                on_admin_decision(
+                    db,
+                    {**property_data, "approved_at": approved_at},
+                    approved=True,
+                )
+            )
         except Exception as wf_err:
             logger.warning(f"on_admin_decision (approve) trigger failed: {wf_err}")
 

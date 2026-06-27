@@ -370,6 +370,9 @@ const VerificationReviewSection = () => {
                       <h4 className="font-bold text-charcoal text-lg">
                         {verification.property_details?.title || 'Property'}
                       </h4>
+                      <p className="text-xs text-charcoal-muted font-mono mt-1">
+                        Property ID: {verification.property_id}
+                      </p>
                       <p className="text-sm text-charcoal-light mt-1">
                         {verification.property_details?.city} | {verification.property_details?.bhk_type}
                       </p>
@@ -501,6 +504,9 @@ const VerificationReviewSection = () => {
                           {verification.status}
                         </span>
                       </div>
+                      <p className="text-xs text-charcoal-muted font-mono mt-1">
+                        Property ID: {verification.property_id}
+                      </p>
                       <p className="text-xs text-charcoal-light mt-1">
                         {verification.property_details?.city} | {verification.property_details?.bhk_type}
                       </p>
