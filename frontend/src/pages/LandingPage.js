@@ -1296,7 +1296,7 @@ const LandingPage = () => {
       <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-white px-6 md:px-12 lg:px-20 h-20">
         {/* Left Logo */}
         <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
-          <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain" />
+          <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain logo-white" />
         </div>
 
         {/* Center Pill Links — Glass Transparent style */}
@@ -1385,7 +1385,7 @@ const LandingPage = () => {
         <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-white md:hidden">
           <div className="flex justify-between items-center mb-12">
             <div className="cursor-pointer" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
-              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
+              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain logo-white" />
             </div>
             <button onClick={() => setIsMobileMenuOpen(false)} className="text-white hover:text-terracotta transition p-2 bg-white/10 rounded-full">
               <X className="w-6 h-6" />
@@ -2073,10 +2073,10 @@ const LandingPage = () => {
         </div>
       </div>
 
-<footer className="relative bg-[#07130E] border-t-2 border-sage/20 pt-20 pb-12 transition-colors duration-500 overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.2)]">
+<footer className="relative bg-white border-t border-sand-200 pt-20 pb-12 transition-colors duration-500 overflow-hidden shadow-subtle">
         {/* Luxury background glow */}
-        <div className="absolute top-0 left-1/4 w-80 h-80 bg-sage/5 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-terracotta/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-0 left-1/4 w-80 h-80 bg-terracotta/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-sage/5 rounded-full blur-[100px] pointer-events-none" />
 
         <div className="max-w-[1400px] mx-auto px-6 md:px-10 xl:px-16 relative z-10">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-[1.4fr_0.8fr_0.8fr_1fr_0.8fr_1.2fr] gap-x-8 xl:gap-x-12 2xl:gap-x-16 gap-y-12 mb-16">
@@ -2085,9 +2085,9 @@ const LandingPage = () => {
                 className="flex items-center mb-6 cursor-pointer group"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               >
-                <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain brightness-0 invert opacity-95 transition-transform duration-300 group-hover:scale-105" />
+                <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
               </div>
-              <p className="text-sand-300/80 text-[13.5px] mb-8 max-w-sm leading-relaxed font-medium">
+              <p className="text-charcoal-light/80 text-[13.5px] mb-8 max-w-sm leading-relaxed font-semibold">
                 {footerData.brand_description || t('footerSub')}
               </p>
               <div className="flex space-x-3.5">
@@ -2102,16 +2102,16 @@ const LandingPage = () => {
                      href={social.url} 
                      target="_blank" 
                      rel="noopener noreferrer" 
-                     className="w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:border-sage text-sand-300 hover:text-sage hover:bg-sage/10 transition-all duration-300 flex items-center justify-center hover:-translate-y-1 cursor-pointer"
+                     className="w-10 h-10 rounded-full bg-charcoal/5 border border-charcoal/10 hover:border-terracotta text-charcoal-light hover:text-terracotta hover:bg-terracotta/10 transition-all duration-300 flex items-center justify-center hover:-translate-y-1 cursor-pointer"
                    >
-                      <social.icon className="w-4 h-4" />
+                       <social.icon className="w-4 h-4" />
                    </a>
                  ))}
               </div>
             </div>
             {footerSections.map((section, index) => (
               <div key={`${section.heading}-${index}`} className="min-w-0">
-                <h5 className="font-bold tracking-wider text-sage uppercase tracking-[0.25em] text-[11px] mb-8 pb-3.5 border-b border-white/10 inline-block w-full">{section.heading || `Section ${index + 1}`}</h5>
+                <h5 className="font-bold tracking-wider text-terracotta uppercase tracking-[0.25em] text-[11px] mb-8 pb-3.5 border-b border-sand-200 inline-block w-full">{section.heading || `Section ${index + 1}`}</h5>
                 <ul className="space-y-4">
                   {section.items.map((item, itemIndex) => {
                     const label = item.label || item.text || 'Footer Text';
@@ -2121,43 +2121,43 @@ const LandingPage = () => {
                           <button
                             type="button"
                             onClick={() => handleFooterSectionClick(section, item)}
-                            className="text-left text-sand-300/80 font-semibold hover:text-sage transition-all duration-300 hover:translate-x-1.5 inline-block py-0.5"
+                            className="text-left text-charcoal-light/90 font-bold hover:text-terracotta transition-all duration-300 hover:translate-x-1.5 inline-block py-0.5"
                           >
                             {label}
                           </button>
                         ) : (
-                          <div className="text-sand-300/90">
+                          <div className="text-charcoal-light/90">
                             {label.includes('@') ? (
                               <div className="space-y-1">
-                                <span className="block text-[9px] font-bold text-sand-400/80 uppercase tracking-widest leading-none">
+                                <span className="block text-[9px] font-bold text-charcoal-muted/80 uppercase tracking-widest leading-none">
                                   {label.includes('nodal') ? 'Nodal Officer Email' : 'Support Email'}
                                 </span>
                                 <a
                                   href={`mailto:${label.trim()}`}
-                                  className="font-semibold text-sage hover:text-sage/80 transition-colors duration-300 break-words text-xs xl:text-sm underline decoration-sage/20 hover:decoration-sage/50 block py-0.5"
+                                  className="font-bold text-terracotta hover:text-terracotta-hover transition-colors duration-300 break-words text-xs xl:text-sm underline decoration-terracotta/20 hover:decoration-terracotta/50 block py-0.5"
                                 >
                                   {label}
                                 </a>
                               </div>
                             ) : (label.includes('+91') || label.match(/^\+?[\d\s-]{10,}$/)) ? (
                               <div className="space-y-1">
-                                <span className="block text-[9px] font-bold text-sand-400/80 uppercase tracking-widest leading-none">
+                                <span className="block text-[9px] font-bold text-charcoal-muted/80 uppercase tracking-widest leading-none">
                                   {label.includes('76206') ? 'Escalation Phone' : 'Support Phone'}
                                 </span>
                                 <a
                                   href={`tel:${label.replace(/\s+/g, '')}`}
-                                  className="font-semibold text-sand-200 hover:text-sage transition-colors duration-300 text-xs xl:text-sm block py-0.5"
+                                  className="font-bold text-charcoal hover:text-terracotta transition-colors duration-300 text-xs xl:text-sm block py-0.5"
                                 >
                                   {label}
                                 </a>
                               </div>
                             ) : label.startsWith('Officer:') ? (
                               <div className="space-y-1">
-                                <span className="block text-[9px] font-bold text-sand-400/80 uppercase tracking-widest leading-none">Grievance Officer</span>
-                                <span className="block text-sm font-semibold text-white">{label.replace('Officer:', '').trim()}</span>
+                                <span className="block text-[9px] font-bold text-charcoal-muted/80 uppercase tracking-widest leading-none">Grievance Officer</span>
+                                <span className="block text-sm font-bold text-charcoal">{label.replace('Officer:', '').trim()}</span>
                               </div>
                             ) : (
-                              <span className="font-semibold text-sand-200 text-sm leading-relaxed block py-0.5">
+                              <span className="font-bold text-charcoal-light text-sm leading-relaxed block py-0.5">
                                 {label}
                               </span>
                             )}
@@ -2167,7 +2167,7 @@ const LandingPage = () => {
                     );
                   })}
                   {index === 4 && (section.resolution_text || footerData.resolution_text) && (
-                    <li className="mt-4 pt-3 border-t border-white/5">
+                    <li className="mt-4 pt-3 border-t border-sand-200">
                       <div className="inline-flex items-center space-x-1.5 px-3.5 py-1 bg-sage/10 text-sage text-[9px] font-bold tracking-wider uppercase rounded-full border border-sage/20 shadow-sm">
                         <span className="w-1.5 h-1.5 rounded-full bg-sage animate-pulse mr-1" />
                         <span>{section.resolution_text || footerData.resolution_text}</span>
@@ -2178,9 +2178,9 @@ const LandingPage = () => {
               </div>
             ))}
           </div>
-          <div className="pt-10 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-sand-400/80 font-medium text-[11px] tracking-wide uppercase leading-relaxed max-w-2xl text-center md:text-left">{t('precision')}</p>
-            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[10.5px] font-bold text-sand-400 uppercase tracking-wider">
+          <div className="pt-10 border-t border-sand-200 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p className="text-charcoal-muted/80 font-semibold text-[11px] tracking-wide uppercase leading-relaxed max-w-2xl text-center md:text-left">{t('precision')}</p>
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[10.5px] font-bold text-charcoal-muted uppercase tracking-wider">
                {[
                  { label: footerData.privacy_label || 'Privacy Policy', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text },
                  { label: footerData.terms_label || 'Terms & Conditions', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text },
@@ -2190,7 +2190,7 @@ const LandingPage = () => {
                    key={idx}
                    type="button" 
                    onClick={() => setFooterPopup({ title: btn.label, text: btn.text })} 
-                   className="hover:text-sage text-sand-300/80 transition-all duration-300 relative py-1 hover:translate-y-[-0.5px] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-sage hover:after:w-full after:transition-all after:duration-300"
+                   className="hover:text-terracotta text-charcoal-light transition-all duration-300 relative py-1 hover:translate-y-[-0.5px] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-terracotta hover:after:w-full after:transition-all after:duration-300"
                  >
                    {btn.label}
                  </button>

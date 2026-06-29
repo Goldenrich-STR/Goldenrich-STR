@@ -47,9 +47,9 @@
   }
 
   .btn-primary {
-    @apply relative overflow-hidden px-5 py-2.5 rounded-xl font-semibold transition-all duration-300;
-    @apply bg-terracotta text-white hover:bg-terracotta-hover hover:-translate-y-[1px] active:scale-[0.98] active:translate-y-0;
-    box-shadow: 0 4px 14px 0 rgba(217, 83, 79, 0.2);
+    @apply relative overflow-hidden px-5 py-2.5 rounded-xl font-bold transition-all duration-300;
+    @apply bg-terracotta text-charcoal hover:bg-terracotta-hover hover:-translate-y-[1px] active:scale-[0.98] active:translate-y-0;
+    box-shadow: 0 4px 14px 0 rgba(212, 175, 55, 0.3); /* Soft gold shadow */
   }
 
   .btn-premium-outline {
@@ -118,6 +118,7 @@
     object-position: left center !important;
     flex-shrink: 0 !important;
     image-rendering: high-quality !important;
+    filter: brightness(0) invert(1) !important;
   }
 
   /* Medium logo for Footer / Dashboard (Uses cropped image) */
@@ -129,6 +130,7 @@
     object-position: left center !important;
     flex-shrink: 0 !important;
     image-rendering: high-quality !important;
+    filter: brightness(0) invert(1) !important;
   }
 
   /* Large logo for Landing Page Navbar */
@@ -141,6 +143,17 @@
     flex-shrink: 0 !important;
     image-rendering: high-quality !important;
     transform: translateY(16px) !important;
+    filter: brightness(0) invert(1) !important;
+  }
+
+  /* Target all logo images globally: black by default */
+  img[src="/logo.png"], img[src="logo.png"] {
+    filter: brightness(0);
+  }
+
+  /* Utility class to force logo to be white */
+  .logo-white {
+    filter: brightness(0) invert(1) !important;
   }
 
   @media (max-width: 640px) {
@@ -189,7 +202,7 @@
 /* Custom Modal Scrollbar */
 .custom-modal-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #006437 transparent;
+  scrollbar-color: #0B6E4F transparent;
 }
 .custom-modal-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -200,6 +213,6 @@
   margin-bottom: 15px;
 }
 .custom-modal-scrollbar::-webkit-scrollbar-thumb {
-  background: #006437;
+  background: #0B6E4F;
   border-radius: 10px;
 }

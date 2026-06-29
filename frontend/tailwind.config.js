@@ -6,8 +6,15 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        brand: {
+          gold: "#D4AF37",
+          green: "#0B6E4F",
+          darkGreen: "#083B2F",
+          beige: "#E8E0C8",
+          dark: "#1A1A1A"
+        },
         sand: {
-          50: "#FAFAFA",  // Cleaned up for a more modern Apple-like gray/white
+          50: "#FAFAFA",  // Crisp clean off-white background
           100: "#F5F5F5",
           200: "#EAEAEA",
           300: "#D4D4D4",
@@ -19,22 +26,22 @@ module.exports = {
           900: "#171717"
         },
         charcoal: {
-          DEFAULT: "#111111", // Sleeker dark gray
-          light: "#444444",
-          muted: "#777777",
+          DEFAULT: "#1A1A1A", // Dark Gray
+          light: "#333333",
+          muted: "#666666",
           deep: "#000000"
         },
         terracotta: {
-          DEFAULT: "#006437", // Forest Green from new logo
-          hover: "#004d2a",
-          light: "#d4e8dd",
-          soft: "#f2f8f5"
+          DEFAULT: "#D4AF37", // Swapped: Now Gold is primary
+          hover: "#C09A2D",   // Darker Gold for hover
+          light: "#f0dfa8",
+          soft: "#fdfbf7"
         },
         sage: {
-          DEFAULT: "#cda250", // Gold from new logo
-          dark: "#a07d35",
-          light: "#f3e9d2",
-          soft: "#fdfbf7"
+          DEFAULT: "#0B6E4F", // Swapped: Now Green is secondary
+          dark: "#083B2F",
+          light: "#d4e8dd",
+          soft: "#f2f8f5"
         },
         gold: {
           50: "#FFFCF5",
@@ -48,7 +55,7 @@ module.exports = {
           800: "#92400E",
           900: "#78350F",
         },
-        stone: "#FAFAFA"
+        stone: "#FAFAFA" // Clean background
       },
       fontFamily: {
         sans: ['Inter', 'Plus Jakarta Sans', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
