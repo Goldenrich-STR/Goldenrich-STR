@@ -1577,7 +1577,10 @@ const LandingPage = () => {
                                 className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-stone transition text-left"
                               >
                                 <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
-                                  {dest.icon ? <dest.icon className="w-5 h-5 text-gray-500" /> : <MapPin className="w-5 h-5 text-gray-500" />}
+                                  {(() => {
+                                    const DestIcon = dest.icon || MapPin;
+                                    return <DestIcon className="w-5 h-5 text-gray-500" />;
+                                  })()}
                                 </div>
                                 <div>
                                   <p className="text-sm font-bold text-charcoal">{dest.city}, {dest.state}</p>
@@ -2073,13 +2076,13 @@ const LandingPage = () => {
         </div>
       </div>
 
-<footer className="relative bg-white border-t border-sand-200 pt-20 pb-12 transition-colors duration-500 overflow-hidden shadow-subtle">
+<footer className="relative bg-gradient-to-b from-white to-[#FCFAF7] border-t-2 border-brand-gold/20 pt-20 pb-12 transition-colors duration-500 overflow-hidden shadow-premium">
         {/* Luxury background glow */}
-        <div className="absolute top-0 left-1/4 w-80 h-80 bg-terracotta/5 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-sage/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-0 left-1/4 w-80 h-80 bg-brand-gold/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-brand-green/5 rounded-full blur-[100px] pointer-events-none" />
 
         <div className="max-w-[1400px] mx-auto px-6 md:px-10 xl:px-16 relative z-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-[1.4fr_0.8fr_0.8fr_1fr_0.8fr_1.2fr] gap-x-8 xl:gap-x-12 2xl:gap-x-16 gap-y-12 mb-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-[1.2fr_0.7fr_0.7fr_1.1fr_0.7fr_1.6fr] gap-x-6 xl:gap-x-8 2xl:gap-x-10 gap-y-12 mb-16">
             <div>
               <div 
                 className="flex items-center mb-6 cursor-pointer group"
@@ -2096,22 +2099,26 @@ const LandingPage = () => {
                    { icon: Instagram, url: 'https://instagram.com' },
                    { icon: Twitter, url: 'https://twitter.com' },
                    { icon: Linkedin, url: 'https://linkedin.com' }
-                 ].map((social, idx) => (
-                   <a 
-                     key={idx}
-                     href={social.url} 
-                     target="_blank" 
-                     rel="noopener noreferrer" 
-                     className="w-10 h-10 rounded-full bg-charcoal/5 border border-charcoal/10 hover:border-terracotta text-charcoal-light hover:text-terracotta hover:bg-terracotta/10 transition-all duration-300 flex items-center justify-center hover:-translate-y-1 cursor-pointer"
-                   >
-                       <social.icon className="w-4 h-4" />
-                   </a>
-                 ))}
+                 ].map((social, idx) => {
+                   const IconComponent = social.icon;
+                   if (!IconComponent) return null;
+                   return (
+                     <a 
+                       key={idx}
+                       href={social.url} 
+                       target="_blank" 
+                       rel="noopener noreferrer" 
+                       className="w-10 h-10 rounded-full bg-charcoal/5 border border-charcoal/10 hover:border-brand-gold text-charcoal-light hover:text-brand-gold hover:bg-brand-gold/10 transition-all duration-300 flex items-center justify-center hover:-translate-y-1 cursor-pointer"
+                     >
+                       <IconComponent className="w-4 h-4" />
+                     </a>
+                   );
+                 })}
               </div>
             </div>
             {footerSections.map((section, index) => (
               <div key={`${section.heading}-${index}`} className="min-w-0">
-                <h5 className="font-bold tracking-wider text-terracotta uppercase tracking-[0.25em] text-[11px] mb-8 pb-3.5 border-b border-sand-200 inline-block w-full">{section.heading || `Section ${index + 1}`}</h5>
+                <h5 className="font-bold tracking-wider text-brand-gold uppercase tracking-[0.25em] text-[11px] mb-8 pb-3.5 border-b border-brand-gold/20 inline-block w-full">{section.heading || `Section ${index + 1}`}</h5>
                 <ul className="space-y-4">
                   {section.items.map((item, itemIndex) => {
                     const label = item.label || item.text || 'Footer Text';
@@ -2121,7 +2128,7 @@ const LandingPage = () => {
                           <button
                             type="button"
                             onClick={() => handleFooterSectionClick(section, item)}
-                            className="text-left text-charcoal-light/90 font-bold hover:text-terracotta transition-all duration-300 hover:translate-x-1.5 inline-block py-0.5"
+                            className="text-left text-charcoal-light/90 font-bold hover:text-brand-gold transition-all duration-300 hover:translate-x-1.5 inline-block py-0.5"
                           >
                             {label}
                           </button>
@@ -2129,32 +2136,32 @@ const LandingPage = () => {
                           <div className="text-charcoal-light/90">
                             {label.includes('@') ? (
                               <div className="space-y-1">
-                                <span className="block text-[9px] font-bold text-charcoal-muted/80 uppercase tracking-widest leading-none">
+                                <span className="block text-[9px] font-bold text-brand-green uppercase tracking-widest leading-none">
                                   {label.includes('nodal') ? 'Nodal Officer Email' : 'Support Email'}
                                 </span>
                                 <a
                                   href={`mailto:${label.trim()}`}
-                                  className="font-bold text-terracotta hover:text-terracotta-hover transition-colors duration-300 break-words text-xs xl:text-sm underline decoration-terracotta/20 hover:decoration-terracotta/50 block py-0.5"
+                                  className="font-bold text-brand-green hover:text-brand-gold transition-colors duration-300 break-normal whitespace-nowrap text-xs xl:text-[12.5px] underline decoration-brand-green/20 hover:decoration-brand-gold/50 block py-0.5"
                                 >
                                   {label}
                                 </a>
                               </div>
                             ) : (label.includes('+91') || label.match(/^\+?[\d\s-]{10,}$/)) ? (
                               <div className="space-y-1">
-                                <span className="block text-[9px] font-bold text-charcoal-muted/80 uppercase tracking-widest leading-none">
+                                <span className="block text-[9px] font-bold text-brand-green uppercase tracking-widest leading-none">
                                   {label.includes('76206') ? 'Escalation Phone' : 'Support Phone'}
                                 </span>
                                 <a
                                   href={`tel:${label.replace(/\s+/g, '')}`}
-                                  className="font-bold text-charcoal hover:text-terracotta transition-colors duration-300 text-xs xl:text-sm block py-0.5"
+                                  className="font-bold text-charcoal hover:text-brand-gold transition-colors duration-300 break-normal whitespace-nowrap text-xs xl:text-[12.5px] block py-0.5"
                                 >
                                   {label}
                                 </a>
                               </div>
                             ) : label.startsWith('Officer:') ? (
                               <div className="space-y-1">
-                                <span className="block text-[9px] font-bold text-charcoal-muted/80 uppercase tracking-widest leading-none">Grievance Officer</span>
-                                <span className="block text-sm font-bold text-charcoal">{label.replace('Officer:', '').trim()}</span>
+                                <span className="block text-[9px] font-bold text-brand-green uppercase tracking-widest leading-none">Grievance Officer</span>
+                                <span className="block text-sm font-bold text-charcoal whitespace-nowrap">{label.replace('Officer:', '').trim()}</span>
                               </div>
                             ) : (
                               <span className="font-bold text-charcoal-light text-sm leading-relaxed block py-0.5">
@@ -2167,9 +2174,9 @@ const LandingPage = () => {
                     );
                   })}
                   {index === 4 && (section.resolution_text || footerData.resolution_text) && (
-                    <li className="mt-4 pt-3 border-t border-sand-200">
-                      <div className="inline-flex items-center space-x-1.5 px-3.5 py-1 bg-sage/10 text-sage text-[9px] font-bold tracking-wider uppercase rounded-full border border-sage/20 shadow-sm">
-                        <span className="w-1.5 h-1.5 rounded-full bg-sage animate-pulse mr-1" />
+                    <li className="mt-4 pt-3 border-t border-brand-gold/25">
+                      <div className="inline-flex items-center space-x-1.5 px-3.5 py-1 bg-brand-green/10 text-brand-green text-[9px] font-bold tracking-wider uppercase rounded-full border border-brand-green/20 shadow-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse mr-1" />
                         <span>{section.resolution_text || footerData.resolution_text}</span>
                       </div>
                     </li>
@@ -2180,22 +2187,6 @@ const LandingPage = () => {
           </div>
           <div className="pt-10 border-t border-sand-200 flex flex-col md:flex-row justify-between items-center gap-6">
             <p className="text-charcoal-muted/80 font-semibold text-[11px] tracking-wide uppercase leading-relaxed max-w-2xl text-center md:text-left">{t('precision')}</p>
-            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[10.5px] font-bold text-charcoal-muted uppercase tracking-wider">
-               {[
-                 { label: footerData.privacy_label || 'Privacy Policy', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text },
-                 { label: footerData.terms_label || 'Terms & Conditions', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text },
-                 { label: footerData.checkin_label || 'Check-In Instructions', text: footerData.checkin_text || DEFAULT_FOOTER_DATA.checkin_text }
-               ].map((btn, idx) => (
-                 <button 
-                   key={idx}
-                   type="button" 
-                   onClick={() => setFooterPopup({ title: btn.label, text: btn.text })} 
-                   className="hover:text-terracotta text-charcoal-light transition-all duration-300 relative py-1 hover:translate-y-[-0.5px] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-terracotta hover:after:w-full after:transition-all after:duration-300"
-                 >
-                   {btn.label}
-                 </button>
-               ))}
-             </div>
           </div>
         </div>
       </footer>
