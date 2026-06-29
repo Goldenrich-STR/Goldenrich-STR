@@ -531,12 +531,12 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
                 )
             rm_id = employee["user_id"]
             
-            # ALSO update the selected broker's rm_id to this employee's user_id
-            if broker_id:
-                await db.users.update_one(
-                    {"user_id": broker_id},
-                    {"$set": {"rm_id": rm_id, "updated_at": datetime.now(timezone.utc)}}
-                )
+        # Link broker to the employee if both are provided during Host registration
+        if broker_id and rm_id:
+            await db.users.update_one(
+                {"user_id": broker_id},
+                {"$set": {"rm_id": rm_id}}
+            )
         
         # Generate the deterministic role-based UID
         role_prefix = "GST"

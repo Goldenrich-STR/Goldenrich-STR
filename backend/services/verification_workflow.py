@@ -36,47 +36,56 @@ async def assign_broker(db: AsyncIOMotorDatabase, property_id: str, city: str) -
     try:
         # First, check if the host has a specific broker assigned during registration (via LG Code)
         property_data = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+        owner = None
         if property_data and property_data.get("owner_id"):
             owner = await db.users.find_one({"user_id": property_data["owner_id"]})
-            if owner and owner.get("broker_id"):
-                chosen_broker = await db.users.find_one({"user_id": owner["broker_id"], "role": "broker", "is_active": True})
-                if chosen_broker:
-                    await db.properties.update_one(
-                        {"property_id": property_id},
-                        {"$set": {"broker_id": chosen_broker["user_id"], "updated_at": datetime.now(timezone.utc)}},
+        
+        if property_data and owner and owner.get("broker_id"):
+            chosen_broker = await db.users.find_one({"user_id": owner["broker_id"], "role": "broker", "is_active": True})
+            if chosen_broker:
+                await db.properties.update_one(
+                    {"property_id": property_id},
+                    {"$set": {"broker_id": chosen_broker["user_id"], "updated_at": datetime.now(timezone.utc)}},
+                )
+                
+                # Assign to owner's or broker's RM
+                owner_rm_id = owner.get("rm_id")
+                if not owner_rm_id:
+                    owner_rm_id = chosen_broker.get("rm_id")
+                    
+                from models.verification import PropertyVerification, VerificationStatus
+                existing = await db.property_verifications.find_one({"property_id": property_id})
+                if not existing:
+                    verification = PropertyVerification(
+                        property_id=property_id,
+                        broker_id=chosen_broker["user_id"],
+                        owner_id=property_data["owner_id"],
+                        status=VerificationStatus.PENDING,
+                        rm_id=owner_rm_id
                     )
-                    from models.verification import PropertyVerification, VerificationStatus
-                    existing = await db.property_verifications.find_one({"property_id": property_id})
-                    if not existing:
-                        verification = PropertyVerification(
-                            property_id=property_id,
-                            broker_id=chosen_broker["user_id"],
-                            owner_id=property_data["owner_id"],
-                            status=VerificationStatus.PENDING,
-                        )
-                        await db.property_verifications.insert_one(verification.model_dump())
-                    else:
-                        await db.property_verifications.update_one(
-                            {"property_id": property_id},
-                            {"$set": {
-                                "broker_id": chosen_broker["user_id"],
-                                "status": VerificationStatus.PENDING.value,
-                                "rm_reviewed": False,
-                                "rm_approved": False,
-                                "rm_remarks": None,
-                                "rm_id": None,
-                                "reviewed_at": None,
-                                "admin_reviewed": False,
-                                "admin_approved": False,
-                                "admin_remarks": None,
-                                "admin_id": None,
-                                "admin_reviewed_at": None,
-                                "completed_at": None,
-                                "updated_at": datetime.now(timezone.utc)
-                            }}
-                        )
-                    logger.info(f"Host's registered broker {chosen_broker['user_id']} assigned directly to property {property_id}")
-                    return chosen_broker["user_id"]
+                    await db.property_verifications.insert_one(verification.model_dump())
+                else:
+                    await db.property_verifications.update_one(
+                        {"property_id": property_id},
+                        {"$set": {
+                            "broker_id": chosen_broker["user_id"],
+                            "status": VerificationStatus.PENDING.value,
+                            "rm_reviewed": False,
+                            "rm_approved": False,
+                            "rm_remarks": None,
+                            "rm_id": owner_rm_id,
+                            "reviewed_at": None,
+                            "admin_reviewed": False,
+                            "admin_approved": False,
+                            "admin_remarks": None,
+                            "admin_id": None,
+                            "admin_reviewed_at": None,
+                            "completed_at": None,
+                            "updated_at": datetime.now(timezone.utc)
+                        }}
+                    )
+                logger.info(f"Host's registered broker {chosen_broker['user_id']} assigned directly to property {property_id} (RM: {owner_rm_id})")
+                return chosen_broker["user_id"]
 
         # Fallback to load-balanced city-based auto-assignment
         brokers = await db.users.find(
@@ -102,16 +111,27 @@ async def assign_broker(db: AsyncIOMotorDatabase, property_id: str, city: str) -
             {"property_id": property_id},
             {"$set": {"broker_id": chosen["user_id"], "updated_at": datetime.now(timezone.utc)}},
         )
+        
         # Pre-create a PENDING verification record so it shows in broker queue
         from models.verification import PropertyVerification, VerificationStatus
         property_data = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
         existing = await db.property_verifications.find_one({"property_id": property_id})
+        
+        owner_rm_id = None
+        if property_data and property_data.get("owner_id"):
+            owner = await db.users.find_one({"user_id": property_data["owner_id"]})
+            if owner:
+                owner_rm_id = owner.get("rm_id")
+        if not owner_rm_id and chosen:
+            owner_rm_id = chosen.get("rm_id")
+            
         if not existing and property_data:
             verification = PropertyVerification(
                 property_id=property_id,
                 broker_id=chosen["user_id"],
                 owner_id=property_data["owner_id"],
                 status=VerificationStatus.PENDING,
+                rm_id=owner_rm_id
             )
             await db.property_verifications.insert_one(verification.model_dump())
         elif existing:
@@ -123,7 +143,7 @@ async def assign_broker(db: AsyncIOMotorDatabase, property_id: str, city: str) -
                     "rm_reviewed": False,
                     "rm_approved": False,
                     "rm_remarks": None,
-                    "rm_id": None,
+                    "rm_id": owner_rm_id,
                     "reviewed_at": None,
                     "admin_reviewed": False,
                     "admin_approved": False,
@@ -135,7 +155,7 @@ async def assign_broker(db: AsyncIOMotorDatabase, property_id: str, city: str) -
                 }}
             )
 
-        logger.info(f"Broker {chosen['user_id']} assigned to property {property_id} (load={min(loads)})")
+        logger.info(f"Broker {chosen['user_id']} assigned to property {property_id} (load={min(loads)}, RM: {owner_rm_id})")
         return chosen["user_id"]
     except Exception as e:
         logger.error(f"assign_broker failed: {e}")
