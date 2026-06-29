@@ -287,9 +287,7 @@ const SupportPage = () => {
       <nav className="sticky top-0 z-50 flex justify-between items-center text-charcoal bg-white/95 backdrop-blur-md px-6 md:px-12 lg:px-20 h-20 border-b border-sand-200 shadow-sm">
         {/* Left Logo */}
         <div className="flex items-center">
-          <h1 className="text-2xl md:text-3xl font-black tracking-tight cursor-pointer text-charcoal hover:text-charcoal-light transition" onClick={() => navigate('/')}>
-            X-space360<span className="text-terracotta">.in</span>
-          </h1>
+          <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain cursor-pointer" onClick={() => navigate('/')} />
         </div>
 
         {/* Center Pill Links */}
@@ -375,9 +373,7 @@ const SupportPage = () => {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto text-white md:hidden animate-fadeIn">
           <div className="flex justify-between items-center mb-12">
-            <h1 className="text-2xl font-black tracking-tight cursor-pointer text-white" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
-              X-space360<span className="text-terracotta">.in</span>
-            </h1>
+            <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain cursor-pointer brightness-0 invert" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }} />
             <button onClick={() => setIsMobileMenuOpen(false)} className="text-white hover:text-terracotta transition p-2 bg-white/10 rounded-none">
               <X className="w-6 h-6" />
             </button>
@@ -756,7 +752,7 @@ const SupportPage = () => {
       <footer className="bg-charcoal text-white py-12 px-6 md:px-12 lg:px-20 border-t border-white/5 font-semibold text-xs">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center space-x-2">
-            <span className="text-lg font-black tracking-tight">X-space360<span className="text-terracotta">.in</span></span>
+            <img src="/logo.png" alt="X-Space360 Logo" className="h-6 w-auto object-contain brightness-0 invert" />
             <span className="text-gray-500 font-bold">|</span>
             <span className="text-gray-500 font-bold">© {new Date().getFullYear()} Goldenrich Group. All rights reserved.</span>
           </div>

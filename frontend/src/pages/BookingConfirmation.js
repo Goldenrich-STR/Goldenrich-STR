@@ -119,7 +119,7 @@ const BookingConfirmation = () => {
         email: user?.email || '',
         contact: user?.phone || '',
       },
-      theme: { color: '#C05C4F' },
+      theme: { color: '#006437' },
       handler: async (response) => {
         // Razorpay returns: razorpay_payment_id, razorpay_order_id, razorpay_signature
         try {
@@ -205,7 +205,7 @@ const BookingConfirmation = () => {
         email: user?.email || '',
         contact: user?.phone || '',
       },
-      theme: { color: '#C05C4F' },
+      theme: { color: '#006437' },
       handler: async () => {
         try {
           await bookingAPI.mockPay(booking.booking_id);
@@ -270,9 +270,7 @@ const BookingConfirmation = () => {
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">
-              X-space360<span className="text-terracotta">.in</span>
-            </span>
+            <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
           <button 
             onClick={() => navigate('/guest/browse')} 

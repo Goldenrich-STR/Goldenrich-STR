@@ -70,7 +70,7 @@ const BrokerDashboard = () => {
             className="flex items-center space-x-3 cursor-pointer group" 
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
+            <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-4 px-4 py-2 bg-white/50 border border-gray-100 rounded-full shadow-sm">

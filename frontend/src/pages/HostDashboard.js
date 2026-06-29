@@ -570,7 +570,7 @@ const HostDashboard = () => {
               alert('Payment confirmation failed: ' + (err.response?.data?.detail || err.message));
             }
           },
-          theme: { color: '#C05C4F' }
+          theme: { color: '#006437' }
         };
         const rzp = new window.Razorpay(options);
         rzp.open();
@@ -640,7 +640,7 @@ const HostDashboard = () => {
             className="flex items-center space-x-3 cursor-pointer group" 
             onClick={() => navigate('/')}
           >
-            <span className="text-2xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">X-space360<span className="text-terracotta">.in</span></span>
+            <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain" />
           </div>
           <div className="flex items-center space-x-6">
             <nav className="hidden md:flex items-center space-x-6">

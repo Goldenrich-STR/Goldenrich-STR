@@ -102,9 +102,9 @@ const VIEW_MODES = {
 function priceIcon(price, active) {
   const html = `
     <div style="
-      background:${active ? '#C05C4F' : '#fff'};
+      background:${active ? '#006437' : '#fff'};
       color:${active ? '#fff' : '#2C2C2C'};
-      border:2px solid #C05C4F;
+      border:2px solid #006437;
       padding:4px 10px;
       border-radius:999px;
       font-weight:700;
@@ -533,11 +533,7 @@ const GuestBrowse = () => {
             className="flex items-center cursor-pointer shrink-0" 
             onClick={() => navigate('/')}
           >
-            <div className="font-extrabold text-2xl md:text-3xl tracking-tighter">
-              <span className="text-gray-900">X </span>
-              <span className="text-terracotta">SPACE</span>
-              <span className="text-gray-900">360</span>
-            </div>
+            <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain" />
           </div>
           <div className="hidden md:flex items-center space-x-4 md:space-x-6">
             {/* Language Selector */}
@@ -610,11 +606,7 @@ const GuestBrowse = () => {
         <div className="fixed inset-0 z-[100] bg-white flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-charcoal md:hidden">
           <div className="flex justify-between items-center mb-12">
             <div className="cursor-pointer" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
-              <div className="font-extrabold text-2xl tracking-tighter">
-                <span className="text-gray-900">X </span>
-                <span className="text-terracotta">SPACE</span>
-                <span className="text-gray-900">360</span>
-              </div>
+              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
             </div>
             <button onClick={() => setIsMobileMenuOpen(false)} className="text-charcoal hover:text-terracotta transition p-2 bg-gray-50 rounded-full">
               <X className="w-6 h-6" />

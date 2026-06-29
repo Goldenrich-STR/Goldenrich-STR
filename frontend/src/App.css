@@ -27,7 +27,7 @@
 }
 
 .btn-primary {
-  background-color: #C05C4F;
+  background-color: #006437;
   color: white;
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
@@ -38,12 +38,12 @@
 }
 
 .btn-primary:hover {
-  background-color: #A94E42;
+  background-color: #004d2a;
   transform: translateY(-2px);
 }
 
 .btn-secondary {
-  background-color: #788574;
+  background-color: #cda250;
   color: white;
   padding: 0.75rem 1.5rem;
   border-radius: 0.75rem;
@@ -54,7 +54,7 @@
 }
 
 .btn-secondary:hover {
-  background-color: #647160;
+  background-color: #a07d35;
 }
 
 .input-field {
@@ -69,8 +69,8 @@
 
 .input-field:focus {
   outline: none;
-  border-color: #C05C4F;
-  box-shadow: 0 0 0 3px rgba(192, 92, 79, 0.1);
+  border-color: #006437;
+  box-shadow: 0 0 0 3px rgba(0, 100, 55, 0.1);
 }
 
 .dashboard-card {

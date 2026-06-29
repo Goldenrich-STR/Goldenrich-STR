@@ -314,8 +314,36 @@ async def create_user(
         
         uid_val = user_data.uid or generated_uid
         
-        # If user is a broker, set their lg_code to their UID
-        lg_code_val = uid_val if user_data.role.value == "broker" else user_data.lg_code
+        # If user is a broker, set their lg_code to their entered code (or fallback to UID)
+        role_enum_val = user_data.role.value if hasattr(user_data.role, "value") else str(user_data.role)
+        lg_code_val = user_data.lg_code if (role_enum_val == "broker" and user_data.lg_code) else (uid_val if role_enum_val == "broker" else user_data.lg_code)
+        
+        # Resolve broker and employee if role is host
+        broker_id = None
+        rm_id = None
+        if role_str_lower == "host":
+            if user_data.lg_code and user_data.lg_code.strip():
+                lg_code_clean = user_data.lg_code.strip()
+                broker = await db.users.find_one({
+                    "role": "broker",
+                    "lg_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}
+                })
+                if broker:
+                    broker_id = broker["user_id"]
+            if user_data.employee_code and user_data.employee_code.strip():
+                employee_code_clean = user_data.employee_code.strip()
+                employee = await db.users.find_one({
+                    "role": "employee",
+                    "employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}
+                })
+                if employee:
+                    rm_id = employee["user_id"]
+                    # ALSO update the selected broker's rm_id to this employee's user_id
+                    if broker_id:
+                        await db.users.update_one(
+                            {"user_id": broker_id},
+                            {"$set": {"rm_id": rm_id, "updated_at": datetime.now(timezone.utc)}}
+                        )
         
         new_user_args = {
             "user_id": uid_val,
@@ -331,6 +359,9 @@ async def create_user(
             "birthdate": user_data.birthdate,
             "uid": uid_val,
             "lg_code": lg_code_val,
+            "broker_id": broker_id,
+            "rm_id": rm_id,
+            "employee_code": user_data.employee_code,
             "terms_accepted": True,
             "is_active": True,
             "created_at": datetime.now(timezone.utc),
@@ -399,7 +430,7 @@ async def update_user(
             update_fields["password_hash"] = hash_password(user_data.password)
 
         # Other profile fields
-        for field in ["full_name", "role", "city", "state", "franchise", "branch", "birthdate", "profile_image", "is_active"]:
+        for field in ["full_name", "role", "city", "state", "franchise", "branch", "birthdate", "profile_image", "is_active", "employee_code"]:
             val = getattr(user_data, field)
             if val is not None:
                 # If role changed, set lg_code appropriately
@@ -436,6 +467,43 @@ async def update_user(
         # Update rm_id
         if user_data.rm_id is not None:
             update_fields["rm_id"] = user_data.rm_id
+            
+        # Resolve broker_id and rm_id if role is host and code fields are present / updated
+        user_role = update_fields.get("role") or user.get("role")
+        user_role_str = user_role.value if hasattr(user_role, "value") else str(user_role)
+        if user_role_str.lower() == "host":
+            target_lg_code = update_fields.get("lg_code") if "lg_code" in update_fields else user.get("lg_code")
+            target_employee_code = update_fields.get("employee_code") if "employee_code" in update_fields else user.get("employee_code")
+            
+            resolved_broker_id = update_fields.get("broker_id") or user.get("broker_id")
+            resolved_rm_id = update_fields.get("rm_id") or user.get("rm_id")
+            
+            if target_lg_code and target_lg_code.strip():
+                lg_code_clean = target_lg_code.strip()
+                broker = await db.users.find_one({
+                    "role": "broker",
+                    "lg_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}
+                })
+                if broker:
+                    resolved_broker_id = broker["user_id"]
+                    update_fields["broker_id"] = resolved_broker_id
+            
+            if target_employee_code and target_employee_code.strip():
+                employee_code_clean = target_employee_code.strip()
+                employee = await db.users.find_one({
+                    "role": "employee",
+                    "employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}
+                })
+                if employee:
+                    resolved_rm_id = employee["user_id"]
+                    update_fields["rm_id"] = resolved_rm_id
+                    
+            if resolved_broker_id and resolved_rm_id:
+                # Update selected broker's rm_id to the employee's user_id
+                await db.users.update_one(
+                    {"user_id": resolved_broker_id},
+                    {"$set": {"rm_id": resolved_rm_id, "updated_at": datetime.now(timezone.utc)}}
+                )
             
         # Add updated_at timestamp
         if update_fields:

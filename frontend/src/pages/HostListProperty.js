@@ -1085,7 +1085,7 @@ const HostListProperty = () => {
                   email: user?.email,
                   contact: user?.phone,
                 },
-                theme: { color: '#C05C4F' },
+                theme: { color: '#006437' },
                 handler: async () => {
                   try {
                     await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
@@ -1143,7 +1143,7 @@ const HostListProperty = () => {
                 email: user?.email,
                 contact: user?.phone,
               },
-              theme: { color: '#C05C4F' },
+              theme: { color: '#006437' },
               handler: async (resp) => {
                 try {
                   await subscriptionAPI.confirmSubscription({

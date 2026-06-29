@@ -47,20 +47,41 @@ async def get_employee_dashboard_stats(
 ):
     """Get employee dashboard statistics."""
     try:
-        # Get brokers in this RM's region (for now, show all brokers)
-        total_brokers = await db.users.count_documents({"role": "broker"})
+        # Get brokers assigned to this RM
+        assigned_brokers = await db.users.find(
+            {"role": "broker", "rm_id": current_user["user_id"]},
+            {"user_id": 1}
+        ).to_list(length=1000)
+        assigned_broker_ids = [b["user_id"] for b in assigned_brokers]
+
+        # Get hosts assigned to this RM
+        assigned_hosts = await db.users.find(
+            {"role": "host", "rm_id": current_user["user_id"]},
+            {"user_id": 1}
+        ).to_list(length=1000)
+        assigned_host_ids = [h["user_id"] for h in assigned_hosts]
+
+        total_brokers = len(assigned_broker_ids)
         
-        # Pending verifications (all verifications waiting for RM review)
-        pending_verifications = await db.property_verifications.count_documents({
+        # Build filter query for pending verifications
+        filter_query = {
             "status": VerificationStatus.COMPLETED.value,
             "rm_reviewed": False
-        })
+        }
+        if assigned_broker_ids or assigned_host_ids:
+            or_conditions = []
+            if assigned_broker_ids:
+                or_conditions.append({"broker_id": {"$in": assigned_broker_ids}})
+            if assigned_host_ids:
+                or_conditions.append({"owner_id": {"$in": assigned_host_ids}})
+            filter_query["$or"] = or_conditions
+        else:
+            filter_query["property_id"] = "none"
+            
+        pending_verifications = await db.property_verifications.count_documents(filter_query)
         
         # Total properties under review (pending RM review)
-        pending_reviews = await db.property_verifications.find({
-            "status": VerificationStatus.COMPLETED.value,
-            "rm_reviewed": False
-        }).to_list()
+        pending_reviews = await db.property_verifications.find(filter_query).to_list()
         
         pending_property_ids = list(set([v["property_id"] for v in pending_reviews if "property_id" in v]))
         
@@ -106,13 +127,39 @@ async def get_pending_verifications(
     current_user: dict = Depends(require_employee),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Get all verifications pending RM review."""
+    """Get all verifications pending RM review for this RM (employee)."""
     try:
+        # Get brokers assigned to this RM
+        assigned_brokers = await db.users.find(
+            {"role": "broker", "rm_id": current_user["user_id"]},
+            {"user_id": 1}
+        ).to_list(length=1000)
+        assigned_broker_ids = [b["user_id"] for b in assigned_brokers]
+
+        # Get hosts assigned to this RM
+        assigned_hosts = await db.users.find(
+            {"role": "host", "rm_id": current_user["user_id"]},
+            {"user_id": 1}
+        ).to_list(length=1000)
+        assigned_host_ids = [h["user_id"] for h in assigned_hosts]
+
+        # Build filter query for pending verifications
+        filter_query = {
+            "status": VerificationStatus.COMPLETED.value,
+            "rm_reviewed": False
+        }
+        if assigned_broker_ids or assigned_host_ids:
+            or_conditions = []
+            if assigned_broker_ids:
+                or_conditions.append({"broker_id": {"$in": assigned_broker_ids}})
+            if assigned_host_ids:
+                or_conditions.append({"owner_id": {"$in": assigned_host_ids}})
+            filter_query["$or"] = or_conditions
+        else:
+            filter_query["property_id"] = "none"
+
         cursor = db.property_verifications.find(
-            {
-                "status": VerificationStatus.COMPLETED.value,
-                "rm_reviewed": False
-            },
+            filter_query,
             {"_id": 0}
         ).sort("completed_at", -1)
         
@@ -565,9 +612,9 @@ async def get_all_brokers(
 ):
     """Get all brokers under this RM."""
     try:
-        # For now, show all brokers (in production, filter by region)
+        # Show only brokers assigned to this RM (employee)
         cursor = db.users.find(
-            {"role": "broker"},
+            {"role": "broker", "rm_id": current_user["user_id"]},
             {"_id": 0, "password_hash": 0}
         )
         brokers = await cursor.to_list(length=200)

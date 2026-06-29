@@ -16,7 +16,7 @@ import AICallsManagement from '../components/admin/AICallsManagement';
 import { Phone, Volume2, HelpCircle, Download, UserPlus } from 'lucide-react';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, formatReadableText } from '../lib/displayLabels';
 
-const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', required = false, leftIcon }) => {
+const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', required = false, leftIcon, disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = React.useRef(null);
   
@@ -130,10 +130,10 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
   };
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className={`relative ${disabled ? 'opacity-50 pointer-events-none bg-gray-100/50' : ''}`} ref={containerRef}>
       <div 
         className="w-full border border-gray-200/80 rounded-2xl focus-within:border-terracotta outline-none transition bg-white flex items-center cursor-pointer select-none overflow-hidden"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         {leftIcon && (
           <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
@@ -240,7 +240,8 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
         tabIndex={-1}
         value={value || ''} 
         onChange={() => {}}
-        required={required} 
+        required={required && !disabled} 
+        disabled={disabled}
         className="opacity-0 absolute inset-0 pointer-events-none" 
       />
     </div>
@@ -310,9 +311,7 @@ const AdminDashboard = () => {
             className="flex items-center space-x-3 cursor-pointer group"
             onClick={() => navigate('/')}
           >
-            <span className="text-xl font-bold tracking-tight text-charcoal tracking-tight group-hover:text-terracotta transition-colors">
-              X-space360<span className="text-terracotta">.in</span>
-            </span>
+            <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
           <div className="flex items-center space-x-6">
             <span className="text-charcoal-light">Admin: {user?.full_name}</span>
@@ -583,7 +582,9 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     branch: '',
     birthdate: '',
     uid: '',
-    profile_image: ''
+    profile_image: '',
+    lg_code: '',
+    employee_code: ''
   });
   const [uploading, setUploading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -616,7 +617,9 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
   const startEditUser = (user) => {
     setEditUser({
       ...user,
-      password: ''
+      password: '',
+      lg_code: user.lg_code || '',
+      employee_code: user.employee_code || ''
     });
     setShowEditModal(true);
   };
@@ -669,7 +672,30 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
   useEffect(() => {
     const generateUID = () => {
-      const { role } = newUser;
+      const { role, lg_code, employee_code } = newUser;
+      
+      if (role === 'broker' && lg_code && lg_code.trim()) {
+        const customUid = lg_code.trim();
+        setNewUser(prev => {
+          if (prev.uid !== customUid) {
+            return { ...prev, uid: customUid };
+          }
+          return prev;
+        });
+        return;
+      }
+      
+      if (role === 'employee' && employee_code && employee_code.trim()) {
+        const customUid = employee_code.trim();
+        setNewUser(prev => {
+          if (prev.uid !== customUid) {
+            return { ...prev, uid: customUid };
+          }
+          return prev;
+        });
+        return;
+      }
+      
       let rolePrefix = 'GST';
       if (role === 'admin') rolePrefix = 'ADM';
       else if (role === 'host') rolePrefix = 'HST';
@@ -694,21 +720,27 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     };
     
     generateUID();
-  }, [newUser.role]);
+  }, [newUser.role, newUser.lg_code, newUser.employee_code]);
+
+  const isCodeLocked = 
+    (newUser.role === 'broker' && newUser.lg_code && newUser.lg_code.trim()) ||
+    (newUser.role === 'employee' && newUser.employee_code && newUser.employee_code.trim());
 
   const getDisplayUID = (u) => {
     if (!u) return '';
-    const idToCheck = u.uid || u.user_id || '';
-    if (/^[A-Z]{3} -\d{12}$/.test(idToCheck)) {
-      return idToCheck;
+    
+    if (u.role === 'broker' && u.lg_code && u.lg_code.trim()) {
+      return u.lg_code.trim();
+    }
+    if (u.role === 'employee' && u.employee_code && u.employee_code.trim()) {
+      return u.employee_code.trim();
     }
     
-    const role = u.role || 'guest';
     let rolePrefix = 'GST';
-    if (role === 'admin') rolePrefix = 'ADM';
-    else if (role === 'host') rolePrefix = 'HST';
-    else if (role === 'broker') rolePrefix = 'BRK';
-    else if (role === 'employee') rolePrefix = 'EMP';
+    if (u.role === 'admin') rolePrefix = 'ADM';
+    else if (u.role === 'host') rolePrefix = 'HST';
+    else if (u.role === 'broker') rolePrefix = 'BRK';
+    else if (u.role === 'employee') rolePrefix = 'EMP';
     
     const regDate = u.created_at ? new Date(u.created_at) : new Date();
     const dd = String(regDate.getDate()).padStart(2, '0');
@@ -759,7 +791,9 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         branch: '',
         birthdate: '',
         uid: '',
-        profile_image: ''
+        profile_image: '',
+        lg_code: '',
+        employee_code: ''
       });
       fetchUsers();
       fetchBrokersAndEmployees();
@@ -1389,14 +1423,15 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 </div>
                 <div>
                   <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">City</label>
-                  <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                  <div className={`relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all ${isCodeLocked ? 'opacity-50 bg-gray-50/50' : ''}`}>
                     <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
                       <MapPin className="w-5 h-5" />
                     </div>
                     <input 
-                      required
+                      required={!isCodeLocked}
+                      disabled={isCodeLocked}
                       placeholder="e.g. Mumbai"
-                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm disabled:cursor-not-allowed"
                       value={newUser.city}
                       onChange={e => setNewUser({...newUser, city: e.target.value})}
                     />
@@ -1407,14 +1442,15 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className={newUser.role === 'admin' ? "col-span-2" : ""}>
                   <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">State</label>
-                  <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                  <div className={`relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all ${isCodeLocked ? 'opacity-50 bg-gray-50/50' : ''}`}>
                     <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
                       <Building2 className="w-5 h-5" />
                     </div>
                     <input 
-                      required
+                      required={!isCodeLocked}
+                      disabled={isCodeLocked}
                       placeholder="e.g. Maharashtra"
-                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm disabled:cursor-not-allowed"
                       value={newUser.state}
                       onChange={e => setNewUser({...newUser, state: e.target.value})}
                     />
@@ -1426,7 +1462,8 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                     <PremiumDatePicker 
                       value={newUser.birthdate}
                       onChange={dateStr => setNewUser({...newUser, birthdate: dateStr})}
-                      required={newUser.role !== 'admin'}
+                      required={newUser.role !== 'admin' && !isCodeLocked}
+                      disabled={isCodeLocked}
                       leftIcon={<Calendar className="w-5 h-5" />}
                     />
                   </div>
@@ -1434,38 +1471,77 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               </div>
 
               {(newUser.role === 'broker' || newUser.role === 'employee') && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up">
-                  <div>
-                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Franchise</label>
-                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
-                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
-                        <Building2 className="w-5 h-5" />
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up">
+                    <div>
+                      <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Franchise</label>
+                      <div className={`relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all ${isCodeLocked ? 'opacity-50 bg-gray-50/50' : ''}`}>
+                        <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                          <Building2 className="w-5 h-5" />
+                        </div>
+                        <input 
+                          required={!isCodeLocked}
+                          disabled={isCodeLocked}
+                          placeholder="e.g. Golden"
+                          className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm disabled:cursor-not-allowed"
+                          value={newUser.franchise}
+                          onChange={e => setNewUser({...newUser, franchise: e.target.value})}
+                        />
                       </div>
-                      <input 
-                        required
-                        placeholder="e.g. Golden"
-                        className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
-                        value={newUser.franchise}
-                        onChange={e => setNewUser({...newUser, franchise: e.target.value})}
-                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Branch</label>
+                      <div className={`relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all ${isCodeLocked ? 'opacity-50 bg-gray-50/50' : ''}`}>
+                        <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                          <MapPin className="w-5 h-5" />
+                        </div>
+                        <input 
+                          required={!isCodeLocked}
+                          disabled={isCodeLocked}
+                          placeholder="e.g. Bandra"
+                          className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm disabled:cursor-not-allowed"
+                          value={newUser.branch}
+                          onChange={e => setNewUser({...newUser, branch: e.target.value})}
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Branch</label>
-                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
-                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
-                        <MapPin className="w-5 h-5" />
+                  <div className="grid grid-cols-1 gap-4 mt-4 animate-slide-up">
+                    {newUser.role === 'broker' ? (
+                      <div>
+                        <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Broker Code</label>
+                        <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                          <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                            <Shield className="w-5 h-5" />
+                          </div>
+                          <input 
+                            required
+                            placeholder="e.g. BRK12345"
+                            className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                            value={newUser.lg_code}
+                            onChange={e => setNewUser({...newUser, lg_code: e.target.value})}
+                          />
+                        </div>
                       </div>
-                      <input 
-                        required
-                        placeholder="e.g. Bandra"
-                        className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
-                        value={newUser.branch}
-                        onChange={e => setNewUser({...newUser, branch: e.target.value})}
-                      />
-                    </div>
+                    ) : (
+                      <div>
+                        <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Employee Code</label>
+                        <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                          <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                            <Shield className="w-5 h-5" />
+                          </div>
+                          <input 
+                            required
+                            placeholder="e.g. EMP98765"
+                            className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                            value={newUser.employee_code}
+                            onChange={e => setNewUser({...newUser, employee_code: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
+                </>
               )}
 
               {/* Dynamic UID Preview Box */}
@@ -1809,6 +1885,42 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   </div>
                 )}
 
+                {editUser.role === 'broker' && (
+                  <div className="space-y-1 animate-slide-up">
+                    <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Broker Code</label>
+                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                        <Shield className="w-5 h-5" />
+                      </div>
+                      <input 
+                        required
+                        placeholder="e.g. BRK12345"
+                        className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                        value={editUser.lg_code || ''}
+                        onChange={e => setEditUser({...editUser, lg_code: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {editUser.role === 'employee' && (
+                  <div className="space-y-1 animate-slide-up">
+                    <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Employee Code</label>
+                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                        <Shield className="w-5 h-5" />
+                      </div>
+                      <input 
+                        required
+                        placeholder="e.g. EMP98765"
+                        className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
+                        value={editUser.employee_code || ''}
+                        onChange={e => setEditUser({...editUser, employee_code: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Info Banner Note */}
                 <div className="bg-terracotta/5 border border-terracotta/10 rounded-2xl p-4 flex items-center space-x-3 text-xs text-terracotta font-semibold">
                   <Info className="w-5 h-5 text-terracotta flex-shrink-0" />
@@ -1921,7 +2033,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
                     <div className="p-4 bg-stone rounded-2xl">
                       <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Host User ID / LG Code</p>
-                      <p className="text-xs font-mono text-charcoal-light">{getDisplayUID(viewUser)} {viewUser.lg_code ? `| LG: ${viewUser.lg_code}` : ''}</p>
+                      <p className="text-xs font-mono text-charcoal-light">{getDisplayUID(viewUser)} {viewUser.lg_code && getDisplayUID(viewUser) !== viewUser.lg_code ? `| LG: ${viewUser.lg_code}` : ''}</p>
                     </div>
 
                     {viewUser.role === 'host' && (
@@ -2219,6 +2331,55 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                       </p>
                     </div>
                   </div>
+
+                  {(viewUser.role === 'broker' || viewUser.role === 'employee') && (
+                    <>
+                      {viewUser.franchise && (
+                        <div className="flex items-center space-x-3.5 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                          <div className="w-10 h-10 rounded-xl bg-terracotta/5 border border-terracotta/10 flex items-center justify-center flex-shrink-0">
+                            <Building2 className="w-5 h-5 text-terracotta" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-0.5">Franchise</p>
+                            <p className="text-sm font-bold text-charcoal truncate">{viewUser.franchise}</p>
+                          </div>
+                        </div>
+                      )}
+                      {viewUser.branch && (
+                        <div className="flex items-center space-x-3.5 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                          <div className="w-10 h-10 rounded-xl bg-terracotta/5 border border-terracotta/10 flex items-center justify-center flex-shrink-0">
+                            <MapPin className="w-5 h-5 text-terracotta" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-0.5">Branch</p>
+                            <p className="text-sm font-bold text-charcoal truncate">{viewUser.branch}</p>
+                          </div>
+                        </div>
+                      )}
+                      {viewUser.role === 'broker' && viewUser.lg_code && (
+                        <div className="flex items-center space-x-3.5 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                          <div className="w-10 h-10 rounded-xl bg-terracotta/5 border border-terracotta/10 flex items-center justify-center flex-shrink-0">
+                            <Shield className="w-5 h-5 text-terracotta" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-0.5">Broker Code</p>
+                            <p className="text-sm font-bold text-charcoal truncate">{viewUser.lg_code}</p>
+                          </div>
+                        </div>
+                      )}
+                      {viewUser.role === 'employee' && viewUser.employee_code && (
+                        <div className="flex items-center space-x-3.5 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                          <div className="w-10 h-10 rounded-xl bg-terracotta/5 border border-terracotta/10 flex items-center justify-center flex-shrink-0">
+                            <Shield className="w-5 h-5 text-terracotta" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-0.5">Employee Code</p>
+                            <p className="text-sm font-bold text-charcoal truncate">{viewUser.employee_code}</p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
 
                 {/* Administrative Access Notice */}

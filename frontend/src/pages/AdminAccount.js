@@ -174,7 +174,7 @@ const OverviewTab = () => {
               <Tooltip
                 formatter={(v) => [`₹${Number(v).toLocaleString('en-IN')}`, 'value']}
               />
-              <Line type="monotone" dataKey="inflow" stroke="#C05C4F" strokeWidth={2} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="inflow" stroke="#006437" strokeWidth={2} dot={{ r: 3 }} />
               <Line type="monotone" dataKey="refund" stroke="#788574" strokeWidth={2} dot={{ r: 3 }} />
               <Line type="monotone" dataKey="net"    stroke="#2E2A26" strokeWidth={2} dot={{ r: 3 }} />
             </LineChart>

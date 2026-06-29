@@ -8,9 +8,13 @@ async def setup_db():
     ROOT_DIR = Path(__file__).parent
     load_dotenv(ROOT_DIR / '.env')
     
+    target_url = os.environ.get('POSTGRES_URL')
+    from urllib.parse import urlparse
+    parsed = urlparse(target_url)
+    db_name = parsed.path.lstrip('/')
+    
     # Try to connect to system 'postgres' db first to create our db
-    sys_url = "postgresql://postgres:Pratik16@localhost:5432/postgres"
-    db_name = "Goldenrich_STR"
+    sys_url = f"postgresql://{parsed.username}:{parsed.password}@{parsed.hostname}:{parsed.port or 5432}/postgres"
     
     print(f"Connecting to system database to ensure '{db_name}' exists...")
     try:

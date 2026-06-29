@@ -25,16 +25,16 @@ module.exports = {
           deep: "#000000"
         },
         terracotta: {
-          DEFAULT: "#c05c4f", // Custom theme red/coral
-          hover: "#a34c41",
-          light: "#ebd1cf",
-          soft: "#f8ecea"
+          DEFAULT: "#006437", // Forest Green from new logo
+          hover: "#004d2a",
+          light: "#d4e8dd",
+          soft: "#f2f8f5"
         },
         sage: {
-          DEFAULT: "#6B7A68",
-          dark: "#4B5649",
-          light: "#A0AFA0",
-          soft: "#F2F5F2"
+          DEFAULT: "#cda250", // Gold from new logo
+          dark: "#a07d35",
+          light: "#f3e9d2",
+          soft: "#fdfbf7"
         },
         gold: {
           50: "#FFFCF5",

@@ -31,11 +31,14 @@ const AuthPage = ({ isAdminLogin = false }) => {
     city: '',
     role: 'guest',
     lg_code: '',
+    employee_code: '',
     terms_accepted: false
   });
   
   const [showOTPVerification, setShowOTPVerification] = useState(false);
   const [otp, setOtp] = useState('');
+  const [availableBrokers, setAvailableBrokers] = useState([]);
+  const [availableEmployees, setAvailableEmployees] = useState([]);
 
   useEffect(() => {
     if (forceLogin && !forcedLogoutHandled.current) {
@@ -43,6 +46,21 @@ const AuthPage = ({ isAdminLogin = false }) => {
       logout();
     }
   }, [forceLogin, logout]);
+
+  useEffect(() => {
+    const fetchBrokersAndEmployees = async () => {
+      try {
+        const response = await apiClient.get('/auth/public/brokers-and-employees');
+        if (response.data) {
+          setAvailableBrokers(response.data.brokers || []);
+          setAvailableEmployees(response.data.employees || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch brokers and employees:', err);
+      }
+    };
+    fetchBrokersAndEmployees();
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -163,7 +181,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                className="flex items-center space-x-3 cursor-pointer group w-fit" 
                onClick={() => navigate('/')}
             >
-               <span className="text-2xl font-bold tracking-tight text-white tracking-tight hover:text-white/95 transition">X-space360<span className="text-terracotta">.in</span></span>
+               <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain brightness-0 invert" />
             </div>
 
            <div className="animate-slide-up">
@@ -201,10 +219,8 @@ const AuthPage = ({ isAdminLogin = false }) => {
       <div className="w-full lg:w-7/12 flex items-center justify-center p-6 md:p-14 overflow-y-auto h-full bg-white/50 backdrop-blur-xl">
         <div className="w-full max-w-xl animate-fade-in">
            {/* Logo (Mobile Only) */}
-           <div className="lg:hidden text-center mb-10">
-              <span className="text-3xl font-bold tracking-tight text-charcoal tracking-tight hover:text-terracotta transition cursor-pointer" onClick={() => navigate('/')}>
-                 X-space360<span className="text-terracotta">.in</span>
-              </span>
+           <div className="lg:hidden text-center mb-10 flex justify-center">
+              <img src="/logo.png" alt="X-Space360 Logo" className="h-12 w-auto object-contain hover:opacity-90 transition cursor-pointer" onClick={() => navigate('/')} />
            </div>
 
            <div className="mb-5 text-center">
@@ -427,6 +443,41 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                 />
                              </div>
                           </div>
+
+                          {registerData.role === 'host' && (
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-fade-in">
+                                <div className="space-y-2">
+                                   <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Broker Code</label>
+                                   <select
+                                      value={registerData.lg_code}
+                                      onChange={(e) => setRegisterData({ ...registerData, lg_code: e.target.value })}
+                                      className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                   >
+                                      <option value="">-- Select Broker Code --</option>
+                                      {availableBrokers.map(b => (
+                                         <option key={b.user_id} value={b.lg_code}>
+                                            {b.full_name} ({b.lg_code})
+                                         </option>
+                                      ))}
+                                   </select>
+                                </div>
+                                <div className="space-y-2">
+                                   <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Employee Code</label>
+                                   <select
+                                      value={registerData.employee_code}
+                                      onChange={(e) => setRegisterData({ ...registerData, employee_code: e.target.value })}
+                                      className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                   >
+                                      <option value="">-- Select Employee Code --</option>
+                                      {availableEmployees.map(emp => (
+                                         <option key={emp.user_id} value={emp.employee_code}>
+                                            {emp.full_name} ({emp.employee_code})
+                                         </option>
+                                      ))}
+                                   </select>
+                                </div>
+                             </div>
+                          )}
                           
                           <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-2xl border border-gray-100 group cursor-pointer">
                              <input

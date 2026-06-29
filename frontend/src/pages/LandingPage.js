@@ -493,6 +493,11 @@ const DEFAULT_FOOTER_DATA = {
       { label: 'Nashik, Maharashtra', action_type: 'text', link: '', text: 'X-Space360 support is available for guest and host assistance.\n\nEmail: support@X-space360.com\nPhone: +91 8484826247' },
       { label: 'support@X-space360.com', action_type: 'text', link: '', text: 'Email support@X-space360.com for help with bookings, listings, or account support.' },
     ] },
+    { heading: 'Legal', items: [
+      { label: 'Privacy Policy', action_type: 'text', link: '', text: 'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.' },
+      { label: 'Terms & Conditions', action_type: 'text', link: '', text: 'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.' },
+      { label: 'Check-In Instructions', action_type: 'text', link: '', text: 'Standard check-in time starts at 2:00 PM. Please coordinate with your host at least 24 hours prior to arrival for key handover and coordinate exchange. Valid ID proof must be submitted at the time of check-in.' }
+    ] },
     { heading: 'Grievance & Escalation', resolution_text: 'Resolution: 7 working days', items: [
       { label: 'Officer: Rahul Mundra', action_type: 'text', link: '', text: 'Grievance Officer: Rahul Mundra\nEmail: nodal.officer@rupiyaloan.com\nPhone: +91 76206 66949\nResolution: 7 working days' },
       { label: 'nodal.officer@rupiyaloan.com', action_type: 'text', link: '', text: 'Email nodal.officer@rupiyaloan.com for grievance escalation.\nResolution: 7 working days.' },
@@ -1041,15 +1046,36 @@ const LandingPage = () => {
   };
   const footerData = { ...DEFAULT_FOOTER_DATA, ...(cmsContent?.footer || {}) };
   const footerFaqItems = Array.isArray(footerData.faq_items) ? footerData.faq_items : DEFAULT_FOOTER_DATA.faq_items;
-  const footerSections = (Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
-    ? footerData.footer_sections
-    : DEFAULT_FOOTER_DATA.footer_sections
-  ).slice(0, 4).map((rawSection, index) => {
+  
+  // Build raw sections list
+  let rawSections = Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
+    ? [...footerData.footer_sections]
+    : [...DEFAULT_FOOTER_DATA.footer_sections];
+
+  // If "Legal" is not in rawSections, let's insert it at index 3 (before the last section, which is Grievance & Escalation)
+  const legalSectionExists = rawSections.some(s => s && (s.heading === 'Legal' || s.label === 'Legal'));
+  if (!legalSectionExists) {
+    const legalSection = {
+      heading: 'Legal',
+      items: [
+        { label: footerData.privacy_label || 'Privacy Policy', action_type: 'text', link: '', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text },
+        { label: footerData.terms_label || 'Terms & Conditions', action_type: 'text', link: '', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text },
+        { label: footerData.checkin_label || 'Check-In Instructions', action_type: 'text', link: '', text: footerData.checkin_text || DEFAULT_FOOTER_DATA.checkin_text }
+      ]
+    };
+    if (rawSections.length >= 3) {
+      rawSections.splice(3, 0, legalSection);
+    } else {
+      rawSections.push(legalSection);
+    }
+  }
+
+  const footerSections = rawSections.slice(0, 5).map((rawSection, index) => {
     const section = rawSection || {};
     return {
       ...section,
       heading: (!section.heading || /^Section\s+\d+$/i.test(section.heading))
-        ? ['For Guests', 'For Hosts', 'Contact', 'Grievance & Escalation'][index]
+        ? ['For Guests', 'For Hosts', 'Contact', 'Legal', 'Grievance & Escalation'][index]
         : section.heading,
       items: Array.isArray(section.items) && section.items.length
         ? section.items.filter(Boolean).map(item => ({
@@ -1270,11 +1296,7 @@ const LandingPage = () => {
       <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-white px-6 md:px-12 lg:px-20 h-20">
         {/* Left Logo */}
         <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
-          <div className="font-extrabold text-2xl md:text-3xl tracking-tighter">
-            <span className="text-white">X </span>
-            <span className="text-terracotta">SPACE</span>
-            <span className="text-white">360</span>
-          </div>
+          <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain" />
         </div>
 
         {/* Center Pill Links — Glass Transparent style */}
@@ -1363,11 +1385,7 @@ const LandingPage = () => {
         <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-white md:hidden">
           <div className="flex justify-between items-center mb-12">
             <div className="cursor-pointer" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
-              <div className="font-extrabold text-3xl tracking-tighter">
-                <span className="text-white">X </span>
-                <span className="text-terracotta">SPACE</span>
-                <span className="text-white">360</span>
-              </div>
+              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
             </div>
             <button onClick={() => setIsMobileMenuOpen(false)} className="text-white hover:text-terracotta transition p-2 bg-white/10 rounded-full">
               <X className="w-6 h-6" />
@@ -2055,83 +2073,129 @@ const LandingPage = () => {
         </div>
       </div>
 
-<footer className="bg-white border-t border-gray-100 pt-16 md:pt-20 pb-12">
-        <div className="w-full px-6 md:px-10 xl:px-16 2xl:px-24">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.5fr_repeat(4,minmax(0,1fr))] gap-x-10 xl:gap-x-16 2xl:gap-x-20 gap-y-12 mb-16">
+<footer className="relative bg-[#07130E] border-t-2 border-sage/20 pt-20 pb-12 transition-colors duration-500 overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.2)]">
+        {/* Luxury background glow */}
+        <div className="absolute top-0 left-1/4 w-80 h-80 bg-sage/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-terracotta/5 rounded-full blur-[100px] pointer-events-none" />
+
+        <div className="max-w-[1400px] mx-auto px-6 md:px-10 xl:px-16 relative z-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-[1.4fr_0.8fr_0.8fr_1fr_0.8fr_1.2fr] gap-x-8 xl:gap-x-12 2xl:gap-x-16 gap-y-12 mb-16">
             <div>
               <div 
-                className="flex items-center mb-8 cursor-pointer group"
+                className="flex items-center mb-6 cursor-pointer group"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               >
-                <div className="font-extrabold text-3xl tracking-tighter">
-                  <span className="text-gray-900">X </span>
-                  <span className="text-terracotta">SPACE</span>
-                  <span className="text-gray-900">360</span>
-                </div>
+                <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain brightness-0 invert opacity-95 transition-transform duration-300 group-hover:scale-105" />
               </div>
-              <p className="text-charcoal-light text-lg mb-8 max-w-md leading-relaxed">
+              <p className="text-sand-300/80 text-[13.5px] mb-8 max-w-sm leading-relaxed font-medium">
                 {footerData.brand_description || t('footerSub')}
               </p>
-              <div className="flex space-x-4">
-                 <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
-                    <Facebook className="w-4 h-4" />
-                 </a>
-                 <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
-                    <Instagram className="w-4 h-4" />
-                 </a>
-                 <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
-                    <Twitter className="w-4 h-4" />
-                 </a>
-                 <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-charcoal-muted hover:bg-terracotta hover:text-white transition-all cursor-pointer">
-                    <Linkedin className="w-4 h-4" />
-                 </a>
+              <div className="flex space-x-3.5">
+                 {[
+                   { icon: Facebook, url: 'https://facebook.com' },
+                   { icon: Instagram, url: 'https://instagram.com' },
+                   { icon: Twitter, url: 'https://twitter.com' },
+                   { icon: Linkedin, url: 'https://linkedin.com' }
+                 ].map((social, idx) => (
+                   <a 
+                     key={idx}
+                     href={social.url} 
+                     target="_blank" 
+                     rel="noopener noreferrer" 
+                     className="w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:border-sage text-sand-300 hover:text-sage hover:bg-sage/10 transition-all duration-300 flex items-center justify-center hover:-translate-y-1 cursor-pointer"
+                   >
+                      <social.icon className="w-4 h-4" />
+                   </a>
+                 ))}
               </div>
             </div>
             {footerSections.map((section, index) => (
               <div key={`${section.heading}-${index}`} className="min-w-0">
-                <h5 className="font-bold tracking-tight text-charcoal uppercase tracking-[0.18em] text-xs mb-8 leading-snug">{section.heading || `Section ${index + 1}`}</h5>
+                <h5 className="font-bold tracking-wider text-sage uppercase tracking-[0.25em] text-[11px] mb-8 pb-3.5 border-b border-white/10 inline-block w-full">{section.heading || `Section ${index + 1}`}</h5>
                 <ul className="space-y-4">
-                  {section.items.map((item, itemIndex) => (
-                    <li key={itemIndex}>
-                      {index < 2 ? (
-                        <button
-                          type="button"
-                          onClick={() => handleFooterSectionClick(section, item)}
-                          className="text-left text-charcoal-light font-medium hover:text-terracotta transition-colors leading-relaxed break-words"
-                        >
-                          {item.label || 'Footer Link'}
-                        </button>
-                      ) : (
-                        <p className="text-charcoal-light font-medium leading-relaxed break-words">
-                          {item.label || item.text || 'Footer Text'}
-                        </p>
-                      )}
-                    </li>
-                  ))}
-                  {index === 3 && (section.resolution_text || footerData.resolution_text) && (
-                    <li>
-                      <p className="text-[10px] font-bold tracking-tight uppercase tracking-[0.14em] text-charcoal-muted leading-relaxed">
-                        {section.resolution_text || footerData.resolution_text}
-                      </p>
+                  {section.items.map((item, itemIndex) => {
+                    const label = item.label || item.text || 'Footer Text';
+                    return (
+                      <li key={itemIndex} className="text-sm">
+                        {(index === 0 || index === 1 || index === 3) ? (
+                          <button
+                            type="button"
+                            onClick={() => handleFooterSectionClick(section, item)}
+                            className="text-left text-sand-300/80 font-semibold hover:text-sage transition-all duration-300 hover:translate-x-1.5 inline-block py-0.5"
+                          >
+                            {label}
+                          </button>
+                        ) : (
+                          <div className="text-sand-300/90">
+                            {label.includes('@') ? (
+                              <div className="space-y-1">
+                                <span className="block text-[9px] font-bold text-sand-400/80 uppercase tracking-widest leading-none">
+                                  {label.includes('nodal') ? 'Nodal Officer Email' : 'Support Email'}
+                                </span>
+                                <a
+                                  href={`mailto:${label.trim()}`}
+                                  className="font-semibold text-sage hover:text-sage/80 transition-colors duration-300 break-words text-xs xl:text-sm underline decoration-sage/20 hover:decoration-sage/50 block py-0.5"
+                                >
+                                  {label}
+                                </a>
+                              </div>
+                            ) : (label.includes('+91') || label.match(/^\+?[\d\s-]{10,}$/)) ? (
+                              <div className="space-y-1">
+                                <span className="block text-[9px] font-bold text-sand-400/80 uppercase tracking-widest leading-none">
+                                  {label.includes('76206') ? 'Escalation Phone' : 'Support Phone'}
+                                </span>
+                                <a
+                                  href={`tel:${label.replace(/\s+/g, '')}`}
+                                  className="font-semibold text-sand-200 hover:text-sage transition-colors duration-300 text-xs xl:text-sm block py-0.5"
+                                >
+                                  {label}
+                                </a>
+                              </div>
+                            ) : label.startsWith('Officer:') ? (
+                              <div className="space-y-1">
+                                <span className="block text-[9px] font-bold text-sand-400/80 uppercase tracking-widest leading-none">Grievance Officer</span>
+                                <span className="block text-sm font-semibold text-white">{label.replace('Officer:', '').trim()}</span>
+                              </div>
+                            ) : (
+                              <span className="font-semibold text-sand-200 text-sm leading-relaxed block py-0.5">
+                                {label}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                  {index === 4 && (section.resolution_text || footerData.resolution_text) && (
+                    <li className="mt-4 pt-3 border-t border-white/5">
+                      <div className="inline-flex items-center space-x-1.5 px-3.5 py-1 bg-sage/10 text-sage text-[9px] font-bold tracking-wider uppercase rounded-full border border-sage/20 shadow-sm">
+                        <span className="w-1.5 h-1.5 rounded-full bg-sage animate-pulse mr-1" />
+                        <span>{section.resolution_text || footerData.resolution_text}</span>
+                      </div>
                     </li>
                   )}
                 </ul>
               </div>
             ))}
           </div>
-          <div className="pt-12 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-charcoal-muted font-bold text-sm tracking-wide uppercase">{t('precision')}</p>
-            <div className="flex space-x-8 text-sm font-bold text-charcoal-muted uppercase tracking-widest">
-               <button type="button" onClick={() => setFooterPopup({ title: footerData.privacy_label || 'Privacy Policy', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text })} className="hover:text-terracotta">
-                 {footerData.privacy_label || 'Privacy Policy'}
-               </button>
-               <button type="button" onClick={() => setFooterPopup({ title: footerData.terms_label || 'Terms & Conditions', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text })} className="hover:text-terracotta">
-                 {footerData.terms_label || 'Terms & Conditions'}
-               </button>
-               <button type="button" onClick={() => setFooterPopup({ title: footerData.checkin_label || 'Check-In Instructions', text: footerData.checkin_text || DEFAULT_FOOTER_DATA.checkin_text })} className="hover:text-terracotta">
-                 {footerData.checkin_label || 'Check-In Instructions'}
-               </button>
-            </div>
+          <div className="pt-10 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p className="text-sand-400/80 font-medium text-[11px] tracking-wide uppercase leading-relaxed max-w-2xl text-center md:text-left">{t('precision')}</p>
+            <div className="flex flex-wrap justify-center gap-x-6 gap-y-3 text-[10.5px] font-bold text-sand-400 uppercase tracking-wider">
+               {[
+                 { label: footerData.privacy_label || 'Privacy Policy', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text },
+                 { label: footerData.terms_label || 'Terms & Conditions', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text },
+                 { label: footerData.checkin_label || 'Check-In Instructions', text: footerData.checkin_text || DEFAULT_FOOTER_DATA.checkin_text }
+               ].map((btn, idx) => (
+                 <button 
+                   key={idx}
+                   type="button" 
+                   onClick={() => setFooterPopup({ title: btn.label, text: btn.text })} 
+                   className="hover:text-sage text-sand-300/80 transition-all duration-300 relative py-1 hover:translate-y-[-0.5px] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[1px] after:bg-sage hover:after:w-full after:transition-all after:duration-300"
+                 >
+                   {btn.label}
+                 </button>
+               ))}
+             </div>
           </div>
         </div>
       </footer>

@@ -453,6 +453,30 @@ async def goldenrich_sso_callback(
     response.delete_cookie(GOLDENRICH_SSO_COOKIE)
     return response
 
+@router.get("/public/brokers-and-employees")
+async def get_public_brokers_and_employees(db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Fetch all active brokers and employees for public registration dropdowns."""
+    brokers = await db.users.find(
+        {"role": "broker", "is_active": True, "lg_code": {"$ne": None}},
+        {"user_id": 1, "full_name": 1, "lg_code": 1}
+    ).to_list(length=1000)
+    
+    employees = await db.users.find(
+        {"role": "employee", "is_active": True, "employee_code": {"$ne": None}},
+        {"user_id": 1, "full_name": 1, "employee_code": 1}
+    ).to_list(length=1000)
+    
+    return {
+        "brokers": [
+            {"user_id": b["user_id"], "full_name": b["full_name"], "lg_code": b["lg_code"]}
+            for b in brokers
+        ],
+        "employees": [
+            {"user_id": emp["user_id"], "full_name": emp["full_name"], "employee_code": emp["employee_code"]}
+            for emp in employees
+        ]
+    }
+
 @router.post("/register", response_model=TokenResponse)
 async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
     """Register a new user."""
@@ -491,6 +515,28 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
                     detail="Invalid LG Code. No broker found with this code."
                 )
             broker_id = broker["user_id"]
+            
+        # Resolve employee if employee_code is provided for a host
+        rm_id = None
+        if role_str.lower() == "host" and user_data.employee_code and user_data.employee_code.strip():
+            employee_code_clean = user_data.employee_code.strip()
+            employee = await db.users.find_one({
+                "role": "employee",
+                "employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}
+            })
+            if not employee:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid Employee Code. No employee found with this code."
+                )
+            rm_id = employee["user_id"]
+            
+            # ALSO update the selected broker's rm_id to this employee's user_id
+            if broker_id:
+                await db.users.update_one(
+                    {"user_id": broker_id},
+                    {"$set": {"rm_id": rm_id, "updated_at": datetime.now(timezone.utc)}}
+                )
         
         # Generate the deterministic role-based UID
         role_prefix = "GST"
@@ -524,6 +570,8 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
             city=user_data.city,
             lg_code=user_data.lg_code.strip().upper() if user_data.lg_code else None,
             broker_id=broker_id,
+            rm_id=rm_id,
+            employee_code=user_data.employee_code.strip() if user_data.employee_code else None,
             terms_accepted=user_data.terms_accepted,
             is_phone_verified=True  # Assuming OTP was verified before registration
         )

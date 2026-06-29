@@ -58,6 +58,7 @@ class User(BaseModel):
     
     # Employee-specific fields
     employee_region: Optional[str] = None
+    employee_code: Optional[str] = None
     
     # Common fields
     is_active: bool = True
@@ -81,6 +82,7 @@ class UserCreate(BaseModel):
     birthdate: Optional[str] = None
     uid: Optional[str] = None
     lg_code: Optional[str] = None
+    employee_code: Optional[str] = None
     profile_image: Optional[str] = None
     terms_accepted: bool = False
 
@@ -96,6 +98,7 @@ class UserUpdate(BaseModel):
     branch: Optional[str] = None
     birthdate: Optional[str] = None
     lg_code: Optional[str] = None
+    employee_code: Optional[str] = None
     broker_id: Optional[str] = None
     rm_id: Optional[str] = None
     profile_image: Optional[str] = None

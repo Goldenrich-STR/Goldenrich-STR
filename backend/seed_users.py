@@ -19,6 +19,7 @@ async def create_users():
     from server import db_instance
     if os.environ.get('DATABASE_TYPE') == 'postgres':
         await db_instance.connect()
+        await db_instance.ensure_table("users")
     db = db_instance
     
     users = [

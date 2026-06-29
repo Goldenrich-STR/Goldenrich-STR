@@ -189,7 +189,7 @@
 /* Custom Modal Scrollbar */
 .custom-modal-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #D9534F transparent;
+  scrollbar-color: #006437 transparent;
 }
 .custom-modal-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -200,6 +200,6 @@
   margin-bottom: 15px;
 }
 .custom-modal-scrollbar::-webkit-scrollbar-thumb {
-  background: #D9534F;
+  background: #006437;
   border-radius: 10px;
 }
