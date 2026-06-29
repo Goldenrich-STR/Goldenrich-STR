@@ -349,6 +349,8 @@ const initialForm = {
   youtube_short_url: '',
   youtube_long_url: '',
   house_rules: '',
+  check_in_time: '12:00',
+  check_out_time: '11:00',
   pet_friendly: false,
   smoking_allowed: false,
   instant_booking: false,
@@ -501,6 +503,8 @@ const HostListProperty = () => {
             non_veg_price: p.non_veg_price !== null && p.non_veg_price !== undefined ? String(p.non_veg_price) : '',
             guest_size: p.guest_size !== null && p.guest_size !== undefined ? String(p.guest_size) : '',
             packages: mergePackagesWithDefaults(p.packages || []),
+            check_in_time: p.check_in_time || '12:00',
+            check_out_time: p.check_out_time || '11:00',
           };
           
           // Only overwrite form with backend data if there was no local form in localStorage
@@ -1036,6 +1040,8 @@ const HostListProperty = () => {
       non_veg_price: form.non_veg_price ? Number(form.non_veg_price) : null,
       guest_size: form.guest_size ? Number(form.guest_size) : null,
       packages: form.packages || [],
+      check_in_time: form.check_in_time || '12:00',
+      check_out_time: form.check_out_time || '11:00',
     };
   };
 
@@ -1549,6 +1555,32 @@ const HostListProperty = () => {
                     />
                   </div>
                   <Textarea label="House rules (If Applicable)" testid="pricing-rules" value={form.house_rules} onChange={(v) => update({ house_rules: v })} rows={3} placeholder="Quiet hours after 10 PM, no parties, etc." />
+                  {/* Check-in / Check-out Time */}
+                  <div className="bg-stone rounded-2xl border border-gray-100 p-4">
+                    <h3 className="text-sm font-bold text-charcoal mb-3 flex items-center gap-2 uppercase tracking-wider">
+                      <span>⏰</span> Check-in &amp; Check-out Times
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-2">Check-in Time</label>
+                        <input
+                          type="time"
+                          value={form.check_in_time || '12:00'}
+                          onChange={(e) => update({ check_in_time: e.target.value })}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all [color-scheme:light] font-bold text-charcoal"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-2">Check-out Time</label>
+                        <input
+                          type="time"
+                          value={form.check_out_time || '11:00'}
+                          onChange={(e) => update({ check_out_time: e.target.value })}
+                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all [color-scheme:light] font-bold text-charcoal"
+                        />
+                      </div>
+                    </div>
+                  </div>
                   <div className="flex flex-wrap gap-4 pt-2">
                     <Toggle label="Instant booking" testid="pricing-instant" checked={form.instant_booking} onChange={(v) => update({ instant_booking: v })} />
                     <Toggle label="Pet-friendly" testid="pricing-pet" checked={form.pet_friendly} onChange={(v) => update({ pet_friendly: v })} />
