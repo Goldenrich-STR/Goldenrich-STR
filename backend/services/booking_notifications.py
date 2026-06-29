@@ -112,17 +112,37 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
             f"Booking ID {booking.get('booking_id')}."
         )
 
+        prop_details = prop or {}
+        address = prop_details.get("address") or ""
+        city = prop_details.get("city") or ""
+        state = prop_details.get("state") or ""
+        pin_code = prop_details.get("pin_code") or ""
+        full_address = f"{address}, {city}, {state} - {pin_code}".strip(", -")
+        check_in_time = prop_details.get("check_in_time") or "12:00 PM"
+        check_out_time = prop_details.get("check_out_time") or "11:00 AM"
+        host_phone = host.get("phone") or host.get("mobile") or "N/A"
+        check_in_instructions = prop_details.get("check_in_instructions") or "Please contact the host upon arrival."
+
         data = {
             "booking_id": booking.get("booking_id"),
             "property_id": booking.get("property_id"),
             "property_title": property_title,
+            "property_address": full_address,
             "guest_name": guest_name,
+            "customer_name": guest_name,
             "host_name": host_name,
+            "host_mobile": host_phone,
             "check_in_date": booking.get("check_in_date"),
             "check_out_date": booking.get("check_out_date"),
+            "check_in_time": check_in_time,
+            "check_out_time": check_out_time,
             "number_of_guests": booking.get("number_of_guests"),
+            "guests": booking.get("number_of_guests"),
+            "guest_count": booking.get("number_of_guests"),
             "total_amount": booking.get("total_amount"),
+            "amount": booking.get("total_amount"),
             "payout_amount": payout,
+            "check_in_instructions": check_in_instructions,
         }
 
         # In-App + WhatsApp + SMS via the standard path
@@ -320,6 +340,21 @@ async def notify_guest_refund_processed(db: AsyncIOMotorDatabase, refund_dict: d
             f"Booking ID: {refund_dict['booking_id']}."
         )
 
+        property_title = ""
+        payment_method = "Razorpay"
+        if booking:
+            prop = await db.properties.find_one({"property_id": booking["property_id"]}, {"_id": 0})
+            if prop:
+                property_title = prop.get("title", "")
+            payment_method = booking.get("payment_method") or booking.get("payment_status") or "Razorpay"
+            if isinstance(payment_method, str) and payment_method.lower() == "paid":
+                payment_method = "Razorpay"
+        
+        refund_amount_val = refund_dict.get("refund_amount", 0)
+        refund_amt_inr = refund_amount_val / 100 if refund_amount_val else 0
+        refund_date_val = refund_dict.get("created_at") or datetime.now(timezone.utc)
+        refund_ref = refund_dict.get("razorpay_refund_id") or refund_dict.get("refund_id") or "N/A"
+
         await send_multi_channel_notification(
             db=db,
             user_id=refund_dict["guest_id"],
@@ -330,8 +365,11 @@ async def notify_guest_refund_processed(db: AsyncIOMotorDatabase, refund_dict: d
             data={
                 "booking_id": refund_dict["booking_id"],
                 "refund_id": refund_dict.get("refund_id"),
-                "refund_amount": refund_dict.get("refund_amount"),
-                "refund_percent": refund_dict.get("refund_percent"),
+                "refund_amount": refund_amt_inr,
+                "property_name": property_title,
+                "refund_date": refund_date_val,
+                "payment_method": payment_method,
+                "refund_reference_number": refund_ref,
             },
         )
         logger.info(f"Refund notification triggered for booking {refund_dict['booking_id']}")

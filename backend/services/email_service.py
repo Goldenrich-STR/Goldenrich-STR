@@ -128,202 +128,356 @@ class EmailService:
         return ""
 
     def _variables_for(self, template: str, data: Dict, subject: str, title: str, cta_url: str) -> Dict:
-        name = data.get("name") or data.get("guest_name") or data.get("host_name") or "there"
-        email = data.get("email") or data.get("email_address") or data.get("Email") or ""
-        mobile = data.get("mobile") or data.get("phone") or data.get("Mobile") or ""
-        property_title = data.get("property_title") or data.get("property_name") or data.get("title") or ""
-        property_id = data.get("property_id") or data.get("Property_ID") or ""
-        approval_date = data.get("approval_date") or data.get("Approval_Date") or ""
-        published_date = data.get("published_date") or data.get("Published_Date") or approval_date
-        booking_id = data.get("booking_id") or data.get("Booking_ID") or ""
-        booking_date = data.get("booking_date") or data.get("created_at") or data.get("Booking_Date") or ""
-        check_in_date = data.get("check_in_date") or data.get("Check_In_Date") or ""
-        check_out_date = data.get("check_out_date") or data.get("Check_Out_Date") or ""
-        guests = data.get("number_of_guests") or data.get("guests") or data.get("Guests") or ""
-        total_amount = data.get("total_amount") or data.get("amount") or data.get("Total_Amount") or ""
-        refund_amount = data.get("refund_amount") or data.get("Refund_Amount") or ""
-        plan_name = data.get("plan_name") or data.get("Plan_Name") or ""
-        payment_id = data.get("payment_id") or data.get("Payment_ID") or ""
-        invoice_id = data.get("invoice_id") or data.get("transaction_id") or data.get("Invoice_ID") or ""
-        reason = (
-            data.get("reason")
-            or data.get("Reason")
-            or data.get("rejection_reason")
-            or data.get("Rejection_Reason")
-            or ""
-        )
-        remarks = (
-            data.get("remarks")
-            or data.get("Remarks")
-            or data.get("rejection_reason")
-            or data.get("Rejection_Reason")
-            or reason
-        )
-        reset_link = cta_url if template == "password_reset" else data.get("reset_link", "")
-        support_email = data.get("support_email") or data.get("Support_Email") or _support_email()
-        support_phone = data.get("support_phone") or data.get("support_number") or data.get("Support_Number") or _support_phone()
-        frontend_url = os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
-        dashboard_url = data.get("dashboard_url") or data.get("Dashboard_URL") or f"{frontend_url}/host/dashboard"
-        variables = {
-            "name": name,
-            "host_name": data.get("host_name") or name,
-            "guest_name": data.get("guest_name") or name,
-            "customer_name": data.get("customer_name") or name,
+        import re
+        from datetime import datetime, date, timezone
+
+        def _format_friendly_amount(value) -> str:
+            try:
+                val = float(value or 0)
+            except (TypeError, ValueError):
+                val = 0.0
+            if val.is_integer():
+                return f"{int(val):,}"
+            else:
+                return f"{val:,.2f}"
+
+        def _format_friendly_date(value) -> str:
+            if not value:
+                return ""
+            if isinstance(value, str):
+                try:
+                    if "T" in value:
+                        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                    else:
+                        dt = datetime.strptime(value, "%Y-%m-%d")
+                    value = dt
+                except Exception:
+                    return value
+            if isinstance(value, (datetime, date)):
+                return value.strftime("%d %B %Y")
+            return str(value)
+
+        def _format_friendly_time(value) -> str:
+            if not value:
+                return ""
+            if isinstance(value, str):
+                try:
+                    if "T" in value:
+                        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                        return dt.strftime("%I:%M %p")
+                except Exception:
+                    pass
+                return value
+            if isinstance(value, datetime):
+                return value.strftime("%I:%M %p")
+            return str(value)
+
+        def get_words(s: str) -> list:
+            s = s.replace("-", "_").replace(" ", "_")
+            s = re.sub(r'([A-Z])', r'_\1', s)
+            return [p.lower() for p in s.split("_") if p]
+
+        # 1. Resolve raw values from input data (case-insensitive key lookup)
+        def get_val(keys_list, default=""):
+            for k in keys_list:
+                for dk, dv in data.items():
+                    if dk.lower() == k.lower():
+                        if dv is not None:
+                            return dv
+            return default
+
+        # 2. Extract base fields
+        name = get_val(["name", "customer_name", "user_name", "host_name", "guest_name", "full_name"], "there")
+        email = get_val(["email", "email_address", "mail_id"], "")
+        mobile = get_val(["mobile", "phone", "mobile_number", "contact_number"], "")
+        property_title = get_val(["property_title", "property_name", "title"], "")
+        property_id = get_val(["property_id"], "")
+        property_address = get_val(["property_address", "address", "location"], "")
+        
+        # Booking details
+        booking_id = get_val(["booking_id"], "")
+        booking_date = get_val(["booking_date", "created_at"], "")
+        check_in_date = get_val(["check_in_date"], "")
+        check_in_time = get_val(["check_in_time"], "12:00 PM")
+        check_out_date = get_val(["check_out_date"], "")
+        check_out_time = get_val(["check_out_time"], "11:00 AM")
+        
+        # Payment / transaction details
+        transaction_id = get_val(["transaction_id", "payment_id", "razorpay_payment_id", "razorpay_subscription_id", "refund_id", "razorpay_refund_id", "invoice_number", "invoice_id"], "")
+        amount = get_val(["amount", "total_amount", "plan_amount", "refund_amount", "renewal_amount"], "")
+        
+        # Host contact / customer support
+        host_mobile = get_val(["host_mobile", "host_phone", "host_contact"], "N/A")
+        support_number = get_val(["support_number", "customer_support_number", "support_phone", "contact_number"], _support_phone())
+        support_email = get_val(["support_email", "customer_support_email", "support_mail", "customer_support_mail"], _support_email())
+        
+        # Check-in instructions
+        check_in_instructions = get_val(["check_in_instructions", "check-in_instructions", "checkin_instructions"], "Please contact the host upon arrival.")
+        
+        # Rejections / cancellations / failures
+        rejection_reason = get_val(["rejection_reason", "cancellation_reason", "failure_reason", "reason", "remarks"], "")
+        
+        # Dates
+        cancellation_date = get_val(["cancellation_date", "cancelled_at"], "")
+        refund_date = get_val(["refund_date", "refunded_at"], "")
+        payment_date = get_val(["payment_date", "confirmed_at", "paid_at"], "")
+        activation_date = get_val(["activation_date", "activated_at"], "")
+        expiry_date = get_val(["expiry_date", "expires_at", "expiry_at"], "")
+        request_date = get_val(["request_date", "created_at"], "")
+        reset_request_time = get_val(["reset_request_time", "created_at"], "")
+        attempt_date = get_val(["attempt_date", "failed_at"], "")
+        effective_date = get_val(["effective_date"], "")
+        
+        # Subscriptions
+        subscription_id = get_val(["subscription_id"], "")
+        plan_name = get_val(["plan_name"], "")
+        auto_renewal_status = get_val(["auto_renewal_status", "auto_renewal", "auto_renew"], "")
+        if auto_renewal_status:
+            if str(auto_renewal_status).lower() in ("true", "1", "active", "yes", "enabled"):
+                auto_renewal_status = "Active"
+            else:
+                auto_renewal_status = "Disabled"
+        else:
+            auto_renewal_status = "Disabled"
+
+        # GST details
+        gst_number = get_val(["gst_number", "gst_no"], "N/A")
+        gst_amount = get_val(["gst_amount", "gst_val"], "")
+        
+        # Guest Count
+        guests = get_val(["guests", "number_of_guests", "guest_count", "guest_cnt"], "")
+        
+        # Payment Method
+        payment_method = get_val(["payment_method"], "Razorpay")
+
+        # Fallbacks for empty fields based on current time
+        now = datetime.now(timezone.utc)
+        if not request_date:
+            request_date = now
+        if not reset_request_time:
+            reset_request_time = now
+        if not booking_date:
+            booking_date = now
+        if not payment_date:
+            payment_date = now
+        if not refund_date:
+            refund_date = now
+        if not cancellation_date:
+            cancellation_date = now
+        if not attempt_date:
+            attempt_date = now
+        if not effective_date:
+            effective_date = now
+        if not activation_date:
+            activation_date = now
+
+        # 3. Format friendly representations
+        formatted_booking_date = _format_friendly_date(booking_date)
+        formatted_check_in_date = _format_friendly_date(check_in_date)
+        formatted_check_out_date = _format_friendly_date(check_out_date)
+        formatted_cancellation_date = _format_friendly_date(cancellation_date)
+        formatted_refund_date = _format_friendly_date(refund_date)
+        formatted_payment_date = _format_friendly_date(payment_date)
+        formatted_activation_date = _format_friendly_date(activation_date)
+        formatted_expiry_date = _format_friendly_date(expiry_date)
+        formatted_request_date = _format_friendly_date(request_date)
+        formatted_attempt_date = _format_friendly_date(attempt_date)
+        formatted_effective_date = _format_friendly_date(effective_date)
+        
+        formatted_check_in_time = _format_friendly_time(check_in_time)
+        formatted_check_out_time = _format_friendly_time(check_out_time)
+        formatted_reset_request_time = _format_friendly_time(reset_request_time)
+        
+        formatted_amount = _format_friendly_amount(amount)
+        formatted_gst_amount = _format_friendly_amount(gst_amount)
+
+        # 4. Construct base variables dictionary
+        base_vars = {
+            # Names
+            "customer_name": name,
+            "user_name": name,
+            "host_name": name,
+            "guest_name": name,
+            # Contacts
             "email": email,
-            "email_address": email,
             "mobile": mobile,
-            "phone": mobile,
-            "property_name": property_title,
-            "property_title": property_title,
-            "property_id": property_id,
-            "approval_date": approval_date,
-            "published_date": published_date,
+            # Booking
             "booking_id": booking_id,
-            "booking_date": booking_date,
-            "check_in_date": check_in_date,
-            "check_out_date": check_out_date,
-            "number_of_guests": guests,
+            "booking_date": formatted_booking_date,
+            "property_name": property_title,
+            "property_id": property_id,
+            "property_address": property_address,
+            "check_in_date": formatted_check_in_date,
+            "check_in_time": formatted_check_in_time,
+            "check_out_date": formatted_check_out_date,
+            "check_out_time": formatted_check_out_time,
+            "host_mobile": host_mobile,
+            "check_in_instructions": check_in_instructions,
             "guests": guests,
-            "amount": total_amount,
-            "total_amount": total_amount,
-            "refund_amount": refund_amount,
-            "refund_id": data.get("refund_id") or "",
-            "plan_name": plan_name,
-            "payment_id": payment_id,
-            "invoice_id": invoice_id,
-            "reason": reason,
-            "remarks": remarks,
-            "reset_link": reset_link,
-            "action_url": cta_url,
-            "action_link": cta_url,
-            "cta_url": cta_url,
-            "cta_link": cta_url,
-            "button_url": cta_url,
-            "button_link": cta_url,
-            "button_link_url": cta_url,
-            "link": cta_url,
-            "url": cta_url,
-            "redirect_url": cta_url,
-            "login_url": cta_url,
-            "dashboard_url": dashboard_url,
-            "dashboard_link": dashboard_url,
-            "property_url": data.get("property_url") or cta_url,
-            "booking_url": data.get("booking_url") or cta_url,
-            "invoice_url": data.get("invoice_url") or cta_url,
-            "upload_corrected_documents_url": cta_url,
-            "upload_corrected_documents_link": cta_url,
-            "reupload_documents_url": cta_url,
-            "reupload_documents_link": cta_url,
-            "documents_url": cta_url,
-            "document_upload_link": cta_url,
-            "document_upload_url": cta_url,
-            "rejection_reason": remarks,
-            "reason_for_rejection": remarks,
-            "document_type": data.get("document_type") or data.get("Document_Type") or "",
+            "guest_count": guests,
+            # Payment
+            "transaction_id": transaction_id,
+            "invoice_number": transaction_id,
+            "refund_reference_number": transaction_id,
+            "amount": formatted_amount,
+            "plan_amount": formatted_amount,
+            "refund_amount": formatted_amount,
+            "renewal_amount": formatted_amount,
+            "gst_amount": formatted_gst_amount,
+            "gst_number": gst_number,
+            "payment_method": payment_method,
+            # Support
+            "support_number": support_number,
+            "customer_support_number": support_number,
             "support_email": support_email,
             "customer_support_email": support_email,
-            "customer_support_mail": support_email,
-            "support_phone": support_phone,
-            "support_number": support_phone,
-            "customer_support_phone": support_phone,
-            "customer_support_number": support_phone,
-            "helpline_number": support_phone,
-            "contact_number": support_phone,
-            "subject": subject,
-            "title": title,
+            # Rejection / Cancellation / Failure
+            "cancellation_reason": rejection_reason,
+            "rejection_reason": rejection_reason,
+            "failure_reason": rejection_reason,
+            "reason": rejection_reason,
+            # Dates
+            "cancellation_date": formatted_cancellation_date,
+            "refund_date": formatted_refund_date,
+            "payment_date": formatted_payment_date,
+            "activation_date": formatted_activation_date,
+            "expiry_date": formatted_expiry_date,
+            "request_date": formatted_request_date,
+            "reset_request_time": formatted_reset_request_time,
+            "attempt_date": formatted_attempt_date,
+            "effective_date": formatted_effective_date,
+            # Subscriptions
+            "subscription_id": subscription_id,
+            "plan_name": plan_name,
+            "auto_renewal_status": auto_renewal_status,
         }
-        for key, value in data.items():
-            if isinstance(key, str) and key not in variables:
-                variables[key] = value
-        title_case_aliases = {
-            "Name": name,
-            "User_Name": name,
-            "Host_Name": data.get("host_name") or name,
-            "Guest_Name": data.get("guest_name") or name,
-            "Customer_Name": data.get("customer_name") or name,
-            "Email": email,
-            "Email_Address": email,
-            "Mobile": mobile,
-            "Phone": mobile,
-            "Property_Name": property_title,
-            "Property_Title": property_title,
-            "Property_ID": property_id,
-            "Approval_Date": approval_date,
-            "Published_Date": published_date,
-            "Booking_ID": booking_id,
-            "Booking_Date": booking_date,
-            "Check_In_Date": check_in_date,
-            "Check_Out_Date": check_out_date,
-            "Guests": guests,
-            "Number_Of_Guests": guests,
-            "Amount": total_amount,
-            "Total_Amount": total_amount,
-            "Refund_Amount": refund_amount,
-            "Refund_ID": data.get("refund_id") or "",
-            "Plan_Name": plan_name,
-            "Payment_ID": payment_id,
-            "Invoice_ID": invoice_id,
-            "Reason": reason,
-            "Remarks": remarks,
-            "Reset_Link": reset_link,
-            "Action_URL": cta_url,
-            "Action_Url": cta_url,
-            "Action_Link": cta_url,
-            "CTA_URL": cta_url,
-            "Cta_Url": cta_url,
-            "CTA_Link": cta_url,
-            "Button_URL": cta_url,
-            "Button_Url": cta_url,
-            "Button_Link": cta_url,
-            "Button_Link_URL": cta_url,
-            "Link": cta_url,
-            "URL": cta_url,
-            "Url": cta_url,
-            "Redirect_URL": cta_url,
-            "Login_URL": cta_url,
-            "Dashboard_URL": dashboard_url,
-            "Dashboard_Url": dashboard_url,
-            "Dashboard_Link": dashboard_url,
-            "Property_URL": data.get("property_url") or cta_url,
-            "Booking_URL": data.get("booking_url") or cta_url,
-            "Invoice_URL": data.get("invoice_url") or cta_url,
-            "Upload_Corrected_Documents_URL": cta_url,
-            "Upload_Corrected_Documents_Link": cta_url,
-            "Reupload_Documents_URL": cta_url,
-            "Reupload_Documents_Link": cta_url,
-            "Documents_URL": cta_url,
-            "Document_Upload_Link": cta_url,
-            "Document_Upload_URL": cta_url,
-            "Rejection_Reason": remarks,
-            "Reason_For_Rejection": remarks,
-            "Reason_for_Rejection": remarks,
-            "Document_Type": data.get("document_type") or data.get("Document_Type") or "",
-            "Support_Email": support_email,
-            "Customer_Support_Email": support_email,
-            "Customer_Support_Mail": support_email,
-            "Support_Phone": support_phone,
-            "Support_Number": support_phone,
-            "Customer_Support_Phone": support_phone,
-            "Customer_Support_Number": support_phone,
-            "Helpline_Number": support_phone,
-            "Contact_Number": support_phone,
-        }
-        variables.update(title_case_aliases)
 
-        # Exact Handlebars contract used by the MSG91 rejection template.
-        if template == "host_documents_rejected":
-            variables.update(
-                {
-                    "User_Name": name,
-                    "Rejection_Reason": remarks,
-                    "Document_Upload_Link": cta_url,
-                    "Support_Email": support_email,
-                    "Support_Number": support_phone,
-                }
-            )
-        for index, value in enumerate(list(variables.values())[:20], start=1):
+        # 5. Add CTA button mappings
+        cta_buttons = [
+            "action_url", "action_link", "cta_url", "cta_link", "button_url", "button_link", "link", "url", "redirect_url",
+            "view_cancellation_policy", "view_cancellation_policy_url", "view_cancellation_policy_link",
+            "login_to_your_account", "login_to_your_account_url", "login_to_your_account_link",
+            "update_property", "update_property_url", "update_property_link",
+            "manage_subscription", "manage_subscription_url", "manage_subscription_link",
+            "leave_your_review", "leave_your_review_url", "leave_your_review_link",
+            "view_updated_privacy_policy", "view_updated_privacy_policy_url", "view_updated_privacy_policy_link",
+            "view_updated_terms_conditions", "view_updated_terms_conditions_url", "view_updated_terms_conditions_link",
+            "view_updated_terms_and_conditions", "view_updated_terms_and_conditions_url", "view_updated_terms_and_conditions_link",
+            "retry_subscription_payment", "retry_subscription_payment_url", "retry_subscription_payment_link",
+            "renew_subscription", "renew_subscription_url", "renew_subscription_link",
+            "reset_password", "reset_password_url", "reset_password_link", "reset_link",
+            "view_booking", "view_booking_url", "view_booking_link", "booking_url", "booking_link",
+            "view_invoice", "view_invoice_url", "view_invoice_link", "invoice_url", "invoice_link",
+            "document_upload_link", "document_upload_url", "upload_corrected_documents_url", "upload_corrected_documents_link",
+            "reupload_documents_url", "reupload_documents_link", "documents_url"
+        ]
+        for btn in cta_buttons:
+            base_vars[btn] = cta_url
+
+        # 6. Merge caller-provided data dictionary
+        merged_vars = {}
+        for dk, dv in data.items():
+            if isinstance(dk, str):
+                merged_vars[dk] = dv
+        merged_vars.update(base_vars)
+
+        # 7. Generate casing variations for all resolved variables
+        variables = {}
+        for key, value in list(merged_vars.items()):
+            # Always preserve raw keys passed
+            variables[key] = value
+            
+            keys_to_process = [key]
+            normalized_key = key.replace("-", "_").replace(" ", "_")
+            if normalized_key != key:
+                keys_to_process.append(normalized_key)
+            
+            for k in keys_to_process:
+                words = get_words(k)
+                if not words:
+                    words = [k]
+                
+                sc = "_".join(words)
+                usc = sc.upper()
+                variables[sc] = value
+                variables[usc] = value
+                
+                # Standard capitalization
+                tsc_std = "_".join(w.capitalize() for w in words)
+                cc_std = words[0] + "".join(w.capitalize() for w in words[1:])
+                pc_std = "".join(w.capitalize() for w in words)
+                hc_std = "-".join(w.capitalize() for w in words)
+                
+                variables[tsc_std] = value
+                variables[cc_std] = value
+                variables[pc_std] = value
+                variables[hc_std] = value
+                
+                # Acronym-aware capitalization
+                def cap_word(w: str) -> str:
+                    if w.lower() in ("id", "url", "cta", "gst", "sms"):
+                        return w.upper()
+                    return w.capitalize()
+                
+                tsc_acr = "_".join(cap_word(w) for w in words)
+                cc_acr = (cap_word(words[0]) if words[0].lower() in ("id", "url", "cta", "gst", "sms") else words[0]) + "".join(cap_word(w) for w in words[1:])
+                pc_acr = "".join(cap_word(w) for w in words)
+                hc_acr = "-".join(cap_word(w) for w in words)
+                
+                variables[tsc_acr] = value
+                variables[cc_acr] = value
+                variables[pc_acr] = value
+                variables[hc_acr] = value
+                
+                # Lowercase and uppercase variants
+                lc = "".join(words)
+                uc = lc.upper()
+                variables[lc] = value
+                variables[uc] = value
+                
+                # Hyphenated lowercase/Title variants
+                hc = "-".join(words)
+                thc_std = "-".join(w.capitalize() for w in words)
+                thc_acr = "-".join(cap_word(w) for w in words)
+                variables[hc] = value
+                variables[thc_std] = value
+                variables[thc_acr] = value
+                
+                # Hybrid check-in / check-out variations (e.g. Check-In_Instructions)
+                if len(words) >= 2 and words[0] == "check" and words[1] in ("in", "out"):
+                    first_part_lower = f"check-{words[1]}"
+                    first_part_upper = f"CHECK-{words[1].upper()}"
+                    first_part_title = f"Check-{words[1].capitalize()}"
+                    
+                    rest_words = words[2:]
+                    if rest_words:
+                        hy_lc = f"{first_part_lower}_" + "_".join(rest_words)
+                        hy_uc = f"{first_part_upper}_" + "_".join(w.upper() for w in rest_words)
+                        hy_th_std = f"{first_part_title}_" + "_".join(w.capitalize() for w in rest_words)
+                        hy_th_acr = f"{first_part_title}_" + "_".join(cap_word(w) for w in rest_words)
+                        
+                        variables[hy_lc] = value
+                        variables[hy_uc] = value
+                        variables[hy_th_std] = value
+                        variables[hy_th_acr] = value
+                        
+                        # Also support uppercase suffix for acronym-aware if needed
+                    else:
+                        variables[first_part_lower] = value
+                        variables[first_part_upper] = value
+                        variables[first_part_title] = value
+                
+                if "-" in k:
+                    variables[k] = value
+                    variables[k.lower()] = value
+                    variables[k.upper()] = value
+
+        # 8. Add fallback var1..var20 mappings (for backward compatibility if needed)
+        for index, value in enumerate(list(base_vars.values())[:20], start=1):
             variables[f"var{index}"] = value
             variables[f"VAR{index}"] = value
+
+        # 9. Clean values and return
         return {k: _clean_msg91_value(v) for k, v in variables.items()}
 
     def _send_msg91_template(self, to_email: str, template: str, subject: str, title: str, cta_url: str, data: Dict) -> Dict:
