@@ -98,8 +98,8 @@ const ChatbotWidget = () => {
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-gray-100 shadow-sm z-10">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-full bg-charcoal flex items-center justify-center shadow-subtle">
-                <Sparkles className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-full bg-terracotta flex items-center justify-center shadow-subtle">
+                <Sparkles className="w-4 h-4 text-charcoal" />
               </div>
               <div>
                 <h3 className="text-[15px] font-bold text-charcoal tracking-tight leading-tight">X-Space360</h3>
@@ -119,8 +119,8 @@ const ChatbotWidget = () => {
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'model' && (
-                  <div className="w-6 h-6 rounded-full bg-charcoal flex items-center justify-center shrink-0 mr-3 mt-1 shadow-sm">
-                    <Sparkles className="w-3 h-3 text-white" />
+                  <div className="w-6 h-6 rounded-full bg-terracotta flex items-center justify-center shrink-0 mr-3 mt-1 shadow-sm">
+                    <Sparkles className="w-3 h-3 text-charcoal" />
                   </div>
                 )}
                 <div 
@@ -139,8 +139,8 @@ const ChatbotWidget = () => {
             
             {isTyping && (
               <div className="flex justify-start">
-                <div className="w-6 h-6 rounded-full bg-charcoal flex items-center justify-center shrink-0 mr-3 mt-1 shadow-sm">
-                  <Sparkles className="w-3 h-3 text-white" />
+                <div className="w-6 h-6 rounded-full bg-terracotta flex items-center justify-center shrink-0 mr-3 mt-1 shadow-sm">
+                  <Sparkles className="w-3 h-3 text-charcoal" />
                 </div>
                 <div className="bg-white border border-gray-100 rounded-3xl rounded-tl-sm px-5 py-4 shadow-sm flex items-center space-x-1.5">
                   <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
@@ -183,9 +183,9 @@ const ChatbotWidget = () => {
               <button
                 type="submit"
                 disabled={!input.trim() || isTyping}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-charcoal flex items-center justify-center hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-terracotta flex items-center justify-center hover:bg-terracotta-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
               >
-                {isTyping ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Send className="w-4 h-4 text-white ml-0.5" />}
+                {isTyping ? <Loader2 className="w-4 h-4 text-charcoal animate-spin" /> : <Send className="w-4 h-4 text-charcoal ml-0.5" />}
               </button>
             </form>
             <div className="text-center mt-3">
@@ -199,9 +199,9 @@ const ChatbotWidget = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="w-16 h-16 rounded-full bg-charcoal hover:bg-black shadow-elevated flex items-center justify-center transition-transform hover:scale-[1.02] cursor-pointer"
+          className="w-16 h-16 rounded-full bg-terracotta hover:bg-terracotta-hover shadow-elevated flex items-center justify-center transition-transform hover:scale-[1.02] cursor-pointer"
         >
-          <MessageSquare className="w-7 h-7 text-white" />
+          <MessageSquare className="w-7 h-7 text-charcoal" />
         </button>
       )}
     </div>
