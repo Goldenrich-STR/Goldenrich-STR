@@ -10,7 +10,6 @@ import {
   Mail, EyeOff, Lock, User, MapPin, Eye, Camera, Info, ArrowLeft,
   Search, ChevronDown
 } from 'lucide-react';
-import CouponManagement from '../components/admin/CouponManagement';
 import SearchLogsManagement from '../components/admin/SearchLogsManagement';
 import AICallsManagement from '../components/admin/AICallsManagement';
 import { Phone, Volume2, HelpCircle, Download, UserPlus } from 'lucide-react';
@@ -362,10 +361,7 @@ const AdminDashboard = () => {
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             { id: 'users', label: 'Users', icon: Users },
             { id: 'properties', label: 'Properties', icon: Building2 },
-            { id: 'bookings', label: 'Bookings', icon: Calendar },
-            { id: 'subscriptions', label: 'Subscriptions', icon: Zap },
             { id: 'cms', label: 'CMS', icon: TrendingUp },
-            { id: 'coupons', label: 'Coupons', icon: Tag },
             { id: 'search-logs', label: 'Search Logs', icon: FileText },
             { id: 'ai-calls', label: 'AI Voice Calls', icon: Phone },
           ].map((tab) => (
@@ -494,26 +490,9 @@ const AdminDashboard = () => {
           <PropertyModeration />
         )}
 
-        {/* Bookings Tab */}
-        {activeTab === 'bookings' && (
-          <BookingManagement />
-        )}
-
-        {/* Subscriptions Tab */}
-        {activeTab === 'subscriptions' && (
-          <SubscriptionManagement />
-        )}
-
         {/* CMS Tab */}
         {activeTab === 'cms' && (
           <CMSManagement />
-        )}
-
-        {/* Coupons Tab */}
-        {activeTab === 'coupons' && (
-          <div data-testid="coupons-section" className="animate-fade-in">
-            <CouponManagement />
-          </div>
         )}
 
         {/* Search Logs Tab */}
@@ -954,6 +933,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         birthdate: editUser.birthdate,
         profile_image: editUser.profile_image,
         lg_code: editUser.lg_code,
+        employee_code: editUser.employee_code,
         is_active: editUser.is_active
       };
       
@@ -1066,7 +1046,12 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     try {
       await apiClient.patch(`/admin/users/${userId}`, { broker_id: brokerId });
       alert('Broker assigned successfully!');
-      setViewUser(prev => ({ ...prev, broker_id: brokerId }));
+      const assignedBroker = allBrokers.find(b => b.user_id === brokerId);
+      setViewUser(prev => ({
+        ...prev,
+        broker_id: brokerId,
+        lg_code: assignedBroker?.lg_code || prev?.lg_code || ''
+      }));
       fetchUsers();
     } catch (error) {
       alert('Failed to assign broker: ' + (error.response?.data?.detail || error.message));
@@ -1077,7 +1062,12 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     try {
       await apiClient.patch(`/admin/users/${userId}`, { rm_id: rmId });
       alert('RM assigned successfully!');
-      setViewUser(prev => ({ ...prev, rm_id: rmId }));
+      const assignedEmployee = allEmployees.find(emp => emp.user_id === rmId);
+      setViewUser(prev => ({
+        ...prev,
+        rm_id: rmId,
+        employee_code: assignedEmployee?.employee_code || prev?.employee_code || ''
+      }));
       fetchUsers();
     } catch (error) {
       alert('Failed to assign RM: ' + (error.response?.data?.detail || error.message));
@@ -1134,6 +1124,21 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
   const displayTotalUsers = selectedRole && displayedUsers.length !== users.length
     ? displayedUsers.length
     : totalUsers;
+
+  const getAssignedBroker = (u) => (
+    allBrokers.find(b => b.user_id === u?.broker_id)
+    || allBrokers.find(b => b.lg_code && u?.lg_code && b.lg_code.toLowerCase() === u.lg_code.toLowerCase())
+    || null
+  );
+
+  const getAssignedEmployee = (u) => (
+    allEmployees.find(emp => emp.user_id === u?.rm_id)
+    || allEmployees.find(emp => emp.employee_code && u?.employee_code && emp.employee_code.toLowerCase() === u.employee_code.toLowerCase())
+    || null
+  );
+
+  const getHostBrokerCode = (u) => u?.lg_code || getAssignedBroker(u)?.lg_code || 'Not assigned';
+  const getHostEmployeeCode = (u) => u?.employee_code || getAssignedEmployee(u)?.employee_code || 'Not assigned';
 
   return (
     <div data-testid="user-management">
@@ -2173,32 +2178,75 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                       </div>
                     </div>
 
-                    <div className="p-4 bg-stone rounded-2xl">
-                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Host User ID / LG Code</p>
-                      <p className="text-xs font-mono text-charcoal-light">{getDisplayUID(viewUser)} {viewUser.lg_code && getDisplayUID(viewUser) !== viewUser.lg_code ? `| LG: ${viewUser.lg_code}` : ''}</p>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="p-4 bg-stone rounded-2xl">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Host User ID</p>
+                        <p className="text-xs font-mono text-charcoal-light break-all">{getDisplayUID(viewUser)}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-stone rounded-2xl">
+                          <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Broker Code</p>
+                          <p className="text-xs font-mono font-bold text-terracotta break-all">{getHostBrokerCode(viewUser)}</p>
+                        </div>
+                        <div className="p-4 bg-stone rounded-2xl">
+                          <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Employee Code</p>
+                          <p className="text-xs font-mono font-bold text-terracotta break-all">{getHostEmployeeCode(viewUser)}</p>
+                        </div>
+                      </div>
                     </div>
 
                     {viewUser.role === 'host' && (
-                      <div className="p-4 bg-stone rounded-2xl">
-                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Assigned Broker</p>
-                        <div className="flex flex-col space-y-2 mt-2">
-                          <select 
-                            className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs font-bold text-charcoal"
-                            value={viewUser.broker_id || ''}
-                            onChange={(e) => handleAssignBroker(viewUser.user_id, e.target.value)}
-                          >
-                            <option value="">-- Assign a Broker --</option>
-                            {allBrokers.map(b => (
-                              <option key={b.user_id} value={b.user_id}>
-                                {b.full_name} ({b.lg_code || b.user_id})
-                              </option>
-                            ))}
-                          </select>
-                          {viewUser.broker_id && (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-stone rounded-2xl">
+                          <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Assigned Broker</p>
+                          <div className="flex flex-col space-y-2 mt-2">
+                            <select 
+                              className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs font-bold text-charcoal"
+                              value={viewUser.broker_id || getAssignedBroker(viewUser)?.user_id || ''}
+                              onChange={(e) => handleAssignBroker(viewUser.user_id, e.target.value)}
+                            >
+                              <option value="">-- Assign a Broker --</option>
+                              {allBrokers.map(b => (
+                                <option key={b.user_id} value={b.user_id}>
+                                  {b.full_name} ({b.lg_code || b.user_id})
+                                </option>
+                              ))}
+                            </select>
                             <p className="text-[10px] font-bold text-terracotta mt-1 tracking-widest uppercase">
-                              Broker ID: {viewUser.broker_id}
+                              Broker Code: {getHostBrokerCode(viewUser)}
                             </p>
-                          )}
+                            {viewUser.broker_id && (
+                              <p className="text-[10px] font-mono font-semibold text-charcoal-light break-all">
+                                Broker ID: {viewUser.broker_id}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="p-4 bg-stone rounded-2xl">
+                          <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Assigned Employee</p>
+                          <div className="flex flex-col space-y-2 mt-2">
+                            <select 
+                              className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs font-bold text-charcoal"
+                              value={viewUser.rm_id || getAssignedEmployee(viewUser)?.user_id || ''}
+                              onChange={(e) => handleAssignRM(viewUser.user_id, e.target.value)}
+                            >
+                              <option value="">-- Assign an Employee --</option>
+                              {allEmployees.map(emp => (
+                                <option key={emp.user_id} value={emp.user_id}>
+                                  {emp.full_name} ({emp.employee_code || emp.user_id})
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-[10px] font-bold text-terracotta mt-1 tracking-widest uppercase">
+                              Employee Code: {getHostEmployeeCode(viewUser)}
+                            </p>
+                            {viewUser.rm_id && (
+                              <p className="text-[10px] font-mono font-semibold text-charcoal-light break-all">
+                                Employee ID: {viewUser.rm_id}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -2287,6 +2335,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                               </a>
                             )}
 
+                            {viewUser.kyc_status !== 'approved' && (
                             <div className="flex gap-2 pt-2 border-t border-sand-100">
                               <button
                                 type="button"
@@ -2313,6 +2362,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                                 Reject
                               </button>
                             </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -2350,7 +2400,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
                 {/* KYC Actions Row */}
                 <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  {viewUser.role === 'host' ? (
+                  {viewUser.role === 'host' && viewUser.kyc_status !== 'approved' ? (
                     <>
                       <div className="text-xs text-charcoal-muted font-bold">
                         ⚠️ Verify all documents and signature against local guidelines before approval.
@@ -2369,6 +2419,15 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                           Approve KYC & Go Live
                         </button>
                       </div>
+                    </>
+                  ) : viewUser.role === 'host' ? (
+                    <>
+                      <div className="text-xs text-green-700 font-bold">
+                        KYC is already approved. Review actions are disabled.
+                      </div>
+                      <button onClick={() => setViewUser(null)} className="w-full sm:w-auto btn-premium py-4 px-8">
+                        Close Inspection Details
+                      </button>
                     </>
                   ) : (
                     <button onClick={() => setViewUser(null)} className="w-full btn-premium py-4">Close Inspection Details</button>
@@ -3161,7 +3220,7 @@ const PropertyModeration = () => {
 };
 
 // Booking Management Component
-const BookingManagement = () => {
+export const BookingManagement = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
@@ -5035,7 +5094,7 @@ const CMSManagement = () => {
 };
 
 // Subscription Management Component
-const SubscriptionManagement = () => {
+export const SubscriptionManagement = () => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
