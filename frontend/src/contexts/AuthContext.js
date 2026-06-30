@@ -62,16 +62,19 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, [token, refreshUser]);
 
+  const persistSession = (accessToken, userData) => {
+    setToken(accessToken);
+    setUser(userData);
+
+    localStorage.setItem('propnest_token', accessToken);
+    localStorage.setItem('propnest_user', JSON.stringify(userData));
+  };
+
   const login = async (email, password) => {
     try {
       const response = await authAPI.login(email, password);
       const { access_token, user: userData } = response.data;
-      
-      setToken(access_token);
-      setUser(userData);
-      
-      localStorage.setItem('propnest_token', access_token);
-      localStorage.setItem('propnest_user', JSON.stringify(userData));
+      persistSession(access_token, userData);
       
       return { success: true, user: userData };
     } catch (error) {
@@ -79,6 +82,22 @@ export const AuthProvider = ({ children }) => {
       return {
         success: false,
         error: error.response?.data?.detail || 'Login failed',
+      };
+    }
+  };
+
+  const adminLogin = async (email, password) => {
+    try {
+      const response = await authAPI.adminLogin(email, password);
+      const { access_token, user: userData } = response.data;
+      persistSession(access_token, userData);
+
+      return { success: true, user: userData };
+    } catch (error) {
+      console.error('Admin login failed:', error);
+      return {
+        success: false,
+        error: error.response?.data?.detail || 'Admin login failed',
       };
     }
   };
@@ -123,6 +142,7 @@ export const AuthProvider = ({ children }) => {
     token,
     loading,
     login,
+    adminLogin,
     register,
     acceptToken,
     logout,

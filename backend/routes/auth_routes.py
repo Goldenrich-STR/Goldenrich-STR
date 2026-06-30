@@ -69,6 +69,68 @@ async def get_db():
     from server import db_instance
     return db_instance
 
+def _user_token_response(user_dict: dict) -> TokenResponse:
+    access_token = create_access_token(data={
+        "user_id": user_dict["user_id"],
+        "email": user_dict["email"],
+        "role": user_dict["role"],
+    })
+
+    user_response = UserResponse(
+        user_id=user_dict["user_id"],
+        email=user_dict["email"],
+        phone=user_dict.get("phone", ""),
+        full_name=user_dict.get("full_name", ""),
+        role=user_dict["role"],
+        city=user_dict.get("city"),
+        profile_image=user_dict.get("profile_image"),
+        kyc_status=user_dict.get("kyc_status"),
+        is_active=user_dict.get("is_active", True),
+        created_at=user_dict.get("created_at") or datetime.now(timezone.utc),
+    )
+
+    return TokenResponse(
+        access_token=access_token,
+        user=user_response,
+    )
+
+async def _get_or_sync_env_admin(db: AsyncIOMotorDatabase, email: str) -> dict:
+    now = datetime.now(timezone.utc)
+    admin_name = _env("ADMIN_NAME", "X-Space360 Admin") or "X-Space360 Admin"
+    admin_phone = _env("ADMIN_PHONE", "+910000000000") or "+910000000000"
+
+    existing = await db.users.find_one({"email": email}, {"_id": 0})
+    update_fields = {
+        "email": email,
+        "full_name": admin_name,
+        "role": UserRole.ADMIN.value,
+        "is_active": True,
+        "is_email_verified": True,
+        "updated_at": now,
+    }
+
+    if existing:
+        await db.users.update_one({"user_id": existing["user_id"]}, {"$set": update_fields})
+        existing.update(update_fields)
+        return existing
+
+    admin_user = User(
+        user_id=f"ADM -{now.strftime('%d%m%Y%H%M')}",
+        uid=f"ADM -{now.strftime('%d%m%Y%H%M')}",
+        email=email,
+        phone=admin_phone,
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        full_name=admin_name,
+        role=UserRole.ADMIN,
+        is_active=True,
+        is_email_verified=True,
+        is_phone_verified=False,
+        terms_accepted=True,
+    )
+    admin_dict = admin_user.model_dump()
+    await db.users.insert_one(admin_dict)
+    return admin_dict
+
 def _normalize_sso_role(raw_role: str | None) -> UserRole:
     role = (raw_role or "").strip().lower()
     if role in {"broker", "agent", "channel_partner", "cp", "lg"}:
@@ -481,6 +543,13 @@ async def get_public_brokers_and_employees(db: AsyncIOMotorDatabase = Depends(ge
 async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
     """Register a new user."""
     try:
+        role_str = user_data.role.value if hasattr(user_data.role, "value") else str(user_data.role)
+        if role_str.lower() == UserRole.ADMIN.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin accounts can only be managed from the admin environment",
+            )
+
         # Check if user already exists
         existing_user = await db.users.find_one({"email": user_data.email})
         if existing_user:
@@ -502,7 +571,6 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
         
         # Resolve broker if lg_code is provided for a host
         broker_id = None
-        role_str = user_data.role.value if hasattr(user_data.role, "value") else str(user_data.role)
         if role_str.lower() == "host" and user_data.lg_code and user_data.lg_code.strip():
             lg_code_clean = user_data.lg_code.strip()
             broker = await db.users.find_one({
@@ -638,15 +706,22 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
 
 @router.post("/login", response_model=TokenResponse)
 async def login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends(get_db)):
-    """Login user and return JWT token."""
+    """Login non-admin users and return JWT token."""
     try:
         # Find user by email
-        user_dict = await db.users.find_one({"email": credentials.email}, {"_id": 0})
+        email = credentials.email.strip().lower()
+        user_dict = await db.users.find_one({"email": email}, {"_id": 0})
         
         if not user_dict:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid email or password"
+            )
+
+        if user_dict.get("role") == UserRole.ADMIN.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admins must sign in from the admin login page"
             )
         
         # Verify password
@@ -662,32 +737,8 @@ async def login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends(get_d
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account is deactivated"
             )
-        
-        # Create access token
-        access_token = create_access_token(data={
-            "user_id": user_dict["user_id"],
-            "email": user_dict["email"],
-            "role": user_dict["role"]
-        })
-        
-        # Return response
-        user_response = UserResponse(
-            user_id=user_dict["user_id"],
-            email=user_dict["email"],
-            phone=user_dict["phone"],
-            full_name=user_dict["full_name"],
-            role=user_dict["role"],
-            city=user_dict.get("city"),
-            profile_image=user_dict.get("profile_image"),
-            kyc_status=user_dict.get("kyc_status"),
-            is_active=user_dict["is_active"],
-            created_at=user_dict["created_at"]
-        )
-        
-        return TokenResponse(
-            access_token=access_token,
-            user=user_response
-        )
+
+        return _user_token_response(user_dict)
     
     except HTTPException:
         raise
@@ -696,6 +747,39 @@ async def login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends(get_d
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Login failed"
+        )
+
+
+@router.post("/admin-login", response_model=TokenResponse)
+async def admin_login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Login admin using ADMIN_EMAIL and ADMIN_PASSWORD from environment."""
+    try:
+        admin_email = _env("ADMIN_EMAIL").lower()
+        admin_password = _env("ADMIN_PASSWORD")
+        email = credentials.email.strip().lower()
+
+        if not admin_email or not admin_password:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Admin login is not configured",
+            )
+
+        if email != admin_email or not secrets.compare_digest(credentials.password, admin_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid admin email or password",
+            )
+
+        user_dict = await _get_or_sync_env_admin(db, admin_email)
+        return _user_token_response(user_dict)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Admin login error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Admin login failed"
         )
 
 

@@ -708,6 +708,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
   const [allBrokers, setAllBrokers] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
   const [rejectDocState, setRejectDocState] = useState(null);
+  const fetchUsersRequestRef = useRef(0);
 
   const fetchBrokersAndEmployees = async () => {
     try {
@@ -774,6 +775,8 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
   useEffect(() => {
     setCurrentPage(1);
+    setUsers([]);
+    setTotalUsers(0);
   }, [roleFilter, searchTerm, emailSearch, phoneSearch, uidSearch, locationSearch]);
 
   useEffect(() => {
@@ -867,11 +870,16 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
   };
 
   const fetchUsers = async () => {
+    const requestId = fetchUsersRequestRef.current + 1;
+    fetchUsersRequestRef.current = requestId;
+    setLoading(true);
+
     try {
+      const selectedRole = (roleFilter || '').trim().toLowerCase();
       const params = {
         limit: usersPerPage,
         skip: (currentPage - 1) * usersPerPage,
-        role: roleFilter || undefined,
+        role: selectedRole || undefined,
         search: searchTerm || undefined,
         email: emailSearch || undefined,
         phone: phoneSearch || undefined,
@@ -879,12 +887,24 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         location: locationSearch || undefined
       };
       const response = await apiClient.get('/admin/users', { params });
-      setUsers(response.data.users || []);
-      setTotalUsers(response.data.total || 0);
+      if (requestId !== fetchUsersRequestRef.current) return;
+
+      const responseUsers = response.data.users || [];
+      const roleSafeUsers = selectedRole
+        ? responseUsers.filter(user => String(user.role || '').toLowerCase() === selectedRole)
+        : responseUsers;
+
+      setUsers(roleSafeUsers);
+      setTotalUsers(selectedRole && roleSafeUsers.length !== responseUsers.length
+        ? roleSafeUsers.length
+        : response.data.total || 0);
     } catch (error) {
+      if (requestId !== fetchUsersRequestRef.current) return;
       console.error('Error fetching users:', error);
     } finally {
-      setLoading(false);
+      if (requestId === fetchUsersRequestRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -1107,6 +1127,14 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     }
   };
 
+  const selectedRole = (roleFilter || '').trim().toLowerCase();
+  const displayedUsers = selectedRole
+    ? users.filter(user => String(user.role || '').toLowerCase() === selectedRole)
+    : users;
+  const displayTotalUsers = selectedRole && displayedUsers.length !== users.length
+    ? displayedUsers.length
+    : totalUsers;
+
   return (
     <div data-testid="user-management">
       <div className="dashboard-card mb-6">
@@ -1210,7 +1238,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         </div>
       ) : (
         <div className="space-y-4" data-testid="users-list">
-          {users.map((user) => (
+          {displayedUsers.map((user) => (
             <div key={user.user_id} className="dashboard-card hover:shadow-subtle transition-all group" data-testid={`user-${user.user_id}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
@@ -1298,14 +1326,14 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
           ))}
           
           {/* Pagination Controls */}
-          {totalUsers > usersPerPage && (
+          {displayTotalUsers > usersPerPage && (
             <div className="flex justify-between items-center bg-white px-6 py-4 rounded-2xl border border-gray-100 mt-6 flex-wrap gap-4">
               <p className="text-xs text-charcoal-muted">
                 Showing <span className="font-bold text-charcoal">{(currentPage - 1) * usersPerPage + 1}</span> to{' '}
                 <span className="font-bold text-charcoal">
-                  {Math.min(currentPage * usersPerPage, totalUsers)}
+                  {Math.min(currentPage * usersPerPage, displayTotalUsers)}
                 </span>{' '}
-                of <span className="font-bold text-charcoal">{totalUsers}</span> users
+                of <span className="font-bold text-charcoal">{displayTotalUsers}</span> users
               </p>
               <div className="flex items-center space-x-2">
                 <button
@@ -1316,9 +1344,9 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                {Array.from({ length: Math.ceil(totalUsers / usersPerPage) }).map((_, idx) => {
+                {Array.from({ length: Math.ceil(displayTotalUsers / usersPerPage) }).map((_, idx) => {
                   const pageNum = idx + 1;
-                  const totalPages = Math.ceil(totalUsers / usersPerPage);
+                  const totalPages = Math.ceil(displayTotalUsers / usersPerPage);
                   if (
                     pageNum === 1 ||
                     pageNum === totalPages ||
@@ -1349,8 +1377,8 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 })}
                 <button
                   type="button"
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(totalUsers / usersPerPage)))}
-                  disabled={currentPage === Math.ceil(totalUsers / usersPerPage)}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(displayTotalUsers / usersPerPage)))}
+                  disabled={currentPage === Math.ceil(displayTotalUsers / usersPerPage)}
                   className="p-2 rounded-xl border border-gray-100 text-charcoal-light hover:bg-stone transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="w-4 h-4" />
