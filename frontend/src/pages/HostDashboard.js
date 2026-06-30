@@ -23,6 +23,7 @@ const HostDashboard = () => {
 
   // Verification & Agreement Modal States
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [verificationSubmitting, setVerificationSubmitting] = useState(false);
   
@@ -511,7 +512,7 @@ const HostDashboard = () => {
   };
 
   const unusedSubsCount = subscriptions.filter(s => !s.property_id && s.status === 'active').length;
-  const isLocked = properties.length >= 1 && unusedSubsCount === 0;
+  const isLocked = false;
 
   const handleListPropertyClick = () => {
     if (!user?.kyc_status || user.kyc_status === 'unverified' || user.kyc_status === 'rejected') {
@@ -661,7 +662,10 @@ const HostDashboard = () => {
             <div className="h-6 w-px bg-sand-200"></div>
             <div className="flex items-center space-x-4">
               <NotificationBell />
-              <div className="flex items-center space-x-3 px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm">
+              <div 
+                onClick={() => setShowProfileModal(true)}
+                className="flex items-center space-x-3 px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
+              >
                  <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
                     {user?.full_name?.[0]}
                  </div>
@@ -1383,6 +1387,111 @@ const HostDashboard = () => {
                   className="flex-1 btn-premium py-4 shadow-premium"
                 >
                   I Agree & Save Signature
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showProfileModal && (
+          <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
+            <div className="bg-white rounded-[2rem] p-8 max-w-lg w-full shadow-elevated border border-gray-100 animate-scale-up">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-2xl font-bold tracking-tight text-charcoal">Profile Details</h3>
+                  <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mt-1">Your registered account parameters</p>
+                </div>
+                <button 
+                  onClick={() => setShowProfileModal(false)} 
+                  className="w-8 h-8 rounded-full bg-stone flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-all"
+                >
+                  <Plus className="w-5 h-5 rotate-45" />
+                </button>
+              </div>
+
+              <div className="flex items-center space-x-4 mb-6 p-4 bg-stone rounded-2xl">
+                <div className="w-14 h-14 rounded-xl bg-terracotta text-white flex items-center justify-center text-xl font-bold">
+                  {user?.full_name?.[0]}
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-charcoal">{user?.full_name}</h4>
+                  <span className="inline-block px-2.5 py-0.5 mt-1 bg-charcoal text-white rounded-full text-[9px] font-bold uppercase tracking-widest">
+                    {user?.role}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">User ID</span>
+                    <span className="text-xs font-mono font-semibold text-charcoal break-all">{user?.user_id || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">System UID / Code</span>
+                    <span className="text-xs font-semibold text-charcoal break-all">{user?.uid || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Email Address</span>
+                    <span className="text-xs font-semibold text-charcoal break-all">{user?.email || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Phone Number</span>
+                    <span className="text-xs font-semibold text-charcoal break-all">{user?.phone || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">City</span>
+                    <span className="text-xs font-semibold text-charcoal">{user?.city || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">State</span>
+                    <span className="text-xs font-semibold text-charcoal">{user?.state || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Franchise</span>
+                    <span className="text-xs font-semibold text-charcoal">{user?.franchise || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Branch</span>
+                    <span className="text-xs font-semibold text-charcoal">{user?.branch || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Date of Birth</span>
+                    <span className="text-xs font-semibold text-charcoal">{user?.birthdate || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">KYC Status</span>
+                    <span className="inline-block mt-0.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-stone text-charcoal">
+                      {user?.kyc_status || 'N/A'}
+                    </span>
+                  </div>
+                  {user?.broker_id && (
+                    <div className="col-span-2">
+                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Assigned Broker ID</span>
+                      <span className="text-xs font-mono font-semibold text-charcoal break-all">{user?.broker_id}</span>
+                    </div>
+                  )}
+                  {user?.lg_code && (
+                    <div>
+                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Broker LG Code</span>
+                      <span className="text-xs font-semibold text-charcoal">{user?.lg_code}</span>
+                    </div>
+                  )}
+                  {user?.rm_id && (
+                    <div className="col-span-2">
+                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Assigned RM ID</span>
+                      <span className="text-xs font-mono font-semibold text-charcoal break-all">{user?.rm_id}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-8 pt-4 border-t border-gray-100 flex justify-end">
+                <button 
+                  onClick={() => setShowProfileModal(false)}
+                  className="btn-premium px-8 py-3 shadow-premium text-xs uppercase tracking-widest font-bold"
+                >
+                  Close Details
                 </button>
               </div>
             </div>

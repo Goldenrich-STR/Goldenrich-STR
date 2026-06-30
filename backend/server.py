@@ -320,6 +320,14 @@ async def startup_sequence():
     except Exception as e:
         logger.error(f"Failed to start payout sweeper: {e}")
 
+    # 8. Start subscription status sweeper
+    try:
+        from services.subscription_sweep import start_subscription_sweeper
+        sweep_interval = int(os.environ.get("SUBSCRIPTION_SWEEP_INTERVAL", "86400")) # Default once a day
+        await start_subscription_sweeper(db_instance, interval_seconds=sweep_interval)
+    except Exception as e:
+        logger.error(f"Failed to start subscription status sweeper: {e}")
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

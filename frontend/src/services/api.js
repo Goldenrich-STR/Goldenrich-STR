@@ -236,6 +236,12 @@ export const subscriptionAPI = {
 
   deletePlan: (planId) =>
     apiClient.delete(`/subscriptions/admin/plans/${planId}`),
+
+  getAdminPlans: () =>
+    apiClient.get('/subscriptions/admin/plans'),
+
+  togglePlanStatus: (planId) =>
+    apiClient.patch(`/subscriptions/admin/plans/${planId}/toggle`),
 };
 
 // Upload API
@@ -498,6 +504,7 @@ export const couponAPI = {
   createCoupon: (data) => apiClient.post('/coupons/', data),
   listCoupons: () => apiClient.get('/coupons/'),
   getPropertyCoupons: (propertyId) => apiClient.get(`/coupons/property/${propertyId}`),
+  toggleCouponStatus: (couponId) => apiClient.patch(`/coupons/admin/${couponId}/toggle`),
 };
 
 // Admin API

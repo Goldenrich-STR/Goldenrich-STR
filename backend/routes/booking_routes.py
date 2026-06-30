@@ -209,9 +209,11 @@ async def create_booking(
         # Determine payment order amount
         order_amount = total_amount
         advance_amount = 0.0
-        if booking_data.payment_type == "advance":
+        if booking_data.payment_type == "advance" and property_dict.get("category") == "event_venue":
             advance_amount = round(total_amount * (advance_rate / 100), 2)
             order_amount = advance_amount
+        else:
+            booking_data.payment_type = "full"
         
         # Create booking with soft lock
         # Soft-lock window — 5 minutes. Stored as timezone-aware UTC so that

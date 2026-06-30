@@ -16,9 +16,25 @@ from services.razorpay_service import razorpay_service  # noqa: E402
 GUEST = {"email": "guest@propnest.com", "password": "guest123"}
 HOST = {"email": "host@propnest.com", "password": "host123"}
 
-# Phase 9 brief recommends prop_demo_3 (Heritage Haveli) or prop_demo_4 (Tech Park)
-PRIMARY_PROPERTY = "prop_demo_3_1778066214"
-FALLBACK_PROPERTY = "prop_demo_4_1778066214"
+# Resolve properties dynamically at module loading time
+def _resolve_properties():
+    try:
+        r = requests.get(f"{API}/properties/search", params={"limit": 20}, timeout=15)
+        if r.status_code == 200:
+            props = r.json().get("properties", [])
+            # Find residential or commercial properties
+            res_comm = [p["property_id"] for p in props if p.get("category") in ("residential", "commercial")]
+            if len(res_comm) >= 2:
+                return res_comm[0], res_comm[1]
+            elif len(res_comm) == 1:
+                return res_comm[0], res_comm[0]
+    except Exception:
+        pass
+    # Fallback suffix from database list
+    return "prop_demo_1_1782690078", "prop_demo_4_1782690078"
+
+PRIMARY_PROPERTY, FALLBACK_PROPERTY = _resolve_properties()
+
 
 
 # ---------- fixtures ----------
@@ -258,3 +274,30 @@ class TestPhase8Regression:
         r = requests.get(f"{API}/properties/search", params={"limit": 5}, timeout=15)
         assert r.status_code == 200
         assert "properties" in r.json()
+
+
+# ---------- advance payment constraint check ----------
+class TestAdvancePaymentConstraint:
+    def test_residential_commercial_advance_denied(self, guest_token):
+        """Verify that attempting to book a residential/commercial property with advance payment gets coerced to full payment."""
+        today = date.today()
+        base_offset = 1200
+        ci = today + timedelta(days=base_offset)
+        co = ci + timedelta(days=2)
+        payload = {
+            "property_id": PRIMARY_PROPERTY,  # Heritage Haveli, category residential
+            "check_in_date": ci.isoformat(),
+            "check_out_date": co.isoformat(),
+            "number_of_guests": 2,
+            "payment_type": "advance",
+        }
+        r = requests.post(f"{API}/bookings/", json=payload, headers=_auth(guest_token), timeout=15)
+        if r.status_code == 409:
+            payload["check_in_date"] = (ci + timedelta(days=10)).isoformat()
+            payload["check_out_date"] = (co + timedelta(days=10)).isoformat()
+            r = requests.post(f"{API}/bookings/", json=payload, headers=_auth(guest_token), timeout=15)
+        
+        assert r.status_code == 200, r.text
+        data = r.json()
+        assert data["booking_details"]["payment_type"] == "full"
+

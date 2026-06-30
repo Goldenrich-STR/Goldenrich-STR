@@ -152,10 +152,12 @@ const formatVenuePolicyValue = (key, val) => {
 };
 
 const readPercent = (value, fallback) => {
-  const parsed = Number(String(value ?? '').replace('%', '').trim());
+  if (value === undefined || value === null || String(value).trim() === '') return fallback;
+  const parsed = Number(String(value).replace('%', '').trim());
   if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) return fallback;
   return parsed;
 };
+
 
 const TRANSLATIONS = {
   en: {
@@ -498,13 +500,28 @@ const PropertyDetail = () => {
 
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [recommended, setRecommended] = useState([]);
+  const [isSameCityRecommendation, setIsSameCityRecommendation] = useState(true);
 
-  const fetchRecommendations = async (city, currentId) => {
+  const fetchRecommendations = async (city, currentId, category) => {
     try {
-      const res = await propertyAPI.searchProperties({ city, limit: 10 });
+      // 1. Try to search in the same city with the same category
+      let res = await propertyAPI.searchProperties({ city, category, limit: 10 });
+      let filtered = [];
       if (res.data && res.data.properties) {
-        const filtered = res.data.properties.filter(p => p.property_id !== currentId);
+        filtered = res.data.properties.filter(p => p.property_id !== currentId);
+      }
+      
+      if (filtered.length > 0) {
         setRecommended(filtered.slice(0, 3));
+        setIsSameCityRecommendation(true);
+      } else {
+        // 2. Fallback: Search across all cities for the same category
+        res = await propertyAPI.searchProperties({ category, limit: 10 });
+        if (res.data && res.data.properties) {
+          filtered = res.data.properties.filter(p => p.property_id !== currentId);
+        }
+        setRecommended(filtered.slice(0, 3));
+        setIsSameCityRecommendation(false);
       }
     } catch (err) {
       console.error('Failed to load recommended properties', err);
@@ -512,6 +529,14 @@ const PropertyDetail = () => {
   };
 
   useEffect(() => {
+    setImgIdx(0);
+    setChildrenGuests(0);
+    setInfantGuests(0);
+    setBookingError('');
+    setSelectedSlot('');
+    setFoodPreference('veg');
+    setShowGuestDropdown(false);
+
     fetchProperty();
     fetchBlockedDates();
     fetchReviews();
@@ -585,11 +610,12 @@ const PropertyDetail = () => {
   };
 
   const fetchProperty = async () => {
+    setLoading(true);
     try {
       const res = await propertyAPI.getProperty(id);
       setProperty(res.data);
       if (res.data && res.data.city) {
-        fetchRecommendations(res.data.city, res.data.property_id);
+        fetchRecommendations(res.data.city, res.data.property_id, res.data.category);
       }
     } catch (e) {
       setError(e.response?.status === 404 ? 'Property not found' : 'Failed to load property');
@@ -710,7 +736,7 @@ const PropertyDetail = () => {
   const taxes = baseAmount * (taxPercent / 100);
   const total = baseAmount + serviceFee + taxes;
   const advanceAmount = Math.round(total * (advancePercent / 100));
-  const amountDueNow = bookingPaymentType === 'advance' ? advanceAmount : Math.round(total);
+  const amountDueNow = (property?.category === 'event_venue' && bookingPaymentType === 'advance') ? advanceAmount : Math.round(total);
   const canShowBookingAmount = Boolean(checkIn && checkOut && nights > 0 && amountDueNow > 0);
 
   const goPrev = () => {
@@ -828,7 +854,7 @@ const PropertyDetail = () => {
         number_of_guests: property?.category === 'event_venue' ? Number(guests) : chargeableGuests,
         selected_slot: property?.category === 'event_venue' ? selectedSlot : undefined,
         food_preference: property?.category === 'event_venue' ? foodPreference : undefined,
-        payment_type: paymentType,
+        payment_type: property?.category === 'event_venue' ? paymentType : 'full',
       });
       // Soft lock created — show confirmation; payment integration is mocked
       navigate(`/guest/booking-confirmation?booking_id=${res.data.booking_id}`);
@@ -2071,24 +2097,26 @@ const PropertyDetail = () => {
                     <span className="text-base font-bold tracking-tight text-charcoal uppercase tracking-tighter">{t('totalAmount')}</span>
                     <span className="text-2xl font-bold tracking-tight text-terracotta" data-testid="total-amount">₹{Math.round(total).toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setBookingPaymentType('advance')}
-                      className={`text-left p-3 rounded-2xl border-2 transition-all ${bookingPaymentType === 'advance' ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 bg-white hover:border-gray-200'}`}
-                    >
-                      <span className="block text-[9px] font-bold tracking-tight uppercase tracking-widest text-charcoal-muted">Pay {advancePercent}% Advance</span>
-                      <span className="block text-lg font-bold tracking-tight text-terracotta mt-1">Rs.{advanceAmount.toLocaleString('en-IN')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBookingPaymentType('full')}
-                      className={`text-left p-3 rounded-2xl border-2 transition-all ${bookingPaymentType === 'full' ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 bg-white hover:border-gray-200'}`}
-                    >
-                      <span className="block text-[9px] font-bold tracking-tight uppercase tracking-widest text-charcoal-muted">Pay Full Amount</span>
-                      <span className="block text-lg font-bold tracking-tight text-charcoal mt-1">Rs.{Math.round(total).toLocaleString('en-IN')}</span>
-                    </button>
-                  </div>
+                  {property.category === 'event_venue' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setBookingPaymentType('advance')}
+                        className={`text-left p-3 rounded-2xl border-2 transition-all ${bookingPaymentType === 'advance' ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+                      >
+                        <span className="block text-[9px] font-bold tracking-tight uppercase tracking-widest text-charcoal-muted">Pay {advancePercent}% Advance</span>
+                        <span className="block text-lg font-bold tracking-tight text-terracotta mt-1">Rs.{advanceAmount.toLocaleString('en-IN')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBookingPaymentType('full')}
+                        className={`text-left p-3 rounded-2xl border-2 transition-all ${bookingPaymentType === 'full' ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 bg-white hover:border-gray-200'}`}
+                      >
+                        <span className="block text-[9px] font-bold tracking-tight uppercase tracking-widest text-charcoal-muted">Pay Full Amount</span>
+                        <span className="block text-lg font-bold tracking-tight text-charcoal mt-1">Rs.{Math.round(total).toLocaleString('en-IN')}</span>
+                      </button>
+                    </div>
+                  )}
                   <div className="bg-stone border border-gray-100 rounded-2xl px-4 py-3 flex justify-between items-center">
                     <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Pay Now</span>
                     <span className="text-xl font-bold tracking-tight text-terracotta">Rs.{amountDueNow.toLocaleString('en-IN')}</span>
@@ -2156,7 +2184,9 @@ const PropertyDetail = () => {
         {recommended.length > 0 && (
           <div className="mt-16 pt-16 border-t border-gray-100 animate-slide-up">
             <h2 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight mb-8">
-              {t('similarProperties').replace('{city}', property.city)}
+              {isSameCityRecommendation 
+                ? t('similarProperties').replace('{city}', property.city)
+                : lang === 'mr' ? 'तत्सम जागा' : lang === 'hi' ? 'समान संपत्तियां' : 'Similar Properties'}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {recommended.map((prop) => {
@@ -2167,7 +2197,7 @@ const PropertyDetail = () => {
                   <div 
                     key={prop.property_id} 
                     onClick={() => {
-                      navigate(`/guest/properties/${prop.property_id}`);
+                      navigate(`/property/${prop.property_id}`);
                       window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-premium hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col h-full"

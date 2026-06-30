@@ -255,6 +255,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [roleFilter, setRoleFilter] = useState('');
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   useEffect(() => {
     fetchDashboardStats();
@@ -314,7 +315,15 @@ const AdminDashboard = () => {
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
           <div className="flex items-center space-x-6">
-            <span className="text-charcoal-light">Admin: {user?.full_name}</span>
+            <div 
+              onClick={() => setShowProfileModal(true)}
+              className="flex items-center space-x-3 px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
+            >
+               <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
+                  {user?.full_name?.[0]}
+               </div>
+               <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">Admin: {user?.full_name?.split(' ')[0]}</span>
+            </div>
             <button
               onClick={() => navigate('/admin/account')}
               className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-terracotta text-white font-semibold hover:bg-terracotta-dark transition text-sm"
@@ -521,6 +530,111 @@ const AdminDashboard = () => {
           </div>
         )}
       </div>
+
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
+          <div className="bg-white rounded-[2rem] p-8 max-w-lg w-full shadow-elevated border border-gray-100/80 animate-scale-up animate-fade-in">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-2xl font-bold tracking-tight text-charcoal">Profile Details</h3>
+                <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mt-1">Your registered account parameters</p>
+              </div>
+              <button 
+                onClick={() => setShowProfileModal(false)} 
+                className="w-8 h-8 rounded-full bg-stone flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-all"
+              >
+                <Plus className="w-5 h-5 rotate-45" />
+              </button>
+            </div>
+
+            <div className="flex items-center space-x-4 mb-6 p-4 bg-stone rounded-2xl">
+              <div className="w-14 h-14 rounded-xl bg-terracotta text-white flex items-center justify-center text-xl font-bold">
+                {user?.full_name?.[0]}
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-charcoal">{user?.full_name}</h4>
+                <span className="inline-block px-2.5 py-0.5 mt-1 bg-charcoal text-white rounded-full text-[9px] font-bold uppercase tracking-widest">
+                  {user?.role}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">User ID</span>
+                  <span className="text-xs font-mono font-semibold text-charcoal break-all">{user?.user_id || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">System UID / Code</span>
+                  <span className="text-xs font-semibold text-charcoal break-all">{user?.uid || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Email Address</span>
+                  <span className="text-xs font-semibold text-charcoal break-all">{user?.email || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Phone Number</span>
+                  <span className="text-xs font-semibold text-charcoal break-all">{user?.phone || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">City</span>
+                  <span className="text-xs font-semibold text-charcoal">{user?.city || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">State</span>
+                  <span className="text-xs font-semibold text-charcoal">{user?.state || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Franchise</span>
+                  <span className="text-xs font-semibold text-charcoal">{user?.franchise || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Branch</span>
+                  <span className="text-xs font-semibold text-charcoal">{user?.branch || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Date of Birth</span>
+                  <span className="text-xs font-semibold text-charcoal">{user?.birthdate || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">KYC Status</span>
+                  <span className="inline-block mt-0.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-stone text-charcoal">
+                    {user?.kyc_status || 'N/A'}
+                  </span>
+                </div>
+                {user?.broker_id && (
+                  <div className="col-span-2">
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Assigned Broker ID</span>
+                    <span className="text-xs font-mono font-semibold text-charcoal break-all">{user?.broker_id}</span>
+                  </div>
+                )}
+                {user?.lg_code && (
+                  <div>
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Broker LG Code</span>
+                    <span className="text-xs font-semibold text-charcoal">{user?.lg_code}</span>
+                  </div>
+                )}
+                {user?.rm_id && (
+                  <div className="col-span-2">
+                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Assigned RM ID</span>
+                    <span className="text-xs font-mono font-semibold text-charcoal break-all">{user?.rm_id}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-8 pt-4 border-t border-gray-100 flex justify-end">
+              <button 
+                onClick={() => setShowProfileModal(false)}
+                className="btn-premium px-8 py-3 shadow-premium text-xs uppercase tracking-widest font-bold"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -4903,7 +5017,8 @@ const SubscriptionManagement = () => {
     plan_type: '1bhk',
     price_monthly: '',
     price_annual: '',
-    description: ''
+    description: '',
+    validity_days: 30
   });
 
   useEffect(() => {
@@ -4912,7 +5027,7 @@ const SubscriptionManagement = () => {
 
   const fetchPlans = async () => {
     try {
-      const response = await subscriptionAPI.getPlans();
+      const response = await subscriptionAPI.getAdminPlans();
       setPlans(response.data.plans || []);
     } catch (error) {
       console.error('Error fetching plans:', error);
@@ -4930,7 +5045,7 @@ const SubscriptionManagement = () => {
         await subscriptionAPI.createPlan(newPlan);
       }
       setShowAddModal(false);
-      setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', description: '' });
+      setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', description: '', validity_days: 30 });
       fetchPlans();
     } catch (error) {
       alert('Failed to save plan');
@@ -4938,12 +5053,21 @@ const SubscriptionManagement = () => {
   };
 
   const handleDeletePlan = async (planId) => {
-    if (!window.confirm('Deactivate this plan?')) return;
+    if (!window.confirm('Delete/deactivate this plan?')) return;
     try {
       await subscriptionAPI.deletePlan(planId);
       fetchPlans();
     } catch (error) {
       alert('Failed to delete plan');
+    }
+  };
+
+  const handleTogglePlan = async (planId) => {
+    try {
+      await subscriptionAPI.togglePlanStatus(planId);
+      fetchPlans();
+    } catch (error) {
+      alert('Failed to toggle plan status');
     }
   };
 
@@ -4953,7 +5077,7 @@ const SubscriptionManagement = () => {
         <h3 className="text-2xl font-bold text-charcoal">Subscription Management</h3>
         <button 
           onClick={() => {
-            setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', description: '' });
+            setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', description: '', validity_days: 30 });
             setShowAddModal(true);
           }}
           className="btn-primary flex items-center space-x-2"
@@ -5010,6 +5134,28 @@ const SubscriptionManagement = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-charcoal-muted font-bold uppercase">Monthly</span>
                   <span className="text-lg font-bold tracking-tight text-terracotta">₹{(plan.price_monthly || 0).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-charcoal-muted font-bold uppercase">Validity</span>
+                  <span className="text-sm font-bold text-charcoal">{plan.validity_days || 30} Days</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-50 mt-2">
+                  <div className="flex items-center space-x-1.5">
+                    <span className={`w-2 h-2 rounded-full ${plan.is_active !== false ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-charcoal-muted">
+                      {plan.is_active !== false ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => handleTogglePlan(plan.plan_id)}
+                    className={`px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition duration-300 ${
+                      plan.is_active !== false
+                        ? 'bg-red-50 hover:bg-red-100 text-red-600'
+                        : 'bg-green-50 hover:bg-green-100 text-green-600'
+                    }`}
+                  >
+                    {plan.is_active !== false ? 'Deactivate' : 'Activate'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -5071,6 +5217,15 @@ const SubscriptionManagement = () => {
                 />
               </div>
               <div>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Validity (Days)</label>
+                <input 
+                  type="number" required min={1}
+                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                  value={newPlan.validity_days || 30}
+                  onChange={e => setNewPlan({...newPlan, validity_days: Number(e.target.value)})}
+                />
+              </div>
+              <div>
                 <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Description</label>
                 <textarea 
                   required rows={3}
@@ -5106,6 +5261,10 @@ const SubscriptionManagement = () => {
               <div className="p-4 bg-stone rounded-2xl">
                 <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Annual Cost</p>
                 <p className="text-2xl font-bold tracking-tight text-terracotta">₹{(viewPlan.price_annual || 0).toLocaleString('en-IN')}</p>
+              </div>
+              <div className="p-4 bg-stone rounded-2xl">
+                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Validity (Days)</p>
+                <p className="text-2xl font-bold tracking-tight text-charcoal">{viewPlan.validity_days || 30} Days</p>
               </div>
               <div>
                 <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-2">Description</p>

@@ -26,6 +26,7 @@ class SubscriptionPlan(BaseModel):
     price_monthly: float
     price_annual: float
     description: str
+    validity_days: int = 30
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
