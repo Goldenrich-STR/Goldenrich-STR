@@ -877,27 +877,29 @@ const VerificationReviewSection = () => {
                         )}
                       </div>
                       
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={() => {
-                            setReviewNotice(`${formatDisplayLabel(key)} marked as approved for this review.`);
-                          }}
-                          className="flex-1 py-2 bg-green-50 text-green-700 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded-xl hover:bg-green-100 transition flex items-center justify-center space-x-1"
-                        >
-                          <CheckCircle className="w-3 h-3" />
-                          <span>Approve</span>
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setRejectReason(`Rejected Point: ${formatDisplayLabel(key).toUpperCase()} - `);
-                            setShowRejectReasonModal(true);
-                          }}
-                          className="flex-1 py-2 bg-red-50 text-red-700 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded-xl hover:bg-red-100 transition flex items-center justify-center space-x-1"
-                        >
-                          <XCircle className="w-3 h-3" />
-                          <span>Reject</span>
-                        </button>
-                      </div>
+                      {!selectedVerification.rm_reviewed && selectedVerification.status !== 'approved' && selectedVerification.status !== 'rejected' && (
+                        <div className="flex space-x-2">
+                          <button 
+                            onClick={() => {
+                              setReviewNotice(`${formatDisplayLabel(key)} marked as approved for this review.`);
+                            }}
+                            className="flex-1 py-2 bg-green-50 text-green-700 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded-xl hover:bg-green-100 transition flex items-center justify-center space-x-1"
+                          >
+                            <CheckCircle className="w-3 h-3" />
+                            <span>Approve</span>
+                          </button>
+                          <button 
+                            onClick={() => {
+                              setRejectReason(`Rejected Point: ${formatDisplayLabel(key).toUpperCase()} - `);
+                              setShowRejectReasonModal(true);
+                            }}
+                            className="flex-1 py-2 bg-red-50 text-red-700 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded-xl hover:bg-red-100 transition flex items-center justify-center space-x-1"
+                          >
+                            <XCircle className="w-3 h-3" />
+                            <span>Reject</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -956,27 +958,29 @@ const VerificationReviewSection = () => {
               )}
             </div>
 
-            {/* Actions */}
-            <div className="flex space-x-4 mt-8 pt-8 border-t border-gray-100">
-              <button 
-                onClick={() => setShowRejectReasonModal(true)}
-                className="flex-1 py-4 bg-red-50 text-red-600 font-bold tracking-tight uppercase tracking-widest rounded-2xl hover:bg-red-100 transition flex items-center justify-center space-x-2"
-              >
-                <XCircle className="w-5 h-5" />
-                <span>Reject Report</span>
-              </button>
-              <button 
-                onClick={() => {
-                  setApproveRemarks('');
-                  setApproveError('');
-                  setShowApproveModal(true);
-                }}
-                className="flex-1 py-4 bg-green-600 text-white font-bold tracking-tight uppercase tracking-widest rounded-2xl hover:bg-green-700 shadow-premium shadow-green-200 transition flex items-center justify-center space-x-2"
-              >
-                <CheckCircle className="w-5 h-5" />
-                <span>Approve Report</span>
-              </button>
-            </div>
+             {/* Actions */}
+            {!selectedVerification.rm_reviewed && selectedVerification.status !== 'approved' && selectedVerification.status !== 'rejected' && (
+              <div className="flex space-x-4 mt-8 pt-8 border-t border-gray-100">
+                <button 
+                  onClick={() => setShowRejectReasonModal(true)}
+                  className="flex-1 py-4 bg-red-50 text-red-600 font-bold tracking-tight uppercase tracking-widest rounded-2xl hover:bg-red-100 transition flex items-center justify-center space-x-2"
+                >
+                  <XCircle className="w-5 h-5" />
+                  <span>Reject Report</span>
+                </button>
+                <button 
+                  onClick={() => {
+                    setApproveRemarks('');
+                    setApproveError('');
+                    setShowApproveModal(true);
+                  }}
+                  className="flex-1 py-4 bg-green-600 text-white font-bold tracking-tight uppercase tracking-widest rounded-2xl hover:bg-green-700 shadow-premium shadow-green-200 transition flex items-center justify-center space-x-2"
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  <span>Approve Report</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
