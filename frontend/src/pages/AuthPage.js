@@ -344,28 +344,21 @@ const AuthPage = ({ isAdminLogin = false }) => {
                        <div className="space-y-4">
                           <div className="space-y-3 pt-1 text-center">
                              <label className="block text-[11px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Select Role</label>
-                             <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto">
-                                {['guest', 'host', 'broker'].map(role => (
+                             <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
+                                {['guest', 'host'].map(role => (
                                    <button
                                       key={role}
                                       type="button"
                                       onClick={() => {
-                                         if (role === 'broker') {
-                                            // Unclickable for now
-                                         } else {
-                                            setRegisterData({ ...registerData, role });
-                                         }
+                                         setRegisterData({ ...registerData, role });
                                       }}
                                       className={`py-3 rounded-2xl border-2 font-bold tracking-tight text-[11px] uppercase tracking-widest transition-all duration-500 ${
-                                         role === 'broker'
-                                         ? 'opacity-40 cursor-not-allowed border-gray-100 bg-white text-charcoal-muted'
-                                         : (registerData.role === role 
-                                            ? 'border-terracotta bg-terracotta text-white shadow-elevated scale-[1.02]' 
-                                            : 'border-gray-100 bg-white text-charcoal-muted hover:border-terracotta')
+                                         registerData.role === role 
+                                         ? 'border-terracotta bg-terracotta text-white shadow-elevated scale-[1.02]' 
+                                         : 'border-gray-100 bg-white text-charcoal-muted hover:border-terracotta'
                                       }`}
-                                      disabled={role === 'broker'}
                                    >
-                                      {role === 'guest' ? 'Guest' : role === 'host' ? 'Host' : 'Broker'}
+                                      {role === 'guest' ? 'Guest' : 'Host'}
                                    </button>
                                 ))}
                              </div>
