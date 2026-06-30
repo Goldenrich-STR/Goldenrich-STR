@@ -878,8 +878,7 @@ const PREMIUM_COLLECTIONS = [
   { id: 'villas-resorts', label: 'Villas & Resorts', image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=600', query: 'residential' },
   { id: 'residential-stays', label: 'Residential Stays', image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=600', query: 'residential' },
   { id: 'commercial-spaces', label: 'Commercial Spaces', image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=600', query: 'commercial' },
-  { id: 'wedding-venues', label: 'Wedding Venues', image: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=600', query: 'event_venue' },
-  { id: 'banquet-halls', label: 'Banquet Halls', image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600', query: 'event_venue' }
+  { id: 'event-venues', label: 'Event Venues', image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600', query: 'event_venue' }
 ];
 
 const STANDARD_FEATURES = [
@@ -1099,13 +1098,13 @@ const LandingPage = () => {
   };
 
   const handleListSpaceClick = () => {
-    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/login');
+    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/register');
   };
 
   const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
       if (item.link === '/host/list-property') {
-        navigate(user ? item.link : '/login');
+        navigate(user ? item.link : '/register');
       } else {
         handleFooterLink(item.link, '/');
       }

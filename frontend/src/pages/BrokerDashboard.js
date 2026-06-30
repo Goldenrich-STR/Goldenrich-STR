@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, getImageUrl } from '../services/api';
 import { createPortal } from 'react-dom';
 import { formatCategoryLabel, formatDisplayLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
+import { NotificationBell } from '../components/NotificationCenter';
 import { 
   Users, Building2, FileCheck, Target, IndianRupee, 
   AlertCircle, Plus, CheckCircle, XCircle, Clock, 
@@ -74,6 +75,7 @@ const BrokerDashboard = () => {
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
           <div className="flex items-center space-x-6">
+            <NotificationBell />
             <div 
               onClick={() => setShowProfileModal(true)}
               className="flex items-center space-x-4 px-4 py-2 bg-white/50 border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
@@ -108,15 +110,7 @@ const BrokerDashboard = () => {
             </h2>
             <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Global overview of your owner network and properties</p>
           </div>
-          <div className="flex items-center space-x-4">
-             <div className="p-3 bg-white border border-gray-100 rounded-2xl shadow-sm cursor-pointer hover:shadow-premium transition-all">
-                <Bell className="w-5 h-5 text-charcoal" />
-             </div>
-             <button className="btn-premium px-8 py-4 shadow-premium">
-                <Plus className="w-5 h-5 mr-2" />
-                <span className="text-sm font-bold tracking-tight uppercase tracking-widest">New Verification</span>
-             </button>
-          </div>
+
         </div>
 
         {/* Modern Navigation Tabs */}
@@ -196,25 +190,25 @@ const BrokerDashboard = () => {
                   )}
 
                   {/* Quick Actions */}
-                  <div className="bg-charcoal rounded-3xl p-10 shadow-elevated" data-testid="quick-actions">
-                    <h3 className="text-xl font-bold tracking-tight text-white tracking-tight mb-8">System Shortcuts</h3>
+                  <div className="bg-white border border-gray-100 rounded-3xl p-10 shadow-premium" data-testid="quick-actions">
+                    <h3 className="text-xl font-bold tracking-tight text-charcoal tracking-tight mb-8">System Shortcuts</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {[
                         { id: 'leads', label: 'GENERATE LEAD', icon: Target, color: 'text-terracotta' },
                         { id: 'verifications', label: 'SITE INSPECTION', icon: FileCheck, color: 'text-sage' },
-                        { id: 'owners', label: 'NETWORK VIEW', icon: Users, color: 'text-white' }
+                        { id: 'owners', label: 'NETWORK VIEW', icon: Users, color: 'text-charcoal' }
                       ].map(action => (
                         <button
                           key={action.id}
                           onClick={() => setActiveTab(action.id)}
-                          className="flex items-center justify-between p-6 bg-white/5 border border-white/10 rounded-3xl hover:bg-white hover:border-white transition-all group"
+                          className="flex items-center justify-between p-6 bg-stone/40 border border-sand-200 rounded-3xl hover:bg-white hover:border-terracotta hover:shadow-premium transition-all group"
                           data-testid={`action-${action.id}`}
                         >
                           <div className="flex items-center space-x-4">
                              <action.icon className={`w-6 h-6 ${action.color}`} />
-                             <span className="text-[10px] font-bold tracking-tight text-white/80 group-hover:text-charcoal uppercase tracking-[0.2em]">{action.label}</span>
+                             <span className="text-[10px] font-bold tracking-tight text-charcoal-muted group-hover:text-charcoal uppercase tracking-[0.2em]">{action.label}</span>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-charcoal group-hover:translate-x-1 transition-all" />
+                          <ChevronRight className="w-4 h-4 text-charcoal-muted/30 group-hover:text-terracotta group-hover:translate-x-1 transition-all" />
                         </button>
                       ))}
                     </div>

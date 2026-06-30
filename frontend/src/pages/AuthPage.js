@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star } from 'lucide-react';
 import { authAPI, apiClient } from '../services/api';
@@ -8,12 +8,13 @@ import SEO from '../components/SEO';
 
 const AuthPage = ({ isAdminLogin = false }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, register, logout } = useAuth();
   const forcedLogoutHandled = useRef(false);
   const searchParams = new URLSearchParams(window.location.search);
   const forceLogin = searchParams.get('force_login') === '1';
   const requestedNext = searchParams.get('next') || '';
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(location.pathname !== '/register');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -46,6 +47,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
       logout();
     }
   }, [forceLogin, logout]);
+
+  useEffect(() => {
+    setIsLogin(location.pathname !== '/register');
+  }, [location.pathname]);
 
   useEffect(() => {
     const fetchBrokersAndEmployees = async () => {
@@ -181,7 +186,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                className="flex items-center space-x-3 cursor-pointer group w-fit" 
                onClick={() => navigate('/')}
             >
-               <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain brightness-0 invert" />
+               <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain logo-white" />
             </div>
 
            <div className="animate-slide-up">
@@ -344,17 +349,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
                        <div className="space-y-4">
                           <div className="space-y-3 pt-1 text-center">
                              <label className="block text-[11px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Select Role</label>
-                             <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto">
-                                {['guest', 'host', 'broker'].map(role => (
+                             <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
+                                {['guest', 'host'].map(role => (
                                    <button
                                       key={role}
                                       type="button"
                                       onClick={() => {
-                                         if (role === 'broker') {
-                                            handleGoldenRichSso();
-                                         } else {
-                                            setRegisterData({ ...registerData, role });
-                                         }
+                                         setRegisterData({ ...registerData, role });
                                       }}
                                       className={`py-3 rounded-2xl border-2 font-bold tracking-tight text-[11px] uppercase tracking-widest transition-all duration-500 ${
                                          registerData.role === role 
@@ -362,7 +363,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                          : 'border-gray-100 bg-white text-charcoal-muted hover:border-terracotta'
                                       }`}
                                    >
-                                      {role === 'guest' ? 'Guest' : role === 'host' ? 'Host' : 'Broker'}
+                                      {role === 'guest' ? 'Guest' : 'Host'}
                                    </button>
                                 ))}
                              </div>

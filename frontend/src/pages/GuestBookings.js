@@ -63,6 +63,7 @@ const GuestBookings = () => {
   const [error, setError] = useState('');
   const [cancelling, setCancelling] = useState(null);
   const [cancellingBooking, setCancellingBooking] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
   const [successNotification, setSuccessNotification] = useState(null);
   const [reviewBooking, setReviewBooking] = useState(null);
   const [reviewedIds, setReviewedIds] = useState(new Set());
@@ -153,6 +154,7 @@ const GuestBookings = () => {
   }, [fetchAiCalls, fetchBookings, fetchMyReviews]);
 
   const handleCancel = (booking) => {
+    setCancelReason('');
     setCancellingBooking(booking);
   };
 
@@ -163,6 +165,7 @@ const GuestBookings = () => {
     setCancelling(bookingId);
     try {
       await bookingAPI.cancelBooking(bookingId);
+      setCancelReason('');
       const list = await fetchBookings({ showLoader: false });
       const cancelledB = list.find(b => b.booking_id === bookingId);
       if (cancelledB && cancelledB.booking_status === 'cancelled') {
@@ -170,8 +173,10 @@ const GuestBookings = () => {
           ? Math.round(cancelledB.refund.refund_amount / 100) 
           : 0;
         setSuccessNotification({
-          title: "Refund Received",
-          message: `Your booking was cancelled successfully. A refund of ₹${refundAmt.toLocaleString('en-IN')} has been processed successfully.`,
+          title: "Refund Initiated",
+          message: refundAmt > 0
+            ? `Your booking was cancelled successfully. Your refund of ₹${refundAmt.toLocaleString('en-IN')} will be credited to your account within 24 hours.`
+            : `Your booking was cancelled successfully. Any applicable refund will be credited to your account within 24 hours.`,
           refundAmount: refundAmt,
           policy: cancelledB.refund?.policy_tier
         });
@@ -627,20 +632,35 @@ const GuestBookings = () => {
       {cancellingBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/40 backdrop-blur-sm" data-testid="cancel-confirm-modal">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-premium border border-gray-100">
-            <h3 className="text-lg font-bold tracking-tight text-charcoal text-center mb-6 uppercase tracking-wide leading-tight">
+            <h3 className="text-lg font-bold tracking-tight text-charcoal text-center mb-4 uppercase tracking-wide leading-tight">
               Are you sure you want to cancel?
             </h3>
+
+            {/* Cancellation reason input */}
+            <div className="mb-4">
+              <label className="block text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider mb-2">
+                Cancellation Reason
+              </label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Please enter your reason for cancellation (required)..."
+                className="w-full p-3 border border-gray-200 rounded-2xl text-xs font-semibold text-charcoal outline-none focus:border-terracotta transition-colors resize-none"
+                rows={3}
+              />
+            </div>
             
-            <div className="flex gap-3 mb-6">
+            <div className="flex gap-3 mb-4">
               <button
                 onClick={confirmCancel}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold tracking-tight text-xs uppercase tracking-widest rounded-xl transition shadow-sm cursor-pointer"
+                disabled={!cancelReason.trim()}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white font-bold tracking-tight text-xs uppercase tracking-widest rounded-xl transition shadow-sm cursor-pointer"
                 data-testid="confirm-cancel-yes"
               >
                 Yes
               </button>
               <button
-                onClick={() => setCancellingBooking(null)}
+                onClick={() => { setCancellingBooking(null); setCancelReason(''); }}
                 className="flex-1 py-3 bg-gray-50 hover:bg-sand-200 text-charcoal font-bold tracking-tight text-xs uppercase tracking-widest rounded-xl transition border border-gray-200/50 shadow-sm cursor-pointer"
                 data-testid="confirm-cancel-no"
               >
@@ -648,6 +668,10 @@ const GuestBookings = () => {
               </button>
             </div>
             
+            <p className="text-[10px] text-charcoal-muted font-bold text-center uppercase tracking-wider bg-stone py-2 px-3 rounded-xl border border-gray-100 mb-3">
+              Contact Support: +91 8484826247
+            </p>
+
             <p className="text-[11px] text-charcoal-muted font-bold text-center uppercase tracking-wider bg-stone py-2.5 rounded-xl border border-gray-100">
               Note: The Price & Date may change
             </p>
