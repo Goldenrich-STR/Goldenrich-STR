@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2 } from 'lucide-react';
+import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
@@ -1087,6 +1087,46 @@ const LandingPage = () => {
     };
   });
 
+  const footerLegalItems = [
+    { label: footerData.privacy_label || 'Privacy Policy', action_type: 'text', link: '', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text },
+    { label: footerData.terms_label || 'Terms & Conditions', action_type: 'text', link: '', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text },
+    { label: 'Cookie Policy', action_type: 'text', link: '', text: 'X-Space360 uses essential cookies to keep accounts, bookings, payments, and security features working smoothly.' },
+  ];
+  const footerDisplaySections = [
+    {
+      heading: footerSections[0]?.heading || 'For Guests',
+      items: [
+        footerSections[0]?.items?.[0] || { label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
+        { label: 'All Destinations', action_type: 'link', link: '/guest/browse', text: '' },
+        { label: 'Short-term Stays', action_type: 'link', link: '/guest/browse', text: '' },
+        footerSections[0]?.items?.[1] || { label: 'FAQs', action_type: 'text', link: '', text: DEFAULT_FOOTER_DATA.footer_sections[0].items[1].text },
+      ],
+    },
+    {
+      heading: footerSections[1]?.heading || 'For Hosts',
+      items: [
+        footerSections[1]?.items?.[0] || { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
+        { label: 'Become a Host', action_type: 'link', link: '/register', text: '' },
+      ],
+    },
+    {
+      heading: 'Company',
+      items: [
+        { label: 'About Us', action_type: 'text', link: '', text: 'X-Space360 curates verified short-term rental spaces across India with reliable support and booking operations.' },
+        { label: 'Blog', action_type: 'link', link: '#blog', text: '' },
+      ],
+    },
+    {
+      heading: 'Support',
+      items: [
+        { label: 'Help Center', action_type: 'link', link: '/support', text: '' },
+        { label: 'Cancellation Options', action_type: 'text', link: '', text: 'Cancellation options depend on the booking terms shared during confirmation.' },
+        { label: footerData.checkin_label || 'Check-In Instructions', action_type: 'text', link: '', text: footerData.checkin_text || DEFAULT_FOOTER_DATA.checkin_text },
+        { label: 'Safety & Privacy', action_type: 'text', link: '', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text },
+        { label: 'Contact Us', action_type: 'link', link: '/support', text: '' },
+      ],
+    },
+  ];
   const handleFooterLink = (url, fallbackUrl = '/') => {
     const target = url || fallbackUrl;
     if (target.startsWith('#')) {
@@ -2075,109 +2115,106 @@ const LandingPage = () => {
         </div>
       </div>
 
-<footer className="relative bg-[#0A0A0A] border-t border-white/10 pt-32 pb-20 transition-colors duration-500 overflow-hidden shadow-premium">
-        {/* Luxury background glow */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-gold/5 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand-green/5 rounded-full blur-[120px] pointer-events-none" />
-
-        <div className="w-full max-w-none px-8 md:px-16 xl:px-24 relative z-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-12 xl:gap-x-16 2xl:gap-x-20 gap-y-12 mb-20">
-            <div>
-              <div 
-                className="flex items-center mb-8 cursor-pointer group"
+      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,#0b1b2e_0%,#07111e_48%,#101722_100%)] pointer-events-none" />
+        <div className="relative z-10 w-full px-6 py-12 md:px-10 lg:px-14 xl:px-20">
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.45fr_repeat(5,1fr)] lg:gap-12">
+            <div className="max-w-xs">
+              <button
+                type="button"
+                className="mb-6 flex items-center"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                aria-label="Back to top"
               >
-                <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105 logo-white" />
-              </div>
-              <p className="text-white/80 text-[13.5px] mb-8 max-w-sm leading-relaxed font-medium">
+                <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain logo-white" />
+              </button>
+              <p className="text-sm font-medium leading-7 text-white/62">
                 {footerData.brand_description || t('footerSub')}
               </p>
-              <div className="flex space-x-3.5">
-                 {[
-                   { icon: Facebook, url: 'https://facebook.com' },
-                   { icon: Instagram, url: 'https://instagram.com' },
-                   { icon: Twitter, url: 'https://twitter.com' },
-                   { icon: Linkedin, url: 'https://linkedin.com' }
-                 ].map((social, idx) => {
-                   const IconComponent = social.icon;
-                   if (!IconComponent) return null;
-                   return (
-                     <a 
-                       key={idx}
-                       href={social.url} 
-                       target="_blank" 
-                       rel="noopener noreferrer" 
-                       className="w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:border-white text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300 flex items-center justify-center hover:-translate-y-1 cursor-pointer"
-                     >
-                       <IconComponent className="w-4 h-4" />
-                     </a>
-                   );
-                 })}
+              <div className="mt-7 flex items-center gap-3">
+                {[
+                  { icon: Facebook, url: 'https://facebook.com', label: 'Facebook' },
+                  { icon: Instagram, url: 'https://instagram.com', label: 'Instagram' },
+                  { icon: Twitter, url: 'https://twitter.com', label: 'Twitter' },
+                  { icon: Linkedin, url: 'https://linkedin.com', label: 'LinkedIn' },
+                ].map((social) => {
+                  const IconComponent = social.icon;
+                  return (
+                    <a
+                      key={social.label}
+                      href={social.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={social.label}
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/14 bg-white/[0.03] text-white/70 transition hover:border-[#E0A51B] hover:text-[#E0A51B]"
+                    >
+                      <IconComponent className="h-4 w-4" />
+                    </a>
+                  );
+                })}
               </div>
             </div>
-            {footerSections.map((section, index) => (
-              <div key={`${section.heading}-${index}`} className="min-w-0">
-                <h5 className="font-bold tracking-wider text-white uppercase tracking-[0.25em] text-[11px] mb-9 pb-3.5 border-b border-white/10 inline-block w-full">{section.heading || `Section ${index + 1}`}</h5>
-                <ul className="space-y-5">
-                  {section.items.map((item, itemIndex) => {
-                    const label = item.label || item.text || 'Footer Text';
-                    return (
-                      <li key={itemIndex} className="text-sm">
-                        {(index === 0 || index === 1 || index === 3) ? (
-                          <button
-                            type="button"
-                            onClick={() => handleFooterSectionClick(section, item)}
-                            className="text-left text-white/90 font-medium hover:text-white transition-all duration-300 hover:translate-x-1.5 inline-block py-0.5"
-                          >
-                            {label}
-                          </button>
-                        ) : (
-                          <div className="text-white/90 font-medium">
-                            {label.includes('@') ? (
-                              <div className="space-y-1">
-                                <span className="block text-[9px] font-bold text-white/60 uppercase tracking-widest leading-none">
-                                  {label.includes('nodal') ? 'Nodal Officer Email' : 'Support Email'}
-                                </span>
-                                <a
-                                  href={`mailto:${label.trim()}`}
-                                  className="font-bold text-white hover:text-white/70 transition-colors duration-300 break-normal whitespace-nowrap text-xs xl:text-[12.5px] underline decoration-white/20 hover:decoration-white/50 block py-0.5"
-                                >
-                                  {label}
-                                </a>
-                              </div>
-                            ) : (label.includes('+91') || label.match(/^\+?[\d\s-]{10,}$/)) ? (
-                              <div className="space-y-1">
-                                <span className="block text-[9px] font-bold text-white/60 uppercase tracking-widest leading-none">
-                                  {label.includes('76206') ? 'Escalation Phone' : 'Support Phone'}
-                                </span>
-                                <a
-                                  href={`tel:${label.replace(/\s+/g, '')}`}
-                                  className="font-bold text-white hover:text-white/70 transition-colors duration-300 break-normal whitespace-nowrap text-xs xl:text-[12.5px] block py-0.5"
-                                >
-                                  {label}
-                                </a>
-                              </div>
-                            ) : label.startsWith('Officer:') ? (
-                              <div className="space-y-1">
-                                <span className="block text-[9px] font-bold text-white/60 uppercase tracking-widest leading-none">Grievance Officer</span>
-                                <span className="block text-sm font-bold text-white whitespace-nowrap">{label.replace('Officer:', '').trim()}</span>
-                              </div>
-                            ) : (
-                              <span className="font-medium text-white/80 text-sm leading-relaxed block py-0.5">
-                                {label}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
+
+            {footerDisplaySections.map((section) => (
+              <div key={section.heading} className="min-w-0">
+                <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
+                  {section.heading}
+                  <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
+                </h5>
+                <ul className="space-y-4">
+                  {section.items.map((item) => (
+                    <li key={`${section.heading}-${item.label}`}>
+                      <button
+                        type="button"
+                        onClick={() => handleFooterSectionClick(section, item)}
+                        className="text-left text-sm font-medium text-white/62 transition hover:text-[#E0A51B]"
+                      >
+                        {item.label}
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               </div>
             ))}
+
+            <div className="min-w-0">
+              <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
+                Contact
+                <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
+              </h5>
+              <div className="space-y-5 text-sm font-medium text-white/62">
+                <div className="flex items-start gap-3">
+                  <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
+                  <span>{footerData.location || 'Nashik, Maharashtra'}, India</span>
+                </div>
+                <a href={`mailto:${footerData.email || 'support@x-space360.com'}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
+                  <Mail className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
+                  <span className="break-all">{footerData.email || 'support@x-space360.com'}</span>
+                </a>
+                <a href={`tel:${(footerData.phone || '+91 12345 67890').replace(/\s+/g, '')}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
+                  <Phone className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
+                  <span>{footerData.phone || '+91 12345 67890'}</span>
+                </a>
+              </div>
+            </div>
           </div>
-          <div className="pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-white/60 font-medium text-[11px] tracking-wide uppercase leading-relaxed max-w-2xl text-center md:text-left">{t('precision')}</p>
+
+          <div className="mt-11 border-t border-white/10 pt-7 text-center">
+            <div className="text-xs font-bold uppercase text-white/52">
+              <p>© 2026 X-SPACE360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.</p>
+              <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2">
+                {footerLegalItems.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => handleFooterSectionClick({ heading: 'Legal' }, item)}
+                    className="transition hover:text-[#E0A51B]"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </footer>
