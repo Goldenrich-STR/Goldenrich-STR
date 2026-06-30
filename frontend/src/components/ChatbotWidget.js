@@ -2,8 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, MessageSquare, Sparkles, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
-const API_KEY = atob("QVEuQWI4Uk42SWJzZnpmVm5rbnoxc0std1lDczN3UnNNWjVCM1ZZWFkwLUdqYkJYQ0ljZ0F3");
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+// Gemini API calls are securely proxied through our backend server to prevent client-side key exposure.
 
 const SYSTEM_INSTRUCTION = "You are the X-Space360 Assistant, a helpful, professional, and sophisticated AI assistant for the X-Space360 platform. X-Space360 is a premium platform for booking luxury properties across India, including Villas & Resorts, Residential Stays, Commercial Spaces, Wedding Venues, and Banquet Halls. Do not mention that you are an AI model developed by Google or Gemini. Do not use emojis in your responses. Use clear, concise text and markdown formatting (like bolding and lists) where appropriate to make information readable. Provide helpful answers related to property booking, hosting, subscriptions, and platform features.";
 
@@ -120,35 +119,26 @@ const ChatbotWidget = () => {
     setIsTyping(true);
 
     try {
-      // Prepare history for Gemini API
-      const contents = newMessages.map(msg => ({
-        role: msg.role === 'model' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
-      }));
-
-      const payload = {
-        systemInstruction: {
-          parts: [{ text: SYSTEM_INSTRUCTION }]
-        },
-        contents: contents,
-        generationConfig: {
-          temperature: 0.7,
-        }
-      };
-
-      const response = await fetch(API_URL, {
+      // Proxy chat request securely to backend
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
+      const response = await fetch(`${backendUrl}/api/ai-calls/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          message: queryText,
+          history: newMessages.slice(0, -1).map(msg => ({
+            role: msg.role === 'model' ? 'model' : 'user',
+            text: msg.content
+          }))
+        })
       });
 
       const data = await response.json();
       
-      if (data.candidates && data.candidates[0].content.parts[0].text) {
-        const botReply = data.candidates[0].content.parts[0].text;
-        setMessages([...newMessages, { role: 'model', content: botReply }]);
+      if (data && data.response) {
+        setMessages([...newMessages, { role: 'model', content: data.response }]);
       } else {
         const fallbackReply = getLocalResponse(queryText);
         setMessages([...newMessages, { role: 'model', content: fallbackReply }]);
