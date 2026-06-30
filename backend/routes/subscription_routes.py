@@ -132,10 +132,10 @@ async def create_subscription(
         
         # Calculate dates
         start_date = date.today()
-        if subscription_data.billing_cycle == "monthly":
-            end_date = start_date + timedelta(days=30)
-        else:
-            end_date = start_date + timedelta(days=365)
+        validity_days = plan.get("validity_days", 30)
+        if not validity_days:
+            validity_days = 30 if subscription_data.billing_cycle == "monthly" else 365
+        end_date = start_date + timedelta(days=validity_days)
         
         # Create subscription
         subscription = Subscription(
@@ -600,6 +600,7 @@ async def create_subscription_plan(
     price_monthly: float,
     price_annual: float,
     description: str,
+    validity_days: int = 30,
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -616,7 +617,8 @@ async def create_subscription_plan(
             plan_name=plan_name,
             price_monthly=price_monthly,
             price_annual=price_annual,
-            description=description
+            description=description,
+            validity_days=validity_days
         )
         
         plan_dict = plan.model_dump()
@@ -633,6 +635,75 @@ async def create_subscription_plan(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create subscription plan"
         )
+
+@router.get("/admin/plans")
+async def get_admin_subscription_plans(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get all subscription plans, including inactive ones (Admin only)."""
+    try:
+        if current_user["role"] != UserRole.ADMIN.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required"
+            )
+        cursor = db.subscription_plans.find({}, {"_id": 0})
+        plans = await cursor.to_list(length=100)
+        return {
+            "plans": plans,
+            "total": len(plans)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching admin plans: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch plans"
+        )
+
+@router.patch("/admin/plans/{plan_id}/toggle")
+async def toggle_subscription_plan_status(
+    plan_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Toggle subscription plan active status (Admin only)."""
+    try:
+        if current_user["role"] != UserRole.ADMIN.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required"
+            )
+        
+        plan = await db.subscription_plans.find_one({"plan_id": plan_id})
+        if not plan:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Subscription plan not found"
+            )
+            
+        new_status = not plan.get("is_active", True)
+        await db.subscription_plans.update_one(
+            {"plan_id": plan_id},
+            {"$set": {"is_active": new_status}}
+        )
+        
+        logger.info(f"Subscription plan toggled to {new_status} for: {plan_id}")
+        return {
+            "message": f"Subscription plan status updated to {'active' if new_status else 'inactive'}",
+            "is_active": new_status
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error toggling subscription plan status: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to toggle subscription plan status"
+        )
+
 @router.delete("/admin/plans/{plan_id}")
 async def delete_subscription_plan(
     plan_id: str,
@@ -678,6 +749,8 @@ async def update_subscription_plan(
     price_monthly: Optional[float] = None,
     price_annual: Optional[float] = None,
     description: Optional[str] = None,
+    validity_days: Optional[int] = None,
+    is_active: Optional[bool] = None,
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -695,6 +768,8 @@ async def update_subscription_plan(
         if price_monthly is not None: update_data["price_monthly"] = price_monthly
         if price_annual is not None: update_data["price_annual"] = price_annual
         if description: update_data["description"] = description
+        if validity_days is not None: update_data["validity_days"] = validity_days
+        if is_active is not None: update_data["is_active"] = is_active
         
         if not update_data:
             return {"message": "No changes provided"}
@@ -720,4 +795,28 @@ async def update_subscription_plan(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update subscription plan"
+        )
+
+@router.post("/admin/sweep")
+async def trigger_subscription_sweep(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Manually trigger the subscription expiration and warning sweep (Admin only)."""
+    try:
+        if current_user["role"] != UserRole.ADMIN.value:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Admin access required"
+            )
+        from services.subscription_sweep import sweep_subscriptions
+        await sweep_subscriptions(db)
+        return {"message": "Subscription status sweep executed successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error triggering subscription sweep: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to execute subscription status sweep"
         )

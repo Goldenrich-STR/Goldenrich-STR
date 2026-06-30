@@ -186,7 +186,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       'check_in_date': dateFormat.format(_checkInDate!),
       'check_out_date': dateFormat.format(_checkOutDate!),
       'number_of_guests': _guestCount,
-      'payment_type': _paymentType,
+      'payment_type': isEvent ? _paymentType : 'full',
     };
 
     if (isEvent) {

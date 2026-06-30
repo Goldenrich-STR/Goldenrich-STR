@@ -128,3 +128,43 @@ async def get_subscription_coupons(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch subscription coupons"
         )
+
+@router.patch("/admin/{coupon_id}/toggle", response_model=dict)
+async def toggle_coupon_status(
+    coupon_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Toggle coupon active status (Admin only)"""
+    try:
+        if current_user.get("role") != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admins can toggle coupon status"
+            )
+            
+        coupon = await db.coupons.find_one({"coupon_id": coupon_id})
+        if not coupon:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Coupon not found"
+            )
+            
+        new_status = not coupon.get("is_active", True)
+        await db.coupons.update_one(
+            {"coupon_id": coupon_id},
+            {"$set": {"is_active": new_status}}
+        )
+        
+        logger.info(f"Coupon status toggled to {new_status} for: {coupon_id}")
+        return {"message": f"Coupon status updated to {'active' if new_status else 'inactive'}", "is_active": new_status}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error toggling coupon status: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to toggle coupon status"
+        )
+

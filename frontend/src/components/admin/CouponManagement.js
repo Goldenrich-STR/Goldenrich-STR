@@ -77,6 +77,15 @@ const CouponManagement = () => {
     }
   };
 
+  const handleToggleCoupon = async (couponId) => {
+    try {
+      await couponAPI.toggleCouponStatus(couponId);
+      fetchCoupons();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to toggle coupon status');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
@@ -253,6 +262,7 @@ const CouponManagement = () => {
                   <th className="px-6 py-4 text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">Discount</th>
                   <th className="px-6 py-4 text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">Scope</th>
                   <th className="px-6 py-4 text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">Status</th>
+                  <th className="px-6 py-4 text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-sand-100">
@@ -293,8 +303,22 @@ const CouponManagement = () => {
                           <CheckCircle className="w-4 h-4 mr-1" /> Active
                         </span>
                       ) : (
-                        <span className="text-red-500 font-bold text-sm">Inactive</span>
+                        <span className="inline-flex items-center text-red-500 font-bold text-sm">
+                          <XCircle className="w-4 h-4 mr-1" /> Inactive
+                        </span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => handleToggleCoupon(coupon.coupon_id)}
+                        className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition duration-300 ${
+                          coupon.is_active
+                            ? 'bg-red-50 hover:bg-red-100 text-red-600'
+                            : 'bg-green-50 hover:bg-green-100 text-green-600'
+                        }`}
+                      >
+                        {coupon.is_active ? 'Deactivate' : 'Activate'}
+                      </button>
                     </td>
                   </tr>
                 ))}
