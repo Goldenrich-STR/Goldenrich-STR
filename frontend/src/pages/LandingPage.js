@@ -499,8 +499,8 @@ const DEFAULT_FOOTER_DATA = {
       { label: 'Check-In Instructions', action_type: 'text', link: '', text: 'Standard check-in time starts at 2:00 PM. Please coordinate with your host at least 24 hours prior to arrival for key handover and coordinate exchange. Valid ID proof must be submitted at the time of check-in.' }
     ] },
     { heading: 'Grievance & Escalation', resolution_text: 'Resolution: 7 working days', items: [
-      { label: 'Officer: Rahul Mundra', action_type: 'text', link: '', text: 'Grievance Officer: Rahul Mundra\nEmail: nodal.officer@rupiyaloan.com\nPhone: +91 76206 66949\nResolution: 7 working days' },
-      { label: 'nodal.officer@rupiyaloan.com', action_type: 'text', link: '', text: 'Email nodal.officer@rupiyaloan.com for grievance escalation.\nResolution: 7 working days.' },
+      { label: 'Officer: Rahul Mundra', action_type: 'text', link: '', text: 'Grievance Officer: Rahul Mundra\nEmail: nodal.officer@x-space360.com\nPhone: +91 76206 66949\nResolution: 7 working days' },
+      { label: 'nodal.officer@x-space360.com', action_type: 'text', link: '', text: 'Email nodal.officer@x-space360.com for grievance escalation.\nResolution: 7 working days.' },
     ] },
   ],
   hosts_title: 'For Hosts',
@@ -511,7 +511,7 @@ const DEFAULT_FOOTER_DATA = {
   contact_title: 'Contact',
   grievance_title: 'Grievance & Escalations',
   grievance_officer: 'Rahul Mundra',
-  grievance_email: 'nodal.officer@rupiyaloan.com',
+  grievance_email: 'nodal.officer@x-space360.com',
   grievance_phone: '+91 76206 66949',
   resolution_text: 'Resolution: 7 working days',
   privacy_label: 'Privacy Policy',
@@ -1070,12 +1070,12 @@ const LandingPage = () => {
     }
   }
 
-  const footerSections = rawSections.slice(0, 5).map((rawSection, index) => {
+  const footerSections = rawSections.slice(0, 4).map((rawSection, index) => {
     const section = rawSection || {};
     return {
       ...section,
       heading: (!section.heading || /^Section\s+\d+$/i.test(section.heading))
-        ? ['For Guests', 'For Hosts', 'Contact', 'Legal', 'Grievance & Escalation'][index]
+        ? ['For Guests', 'For Hosts', 'Contact', 'Legal'][index]
         : section.heading,
       items: Array.isArray(section.items) && section.items.length
         ? section.items.filter(Boolean).map(item => ({
@@ -2076,21 +2076,21 @@ const LandingPage = () => {
         </div>
       </div>
 
-<footer className="relative bg-gradient-to-b from-white to-[#FCFAF7] border-t-2 border-brand-gold/20 pt-20 pb-12 transition-colors duration-500 overflow-hidden shadow-premium">
+<footer className="relative bg-[#0A0A0A] border-t border-white/10 pt-32 pb-20 transition-colors duration-500 overflow-hidden shadow-premium">
         {/* Luxury background glow */}
-        <div className="absolute top-0 left-1/4 w-80 h-80 bg-brand-gold/5 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-brand-green/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-gold/5 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-brand-green/5 rounded-full blur-[120px] pointer-events-none" />
 
-        <div className="max-w-[1400px] mx-auto px-6 md:px-10 xl:px-16 relative z-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 xl:grid-cols-[1.2fr_0.7fr_0.7fr_1.1fr_0.7fr_1.6fr] gap-x-6 xl:gap-x-8 2xl:gap-x-10 gap-y-12 mb-16">
+        <div className="w-full max-w-none px-8 md:px-16 xl:px-24 relative z-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-12 xl:gap-x-16 2xl:gap-x-20 gap-y-12 mb-20">
             <div>
               <div 
-                className="flex items-center mb-6 cursor-pointer group"
+                className="flex items-center mb-8 cursor-pointer group"
                 onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               >
-                <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105" />
+                <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-105 logo-white" />
               </div>
-              <p className="text-charcoal-light/80 text-[13.5px] mb-8 max-w-sm leading-relaxed font-semibold">
+              <p className="text-white/80 text-[13.5px] mb-8 max-w-sm leading-relaxed font-medium">
                 {footerData.brand_description || t('footerSub')}
               </p>
               <div className="flex space-x-3.5">
@@ -2108,7 +2108,7 @@ const LandingPage = () => {
                        href={social.url} 
                        target="_blank" 
                        rel="noopener noreferrer" 
-                       className="w-10 h-10 rounded-full bg-charcoal/5 border border-charcoal/10 hover:border-brand-gold text-charcoal-light hover:text-brand-gold hover:bg-brand-gold/10 transition-all duration-300 flex items-center justify-center hover:-translate-y-1 cursor-pointer"
+                       className="w-10 h-10 rounded-full bg-white/5 border border-white/10 hover:border-white text-white/70 hover:text-white hover:bg-white/10 transition-all duration-300 flex items-center justify-center hover:-translate-y-1 cursor-pointer"
                      >
                        <IconComponent className="w-4 h-4" />
                      </a>
@@ -2118,8 +2118,8 @@ const LandingPage = () => {
             </div>
             {footerSections.map((section, index) => (
               <div key={`${section.heading}-${index}`} className="min-w-0">
-                <h5 className="font-bold tracking-wider text-brand-gold uppercase tracking-[0.25em] text-[11px] mb-8 pb-3.5 border-b border-brand-gold/20 inline-block w-full">{section.heading || `Section ${index + 1}`}</h5>
-                <ul className="space-y-4">
+                <h5 className="font-bold tracking-wider text-white uppercase tracking-[0.25em] text-[11px] mb-9 pb-3.5 border-b border-white/10 inline-block w-full">{section.heading || `Section ${index + 1}`}</h5>
+                <ul className="space-y-5">
                   {section.items.map((item, itemIndex) => {
                     const label = item.label || item.text || 'Footer Text';
                     return (
@@ -2128,43 +2128,43 @@ const LandingPage = () => {
                           <button
                             type="button"
                             onClick={() => handleFooterSectionClick(section, item)}
-                            className="text-left text-charcoal-light/90 font-bold hover:text-brand-gold transition-all duration-300 hover:translate-x-1.5 inline-block py-0.5"
+                            className="text-left text-white/90 font-medium hover:text-white transition-all duration-300 hover:translate-x-1.5 inline-block py-0.5"
                           >
                             {label}
                           </button>
                         ) : (
-                          <div className="text-charcoal-light/90">
+                          <div className="text-white/90 font-medium">
                             {label.includes('@') ? (
                               <div className="space-y-1">
-                                <span className="block text-[9px] font-bold text-brand-green uppercase tracking-widest leading-none">
+                                <span className="block text-[9px] font-bold text-white/60 uppercase tracking-widest leading-none">
                                   {label.includes('nodal') ? 'Nodal Officer Email' : 'Support Email'}
                                 </span>
                                 <a
                                   href={`mailto:${label.trim()}`}
-                                  className="font-bold text-brand-green hover:text-brand-gold transition-colors duration-300 break-normal whitespace-nowrap text-xs xl:text-[12.5px] underline decoration-brand-green/20 hover:decoration-brand-gold/50 block py-0.5"
+                                  className="font-bold text-white hover:text-white/70 transition-colors duration-300 break-normal whitespace-nowrap text-xs xl:text-[12.5px] underline decoration-white/20 hover:decoration-white/50 block py-0.5"
                                 >
                                   {label}
                                 </a>
                               </div>
                             ) : (label.includes('+91') || label.match(/^\+?[\d\s-]{10,}$/)) ? (
                               <div className="space-y-1">
-                                <span className="block text-[9px] font-bold text-brand-green uppercase tracking-widest leading-none">
+                                <span className="block text-[9px] font-bold text-white/60 uppercase tracking-widest leading-none">
                                   {label.includes('76206') ? 'Escalation Phone' : 'Support Phone'}
                                 </span>
                                 <a
                                   href={`tel:${label.replace(/\s+/g, '')}`}
-                                  className="font-bold text-charcoal hover:text-brand-gold transition-colors duration-300 break-normal whitespace-nowrap text-xs xl:text-[12.5px] block py-0.5"
+                                  className="font-bold text-white hover:text-white/70 transition-colors duration-300 break-normal whitespace-nowrap text-xs xl:text-[12.5px] block py-0.5"
                                 >
                                   {label}
                                 </a>
                               </div>
                             ) : label.startsWith('Officer:') ? (
                               <div className="space-y-1">
-                                <span className="block text-[9px] font-bold text-brand-green uppercase tracking-widest leading-none">Grievance Officer</span>
-                                <span className="block text-sm font-bold text-charcoal whitespace-nowrap">{label.replace('Officer:', '').trim()}</span>
+                                <span className="block text-[9px] font-bold text-white/60 uppercase tracking-widest leading-none">Grievance Officer</span>
+                                <span className="block text-sm font-bold text-white whitespace-nowrap">{label.replace('Officer:', '').trim()}</span>
                               </div>
                             ) : (
-                              <span className="font-bold text-charcoal-light text-sm leading-relaxed block py-0.5">
+                              <span className="font-medium text-white/80 text-sm leading-relaxed block py-0.5">
                                 {label}
                               </span>
                             )}
@@ -2173,20 +2173,12 @@ const LandingPage = () => {
                       </li>
                     );
                   })}
-                  {index === 4 && (section.resolution_text || footerData.resolution_text) && (
-                    <li className="mt-4 pt-3 border-t border-brand-gold/25">
-                      <div className="inline-flex items-center space-x-1.5 px-3.5 py-1 bg-brand-green/10 text-brand-green text-[9px] font-bold tracking-wider uppercase rounded-full border border-brand-green/20 shadow-sm">
-                        <span className="w-1.5 h-1.5 rounded-full bg-brand-green animate-pulse mr-1" />
-                        <span>{section.resolution_text || footerData.resolution_text}</span>
-                      </div>
-                    </li>
-                  )}
                 </ul>
               </div>
             ))}
           </div>
-          <div className="pt-10 border-t border-sand-200 flex flex-col md:flex-row justify-between items-center gap-6">
-            <p className="text-charcoal-muted/80 font-semibold text-[11px] tracking-wide uppercase leading-relaxed max-w-2xl text-center md:text-left">{t('precision')}</p>
+          <div className="pt-12 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6">
+            <p className="text-white/60 font-medium text-[11px] tracking-wide uppercase leading-relaxed max-w-2xl text-center md:text-left">{t('precision')}</p>
           </div>
         </div>
       </footer>

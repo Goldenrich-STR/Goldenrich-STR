@@ -1299,6 +1299,37 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
              </div>
            ))}
         </div>
+        {/* Check-in / Check-out time badges */}
+        {(property.check_in_time || property.check_out_time) && (
+          <div className="flex items-center gap-3 mb-3">
+            {property.check_in_time && (
+              <div className="flex items-center gap-1 bg-sage/10 border border-sage/20 px-2 py-1 rounded-md">
+                <span className="text-[9px] font-bold text-sage-dark uppercase tracking-wider">Check-in</span>
+                <span className="text-[10px] font-bold text-charcoal">
+                  {(() => {
+                    const [h, m] = property.check_in_time.split(':');
+                    const hour = parseInt(h);
+                    const ampm = hour >= 12 ? 'PM' : 'AM';
+                    return `${hour % 12 || 12}:${m} ${ampm}`;
+                  })()}
+                </span>
+              </div>
+            )}
+            {property.check_out_time && (
+              <div className="flex items-center gap-1 bg-terracotta/10 border border-terracotta/20 px-2 py-1 rounded-md">
+                <span className="text-[9px] font-bold text-terracotta uppercase tracking-wider">Check-out</span>
+                <span className="text-[10px] font-bold text-charcoal">
+                  {(() => {
+                    const [h, m] = property.check_out_time.split(':');
+                    const hour = parseInt(h);
+                    const ampm = hour >= 12 ? 'PM' : 'AM';
+                    return `${hour % 12 || 12}:${m} ${ampm}`;
+                  })()}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
       
       <div className="flex items-center justify-between pt-4 border-t border-sand-100">

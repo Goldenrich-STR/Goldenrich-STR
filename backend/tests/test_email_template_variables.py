@@ -45,3 +45,57 @@ def test_property_approval_msg91_variables():
     assert variables["Approval_Date"] == "27 June 2026"
     assert variables["Published_Date"] == "27 June 2026"
     assert "force_login=1" in variables["Button_URL"]
+
+
+def test_variables_enrichment_and_casing():
+    from datetime import datetime, timezone
+    service = EmailService()
+    
+    # Test case 1: Date & Time formatting + Casing Variations
+    variables = service._variables_for(
+        "booking_confirmed",
+        {
+            "name": "John Doe",
+            "booking_date": "2026-06-29T12:00:00Z",
+            "check_in_date": "2026-07-10",
+            "check_in_time": "2026-07-10T14:30:00Z",
+            "amount": 15450.75,
+            "gst_amount": 2781.0,
+            "auto_renewal_status": True,
+            "check_in_instructions": "Key is in the lockbox.",
+        },
+        "Booking Confirmed",
+        "Your booking is confirmed",
+        "https://uat.x-space360.in/booking/123",
+    )
+    
+    # Check casing variations of customer_name
+    assert variables["customer_name"] == "John Doe"
+    assert variables["Customer_Name"] == "John Doe"
+    assert variables["CUSTOMER_NAME"] == "John Doe"
+    assert variables["customerName"] == "John Doe"
+    assert variables["CustomerName"] == "John Doe"
+    
+    # Check friendly date formats
+    assert variables["Booking_Date"] == "29 June 2026"
+    assert variables["Check_In_Date"] == "10 July 2026"
+    
+    # Check friendly time formats
+    assert variables["Check_In_Time"] == "02:30 PM"
+    
+    # Check friendly amount formats
+    assert variables["Amount"] == "15,450.75"
+    assert variables["GST_Amount"] == "2,781"
+    
+    # Check Auto Renewal status translation
+    assert variables["Auto_Renewal_Status"] == "Active"
+    
+    # Check hyphenated casing variation for check-in instructions
+    assert variables["Check-In_Instructions"] == "Key is in the lockbox."
+    assert variables["check-in_instructions"] == "Key is in the lockbox."
+    assert variables["CHECK-IN_INSTRUCTIONS"] == "Key is in the lockbox."
+    
+    # Check template-specific button names
+    assert variables["View_Cancellation_Policy"] == "https://uat.x-space360.in/booking/123"
+    assert variables["View_Cancellation_Policy_URL"] == "https://uat.x-space360.in/booking/123"
+

@@ -1417,6 +1417,56 @@ const PropertyDetail = () => {
               </div>
             )}
 
+            {/* Check-in / Check-out Time Section */}
+            {(property.check_in_time || property.check_out_time) && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
+                  Check-in &amp; Check-out
+                  <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {property.check_in_time && (
+                    <div className="bg-sage/5 border border-sage/20 rounded-2xl p-5 flex items-center gap-4">
+                      <div className="bg-sage/15 p-3 rounded-xl text-sage-dark">
+                        <span className="text-2xl">🔑</span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-sage-dark uppercase tracking-widest mb-0.5">Check-in Time</p>
+                        <p className="text-xl font-bold tracking-tight text-charcoal">
+                          {(() => {
+                            const [h, m] = property.check_in_time.split(':');
+                            const hour = parseInt(h);
+                            const ampm = hour >= 12 ? 'PM' : 'AM';
+                            return `${hour % 12 || 12}:${m} ${ampm}`;
+                          })()}
+                        </p>
+                        <p className="text-xs text-charcoal-muted font-medium mt-0.5">You may check-in from this time</p>
+                      </div>
+                    </div>
+                  )}
+                  {property.check_out_time && (
+                    <div className="bg-terracotta/5 border border-terracotta/20 rounded-2xl p-5 flex items-center gap-4">
+                      <div className="bg-terracotta/15 p-3 rounded-xl text-terracotta">
+                        <span className="text-2xl">🚪</span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-terracotta uppercase tracking-widest mb-0.5">Check-out Time</p>
+                        <p className="text-xl font-bold tracking-tight text-charcoal">
+                          {(() => {
+                            const [h, m] = property.check_out_time.split(':');
+                            const hour = parseInt(h);
+                            const ampm = hour >= 12 ? 'PM' : 'AM';
+                            return `${hour % 12 || 12}:${m} ${ampm}`;
+                          })()}
+                        </p>
+                        <p className="text-xs text-charcoal-muted font-medium mt-0.5">Please vacate by this time</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Cook & Taxi Services Section */}
             {(property.has_cook || property.has_self_cook || property.has_taxi) && (
               <div className="mb-8">
