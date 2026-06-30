@@ -46,9 +46,10 @@ export const getImageUrl = (url) => {
     try {
       const parsed = new URL(url);
       const isUploadUrl = parsed.pathname.startsWith('/api/uploads/');
-      const isLocalUploadHost = ['localhost', '127.0.0.1', '0.0.0.0'].includes(parsed.hostname);
-      if (isUploadUrl && (isLocalUploadHost || !BACKEND_URL)) {
-        return parsed.pathname;
+      if (isUploadUrl) {
+        return BACKEND_URL
+          ? `${BACKEND_URL}${parsed.pathname}${parsed.search}`
+          : `${parsed.pathname}${parsed.search}`;
       }
     } catch (e) {
       return url;
@@ -56,7 +57,11 @@ export const getImageUrl = (url) => {
     return url;
   }
   if (url.startsWith('/api/')) return `${BACKEND_URL}${url}`;
+  if (url.startsWith('api/uploads/')) return `${BACKEND_URL}/${url}`;
   if (url.startsWith('uploads/')) return `${BACKEND_URL}/api/${url}`;
+  if (/^[^/?#]+\.(png|jpe?g|webp|gif)(?:[?#].*)?$/i.test(url)) {
+    return `${BACKEND_URL}/api/uploads/${url}`;
+  }
   return url;
 };
 

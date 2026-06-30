@@ -8,6 +8,8 @@ import ChatbotWidget from '../components/ChatbotWidget';
 import LanguageSelector from '../components/LanguageSelector';
 import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 
+const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
+
 // Translation Dictionary
 const TRANSLATIONS = {
   en: {
@@ -959,9 +961,9 @@ const LandingPage = () => {
     indexSetter(closestIndex);
   };
 
-  const heroSlides = [
+  const heroSlides = React.useMemo(() => ([
     {
-      src: '/videos/hero/pexels-thevisionaryvows-33485961.jpg',
+      src: '/videos/hero/pexels-thevisionaryvows-33485971.webp',
       tag: 'WEDDING VENUES',
       tagColor: 'text-terracotta',
       titlePrefix: 'Make Your Dream Wedding ',
@@ -971,7 +973,7 @@ const LandingPage = () => {
       subtitle: 'Perfect venues for your perfect day'
     },
     {
-      src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg',
+      src: '/videos/hero/pexels-akshay-mr-187831647-12414221.webp',
       tag: 'RESIDENTIAL SPACES',
       tagColor: 'text-terracotta',
       titlePrefix: 'Find Your Perfect Place to Call ',
@@ -981,7 +983,7 @@ const LandingPage = () => {
       subtitle: 'Comfortable spaces for you and your family'
     },
     {
-      src: '/videos/hero/pexels-contact-me-923323219715-262056873-12703092.jpg',
+      src: '/videos/hero/hero_commercial.png',
       tag: 'COMMERCIAL SPACES',
       tagColor: 'text-terracotta',
       titlePrefix: 'Elevate Your ',
@@ -991,7 +993,7 @@ const LandingPage = () => {
       subtitle: 'Right space to grow your business'
     },
     {
-      src: '/videos/hero/pexels-roman-odintsov-4870616.jpg',
+      src: '/videos/hero/hero_resort.png',
       tag: 'RESORT VILLAS',
       tagColor: 'text-terracotta',
       titlePrefix: 'Relax, Recharge & ',
@@ -1000,9 +1002,10 @@ const LandingPage = () => {
       titleSuffix: '',
       subtitle: 'Luxury villas for your perfect getaway'
     }
-  ];
+  ]), []);
 
   const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
+  const [loadedHeroSlides, setLoadedHeroSlides] = useState(() => new Set([0]));
 
   React.useEffect(() => {
     const timer = setInterval(() => {
@@ -1010,6 +1013,30 @@ const LandingPage = () => {
     }, 5000);
     return () => clearInterval(timer);
   }, [heroSlides.length]);
+
+  React.useEffect(() => {
+    const nextIndex = (currentHeroSlide + 1) % heroSlides.length;
+    if (loadedHeroSlides.has(nextIndex)) return undefined;
+
+    let image;
+    const timer = window.setTimeout(() => {
+      image = new Image();
+      image.decoding = 'async';
+      image.onload = () => {
+        setLoadedHeroSlides((loaded) => {
+          const nextLoaded = new Set(loaded);
+          nextLoaded.add(nextIndex);
+          return nextLoaded;
+        });
+      };
+      image.src = heroSlides[nextIndex].src;
+    }, currentHeroSlide === 0 ? 1200 : 0);
+
+    return () => {
+      window.clearTimeout(timer);
+      if (image) image.onload = null;
+    };
+  }, [currentHeroSlide, loadedHeroSlides, heroSlides]);
 
   const [lang, setLang] = useState(localStorage.getItem('preferredLanguage') || 'en');
 
@@ -1217,8 +1244,14 @@ const LandingPage = () => {
               >
                 <div className="relative h-[220px] rounded-2xl overflow-hidden mb-5">
                   <img 
-                    src={item.img || getImageUrl(item.images?.[0]) || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800'} 
+                    src={item.img || getImageUrl(item.images?.[0]) || PROPERTY_IMAGE_FALLBACK}
                     alt={item.title} 
+                    loading="lazy"
+                    decoding="async"
+                    onError={({ currentTarget }) => {
+                      currentTarget.onerror = null;
+                      currentTarget.src = PROPERTY_IMAGE_FALLBACK;
+                    }}
                     className="w-full h-full object-cover group-hover/card:scale-105 transition duration-700" 
                   />
                   {/* Rating Pill */}
@@ -1466,7 +1499,9 @@ const LandingPage = () => {
             key={index}
             className="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out z-0"
             style={{
-              backgroundImage: `url(${slide.src})`,
+              backgroundImage: index === currentHeroSlide || loadedHeroSlides.has(index)
+                ? `url(${slide.src})`
+                : 'none',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               opacity: index === currentHeroSlide ? 1 : 0
