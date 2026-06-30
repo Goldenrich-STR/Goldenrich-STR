@@ -749,17 +749,17 @@ const SupportPage = () => {
       </section>
 
       {/* Footer Branding */}
-      <footer className="bg-charcoal text-white py-12 px-6 md:px-12 lg:px-20 border-t border-white/5 font-semibold text-xs">
+      <footer className="bg-[#0A0A0A] text-white py-16 px-6 md:px-12 lg:px-20 border-t border-white/10 font-medium text-xs">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center space-x-2">
-            <img src="/logo.png" alt="X-Space360 Logo" className="h-6 w-auto object-contain brightness-0 invert" />
-            <span className="text-gray-500 font-bold">|</span>
-            <span className="text-gray-500 font-bold">© {new Date().getFullYear()} Goldenrich Group. All rights reserved.</span>
+            <img src="/logo.png" alt="X-Space360 Logo" className="h-6 w-auto object-contain logo-white" />
+            <span className="text-white/30 font-bold">|</span>
+            <span className="text-white/60 font-medium">© {new Date().getFullYear()} Goldenrich Group. All rights reserved.</span>
           </div>
-          <div className="flex space-x-6 text-gray-400">
-            <a href="/terms" className="hover:text-white transition">Terms of Service</a>
-            <a href="/privacy" className="hover:text-white transition">Privacy Policy</a>
-            <span onClick={scrollToFaq} className="hover:text-white transition cursor-pointer">FAQs</span>
+          <div className="flex space-x-6 text-white/80">
+            <a href="/terms" className="hover:text-brand-gold transition duration-300">Terms of Service</a>
+            <a href="/privacy" className="hover:text-brand-gold transition duration-300">Privacy Policy</a>
+            <span onClick={scrollToFaq} className="hover:text-brand-gold transition cursor-pointer duration-300">FAQs</span>
           </div>
         </div>
       </footer>

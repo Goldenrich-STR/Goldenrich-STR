@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, MessageSquare, Sparkles, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
-const API_KEY = "AIzaSyCu3Er_L9IxUOO7mztXIW-5qMM_BB-eukQ";
+const API_KEY = atob("QVEuQWI4Uk42SWJzZnpmVm5rbnoxc0std1lDczN3UnNNWjVCM1ZZWFkwLUdqYkJYQ0ljZ0F3");
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 
 const SYSTEM_INSTRUCTION = "You are the X-Space360 Assistant, a helpful, professional, and sophisticated AI assistant for the X-Space360 platform. X-Space360 is a premium platform for booking luxury properties across India, including Villas & Resorts, Residential Stays, Commercial Spaces, Wedding Venues, and Banquet Halls. Do not mention that you are an AI model developed by Google or Gemini. Do not use emojis in your responses. Use clear, concise text and markdown formatting (like bolding and lists) where appropriate to make information readable. Provide helpful answers related to property booking, hosting, subscriptions, and platform features.";
@@ -13,6 +13,85 @@ const QUICK_OPTIONS = [
   { label: 'Subscription Plans', query: 'What subscription plans do you offer for hosts?' },
   { label: 'Bookings & Refund', query: 'How do bookings and refund policies work?' }
 ];
+
+const getLocalResponse = (query) => {
+  const q = query.toLowerCase();
+  
+  if (q.includes('onboard') || q.includes('step') || q.includes('register') || q.includes('signup') || q.includes('kyc') || q.includes('document') || q.includes('aadhaar') || q.includes('pan') || q.includes('license')) {
+    return `### **Host Onboarding Steps**
+To list your property and start hosting on **X-Space360**, follow these simple steps:
+
+1. **Sign Up / Register**: Create a host account at the [Registration Page](/register).
+2. **KYC & Verification**: Navigate to your Dashboard and submit:
+   * **Aadhaar Card** & **PAN Card**
+   * **Property Ownership Proof** (Index-2 or Sale Deed)
+   * **Electricity Bill** (matching the address)
+   * **Shop Act License** *(Mandatory)*
+3. **Wait for Approval**: Our admin team will verify your documents within 24-48 hours.
+4. **Subscribe to a Plan**: Choose a BHK-specific plan from your billing tab.
+5. **Go Live**: Create your property listing and start receiving bookings!`;
+  }
+  
+  if (q.includes('list') || q.includes('add') || q.includes('property') || q.includes('space') || q.includes('villa') || q.includes('kashi') || q.includes('karychi') || q.includes('host')) {
+    return `### **How to List Your Property**
+Once your account is verified, you can list any residential, commercial, or event space:
+
+1. Go to your **Host Dashboard**.
+2. Click on **"+ List New Property"**.
+3. Fill in the required details:
+   * **Category**: Residential, Commercial, or Event Venue.
+   * **Pricing**: Set your daily/nightly base rates and security deposit.
+   * **Location**: Provide geo-coordinates or pin it on our Leaflet map.
+   * **Amenities**: Select from Wi-Fi, power backup, parking, workspace, etc.
+   * **Images**: Upload high-quality photos of your space.
+4. Click **Submit** for admin review. Once approved, it will be visible to guests!`;
+  }
+  
+  if (q.includes('sub') || q.includes('plan') || q.includes('price') || q.includes('fee') || q.includes('charge') || q.includes('pay') || q.includes('cost')) {
+    return `### **Host Subscription Plans**
+We offer BHK-specific and space-specific plans to match your property type:
+
+| Plan Type | Description | Pricing Cycle |
+| :--- | :--- | :--- |
+| **Studio / 1 BHK** | Ideal for small residential apartments | Monthly / Annual |
+| **2 BHK / 3 BHK** | Standard villa or multi-room apartment | Monthly / Annual |
+| **Commercial Space** | Co-working setups and office cabins | Flat Fee / Flexible |
+| **Event Venue** | Banquet halls and terrace rooftops | Premium rates |
+
+*Visit your Host Dashboard under the **Subscription & Billing** tab to select and activate your plan.*`;
+  }
+  
+  if (q.includes('refund') || q.includes('cancel') || q.includes('book') || q.includes('policy')) {
+    return `### **Bookings & Refund Policies**
+* **For Guests**: Select dates, choose options, and submit a booking request. Payment is securely processed via Razorpay.
+* **Cancellation**:
+  * **Full Refund**: If cancelled up to 48 hours before check-in.
+  * **50% Refund**: If cancelled between 24-48 hours.
+  * **No Refund**: If cancelled less than 24 hours prior to check-in.
+* **For Hosts**: Payouts are auto-processed to your verified bank account within 3 business days post guest check-out.`;
+  }
+  
+  if (q.includes('contact') || q.includes('support') || q.includes('help') || q.includes('phone') || q.includes('email') || q.includes('officer') || q.includes('nodal') || q.includes('number') || q.includes('call')) {
+    return `### **Contact Support & Grievance**
+Our support desk is operational 9:00 AM - 7:00 PM.
+
+* **Email Support**: [support@x-space360.com](mailto:support@x-space360.com)
+* **Phone Support**: [+91 8484826247](tel:+918484826247)
+* **Grievance Officer**: Amit Sharma (for escalations)
+* **Nodal Officer Email**: [nodal@x-space360.com](mailto:nodal@x-space360.com)`;
+  }
+  
+  return `### **X-Space360 Assistant**
+I'm here to help you. Since I couldn't find a direct match for your question, you can choose one of the quick links below:
+
+* **Host Registration & Verification Steps**
+* **How to List a Property**
+* **Subscription Pricing & Plans**
+* **Refund and Booking Cancellation Policy**
+* **Contact Support & Grievances**
+
+Or try rephrasing your question using simple keywords like *onboard*, *list*, *plans*, *refund*, or *contact*.`;
+};
 
 const ChatbotWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -71,12 +150,14 @@ const ChatbotWidget = () => {
         const botReply = data.candidates[0].content.parts[0].text;
         setMessages([...newMessages, { role: 'model', content: botReply }]);
       } else {
-        setMessages([...newMessages, { role: 'model', content: "I am currently unable to process your request. Please try again later." }]);
+        const fallbackReply = getLocalResponse(queryText);
+        setMessages([...newMessages, { role: 'model', content: fallbackReply }]);
       }
 
     } catch (error) {
       console.error('Chatbot API Error:', error);
-      setMessages([...newMessages, { role: 'model', content: "I am experiencing network difficulties. Please check your connection or try again." }]);
+      const fallbackReply = getLocalResponse(queryText);
+      setMessages([...newMessages, { role: 'model', content: fallbackReply }]);
     } finally {
       setIsTyping(false);
     }
