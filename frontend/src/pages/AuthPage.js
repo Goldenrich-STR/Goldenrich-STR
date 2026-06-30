@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star } from 'lucide-react';
 import { authAPI, apiClient } from '../services/api';
@@ -8,12 +8,13 @@ import SEO from '../components/SEO';
 
 const AuthPage = ({ isAdminLogin = false }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, register, logout } = useAuth();
   const forcedLogoutHandled = useRef(false);
   const searchParams = new URLSearchParams(window.location.search);
   const forceLogin = searchParams.get('force_login') === '1';
   const requestedNext = searchParams.get('next') || '';
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(location.pathname !== '/register');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -46,6 +47,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
       logout();
     }
   }, [forceLogin, logout]);
+
+  useEffect(() => {
+    setIsLogin(location.pathname !== '/register');
+  }, [location.pathname]);
 
   useEffect(() => {
     const fetchBrokersAndEmployees = async () => {
