@@ -540,7 +540,11 @@ const VerificationReviewSection = () => {
                       <span>Approve</span>
                     </button>
                     <button
-                      onClick={() => handleReject(verification.verification_id)}
+                      onClick={() => {
+                        setSelectedVerification(verification);
+                        setRejectReason('');
+                        setShowRejectReasonModal(true);
+                      }}
                       className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold"
                       data-testid={`reject-${verification.verification_id}`}
                     >

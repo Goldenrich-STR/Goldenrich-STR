@@ -317,6 +317,7 @@ async def on_rm_decision(db: AsyncIOMotorDatabase, verification: dict, approved:
             channels=[NotificationChannel.IN_APP],
         )
     else:
+        # Notify host/owner
         await _notify(
             db,
             property_data["owner_id"],
@@ -326,6 +327,34 @@ async def on_rm_decision(db: AsyncIOMotorDatabase, verification: dict, approved:
             f"Please update and resubmit.",
             {"property_id": property_id, "remarks": remarks},
         )
+        
+        # Notify broker who did the site verification
+        broker_id = verification.get("broker_id") or property_data.get("broker_id")
+        if broker_id:
+            await _notify(
+                db,
+                broker_id,
+                NotificationType.PROPERTY_REJECTED,
+                "Assigned Property Rejected by RM",
+                f"The property '{property_data.get('title')}' you verified was rejected by the Relationship Manager. Rejection Reason: {remarks or 'No reason provided'}",
+                {"property_id": property_id, "remarks": remarks},
+                channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL]
+            )
+            
+        # Notify admins
+        admins = await db.users.find(
+            {"role": "admin", "is_active": True}, {"_id": 0, "user_id": 1}
+        ).to_list(length=20)
+        for admin in admins:
+            await _notify(
+                db,
+                admin["user_id"],
+                NotificationType.PROPERTY_REJECTED,
+                "Property Verification Rejected by RM",
+                f"Relationship Manager rejected the verification for '{property_data.get('title')}'. Rejection Reason: {remarks or 'No reason provided'}",
+                {"property_id": property_id, "remarks": remarks},
+                channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL]
+            )
 
 
 async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, approved: bool, reason: str = "") -> None:
