@@ -291,7 +291,7 @@ const HostDashboard = () => {
 
   const handleVerifySubmit = async (e) => {
     e.preventDefault();
-            if (!aadharCard || !propertyProof || !cancelledCheque || !societyNoc || !shopAct || !agreementSignature) {
+            if (!aadharCard || !propertyProof || !cancelledCheque || !shopAct || !agreementSignature) {
       alert('Please upload all mandatory documents and sign the agreement.');
       return;
     }
@@ -1011,7 +1011,7 @@ const HostDashboard = () => {
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {renderDocCard("01", "KYC - Owner", "Aadhaar Card / PAN Card / Passport of owner", "aadhar", aadharCard, "image/*,application/pdf", true, User)}
                   {renderDocCard("02", "Property Documents", "Property Tax / Water Tax / MSEB Bill", "property", propertyProof, "image/*,application/pdf", true, Building2)}
-                  {renderDocCard("03", "Society NOC", "If not a society, then Neighbour NOC", "society", societyNoc, "image/*,application/pdf", true, Users)}
+                  {renderDocCard("03", "Society NOC", "If not a society, then Neighbour NOC", "society", societyNoc, "image/*,application/pdf", false, Users)}
                   {renderDocCard("04", "Cancelled Cheque / Bank Statement", "Latest cancelled cheque or bank statement", "cheque", cancelledCheque, "image/*,application/pdf", true, Landmark)}
                   {renderDocCard("05", "Shop Act License", "Shop Act registration copy of the business", "shop_act", shopAct, "image/*,application/pdf", true, FileText)}
                   {renderDocCard("06", "GST Document", "GST Certificate / GST Registration (Optional)", "gst", gstCertificate, "image/*,application/pdf", false, Briefcase)}
@@ -1212,7 +1212,7 @@ const HostDashboard = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={verificationSubmitting || !aadharCard || !propertyProof || !cancelledCheque || !societyNoc || !shopAct || !agreementSignature || !verificationConsent}
+                    disabled={verificationSubmitting || !aadharCard || !propertyProof || !cancelledCheque || !shopAct || !agreementSignature || !verificationConsent}
                     className="flex-1 btn-premium py-4 shadow-premium disabled:opacity-40"
                   >
                     {verificationSubmitting ? 'Submitting...' : 'Submit for Verification'}
