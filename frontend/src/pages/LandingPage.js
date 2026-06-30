@@ -1098,13 +1098,13 @@ const LandingPage = () => {
   };
 
   const handleListSpaceClick = () => {
-    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/login');
+    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/register');
   };
 
   const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
       if (item.link === '/host/list-property') {
-        navigate(user ? item.link : '/login');
+        navigate(user ? item.link : '/register');
       } else {
         handleFooterLink(item.link, '/');
       }
