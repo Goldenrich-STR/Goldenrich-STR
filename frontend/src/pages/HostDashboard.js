@@ -974,11 +974,7 @@ const HostDashboard = () => {
                         disabled={currentPage === Math.ceil(filteredProperties.length / itemsPerPage)}
                         className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-<<<<<<< HEAD
                         <ChevronRight className="w-5 h-5" />
-=======
-                        Edit
->>>>>>> 290ec4675f9b5ca7bf2217d59b6b996d1930cc97
                       </button>
                     </div>
                   )}
