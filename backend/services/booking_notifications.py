@@ -122,6 +122,12 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
         check_out_time = prop_details.get("check_out_time") or "11:00 AM"
         host_phone = host.get("phone") or host.get("mobile") or "N/A"
         check_in_instructions = prop_details.get("check_in_instructions") or "Please contact the host upon arrival."
+        payment_id = (
+            booking.get("razorpay_payment_id")
+            or booking.get("payment_id")
+            or booking.get("razorpay_order_id")
+            or ""
+        )
 
         data = {
             "booking_id": booking.get("booking_id"),
@@ -143,6 +149,11 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
             "amount": booking.get("total_amount"),
             "payout_amount": payout,
             "check_in_instructions": check_in_instructions,
+            "transaction_id": payment_id,
+            "payment_id": payment_id,
+            "razorpay_payment_id": booking.get("razorpay_payment_id") or "",
+            "razorpay_order_id": booking.get("razorpay_order_id") or "",
+            "payment_method": booking.get("payment_method") or "Razorpay",
         }
 
         # In-App + WhatsApp + SMS via the standard path
