@@ -20,6 +20,7 @@ const HostDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, property: null, reason: '', deleting: false });
   const itemsPerPage = 5;
+  const [filterStatus, setFilterStatus] = useState('all');
 
   // Verification & Agreement Modal States
   const [showVerificationModal, setShowVerificationModal] = useState(false);
@@ -626,10 +627,23 @@ const HostDashboard = () => {
     maximumFractionDigits: 0,
   }).format(totalEarningsPaise / 100);
 
+  const isRejected = (property) => {
+    return property.status === 'rejected' || (property.status === 'draft' && property.verification_remarks);
+  };
+
+  const isPending = (property) => {
+    return property.status === 'pending_verification' || property.status === 'under_review';
+  };
+
+  const isLive = (property) => {
+    return property.status === 'live';
+  };
+
   const stats = [
-    { label: 'Total Properties', value: properties.length, icon: Building2 },
-    { label: 'Active Listings', value: properties.filter(p => p.status === 'live').length, icon: Eye },
-    { label: 'Pending Review', value: properties.filter(p => p.status === 'pending_verification').length, icon: Calendar },
+    { label: 'Total Properties', value: properties.length, icon: Building2, statusFilter: 'all' },
+    { label: 'Active Listings', value: properties.filter(isLive).length, icon: Eye, statusFilter: 'live' },
+    { label: 'Pending Review', value: properties.filter(isPending).length, icon: Calendar, statusFilter: 'pending_verification' },
+    { label: 'Rejected Properties', value: properties.filter(isRejected).length, icon: AlertCircle, statusFilter: 'rejected' },
     { label: 'Total Earnings', value: formattedEarnings, icon: IndianRupee },
   ];
 
@@ -746,147 +760,256 @@ const HostDashboard = () => {
         )}
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 animate-slide-up" data-testid="stats-grid">
-          {stats.map((stat, idx) => (
-            <div 
-              key={idx} 
-              className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium group hover:border-terracotta transition-all duration-500" 
-              data-testid={`stat-${idx}`}
-            >
-              <div className="bg-stone w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-terracotta/5 transition-colors">
-                <stat.icon className="w-6 h-6 text-terracotta" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-12 animate-slide-up" data-testid="stats-grid">
+          {stats.map((stat, idx) => {
+            const isClickable = !!stat.statusFilter;
+            const isActive = isClickable && filterStatus === stat.statusFilter;
+            return (
+              <div 
+                key={idx} 
+                onClick={() => {
+                  if (isClickable) {
+                    setFilterStatus(stat.statusFilter);
+                    setCurrentPage(1);
+                  }
+                }}
+                className={`bg-white rounded-3xl p-8 border shadow-premium group transition-all duration-500 ${
+                  isClickable 
+                    ? 'cursor-pointer hover:border-terracotta hover:scale-[1.02]' 
+                    : ''
+                } ${
+                  isActive 
+                    ? 'border-terracotta ring-1 ring-terracotta/20 bg-stone/30' 
+                    : 'border-gray-100'
+                }`}
+                data-testid={`stat-${idx}`}
+              >
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-colors ${
+                  isActive ? 'bg-terracotta text-white' : 'bg-stone group-hover:bg-terracotta/5'
+                }`}>
+                  <stat.icon className={`w-6 h-6 ${isActive ? 'text-white' : 'text-terracotta'}`} />
+                </div>
+                <p className="text-4xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">{stat.value}</p>
+                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">{stat.label}</p>
               </div>
-              <p className="text-4xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">{stat.value}</p>
-              <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">{stat.label}</p>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Properties List */}
         <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
           <div className="flex items-center mb-6">
-             <h3 className="text-xl font-bold tracking-tight text-charcoal tracking-tight">Active Listings</h3>
+             <h3 className="text-xl font-bold tracking-tight text-charcoal tracking-tight">
+               {filterStatus === 'all' ? 'All Properties' :
+                filterStatus === 'live' ? 'Active Listings' :
+                filterStatus === 'pending_verification' ? 'Pending Review' :
+                filterStatus === 'rejected' ? 'Rejected Properties' : 'Properties'}
+             </h3>
              <div className="ml-4 h-px flex-1 bg-sand-200"></div>
           </div>
 
-          {loading ? (
-            <div className="grid grid-cols-1 gap-4">
-               {[1,2,3].map(i => (
-                 <div key={i} className="h-32 bg-white rounded-3xl border border-gray-100 animate-pulse"></div>
-               ))}
-            </div>
-          ) : properties.length > 0 ? (
-            <div data-testid="properties-list">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {[...properties]
-                  .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-                  .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                  .map((property) => (
-                  <div 
-                    key={property.property_id} 
-                    className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-premium transition-all duration-300 flex flex-col h-full group" 
-                    data-testid={`property-${property.property_id}`}
-                  >
-                    <div className="relative overflow-hidden w-full h-48 rounded-2xl mb-4">
-                      <img
-                        src={getImageUrl(property.images[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
-                        alt={property.title}
-                        className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
-                      />
-                      <div className="absolute inset-0 bg-charcoal/10"></div>
-                      <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest ${
-                        property.status === 'live' ? 'bg-sage text-white' :
-                        property.status === 'pending_verification' ? 'bg-amber-500 text-white' :
-                        'bg-charcoal text-white'
-                      }`}>
-                        {property.status.replace('_', ' ')}
-                      </span>
-                    </div>
-                    
-                    <div className="flex-1">
-                      <h3 className="text-lg font-bold tracking-tight text-charcoal mb-1 line-clamp-1" title={property.title}>{property.title}</h3>
-                      <div className="flex items-center text-charcoal-muted space-x-2 mb-4">
-                         <MapPin className="w-3 h-3" />
-                         <span className="text-[10px] font-bold uppercase tracking-widest">{property.city}</span>
-                      </div>
-                    </div>
+          {(() => {
+            const filteredProperties = properties.filter(p => {
+              if (filterStatus === 'all') return true;
+              if (filterStatus === 'live') return isLive(p);
+              if (filterStatus === 'pending_verification') return isPending(p);
+              if (filterStatus === 'rejected') return isRejected(p);
+              return true;
+            });
 
-                    <div className="flex items-center space-x-3 mt-auto pt-4 border-t border-sand-100">
-                      <button
-                        onClick={() => {
-                          if (property.status === 'live') {
-                            navigate(`/host/calendar?property=${property.property_id}`);
-                          } else {
-                            alert('This property is not verified yet. Calendar will be available once the property is live.');
-                          }
-                        }}
-                        className={`flex-1 py-3 rounded-xl border-2 border-gray-100 text-[10px] font-bold tracking-tight uppercase tracking-widest transition-all ${
-                          property.status === 'live' ? 'hover:border-charcoal' : 'opacity-50 cursor-not-allowed'
-                        }`}
-                        data-testid={`property-calendar-${property.property_id}`}
+            if (loading) {
+              return (
+                <div className="grid grid-cols-1 gap-4">
+                   {[1,2,3].map(i => (
+                     <div key={i} className="h-32 bg-white rounded-3xl border border-gray-100 animate-pulse"></div>
+                   ))}
+                </div>
+              );
+            }
+
+            if (filteredProperties.length > 0) {
+              return (
+                <div data-testid="properties-list">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {[...filteredProperties]
+                      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                      .map((property) => (
+                      <div 
+                        key={property.property_id} 
+                        className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-premium transition-all duration-300 flex flex-col h-full group" 
+                        data-testid={`property-${property.property_id}`}
                       >
-                        Calendar
+                        <div className="relative overflow-hidden w-full h-48 rounded-2xl mb-4">
+                          <img
+                            src={getImageUrl(property.images[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
+                            alt={property.title}
+                            className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
+                          />
+                          <div className="absolute inset-0 bg-charcoal/10"></div>
+                          <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest ${
+                            isLive(property) ? 'bg-sage text-white' :
+                            isPending(property) ? 'bg-amber-500 text-white' :
+                            isRejected(property) ? 'bg-red-600 text-white' :
+                            'bg-charcoal text-white'
+                          }`}>
+                            {isRejected(property) ? 'rejected' : property.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold tracking-tight text-charcoal mb-1 line-clamp-1" title={property.title}>{property.title}</h3>
+                          <div className="flex items-center text-charcoal-muted space-x-2 mb-4">
+                             <MapPin className="w-3 h-3" />
+                             <span className="text-[10px] font-bold uppercase tracking-widest">{property.city}</span>
+                          </div>
+
+                          {isRejected(property) && property.verification_remarks && (
+                            <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-2xl flex items-start space-x-2 text-red-800 text-[11px] leading-relaxed mb-4 animate-in fade-in duration-300">
+                              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-600" />
+                              <div>
+                                <span className="font-bold uppercase tracking-wider block text-[9px] mb-0.5 text-red-700">Rejection Reason</span>
+                                <span>{property.verification_remarks}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {(() => {
+                            const propSub = subscriptions.find(s => s.property_id === property.property_id);
+                            if (!propSub) return null;
+                            const plan = plans.find(p => p.plan_id === propSub.plan_id);
+                            
+                            const formatDate = (dateStr) => {
+                              if (!dateStr) return 'N/A';
+                              try {
+                                const d = new Date(dateStr);
+                                return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                              } catch {
+                                return dateStr;
+                              }
+                            };
+
+                            return (
+                              <div className="mt-3 p-3 bg-stone/80 rounded-2xl border border-sand-100 flex flex-col gap-2 mb-4">
+                                <div className="flex justify-between items-center text-[10px] font-bold">
+                                  <span className="uppercase tracking-widest text-charcoal-muted">Sub Plan</span>
+                                  <span className="text-terracotta">{plan ? plan.plan_name : (propSub.plan_type || 'N/A').toUpperCase()}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] font-bold">
+                                  <span className="uppercase tracking-widest text-charcoal-muted">Purchase Date</span>
+                                  <span className="text-charcoal">{formatDate(propSub.start_date)}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] font-bold">
+                                  <span className="uppercase tracking-widest text-charcoal-muted">Renew Date</span>
+                                  <span className="text-charcoal">{formatDate(propSub.end_date)}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[10px] font-bold">
+                                  <span className="uppercase tracking-widest text-charcoal-muted">Status</span>
+                                  <span className={`uppercase tracking-widest px-2 py-0.5 rounded-full text-[9px] ${
+                                    propSub.status === 'active' ? 'bg-sage/10 text-sage' :
+                                    propSub.status === 'trial' ? 'bg-amber-500/10 text-amber-600' :
+                                    'bg-red-500/10 text-red-600'
+                                  }`}>{propSub.status}</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        <div className="flex items-center space-x-3 mt-auto pt-4 border-t border-sand-100">
+                          <button
+                            onClick={() => {
+                              if (isLive(property)) {
+                                navigate(`/host/calendar?property=${property.property_id}`);
+                              } else {
+                                alert('This property is not verified yet. Calendar will be available once the property is live.');
+                              }
+                            }}
+                            className={`flex-1 py-3 rounded-xl border-2 border-gray-100 text-[10px] font-bold tracking-tight uppercase tracking-widest transition-all ${
+                              isLive(property) ? 'hover:border-charcoal' : 'opacity-50 cursor-not-allowed'
+                            }`}
+                            data-testid={`property-calendar-${property.property_id}`}
+                          >
+                            Calendar
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (!isLive(property)) {
+                                navigate(`/host/list-property?edit=${property.property_id}`);
+                              } else {
+                                navigate(`/property/${property.property_id}`);
+                              }
+                            }}
+                            className="flex-1 py-3 rounded-xl bg-charcoal text-white text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
+                          >
+                            Manage
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => openDeleteModal(property)}
+                          className="mt-3 w-full py-3 rounded-xl border-2 border-red-100 bg-red-50/60 text-red-600 text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 transition-all flex items-center justify-center gap-2"
+                          data-testid={`property-delete-${property.property_id}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete Property
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {filteredProperties.length > itemsPerPage && (
+                    <div className="mt-8 flex justify-center items-center space-x-4">
+                      <button 
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
                       </button>
-                      <button
-                        onClick={() => {
-                          if (property.status !== 'live') {
-                            navigate(`/host/list-property?edit=${property.property_id}`);
-                          } else {
-                            navigate(`/property/${property.property_id}`);
-                          }
-                        }}
-                        className="flex-1 py-3 rounded-xl bg-charcoal text-white text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
+                      <span className="text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">
+                        Page {currentPage} of {Math.ceil(filteredProperties.length / itemsPerPage)}
+                      </span>
+                      <button 
+                        onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredProperties.length / itemsPerPage), p + 1))}
+                        disabled={currentPage === Math.ceil(filteredProperties.length / itemsPerPage)}
+                        className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
-                        Manage
+                        <ChevronRight className="w-5 h-5" />
                       </button>
                     </div>
-                    <button
-                      onClick={() => openDeleteModal(property)}
-                      className="mt-3 w-full py-3 rounded-xl border-2 border-red-100 bg-red-50/60 text-red-600 text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 transition-all flex items-center justify-center gap-2"
-                      data-testid={`property-delete-${property.property_id}`}
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Delete Property
-                    </button>
-                  </div>
-                ))}
-              </div>
-              
-              {properties.length > itemsPerPage && (
-                <div className="mt-8 flex justify-center items-center space-x-4">
-                  <button 
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <span className="text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">
-                    Page {currentPage} of {Math.ceil(properties.length / itemsPerPage)}
-                  </span>
-                  <button 
-                    onClick={() => setCurrentPage(p => Math.min(Math.ceil(properties.length / itemsPerPage), p + 1))}
-                    disabled={currentPage === Math.ceil(properties.length / itemsPerPage)}
-                    className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
+                  )}
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
-              <Building2 className="w-16 h-16 text-sand-200 mx-auto mb-6" />
-              <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Properties Listed</h4>
-              <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest mb-8">Ready to start earning? List your first home today.</p>
-              <button
-                onClick={handleListPropertyClick}
-                className="btn-premium px-10 py-4 shadow-premium"
-              >
-                Get Started
-              </button>
-            </div>
-          )}
+              );
+            }
+
+            if (properties.length > 0) {
+              return (
+                <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
+                  <Building2 className="w-16 h-16 text-sand-200 mx-auto mb-6" />
+                  <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">
+                    No {filterStatus === 'live' ? 'Active' :
+                        filterStatus === 'pending_verification' ? 'Pending Review' :
+                        filterStatus === 'rejected' ? 'Rejected' : ''} Properties
+                  </h4>
+                  <p className="text-charcoal-light text-sm">There are no properties matching this category.</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
+                <Building2 className="w-16 h-16 text-sand-200 mx-auto mb-6" />
+                <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Properties Listed</h4>
+                <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest mb-8">Ready to start earning? List your first home today.</p>
+                <button
+                  onClick={handleListPropertyClick}
+                  className="btn-premium px-10 py-4 shadow-premium"
+                >
+                  Get Started
+                </button>
+              </div>
+            );
+          })()}
         </div>
 
         {deleteModal.isOpen && (

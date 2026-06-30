@@ -1983,9 +1983,6 @@ const HostListProperty = () => {
                               ₹{p.price_monthly?.toLocaleString('en-IN') || '—'}
                             </span>
                             <span className="text-xs text-charcoal-light"> /month</span>
-                            <span className="text-xs text-charcoal-light ml-2">
-                              (₹{p.price_annual?.toLocaleString('en-IN') || '—'} annual)
-                            </span>
                           </div>
                         </button>
                       );

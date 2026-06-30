@@ -127,6 +127,25 @@ async def create_booking(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Property is not available for booking"
             )
+
+        # Check if subscription has expired
+        if property_dict.get("subscription_id"):
+            sub = await db.subscriptions.find_one({"subscription_id": property_dict["subscription_id"]})
+            if sub:
+                from datetime import date
+                end_date_str = sub.get("end_date")
+                if isinstance(end_date_str, str):
+                    end_date = datetime.strptime(end_date_str.split('T')[0], "%Y-%m-%d").date()
+                elif isinstance(end_date_str, date):
+                    end_date = end_date_str
+                else:
+                    end_date = None
+                
+                if end_date and end_date <= date.today():
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Property subscription has expired. Bookings are disabled."
+                    )
         
         # Check if the host/owner has completed document verification (KYC status must be approved)
         owner_id = property_dict.get("owner_id")

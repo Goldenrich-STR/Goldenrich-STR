@@ -96,3 +96,34 @@ def test_admin_coupon_toggle_workflow(admin_token, host_token):
     assert r.status_code == 200, r.text
     toggle_data2 = r.json()
     assert toggle_data2["is_active"] == original_active_status
+
+def test_create_commercial_plan_with_sqft_range(admin_token):
+    # Create commercial plan with sqft_range and price_annual as 0
+    params = {
+        "plan_name": "Commercial Standard Small",
+        "plan_type": "commercial",
+        "price_monthly": 1500.0,
+        "price_annual": 0.0,
+        "description": "Standard commercial plan for small spaces",
+        "validity_days": 30,
+        "sqft_range": "small"
+    }
+    r = requests.post(f"{API}/subscriptions/admin/plans", params=params, headers=_auth(admin_token), timeout=15)
+    assert r.status_code == 200, r.text
+    create_data = r.json()
+    assert "plan_id" in create_data
+    plan_id = create_data["plan_id"]
+
+    # Verify plan was created with the correct sqft_range
+    r = requests.get(f"{API}/subscriptions/admin/plans", headers=_auth(admin_token), timeout=15)
+    assert r.status_code == 200, r.text
+    plans = r.json()["plans"]
+    created_plan = next((p for p in plans if p["plan_id"] == plan_id), None)
+    assert created_plan is not None
+    assert created_plan["sqft_range"] == "small"
+    assert created_plan["price_annual"] == 0.0
+
+    # Delete the created plan to clean up
+    r = requests.delete(f"{API}/subscriptions/admin/plans/{plan_id}", headers=_auth(admin_token), timeout=15)
+    assert r.status_code == 200, r.text
+

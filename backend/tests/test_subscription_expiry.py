@@ -207,3 +207,174 @@ async def test_subscription_expiry_sweep(db):
     finally:
         await clean_test_data(db)
         await db.users.delete_many({"user_id": user_id})
+
+
+@pytest.mark.anyio
+async def test_subscription_dynamic_visibility_and_booking(db):
+    """Verify that a property whose subscription has expired is filtered out from search/browse
+    and cannot be retrieved/booked by guest, even before the sweep runs."""
+    await clean_test_data(db)
+    user_id = "TEST_USER_SWEEP"
+    # Create test host user if not exists
+    user = await db.users.find_one({"user_id": user_id})
+    if not user:
+        await db.users.insert_one({
+            "user_id": user_id,
+            "email": "host_sweep@example.com",
+            "full_name": "Test Host",
+            "phone": "9999999999",
+            "role": "host"
+        })
+
+    # Create an expired subscription (end_date is in the past) but property is still "live"
+    expired_sub_id = "TEST_SUB_EXPIRED"
+    expired_prop_id = "TEST_PROP_EXPIRED"
+    
+    await db.properties.insert_one({
+        "property_id": expired_prop_id,
+        "owner_id": user_id,
+        "title": "Expired Test Villa Dynamic",
+        "description": "Villa description",
+        "property_type": "villa",
+        "category": "residential",
+        "bhk_type": "3bhk",
+        "address": "123 Street",
+        "city": "Nashik",
+        "state": "MH",
+        "pin_code": "400001",
+        "area_sqft": 2000,
+        "status": PropertyStatus.LIVE.value,
+        "subscription_id": expired_sub_id,
+        "subscription_status": "active"
+    })
+    
+    await db.subscriptions.insert_one({
+        "subscription_id": expired_sub_id,
+        "user_id": user_id,
+        "property_id": expired_prop_id,
+        "plan_id": "plan_123",
+        "plan_type": "3bhk",
+        "billing_cycle": "monthly",
+        "amount": 5000.0,
+        "status": SubscriptionStatus.ACTIVE.value,
+        "start_date": (date.today() - timedelta(days=40)).isoformat(),
+        "end_date": (date.today() - timedelta(days=5)).isoformat(),
+        "trial_end_date": (date.today() + timedelta(days=50)).isoformat()
+    })
+
+    # Create a non-expired subscription
+    valid_sub_id = "TEST_SUB_SAFE"
+    valid_prop_id = "TEST_PROP_SAFE"
+    
+    await db.properties.insert_one({
+        "property_id": valid_prop_id,
+        "owner_id": user_id,
+        "title": "Valid Test Villa Dynamic",
+        "description": "Villa description",
+        "property_type": "villa",
+        "category": "residential",
+        "bhk_type": "3bhk",
+        "address": "123 Street",
+        "city": "Nashik",
+        "state": "MH",
+        "pin_code": "400001",
+        "area_sqft": 2000,
+        "status": PropertyStatus.LIVE.value,
+        "subscription_id": valid_sub_id,
+        "subscription_status": "active"
+    })
+    
+    await db.subscriptions.insert_one({
+        "subscription_id": valid_sub_id,
+        "user_id": user_id,
+        "property_id": valid_prop_id,
+        "plan_id": "plan_123",
+        "plan_type": "3bhk",
+        "billing_cycle": "monthly",
+        "amount": 5000.0,
+        "status": SubscriptionStatus.ACTIVE.value,
+        "start_date": (date.today() - timedelta(days=5)).isoformat(),
+        "end_date": (date.today() + timedelta(days=25)).isoformat(),
+        "trial_end_date": (date.today() + timedelta(days=55)).isoformat()
+    })
+
+    try:
+        from routes.property_routes import search_properties, get_property
+        from fastapi import Response, Request
+        from unittest.mock import MagicMock
+
+        # 1. Test search_properties filters it out
+        mock_response = MagicMock(spec=Response)
+        search_res = await search_properties(
+            response=mock_response,
+            category=None,
+            city="Nashik",
+            property_type=None,
+            min_price=None,
+            max_price=None,
+            bhk_type=None,
+            amenities=None,
+            instant_booking=None,
+            pet_friendly=None,
+            guests=None,
+            max_guests=None,
+            check_in=None,
+            check_out=None,
+            bbox=None,
+            sort="recommended",
+            limit=50,
+            skip=0,
+            db=db
+        )
+        props = search_res["properties"]
+        prop_ids = [p["property_id"] for p in props]
+        assert expired_prop_id not in prop_ids
+        assert valid_prop_id in prop_ids
+
+        # 2. Test get_property raises 404 for guests
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {}
+        
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc_info:
+            await get_property(property_id=expired_prop_id, request=mock_request, response=mock_response, db=db)
+        assert exc_info.value.status_code == 404
+
+        # 3. Test get_property works for owner
+        mock_request_owner = MagicMock(spec=Request)
+        mock_request_owner.headers = {"authorization": "Bearer dummy_token"}
+        
+        # Patch decode_access_token to return owner user
+        import utils.auth
+        orig_decode = utils.auth.decode_access_token
+        utils.auth.decode_access_token = lambda token: {"user_id": user_id, "role": "host"}
+        
+        try:
+            prop_details = await get_property(property_id=expired_prop_id, request=mock_request_owner, response=mock_response, db=db)
+            assert prop_details["property_id"] == expired_prop_id
+        finally:
+            utils.auth.decode_access_token = orig_decode
+
+        # 4. Test create_booking raises 400 for expired property subscription
+        from routes.booking_routes import create_booking
+        from models.booking import BookingCreate
+        
+        booking_payload = BookingCreate(
+            property_id=expired_prop_id,
+            check_in_date=date.today() + timedelta(days=10),
+            check_out_date=date.today() + timedelta(days=12),
+            number_of_guests=2
+        )
+        
+        with pytest.raises(HTTPException) as exc_info:
+            await create_booking(
+                booking_data=booking_payload,
+                current_user={"user_id": "TEST_GUEST", "role": "guest"},
+                db=db
+            )
+        assert exc_info.value.status_code == 400
+        assert "subscription has expired" in exc_info.value.detail
+
+    finally:
+        await clean_test_data(db)
+        await db.users.delete_many({"user_id": user_id})

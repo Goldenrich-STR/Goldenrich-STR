@@ -5018,7 +5018,8 @@ const SubscriptionManagement = () => {
     price_monthly: '',
     price_annual: '',
     description: '',
-    validity_days: 30
+    validity_days: 30,
+    sqft_range: ''
   });
 
   useEffect(() => {
@@ -5039,13 +5040,18 @@ const SubscriptionManagement = () => {
   const handleCreatePlan = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...newPlan,
+        price_annual: Number(newPlan.price_annual) || 0,
+        sqft_range: newPlan.plan_type === 'commercial' ? newPlan.sqft_range : null
+      };
       if (newPlan.plan_id) {
-        await subscriptionAPI.updatePlan(newPlan.plan_id, newPlan);
+        await subscriptionAPI.updatePlan(newPlan.plan_id, payload);
       } else {
-        await subscriptionAPI.createPlan(newPlan);
+        await subscriptionAPI.createPlan(payload);
       }
       setShowAddModal(false);
-      setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', description: '', validity_days: 30 });
+      setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', description: '', validity_days: 30, sqft_range: '' });
       fetchPlans();
     } catch (error) {
       alert('Failed to save plan');
@@ -5077,7 +5083,7 @@ const SubscriptionManagement = () => {
         <h3 className="text-2xl font-bold text-charcoal">Subscription Management</h3>
         <button 
           onClick={() => {
-            setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', description: '', validity_days: 30 });
+            setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', description: '', validity_days: 30, sqft_range: '' });
             setShowAddModal(true);
           }}
           className="btn-primary flex items-center space-x-2"
@@ -5098,9 +5104,10 @@ const SubscriptionManagement = () => {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <span className="inline-block px-2 py-1 bg-sage/10 text-sage-dark text-[10px] font-bold tracking-tight uppercase tracking-widest rounded mb-2">
-                    {plan.plan_type}
+                    {plan.plan_type === 'commercial' && plan.sqft_range ? `commercial (${plan.sqft_range})` : plan.plan_type}
                   </span>
                   <h4 className="text-lg font-bold text-charcoal">{plan.plan_name}</h4>
+                  <p className="text-[11px] font-semibold text-charcoal-muted/85 font-mono mt-1 mb-2">ID: {plan.plan_id}</p>
                 </div>
                 <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition">
                   <button 
@@ -5207,15 +5214,24 @@ const SubscriptionManagement = () => {
                   />
                 </div>
               </div>
-              <div>
-                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Annual Price</label>
-                <input 
-                  type="number" required
-                  className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
-                  value={newPlan.price_annual}
-                  onChange={e => setNewPlan({...newPlan, price_annual: Number(e.target.value)})}
-                />
-              </div>
+              {newPlan.plan_type === 'commercial' && (
+                <div>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Sq.ft Range</label>
+                  <select 
+                    required
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                    value={newPlan.sqft_range || ''}
+                    onChange={e => setNewPlan({...newPlan, sqft_range: e.target.value})}
+                  >
+                    <option value="">Select Range</option>
+                    <option value="small">Small (under 500 sqft)</option>
+                    <option value="medium">Medium (500-2000 sqft)</option>
+                    <option value="large">Large (2000-5000 sqft)</option>
+                    <option value="extra_large">Extra Large (5000+ sqft)</option>
+                    <option value="custom">Custom Size</option>
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Validity (Days)</label>
                 <input 
@@ -5249,18 +5265,15 @@ const SubscriptionManagement = () => {
       {viewPlan && (
         <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-premium animate-slide-up">
-            <h3 className="text-2xl font-bold tracking-tight text-charcoal mb-2">{viewPlan.plan_name}</h3>
+            <h3 className="text-2xl font-bold tracking-tight text-charcoal mb-1">{viewPlan.plan_name}</h3>
+            <p className="text-xs font-mono text-charcoal-muted mb-4">Subscription ID: {viewPlan.plan_id}</p>
             <span className="inline-block px-3 py-1 bg-sage/10 text-sage-dark text-[10px] font-bold tracking-tight uppercase tracking-widest rounded-full mb-6">
-              {viewPlan.plan_type} Configuration
+              {viewPlan.plan_type === 'commercial' && viewPlan.sqft_range ? `commercial (${viewPlan.sqft_range})` : viewPlan.plan_type} Configuration
             </span>
             <div className="space-y-4 mb-8">
               <div className="p-4 bg-stone rounded-2xl">
                 <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Monthly Cost</p>
                 <p className="text-2xl font-bold tracking-tight text-terracotta">₹{(viewPlan.price_monthly || 0).toLocaleString('en-IN')}</p>
-              </div>
-              <div className="p-4 bg-stone rounded-2xl">
-                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Annual Cost</p>
-                <p className="text-2xl font-bold tracking-tight text-terracotta">₹{(viewPlan.price_annual || 0).toLocaleString('en-IN')}</p>
               </div>
               <div className="p-4 bg-stone rounded-2xl">
                 <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Validity (Days)</p>

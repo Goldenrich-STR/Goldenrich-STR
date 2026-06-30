@@ -601,6 +601,7 @@ async def create_subscription_plan(
     price_annual: float,
     description: str,
     validity_days: int = 30,
+    sqft_range: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -618,7 +619,8 @@ async def create_subscription_plan(
             price_monthly=price_monthly,
             price_annual=price_annual,
             description=description,
-            validity_days=validity_days
+            validity_days=validity_days,
+            sqft_range=sqft_range
         )
         
         plan_dict = plan.model_dump()
@@ -751,6 +753,7 @@ async def update_subscription_plan(
     description: Optional[str] = None,
     validity_days: Optional[int] = None,
     is_active: Optional[bool] = None,
+    sqft_range: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -770,6 +773,7 @@ async def update_subscription_plan(
         if description: update_data["description"] = description
         if validity_days is not None: update_data["validity_days"] = validity_days
         if is_active is not None: update_data["is_active"] = is_active
+        if sqft_range is not None: update_data["sqft_range"] = sqft_range
         
         if not update_data:
             return {"message": "No changes provided"}

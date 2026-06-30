@@ -187,9 +187,24 @@ async def search_properties(
             "average_rating": 1,
             "reviews_count": 1,
             "has_self_cook": 1,
-            "status": 1
+            "status": 1,
+            "subscription_id": 1
         }
         raw_properties = await db.properties.find(query, projection).to_list(length=1000)
+
+        # Filter out properties whose subscription has expired (if they have subscription_id)
+        sub_ids = [p["subscription_id"] for p in raw_properties if p.get("subscription_id")]
+        if sub_ids:
+            from datetime import date
+            today_str = date.today().isoformat()
+            cursor = db.subscriptions.find({
+                "subscription_id": {"$in": sub_ids},
+                "end_date": {"$lte": today_str}
+            }, {"subscription_id": 1})
+            expired_subs = await cursor.to_list(length=len(sub_ids))
+            expired_sub_ids = {s["subscription_id"] for s in expired_subs}
+            if expired_sub_ids:
+                raw_properties = [p for p in raw_properties if p.get("subscription_id") not in expired_sub_ids]
 
         if min_price is not None:
             raw_properties = [p for p in raw_properties if numeric_price(p) >= min_price]
@@ -336,6 +351,7 @@ async def get_property(
 
         # Check if the guest has a confirmed booking for this property
         has_confirmed_booking = False
+        is_owner_or_admin = False
         if current_user:
             user_id = current_user.get("user_id")
             existing_booking = await db.bookings.find_one({
@@ -345,8 +361,35 @@ async def get_property(
             })
             if existing_booking:
                 has_confirmed_booking = True
-            elif property_dict.get("owner_id") == user_id or current_user.get("role") == "admin":
+            if property_dict.get("owner_id") == user_id or current_user.get("role") == "admin":
                 has_confirmed_booking = True
+                is_owner_or_admin = True
+
+        # If the property status is not live, only allow owner or admin to view it
+        if property_dict.get("status") != PropertyStatus.LIVE.value and not is_owner_or_admin:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Property not found"
+            )
+
+        # Check if subscription has expired
+        if property_dict.get("subscription_id"):
+            sub = await db.subscriptions.find_one({"subscription_id": property_dict["subscription_id"]})
+            if sub:
+                from datetime import date
+                end_date_str = sub.get("end_date")
+                if isinstance(end_date_str, str):
+                    end_date = datetime.strptime(end_date_str.split('T')[0], "%Y-%m-%d").date()
+                elif isinstance(end_date_str, date):
+                    end_date = end_date_str
+                else:
+                    end_date = None
+                
+                if end_date and end_date <= date.today() and not is_owner_or_admin:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Property not found"
+                    )
 
         # Attach host profile (include phone and email if they have a confirmed booking, are owner, or admin)
         host_projection = {
