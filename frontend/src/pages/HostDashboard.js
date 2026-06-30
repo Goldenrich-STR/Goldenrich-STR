@@ -837,7 +837,7 @@ const HostDashboard = () => {
                         }}
                         className="flex-1 py-3 rounded-xl bg-charcoal text-white text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
                       >
-                        Manage
+                        Edit
                       </button>
                     </div>
                     <button
