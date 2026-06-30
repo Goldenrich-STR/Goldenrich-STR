@@ -181,7 +181,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                className="flex items-center space-x-3 cursor-pointer group w-fit" 
                onClick={() => navigate('/')}
             >
-               <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain brightness-0 invert" />
+               <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain logo-white" />
             </div>
 
            <div className="animate-slide-up">
@@ -351,16 +351,19 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                       type="button"
                                       onClick={() => {
                                          if (role === 'broker') {
-                                            handleGoldenRichSso();
+                                            // Unclickable for now
                                          } else {
                                             setRegisterData({ ...registerData, role });
                                          }
                                       }}
                                       className={`py-3 rounded-2xl border-2 font-bold tracking-tight text-[11px] uppercase tracking-widest transition-all duration-500 ${
-                                         registerData.role === role 
-                                         ? 'border-terracotta bg-terracotta text-white shadow-elevated scale-[1.02]' 
-                                         : 'border-gray-100 bg-white text-charcoal-muted hover:border-terracotta'
+                                         role === 'broker'
+                                         ? 'opacity-40 cursor-not-allowed border-gray-100 bg-white text-charcoal-muted'
+                                         : (registerData.role === role 
+                                            ? 'border-terracotta bg-terracotta text-white shadow-elevated scale-[1.02]' 
+                                            : 'border-gray-100 bg-white text-charcoal-muted hover:border-terracotta')
                                       }`}
+                                      disabled={role === 'broker'}
                                    >
                                       {role === 'guest' ? 'Guest' : role === 'host' ? 'Host' : 'Broker'}
                                    </button>
