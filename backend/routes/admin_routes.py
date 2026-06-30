@@ -34,11 +34,75 @@ async def require_admin(current_user: dict = Depends(get_current_user)):
         )
     return current_user
 
+
+def _build_user_filter_query(
+    role: Optional[str] = None,
+    search: Optional[str] = None,
+    email: Optional[str] = None,
+    phone: Optional[str] = None,
+    uid: Optional[str] = None,
+    location: Optional[str] = None,
+) -> dict:
+    query: dict = {}
+    and_filters: list[dict] = []
+
+    role_value = (role or "").strip().lower()
+    if role_value:
+        allowed_roles = {item.value for item in UserRole}
+        if role_value not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid role filter",
+            )
+        query["role"] = role_value
+
+    if search:
+        search = search.strip()
+        if search:
+            and_filters.append({
+                "$or": [
+                    {"full_name": {"$regex": search, "$options": "i"}},
+                    {"user_id": {"$regex": search, "$options": "i"}},
+                    {"uid": {"$regex": search, "$options": "i"}},
+                ]
+            })
+
+    if email:
+        query["email"] = {"$regex": email.strip(), "$options": "i"}
+
+    if phone:
+        query["phone"] = {"$regex": phone.strip(), "$options": "i"}
+
+    if uid:
+        uid = uid.strip()
+        if uid:
+            and_filters.append({
+                "$or": [
+                    {"user_id": {"$regex": uid, "$options": "i"}},
+                    {"uid": {"$regex": uid, "$options": "i"}},
+                ]
+            })
+
+    if location:
+        location = location.strip()
+        if location:
+            and_filters.append({
+                "$or": [
+                    {"city": {"$regex": location, "$options": "i"}},
+                    {"state": {"$regex": location, "$options": "i"}},
+                ]
+            })
+
+    if and_filters:
+        query["$and"] = and_filters
+
+    return query
+
 # ========== USER MANAGEMENT ==========
 
 @router.get("/users")
 async def get_all_users(
-    role: Optional[UserRole] = None,
+    role: Optional[str] = None,
     search: Optional[str] = None,
     email: Optional[str] = None,
     phone: Optional[str] = None,
@@ -51,36 +115,7 @@ async def get_all_users(
 ):
     """Get all users with advanced filters."""
     try:
-        print(f"[DEBUG] get_all_users params: role={role}, search={search}, email={email}, phone={phone}, uid={uid}, location={location}")
-        query = {}
-        
-        if role:
-            query["role"] = role.value
-        
-        if search:
-            query["$or"] = [
-                {"full_name": {"$regex": search, "$options": "i"}},
-                {"user_id": {"$regex": search, "$options": "i"}},
-                {"uid": {"$regex": search, "$options": "i"}}
-            ]
-        
-        if email:
-            query["email"] = {"$regex": email, "$options": "i"}
-            
-        if phone:
-            query["phone"] = {"$regex": phone, "$options": "i"}
-            
-        if uid:
-            query["$or"] = [
-                {"user_id": {"$regex": uid, "$options": "i"}},
-                {"uid": {"$regex": uid, "$options": "i"}}
-            ]
-            
-        if location:
-            query["$or"] = [
-                {"city": {"$regex": location, "$options": "i"}},
-                {"state": {"$regex": location, "$options": "i"}}
-            ]
+        query = _build_user_filter_query(role, search, email, phone, uid, location)
         
         cursor = db.users.find(query, {"_id": 0, "password_hash": 0}).sort("created_at", -1).skip(skip).limit(limit)
         users = await cursor.to_list(length=limit)
@@ -102,7 +137,7 @@ async def get_all_users(
 
 @router.get("/users/export-csv")
 async def export_users_csv(
-    role: Optional[UserRole] = None,
+    role: Optional[str] = None,
     search: Optional[str] = None,
     email: Optional[str] = None,
     phone: Optional[str] = None,
@@ -113,35 +148,7 @@ async def export_users_csv(
 ):
     """Export filtered users to a CSV file."""
     try:
-        query = {}
-        
-        if role:
-            query["role"] = role.value
-        
-        if search:
-            query["$or"] = [
-                {"full_name": {"$regex": search, "$options": "i"}},
-                {"user_id": {"$regex": search, "$options": "i"}},
-                {"uid": {"$regex": search, "$options": "i"}}
-            ]
-        
-        if email:
-            query["email"] = {"$regex": email, "$options": "i"}
-            
-        if phone:
-            query["phone"] = {"$regex": phone, "$options": "i"}
-            
-        if uid:
-            query["$or"] = [
-                {"user_id": {"$regex": uid, "$options": "i"}},
-                {"uid": {"$regex": uid, "$options": "i"}}
-            ]
-            
-        if location:
-            query["$or"] = [
-                {"city": {"$regex": location, "$options": "i"}},
-                {"state": {"$regex": location, "$options": "i"}}
-            ]
+        query = _build_user_filter_query(role, search, email, phone, uid, location)
             
         cursor = db.users.find(query, {"_id": 0, "password_hash": 0}).sort("created_at", -1)
         users = await cursor.to_list(length=10000)

@@ -1,14 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { propertyAPI, subscriptionAPI, uploadAPI, bookingAPI, getImageUrl, loadRazorpaySdk } from '../services/api';
+import { propertyAPI, subscriptionAPI, uploadAPI, bookingAPI, couponAPI, getImageUrl, loadRazorpaySdk } from '../services/api';
 import {
   Building2,
   ArrowLeft,
   ArrowRight,
   Check,
   CheckCircle2,
+  ShieldCheck,
   AlertCircle,
+  BadgePercent,
+  Tag,
+  Info,
+  Home,
+  LockKeyhole,
+  Headphones,
   Loader2,
   Upload,
   Trash2,
@@ -437,6 +444,9 @@ const HostListProperty = () => {
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
+  const [pricingSummaryPlan, setPricingSummaryPlan] = useState(null);
+  const [subscriptionCoupons, setSubscriptionCoupons] = useState([]);
+  const [subscriptionCouponCode, setSubscriptionCouponCode] = useState('');
 
   useEffect(() => {
     if (editPropertyId) {
@@ -521,6 +531,7 @@ const HostListProperty = () => {
   useEffect(() => {
     bookingAPI.getPaymentConfig().then((r) => setPaymentConfig(r.data)).catch(() => {});
     subscriptionAPI.getPlans().then((r) => setPlans(r.data.plans || [])).catch(() => {});
+    couponAPI.getSubscriptionCoupons().then((r) => setSubscriptionCoupons(r.data.coupons || [])).catch(() => {});
     if (refreshUser) refreshUser();
   }, [refreshUser]);
 
@@ -794,6 +805,26 @@ const HostListProperty = () => {
     return plans;
   }, [plans, form.bhk_type]);
 
+  const getSubscriptionBreakdown = (plan = {}) => {
+    const planFee = Number(plan.price_monthly) || 0;
+    const platformFee = Number(plan.platform_fee) || 0;
+    const taxPercent = Number(plan.tax_percent ?? 18);
+    const taxes = Math.round((planFee + platformFee) * (taxPercent / 100));
+    const subtotal = planFee + platformFee + taxes;
+    const couponCode = subscriptionCouponCode.trim().toUpperCase();
+    const coupon = couponCode ? subscriptionCoupons.find((c) => c.code === couponCode) : null;
+    const discount = coupon
+      ? Math.min(
+          subtotal,
+          coupon.discount_type === 'percentage'
+            ? Math.round(subtotal * ((Number(coupon.discount_value) || 0) / 100))
+            : Number(coupon.discount_value) || 0
+        )
+      : 0;
+    const total = subtotal - discount;
+    return { planFee, platformFee, taxPercent, taxes, subtotal, coupon, discount, total };
+  };
+
   const validateStep = () => {
     setError('');
     const k = STEPS[step].key;
@@ -1053,6 +1084,141 @@ const HostListProperty = () => {
     !!window.Razorpay
   );
 
+  const processSubscriptionPayment = async (planId, propertyId) => {
+    const subRes = await subscriptionAPI.subscribe({
+      plan_id: planId,
+      property_id: propertyId,
+      coupon_code: subscriptionCouponCode.trim().toUpperCase() || undefined
+    });
+    const subOrder = subRes.data;
+    const plan = plans.find(p => p.plan_id === planId);
+
+    if (paymentConfig?.is_mock) {
+      if (await canUseRazorpayTestCheckout()) {
+        await new Promise((resolve, reject) => {
+          const rzp = new window.Razorpay({
+            key: paymentConfig.key_id,
+            amount: subOrder.amount,
+            currency: subOrder.currency,
+            name: 'X-Space360',
+            description: `Subscription: ${subOrder.plan_name || plan?.plan_name || 'Plan'}`,
+            prefill: {
+              name: user?.full_name,
+              email: user?.email,
+              contact: user?.phone,
+            },
+            theme: { color: '#006437' },
+            handler: async () => {
+              try {
+                await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
+                resolve();
+              } catch (err) {
+                reject(err);
+              }
+            },
+            modal: { ondismiss: () => reject(new Error('Subscription payment cancelled')) },
+          });
+          rzp.on('payment.failed', (resp) => {
+            reject(new Error(resp?.error?.description || 'Subscription payment failed'));
+          });
+          rzp.open();
+        });
+      } else {
+        await new Promise((resolve, reject) => {
+          setMockPayment({
+            isOpen: true,
+            amount: subOrder.payable_amount || ((subOrder.amount || 0) / 100),
+            title: `${plan?.plan_name || 'Subscription'} Plan`,
+            onConfirm: async () => {
+              try {
+                await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
+                setMockPayment(prev => ({ ...prev, isOpen: false }));
+                resolve();
+              } catch (err) {
+                setMockPayment(prev => ({ ...prev, isOpen: false }));
+                reject(err);
+              }
+            },
+            onCancel: () => {
+              setMockPayment(prev => ({ ...prev, isOpen: false }));
+              reject(new Error('Payment cancelled'));
+            }
+          });
+        });
+      }
+      return subOrder;
+    }
+
+    const sdkLoaded = await loadRazorpaySdk();
+    if (!sdkLoaded || !window.Razorpay) {
+      throw new Error('Razorpay SDK failed to load. Please check your internet connection.');
+    }
+    await new Promise((resolve, reject) => {
+      const rzp = new window.Razorpay({
+        key: subOrder.razorpay_key_id,
+        amount: subOrder.amount,
+        currency: subOrder.currency,
+        name: 'X-Space360',
+        description: `Subscription: ${subOrder.plan_name}`,
+        order_id: subOrder.razorpay_order_id,
+        prefill: {
+          name: user?.full_name,
+          email: user?.email,
+          contact: user?.phone,
+        },
+        theme: { color: '#006437' },
+        handler: async (resp) => {
+          try {
+            await subscriptionAPI.confirmSubscription({
+              subscription_id: subOrder.subscription_id,
+              razorpay_payment_id: resp.razorpay_payment_id,
+              razorpay_order_id: resp.razorpay_order_id,
+              razorpay_signature: resp.razorpay_signature,
+            });
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        },
+        modal: { ondismiss: () => reject(new Error('Subscription payment cancelled')) },
+      });
+      rzp.open();
+    });
+    return subOrder;
+  };
+
+  const proceedFromPricingSummary = async () => {
+    if (!pricingSummaryPlan) return;
+    if (subscriptionCouponCode.trim() && !getSubscriptionBreakdown(pricingSummaryPlan).coupon) {
+      setError('This coupon is not available for subscriptions.');
+      return;
+    }
+
+    setError('');
+    setPaying(true);
+    try {
+      let propertyId = createdPropertyId;
+      const payload = { ...buildPropertyPayload(), subscription_id: pricingSummaryPlan.plan_id };
+      if (!propertyId) {
+        const propRes = await propertyAPI.createProperty(payload);
+        propertyId = propRes.data.property_id;
+        setCreatedPropertyId(propertyId);
+      } else {
+        await propertyAPI.updateProperty(propertyId, payload);
+      }
+
+      await processSubscriptionPayment(pricingSummaryPlan.plan_id, propertyId);
+      update({ subscription_plan_id: pricingSummaryPlan.plan_id });
+      setHasActiveSubscription(true);
+      setPricingSummaryPlan(null);
+      setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    } catch (err) {
+      setError(formatError(err, 'Subscription payment failed'));
+    } finally {
+      setPaying(false);
+    }
+  };
+
   const submitListing = async () => {
     setSubmitting(true);
     setError('');
@@ -1070,104 +1236,8 @@ const HostListProperty = () => {
       // 2. Pay the subscription fee (Registration fee skipped)
       if (form.subscription_plan_id && !hasActiveSubscription) {
         setPaying(true);
-        const subRes = await subscriptionAPI.subscribe({
-          plan_id: form.subscription_plan_id,
-          property_id: propertyId
-        });
-        const subOrder = subRes.data;
-
-        if (paymentConfig?.is_mock) {
-          const plan = plans.find(p => p.plan_id === form.subscription_plan_id);
-          if (await canUseRazorpayTestCheckout()) {
-            await new Promise((resolve, reject) => {
-              const rzp = new window.Razorpay({
-                key: paymentConfig.key_id,
-                amount: subOrder.amount,
-                currency: subOrder.currency,
-                name: 'X-Space360',
-                description: `Subscription: ${subOrder.plan_name || plan?.plan_name || 'Plan'}`,
-                prefill: {
-                  name: user?.full_name,
-                  email: user?.email,
-                  contact: user?.phone,
-                },
-                theme: { color: '#006437' },
-                handler: async () => {
-                  try {
-                    await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
-                    resolve();
-                  } catch (err) {
-                    reject(err);
-                  }
-                },
-                modal: { ondismiss: () => reject(new Error('Subscription payment cancelled')) },
-              });
-              rzp.on('payment.failed', (resp) => {
-                reject(new Error(resp?.error?.description || 'Subscription payment failed'));
-              });
-              rzp.open();
-            });
-          } else {
-            // Show internal mock modal when no Razorpay test key is configured.
-            await new Promise((resolve, reject) => {
-              setMockPayment({
-                isOpen: true,
-                amount: plan?.price_monthly || 0,
-                title: `${plan?.plan_name || 'Subscription'} Plan`,
-                onConfirm: async () => {
-                  try {
-                    await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
-                    setMockPayment(prev => ({ ...prev, isOpen: false }));
-                    resolve();
-                  } catch (err) {
-                    setMockPayment(prev => ({ ...prev, isOpen: false }));
-                    reject(err);
-                  }
-                },
-                onCancel: () => {
-                  setMockPayment(prev => ({ ...prev, isOpen: false }));
-                  reject(new Error('Payment cancelled'));
-                }
-              });
-            });
-          }
-        } else {
-          const sdkLoaded = await loadRazorpaySdk();
-          if (!sdkLoaded || !window.Razorpay) {
-            throw new Error('Razorpay SDK failed to load. Please check your internet connection.');
-          }
-          await new Promise((resolve, reject) => {
-            const rzp = new window.Razorpay({
-              key: subOrder.razorpay_key_id,
-              amount: subOrder.amount,
-              currency: subOrder.currency,
-              name: 'X-Space360',
-              description: `Subscription: ${subOrder.plan_name}`,
-              order_id: subOrder.razorpay_order_id,
-              prefill: {
-                name: user?.full_name,
-                email: user?.email,
-                contact: user?.phone,
-              },
-              theme: { color: '#006437' },
-              handler: async (resp) => {
-                try {
-                  await subscriptionAPI.confirmSubscription({
-                    subscription_id: subOrder.subscription_id,
-                    razorpay_payment_id: resp.razorpay_payment_id,
-                    razorpay_order_id: resp.razorpay_order_id,
-                    razorpay_signature: resp.razorpay_signature,
-                  });
-                  resolve();
-                } catch (err) {
-                  reject(err);
-                }
-              },
-              modal: { ondismiss: () => reject(new Error('Subscription payment cancelled')) },
-            });
-            rzp.open();
-          });
-        }
+        await processSubscriptionPayment(form.subscription_plan_id, propertyId);
+        setHasActiveSubscription(true);
         setPaying(false);
       }
 
@@ -1965,7 +2035,7 @@ const HostListProperty = () => {
                         <button
                           key={p.plan_id}
                           type="button"
-                          onClick={() => update({ subscription_plan_id: p.plan_id })}
+                          onClick={() => setPricingSummaryPlan(p)}
                           className={`text-left p-4 rounded-lg border-2 transition ${
                             active ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 hover:border-terracotta/50'
                           }`}
@@ -2074,6 +2144,224 @@ const HostListProperty = () => {
           )}
         </div>
       </div>
+
+      {pricingSummaryPlan && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center px-4 py-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[28px] w-full max-w-lg max-h-[calc(100vh-32px)] overflow-hidden shadow-elevated animate-in zoom-in-95 duration-200 flex flex-col border border-white/80">
+            <div className="flex-shrink-0 bg-white px-4 pt-4 pb-3 border-b border-gray-100">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700">
+                    <CreditCard className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-terracotta leading-none mb-1.5">Pricing Summary</p>
+                    <h3 className="text-xl leading-tight font-bold text-charcoal">{pricingSummaryPlan.plan_name}</h3>
+                    {pricingSummaryPlan.description && (
+                      <p className="text-xs text-charcoal-light mt-1 leading-relaxed">{pricingSummaryPlan.description}</p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPricingSummaryPlan(null)}
+                  className="w-9 h-9 rounded-full border border-gray-100 text-charcoal-light hover:text-charcoal hover:bg-stone transition flex items-center justify-center shrink-0"
+                  aria-label="Close pricing summary"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-3.5 bg-white">
+              <div className="rounded-xl border border-gray-200 bg-white overflow-hidden mb-3">
+                <div className="flex items-center justify-between gap-4 px-3.5 py-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <CreditCard className="w-4 h-4" />
+                    </span>
+                    <span className="text-sm font-bold text-charcoal">Plan fee</span>
+                  </div>
+                  <span className="text-sm sm:text-base font-bold text-charcoal whitespace-nowrap">
+                    ₹{getSubscriptionBreakdown(pricingSummaryPlan).planFee.toLocaleString('en-IN')}/month
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4 px-3.5 py-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </span>
+                    <span className="text-sm font-bold text-charcoal">Premium Service Fee</span>
+                  </div>
+                  <span className="text-sm sm:text-base font-bold text-charcoal whitespace-nowrap">
+                    ₹{getSubscriptionBreakdown(pricingSummaryPlan).platformFee.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4 px-3.5 py-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <BadgePercent className="w-4 h-4" />
+                    </span>
+                    <span className="text-sm font-bold text-charcoal underline decoration-sand-300 underline-offset-4">
+                      Taxes & GST ({getSubscriptionBreakdown(pricingSummaryPlan).taxPercent}%)
+                    </span>
+                  </div>
+                  <span className="text-sm sm:text-base font-bold text-charcoal whitespace-nowrap">
+                    ₹{getSubscriptionBreakdown(pricingSummaryPlan).taxes.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-4 px-3.5 py-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                      <Home className="w-4 h-4" />
+                    </span>
+                    <span className="text-sm font-bold text-charcoal">Selected property type</span>
+                  </div>
+                  <span className="text-sm font-bold text-charcoal whitespace-nowrap">
+                    {CATEGORY_DATA[form.category]?.bhkTypes.find((b) => b.value === form.bhk_type)?.label || form.bhk_type}
+                  </span>
+                </div>
+                {getSubscriptionBreakdown(pricingSummaryPlan).discount > 0 && (
+                  <div className="flex items-center justify-between gap-4 px-3.5 py-3 border-b border-emerald-100 bg-emerald-50">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                        <Tag className="w-4 h-4" />
+                      </span>
+                      <span className="text-sm font-bold text-emerald-800">
+                        Coupon Discount ({getSubscriptionBreakdown(pricingSummaryPlan).coupon?.code})
+                      </span>
+                    </div>
+                    <span className="text-sm sm:text-base font-bold text-emerald-800 whitespace-nowrap">
+                      -₹{getSubscriptionBreakdown(pricingSummaryPlan).discount.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                )}
+                <div className="mx-2 my-2 rounded-lg border border-emerald-100 bg-gradient-to-r from-emerald-50 to-white px-3.5 py-3 flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-bold text-charcoal">Total payable</p>
+                    <p className="text-[10px] font-semibold text-charcoal-light mt-0.5">Inclusive of all taxes</p>
+                  </div>
+                  <span className="text-xl font-bold text-terracotta whitespace-nowrap">
+                    ₹{getSubscriptionBreakdown(pricingSummaryPlan).total.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 bg-white p-3 mb-3">
+                <div className="flex items-center justify-between gap-3 mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-3.5 h-3.5 text-charcoal-light" />
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-charcoal-muted">Subscription Coupons</p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {getSubscriptionBreakdown(pricingSummaryPlan).coupon && (
+                      <span className="text-[10px] font-bold text-emerald-700">Applied</span>
+                    )}
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  </div>
+                </div>
+                {subscriptionCoupons.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {subscriptionCoupons.map((coupon) => (
+                      <button
+                        key={coupon.coupon_id || coupon.code}
+                        type="button"
+                        onClick={() => setSubscriptionCouponCode(coupon.code)}
+                        className={`rounded-full border px-3 py-1 text-xs font-bold transition ${
+                          subscriptionCouponCode.trim().toUpperCase() === coupon.code
+                            ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                            : 'border-gray-200 bg-stone text-charcoal hover:border-terracotta'
+                        }`}
+                      >
+                        {coupon.code} · {coupon.discount_type === 'percentage' ? `${coupon.discount_value}% OFF` : `₹${coupon.discount_value} OFF`}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-charcoal-light mb-3">No active subscription coupons available right now.</p>
+                )}
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    value={subscriptionCouponCode}
+                    onChange={(e) => setSubscriptionCouponCode(e.target.value.toUpperCase())}
+                    placeholder="Enter coupon code"
+                    className="min-h-[42px] flex-1 rounded-lg border border-gray-200 px-4 text-sm font-semibold uppercase outline-none focus:border-terracotta"
+                  />
+                  {subscriptionCouponCode && (
+                    <button
+                      type="button"
+                      onClick={() => setSubscriptionCouponCode('')}
+                      className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-charcoal-light hover:text-charcoal"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                    {subscriptionCouponCode && !getSubscriptionBreakdown(pricingSummaryPlan).coupon && (
+                  <p className="mt-2 text-xs font-semibold text-red-600">This coupon is not available for subscriptions.</p>
+                )}
+              </div>
+
+              <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 flex items-start gap-3">
+                <Info className="w-4 h-4 text-emerald-700 mt-0.5 shrink-0" />
+                <p className="text-xs leading-relaxed text-emerald-800 font-semibold">
+                  Review this summary before proceeding. Payment will be completed from the Review & Pay step.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex-shrink-0 bg-white px-6 py-3.5 md:px-7 border-t border-gray-100 shadow-[0_-12px_28px_rgba(15,23,42,0.08)]">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPricingSummaryPlan(null)}
+                  className="flex-1 min-h-[52px] rounded-xl border border-terracotta/40 bg-white text-terracotta font-bold flex items-center justify-center gap-2 hover:bg-terracotta/5 transition"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={proceedFromPricingSummary}
+                  disabled={paying || (!!subscriptionCouponCode.trim() && !getSubscriptionBreakdown(pricingSummaryPlan).coupon)}
+                  className="flex-1 min-h-[52px] rounded-xl bg-sage-dark text-white font-bold flex flex-col items-center justify-center leading-tight shadow-premium shadow-sage-dark/20 hover:bg-sage-dark/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  data-testid="pricing-summary-proceed"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <LockKeyhole className="w-4 h-4" />}
+                    {paying ? 'Processing Payment...' : 'Proceed to Review & Pay'}
+                  </span>
+                  <span className="text-[10px] font-semibold text-white/80 mt-0.5">Secure & Safe Checkout</span>
+                </button>
+              </div>
+              <div className="hidden sm:grid grid-cols-3 gap-3 pt-3 mt-3 border-t border-gray-100">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ShieldCheck className="w-4 h-4 text-charcoal" />
+                  <div>
+                    <p className="text-[10px] font-bold text-charcoal leading-none">Secure Payments</p>
+                    <p className="text-[9px] text-charcoal-light mt-1">100% Protected</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <BadgePercent className="w-4 h-4 text-charcoal" />
+                  <div>
+                    <p className="text-[10px] font-bold text-charcoal leading-none">Best Price Guarantee</p>
+                    <p className="text-[9px] text-charcoal-light mt-1">Always the best deal</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Headphones className="w-4 h-4 text-charcoal" />
+                  <div>
+                    <p className="text-[10px] font-bold text-charcoal leading-none">24/7 Support</p>
+                    <p className="text-[9px] text-charcoal-light mt-1">We're here to help</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mock Payment Modal */}
       {mockPayment.isOpen && (

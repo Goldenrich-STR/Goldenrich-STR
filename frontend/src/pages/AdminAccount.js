@@ -11,6 +11,8 @@ import {
 
 import { useAuth } from '../contexts/AuthContext';
 import { accountAPI } from '../services/api';
+import CouponManagement from '../components/admin/CouponManagement';
+import { BookingManagement, SubscriptionManagement } from './AdminDashboard';
 
 const fmtINR = (paise) =>
   new Intl.NumberFormat('en-IN', {
@@ -20,6 +22,9 @@ const fmtINR = (paise) =>
 const TABS = [
   { id: 'overview',     label: 'Overview' },
   { id: 'transactions', label: 'Transactions' },
+  { id: 'bookings',     label: 'Bookings' },
+  { id: 'subscriptions', label: 'Subscriptions' },
+  { id: 'coupons',      label: 'Coupons' },
   { id: 'payouts',      label: 'Payouts' },
   { id: 'refunds',      label: 'Refunds' },
   { id: 'top-hosts',    label: 'Top Hosts' },
@@ -80,6 +85,13 @@ const AdminAccount = () => {
 
         {tab === 'overview' && <OverviewTab />}
         {tab === 'transactions' && <TransactionsTab />}
+        {tab === 'bookings' && <BookingManagement />}
+        {tab === 'subscriptions' && <SubscriptionManagement />}
+        {tab === 'coupons' && (
+          <div data-testid="coupons-section" className="animate-fade-in">
+            <CouponManagement />
+          </div>
+        )}
         {tab === 'payouts' && <PayoutsTab />}
         {tab === 'refunds' && <RefundsTab />}
         {tab === 'top-hosts' && <TopHostsTab />}

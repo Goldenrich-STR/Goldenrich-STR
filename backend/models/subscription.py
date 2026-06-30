@@ -25,6 +25,8 @@ class SubscriptionPlan(BaseModel):
     plan_name: str
     price_monthly: float
     price_annual: float
+    platform_fee: float = 0.0
+    tax_percent: float = 18.0
     description: str
     validity_days: int = 30
     is_active: bool = True

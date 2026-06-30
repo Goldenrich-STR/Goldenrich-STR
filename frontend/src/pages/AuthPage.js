@@ -9,7 +9,7 @@ import SEO from '../components/SEO';
 const AuthPage = ({ isAdminLogin = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, register, logout } = useAuth();
+  const { login, adminLogin, register, logout } = useAuth();
   const forcedLogoutHandled = useRef(false);
   const searchParams = new URLSearchParams(window.location.search);
   const forceLogin = searchParams.get('force_login') === '1';
@@ -72,7 +72,9 @@ const AuthPage = ({ isAdminLogin = false }) => {
     setError('');
     setLoading(true);
     
-    const result = await login(loginData.email, loginData.password);
+    const result = isAdminLogin
+      ? await adminLogin(loginData.email, loginData.password)
+      : await login(loginData.email, loginData.password);
     
     if (result.success) {
       const userRole = result.user.role;

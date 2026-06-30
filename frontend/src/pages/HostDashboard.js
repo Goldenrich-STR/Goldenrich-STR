@@ -1596,13 +1596,19 @@ const HostDashboard = () => {
                   )}
                   {user?.lg_code && (
                     <div>
-                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Broker LG Code</span>
-                      <span className="text-xs font-semibold text-charcoal">{user?.lg_code}</span>
+                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Broker Code</span>
+                      <span className="text-xs font-mono font-semibold text-charcoal">{user?.lg_code}</span>
+                    </div>
+                  )}
+                  {user?.employee_code && (
+                    <div>
+                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Employee Code</span>
+                      <span className="text-xs font-mono font-semibold text-charcoal">{user?.employee_code}</span>
                     </div>
                   )}
                   {user?.rm_id && (
                     <div className="col-span-2">
-                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Assigned RM ID</span>
+                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Assigned Employee ID</span>
                       <span className="text-xs font-mono font-semibold text-charcoal break-all">{user?.rm_id}</span>
                     </div>
                   )}

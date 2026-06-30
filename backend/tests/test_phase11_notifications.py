@@ -178,6 +178,7 @@ class TestMockPayNotifications:
             f"{API}/bookings/{bid}/mock-pay", headers=_auth(guest_token), timeout=20
         )
         assert r.status_code == 200, r.text
+        payment_id = r.json()["razorpay_payment_id"]
 
         # async create_task -> wait briefly for completion
         for _ in range(20):
@@ -222,6 +223,24 @@ class TestMockPayNotifications:
             }
         )
         assert guest_inapp >= 1, "Expected guest in_app booking_confirmed row"
+
+        guest_doc = None
+        for _ in range(10):
+            guest_doc = await db.notifications.find_one(
+                {
+                    "user_id": guest_user_id,
+                    "type": "booking_confirmed",
+                    "channel": "in_app",
+                    "data.booking_id": bid,
+                },
+                {"_id": 0},
+            )
+            if guest_doc:
+                break
+            await asyncio.sleep(0.5)
+        assert guest_doc is not None, "Expected guest booking_confirmed notification row"
+        assert guest_doc["data"]["transaction_id"] == payment_id
+        assert guest_doc["data"]["payment_id"] == payment_id
 
         # Backend logs include DEMO + MOCK EMAIL lines
         log = _read_log_tail()
@@ -279,6 +298,23 @@ class TestConfirmPaymentNotifications:
         assert after_host >= 3, (
             f"Expected >=3 host notifs for confirm-payment booking, got {after_host}"
         )
+
+        guest_doc = None
+        for _ in range(10):
+            guest_doc = await db.notifications.find_one(
+                {
+                    "type": "booking_confirmed",
+                    "channel": "in_app",
+                    "data.booking_id": bid,
+                },
+                {"_id": 0},
+            )
+            if guest_doc:
+                break
+            await asyncio.sleep(0.5)
+        assert guest_doc is not None, "Expected guest booking_confirmed notification row"
+        assert guest_doc["data"]["transaction_id"] == mock["razorpay_payment_id"]
+        assert guest_doc["data"]["payment_id"] == mock["razorpay_payment_id"]
 
 
 # ============================================================

@@ -161,6 +161,9 @@ export const authAPI = {
   
   login: (email, password) =>
     apiClient.post('/api/auth/login', { email, password }),
+
+  adminLogin: (email, password) =>
+    apiClient.post('/api/auth/admin-login', { email, password }),
 };
 
 // Property API
@@ -509,6 +512,7 @@ export const couponAPI = {
   createCoupon: (data) => apiClient.post('/coupons/', data),
   listCoupons: () => apiClient.get('/coupons/'),
   getPropertyCoupons: (propertyId) => apiClient.get(`/coupons/property/${propertyId}`),
+  getSubscriptionCoupons: () => apiClient.get('/coupons/subscription'),
   toggleCouponStatus: (couponId) => apiClient.patch(`/coupons/admin/${couponId}/toggle`),
 };
 

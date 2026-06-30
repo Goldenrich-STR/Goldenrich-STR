@@ -10,7 +10,6 @@ import {
   Mail, EyeOff, Lock, User, MapPin, Eye, Camera, Info, ArrowLeft,
   Search, ChevronDown
 } from 'lucide-react';
-import CouponManagement from '../components/admin/CouponManagement';
 import SearchLogsManagement from '../components/admin/SearchLogsManagement';
 import AICallsManagement from '../components/admin/AICallsManagement';
 import { Phone, Volume2, HelpCircle, Download, UserPlus } from 'lucide-react';
@@ -362,10 +361,7 @@ const AdminDashboard = () => {
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             { id: 'users', label: 'Users', icon: Users },
             { id: 'properties', label: 'Properties', icon: Building2 },
-            { id: 'bookings', label: 'Bookings', icon: Calendar },
-            { id: 'subscriptions', label: 'Subscriptions', icon: Zap },
             { id: 'cms', label: 'CMS', icon: TrendingUp },
-            { id: 'coupons', label: 'Coupons', icon: Tag },
             { id: 'search-logs', label: 'Search Logs', icon: FileText },
             { id: 'ai-calls', label: 'AI Voice Calls', icon: Phone },
           ].map((tab) => (
@@ -494,26 +490,9 @@ const AdminDashboard = () => {
           <PropertyModeration />
         )}
 
-        {/* Bookings Tab */}
-        {activeTab === 'bookings' && (
-          <BookingManagement />
-        )}
-
-        {/* Subscriptions Tab */}
-        {activeTab === 'subscriptions' && (
-          <SubscriptionManagement />
-        )}
-
         {/* CMS Tab */}
         {activeTab === 'cms' && (
           <CMSManagement />
-        )}
-
-        {/* Coupons Tab */}
-        {activeTab === 'coupons' && (
-          <div data-testid="coupons-section" className="animate-fade-in">
-            <CouponManagement />
-          </div>
         )}
 
         {/* Search Logs Tab */}
@@ -708,6 +687,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
   const [allBrokers, setAllBrokers] = useState([]);
   const [allEmployees, setAllEmployees] = useState([]);
   const [rejectDocState, setRejectDocState] = useState(null);
+  const fetchUsersRequestRef = useRef(0);
 
   const fetchBrokersAndEmployees = async () => {
     try {
@@ -774,6 +754,8 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
   useEffect(() => {
     setCurrentPage(1);
+    setUsers([]);
+    setTotalUsers(0);
   }, [roleFilter, searchTerm, emailSearch, phoneSearch, uidSearch, locationSearch]);
 
   useEffect(() => {
@@ -867,11 +849,16 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
   };
 
   const fetchUsers = async () => {
+    const requestId = fetchUsersRequestRef.current + 1;
+    fetchUsersRequestRef.current = requestId;
+    setLoading(true);
+
     try {
+      const selectedRole = (roleFilter || '').trim().toLowerCase();
       const params = {
         limit: usersPerPage,
         skip: (currentPage - 1) * usersPerPage,
-        role: roleFilter || undefined,
+        role: selectedRole || undefined,
         search: searchTerm || undefined,
         email: emailSearch || undefined,
         phone: phoneSearch || undefined,
@@ -879,12 +866,24 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         location: locationSearch || undefined
       };
       const response = await apiClient.get('/admin/users', { params });
-      setUsers(response.data.users || []);
-      setTotalUsers(response.data.total || 0);
+      if (requestId !== fetchUsersRequestRef.current) return;
+
+      const responseUsers = response.data.users || [];
+      const roleSafeUsers = selectedRole
+        ? responseUsers.filter(user => String(user.role || '').toLowerCase() === selectedRole)
+        : responseUsers;
+
+      setUsers(roleSafeUsers);
+      setTotalUsers(selectedRole && roleSafeUsers.length !== responseUsers.length
+        ? roleSafeUsers.length
+        : response.data.total || 0);
     } catch (error) {
+      if (requestId !== fetchUsersRequestRef.current) return;
       console.error('Error fetching users:', error);
     } finally {
-      setLoading(false);
+      if (requestId === fetchUsersRequestRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -934,6 +933,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         birthdate: editUser.birthdate,
         profile_image: editUser.profile_image,
         lg_code: editUser.lg_code,
+        employee_code: editUser.employee_code,
         is_active: editUser.is_active
       };
       
@@ -1046,7 +1046,12 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     try {
       await apiClient.patch(`/admin/users/${userId}`, { broker_id: brokerId });
       alert('Broker assigned successfully!');
-      setViewUser(prev => ({ ...prev, broker_id: brokerId }));
+      const assignedBroker = allBrokers.find(b => b.user_id === brokerId);
+      setViewUser(prev => ({
+        ...prev,
+        broker_id: brokerId,
+        lg_code: assignedBroker?.lg_code || prev?.lg_code || ''
+      }));
       fetchUsers();
     } catch (error) {
       alert('Failed to assign broker: ' + (error.response?.data?.detail || error.message));
@@ -1057,7 +1062,12 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     try {
       await apiClient.patch(`/admin/users/${userId}`, { rm_id: rmId });
       alert('RM assigned successfully!');
-      setViewUser(prev => ({ ...prev, rm_id: rmId }));
+      const assignedEmployee = allEmployees.find(emp => emp.user_id === rmId);
+      setViewUser(prev => ({
+        ...prev,
+        rm_id: rmId,
+        employee_code: assignedEmployee?.employee_code || prev?.employee_code || ''
+      }));
       fetchUsers();
     } catch (error) {
       alert('Failed to assign RM: ' + (error.response?.data?.detail || error.message));
@@ -1106,6 +1116,29 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
       alert('Failed to export users list');
     }
   };
+
+  const selectedRole = (roleFilter || '').trim().toLowerCase();
+  const displayedUsers = selectedRole
+    ? users.filter(user => String(user.role || '').toLowerCase() === selectedRole)
+    : users;
+  const displayTotalUsers = selectedRole && displayedUsers.length !== users.length
+    ? displayedUsers.length
+    : totalUsers;
+
+  const getAssignedBroker = (u) => (
+    allBrokers.find(b => b.user_id === u?.broker_id)
+    || allBrokers.find(b => b.lg_code && u?.lg_code && b.lg_code.toLowerCase() === u.lg_code.toLowerCase())
+    || null
+  );
+
+  const getAssignedEmployee = (u) => (
+    allEmployees.find(emp => emp.user_id === u?.rm_id)
+    || allEmployees.find(emp => emp.employee_code && u?.employee_code && emp.employee_code.toLowerCase() === u.employee_code.toLowerCase())
+    || null
+  );
+
+  const getHostBrokerCode = (u) => u?.lg_code || getAssignedBroker(u)?.lg_code || 'Not assigned';
+  const getHostEmployeeCode = (u) => u?.employee_code || getAssignedEmployee(u)?.employee_code || 'Not assigned';
 
   return (
     <div data-testid="user-management">
@@ -1210,7 +1243,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         </div>
       ) : (
         <div className="space-y-4" data-testid="users-list">
-          {users.map((user) => (
+          {displayedUsers.map((user) => (
             <div key={user.user_id} className="dashboard-card hover:shadow-subtle transition-all group" data-testid={`user-${user.user_id}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
@@ -1298,14 +1331,14 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
           ))}
           
           {/* Pagination Controls */}
-          {totalUsers > usersPerPage && (
+          {displayTotalUsers > usersPerPage && (
             <div className="flex justify-between items-center bg-white px-6 py-4 rounded-2xl border border-gray-100 mt-6 flex-wrap gap-4">
               <p className="text-xs text-charcoal-muted">
                 Showing <span className="font-bold text-charcoal">{(currentPage - 1) * usersPerPage + 1}</span> to{' '}
                 <span className="font-bold text-charcoal">
-                  {Math.min(currentPage * usersPerPage, totalUsers)}
+                  {Math.min(currentPage * usersPerPage, displayTotalUsers)}
                 </span>{' '}
-                of <span className="font-bold text-charcoal">{totalUsers}</span> users
+                of <span className="font-bold text-charcoal">{displayTotalUsers}</span> users
               </p>
               <div className="flex items-center space-x-2">
                 <button
@@ -1316,9 +1349,9 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                {Array.from({ length: Math.ceil(totalUsers / usersPerPage) }).map((_, idx) => {
+                {Array.from({ length: Math.ceil(displayTotalUsers / usersPerPage) }).map((_, idx) => {
                   const pageNum = idx + 1;
-                  const totalPages = Math.ceil(totalUsers / usersPerPage);
+                  const totalPages = Math.ceil(displayTotalUsers / usersPerPage);
                   if (
                     pageNum === 1 ||
                     pageNum === totalPages ||
@@ -1349,8 +1382,8 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 })}
                 <button
                   type="button"
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(totalUsers / usersPerPage)))}
-                  disabled={currentPage === Math.ceil(totalUsers / usersPerPage)}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(displayTotalUsers / usersPerPage)))}
+                  disabled={currentPage === Math.ceil(displayTotalUsers / usersPerPage)}
                   className="p-2 rounded-xl border border-gray-100 text-charcoal-light hover:bg-stone transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -2145,32 +2178,75 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                       </div>
                     </div>
 
-                    <div className="p-4 bg-stone rounded-2xl">
-                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Host User ID / LG Code</p>
-                      <p className="text-xs font-mono text-charcoal-light">{getDisplayUID(viewUser)} {viewUser.lg_code && getDisplayUID(viewUser) !== viewUser.lg_code ? `| LG: ${viewUser.lg_code}` : ''}</p>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="p-4 bg-stone rounded-2xl">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Host User ID</p>
+                        <p className="text-xs font-mono text-charcoal-light break-all">{getDisplayUID(viewUser)}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-stone rounded-2xl">
+                          <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Broker Code</p>
+                          <p className="text-xs font-mono font-bold text-terracotta break-all">{getHostBrokerCode(viewUser)}</p>
+                        </div>
+                        <div className="p-4 bg-stone rounded-2xl">
+                          <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Employee Code</p>
+                          <p className="text-xs font-mono font-bold text-terracotta break-all">{getHostEmployeeCode(viewUser)}</p>
+                        </div>
+                      </div>
                     </div>
 
                     {viewUser.role === 'host' && (
-                      <div className="p-4 bg-stone rounded-2xl">
-                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Assigned Broker</p>
-                        <div className="flex flex-col space-y-2 mt-2">
-                          <select 
-                            className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs font-bold text-charcoal"
-                            value={viewUser.broker_id || ''}
-                            onChange={(e) => handleAssignBroker(viewUser.user_id, e.target.value)}
-                          >
-                            <option value="">-- Assign a Broker --</option>
-                            {allBrokers.map(b => (
-                              <option key={b.user_id} value={b.user_id}>
-                                {b.full_name} ({b.lg_code || b.user_id})
-                              </option>
-                            ))}
-                          </select>
-                          {viewUser.broker_id && (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-stone rounded-2xl">
+                          <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Assigned Broker</p>
+                          <div className="flex flex-col space-y-2 mt-2">
+                            <select 
+                              className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs font-bold text-charcoal"
+                              value={viewUser.broker_id || getAssignedBroker(viewUser)?.user_id || ''}
+                              onChange={(e) => handleAssignBroker(viewUser.user_id, e.target.value)}
+                            >
+                              <option value="">-- Assign a Broker --</option>
+                              {allBrokers.map(b => (
+                                <option key={b.user_id} value={b.user_id}>
+                                  {b.full_name} ({b.lg_code || b.user_id})
+                                </option>
+                              ))}
+                            </select>
                             <p className="text-[10px] font-bold text-terracotta mt-1 tracking-widest uppercase">
-                              Broker ID: {viewUser.broker_id}
+                              Broker Code: {getHostBrokerCode(viewUser)}
                             </p>
-                          )}
+                            {viewUser.broker_id && (
+                              <p className="text-[10px] font-mono font-semibold text-charcoal-light break-all">
+                                Broker ID: {viewUser.broker_id}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="p-4 bg-stone rounded-2xl">
+                          <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Assigned Employee</p>
+                          <div className="flex flex-col space-y-2 mt-2">
+                            <select 
+                              className="w-full px-3 py-2 bg-white border border-gray-100 rounded-lg text-xs font-bold text-charcoal"
+                              value={viewUser.rm_id || getAssignedEmployee(viewUser)?.user_id || ''}
+                              onChange={(e) => handleAssignRM(viewUser.user_id, e.target.value)}
+                            >
+                              <option value="">-- Assign an Employee --</option>
+                              {allEmployees.map(emp => (
+                                <option key={emp.user_id} value={emp.user_id}>
+                                  {emp.full_name} ({emp.employee_code || emp.user_id})
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-[10px] font-bold text-terracotta mt-1 tracking-widest uppercase">
+                              Employee Code: {getHostEmployeeCode(viewUser)}
+                            </p>
+                            {viewUser.rm_id && (
+                              <p className="text-[10px] font-mono font-semibold text-charcoal-light break-all">
+                                Employee ID: {viewUser.rm_id}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -2259,6 +2335,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                               </a>
                             )}
 
+                            {viewUser.kyc_status !== 'approved' && (
                             <div className="flex gap-2 pt-2 border-t border-sand-100">
                               <button
                                 type="button"
@@ -2285,6 +2362,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                                 Reject
                               </button>
                             </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -2322,7 +2400,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
                 {/* KYC Actions Row */}
                 <div className="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  {viewUser.role === 'host' ? (
+                  {viewUser.role === 'host' && viewUser.kyc_status !== 'approved' ? (
                     <>
                       <div className="text-xs text-charcoal-muted font-bold">
                         ⚠️ Verify all documents and signature against local guidelines before approval.
@@ -2341,6 +2419,15 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                           Approve KYC & Go Live
                         </button>
                       </div>
+                    </>
+                  ) : viewUser.role === 'host' ? (
+                    <>
+                      <div className="text-xs text-green-700 font-bold">
+                        KYC is already approved. Review actions are disabled.
+                      </div>
+                      <button onClick={() => setViewUser(null)} className="w-full sm:w-auto btn-premium py-4 px-8">
+                        Close Inspection Details
+                      </button>
                     </>
                   ) : (
                     <button onClick={() => setViewUser(null)} className="w-full btn-premium py-4">Close Inspection Details</button>
@@ -3133,7 +3220,7 @@ const PropertyModeration = () => {
 };
 
 // Booking Management Component
-const BookingManagement = () => {
+export const BookingManagement = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
@@ -5007,7 +5094,7 @@ const CMSManagement = () => {
 };
 
 // Subscription Management Component
-const SubscriptionManagement = () => {
+export const SubscriptionManagement = () => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -5017,6 +5104,8 @@ const SubscriptionManagement = () => {
     plan_type: '1bhk',
     price_monthly: '',
     price_annual: '',
+    platform_fee: '',
+    tax_percent: 18,
     description: '',
     validity_days: 30,
     sqft_range: ''
@@ -5043,6 +5132,8 @@ const SubscriptionManagement = () => {
       const payload = {
         ...newPlan,
         price_annual: Number(newPlan.price_annual) || 0,
+        platform_fee: Number(newPlan.platform_fee) || 0,
+        tax_percent: Number(newPlan.tax_percent) || 0,
         sqft_range: newPlan.plan_type === 'commercial' ? newPlan.sqft_range : null
       };
       if (newPlan.plan_id) {
@@ -5051,7 +5142,7 @@ const SubscriptionManagement = () => {
         await subscriptionAPI.createPlan(payload);
       }
       setShowAddModal(false);
-      setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', description: '', validity_days: 30, sqft_range: '' });
+      setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', platform_fee: '', tax_percent: 18, description: '', validity_days: 30, sqft_range: '' });
       fetchPlans();
     } catch (error) {
       alert('Failed to save plan');
@@ -5083,7 +5174,7 @@ const SubscriptionManagement = () => {
         <h3 className="text-2xl font-bold text-charcoal">Subscription Management</h3>
         <button 
           onClick={() => {
-            setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', description: '', validity_days: 30, sqft_range: '' });
+            setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', platform_fee: '', tax_percent: 18, description: '', validity_days: 30, sqft_range: '' });
             setShowAddModal(true);
           }}
           className="btn-primary flex items-center space-x-2"
@@ -5141,6 +5232,14 @@ const SubscriptionManagement = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-charcoal-muted font-bold uppercase">Monthly</span>
                   <span className="text-lg font-bold tracking-tight text-terracotta">₹{(plan.price_monthly || 0).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-charcoal-muted font-bold uppercase">Platform Fee</span>
+                  <span className="text-sm font-bold text-charcoal">₹{(plan.platform_fee || 0).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-charcoal-muted font-bold uppercase">GST</span>
+                  <span className="text-sm font-bold text-charcoal">{plan.tax_percent ?? 18}%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-charcoal-muted font-bold uppercase">Validity</span>
@@ -5214,6 +5313,26 @@ const SubscriptionManagement = () => {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Platform Fee</label>
+                  <input
+                    type="number" min={0}
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                    value={newPlan.platform_fee ?? ''}
+                    onChange={e => setNewPlan({...newPlan, platform_fee: Number(e.target.value)})}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">GST (%)</label>
+                  <input
+                    type="number" min={0} step="0.01"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                    value={newPlan.tax_percent ?? 18}
+                    onChange={e => setNewPlan({...newPlan, tax_percent: Number(e.target.value)})}
+                  />
+                </div>
+              </div>
               {newPlan.plan_type === 'commercial' && (
                 <div>
                   <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Sq.ft Range</label>
@@ -5274,6 +5393,16 @@ const SubscriptionManagement = () => {
               <div className="p-4 bg-stone rounded-2xl">
                 <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Monthly Cost</p>
                 <p className="text-2xl font-bold tracking-tight text-terracotta">₹{(viewPlan.price_monthly || 0).toLocaleString('en-IN')}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 bg-stone rounded-2xl">
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Platform Fee</p>
+                  <p className="text-xl font-bold tracking-tight text-charcoal">₹{(viewPlan.platform_fee || 0).toLocaleString('en-IN')}</p>
+                </div>
+                <div className="p-4 bg-stone rounded-2xl">
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">GST</p>
+                  <p className="text-xl font-bold tracking-tight text-charcoal">{viewPlan.tax_percent ?? 18}%</p>
+                </div>
               </div>
               <div className="p-4 bg-stone rounded-2xl">
                 <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Validity (Days)</p>
