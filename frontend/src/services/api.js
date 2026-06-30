@@ -507,6 +507,7 @@ export const couponAPI = {
   createCoupon: (data) => apiClient.post('/coupons/', data),
   listCoupons: () => apiClient.get('/coupons/'),
   getPropertyCoupons: (propertyId) => apiClient.get(`/coupons/property/${propertyId}`),
+  getSubscriptionCoupons: () => apiClient.get('/coupons/subscription'),
   toggleCouponStatus: (couponId) => apiClient.patch(`/coupons/admin/${couponId}/toggle`),
 };
 

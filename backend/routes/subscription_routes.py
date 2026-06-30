@@ -47,6 +47,29 @@ async def _send_subscription_email(db: AsyncIOMotorDatabase, user_id: str, templ
 
 REGISTRATION_FEE_AMOUNT = int(os.getenv("REGISTRATION_FEE_AMOUNT", "50000"))  # ₹500 in paise
 
+def _subscription_amount_breakdown(plan: dict, billing_cycle: str = "monthly") -> dict:
+    plan_fee = float(plan.get("price_monthly") if billing_cycle == "monthly" else plan.get("price_annual") or 0)
+    platform_fee = float(plan.get("platform_fee") or 0)
+    tax_percent = float(plan.get("tax_percent", 18.0) if plan.get("tax_percent") is not None else 18.0)
+    taxable_amount = plan_fee + platform_fee
+    tax_amount = round(taxable_amount * (tax_percent / 100), 2)
+    total_amount = round(taxable_amount + tax_amount, 2)
+    return {
+        "plan_fee": plan_fee,
+        "platform_fee": platform_fee,
+        "tax_percent": tax_percent,
+        "tax_amount": tax_amount,
+        "total_amount": total_amount,
+    }
+
+def _coupon_discount_amount(coupon: dict, amount: float) -> float:
+    if not coupon:
+        return 0.0
+    value = float(coupon.get("discount_value") or 0)
+    if coupon.get("discount_type") == "percentage":
+        return round(amount * (value / 100), 2)
+    return round(min(amount, value), 2)
+
 # ========== SUBSCRIPTION PLANS (PUBLIC) ==========
 
 @router.get("/plans")
@@ -127,8 +150,23 @@ async def create_subscription(
                 detail="Subscription plan is not active"
             )
         
-        # Calculate amount based on billing cycle
-        amount = plan["price_monthly"] if subscription_data.billing_cycle == "monthly" else plan["price_annual"]
+        # Calculate amount based on billing cycle, platform fee, and GST.
+        amount_breakdown = _subscription_amount_breakdown(plan, subscription_data.billing_cycle)
+        coupon_code = subscription_data.coupon_code.strip().upper() if subscription_data.coupon_code else None
+        coupon = None
+        discount_amount = 0.0
+        if coupon_code:
+            coupon = await db.coupons.find_one(
+                {"code": coupon_code, "is_active": True, "coupon_type": "subscription"},
+                {"_id": 0},
+            )
+            if not coupon:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid subscription coupon code"
+                )
+            discount_amount = _coupon_discount_amount(coupon, amount_breakdown["total_amount"])
+        amount = round(amount_breakdown["total_amount"] - discount_amount, 2)
         
         # Calculate dates
         start_date = date.today()
@@ -148,7 +186,9 @@ async def create_subscription(
             status=SubscriptionStatus.TRIAL,
             start_date=start_date,
             end_date=end_date,
-            trial_end_date=start_date + timedelta(days=90)  # 3-month trial
+            trial_end_date=start_date + timedelta(days=90),  # 3-month trial
+            coupon_code=coupon_code,
+            discount_amount=discount_amount,
         )
         
         # Create Razorpay order for subscription
@@ -180,7 +220,15 @@ async def create_subscription(
             "razorpay_key_id": razorpay_service.key_id,
             "amount": int(amount * 100),
             "currency": "INR",
-            "plan_name": plan["plan_name"]
+            "plan_name": plan["plan_name"],
+            "plan_fee": amount_breakdown["plan_fee"],
+            "platform_fee": amount_breakdown["platform_fee"],
+            "tax_percent": amount_breakdown["tax_percent"],
+            "tax_amount": amount_breakdown["tax_amount"],
+            "coupon_code": coupon_code,
+            "discount_amount": discount_amount,
+            "total_amount": amount_breakdown["total_amount"],
+            "payable_amount": amount,
         }
     
     except HTTPException:
@@ -601,6 +649,8 @@ async def create_subscription_plan(
     price_annual: float,
     description: str,
     validity_days: int = 30,
+    platform_fee: float = 0.0,
+    tax_percent: float = 18.0,
     sqft_range: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
@@ -618,6 +668,8 @@ async def create_subscription_plan(
             plan_name=plan_name,
             price_monthly=price_monthly,
             price_annual=price_annual,
+            platform_fee=platform_fee,
+            tax_percent=tax_percent,
             description=description,
             validity_days=validity_days,
             sqft_range=sqft_range
@@ -750,6 +802,8 @@ async def update_subscription_plan(
     plan_type: Optional[SubscriptionPlanType] = None,
     price_monthly: Optional[float] = None,
     price_annual: Optional[float] = None,
+    platform_fee: Optional[float] = None,
+    tax_percent: Optional[float] = None,
     description: Optional[str] = None,
     validity_days: Optional[int] = None,
     is_active: Optional[bool] = None,
@@ -770,6 +824,8 @@ async def update_subscription_plan(
         if plan_type: update_data["plan_type"] = plan_type.value
         if price_monthly is not None: update_data["price_monthly"] = price_monthly
         if price_annual is not None: update_data["price_annual"] = price_annual
+        if platform_fee is not None: update_data["platform_fee"] = platform_fee
+        if tax_percent is not None: update_data["tax_percent"] = tax_percent
         if description: update_data["description"] = description
         if validity_days is not None: update_data["validity_days"] = validity_days
         if is_active is not None: update_data["is_active"] = is_active

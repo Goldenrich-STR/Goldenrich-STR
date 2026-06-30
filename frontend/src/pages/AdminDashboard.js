@@ -5104,6 +5104,8 @@ export const SubscriptionManagement = () => {
     plan_type: '1bhk',
     price_monthly: '',
     price_annual: '',
+    platform_fee: '',
+    tax_percent: 18,
     description: '',
     validity_days: 30,
     sqft_range: ''
@@ -5130,6 +5132,8 @@ export const SubscriptionManagement = () => {
       const payload = {
         ...newPlan,
         price_annual: Number(newPlan.price_annual) || 0,
+        platform_fee: Number(newPlan.platform_fee) || 0,
+        tax_percent: Number(newPlan.tax_percent) || 0,
         sqft_range: newPlan.plan_type === 'commercial' ? newPlan.sqft_range : null
       };
       if (newPlan.plan_id) {
@@ -5138,7 +5142,7 @@ export const SubscriptionManagement = () => {
         await subscriptionAPI.createPlan(payload);
       }
       setShowAddModal(false);
-      setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', description: '', validity_days: 30, sqft_range: '' });
+      setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', platform_fee: '', tax_percent: 18, description: '', validity_days: 30, sqft_range: '' });
       fetchPlans();
     } catch (error) {
       alert('Failed to save plan');
@@ -5170,7 +5174,7 @@ export const SubscriptionManagement = () => {
         <h3 className="text-2xl font-bold text-charcoal">Subscription Management</h3>
         <button 
           onClick={() => {
-            setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', description: '', validity_days: 30, sqft_range: '' });
+            setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', platform_fee: '', tax_percent: 18, description: '', validity_days: 30, sqft_range: '' });
             setShowAddModal(true);
           }}
           className="btn-primary flex items-center space-x-2"
@@ -5228,6 +5232,14 @@ export const SubscriptionManagement = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-charcoal-muted font-bold uppercase">Monthly</span>
                   <span className="text-lg font-bold tracking-tight text-terracotta">₹{(plan.price_monthly || 0).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-charcoal-muted font-bold uppercase">Platform Fee</span>
+                  <span className="text-sm font-bold text-charcoal">₹{(plan.platform_fee || 0).toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-charcoal-muted font-bold uppercase">GST</span>
+                  <span className="text-sm font-bold text-charcoal">{plan.tax_percent ?? 18}%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-charcoal-muted font-bold uppercase">Validity</span>
@@ -5301,6 +5313,26 @@ export const SubscriptionManagement = () => {
                   />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Platform Fee</label>
+                  <input
+                    type="number" min={0}
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                    value={newPlan.platform_fee ?? ''}
+                    onChange={e => setNewPlan({...newPlan, platform_fee: Number(e.target.value)})}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">GST (%)</label>
+                  <input
+                    type="number" min={0} step="0.01"
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                    value={newPlan.tax_percent ?? 18}
+                    onChange={e => setNewPlan({...newPlan, tax_percent: Number(e.target.value)})}
+                  />
+                </div>
+              </div>
               {newPlan.plan_type === 'commercial' && (
                 <div>
                   <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Sq.ft Range</label>
@@ -5361,6 +5393,16 @@ export const SubscriptionManagement = () => {
               <div className="p-4 bg-stone rounded-2xl">
                 <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Monthly Cost</p>
                 <p className="text-2xl font-bold tracking-tight text-terracotta">₹{(viewPlan.price_monthly || 0).toLocaleString('en-IN')}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 bg-stone rounded-2xl">
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Platform Fee</p>
+                  <p className="text-xl font-bold tracking-tight text-charcoal">₹{(viewPlan.platform_fee || 0).toLocaleString('en-IN')}</p>
+                </div>
+                <div className="p-4 bg-stone rounded-2xl">
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">GST</p>
+                  <p className="text-xl font-bold tracking-tight text-charcoal">{viewPlan.tax_percent ?? 18}%</p>
+                </div>
               </div>
               <div className="p-4 bg-stone rounded-2xl">
                 <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Validity (Days)</p>
