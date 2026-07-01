@@ -18,14 +18,16 @@ class GeoTaggedPhoto(BaseModel):
     description: Optional[str] = None
 
 class VerificationChecklist(BaseModel):
-    address_matches_gps: bool = False
-    structural_condition_good: bool = False
-    amenities_verified: bool = False
-    compliance_docs_present: bool = False
-    all_rooms_photographed: bool = False
-    entrance_photographed: bool = False
-    video_walkthrough_uploaded: bool = False
-    no_discrepancies: bool = False
+    property_owner_verification: bool = False
+    ownership_verification: bool = False
+    property_location_verification: bool = False
+    amenities_verification: bool = False
+    safety_security_verification: bool = False
+    property_photos_verification: bool = False
+    pricing_verification: bool = False
+    guest_capacity_rules: bool = False
+    legal_compliance_verification: bool = False
+    employee_verification_declaration: bool = False
 
 class PropertyVerification(BaseModel):
     verification_id: str = Field(default_factory=lambda: f"verify_{uuid.uuid4().hex[:14].upper()}")

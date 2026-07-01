@@ -159,45 +159,32 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                     "location": "Nashik, Maharashtra",
                     "email": "support@x-space360.com",
                     "phone": "+91 8484826247",
-                    "guests_title": "For Guests",
-                    "guest_link_1_label": "Browse Collections",
-                    "guest_link_1_url": "/guest/browse",
-                    "guest_link_2_label": "FAQs",
-                    "faq_title": "Frequently Asked Questions",
-                    "faq_items": [
-                        {"question": "How do I book a property?", "answer": "Browse collections, choose your dates, and submit a booking request from the property page."},
-                        {"question": "How do hosts list a space?", "answer": "Hosts can sign in and use List Your Space to submit property details and documents for verification."},
-                        {"question": "Who do I contact for support?", "answer": "Use the contact and grievance details in the footer for support or escalation."}
-                    ],
+                    "facebook_link": "https://facebook.com",
+                    "instagram_link": "https://instagram.com",
+                    "twitter_link": "https://twitter.com",
+                    "linkedin_link": "https://linkedin.com",
                     "footer_sections": [
                         {"heading": "For Guests", "items": [
-                            {"label": "Browse Collections", "action_type": "link", "link": "/guest/browse", "text": ""},
-                            {"label": "FAQs", "action_type": "text", "link": "", "text": "Browse collections, choose your dates, and submit a booking request from the property page.\n\nHosts can sign in and use List Your Space to submit property details and documents for verification.\n\nFor support or escalation, use the contact details in the footer."}
+                            {"label": "Browse Space", "action_type": "link", "link": "/guest/browse", "text": ""},
+                            {"label": "All Destinations", "action_type": "link", "link": "/guest/browse", "text": ""},
+                            {"label": "Short-term Stays", "action_type": "link", "link": "/guest/browse", "text": ""},
+                            {"label": "FAQs", "action_type": "link", "link": "/support", "text": ""}
                         ]},
                         {"heading": "For Hosts", "items": [
                             {"label": "List Your Space", "action_type": "link", "link": "/host/list-property", "text": ""},
-                            {"label": "Hosting Standards", "action_type": "link", "link": "#how-it-works", "text": ""}
+                            {"label": "Become a Host", "action_type": "link", "link": "/register", "text": ""}
                         ]},
-                        {"heading": "Contact", "items": [
-                            {"label": "Nashik, Maharashtra", "action_type": "text", "link": "", "text": "X-Space360 support is available for guest and host assistance.\n\nEmail: support@x-space360.com\nPhone: +91 8484826247"},
-                            {"label": "support@x-space360.com", "action_type": "text", "link": "", "text": "Email support@x-space360.com for help with bookings, listings, or account support."}
+                        {"heading": "Company", "items": [
+                            {"label": "About Us", "action_type": "link", "link": "/about-us", "text": ""},
+                            {"label": "Blog", "action_type": "link", "link": "/blog", "text": ""}
                         ]},
-                        {"heading": "Grievance & Escalation", "resolution_text": "Resolution: 7 working days", "items": [
-                            {"label": "Officer: Rahul Mundra", "action_type": "text", "link": "", "text": "Grievance Officer: Rahul Mundra\nEmail: nodal.officer@rupiyaloan.com\nPhone: +91 76206 66949\nResolution: 7 working days"},
-                            {"label": "nodal.officer@rupiyaloan.com", "action_type": "text", "link": "", "text": "Email nodal.officer@rupiyaloan.com for grievance escalation.\nResolution: 7 working days."}
+                        {"heading": "Support", "items": [
+                            {"label": "Help Center", "action_type": "link", "link": "/support", "text": ""},
+                            {"label": "Check-In Instructions", "action_type": "text", "link": "", "text": "Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival."},
+                            {"label": "Safety & Privacy", "action_type": "text", "link": "", "text": "X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations."},
+                            {"label": "Contact Us", "action_type": "link", "link": "/support", "text": ""}
                         ]}
                     ],
-                    "hosts_title": "For Hosts",
-                    "host_link_1_label": "List Your Space",
-                    "host_link_1_url": "/host/list-property",
-                    "host_link_2_label": "Hosting Standards",
-                    "host_link_2_url": "#how-it-works",
-                    "contact_title": "Contact",
-                    "grievance_title": "Grievance & Escalations",
-                    "grievance_officer": "Rahul Mundra",
-                    "grievance_email": "nodal.officer@rupiyaloan.com",
-                    "grievance_phone": "+91 76206 66949",
-                    "resolution_text": "Resolution: 7 working days",
                     "privacy_label": "Privacy Policy",
                     "privacy_text": "X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.",
                     "terms_label": "Terms & Conditions",
@@ -244,45 +231,32 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                     "location": "Nashik, Maharashtra",
                     "email": "support@x-space360.com",
                     "phone": "+91 8484826247",
-                    "guests_title": "For Guests",
-                    "guest_link_1_label": "Browse Collections",
-                    "guest_link_1_url": "/guest/browse",
-                    "guest_link_2_label": "FAQs",
-                    "faq_title": "Frequently Asked Questions",
-                    "faq_items": [
-                        {"question": "How do I book a property?", "answer": "Browse collections, choose your dates, and submit a booking request from the property page."},
-                        {"question": "How do hosts list a space?", "answer": "Hosts can sign in and use List Your Space to submit property details and documents for verification."},
-                        {"question": "Who do I contact for support?", "answer": "Use the contact and grievance details in the footer for support or escalation."}
-                    ],
+                    "facebook_link": "https://facebook.com",
+                    "instagram_link": "https://instagram.com",
+                    "twitter_link": "https://twitter.com",
+                    "linkedin_link": "https://linkedin.com",
                     "footer_sections": [
                         {"heading": "For Guests", "items": [
-                            {"label": "Browse Collections", "action_type": "link", "link": "/guest/browse", "text": ""},
-                            {"label": "FAQs", "action_type": "text", "link": "", "text": "Browse collections, choose your dates, and submit a booking request from the property page.\n\nHosts can sign in and use List Your Space to submit property details and documents for verification.\n\nFor support or escalation, use the contact details in the footer."}
+                            {"label": "Browse Space", "action_type": "link", "link": "/guest/browse", "text": ""},
+                            {"label": "All Destinations", "action_type": "link", "link": "/guest/browse", "text": ""},
+                            {"label": "Short-term Stays", "action_type": "link", "link": "/guest/browse", "text": ""},
+                            {"label": "FAQs", "action_type": "link", "link": "/support", "text": ""}
                         ]},
                         {"heading": "For Hosts", "items": [
                             {"label": "List Your Space", "action_type": "link", "link": "/host/list-property", "text": ""},
-                            {"label": "Hosting Standards", "action_type": "link", "link": "#how-it-works", "text": ""}
+                            {"label": "Become a Host", "action_type": "link", "link": "/register", "text": ""}
                         ]},
-                        {"heading": "Contact", "items": [
-                            {"label": "Nashik, Maharashtra", "action_type": "text", "link": "", "text": "X-Space360 support is available for guest and host assistance.\n\nEmail: support@x-space360.com\nPhone: +91 8484826247"},
-                            {"label": "support@x-space360.com", "action_type": "text", "link": "", "text": "Email support@x-space360.com for help with bookings, listings, or account support."}
+                        {"heading": "Company", "items": [
+                            {"label": "About Us", "action_type": "link", "link": "/about-us", "text": ""},
+                            {"label": "Blog", "action_type": "link", "link": "/blog", "text": ""}
                         ]},
-                        {"heading": "Grievance & Escalation", "resolution_text": "Resolution: 7 working days", "items": [
-                            {"label": "Officer: Rahul Mundra", "action_type": "text", "link": "", "text": "Grievance Officer: Rahul Mundra\nEmail: nodal.officer@rupiyaloan.com\nPhone: +91 76206 66949\nResolution: 7 working days"},
-                            {"label": "nodal.officer@rupiyaloan.com", "action_type": "text", "link": "", "text": "Email nodal.officer@rupiyaloan.com for grievance escalation.\nResolution: 7 working days."}
+                        {"heading": "Support", "items": [
+                            {"label": "Help Center", "action_type": "link", "link": "/support", "text": ""},
+                            {"label": "Check-In Instructions", "action_type": "text", "link": "", "text": "Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival."},
+                            {"label": "Safety & Privacy", "action_type": "text", "link": "", "text": "X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations."},
+                            {"label": "Contact Us", "action_type": "link", "link": "/support", "text": ""}
                         ]}
                     ],
-                    "hosts_title": "For Hosts",
-                    "host_link_1_label": "List Your Space",
-                    "host_link_1_url": "/host/list-property",
-                    "host_link_2_label": "Hosting Standards",
-                    "host_link_2_url": "#how-it-works",
-                    "contact_title": "Contact",
-                    "grievance_title": "Grievance & Escalations",
-                    "grievance_officer": "Rahul Mundra",
-                    "grievance_email": "nodal.officer@rupiyaloan.com",
-                    "grievance_phone": "+91 76206 66949",
-                    "resolution_text": "Resolution: 7 working days",
                     "privacy_label": "Privacy Policy",
                     "privacy_text": "X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.",
                     "terms_label": "Terms & Conditions",
