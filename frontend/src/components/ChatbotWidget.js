@@ -269,8 +269,9 @@ const ChatbotWidget = () => {
       {/* Floating Toggle Button */}
       {!isOpen && (
         <button
+          id="chatbot-toggle-btn"
           onClick={() => setIsOpen(true)}
-          className="w-16 h-16 rounded-full bg-terracotta hover:bg-terracotta-hover shadow-elevated flex items-center justify-center transition-transform hover:scale-[1.02] cursor-pointer"
+          className="chatbot-trigger w-16 h-16 rounded-full bg-terracotta hover:bg-terracotta-hover shadow-elevated flex items-center justify-center transition-transform hover:scale-[1.02] cursor-pointer"
         >
           <MessageSquare className="w-7 h-7 text-charcoal" />
         </button>

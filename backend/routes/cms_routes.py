@@ -478,8 +478,11 @@ async def submit_contact_message(
 ):
     """Submit a support/contact message (public)."""
     try:
+        import uuid
         now = datetime.now(timezone.utc)
+        message_id = f"msg_{uuid.uuid4().hex[:12]}"
         message_doc = {
+            "message_id": message_id,
             "name": payload.name,
             "email": payload.email,
             "phone": payload.phone,
@@ -706,3 +709,88 @@ async def set_featured_properties(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to set featured properties"
         )
+
+
+# ========== ADMIN SUPPORT / CONTACT MESSAGES ENDPOINTS ==========
+
+class ContactMessageStatusUpdate(BaseModel):
+    status: str = Field(..., pattern="^(pending|in-progress|resolved)$")
+    admin_notes: Optional[str] = None
+
+@router.get("/admin/contact-messages")
+async def get_all_contact_messages(
+    status: Optional[str] = None,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get all contact messages (admin)."""
+    try:
+        query = {}
+        if status:
+            query["status"] = status
+            
+        cursor = db.contact_messages.find(query).sort("created_at", -1)
+        messages = await cursor.to_list(length=1000)
+        
+        for msg in messages:
+            # Safely generate and assign message_id if missing (e.g. legacy data)
+            if "message_id" not in msg:
+                import uuid
+                msg["message_id"] = f"msg_{uuid.uuid4().hex[:12]}"
+                # Proactively update the document to have the generated message_id
+                await db.contact_messages.update_one(
+                    {"email": msg.get("email"), "created_at": msg.get("created_at")},
+                    {"$set": {"message_id": msg["message_id"]}}
+                )
+            
+            # Map message_id as _id for frontend compatibility
+            msg["_id"] = msg["message_id"]
+            
+        return {
+            "messages": messages,
+            "total": len(messages)
+        }
+    except Exception as e:
+        logger.error(f"Error fetching contact messages: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch contact messages"
+        )
+
+@router.patch("/admin/contact-messages/{message_id}")
+async def update_contact_message(
+    message_id: str,
+    payload: ContactMessageStatusUpdate,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Update status or notes of a contact message (admin)."""
+    try:
+        update_fields = {
+            "status": payload.status,
+            "updated_at": datetime.now(timezone.utc)
+        }
+        if payload.admin_notes is not None:
+            update_fields["admin_notes"] = payload.admin_notes
+            
+        result = await db.contact_messages.update_one(
+            {"message_id": message_id},
+            {"$set": update_fields}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="Contact message not found"
+            )
+            
+        return {"success": True, "message": "Contact message updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating contact message: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update contact message"
+        )
+

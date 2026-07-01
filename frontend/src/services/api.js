@@ -505,6 +505,8 @@ export const cmsAPI = {
   updateContent: (contentId, payload) => apiClient.patch(`/cms/admin/content/${contentId}`, payload),
   createContent: (payload) => apiClient.post('/cms/admin/content', payload),
   deleteContent: (contentId) => apiClient.delete(`/cms/admin/content/${contentId}`),
+  getContactMessages: (params) => apiClient.get('/cms/admin/contact-messages', { params }),
+  updateContactMessage: (id, payload) => apiClient.patch(`/cms/admin/contact-messages/${id}`, payload),
 };
 
 // Coupon API

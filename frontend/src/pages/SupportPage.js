@@ -8,6 +8,7 @@ import { cmsAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
+import ChatbotWidget from '../components/ChatbotWidget';
 
 const DEFAULT_SUPPORT_DATA = {
   title: "How can we help you?",
@@ -398,34 +399,34 @@ const SupportPage = () => {
       )}
 
       {/* Hero Section */}
-      <section className="relative bg-[#1C1C1C] text-white py-20 px-6 md:px-12 lg:px-20 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-[#0b1b2e] via-[#07111e] to-[#101722] text-white py-20 px-6 md:px-12 lg:px-20 overflow-hidden">
         {/* Subtle mesh background grid */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] opacity-30" />
-        <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-terracotta/10 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#cda250]/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] opacity-20" />
+        <div className="absolute top-1/3 left-1/4 w-[30rem] h-[30rem] bg-terracotta/5 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-[30rem] h-[30rem] bg-[#D4AF37]/5 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="relative max-w-4xl mx-auto text-center space-y-8 z-10">
           <div className="space-y-4">
-            <span className="inline-block px-3 py-1 bg-terracotta/20 text-terracotta border border-terracotta/30 text-[10px] font-black uppercase tracking-widest rounded-none">
+            <span className="inline-block px-4 py-1.5 bg-terracotta/15 text-terracotta border border-terracotta/30 text-[10px] font-black uppercase tracking-widest rounded-full">
               Support Center
             </span>
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight leading-tight">
+            <h2 className="text-4xl md:text-6xl font-black tracking-tight leading-tight text-white">
               {supportData.title.split(' ').map((word, idx, arr) => {
                 if (word.toLowerCase().includes('help')) {
-                  return <span key={idx} className="text-[#d4b26f] italic font-serif">help </span>;
+                  return <span key={idx} className="text-terracotta italic font-serif">help </span>;
                 }
                 return word + ' ';
               })}
             </h2>
-            <p className="text-sm md:text-base text-gray-400 font-medium max-w-xl mx-auto leading-relaxed">
+            <p className="text-sm md:text-base text-white/70 font-medium max-w-xl mx-auto leading-relaxed">
               {supportData.subtitle}
             </p>
           </div>
 
           {/* Search Form - Robust flex row prevents button clipping */}
           <div className="max-w-2xl mx-auto">
-            <div className="flex bg-white shadow-xl rounded-none border border-sand-200 overflow-hidden">
-              <div className="flex items-center pl-5 text-gray-400">
+            <div className="flex bg-white shadow-premium rounded-2xl border border-sand-200 overflow-hidden p-1">
+              <div className="flex items-center pl-4 text-gray-400">
                 <Search className="w-5 h-5" />
               </div>
               <input
@@ -433,12 +434,12 @@ const SupportPage = () => {
                 placeholder={supportData.search_placeholder}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-3 pr-4 py-4.5 text-charcoal placeholder-gray-400 outline-none font-semibold text-sm rounded-none border-none"
+                className="w-full pl-3 pr-4 py-3.5 text-charcoal placeholder-gray-400 outline-none font-semibold text-sm rounded-l-2xl border-none focus:ring-0"
               />
               <button
                 type="button"
                 onClick={scrollToFaq}
-                className="bg-terracotta hover:bg-terracotta-dark text-white px-8 text-xs font-black uppercase tracking-widest rounded-none transition-all flex items-center justify-center shrink-0"
+                className="bg-terracotta hover:bg-terracotta-hover text-white px-8 text-xs font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center shrink-0"
               >
                 Search
               </button>
@@ -456,10 +457,10 @@ const SupportPage = () => {
           {(supportData.cards || []).map((card) => (
             <div 
               key={card.id} 
-              className="bg-white p-6 shadow-lg border border-sand-200/80 hover:border-terracotta/40 rounded-none transition-all duration-300 hover:shadow-xl flex flex-col justify-between group"
+              className="bg-white p-6 shadow-premium border border-sand-200/60 hover:border-terracotta/40 rounded-2xl transition-all duration-300 hover:shadow-elevated hover:-translate-y-1 flex flex-col justify-between group"
             >
               <div className="space-y-4">
-                <div className="w-12 h-12 bg-sand-100 flex items-center justify-center rounded-none group-hover:bg-terracotta/10 transition-colors duration-300">
+                <div className="w-12 h-12 bg-sand-50 flex items-center justify-center rounded-xl group-hover:bg-terracotta/10 transition-colors duration-300">
                   {getCardIcon(card.id)}
                 </div>
                 <div>
@@ -471,7 +472,7 @@ const SupportPage = () => {
               </div>
               <button 
                 onClick={() => handleCardClick(card)}
-                className="mt-6 w-full py-2.5 border border-sand-300 group-hover:border-terracotta group-hover:bg-terracotta group-hover:text-white text-charcoal text-xs font-black uppercase tracking-wider rounded-none transition-all duration-300 flex items-center justify-center space-x-1.5 font-bold"
+                className="mt-6 w-full py-2.5 border border-sand-200 group-hover:border-terracotta group-hover:bg-terracotta group-hover:text-white text-charcoal text-xs font-black uppercase tracking-wider rounded-xl transition-all duration-300 flex items-center justify-center space-x-1.5 font-bold"
               >
                 <span>{card.button_text}</span>
               </button>
@@ -485,26 +486,26 @@ const SupportPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
           
           {/* Left: Message Submission Form */}
-          <div className="lg:col-span-2 bg-white border border-sand-200/80 shadow-sm p-8 rounded-none space-y-6">
+          <div className="lg:col-span-2 bg-white border border-sand-200/60 shadow-premium p-8 rounded-2xl space-y-6">
             <div>
-              <h3 className="text-2xl font-black text-charcoal">Send Us a Message</h3>
+              <h3 className="text-2xl font-black text-charcoal font-display">Send Us a Message</h3>
               <p className="text-xs text-charcoal-muted font-semibold mt-1">
                 Fill in the details below and we'll get back to you as soon as possible.
               </p>
             </div>
 
             {submitted ? (
-              <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-none space-y-4 text-center">
+              <div className="bg-emerald-50/50 border border-emerald-100 p-6 rounded-2xl space-y-4 text-center">
                 <div className="w-12 h-12 bg-emerald-100 text-emerald-600 flex items-center justify-center rounded-full mx-auto">
                   <CheckCircle className="w-6 h-6" />
                 </div>
-                <h4 className="text-lg font-bold text-emerald-800">Message Submitted!</h4>
-                <p className="text-xs text-emerald-700 font-semibold max-w-md mx-auto">
+                <h4 className="text-lg font-bold text-emerald-800 font-display">Message Submitted!</h4>
+                <p className="text-xs text-emerald-700 font-semibold max-w-md mx-auto leading-relaxed">
                   Thank you for reaching out. We have successfully received your inquiry and our support team will get in touch with you shortly.
                 </p>
                 <button
                   onClick={() => setSubmitted(false)}
-                  className="px-6 py-2 border border-emerald-300 text-emerald-800 hover:bg-emerald-100 text-xs font-black uppercase tracking-wider rounded-none transition"
+                  className="px-6 py-2 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 text-xs font-black uppercase tracking-wider rounded-xl transition"
                 >
                   Send another message
                 </button>
@@ -512,7 +513,7 @@ const SupportPage = () => {
             ) : (
               <form onSubmit={handleFormSubmit} className="space-y-6 font-semibold">
                 {errorMsg && (
-                  <div className="p-4 bg-red-50 border border-red-200 text-red-600 text-xs rounded-none font-bold">
+                  <div className="p-4 bg-red-50 border border-red-150 text-red-600 text-xs rounded-xl font-bold">
                     {errorMsg}
                   </div>
                 )}
@@ -526,7 +527,7 @@ const SupportPage = () => {
                       placeholder="Enter your full name"
                       value={formData.name}
                       onChange={e => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full border border-sand-200 focus:border-terracotta rounded-none px-4 py-3 outline-none transition text-sm bg-sand-50/20 focus:bg-white"
+                      className="w-full border border-sand-200 focus:border-terracotta rounded-xl px-4 py-3 outline-none transition text-sm bg-sand-50/20 focus:bg-white"
                     />
                   </div>
                   <div>
@@ -537,7 +538,7 @@ const SupportPage = () => {
                       placeholder="Enter your email address"
                       value={formData.email}
                       onChange={e => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full border border-sand-200 focus:border-terracotta rounded-none px-4 py-3 outline-none transition text-sm bg-sand-50/20 focus:bg-white"
+                      className="w-full border border-sand-200 focus:border-terracotta rounded-xl px-4 py-3 outline-none transition text-sm bg-sand-50/20 focus:bg-white"
                     />
                   </div>
                 </div>
@@ -551,7 +552,7 @@ const SupportPage = () => {
                       placeholder="Enter your phone number"
                       value={formData.phone}
                       onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full border border-sand-200 focus:border-terracotta rounded-none px-4 py-3 outline-none transition text-sm bg-sand-50/20 focus:bg-white"
+                      className="w-full border border-sand-200 focus:border-terracotta rounded-xl px-4 py-3 outline-none transition text-sm bg-sand-50/20 focus:bg-white"
                     />
                   </div>
                   <div>
@@ -560,7 +561,7 @@ const SupportPage = () => {
                       required
                       value={formData.subject}
                       onChange={e => setFormData({ ...formData, subject: e.target.value })}
-                      className="w-full border border-sand-200 focus:border-terracotta rounded-none px-4 py-3 outline-none transition text-sm bg-sand-50/20 focus:bg-white text-charcoal"
+                      className="w-full border border-sand-200 focus:border-terracotta rounded-xl px-4 py-3 outline-none transition text-sm bg-sand-50/20 focus:bg-white text-charcoal"
                     >
                       <option value="">Select a subject</option>
                       <option value="Booking Inquiry">Booking Inquiry</option>
@@ -581,7 +582,7 @@ const SupportPage = () => {
                     placeholder="Type your message details here..."
                     value={formData.message}
                     onChange={e => setFormData({ ...formData, message: e.target.value })}
-                    className="w-full border border-sand-200 focus:border-terracotta rounded-none px-4 py-3 outline-none transition text-sm bg-sand-50/20 focus:bg-white leading-relaxed"
+                    className="w-full border border-sand-200 focus:border-terracotta rounded-xl px-4 py-3 outline-none transition text-sm bg-sand-50/20 focus:bg-white leading-relaxed"
                   />
                 </div>
 
@@ -594,7 +595,7 @@ const SupportPage = () => {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="btn-premium px-8 py-3.5 flex items-center justify-center space-x-2 text-xs font-black uppercase tracking-wider bg-terracotta hover:bg-terracotta-dark text-white rounded-none shadow-md active:scale-95 transition-all self-end sm:self-auto"
+                    className="btn-premium px-8 py-3.5 flex items-center justify-center space-x-2 text-xs font-black uppercase tracking-wider bg-terracotta hover:bg-terracotta-hover text-white rounded-xl shadow-premium active:scale-95 transition-all self-end sm:self-auto"
                   >
                     {submitting ? (
                       <>
@@ -617,7 +618,7 @@ const SupportPage = () => {
           <div className="space-y-8">
             
             {/* Popular Topics */}
-            <div className="bg-white border border-sand-200/80 p-6 rounded-none space-y-4 shadow-sm">
+            <div className="bg-white border border-sand-200/60 p-6 rounded-2xl space-y-4 shadow-premium">
               <h4 className="text-sm font-black text-charcoal uppercase tracking-widest border-b border-sand-100 pb-3 font-serif">
                 Popular Topics
               </h4>
@@ -637,14 +638,14 @@ const SupportPage = () => {
               </ul>
               <button 
                 onClick={scrollToFaq}
-                className="w-full mt-4 py-2 border border-sand-300 hover:border-terracotta hover:bg-sand-50 text-[10px] font-black uppercase tracking-widest text-charcoal rounded-none transition"
+                className="w-full mt-4 py-2.5 border border-sand-200 hover:border-terracotta hover:bg-sand-50 text-[10px] font-black uppercase tracking-widest text-charcoal rounded-xl transition shadow-premium"
               >
                 View All FAQ Articles
               </button>
             </div>
 
             {/* Support Hours */}
-            <div className="bg-white border border-sand-200/80 p-6 rounded-none space-y-4 shadow-sm font-semibold">
+            <div className="bg-white border border-sand-200/60 p-6 rounded-2xl space-y-4 shadow-premium font-semibold">
               <h4 className="text-sm font-black text-charcoal uppercase tracking-widest border-b border-sand-100 pb-3 font-serif">
                 Support Hours
               </h4>
@@ -695,11 +696,11 @@ const SupportPage = () => {
                 return (
                   <div 
                     key={faq.id}
-                    className="bg-white border border-sand-200/80 rounded-none shadow-sm overflow-hidden transition-all duration-300"
+                    className="bg-white border border-sand-200/60 rounded-2xl shadow-subtle overflow-hidden hover:border-terracotta/30 transition-all duration-300"
                   >
                     <button
                       onClick={() => setExpandedFaqId(isOpen ? null : faq.id)}
-                      className="w-full px-6 py-5 flex items-center justify-between text-left font-bold text-charcoal hover:text-terracotta transition-colors duration-200 text-sm md:text-base"
+                      className="w-full px-6 py-5 flex items-center justify-between text-left font-bold text-charcoal hover:text-terracotta transition-colors duration-200 text-sm md:text-base font-display"
                     >
                       <span>{faq.question}</span>
                       {isOpen ? (
@@ -729,7 +730,7 @@ const SupportPage = () => {
       {/* Bottom Footer Banner */}
       <section className="bg-sand-100 border-y border-sand-200 py-16 px-6 text-center space-y-6">
         <div className="max-w-xl mx-auto space-y-2">
-          <h3 className="text-2xl font-black text-charcoal">
+          <h3 className="text-2xl font-black text-charcoal font-display">
             {supportData.footer_title}
           </h3>
           <p className="text-xs text-charcoal-muted font-bold leading-relaxed">
@@ -741,28 +742,30 @@ const SupportPage = () => {
             const chatbotBtn = document.getElementById('chatbot-toggle-btn') || document.querySelector('.chatbot-trigger');
             if (chatbotBtn) chatbotBtn.click();
           }}
-          className="btn-premium px-8 py-3.5 bg-charcoal hover:bg-charcoal-light text-white text-xs font-black uppercase tracking-widest rounded-none shadow-md inline-flex items-center space-x-2 transition-all active:scale-95 font-bold"
+          className="btn-premium px-8 py-3.5 bg-charcoal hover:bg-charcoal-light text-white text-xs font-black uppercase tracking-widest rounded-xl shadow-premium inline-flex items-center space-x-2 transition-all active:scale-95 font-bold"
         >
-          <MessageSquare className="w-4 h-4 text-[#d4b26f]" />
+          <MessageSquare className="w-4 h-4 text-terracotta" />
           <span>{supportData.footer_button_text}</span>
         </button>
       </section>
 
       {/* Footer Branding */}
-      <footer className="bg-[#0A0A0A] text-white py-16 px-6 md:px-12 lg:px-20 border-t border-white/10 font-medium text-xs">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white py-16 px-6 md:px-12 lg:px-20 font-medium text-xs">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,#0b1b2e_0%,#07111e_48%,#101722_100%)] pointer-events-none" />
+        <div className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center space-x-2">
             <img src="/logo.png" alt="X-Space360 Logo" className="h-6 w-auto object-contain logo-white" />
             <span className="text-white/30 font-bold">|</span>
             <span className="text-white/60 font-medium">© {new Date().getFullYear()} Goldenrich Group. All rights reserved.</span>
           </div>
           <div className="flex space-x-6 text-white/80">
-            <a href="/terms" className="hover:text-brand-gold transition duration-300">Terms of Service</a>
-            <a href="/privacy" className="hover:text-brand-gold transition duration-300">Privacy Policy</a>
-            <span onClick={scrollToFaq} className="hover:text-brand-gold transition cursor-pointer duration-300">FAQs</span>
+            <a href="/terms" className="hover:text-terracotta transition duration-300">Terms of Service</a>
+            <a href="/privacy" className="hover:text-terracotta transition duration-300">Privacy Policy</a>
+            <span onClick={scrollToFaq} className="hover:text-terracotta transition cursor-pointer duration-300 font-bold">FAQs</span>
           </div>
         </div>
       </footer>
+      <ChatbotWidget />
     </div>
   );
 };
