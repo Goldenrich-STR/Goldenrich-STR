@@ -65,8 +65,8 @@ async def _rows(conn, table, where=""):
     return [json.loads(record["data"]) for record in records]
 
 
-async def _count(conn, table, where=""):
-    return await conn.fetchval(f"SELECT COUNT(*) FROM {table} {where}")
+async def _count(conn, table, where="", *params):
+    return await conn.fetchval(f"SELECT COUNT(*) FROM {table} {where}", *params)
 
 
 def _write_backup(path, payload):
@@ -128,6 +128,23 @@ async def run(args):
             for table, count in protected_counts.items():
                 print(f"  {table}: {count}")
             print("  manual/external blocked_dates")
+
+            if args.property_id:
+                live_count = await _count(
+                    conn,
+                    "properties",
+                    "WHERE data->>'property_id' = $1",
+                    args.property_id,
+                )
+                archived_count = await _count(
+                    conn,
+                    "deleted_properties",
+                    "WHERE data->>'property_id' = $1",
+                    args.property_id,
+                )
+                print(f"\nProperty check: {args.property_id}")
+                print(f"  live properties record: {live_count}")
+                print(f"  deleted archive record: {archived_count}")
 
             if args.show_deleted:
                 deleted = await conn.fetch(
@@ -210,6 +227,7 @@ def parse_args():
     parser.add_argument("--include-notifications", action="store_true")
     parser.add_argument("--include-analytics", action="store_true")
     parser.add_argument("--show-deleted", action="store_true")
+    parser.add_argument("--property-id")
     return parser.parse_args()
 
 
