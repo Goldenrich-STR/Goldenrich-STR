@@ -513,58 +513,40 @@ const TRANSLATIONS = {
 const DEFAULT_FOOTER_DATA = {
   brand_description: 'Redefining short-term rentals in India through curation, technology, and superior service.',
   location: 'Nashik, Maharashtra',
-  email: 'support@X-space360.com',
+  email: 'support@x-space360.com',
   phone: '+91 8484826247',
-  guests_title: 'For Guests',
-  guest_link_1_label: 'Browse Collections',
-  guest_link_1_url: '/guest/browse',
-  guest_link_2_label: 'FAQs',
-  faq_title: 'Frequently Asked Questions',
-  faq_items: [
-    { question: 'How do I book a property?', answer: 'Browse collections, choose your dates, and submit a booking request from the property page.' },
-    { question: 'How do hosts list a space?', answer: 'Hosts can sign in and use List Your Space to submit property details and documents for verification.' },
-    { question: 'Who do I contact for support?', answer: 'Use the contact and grievance details in the footer for support or escalation.' },
-  ],
+  facebook_link: 'https://facebook.com',
+  instagram_link: 'https://instagram.com',
+  twitter_link: 'https://twitter.com',
+  linkedin_link: 'https://linkedin.com',
   footer_sections: [
     { heading: 'For Guests', items: [
-      { label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
-      { label: 'FAQs', action_type: 'text', link: '', text: 'Browse collections, choose your dates, and submit a booking request from the property page.\n\nHosts can sign in and use List Your Space to submit property details and documents for verification.\n\nFor support or escalation, use the contact details in the footer.' },
+      { label: 'Browse Space', action_type: 'link', link: '/guest/browse', text: '' },
+      { label: 'All Destinations', action_type: 'link', link: '/guest/browse', text: '' },
+      { label: 'Short-term Stays', action_type: 'link', link: '/guest/browse', text: '' },
+      { label: 'FAQs', action_type: 'link', link: '/support', text: '' }
     ] },
     { heading: 'For Hosts', items: [
       { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
-      { label: 'Hosting Standards', action_type: 'link', link: '#how-it-works', text: '' },
+      { label: 'Become a Host', action_type: 'link', link: '/register', text: '' }
     ] },
-    { heading: 'Contact', items: [
-      { label: 'Nashik, Maharashtra', action_type: 'text', link: '', text: 'X-Space360 support is available for guest and host assistance.\n\nEmail: support@X-space360.com\nPhone: +91 8484826247' },
-      { label: 'support@X-space360.com', action_type: 'text', link: '', text: 'Email support@X-space360.com for help with bookings, listings, or account support.' },
+    { heading: 'Company', items: [
+      { label: 'About Us', action_type: 'link', link: '/about-us', text: '' },
+      { label: 'Blog', action_type: 'link', link: '/blog', text: '' }
     ] },
-    { heading: 'Legal', items: [
-      { label: 'Privacy Policy', action_type: 'text', link: '', text: 'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.' },
-      { label: 'Terms & Conditions', action_type: 'text', link: '', text: 'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.' },
-      { label: 'Check-In Instructions', action_type: 'text', link: '', text: 'Standard check-in time starts at 2:00 PM. Please coordinate with your host at least 24 hours prior to arrival for key handover and coordinate exchange. Valid ID proof must be submitted at the time of check-in.' }
-    ] },
-    { heading: 'Grievance & Escalation', resolution_text: 'Resolution: 7 working days', items: [
-      { label: 'Officer: Rahul Mundra', action_type: 'text', link: '', text: 'Grievance Officer: Rahul Mundra\nEmail: nodal.officer@x-space360.com\nPhone: +91 76206 66949\nResolution: 7 working days' },
-      { label: 'nodal.officer@x-space360.com', action_type: 'text', link: '', text: 'Email nodal.officer@x-space360.com for grievance escalation.\nResolution: 7 working days.' },
-    ] },
+    { heading: 'Support', items: [
+      { label: 'Help Center', action_type: 'link', link: '/support', text: '' },
+      { label: 'Check-In Instructions', action_type: 'text', link: '', text: 'Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival.' },
+      { label: 'Safety & Privacy', action_type: 'text', link: '', text: 'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.' },
+      { label: 'Contact Us', action_type: 'link', link: '/support', text: '' }
+    ] }
   ],
-  hosts_title: 'For Hosts',
-  host_link_1_label: 'List Your Space',
-  host_link_1_url: '/host/list-property',
-  host_link_2_label: 'Hosting Standards',
-  host_link_2_url: '#how-it-works',
-  contact_title: 'Contact',
-  grievance_title: 'Grievance & Escalations',
-  grievance_officer: 'Rahul Mundra',
-  grievance_email: 'nodal.officer@x-space360.com',
-  grievance_phone: '+91 76206 66949',
-  resolution_text: 'Resolution: 7 working days',
   privacy_label: 'Privacy Policy',
   privacy_text: 'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.',
   terms_label: 'Terms & Conditions',
   terms_text: 'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.',
-  checkin_label: 'Check-In Instructions',
-  checkin_text: 'Standard check-in time starts at 2:00 PM. Please coordinate with your host at least 24 hours prior to arrival for key handover and coordinate exchange. Valid ID proof must be submitted at the time of check-in.'
+  checkin_label: 'Check-in Instructions',
+  checkin_text: 'Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival. Quiet hours are from 10:00 PM to 7:00 AM.'
 };
 
 // Custom Stateful & Interactive How It Works Modal Component
@@ -965,7 +947,7 @@ const LandingPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
-  const [showFaqModal, setShowFaqModal] = useState(false);
+
   const [footerPopup, setFooterPopup] = useState(null);
   const [cmsContent, setCmsContent] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
@@ -1096,46 +1078,32 @@ const LandingPage = () => {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en']?.[key] || key;
   };
   const footerData = { ...DEFAULT_FOOTER_DATA, ...(cmsContent?.footer || {}) };
-  const footerFaqItems = Array.isArray(footerData.faq_items) ? footerData.faq_items : DEFAULT_FOOTER_DATA.faq_items;
   
+  const supportFooterItems = DEFAULT_FOOTER_DATA.footer_sections.find(section => section.heading === 'Support')?.items || [];
+
   // Build raw sections list
-  let rawSections = Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
+  const rawSections = Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
     ? [...footerData.footer_sections]
     : [...DEFAULT_FOOTER_DATA.footer_sections];
 
-  // If "Legal" is not in rawSections, let's insert it at index 3 (before the last section, which is Grievance & Escalation)
-  const legalSectionExists = rawSections.some(s => s && (s.heading === 'Legal' || s.label === 'Legal'));
-  if (!legalSectionExists) {
-    const legalSection = {
-      heading: 'Legal',
-      items: [
-        { label: footerData.privacy_label || 'Privacy Policy', action_type: 'text', link: '', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text },
-        { label: footerData.terms_label || 'Terms & Conditions', action_type: 'text', link: '', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text },
-        { label: footerData.checkin_label || 'Check-In Instructions', action_type: 'text', link: '', text: footerData.checkin_text || DEFAULT_FOOTER_DATA.checkin_text }
-      ]
-    };
-    if (rawSections.length >= 3) {
-      rawSections.splice(3, 0, legalSection);
-    } else {
-      rawSections.push(legalSection);
-    }
-  }
-
-  const footerSections = rawSections.slice(0, 4).map((rawSection, index) => {
+  const footerSections = ['For Guests', 'For Hosts', 'Company', 'Support'].map((heading, index) => {
+    const rawSection = rawSections.find(section => section?.heading?.toLowerCase() === heading.toLowerCase())
+      || rawSections[index]
+      || DEFAULT_FOOTER_DATA.footer_sections[index];
     const section = rawSection || {};
+    const normalizedItems = Array.isArray(section.items) && section.items.length
+      ? section.items.filter(Boolean).map(item => ({
+        label: item.label === 'Browse Collections' ? 'Browse Space' : (item.label || ''),
+        action_type: item.action_type || 'link',
+        link: item.link || '',
+        text: item.text || '',
+      }))
+      : [{ label: section.label || '', action_type: section.action_type || 'link', link: section.link || '', text: section.text || '' }];
+
     return {
       ...section,
-      heading: (!section.heading || /^Section\s+\d+$/i.test(section.heading))
-        ? ['For Guests', 'For Hosts', 'Contact', 'Legal'][index]
-        : section.heading,
-      items: Array.isArray(section.items) && section.items.length
-        ? section.items.filter(Boolean).map(item => ({
-          label: item.label || '',
-          action_type: item.action_type || 'link',
-          link: item.link || '',
-          text: item.text || '',
-        }))
-        : [{ label: section.label || '', action_type: section.action_type || 'link', link: section.link || '', text: section.text || '' }]
+      heading,
+      items: heading === 'Support' ? supportFooterItems : normalizedItems,
     };
   });
 
@@ -1144,41 +1112,7 @@ const LandingPage = () => {
     { label: footerData.terms_label || 'Terms & Conditions', action_type: 'text', link: '', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text },
     { label: 'Cookie Policy', action_type: 'text', link: '', text: 'X-Space360 uses essential cookies to keep accounts, bookings, payments, and security features working smoothly.' },
   ];
-  const footerDisplaySections = [
-    {
-      heading: footerSections[0]?.heading || 'For Guests',
-      items: [
-        footerSections[0]?.items?.[0] || { label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
-        { label: 'All Destinations', action_type: 'link', link: '/guest/browse', text: '' },
-        { label: 'Short-term Stays', action_type: 'link', link: '/guest/browse', text: '' },
-        footerSections[0]?.items?.[1] || { label: 'FAQs', action_type: 'text', link: '', text: DEFAULT_FOOTER_DATA.footer_sections[0].items[1].text },
-      ],
-    },
-    {
-      heading: footerSections[1]?.heading || 'For Hosts',
-      items: [
-        footerSections[1]?.items?.[0] || { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
-        { label: 'Become a Host', action_type: 'link', link: '/register', text: '' },
-      ],
-    },
-    {
-      heading: 'Company',
-      items: [
-        { label: 'About Us', action_type: 'text', link: '', text: 'X-Space360 curates verified short-term rental spaces across India with reliable support and booking operations.' },
-        { label: 'Blog', action_type: 'link', link: '#blog', text: '' },
-      ],
-    },
-    {
-      heading: 'Support',
-      items: [
-        { label: 'Help Center', action_type: 'link', link: '/support', text: '' },
-        { label: 'Cancellation Options', action_type: 'text', link: '', text: 'Cancellation options depend on the booking terms shared during confirmation.' },
-        { label: footerData.checkin_label || 'Check-In Instructions', action_type: 'text', link: '', text: footerData.checkin_text || DEFAULT_FOOTER_DATA.checkin_text },
-        { label: 'Safety & Privacy', action_type: 'text', link: '', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text },
-        { label: 'Contact Us', action_type: 'link', link: '/support', text: '' },
-      ],
-    },
-  ];
+  const footerDisplaySections = footerSections;
   const handleFooterLink = (url, fallbackUrl = '/') => {
     const target = url || fallbackUrl;
     if (target.startsWith('#')) {
@@ -2282,35 +2216,7 @@ const LandingPage = () => {
         </div>
       </footer>
 
-      {showFaqModal && (
-        <div className="fixed inset-0 z-[120] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="bg-white rounded-3xl shadow-elevated border border-gray-100 w-full max-w-2xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
-            <div className="flex items-start justify-between gap-6 mb-7">
-              <div>
-                <h3 className="text-2xl font-bold tracking-tight text-charcoal">{footerData.faq_title || 'Frequently Asked Questions'}</h3>
-                <p className="text-sm text-charcoal-muted mt-1">Quick answers for guests and hosts.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowFaqModal(false)}
-                className="w-10 h-10 rounded-full border border-gray-100 text-charcoal-muted hover:text-charcoal hover:bg-stone transition flex items-center justify-center"
-                aria-label="Close FAQs"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              {footerFaqItems.map((item, index) => (
-                <div key={index} className="rounded-2xl border border-gray-100 bg-stone/60 p-5">
-                  <h4 className="font-bold tracking-tight text-charcoal mb-2">{item.question || `Question ${index + 1}`}</h4>
-                  <p className="text-sm text-charcoal-light leading-relaxed">{item.answer || 'Answer coming soon.'}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
+      
       {footerPopup && (
         <div className="fixed inset-0 z-[120] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
           <div className="bg-white rounded-3xl shadow-elevated border border-gray-100 w-full max-w-xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">

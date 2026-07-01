@@ -958,6 +958,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
   const [uidSearch, setUidSearch] = useState('');
   const [locationSearch, setLocationSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [usersPerPage] = useState(10);
   const [totalUsers, setTotalUsers] = useState(0);
@@ -1153,6 +1154,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     const requestId = fetchUsersRequestRef.current + 1;
     fetchUsersRequestRef.current = requestId;
     setLoading(true);
+    setLoadError('');
 
     try {
       const selectedRole = (roleFilter || '').trim().toLowerCase();
@@ -1166,7 +1168,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         uid: uidSearch || undefined,
         location: locationSearch || undefined
       };
-      const response = await apiClient.get('/admin/users', { params });
+      const response = await apiClient.get('/admin/users', { params, timeout: 20000 });
       if (requestId !== fetchUsersRequestRef.current) return;
 
       const responseUsers = response.data.users || [];
@@ -1181,6 +1183,9 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     } catch (error) {
       if (requestId !== fetchUsersRequestRef.current) return;
       console.error('Error fetching users:', error);
+      setUsers([]);
+      setTotalUsers(0);
+      setLoadError(formatError(error, 'Unable to load users. Please check that the backend server is running.'));
     } finally {
       if (requestId === fetchUsersRequestRef.current) {
         setLoading(false);
@@ -1542,8 +1547,28 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         <div className="text-center py-12">
           <p className="text-charcoal-light">Loading users...</p>
         </div>
+      ) : loadError ? (
+        <div className="dashboard-card text-center py-12">
+          <XCircle className="w-10 h-10 mx-auto mb-3 text-red-500" />
+          <p className="font-bold text-charcoal mb-1">Could not load users</p>
+          <p className="text-sm text-charcoal-light mb-5">{loadError}</p>
+          <button
+            type="button"
+            onClick={fetchUsers}
+            className="btn-premium inline-flex items-center space-x-2 px-5 py-2"
+          >
+            <span>Retry</span>
+          </button>
+        </div>
       ) : (
         <div className="space-y-4" data-testid="users-list">
+          {displayedUsers.length === 0 && (
+            <div className="dashboard-card text-center py-12">
+              <Users className="w-10 h-10 mx-auto mb-3 text-charcoal-muted" />
+              <p className="font-bold text-charcoal mb-1">No users found</p>
+              <p className="text-sm text-charcoal-light">Try changing the search filters or add a new user.</p>
+            </div>
+          )}
           {displayedUsers.map((user) => (
             <div key={user.user_id} className="dashboard-card hover:shadow-subtle transition-all group" data-testid={`user-${user.user_id}`}>
               <div className="flex items-center justify-between">
@@ -2984,14 +3009,16 @@ const PropertyModeration = () => {
   const [propertyRejectionState, setPropertyRejectionState] = useState(null);
 
   const CHECKLIST_LABELS = {
-    address_matches_gps: "Address Matches GPS Location",
-    structural_condition_good: "Structural Condition is Good",
-    amenities_verified: "Amenities are Verified",
-    compliance_docs_present: "Compliance Documents Present",
-    all_rooms_photographed: "All Rooms Photographed",
-    entrance_photographed: "Entrance Photographed",
-    video_walkthrough_uploaded: "Video Walkthrough Uploaded",
-    no_discrepancies: "No Physical Discrepancies"
+    property_owner_verification: "Property Owner Verification",
+    ownership_verification: "Ownership Verification",
+    property_location_verification: "Property Location Verification",
+    amenities_verification: "Amenities Verification",
+    safety_security_verification: "Safety & Security Verification",
+    property_photos_verification: "Property Photos Verification",
+    pricing_verification: "Pricing Verification",
+    guest_capacity_rules: "Guest Capacity & Rules",
+    legal_compliance_verification: "Legal & Compliance Verification",
+    employee_verification_declaration: "Employee Verification Declaration"
   };
 
   useEffect(() => {
@@ -3049,14 +3076,16 @@ const PropertyModeration = () => {
   const openVerificationDetails = (property) => {
     setActiveReviewProperty(property);
     setAdminChecklist(property.checklist || {
-      address_matches_gps: false,
-      structural_condition_good: false,
-      amenities_verified: false,
-      compliance_docs_present: false,
-      all_rooms_photographed: false,
-      entrance_photographed: false,
-      video_walkthrough_uploaded: false,
-      no_discrepancies: false
+      property_owner_verification: false,
+      ownership_verification: false,
+      property_location_verification: false,
+      amenities_verification: false,
+      safety_security_verification: false,
+      property_photos_verification: false,
+      pricing_verification: false,
+      guest_capacity_rules: false,
+      legal_compliance_verification: false,
+      employee_verification_declaration: false
     });
   };
 
@@ -4792,22 +4821,95 @@ const CMSManagement = () => {
                   onChange={e => setFooterData({ ...footerData, brand_description: e.target.value })}
                 />
               </div>
+
+              {/* General Contact Details */}
+              <div>
+                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">Contact Location</label>
+                <input
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                  value={footerData.location || ''}
+                  onChange={e => setFooterData({ ...footerData, location: e.target.value })}
+                  placeholder="Nashik, Maharashtra"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">Contact Email</label>
+                <input
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                  value={footerData.email || ''}
+                  onChange={e => setFooterData({ ...footerData, email: e.target.value })}
+                  placeholder="support@x-space360.com"
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">Contact Phone</label>
+                <input
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                  value={footerData.phone || ''}
+                  onChange={e => setFooterData({ ...footerData, phone: e.target.value })}
+                  placeholder="+91 8484826247"
+                />
+              </div>
+
+              {/* Social Media Links */}
+              <div>
+                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">Facebook URL</label>
+                <input
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                  value={footerData.facebook_link || ''}
+                  onChange={e => setFooterData({ ...footerData, facebook_link: e.target.value })}
+                  placeholder="https://facebook.com/..."
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">Instagram URL</label>
+                <input
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                  value={footerData.instagram_link || ''}
+                  onChange={e => setFooterData({ ...footerData, instagram_link: e.target.value })}
+                  placeholder="https://instagram.com/..."
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">Twitter URL</label>
+                <input
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                  value={footerData.twitter_link || ''}
+                  onChange={e => setFooterData({ ...footerData, twitter_link: e.target.value })}
+                  placeholder="https://twitter.com/..."
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">LinkedIn URL</label>
+                <input
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                  value={footerData.linkedin_link || ''}
+                  onChange={e => setFooterData({ ...footerData, linkedin_link: e.target.value })}
+                  placeholder="https://linkedin.com/..."
+                />
+              </div>
+
+              {/* Footer Sections */}
               <div className="md:col-span-2 grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {Array.from({ length: 4 }).map((_, index) => {
                   const sections = footerData.footer_sections || [];
-                  const defaultHeadings = ['For Guests', 'For Hosts', 'Contact', 'Grievance & Escalation'];
+                  const defaultHeadings = ['For Guests', 'For Hosts', 'Company', 'Support'];
                   const rawSection = sections[index] || { heading: defaultHeadings[index], items: [] };
-                  const isActionSection = index < 2;
-                  const isGrievanceSection = index === 3;
                   const section = {
                     ...rawSection,
                     heading: (!rawSection.heading || /^Section\s+\d+$/i.test(rawSection.heading)) ? defaultHeadings[index] : rawSection.heading,
                     items: Array.isArray(rawSection.items) && rawSection.items.length
                       ? rawSection.items
-                      : [{ label: rawSection.label || '', action_type: isActionSection ? (rawSection.action_type || 'link') : 'text', link: rawSection.link || '', text: rawSection.text || '' }]
+                      : [{ label: '', action_type: 'link', link: '', text: '' }]
                   };
                   const updateSection = (patch) => {
                     const next = [...sections];
+                    // ensure all indices up to index exist
+                    for (let i = 0; i <= index; i++) {
+                      if (!next[i]) {
+                        next[i] = { heading: defaultHeadings[i], items: [] };
+                      }
+                    }
                     next[index] = { ...section, ...patch };
                     setFooterData({ ...footerData, footer_sections: next });
                   };
@@ -4819,75 +4921,59 @@ const CMSManagement = () => {
                   return (
                     <div key={index} className="rounded-3xl border border-gray-100 bg-stone/60 p-5 space-y-4">
                       <div className="flex items-center justify-between gap-3">
-                        <h5 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest">Section {index + 1}</h5>
+                        <h5 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest">{section.heading} (Column {index + 1})</h5>
                         <button
                           type="button"
-                          onClick={() => updateSection({ items: [...section.items, { label: 'New Label', action_type: isActionSection ? 'link' : 'text', link: '', text: '' }] })}
-                          className="px-3 py-2 rounded-xl bg-terracotta text-white text-[10px] font-bold tracking-tight uppercase tracking-widest"
+                          onClick={() => updateSection({ items: [...section.items, { label: 'New Label', action_type: 'link', link: '', text: '' }] })}
+                          className="px-3 py-2 rounded-xl bg-terracotta text-white text-[10px] font-bold tracking-tight uppercase tracking-widest animate-pulse"
                         >
                           Add Label
                         </button>
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Section Heading</label>
+                        <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Column Heading</label>
                         <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={section.heading || ''} onChange={e => updateSection({ heading: e.target.value })} />
                       </div>
                       <div className="space-y-4">
                         {section.items.map((item, itemIndex) => (
-                          <div key={itemIndex} className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3">
+                          <div key={itemIndex} className="rounded-2xl border border-gray-100 bg-white p-4 space-y-3 shadow-subtle">
                             <div className="flex items-center justify-between gap-3">
-                              <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Label {itemIndex + 1}</span>
+                              <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest font-bold">Label {itemIndex + 1}</span>
                               {section.items.length > 1 && (
                                 <button
                                   type="button"
                                   onClick={() => updateSection({ items: section.items.filter((_, i) => i !== itemIndex) })}
-                                  className="text-[10px] font-bold tracking-tight text-red-600 uppercase tracking-widest"
+                                  className="text-[10px] font-bold tracking-tight text-red-600 uppercase tracking-widest font-bold hover:scale-[1.02] transition"
                                 >
                                   Remove
                                 </button>
                               )}
                             </div>
                             <div>
-                              <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Label</label>
+                              <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Label Text</label>
                               <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.label || ''} onChange={e => updateItem(itemIndex, { label: e.target.value })} />
                             </div>
-                            {isActionSection && (
+                            <div>
+                              <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Action Type</label>
+                              <select className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.action_type || 'link'} onChange={e => updateItem(itemIndex, { action_type: e.target.value })}>
+                                <option value="link">Link Redirect</option>
+                                <option value="text">Text Popup</option>
+                              </select>
+                            </div>
+                            {item.action_type === 'text' ? (
                               <div>
-                                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Action Type</label>
-                                <select className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.action_type || 'link'} onChange={e => updateItem(itemIndex, { action_type: e.target.value })}>
-                                  <option value="link">Link Redirect</option>
-                                  <option value="text">Text Popup</option>
-                                </select>
-                              </div>
-                            )}
-                            {(isActionSection ? item.action_type === 'text' : true) ? (
-                              <div>
-                                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">{isActionSection ? 'Popup Text' : 'Text'}</label>
+                                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Popup Text (Details shown in modal)</label>
                                 <textarea rows={4} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.text || ''} onChange={e => updateItem(itemIndex, { text: e.target.value })} />
                               </div>
                             ) : (
                               <div>
-                                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Redirect Link</label>
-                                <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.link || ''} onChange={e => updateItem(itemIndex, { link: e.target.value })} placeholder="/guest/browse or https://..." />
+                                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Redirect Link (e.g. /about-us or /blog)</label>
+                                <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.link || ''} onChange={e => updateItem(itemIndex, { link: e.target.value })} placeholder="/guest/browse or /about-us or https://..." />
                               </div>
                             )}
                           </div>
                         ))}
                       </div>
-                      {isGrievanceSection && (
-                        <div>
-                          <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Resolution Line</label>
-                          <input
-                            className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
-                            value={section.resolution_text || footerData.resolution_text || ''}
-                            onChange={e => {
-                              updateSection({ resolution_text: e.target.value });
-                              setFooterData(prev => ({ ...prev, resolution_text: e.target.value }));
-                            }}
-                            placeholder="Resolution: 7 working days"
-                          />
-                        </div>
-                      )}
                     </div>
                   );
                 })}

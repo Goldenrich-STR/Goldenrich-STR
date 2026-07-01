@@ -725,26 +725,42 @@ const VerificationsSection = () => {
 
 // Modal: broker fills checklist + photos and submits site visit
 const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
+  const checklistLabels = {
+    property_owner_verification: 'Property Owner Verification',
+    ownership_verification: 'Ownership Verification',
+    property_location_verification: 'Property Location Verification',
+    amenities_verification: 'Amenities Verification',
+    safety_security_verification: 'Safety & Security Verification',
+    property_photos_verification: 'Property Photos Verification',
+    pricing_verification: 'Pricing Verification',
+    guest_capacity_rules: 'Guest Capacity & Rules',
+    legal_compliance_verification: 'Legal & Compliance Verification',
+    employee_verification_declaration: 'Employee Verification Declaration',
+  };
   const initialChecklist = {
-    address_matches_gps: false,
-    structural_condition_good: false,
-    amenities_verified: false,
-    compliance_docs_present: false,
-    all_rooms_photographed: false,
-    entrance_photographed: false,
-    video_walkthrough_uploaded: false,
-    no_discrepancies: false,
+    property_owner_verification: false,
+    ownership_verification: false,
+    property_location_verification: false,
+    amenities_verification: false,
+    safety_security_verification: false,
+    property_photos_verification: false,
+    pricing_verification: false,
+    guest_capacity_rules: false,
+    legal_compliance_verification: false,
+    employee_verification_declaration: false,
   };
   const [checklist, setChecklist] = useState(initialChecklist);
   const [checklistReasons, setChecklistReasons] = useState({
-    address_matches_gps: '',
-    structural_condition_good: '',
-    amenities_verified: '',
-    compliance_docs_present: '',
-    all_rooms_photographed: '',
-    entrance_photographed: '',
-    video_walkthrough_uploaded: '',
-    no_discrepancies: '',
+    property_owner_verification: '',
+    ownership_verification: '',
+    property_location_verification: '',
+    amenities_verification: '',
+    safety_security_verification: '',
+    property_photos_verification: '',
+    pricing_verification: '',
+    guest_capacity_rules: '',
+    legal_compliance_verification: '',
+    employee_verification_declaration: '',
   });
   const [photoFile, setPhotoFile] = useState(null);
   const [photoLat, setPhotoLat] = useState('');
@@ -947,7 +963,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
           missingReason = true;
           break;
         }
-        appendedRemarks += `\n- ${key.replaceAll('_', ' ')}: ${checklistReasons[key].trim()}`;
+        appendedRemarks += `\n- ${checklistLabels[key] || key.replaceAll('_', ' ')}: ${checklistReasons[key].trim()}`;
       }
     }
 
@@ -1083,7 +1099,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
                       data-testid={`check-${key}`}
                     />
                     <span className={`text-sm font-bold capitalize ${val ? 'text-green-800' : 'text-charcoal'}`}>
-                      {formatDisplayLabel(key)}
+                      {checklistLabels[key] || formatDisplayLabel(key)}
                     </span>
                   </label>
                   {!val && (

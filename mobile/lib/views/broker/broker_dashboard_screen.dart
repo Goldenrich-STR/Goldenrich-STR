@@ -1345,26 +1345,30 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
 
   // Checklist states
   final Map<String, bool> _checklist = {
-    'address_matches_gps': false,
-    'structural_condition_good': false,
-    'amenities_verified': false,
-    'compliance_docs_present': false,
-    'all_rooms_photographed': false,
-    'entrance_photographed': false,
-    'video_walkthrough_uploaded': false,
-    'no_discrepancies': false,
+    'property_owner_verification': false,
+    'ownership_verification': false,
+    'property_location_verification': false,
+    'amenities_verification': false,
+    'safety_security_verification': false,
+    'property_photos_verification': false,
+    'pricing_verification': false,
+    'guest_capacity_rules': false,
+    'legal_compliance_verification': false,
+    'employee_verification_declaration': false,
   };
 
   // Checklist reason controllers
   final Map<String, TextEditingController> _reasonControllers = {
-    'address_matches_gps': TextEditingController(),
-    'structural_condition_good': TextEditingController(),
-    'amenities_verified': TextEditingController(),
-    'compliance_docs_present': TextEditingController(),
-    'all_rooms_photographed': TextEditingController(),
-    'entrance_photographed': TextEditingController(),
-    'video_walkthrough_uploaded': TextEditingController(),
-    'no_discrepancies': TextEditingController(),
+    'property_owner_verification': TextEditingController(),
+    'ownership_verification': TextEditingController(),
+    'property_location_verification': TextEditingController(),
+    'amenities_verification': TextEditingController(),
+    'safety_security_verification': TextEditingController(),
+    'property_photos_verification': TextEditingController(),
+    'pricing_verification': TextEditingController(),
+    'guest_capacity_rules': TextEditingController(),
+    'legal_compliance_verification': TextEditingController(),
+    'employee_verification_declaration': TextEditingController(),
   };
 
   // Uploaded photo states
@@ -1595,6 +1599,8 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                 child: Text(
                   title,
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.charcoal),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -1928,16 +1934,18 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                     physics: const NeverScrollableScrollPhysics(),
                     mainAxisSpacing: 8,
                     crossAxisSpacing: 8,
-                    childAspectRatio: 1.45,
+                    childAspectRatio: 1.2,
                     children: [
-                      _buildChecklistCard('address_matches_gps', 'Address Matches Gps'),
-                      _buildChecklistCard('structural_condition_good', 'Structural Condition Good'),
-                      _buildChecklistCard('amenities_verified', 'Amenities Verified'),
-                      _buildChecklistCard('compliance_docs_present', 'Compliance Docs Present'),
-                      _buildChecklistCard('all_rooms_photographed', 'All Rooms Photographed'),
-                      _buildChecklistCard('entrance_photographed', 'Entrance Photographed'),
-                      _buildChecklistCard('video_walkthrough_uploaded', 'Video Walkthrough Uploaded'),
-                      _buildChecklistCard('no_discrepancies', 'No Discrepancies'),
+                      _buildChecklistCard('property_owner_verification', 'Property Owner Verification'),
+                      _buildChecklistCard('ownership_verification', 'Ownership Verification'),
+                      _buildChecklistCard('property_location_verification', 'Property Location Verification'),
+                      _buildChecklistCard('amenities_verification', 'Amenities Verification'),
+                      _buildChecklistCard('safety_security_verification', 'Safety & Security Verification'),
+                      _buildChecklistCard('property_photos_verification', 'Property Photos Verification'),
+                      _buildChecklistCard('pricing_verification', 'Pricing Verification'),
+                      _buildChecklistCard('guest_capacity_rules', 'Guest Capacity & Rules'),
+                      _buildChecklistCard('legal_compliance_verification', 'Legal & Compliance Verification'),
+                      _buildChecklistCard('employee_verification_declaration', 'Employee Verification Declaration'),
                     ],
                   ),
 

@@ -99,10 +99,11 @@ def test_full_happy_path(tokens, db):
         # 3. Broker submits visit
         body = {
             "checklist": {
-                "address_matches_gps": True, "structural_condition_good": True,
-                "amenities_verified": True, "compliance_docs_present": True,
-                "all_rooms_photographed": True, "entrance_photographed": True,
-                "video_walkthrough_uploaded": False, "no_discrepancies": True,
+                "property_owner_verification": True, "ownership_verification": True,
+                "property_location_verification": True, "amenities_verification": True,
+                "safety_security_verification": True, "property_photos_verification": True,
+                "pricing_verification": True, "guest_capacity_rules": True,
+                "legal_compliance_verification": True, "employee_verification_declaration": False,
             },
             "geo_tagged_photos": [{
                 "photo_url": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c",
@@ -158,9 +159,10 @@ def test_rm_rejection_branch(tokens, db):
         requests.post(f"{API}/properties/{pid}/submit-verification", headers=_h(host_tok), timeout=15).raise_for_status()
         body = {
             "checklist": {k: True for k in [
-                "address_matches_gps", "structural_condition_good", "amenities_verified",
-                "compliance_docs_present", "all_rooms_photographed", "entrance_photographed",
-                "video_walkthrough_uploaded", "no_discrepancies"]},
+                "property_owner_verification", "ownership_verification", "property_location_verification",
+                "amenities_verification", "safety_security_verification", "property_photos_verification",
+                "pricing_verification", "guest_capacity_rules", "legal_compliance_verification",
+                "employee_verification_declaration"]},
             "geo_tagged_photos": [{
                 "photo_url": "https://x/y.jpg", "latitude": 19.0, "longitude": 72.8,
                 "timestamp": "2026-01-01T10:00:00",
@@ -192,9 +194,10 @@ def test_admin_rejection_branch(tokens, db):
         requests.post(f"{API}/properties/{pid}/submit-verification", headers=_h(host_tok), timeout=15).raise_for_status()
         body = {
             "checklist": {k: True for k in [
-                "address_matches_gps", "structural_condition_good", "amenities_verified",
-                "compliance_docs_present", "all_rooms_photographed", "entrance_photographed",
-                "video_walkthrough_uploaded", "no_discrepancies"]},
+                "property_owner_verification", "ownership_verification", "property_location_verification",
+                "amenities_verification", "safety_security_verification", "property_photos_verification",
+                "pricing_verification", "guest_capacity_rules", "legal_compliance_verification",
+                "employee_verification_declaration"]},
             "geo_tagged_photos": [{"photo_url": "https://x/y.jpg", "latitude": 19.0,
                                    "longitude": 72.8, "timestamp": "2026-01-01T10:00:00"}],
         }
@@ -225,9 +228,10 @@ def test_admin_approve_guard(tokens, db):
         requests.post(f"{API}/properties/{pid}/submit-verification", headers=_h(host_tok), timeout=15).raise_for_status()
         body = {
             "checklist": {k: True for k in [
-                "address_matches_gps", "structural_condition_good", "amenities_verified",
-                "compliance_docs_present", "all_rooms_photographed", "entrance_photographed",
-                "video_walkthrough_uploaded", "no_discrepancies"]},
+                "property_owner_verification", "ownership_verification", "property_location_verification",
+                "amenities_verification", "safety_security_verification", "property_photos_verification",
+                "pricing_verification", "guest_capacity_rules", "legal_compliance_verification",
+                "employee_verification_declaration"]},
             "geo_tagged_photos": [{"photo_url": "https://x/y.jpg", "latitude": 19.0,
                                    "longitude": 72.8, "timestamp": "2026-01-01T10:00:00"}],
         }

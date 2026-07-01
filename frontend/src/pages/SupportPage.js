@@ -132,33 +132,12 @@ const SupportPage = () => {
   const fetchSupportPageContent = async () => {
     try {
       setLoading(true);
-      const [supportRes, landingRes] = await Promise.allSettled([
-        cmsAPI.getSupportPage(),
-        cmsAPI.getLandingPage()
-      ]);
-
-      if (supportRes.status === 'fulfilled' && supportRes.value.data?.support_content) {
+      const res = await cmsAPI.getSupportPage();
+      if (res.data?.support_content) {
         setSupportData({
           ...DEFAULT_SUPPORT_DATA,
-          ...supportRes.value.data.support_content
+          ...res.data.support_content
         });
-      }
-
-      // Merge dynamic FAQs from landing page footer if present
-      if (landingRes.status === 'fulfilled' && landingRes.value.data?.footer?.faq_items) {
-        const footerFaqs = landingRes.value.data.footer.faq_items.map((item, idx) => ({
-          id: `dynamic-faq-${idx}`,
-          question: item.question,
-          answer: item.answer
-        }));
-        
-        if (footerFaqs.length > 0) {
-          // Combine and deduplicate
-          setFaqs([
-            ...footerFaqs,
-            ...DEFAULT_FAQS.filter(df => !footerFaqs.some(ff => ff.question.toLowerCase() === df.question.toLowerCase()))
-          ]);
-        }
       }
     } catch (err) {
       console.error('Failed to load support page dynamic content:', err);
