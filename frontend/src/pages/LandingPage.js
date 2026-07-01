@@ -1516,17 +1516,20 @@ const LandingPage = () => {
 
         {/* ── Dot Slider Indicators ── */}
         <div className="absolute bottom-12 left-0 right-0 z-30 flex justify-center items-center space-x-3">
-          {heroSlides.map((slide, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentHeroSlide(index)}
-              className={`w-3 h-3 rounded-full transition-all duration-300 shadow-sm ${
-                index === currentHeroSlide 
-                  ? `${slide.tagColor.replace('text-', 'bg-')} scale-125` 
-                  : 'bg-white/70 hover:bg-white'
-              }`}
-            />
-          ))}
+          {heroSlides.map((slide, index) => {
+            const tagColor = slide?.tagColor || DEFAULT_HERO_SLIDES[0].tagColor;
+            return (
+              <button
+                key={index}
+                onClick={() => setCurrentHeroSlide(index)}
+                className={`w-3 h-3 rounded-full transition-all duration-300 shadow-sm ${
+                  index === currentHeroSlide 
+                    ? `${tagColor.replace('text-', 'bg-')} scale-125` 
+                    : 'bg-white/70 hover:bg-white'
+                }`}
+              />
+            );
+          })}
         </div>
 
         {/* ── Hero Content ── */}
@@ -1538,21 +1541,26 @@ const LandingPage = () => {
 
 
               {/* Dynamic Headline from Slider */}
-              <div className="flex flex-col space-y-2 mb-4 w-full" key={currentHeroSlide}>
-                 <span className={`text-xs md:text-sm font-bold tracking-[0.2em] uppercase drop-shadow-md ${heroSlides[currentHeroSlide].tagColor}`}>
-                    {heroSlides[currentHeroSlide].tag}
-                 </span>
-                 <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.15] text-white drop-shadow-premium max-w-4xl font-serif-hero mt-2">
-                   {heroSlides[currentHeroSlide].titlePrefix}
-                   <span className={`${heroSlides[currentHeroSlide].highlightColor}`}>
-                      {heroSlides[currentHeroSlide].titleHighlight}
-                   </span>
-                   {heroSlides[currentHeroSlide].titleSuffix}
-                 </h2>
-                 <p className="text-3xl md:text-5xl text-white/90 font-handwriting drop-shadow-md mt-4 pb-2">
-                   {heroSlides[currentHeroSlide].subtitle}
-                 </p>
-              </div>
+              {(() => {
+                const activeHero = heroSlides[currentHeroSlide] || heroSlides[0] || DEFAULT_HERO_SLIDES[0];
+                return (
+                  <div className="flex flex-col space-y-2 mb-4 w-full" key={currentHeroSlide}>
+                     <span className={`text-xs md:text-sm font-bold tracking-[0.2em] uppercase drop-shadow-md ${activeHero.tagColor}`}>
+                        {activeHero.tag}
+                     </span>
+                     <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.15] text-white drop-shadow-premium max-w-4xl font-serif-hero mt-2">
+                       {activeHero.titlePrefix}
+                       <span className={`${activeHero.highlightColor}`}>
+                          {activeHero.titleHighlight}
+                       </span>
+                       {activeHero.titleSuffix}
+                     </h2>
+                     <p className="text-3xl md:text-5xl text-white/90 font-handwriting drop-shadow-md mt-4 pb-2">
+                       {activeHero.subtitle}
+                     </p>
+                  </div>
+                );
+              })()}
 
               {/* ── Search Bar ── */}
               <div className="mt-8 w-full max-w-5xl relative">
