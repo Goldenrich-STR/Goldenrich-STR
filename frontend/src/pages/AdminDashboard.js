@@ -8,7 +8,7 @@ import {
   Edit, Eye as EyeIcon, Shield, ChevronLeft, ChevronRight, Tag,
   Check, ListTodo, Heart, FileText, Sparkles, UploadCloud,
   Mail, EyeOff, Lock, User, MapPin, Eye, Camera, Info, ArrowLeft,
-  Search, ChevronDown
+  Search, ChevronDown, ChevronUp
 } from 'lucide-react';
 import SearchLogsManagement from '../components/admin/SearchLogsManagement';
 import AICallsManagement from '../components/admin/AICallsManagement';
@@ -3675,6 +3675,7 @@ const CMSManagement = () => {
     title: '',
     subtitle: '',
     image_url: '',
+    slides: [],
     rating: '',
     trusted_text: ''
   });
@@ -3755,7 +3756,18 @@ const CMSManagement = () => {
       setContent(docs);
 
       const heroDoc = docs.find(d => d.section === 'hero');
-      if (heroDoc) setHeroData(heroDoc.content_data);
+      if (heroDoc) {
+        const hero = heroDoc.content_data || {};
+        const savedSlides = Array.isArray(hero.slides)
+          ? hero.slides.filter(slide => slide && (typeof slide === 'string' || slide.image_url))
+          : [];
+        const slides = savedSlides.length
+          ? savedSlides.map(slide => typeof slide === 'string' ? { image_url: slide } : slide)
+          : hero.image_url
+            ? [{ image_url: hero.image_url }]
+            : [];
+        setHeroData(prev => ({ ...prev, ...hero, slides }));
+      }
 
       const howItWorksDoc = docs.find(d => d.section === 'how_it_works');
       if (howItWorksDoc) setHowItWorksData(howItWorksDoc.content_data);
@@ -3794,7 +3806,14 @@ const CMSManagement = () => {
         alert(`Document for section ${section} not found.`);
         return;
       }
-      await cmsAPI.updateContent(doc.content_id, { content_data: data });
+      const contentData = section === 'hero'
+        ? {
+            ...data,
+            image_url: data.slides?.[0]?.image_url || data.image_url || '',
+            slides: (data.slides || []).filter(slide => slide?.image_url)
+          }
+        : data;
+      await cmsAPI.updateContent(doc.content_id, { content_data: contentData });
       alert(`${section.replace(/_/g, ' ').toUpperCase()} updated successfully!`);
       fetchCMSContent();
     } catch (err) {
@@ -3814,6 +3833,16 @@ const CMSManagement = () => {
       
       if (type === 'hero') {
         setHeroData(prev => ({ ...prev, image_url: uploadedUrl }));
+      } else if (type === 'hero_slide' && index !== null) {
+        setHeroData(prev => {
+          const slides = [...(prev.slides || [])];
+          slides[index] = { ...(slides[index] || {}), image_url: uploadedUrl };
+          return {
+            ...prev,
+            slides,
+            image_url: index === 0 ? uploadedUrl : prev.image_url
+          };
+        });
       } else if (type === 'offer') {
         setOfferData(prev => ({ ...prev, image_url: uploadedUrl }));
       } else if (type === 'blog' && index !== null) {
@@ -3834,6 +3863,30 @@ const CMSManagement = () => {
       console.error('Upload failed:', error);
       alert('Failed to upload image.');
     }
+  };
+
+  const addHeroSlide = () => {
+    setHeroData(prev => ({
+      ...prev,
+      slides: [...(prev.slides || []), { image_url: '' }]
+    }));
+  };
+
+  const removeHeroSlide = (index) => {
+    setHeroData(prev => {
+      const slides = (prev.slides || []).filter((_, slideIndex) => slideIndex !== index);
+      return { ...prev, slides, image_url: slides[0]?.image_url || '' };
+    });
+  };
+
+  const moveHeroSlide = (index, direction) => {
+    setHeroData(prev => {
+      const slides = [...(prev.slides || [])];
+      const target = index + direction;
+      if (target < 0 || target >= slides.length) return prev;
+      [slides[index], slides[target]] = [slides[target], slides[index]];
+      return { ...prev, slides, image_url: slides[0]?.image_url || '' };
+    });
   };
 
   if (loading) {
@@ -3955,36 +4008,102 @@ const CMSManagement = () => {
               />
             </div>
 
-            <div className="relative group">
-              <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Hero Background Image</label>
-              <div className="flex items-stretch space-x-3">
-                <div className="relative flex-1">
-                  <input
-                    className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3.5 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm"
-                    value={heroData.image_url}
-                    onChange={e => setHeroData({ ...heroData, image_url: e.target.value })}
-                    placeholder="Image URL"
-                  />
+            <div className="relative">
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <div>
+                  <label className="text-[10px] font-bold text-charcoal-light uppercase tracking-widest block">Hero Slider Images</label>
+                  <p className="text-xs text-charcoal-muted mt-1">The first image loads first. Use the arrows to change slide order.</p>
                 </div>
-                <label className="btn-premium px-6 flex items-center justify-center space-x-2 text-sm font-semibold rounded-2xl cursor-pointer hover:shadow-premium transition-all duration-300">
-                  <UploadCloud className="w-4 h-4" />
-                  <span>Upload Image</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={e => handleImageUpload(e, 'hero')}
-                  />
-                </label>
+                <button
+                  type="button"
+                  onClick={addHeroSlide}
+                  disabled={(heroData.slides || []).length >= 6}
+                  className="btn-premium px-4 py-2.5 flex items-center gap-2 text-xs disabled:opacity-40"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add slide
+                </button>
               </div>
-              
-              {heroData.image_url && (
-                <div className="mt-5 relative group overflow-hidden rounded-2xl border border-gray-100/80 shadow-subtle aspect-video max-h-64">
-                  <img src={getImageUrl(heroData.image_url)} alt="Hero Preview" className="w-full h-full object-cover group-hover:scale-[1.02] transition-all duration-500" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end p-4">
-                    <span className="text-white text-xs font-semibold tracking-wide bg-charcoal/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">Active Hero Background</span>
+
+              <div className="space-y-4">
+                {(heroData.slides || []).map((slide, index) => (
+                  <div key={index} className="grid grid-cols-1 lg:grid-cols-[220px_1fr_auto] gap-4 items-center border border-gray-100 rounded-2xl p-4 bg-stone/20">
+                    <div className="aspect-video overflow-hidden rounded-xl bg-gray-100">
+                      {slide.image_url ? (
+                        <img
+                          src={getImageUrl(slide.image_url)}
+                          alt={`Hero slide ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-charcoal-muted">No image</div>
+                      )}
+                    </div>
+
+                    <div className="space-y-3 min-w-0">
+                      <div className="text-xs font-bold text-charcoal">Slide {index + 1}{index === 0 ? ' (first)' : ''}</div>
+                      <input
+                        className="w-full border border-gray-100 focus:border-terracotta rounded-xl px-4 py-3 outline-none text-sm bg-white"
+                        value={slide.image_url || ''}
+                        onChange={e => {
+                          const slides = [...(heroData.slides || [])];
+                          slides[index] = { ...slide, image_url: e.target.value };
+                          setHeroData({ ...heroData, slides, image_url: index === 0 ? e.target.value : heroData.image_url });
+                        }}
+                        placeholder="Image URL"
+                      />
+                      <label className="inline-flex items-center gap-2 text-xs font-semibold text-terracotta cursor-pointer">
+                        <UploadCloud className="w-4 h-4" />
+                        Upload image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => handleImageUpload(e, 'hero_slide', index)}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex lg:flex-col gap-2">
+                      <button
+                        type="button"
+                        title="Move slide up"
+                        disabled={index === 0}
+                        onClick={() => moveHeroSlide(index, -1)}
+                        className="w-9 h-9 border border-gray-200 rounded-lg flex items-center justify-center disabled:opacity-30"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Move slide down"
+                        disabled={index === heroData.slides.length - 1}
+                        onClick={() => moveHeroSlide(index, 1)}
+                        className="w-9 h-9 border border-gray-200 rounded-lg flex items-center justify-center disabled:opacity-30"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Remove slide"
+                        onClick={() => removeHeroSlide(index)}
+                        className="w-9 h-9 border border-red-100 text-red-500 rounded-lg flex items-center justify-center"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ))}
+              </div>
+
+              {(heroData.slides || []).length === 0 && (
+                <button
+                  type="button"
+                  onClick={addHeroSlide}
+                  className="w-full border border-dashed border-terracotta/40 rounded-2xl py-8 text-sm font-semibold text-terracotta"
+                >
+                  Add your first hero image
+                </button>
               )}
             </div>
 

@@ -412,8 +412,8 @@ async def get_landing_page_content(
             section = item["section"]
             organized_content[section] = item["content_data"]
         
-        # Set cache-control header for public landing page CMS content (5 minutes)
-        response.headers["Cache-Control"] = "public, max-age=300"
+        # Admin cover changes should be visible immediately on the landing page.
+        response.headers["Cache-Control"] = "no-store"
         
         # Organize SEO metadata
         organized_content["seo"] = {
