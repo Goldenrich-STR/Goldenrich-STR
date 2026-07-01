@@ -871,6 +871,11 @@ async def permanently_delete_property(
         await db.reviews.delete_many({"property_id": property_id})
         await db.coupons.delete_many({"property_id": property_id})
         await db.deleted_properties.delete_many({"property_id": property_id})
+        if await db.deleted_properties.find_one(
+            {"property_id": property_id},
+            {"_id": 0, "property_id": 1},
+        ):
+            raise RuntimeError("Archived property record could not be removed from the database")
 
         logger.warning(
             "Property permanently deleted: %s by admin %s",

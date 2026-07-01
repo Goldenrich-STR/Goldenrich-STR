@@ -3100,8 +3100,13 @@ const PropertyModeration = () => {
       setDeleteState(null);
       refresh();
     } catch (error) {
-      const message = error?.response?.data?.detail || 'Failed to delete property';
-      alert(message);
+      const fallback = error?.request
+        ? 'The backend did not respond. Check the backend container and API URL.'
+        : 'Failed to delete property';
+      setDeleteState(current => current ? {
+        ...current,
+        error: formatError(error, fallback),
+      } : current);
     } finally {
       setDeleteSubmitting(false);
     }
@@ -3120,8 +3125,13 @@ const PropertyModeration = () => {
       setPermanentDeleteState(null);
       refresh();
     } catch (error) {
-      const message = error?.response?.data?.detail || 'Failed to permanently delete property';
-      alert(message);
+      const fallback = error?.request
+        ? 'The backend did not respond. Check the backend container and API URL.'
+        : 'Failed to permanently delete property';
+      setPermanentDeleteState(current => current ? {
+        ...current,
+        error: formatError(error, fallback),
+      } : current);
     } finally {
       setDeleteSubmitting(false);
     }
@@ -3274,7 +3284,7 @@ const PropertyModeration = () => {
                           <span>Edit</span>
                         </button>
                         <button
-                          onClick={() => setDeleteState({ property, reason: '' })}
+                          onClick={() => setDeleteState({ property, reason: '', error: '' })}
                           className="flex items-center space-x-1.5 px-4 py-2 border border-[#FECACA] text-[#DC2626] bg-[#FEF2F2] rounded-full font-bold text-xs hover:bg-[#FEE2E2] transition-all shadow-sm"
                           title="Delete property"
                         >
@@ -3284,7 +3294,7 @@ const PropertyModeration = () => {
                       </>
                     ) : (
                       <button
-                        onClick={() => setPermanentDeleteState({ property, confirmation: '' })}
+                        onClick={() => setPermanentDeleteState({ property, confirmation: '', error: '' })}
                         className="flex items-center space-x-1.5 px-4 py-2 border border-[#991B1B] text-white bg-[#B91C1C] rounded-full font-bold text-xs hover:bg-[#991B1B] transition-all shadow-sm"
                         title="Permanently delete property"
                       >
@@ -3375,6 +3385,11 @@ const PropertyModeration = () => {
             <p className="text-xs text-charcoal-muted mt-2">
               Minimum 10 characters. The property will move to Deleted Properties.
             </p>
+            {deleteState.error && (
+              <p className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {deleteState.error}
+              </p>
+            )}
 
             <div className="flex justify-end gap-3 mt-6">
               <button
@@ -3430,6 +3445,11 @@ const PropertyModeration = () => {
               className="input-field w-full mt-2 font-mono"
               placeholder="Property ID"
             />
+            {permanentDeleteState.error && (
+              <p className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {permanentDeleteState.error}
+              </p>
+            )}
 
             <div className="flex justify-end gap-3 mt-6">
               <button
