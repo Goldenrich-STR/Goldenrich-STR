@@ -8,7 +8,7 @@ import {
   Edit, Eye as EyeIcon, Shield, ChevronLeft, ChevronRight, Tag,
   Check, ListTodo, Heart, FileText, Sparkles, UploadCloud,
   Mail, EyeOff, Lock, User, MapPin, Eye, Camera, Info, ArrowLeft,
-  Search, ChevronDown
+  Search, ChevronDown, ChevronUp
 } from 'lucide-react';
 import SearchLogsManagement from '../components/admin/SearchLogsManagement';
 import AICallsManagement from '../components/admin/AICallsManagement';
@@ -364,6 +364,7 @@ const AdminDashboard = () => {
             { id: 'cms', label: 'CMS', icon: TrendingUp },
             { id: 'search-logs', label: 'Search Logs', icon: FileText },
             { id: 'ai-calls', label: 'AI Voice Calls', icon: Phone },
+            { id: 'support-messages', label: 'Support Messages', icon: Mail },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -508,6 +509,11 @@ const AdminDashboard = () => {
             <AICallsManagement />
           </div>
         )}
+
+        {/* Support Messages Tab */}
+        {activeTab === 'support-messages' && (
+          <SupportMessagesManagement />
+        )}
       </div>
 
       {showProfileModal && (
@@ -647,6 +653,301 @@ const INDIAN_STATES = [
   "Andaman and Nicobar Islands", "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu",
   "Delhi", "Jammu and Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
 ];
+
+// Support Messages Management Component
+const SupportMessagesManagement = () => {
+  const [messages, setMessages] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [updating, setUpdating] = useState(false);
+  const [adminNotes, setAdminNotes] = useState('');
+  const [messageStatus, setMessageStatus] = useState('pending');
+
+  const fetchMessages = async () => {
+    try {
+      setLoading(true);
+      const params = statusFilter ? { status: statusFilter } : {};
+      const res = await cmsAPI.getContactMessages(params);
+      setMessages(res.data.messages || []);
+      
+      // Auto-select first message if available and none selected
+      if (res.data.messages && res.data.messages.length > 0) {
+        const firstMsg = res.data.messages[0];
+        setSelectedMessage(firstMsg);
+        setAdminNotes(firstMsg.admin_notes || '');
+        setMessageStatus(firstMsg.status || 'pending');
+      } else {
+        setSelectedMessage(null);
+      }
+    } catch (error) {
+      console.error('Error fetching contact messages:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMessages();
+  }, [statusFilter]);
+
+  const handleSelectMessage = (msg) => {
+    setSelectedMessage(msg);
+    setAdminNotes(msg.admin_notes || '');
+    setMessageStatus(msg.status || 'pending');
+  };
+
+  const handleUpdateFollowUp = async (e) => {
+    e.preventDefault();
+    if (!selectedMessage) return;
+
+    try {
+      setUpdating(true);
+      await cmsAPI.updateContactMessage(selectedMessage._id, {
+        status: messageStatus,
+        admin_notes: adminNotes
+      });
+      alert('Follow-up updated successfully!');
+      
+      // Refresh messages list and preserve selection
+      const params = statusFilter ? { status: statusFilter } : {};
+      const res = await cmsAPI.getContactMessages(params);
+      const updatedMessages = res.data.messages || [];
+      setMessages(updatedMessages);
+      
+      const updatedSelected = updatedMessages.find(m => m._id === selectedMessage._id);
+      if (updatedSelected) {
+        setSelectedMessage(updatedSelected);
+      }
+    } catch (error) {
+      console.error('Error updating follow-up:', error);
+      alert(formatError(error, 'Failed to update follow-up'));
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case 'resolved':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'in-progress':
+        return 'bg-blue-50 text-blue-700 border-blue-200';
+      default:
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+    }
+  };
+
+  const filteredMessages = messages.filter(msg => {
+    const term = searchQuery.toLowerCase();
+    return (
+      msg.name?.toLowerCase().includes(term) ||
+      msg.email?.toLowerCase().includes(term) ||
+      msg.phone?.toLowerCase().includes(term) ||
+      msg.subject?.toLowerCase().includes(term) ||
+      msg.message?.toLowerCase().includes(term)
+    );
+  });
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
+      {/* Left Column: Messages List */}
+      <div className="lg:col-span-1 space-y-6">
+        <div className="bg-white rounded-2xl p-5 border border-sand-200/60 shadow-premium space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold text-charcoal font-display">Inquiries List</h3>
+            <span className="px-2.5 py-1 bg-stone text-charcoal font-bold text-[10px] rounded-full uppercase border border-sand-200">
+              {filteredMessages.length} Total
+            </span>
+          </div>
+
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-muted" />
+            <input
+              type="text"
+              placeholder="Search inquiries..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-sand-200 focus:border-terracotta rounded-xl outline-none text-xs font-semibold"
+            />
+          </div>
+
+          {/* Status Filter */}
+          <div className="flex gap-2">
+            {[
+              { label: 'All', value: '' },
+              { label: 'Pending', value: 'pending' },
+              { label: 'In Progress', value: 'in-progress' },
+              { label: 'Resolved', value: 'resolved' }
+            ].map(filter => (
+              <button
+                key={filter.label}
+                onClick={() => setStatusFilter(filter.value)}
+                className={`px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider transition ${
+                  statusFilter === filter.value
+                    ? 'bg-terracotta text-white border-terracotta'
+                    : 'bg-white border-sand-200 text-charcoal hover:bg-sand-50'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Message Cards Scroll Container */}
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+          {loading ? (
+            <div className="text-center py-8 text-charcoal-muted text-xs font-bold bg-white rounded-2xl border border-sand-200/60 p-6 shadow-premium">
+              Loading support requests...
+            </div>
+          ) : filteredMessages.length > 0 ? (
+            filteredMessages.map(msg => (
+              <div
+                key={msg._id}
+                onClick={() => handleSelectMessage(msg)}
+                className={`p-4 bg-white border rounded-2xl shadow-subtle cursor-pointer transition-all duration-200 flex flex-col justify-between ${
+                  selectedMessage?._id === msg._id
+                    ? 'border-terracotta ring-1 ring-terracotta/20 bg-terracotta/5'
+                    : 'border-sand-200/60 hover:border-terracotta/30 hover:bg-stone/50'
+                }`}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h4 className="text-sm font-bold text-charcoal">{msg.name}</h4>
+                    <p className="text-[10px] text-charcoal-muted font-semibold mt-0.5">{msg.email}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-full border ${getStatusBadgeClass(msg.status)}`}>
+                    {msg.status.replace('-', ' ')}
+                  </span>
+                </div>
+                
+                <p className="text-xs font-bold text-charcoal-light line-clamp-1 border-t border-sand-100 pt-2 mt-2">
+                  {msg.subject}
+                </p>
+                <span className="text-[9px] text-charcoal-muted mt-1 block font-medium">
+                  {new Date(msg.created_at).toLocaleString()}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-charcoal-muted text-xs font-semibold bg-white rounded-2xl border border-dashed border-sand-300 p-6">
+              No inquiries found matching criteria.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right Column: In-depth Detail Panel & Notes Form */}
+      <div className="lg:col-span-2">
+        {selectedMessage ? (
+          <div className="bg-white rounded-2xl border border-sand-200/60 shadow-premium p-6 space-y-6">
+            {/* Header section with status */}
+            <div className="flex justify-between items-start border-b border-sand-100 pb-4">
+              <div>
+                <span className="text-[10px] font-black text-terracotta uppercase tracking-widest block">Inquiry Details</span>
+                <h3 className="text-xl font-bold text-charcoal font-display mt-0.5">{selectedMessage.subject}</h3>
+                <p className="text-xs text-charcoal-muted mt-1 font-semibold">
+                  Submitted on {new Date(selectedMessage.created_at).toLocaleString()}
+                </p>
+              </div>
+              <span className={`px-3 py-1 text-[9px] font-black uppercase tracking-wider rounded-full border ${getStatusBadgeClass(selectedMessage.status)}`}>
+                {selectedMessage.status.replace('-', ' ')}
+              </span>
+            </div>
+
+            {/* Guest Details Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-stone/50 p-4 rounded-xl border border-sand-200/40">
+                <span className="text-[9px] text-charcoal-muted uppercase tracking-wider font-bold block mb-1">Guest Name</span>
+                <span className="text-xs font-bold text-charcoal flex items-center space-x-1.5">
+                  <User className="w-3.5 h-3.5 text-terracotta" />
+                  <span>{selectedMessage.name}</span>
+                </span>
+              </div>
+              <div className="bg-stone/50 p-4 rounded-xl border border-sand-200/40">
+                <span className="text-[9px] text-charcoal-muted uppercase tracking-wider font-bold block mb-1">Email Address</span>
+                <a href={`mailto:${selectedMessage.email}`} className="text-xs font-bold text-terracotta hover:underline flex items-center space-x-1.5">
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>{selectedMessage.email}</span>
+                </a>
+              </div>
+              <div className="bg-stone/50 p-4 rounded-xl border border-sand-200/40">
+                <span className="text-[9px] text-charcoal-muted uppercase tracking-wider font-bold block mb-1">Phone Number</span>
+                <a href={`tel:${selectedMessage.phone}`} className="text-xs font-bold text-charcoal flex items-center space-x-1.5 hover:text-terracotta transition-colors">
+                  <Phone className="w-3.5 h-3.5 text-sage" />
+                  <span>{selectedMessage.phone}</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Message Description */}
+            <div className="bg-sand-50/40 p-5 rounded-2xl border border-sand-250/30">
+              <span className="text-[10px] text-charcoal-muted uppercase tracking-widest font-black block mb-3 border-b border-sand-100 pb-2">Description</span>
+              <p className="text-sm font-semibold text-charcoal-light leading-relaxed whitespace-pre-line">
+                {selectedMessage.message}
+              </p>
+            </div>
+
+            {/* Follow-up / Admin Actions Form */}
+            <form onSubmit={handleUpdateFollowUp} className="border-t border-sand-100 pt-6 space-y-4">
+              <h4 className="text-sm font-black text-charcoal uppercase tracking-wider font-display mb-2">Admin Follow-up Log</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Status</label>
+                  <select
+                    value={messageStatus}
+                    onChange={e => setMessageStatus(e.target.value)}
+                    className="w-full border border-sand-200 focus:border-terracotta rounded-xl px-4 py-2.5 outline-none transition text-xs font-bold bg-white text-charcoal"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-charcoal-light uppercase tracking-widest block mb-2">Follow-up Notes / Resolution Log</label>
+                <textarea
+                  rows={4}
+                  placeholder="Record call logs, escalation updates, or resolving comments..."
+                  value={adminNotes}
+                  onChange={e => setAdminNotes(e.target.value)}
+                  className="w-full border border-sand-200 focus:border-terracotta rounded-xl px-4 py-3 outline-none transition text-xs font-semibold bg-sand-50/20 focus:bg-white leading-relaxed"
+                />
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={updating}
+                  className="px-6 py-2.5 bg-terracotta hover:bg-terracotta-hover text-white text-xs font-black uppercase tracking-wider rounded-xl shadow-premium transition active:scale-95 flex items-center justify-center space-x-2"
+                >
+                  {updating ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Saving changes...</span>
+                    </>
+                  ) : (
+                    <span>Save Updates</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-sand-200/60 shadow-premium p-12 text-center text-charcoal-muted text-sm font-semibold">
+            Select an inquiry from the list to display details and log follow-ups.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // User Management Component
 const UserManagement = ({ roleFilter, setRoleFilter }) => {
@@ -3704,6 +4005,7 @@ const CMSManagement = () => {
     title: '',
     subtitle: '',
     image_url: '',
+    slides: [],
     rating: '',
     trusted_text: ''
   });
@@ -3784,7 +4086,18 @@ const CMSManagement = () => {
       setContent(docs);
 
       const heroDoc = docs.find(d => d.section === 'hero');
-      if (heroDoc) setHeroData(heroDoc.content_data);
+      if (heroDoc) {
+        const hero = heroDoc.content_data || {};
+        const savedSlides = Array.isArray(hero.slides)
+          ? hero.slides.filter(slide => slide && (typeof slide === 'string' || slide.image_url))
+          : [];
+        const slides = savedSlides.length
+          ? savedSlides.map(slide => typeof slide === 'string' ? { image_url: slide } : slide)
+          : hero.image_url
+            ? [{ image_url: hero.image_url }]
+            : [];
+        setHeroData(prev => ({ ...prev, ...hero, slides }));
+      }
 
       const howItWorksDoc = docs.find(d => d.section === 'how_it_works');
       if (howItWorksDoc) setHowItWorksData(howItWorksDoc.content_data);
@@ -3823,7 +4136,14 @@ const CMSManagement = () => {
         alert(`Document for section ${section} not found.`);
         return;
       }
-      await cmsAPI.updateContent(doc.content_id, { content_data: data });
+      const contentData = section === 'hero'
+        ? {
+            ...data,
+            image_url: data.slides?.[0]?.image_url || data.image_url || '',
+            slides: (data.slides || []).filter(slide => slide?.image_url)
+          }
+        : data;
+      await cmsAPI.updateContent(doc.content_id, { content_data: contentData });
       alert(`${section.replace(/_/g, ' ').toUpperCase()} updated successfully!`);
       fetchCMSContent();
     } catch (err) {
@@ -3843,6 +4163,16 @@ const CMSManagement = () => {
       
       if (type === 'hero') {
         setHeroData(prev => ({ ...prev, image_url: uploadedUrl }));
+      } else if (type === 'hero_slide' && index !== null) {
+        setHeroData(prev => {
+          const slides = [...(prev.slides || [])];
+          slides[index] = { ...(slides[index] || {}), image_url: uploadedUrl };
+          return {
+            ...prev,
+            slides,
+            image_url: index === 0 ? uploadedUrl : prev.image_url
+          };
+        });
       } else if (type === 'offer') {
         setOfferData(prev => ({ ...prev, image_url: uploadedUrl }));
       } else if (type === 'blog' && index !== null) {
@@ -3863,6 +4193,30 @@ const CMSManagement = () => {
       console.error('Upload failed:', error);
       alert('Failed to upload image.');
     }
+  };
+
+  const addHeroSlide = () => {
+    setHeroData(prev => ({
+      ...prev,
+      slides: [...(prev.slides || []), { image_url: '' }]
+    }));
+  };
+
+  const removeHeroSlide = (index) => {
+    setHeroData(prev => {
+      const slides = (prev.slides || []).filter((_, slideIndex) => slideIndex !== index);
+      return { ...prev, slides, image_url: slides[0]?.image_url || '' };
+    });
+  };
+
+  const moveHeroSlide = (index, direction) => {
+    setHeroData(prev => {
+      const slides = [...(prev.slides || [])];
+      const target = index + direction;
+      if (target < 0 || target >= slides.length) return prev;
+      [slides[index], slides[target]] = [slides[target], slides[index]];
+      return { ...prev, slides, image_url: slides[0]?.image_url || '' };
+    });
   };
 
   if (loading) {
@@ -3984,36 +4338,102 @@ const CMSManagement = () => {
               />
             </div>
 
-            <div className="relative group">
-              <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Hero Background Image</label>
-              <div className="flex items-stretch space-x-3">
-                <div className="relative flex-1">
-                  <input
-                    className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3.5 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm"
-                    value={heroData.image_url}
-                    onChange={e => setHeroData({ ...heroData, image_url: e.target.value })}
-                    placeholder="Image URL"
-                  />
+            <div className="relative">
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <div>
+                  <label className="text-[10px] font-bold text-charcoal-light uppercase tracking-widest block">Hero Slider Images</label>
+                  <p className="text-xs text-charcoal-muted mt-1">The first image loads first. Use the arrows to change slide order.</p>
                 </div>
-                <label className="btn-premium px-6 flex items-center justify-center space-x-2 text-sm font-semibold rounded-2xl cursor-pointer hover:shadow-premium transition-all duration-300">
-                  <UploadCloud className="w-4 h-4" />
-                  <span>Upload Image</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={e => handleImageUpload(e, 'hero')}
-                  />
-                </label>
+                <button
+                  type="button"
+                  onClick={addHeroSlide}
+                  disabled={(heroData.slides || []).length >= 6}
+                  className="btn-premium px-4 py-2.5 flex items-center gap-2 text-xs disabled:opacity-40"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add slide
+                </button>
               </div>
-              
-              {heroData.image_url && (
-                <div className="mt-5 relative group overflow-hidden rounded-2xl border border-gray-100/80 shadow-subtle aspect-video max-h-64">
-                  <img src={getImageUrl(heroData.image_url)} alt="Hero Preview" className="w-full h-full object-cover group-hover:scale-[1.02] transition-all duration-500" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent flex items-end p-4">
-                    <span className="text-white text-xs font-semibold tracking-wide bg-charcoal/40 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">Active Hero Background</span>
+
+              <div className="space-y-4">
+                {(heroData.slides || []).map((slide, index) => (
+                  <div key={index} className="grid grid-cols-1 lg:grid-cols-[220px_1fr_auto] gap-4 items-center border border-gray-100 rounded-2xl p-4 bg-stone/20">
+                    <div className="aspect-video overflow-hidden rounded-xl bg-gray-100">
+                      {slide.image_url ? (
+                        <img
+                          src={getImageUrl(slide.image_url)}
+                          alt={`Hero slide ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-charcoal-muted">No image</div>
+                      )}
+                    </div>
+
+                    <div className="space-y-3 min-w-0">
+                      <div className="text-xs font-bold text-charcoal">Slide {index + 1}{index === 0 ? ' (first)' : ''}</div>
+                      <input
+                        className="w-full border border-gray-100 focus:border-terracotta rounded-xl px-4 py-3 outline-none text-sm bg-white"
+                        value={slide.image_url || ''}
+                        onChange={e => {
+                          const slides = [...(heroData.slides || [])];
+                          slides[index] = { ...slide, image_url: e.target.value };
+                          setHeroData({ ...heroData, slides, image_url: index === 0 ? e.target.value : heroData.image_url });
+                        }}
+                        placeholder="Image URL"
+                      />
+                      <label className="inline-flex items-center gap-2 text-xs font-semibold text-terracotta cursor-pointer">
+                        <UploadCloud className="w-4 h-4" />
+                        Upload image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={e => handleImageUpload(e, 'hero_slide', index)}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex lg:flex-col gap-2">
+                      <button
+                        type="button"
+                        title="Move slide up"
+                        disabled={index === 0}
+                        onClick={() => moveHeroSlide(index, -1)}
+                        className="w-9 h-9 border border-gray-200 rounded-lg flex items-center justify-center disabled:opacity-30"
+                      >
+                        <ChevronUp className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Move slide down"
+                        disabled={index === heroData.slides.length - 1}
+                        onClick={() => moveHeroSlide(index, 1)}
+                        className="w-9 h-9 border border-gray-200 rounded-lg flex items-center justify-center disabled:opacity-30"
+                      >
+                        <ChevronDown className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Remove slide"
+                        onClick={() => removeHeroSlide(index)}
+                        className="w-9 h-9 border border-red-100 text-red-500 rounded-lg flex items-center justify-center"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ))}
+              </div>
+
+              {(heroData.slides || []).length === 0 && (
+                <button
+                  type="button"
+                  onClick={addHeroSlide}
+                  className="w-full border border-dashed border-terracotta/40 rounded-2xl py-8 text-sm font-semibold text-terracotta"
+                >
+                  Add your first hero image
+                </button>
               )}
             </div>
 
