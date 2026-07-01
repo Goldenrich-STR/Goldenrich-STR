@@ -12,6 +12,66 @@ async def get_db():
     from server import db_instance
     return db_instance
 
+def _normalize(value: Optional[str]) -> Optional[str]:
+    return value.strip().lower() if value else None
+
+def _sqft_matches(range_text: Optional[str], area_sqft: Optional[float]) -> bool:
+    if not range_text or area_sqft is None:
+        return True
+
+    text = range_text.strip().lower().replace("sqft", "").replace("sq.ft", "").replace(",", "")
+    text = text.replace(" ", "")
+    aliases = {
+        "small": "<500",
+        "medium": "500-2000",
+        "large": "2000-5000",
+        "extra_large": "5000+",
+        "extralarge": "5000+",
+    }
+    text = aliases.get(text, text)
+    try:
+        if text.startswith("<="):
+            return area_sqft <= float(text[2:])
+        if text.startswith(">="):
+            return area_sqft >= float(text[2:])
+        if text.startswith("<"):
+            return area_sqft < float(text[1:])
+        if text.startswith(">"):
+            return area_sqft > float(text[1:])
+        if text.endswith("+"):
+            return area_sqft >= float(text[:-1])
+        if "-" in text:
+            start, end = text.split("-", 1)
+            return float(start) <= area_sqft <= float(end)
+    except ValueError:
+        return True
+
+    return True
+
+def _target_matches(
+    item: dict,
+    *,
+    plan_type: Optional[str] = None,
+    property_category: Optional[str] = None,
+    bhk_type: Optional[str] = None,
+    area_sqft: Optional[float] = None,
+) -> bool:
+    requested_plan_type = _normalize(plan_type)
+    requested_category = _normalize(property_category)
+    requested_bhk = _normalize(bhk_type)
+
+    item_plan_type = _normalize(item.get("plan_type"))
+    item_category = _normalize(item.get("property_category"))
+    item_bhk = _normalize(item.get("bhk_type"))
+
+    if requested_plan_type and item_plan_type and item_plan_type != requested_plan_type:
+        return False
+    if requested_category and item_category and item_category != requested_category:
+        return False
+    if requested_bhk and item_bhk and item_bhk != requested_bhk:
+        return False
+    return _sqft_matches(item.get("sqft_range"), area_sqft)
+
 @router.post("/", response_model=dict)
 async def create_coupon(
     coupon_data: CouponCreate,
@@ -41,7 +101,11 @@ async def create_coupon(
             discount_type=coupon_data.discount_type,
             discount_value=coupon_data.discount_value,
             coupon_type=coupon_data.coupon_type,
-            property_id=coupon_data.property_id
+            property_id=coupon_data.property_id,
+            plan_type=coupon_data.plan_type,
+            property_category=coupon_data.property_category,
+            bhk_type=coupon_data.bhk_type,
+            sqft_range=coupon_data.sqft_range,
         )
         
         await db.coupons.insert_one(coupon.model_dump())
@@ -112,6 +176,10 @@ async def get_property_coupons(
 
 @router.get("/subscription", response_model=dict)
 async def get_subscription_coupons(
+    plan_type: Optional[str] = None,
+    property_category: Optional[str] = None,
+    bhk_type: Optional[str] = None,
+    area_sqft: Optional[float] = None,
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get active subscription coupons (Public)"""
@@ -121,6 +189,16 @@ async def get_subscription_coupons(
             "coupon_type": "subscription"
         }, {"_id": 0})
         coupons = await cursor.to_list(length=20)
+        coupons = [
+            coupon for coupon in coupons
+            if _target_matches(
+                coupon,
+                plan_type=plan_type,
+                property_category=property_category,
+                bhk_type=bhk_type,
+                area_sqft=area_sqft,
+            )
+        ]
         return {"coupons": coupons}
     except Exception as e:
         logger.error(f"Error fetching subscription coupons: {str(e)}")

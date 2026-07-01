@@ -6,11 +6,11 @@ BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
 assert BASE_URL, "REACT_APP_BACKEND_URL must be set"
 API = f"{BASE_URL}/api"
 
-ADMIN = {"email": "admin@propnest.com", "password": "admin123"}
+ADMIN = {"email": "admin@goldenrichstay.com", "password": "admin@123"}
 
 @pytest.fixture(scope="module")
 def admin_token():
-    r = requests.post(f"{API}/auth/login", json=ADMIN, timeout=15)
+    r = requests.post(f"{API}/auth/admin-login", json=ADMIN, timeout=15)
     assert r.status_code == 200, r.text
     return r.json()["access_token"]
 
@@ -27,6 +27,7 @@ def test_get_public_cms_landing():
     assert "testimonials" in data
     assert "blog" in data
     assert "offer" in data
+    assert "agreement" in data
 
     # Verify hero content matches schema
     hero = data["hero"]
@@ -34,6 +35,11 @@ def test_get_public_cms_landing():
     assert "title" in hero
     assert "subtitle" in hero
     assert "image_url" in hero
+
+    # Verify agreement content matches schema
+    agreement = data["agreement"]
+    assert "title" in agreement
+    assert "agreement_text" in agreement
 
     # Verify offer content matches schema
     offer = data["offer"]
@@ -121,6 +127,50 @@ def test_admin_cms_workflow(admin_token):
     r = requests.patch(
         f"{API}/cms/admin/content/{offer_content_id}",
         json={"content_data": original_offer_data},
+        headers=_auth(admin_token),
+        timeout=15
+    )
+    assert r.status_code == 200
+
+def test_agreement_cms_workflow(admin_token):
+    # 1. Fetch admin CMS documents
+    r = requests.get(f"{API}/cms/admin/content?page=landing", headers=_auth(admin_token), timeout=15)
+    assert r.status_code == 200
+    docs = r.json().get("content", [])
+    assert len(docs) > 0
+
+    # 2. Find the Agreement section document
+    agreement_doc = next((d for d in docs if d["section"] == "agreement"), None)
+    assert agreement_doc is not None
+    content_id = agreement_doc["content_id"]
+
+    # 3. Update the Agreement section document content_data
+    original_data = agreement_doc["content_data"]
+    updated_data = {
+        "title": "UPDATED STR HOST AGREEMENT",
+        "agreement_text": "Updated agreement content test via pytest workflow"
+    }
+
+    r = requests.patch(
+        f"{API}/cms/admin/content/{content_id}",
+        json={"content_data": updated_data},
+        headers=_auth(admin_token),
+        timeout=15
+    )
+    assert r.status_code == 200
+    assert "message" in r.json()
+
+    # 4. Fetch public CMS landing-page again and verify the change is visible
+    r = requests.get(f"{API}/cms/landing-page", timeout=15)
+    assert r.status_code == 200
+    data = r.json()
+    assert data["agreement"]["title"] == "UPDATED STR HOST AGREEMENT"
+    assert data["agreement"]["agreement_text"] == "Updated agreement content test via pytest workflow"
+
+    # 5. Restore the original data
+    r = requests.patch(
+        f"{API}/cms/admin/content/{content_id}",
+        json={"content_data": original_data},
         headers=_auth(admin_token),
         timeout=15
     )

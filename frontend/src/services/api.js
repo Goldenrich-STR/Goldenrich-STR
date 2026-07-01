@@ -204,8 +204,8 @@ export const propertyAPI = {
 
 // Subscription API
 export const subscriptionAPI = {
-  getPlans: (planType) =>
-    apiClient.get('/subscriptions/plans', { params: planType ? { plan_type: planType } : {} }),
+  getPlans: (params = {}) =>
+    apiClient.get('/subscriptions/plans', { params: typeof params === 'string' ? { plan_type: params } : params }),
 
   createRegistrationFeeOrder: () =>
     apiClient.post('/subscriptions/registration-fee'),
@@ -234,6 +234,9 @@ export const subscriptionAPI = {
 
   getPaymentConfig: () =>
     apiClient.get('/bookings/payment/config'),
+
+  updatePaymentConfig: (data) =>
+    apiClient.put('/bookings/admin/payment/config', data),
 
   // Admin
   createPlan: (planData) =>
@@ -503,7 +506,13 @@ export const cmsAPI = {
   submitContactForm: (payload) => apiClient.post('/cms/contact', payload),
   getAdminContent: (page) => apiClient.get('/cms/admin/content', { params: page ? { page } : {} }),
   updateContent: (contentId, payload) => apiClient.patch(`/cms/admin/content/${contentId}`, payload),
-  createContent: (payload) => apiClient.post('/cms/admin/content', payload),
+  createContent: (payload) => apiClient.post('/cms/admin/content', payload?.content_data || {}, {
+    params: {
+      page: payload?.page,
+      section: payload?.section,
+      content_type: payload?.content_type,
+    },
+  }),
   deleteContent: (contentId) => apiClient.delete(`/cms/admin/content/${contentId}`),
   getContactMessages: (params) => apiClient.get('/cms/admin/contact-messages', { params }),
   updateContactMessage: (id, payload) => apiClient.patch(`/cms/admin/contact-messages/${id}`, payload),
@@ -514,7 +523,7 @@ export const couponAPI = {
   createCoupon: (data) => apiClient.post('/coupons/', data),
   listCoupons: () => apiClient.get('/coupons/'),
   getPropertyCoupons: (propertyId) => apiClient.get(`/coupons/property/${propertyId}`),
-  getSubscriptionCoupons: () => apiClient.get('/coupons/subscription'),
+  getSubscriptionCoupons: (params = {}) => apiClient.get('/coupons/subscription', { params }),
   toggleCouponStatus: (couponId) => apiClient.patch(`/coupons/admin/${couponId}/toggle`),
 };
 

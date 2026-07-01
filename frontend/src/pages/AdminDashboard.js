@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, subscriptionAPI, uploadAPI, getImageUrl, bookingAPI, cmsAPI, adminAPI, propertyAPI } from '../services/api';
 import { 
@@ -4212,6 +4213,151 @@ export const BookingManagement = () => {
   );
 };
 
+// CMS Markdown Editor Component with toolbar and preview toggle
+const CmsMarkdownEditor = ({ value, onChange, label, placeholder, rows = 6 }) => {
+  const [isPreview, setIsPreview] = useState(false);
+  const textareaRef = useRef(null);
+
+  const insertText = (before, after = '') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selected = text.substring(start, end);
+    const replacement = before + (selected || '') + after;
+
+    const newValue = text.substring(0, start) + replacement + text.substring(end);
+    onChange(newValue);
+
+    // Reset cursor position
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + before.length, start + before.length + (selected || '').length);
+    }, 0);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between items-center">
+        <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block">{label}</label>
+        <div className="flex border border-gray-100 rounded-xl overflow-hidden text-[10px] bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={() => setIsPreview(false)}
+            className={`px-3 py-1 font-bold uppercase tracking-wider transition ${!isPreview ? 'bg-charcoal text-white' : 'text-charcoal-muted hover:bg-stone'}`}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsPreview(true)}
+            className={`px-3 py-1 font-bold uppercase tracking-wider transition ${isPreview ? 'bg-charcoal text-white' : 'text-charcoal-muted hover:bg-stone'}`}
+          >
+            Preview
+          </button>
+        </div>
+      </div>
+
+      {!isPreview ? (
+        <div className="border border-gray-150 rounded-2xl bg-white overflow-hidden focus-within:ring-2 focus-within:ring-terracotta/15 focus-within:border-terracotta transition-all shadow-subtle">
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center gap-1.5 p-2 bg-stone/40 border-b border-gray-155">
+            <button
+              type="button"
+              onClick={() => insertText('**', '**')}
+              className="p-1 px-2.5 rounded-lg hover:bg-gray-200 text-xs font-bold text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Bold"
+            >
+              B
+            </button>
+            <button
+              type="button"
+              onClick={() => insertText('*', '*')}
+              className="p-1 px-2.5 rounded-lg hover:bg-gray-200 text-xs italic text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Italic"
+            >
+              I
+            </button>
+            <button
+              type="button"
+              onClick={() => insertText('### ', '')}
+              className="p-1 px-2.5 rounded-lg hover:bg-gray-200 text-xs font-bold text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Heading 3"
+            >
+              H3
+            </button>
+            <div className="w-[1px] h-4 bg-gray-200 mx-1" />
+            <button
+              type="button"
+              onClick={() => insertText('- ', '')}
+              className="p-1 px-2 rounded-lg hover:bg-gray-200 text-[10px] font-bold text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Bullet List"
+            >
+              • List
+            </button>
+            <button
+              type="button"
+              onClick={() => insertText('1. ', '')}
+              className="p-1 px-2 rounded-lg hover:bg-gray-200 text-[10px] font-bold text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Numbered List"
+            >
+              1. List
+            </button>
+            <button
+              type="button"
+              onClick={() => insertText('> ', '')}
+              className="p-1 px-2 rounded-lg hover:bg-gray-200 text-[10px] font-bold text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Quote"
+            >
+              " Quote
+            </button>
+            <button
+              type="button"
+              onClick={() => insertText('[', '](url)')}
+              className="p-1 px-2 rounded-lg hover:bg-gray-200 text-[10px] font-bold text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Insert Link"
+            >
+              Link
+            </button>
+          </div>
+          <textarea
+            ref={textareaRef}
+            rows={rows}
+            className="w-full px-4 py-3 outline-none font-semibold text-charcoal text-sm resize-y bg-transparent"
+            value={value || ''}
+            onChange={e => onChange(e.target.value)}
+            placeholder={placeholder}
+          />
+        </div>
+      ) : (
+        <div className="border border-gray-150 rounded-2xl p-5 bg-stone/20 min-h-[150px] text-sm text-charcoal-light leading-relaxed prose prose-sm max-w-none shadow-inner">
+          {value ? (
+            <ReactMarkdown
+              components={{
+                h1: ({node, ...props}) => <h1 className="text-lg font-bold mt-3 mb-2 text-charcoal" {...props} />,
+                h2: ({node, ...props}) => <h2 className="text-base font-bold mt-2.5 mb-1.5 text-charcoal" {...props} />,
+                h3: ({node, ...props}) => <h3 className="text-sm font-bold mt-2 mb-1 text-charcoal" {...props} />,
+                p: ({node, ...props}) => <p className="mb-2 last:mb-0 text-charcoal-light leading-relaxed" {...props} />,
+                ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 space-y-1 text-charcoal-light" {...props} />,
+                ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-charcoal-light" {...props} />,
+                li: ({node, ...props}) => <li className="text-charcoal-light" {...props} />,
+                blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-terracotta/40 pl-3 italic text-charcoal-muted my-2 bg-stone/40 py-0.5 rounded-r" {...props} />,
+                a: ({node, ...props}) => <a className="text-terracotta hover:underline font-semibold" target="_blank" rel="noopener noreferrer" {...props} />,
+              }}
+            >
+              {value}
+            </ReactMarkdown>
+          ) : (
+            <span className="text-gray-400 italic text-xs">Nothing to preview. Type something in the Edit tab first!</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // CMS Management Component
 const CMSManagement = () => {
   const [activeSubTab, setActiveSubTab] = useState('hero');
@@ -4295,6 +4441,11 @@ const CMSManagement = () => {
     is_enabled: false
   });
 
+  const [agreementData, setAgreementData] = useState({
+    title: '',
+    agreement_text: ''
+  });
+
   const fetchCMSContent = async () => {
     try {
       setLoading(true);
@@ -4336,6 +4487,9 @@ const CMSManagement = () => {
 
       const supportDoc = docs.find(d => d.section === 'support_content');
       if (supportDoc) setSupportData(supportDoc.content_data);
+
+      const agreementDoc = docs.find(d => d.section === 'agreement');
+      if (agreementDoc) setAgreementData(agreementDoc.content_data || { title: '', agreement_text: '' });
 
     } catch (err) {
       console.error('Failed to load CMS content:', err);
@@ -4465,7 +4619,8 @@ const CMSManagement = () => {
           { id: 'blog', label: 'Blog Posts', icon: FileText },
           { id: 'offer', label: 'Promotional Offer', icon: Tag },
           { id: 'support', label: 'Support Page', icon: HelpCircle },
-          { id: 'footer', label: 'Footer', icon: Phone }
+          { id: 'footer', label: 'Footer', icon: Phone },
+          { id: 'agreement', label: 'Host Agreement', icon: FileText }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
@@ -5181,9 +5336,14 @@ const CMSManagement = () => {
                               </select>
                             </div>
                             {item.action_type === 'text' ? (
-                              <div>
-                                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Popup Text (Details shown in modal)</label>
-                                <textarea rows={4} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.text || ''} onChange={e => updateItem(itemIndex, { text: e.target.value })} />
+                              <div className="mt-2">
+                                <CmsMarkdownEditor
+                                  label="Popup Text (Details shown in modal)"
+                                  value={item.text || ''}
+                                  onChange={val => updateItem(itemIndex, { text: val })}
+                                  placeholder="Enter detailed popup content in Markdown..."
+                                  rows={4}
+                                />
                               </div>
                             ) : (
                               <div>
@@ -5198,9 +5358,9 @@ const CMSManagement = () => {
                   );
                 })}
               </div>
-              <div className="md:col-span-2 rounded-3xl border border-gray-100 bg-stone/60 p-5 space-y-4">
+              <div className="md:col-span-2 rounded-3xl border border-gray-100 bg-stone/60 p-6 space-y-6">
                 <h5 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest">Footer Legal Links</h5>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Privacy Label</label>
                     <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_label || ''} onChange={e => setFooterData({ ...footerData, privacy_label: e.target.value })} />
@@ -5213,17 +5373,32 @@ const CMSManagement = () => {
                     <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Check-in Instructions Label</label>
                     <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.checkin_label || ''} onChange={e => setFooterData({ ...footerData, checkin_label: e.target.value })} />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Privacy Policy Text</label>
-                    <textarea rows={5} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_text || ''} onChange={e => setFooterData({ ...footerData, privacy_text: e.target.value })} />
+                  <div className="md:col-span-3">
+                    <CmsMarkdownEditor
+                      label="Privacy Policy Text"
+                      value={footerData.privacy_text || ''}
+                      onChange={val => setFooterData({ ...footerData, privacy_text: val })}
+                      placeholder="Enter Privacy Policy text in Markdown format..."
+                      rows={6}
+                    />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Terms & Conditions Text</label>
-                    <textarea rows={5} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_text || ''} onChange={e => setFooterData({ ...footerData, terms_text: e.target.value })} />
+                  <div className="md:col-span-3">
+                    <CmsMarkdownEditor
+                      label="Terms & Conditions Text"
+                      value={footerData.terms_text || ''}
+                      onChange={val => setFooterData({ ...footerData, terms_text: val })}
+                      placeholder="Enter Terms & Conditions text in Markdown format..."
+                      rows={6}
+                    />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Check-in Instructions Text</label>
-                    <textarea rows={5} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.checkin_text || ''} onChange={e => setFooterData({ ...footerData, checkin_text: e.target.value })} />
+                  <div className="md:col-span-3">
+                    <CmsMarkdownEditor
+                      label="Check-in Instructions Text"
+                      value={footerData.checkin_text || ''}
+                      onChange={val => setFooterData({ ...footerData, checkin_text: val })}
+                      placeholder="Enter Check-in Instructions text in Markdown format..."
+                      rows={6}
+                    />
                   </div>
                 </div>
               </div>
@@ -5272,6 +5447,7 @@ const CMSManagement = () => {
                       id: `p_${Date.now()}`,
                       title: 'New Insights Article',
                       excerpt: 'Discover short-term rental trends across major metros.',
+                      content: '',
                       image_url: '',
                       author: 'STR Insights Team',
                       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -5355,16 +5531,30 @@ const CMSManagement = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Excerpt Summary</label>
-                    <textarea
-                      rows={2.5}
-                      className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm leading-relaxed"
-                      value={post.excerpt}
-                      onChange={e => {
+                    <CmsMarkdownEditor
+                      label="Excerpt Summary"
+                      value={post.excerpt || ''}
+                      onChange={val => {
                         const updated = [...blogData.posts];
-                        updated[index] = { ...updated[index], excerpt: e.target.value };
+                        updated[index] = { ...updated[index], excerpt: val };
                         setBlogData({ posts: updated });
                       }}
+                      placeholder="Summarize the article in one or two sentences..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div>
+                    <CmsMarkdownEditor
+                      label="Full Article Content (Markdown)"
+                      value={post.content || ''}
+                      onChange={val => {
+                        const updated = [...blogData.posts];
+                        updated[index] = { ...updated[index], content: val };
+                        setBlogData({ posts: updated });
+                      }}
+                      placeholder="Write the full blog article in Markdown..."
+                      rows={10}
                     />
                   </div>
 
@@ -5807,6 +5997,63 @@ const CMSManagement = () => {
                   <>
                     <Check className="w-4 h-4" />
                     <span>Save Offer Configuration</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* HOST AGREEMENT TAB */}
+        {activeSubTab === 'agreement' && (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-sand-100">
+              <div className="p-2.5 bg-terracotta/10 rounded-xl text-terracotta">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-lg font-bold tracking-tight text-charcoal">Short-Term Rental Host Agreement</h4>
+                <p className="text-xs text-charcoal-muted font-medium">Configure the legal agreement text that hosts must review and sign during KYC verification.</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="relative group">
+                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Agreement Title</label>
+                <input
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm"
+                  value={agreementData.title || ''}
+                  onChange={e => setAgreementData({ ...agreementData, title: e.target.value })}
+                  placeholder="e.g. SHORT-TERM RENTAL HOST AGREEMENT"
+                />
+              </div>
+
+              <div>
+                <CmsMarkdownEditor
+                  label="Agreement Text Content (Markdown Supported)"
+                  value={agreementData.agreement_text || ''}
+                  onChange={val => setAgreementData({ ...agreementData, agreement_text: val })}
+                  placeholder="Write the full agreement terms and conditions..."
+                  rows={15}
+                />
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-sand-150">
+              <button
+                onClick={() => handleSave('agreement', agreementData)}
+                disabled={saving}
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-subtle shadow-terracotta/15 active:scale-95 transition-all"
+              >
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Saving Agreement...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Save Agreement Configuration</span>
                   </>
                 )}
               </button>

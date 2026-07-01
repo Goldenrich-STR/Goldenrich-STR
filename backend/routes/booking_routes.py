@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from models.booking import Booking, BookingCreate, BookingResponse, BookingStatus
 from models.property import PropertyStatus
 from middleware.auth_middleware import get_current_user
@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 import asyncio
 import json
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
@@ -101,6 +102,41 @@ class ConfirmPaymentRequest(BaseModel):
 async def get_db():
     from server import db_instance
     return db_instance
+
+BOOKING_PAYMENT_CONFIG_KEY = "booking_payment_config"
+
+async def _ensure_platform_settings_table(db: AsyncIOMotorDatabase) -> None:
+    ensure_table = getattr(db, "ensure_table", None)
+    if ensure_table:
+        try:
+            await ensure_table("platform_settings")
+        except Exception as exc:
+            logger.warning("Could not ensure platform_settings table: %s", exc)
+
+def _default_platform_fee_percent() -> float:
+    try:
+        value = float(os.getenv("BOOKING_PLATFORM_FEE_PERCENT", "10"))
+    except ValueError:
+        value = 10.0
+    return max(0.0, min(100.0, value))
+
+async def _get_booking_payment_config(db: AsyncIOMotorDatabase) -> dict:
+    await _ensure_platform_settings_table(db)
+    try:
+        config = await db.platform_settings.find_one({"key": BOOKING_PAYMENT_CONFIG_KEY}, {"_id": 0}) or {}
+    except Exception as exc:
+        logger.warning("Could not load booking payment config, using defaults: %s", exc)
+        config = {}
+    platform_fee_percent = config.get("platform_fee_percent", _default_platform_fee_percent())
+    try:
+        platform_fee_percent = float(platform_fee_percent)
+    except (TypeError, ValueError):
+        platform_fee_percent = _default_platform_fee_percent()
+
+    return {
+        "platform_fee_percent": max(0.0, min(100.0, platform_fee_percent)),
+        "platform_fee_label": config.get("platform_fee_label") or "Premium Service Fee",
+    }
 
 @router.post("/", response_model=dict)
 async def create_booking(
@@ -221,7 +257,9 @@ async def create_booking(
             
         tax_rate = _event_policy_percent(property_dict, "taxes", 18.0)
         advance_rate = _event_policy_percent(property_dict, "advance", 50.0)
-        service_fee = base_amount * 0.10  # 10% service fee
+        payment_settings = await _get_booking_payment_config(db)
+        service_fee_percent = payment_settings["platform_fee_percent"]
+        service_fee = base_amount * (service_fee_percent / 100)
         taxes = base_amount * (tax_rate / 100)
         total_amount = base_amount + service_fee + taxes
         
@@ -309,6 +347,11 @@ async def create_booking(
             "booking_details": {
                 "check_in_date": check_in.isoformat(),
                 "check_out_date": check_out.isoformat(),
+                "base_amount": base_amount,
+                "service_fee": service_fee,
+                "service_fee_percent": service_fee_percent,
+                "taxes": taxes,
+                "tax_percent": tax_rate,
                 "total_amount": total_amount,
                 "advance_amount": advance_amount,
                 "payment_type": booking.payment_type,
@@ -817,14 +860,51 @@ async def apply_coupon(
 
 
 @router.get("/payment/config")
-async def payment_config():
+async def payment_config(db: AsyncIOMotorDatabase = Depends(get_db)):
     """Public payment gateway config so the frontend knows whether to load real or mock checkout."""
+    payment_settings = await _get_booking_payment_config(db)
     return {
         "provider": "razorpay",
         "key_id": razorpay_service.key_id,
         "is_mock": razorpay_service.is_mock,
         "currency": "INR",
+        **payment_settings,
     }
+
+class BookingPaymentConfigUpdate(BaseModel):
+    platform_fee_percent: float
+    platform_fee_label: Optional[str] = None
+
+@router.put("/admin/payment/config")
+async def update_payment_config(
+    payload: BookingPaymentConfigUpdate,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Admin-only booking fee configuration."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+
+    if payload.platform_fee_percent < 0 or payload.platform_fee_percent > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Platform fee percent must be between 0 and 100",
+        )
+
+    update_data = {
+        "key": BOOKING_PAYMENT_CONFIG_KEY,
+        "platform_fee_percent": round(float(payload.platform_fee_percent), 2),
+        "platform_fee_label": (payload.platform_fee_label or "Premium Service Fee").strip() or "Premium Service Fee",
+        "updated_at": datetime.now(timezone.utc),
+        "updated_by": current_user.get("user_id"),
+    }
+    await _ensure_platform_settings_table(db)
+    await db.platform_settings.update_one(
+        {"key": BOOKING_PAYMENT_CONFIG_KEY},
+        {"$set": update_data},
+        upsert=True,
+    )
+    return await _get_booking_payment_config(db)
 
 
 @router.post("/{booking_id}/mock-pay")

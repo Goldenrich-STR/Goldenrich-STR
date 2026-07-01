@@ -871,6 +871,10 @@ async def seed():
             "discount_value": 50.0,
             "coupon_type": "subscription",
             "property_id": None,
+            "plan_type": "2bhk",
+            "property_category": "residential",
+            "bhk_type": "2bhk",
+            "sqft_range": None,
             "is_active": True,
             "created_at": datetime.utcnow()
         },
@@ -881,6 +885,24 @@ async def seed():
             "discount_value": 500.0,
             "coupon_type": "subscription",
             "property_id": None,
+            "plan_type": "commercial",
+            "property_category": "commercial",
+            "bhk_type": None,
+            "sqft_range": "500-2000",
+            "is_active": True,
+            "created_at": datetime.utcnow()
+        },
+        {
+            "coupon_id": "coup_sub_event_1000",
+            "code": "EVENT1000",
+            "discount_type": "fixed",
+            "discount_value": 1000.0,
+            "coupon_type": "subscription",
+            "property_id": None,
+            "plan_type": "banquet",
+            "property_category": "event_venue",
+            "bhk_type": None,
+            "sqft_range": "2000+",
             "is_active": True,
             "created_at": datetime.utcnow()
         }
