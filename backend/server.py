@@ -230,7 +230,7 @@ async def startup_sequence():
             "transactions", "payouts", "refunds", "reviews", 
             "notifications", "subscription_plans", "subscriptions", "cms_content", "leads", "coupons",
             "deleted_properties", "search_logs", "ai_calls", "ai_agents", "calendar_sync_logs",
-            "contact_messages"
+            "contact_messages", "commissions", "password_reset_tokens"
         ]
         for table in tables:
             await db_instance.ensure_table(table)
