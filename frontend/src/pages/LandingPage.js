@@ -920,8 +920,8 @@ const SUGGESTED_DESTINATIONS = [
 ];
 
 const PREMIUM_COLLECTIONS = [
-  { id: 'villas-resorts', label: 'Villas & Resorts', image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=600', query: 'residential' },
-  { id: 'residential-stays', label: 'Residential Stays', image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=600', query: 'residential' },
+  { id: 'villas-resorts', label: 'Villas & Resorts', image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=600', query: 'residential', property_type: 'villa' },
+  { id: 'residential-stays', label: 'Residential Stays', image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=600', query: 'residential', property_type: 'apartment' },
   { id: 'commercial-spaces', label: 'Commercial Spaces', image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=600', query: 'commercial' },
   { id: 'event-venues', label: 'Event Venues', image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600', query: 'event_venue' }
 ];
@@ -1911,7 +1911,10 @@ const LandingPage = () => {
               {PREMIUM_COLLECTIONS.map((collection) => (
                 <button
                   key={collection.id}
-                  onClick={() => navigate(`/guest/browse?category=${collection.query}`)}
+                  onClick={() => {
+                    const typeQuery = collection.property_type ? `&property_type=${collection.property_type}` : '';
+                    navigate(`/guest/browse?category=${collection.query}${typeQuery}`);
+                  }}
                   className="relative flex-none w-72 md:w-80 aspect-[4/5] rounded-3xl overflow-hidden group cursor-pointer snap-center shadow-subtle hover:shadow-premium transition-all duration-500"
                 >
                   <img 

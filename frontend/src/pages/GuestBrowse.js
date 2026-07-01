@@ -349,7 +349,7 @@ const GuestBrowse = () => {
     return {
       city: params.get('city') || '',
       category: params.get('category') || 'residential',
-      property_type: '',
+      property_type: params.get('property_type') || '',
       bhk_type: '',
       min_price: '',
       max_price: '',
@@ -367,6 +367,7 @@ const GuestBrowse = () => {
     const params = new URLSearchParams(window.location.search);
     const city = params.get('city');
     const category = params.get('category');
+    const propertyType = params.get('property_type');
     const checkIn = params.get('checkIn');
     const checkOut = params.get('checkOut');
     const guests = params.get('guests');
@@ -376,11 +377,12 @@ const GuestBrowse = () => {
       setShowWishlistOnly(true);
     }
     
-    if (city || category || checkIn || checkOut || guests) {
+    if (city || category || propertyType || checkIn || checkOut || guests) {
       setFilters(prev => ({
         ...prev,
         city: city || prev.city,
         category: category || prev.category,
+        property_type: propertyType || prev.property_type,
         check_in: checkIn || prev.check_in,
         check_out: checkOut || prev.check_out,
         guests: guests || prev.guests
