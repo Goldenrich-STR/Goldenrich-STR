@@ -212,7 +212,7 @@ function App() {
               <Route
                 path="/host/list-property"
                 element={
-                  <ProtectedRoute allowedRoles={["host"]}>
+                  <ProtectedRoute allowedRoles={["host", "admin"]}>
                     <HostListProperty />
                   </ProtectedRoute>
                 }
