@@ -38,7 +38,6 @@ const CATEGORY_DATA = {
       { value: 'villa', label: 'Villa' },
       { value: 'studio', label: 'Studio' },
       { value: 'independent_house', label: 'Independent House' },
-      { value: 'pg', label: 'PG' },
       { value: 'co_living', label: 'Co-living' },
       { value: 'farmhouse', label: 'Farmhouse' },
     ],

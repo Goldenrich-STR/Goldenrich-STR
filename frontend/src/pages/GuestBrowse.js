@@ -48,7 +48,6 @@ const PROPERTY_TYPES = [
   { value: 'villa', label: 'Villa' },
   { value: 'studio', label: 'Studio' },
   { value: 'independent_house', label: 'Independent House' },
-  { value: 'pg', label: 'PG' },
   { value: 'co_living', label: 'Co-living' },
   { value: 'private_office', label: 'Private Office' },
   { value: 'co_working', label: 'Co-working' },

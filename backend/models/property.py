@@ -9,7 +9,6 @@ class PropertyType(str, Enum):
     VILLA = "villa"
     STUDIO = "studio"
     INDEPENDENT_HOUSE = "independent_house"
-    PG = "pg"
     CO_LIVING = "co_living"
     PRIVATE_OFFICE = "private_office"
     CO_WORKING = "co_working"

@@ -277,28 +277,32 @@ const AdminDashboard = () => {
       value: stats.users.total, 
       icon: Users, 
       color: 'terracotta',
-      subtext: `${stats.users.hosts} Hosts, ${stats.users.guests} Guests`
+      subtext: `${stats.users.hosts} Hosts · ${stats.users.guests} Guests`,
+      tab: 'users',
     },
     { 
       label: 'Total Properties', 
       value: stats.properties.total, 
       icon: Building2, 
       color: 'sage',
-      subtext: `${stats.properties.live} Live`
+      subtext: `${stats.properties.live} Live · ${stats.properties.pending_verification} Pending`,
+      tab: 'properties',
     },
     { 
       label: 'Total Bookings', 
       value: stats.bookings.total, 
       icon: Calendar, 
       color: 'terracotta',
-      subtext: `${stats.bookings.confirmed} Confirmed`
+      subtext: `${stats.bookings.confirmed} Confirmed`,
+      tab: 'properties',
     },
     { 
       label: 'Total Revenue', 
-      value: `₹${(stats.revenue.total / 100).toLocaleString('en-IN')}`, 
+      value: `₹${stats.revenue.total.toLocaleString('en-IN')}`, 
       icon: IndianRupee, 
       color: 'sage',
-      subtext: 'Gross Merchandise Value'
+      subtext: 'Gross Merchandise Value',
+      tab: 'overview',
     },
   ] : [];
 
@@ -394,12 +398,22 @@ const AdminDashboard = () => {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" data-testid="stats-grid">
                   {statCards.map((stat, idx) => (
-                    <div key={idx} className="dashboard-card" data-testid={`stat-card-${idx}`}>
-                      <stat.icon className={`w-8 h-8 text-${stat.color} mb-3`} />
+                    <button
+                      key={idx}
+                      onClick={() => stat.tab && setActiveTab(stat.tab)}
+                      className="dashboard-card text-left group hover:shadow-elevated hover:border-terracotta/30 active:scale-[0.98] transition-all duration-200 cursor-pointer"
+                      data-testid={`stat-card-${idx}`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <stat.icon className={`w-8 h-8 text-${stat.color}`} />
+                        {stat.tab !== 'overview' && (
+                          <span className="text-[9px] font-black uppercase tracking-widest text-charcoal-muted group-hover:text-terracotta transition-colors">View →</span>
+                        )}
+                      </div>
                       <p className="text-3xl font-bold text-charcoal">{stat.value}</p>
                       <p className="text-sm font-semibold text-charcoal-light mt-1">{stat.label}</p>
                       <p className="text-xs text-charcoal-muted mt-2">{stat.subtext}</p>
-                    </div>
+                    </button>
                   ))}
                 </div>                 {/* Pending Verifications Alert */}
                 {stats && stats.properties.pending_verification > 0 && (
