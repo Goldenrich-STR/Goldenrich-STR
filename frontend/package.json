@@ -66,6 +66,7 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build",
+    "deploy:production": "npm run build && bash scripts/deploy-production.sh",
     "test": "craco test"
   },
   "browserslist": {

@@ -87,11 +87,23 @@ For production, run it with `systemd` or another process manager.
 
 ```bash
 cd frontend
-npm install --legacy-peer-deps
-npm run build
+npm ci
+npm run deploy:production
 ```
 
-Serve `frontend/build` through Nginx.
+`deploy:production` uploads versioned assets first, verifies every JavaScript and
+CSS file referenced by the build, and publishes `index.html` last. It retains old
+hashed assets so that cached HTML cannot produce a blank page during a release.
+
+The default production targets are:
+
+```bash
+S3_BUCKET=xspace-prod-frontend
+CLOUDFRONT_DISTRIBUTION_ID=EQPC5S4OUUUUH
+```
+
+Override either environment variable before running the command for another
+environment.
 
 ## Nginx Sketch
 
