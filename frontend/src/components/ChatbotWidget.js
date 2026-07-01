@@ -111,53 +111,19 @@ const ChatbotWidget = () => {
     }
   }, [messages, isOpen]);
 
-  const sendQuery = async (queryText) => {
+  const sendQuery = (queryText) => {
     if (!queryText.trim()) return;
 
     const newMessages = [...messages, { role: 'user', content: queryText }];
     setMessages(newMessages);
     setIsTyping(true);
 
-    try {
-      // Proxy chat request securely to backend
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || "http://localhost:8001";
-      const response = await fetch(`${backendUrl}/api/ai-calls/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          message: queryText,
-          history: newMessages.slice(0, -1).map(msg => ({
-            role: msg.role === 'model' ? 'model' : 'user',
-            text: msg.content
-          }))
-        })
-      });
-
-      const data = await response.json();
-      
-      if (data && data.response) {
-        setMessages([...newMessages, { role: 'model', content: data.response }]);
-      } else {
-        const fallbackReply = getLocalResponse(queryText);
-        setMessages([...newMessages, { role: 'model', content: fallbackReply }]);
-      }
-
-    } catch (error) {
-      console.error('Chatbot API Error:', error);
+    // Simulate a short delay for better UX
+    setTimeout(() => {
       const fallbackReply = getLocalResponse(queryText);
       setMessages([...newMessages, { role: 'model', content: fallbackReply }]);
-    } finally {
       setIsTyping(false);
-    }
-  };
-
-  const handleSend = async (e) => {
-    e?.preventDefault();
-    const currentInput = input;
-    setInput('');
-    await sendQuery(currentInput);
+    }, 500);
   };
 
   return (
@@ -223,44 +189,23 @@ const ChatbotWidget = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Options */}
-          {messages.length === 1 && (
-            <div className="px-4 pb-3 pt-1 bg-white flex flex-wrap gap-2 border-t border-transparent z-10">
+          {/* Quick Options Menu (Permanent) */}
+          <div className="p-4 bg-white border-t border-gray-100 z-10">
+            <p className="text-xs font-semibold text-charcoal-light mb-3">Select a topic below:</p>
+            <div className="flex flex-col gap-2">
               {QUICK_OPTIONS.map((opt, i) => (
                 <button
                   key={i}
+                  disabled={isTyping}
                   onClick={() => sendQuery(opt.query)}
-                  className="px-3.5 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-full text-xs font-semibold text-charcoal transition-colors cursor-pointer shadow-sm"
+                  className="px-4 py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-sm font-semibold text-charcoal transition-colors cursor-pointer text-left w-full shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {opt.label}
                 </button>
               ))}
             </div>
-          )}
-
-          {/* Input Area */}
-          <div className={`p-4 bg-white z-10 ${messages.length > 1 ? 'border-t border-gray-100' : ''}`}>
-            <form 
-              onSubmit={handleSend}
-              className="flex items-center relative"
-            >
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Message X-Space360..."
-                className="w-full bg-gray-50 border border-gray-200 rounded-full pl-5 pr-12 py-3.5 text-[14px] text-charcoal focus:outline-none focus:ring-1 focus:ring-charcoal focus:border-charcoal transition-shadow placeholder-gray-400"
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || isTyping}
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-terracotta flex items-center justify-center hover:bg-terracotta-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-sm"
-              >
-                {isTyping ? <Loader2 className="w-4 h-4 text-charcoal animate-spin" /> : <Send className="w-4 h-4 text-charcoal ml-0.5" />}
-              </button>
-            </form>
-            <div className="text-center mt-3">
-              <span className="text-[10px] font-semibold text-gray-400">Powered by X-Space360 Intelligence</span>
+            <div className="text-center mt-4">
+              <span className="text-[10px] font-semibold text-gray-400">Powered by X-Space360 Helpdesk</span>
             </div>
           </div>
         </div>
