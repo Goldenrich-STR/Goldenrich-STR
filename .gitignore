@@ -76,6 +76,7 @@ backend/scratch/
 # Data and databases
 agenthub/agents/youtube/db
 backend/uploads/
+backend/backups/
 test_reports/
 
 # Archive files and large assets
