@@ -167,8 +167,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                         {"heading": "For Guests", "items": [
                             {"label": "Browse Space", "action_type": "link", "link": "/guest/browse", "text": ""},
                             {"label": "All Destinations", "action_type": "link", "link": "/guest/browse", "text": ""},
-                            {"label": "Short-term Stays", "action_type": "link", "link": "/guest/browse", "text": ""},
-                            {"label": "FAQs", "action_type": "link", "link": "/support", "text": ""}
+                            {"label": "Short-term Stays", "action_type": "link", "link": "/guest/browse", "text": ""}
                         ]},
                         {"heading": "For Hosts", "items": [
                             {"label": "List Your Space", "action_type": "link", "link": "/host/list-property", "text": ""},
@@ -252,8 +251,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                         {"heading": "For Guests", "items": [
                             {"label": "Browse Space", "action_type": "link", "link": "/guest/browse", "text": ""},
                             {"label": "All Destinations", "action_type": "link", "link": "/guest/browse", "text": ""},
-                            {"label": "Short-term Stays", "action_type": "link", "link": "/guest/browse", "text": ""},
-                            {"label": "FAQs", "action_type": "link", "link": "/support", "text": ""}
+                            {"label": "Short-term Stays", "action_type": "link", "link": "/guest/browse", "text": ""}
                         ]},
                         {"heading": "For Hosts", "items": [
                             {"label": "List Your Space", "action_type": "link", "link": "/host/list-property", "text": ""},

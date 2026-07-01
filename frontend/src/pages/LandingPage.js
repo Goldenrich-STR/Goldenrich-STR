@@ -523,8 +523,7 @@ const DEFAULT_FOOTER_DATA = {
     { heading: 'For Guests', items: [
       { label: 'Browse Space', action_type: 'link', link: '/guest/browse', text: '' },
       { label: 'All Destinations', action_type: 'link', link: '/guest/browse', text: '' },
-      { label: 'Short-term Stays', action_type: 'link', link: '/guest/browse', text: '' },
-      { label: 'FAQs', action_type: 'link', link: '/support', text: '' }
+      { label: 'Short-term Stays', action_type: 'link', link: '/guest/browse', text: '' }
     ] },
     { heading: 'For Hosts', items: [
       { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
@@ -1081,14 +1080,21 @@ const LandingPage = () => {
   
   const supportFooterItems = DEFAULT_FOOTER_DATA.footer_sections.find(section => section.heading === 'Support')?.items || [];
 
-  // Build raw sections list
-  const rawSections = Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
-    ? [...footerData.footer_sections]
-    : [...DEFAULT_FOOTER_DATA.footer_sections];
+  const expectedFooterHeadings = ['For Guests', 'For Hosts', 'Company', 'Support'];
+  const cmsFooterSections = Array.isArray(footerData.footer_sections)
+    ? footerData.footer_sections.filter(Boolean)
+    : [];
+  const hasCompleteFooterStructure = expectedFooterHeadings.every((heading) =>
+    cmsFooterSections.some(
+      (section) => section?.heading?.trim().toLowerCase() === heading.toLowerCase()
+    )
+  );
+  const rawSections = hasCompleteFooterStructure
+    ? cmsFooterSections
+    : DEFAULT_FOOTER_DATA.footer_sections;
 
-  const footerSections = ['For Guests', 'For Hosts', 'Company', 'Support'].map((heading, index) => {
+  const footerSections = expectedFooterHeadings.map((heading, index) => {
     const rawSection = rawSections.find(section => section?.heading?.toLowerCase() === heading.toLowerCase())
-      || rawSections[index]
       || DEFAULT_FOOTER_DATA.footer_sections[index];
     const section = rawSection || {};
     const normalizedItems = Array.isArray(section.items) && section.items.length
