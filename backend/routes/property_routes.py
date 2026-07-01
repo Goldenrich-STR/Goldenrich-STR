@@ -6,6 +6,7 @@ from models.property import Property, PropertyCreate, PropertyUpdate, PropertySt
 from models.user import UserRole
 from middleware.auth_middleware import get_current_user, require_role
 from datetime import datetime, timezone
+import asyncio
 import logging
 import re
 
@@ -540,7 +541,8 @@ async def _delete_property_with_reason(
                 detail="Property not found"
             )
 
-        if property_dict["owner_id"] != current_user["user_id"] and current_user["role"] != UserRole.ADMIN.value:
+        is_admin = current_user.get("role") == UserRole.ADMIN.value
+        if not is_admin and property_dict.get("owner_id") != current_user.get("user_id"):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not authorized to delete this property"
@@ -557,7 +559,7 @@ async def _delete_property_with_reason(
             )
 
         deleted_at = datetime.now(timezone.utc)
-        await db.deleted_properties.insert_one({
+        archive = {
             "property_id": property_id,
             "owner_id": property_dict.get("owner_id"),
             "title": property_dict.get("title"),
@@ -568,12 +570,34 @@ async def _delete_property_with_reason(
             "deleted_by_role": current_user["role"],
             "deleted_at": deleted_at,
             "property_snapshot": property_dict,
-        })
+        }
+        await db.deleted_properties.update_one(
+            {"property_id": property_id},
+            {"$set": archive},
+            upsert=True,
+        )
 
         await db.properties.delete_one({"property_id": property_id})
-        await db.blocked_dates.delete_many({"property_id": property_id})
-        await db.external_calendars.delete_many({"property_id": property_id})
-        await db.property_verifications.delete_many({"property_id": property_id})
+        if await db.properties.find_one({"property_id": property_id}, {"_id": 0, "property_id": 1}):
+            raise RuntimeError("Property record could not be removed from the database")
+
+        cleanup_operations = [
+            ("blocked dates", db.blocked_dates.delete_many({"property_id": property_id})),
+            ("external calendars", db.external_calendars.delete_many({"property_id": property_id})),
+            ("property verifications", db.property_verifications.delete_many({"property_id": property_id})),
+        ]
+        cleanup_results = await asyncio.gather(
+            *(operation for _, operation in cleanup_operations),
+            return_exceptions=True,
+        )
+        for (label, _), result in zip(cleanup_operations, cleanup_results):
+            if isinstance(result, Exception):
+                logger.warning(
+                    "Property %s deleted but %s cleanup failed: %s",
+                    property_id,
+                    label,
+                    result,
+                )
 
         logger.info(
             "Property deleted: %s by %s reason=%s",

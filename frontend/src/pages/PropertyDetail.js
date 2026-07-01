@@ -501,6 +501,10 @@ const PropertyDetail = () => {
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [recommended, setRecommended] = useState([]);
   const [isSameCityRecommendation, setIsSameCityRecommendation] = useState(true);
+  const [paymentConfig, setPaymentConfig] = useState({
+    platform_fee_percent: 10,
+    platform_fee_label: 'Premium Service Fee',
+  });
 
   const fetchRecommendations = async (city, currentId, category) => {
     try {
@@ -541,6 +545,12 @@ const PropertyDetail = () => {
     fetchBlockedDates();
     fetchReviews();
     fetchCoupons();
+    bookingAPI.getPaymentConfig()
+      .then((res) => setPaymentConfig({
+        platform_fee_percent: res.data.platform_fee_percent ?? 10,
+        platform_fee_label: res.data.platform_fee_label || 'Premium Service Fee',
+      }))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -732,7 +742,9 @@ const PropertyDetail = () => {
   const advancePercent = property?.category === 'event_venue'
     ? readPercent(parsedPolicies?.advance, 50)
     : 50;
-  const serviceFee = baseAmount * 0.1;
+  const platformFeePercent = Number(paymentConfig.platform_fee_percent ?? 10);
+  const platformFeeLabel = paymentConfig.platform_fee_label || t('premiumServiceFee');
+  const serviceFee = baseAmount * (platformFeePercent / 100);
   const taxes = baseAmount * (taxPercent / 100);
   const total = baseAmount + serviceFee + taxes;
   const advanceAmount = Math.round(total * (advancePercent / 100));
@@ -959,11 +971,11 @@ const PropertyDetail = () => {
               </tr>
               ` : ''}
               <tr>
-                <td colspan="2">Premium Service Fee (10%)</td>
+                <td colspan="2">${platformFeeLabel} (${platformFeePercent}%)</td>
                 <td style="text-align: right; font-weight: 800;">₹${Math.round(serviceFee).toLocaleString('en-IN')}</td>
               </tr>
               <tr>
-                <td colspan="2">Taxes & GST (18%)</td>
+                <td colspan="2">Taxes & GST (${taxPercent}%)</td>
                 <td style="text-align: right; font-weight: 800;">₹${Math.round(taxes).toLocaleString('en-IN')}</td>
               </tr>
               <tr class="total-row">
@@ -2086,7 +2098,7 @@ const PropertyDetail = () => {
                     </div>
                   )}
                   <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">{t('premiumServiceFee')}</span>
+                    <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">{platformFeeLabel} ({platformFeePercent}%)</span>
                     <span className="text-sm font-bold tracking-tight text-charcoal">₹{Math.round(serviceFee).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -2396,7 +2408,7 @@ const PropertyDetail = () => {
                     </div>
                   )}
                   <div className="py-3 grid grid-cols-3">
-                    <span className="col-span-2">Premium Service Fee (10%)</span>
+                    <span className="col-span-2">{platformFeeLabel} ({platformFeePercent}%)</span>
                     <span className="text-right font-bold tracking-tight">₹{Math.round(serviceFee).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="py-3 grid grid-cols-3">

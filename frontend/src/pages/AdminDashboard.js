@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
-import apiClient, { verificationAPI, subscriptionAPI, uploadAPI, getImageUrl, bookingAPI, cmsAPI, adminAPI } from '../services/api';
+import apiClient, { verificationAPI, subscriptionAPI, uploadAPI, getImageUrl, bookingAPI, cmsAPI, adminAPI, propertyAPI } from '../services/api';
 import { 
   Users, Building2, Calendar, IndianRupee, CheckCircle, 
   X, XCircle, Clock, TrendingUp, BarChart3, LogOut, Plus, Trash, Zap,
@@ -3021,6 +3022,9 @@ const PropertyModeration = () => {
   const [activeReviewProperty, setActiveReviewProperty] = useState(null);
   const [adminChecklist, setAdminChecklist] = useState({});
   const [propertyRejectionState, setPropertyRejectionState] = useState(null);
+  const [deleteState, setDeleteState] = useState(null);
+  const [permanentDeleteState, setPermanentDeleteState] = useState(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const CHECKLIST_LABELS = {
     property_owner_verification: "Property Owner Verification",
@@ -3042,6 +3046,8 @@ const PropertyModeration = () => {
       fetchAwaitingFinalApproval();
     } else if (statusFilter === 'pending_verification') {
       fetchPendingProperties();
+    } else if (statusFilter === 'deleted') {
+      fetchDeletedProperties();
     } else {
       fetchAllProperties();
     }
@@ -3050,6 +3056,7 @@ const PropertyModeration = () => {
   const refresh = () => {
     if (statusFilter === 'awaiting_final_approval') fetchAwaitingFinalApproval();
     else if (statusFilter === 'pending_verification') fetchPendingProperties();
+    else if (statusFilter === 'deleted') fetchDeletedProperties();
     else fetchAllProperties();
   };
 
@@ -3084,6 +3091,64 @@ const PropertyModeration = () => {
       console.error('Error fetching properties:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDeletedProperties = async () => {
+    try {
+      const response = await adminAPI.getDeletedProperties({ limit: 200 });
+      setProperties(response.data.properties || []);
+    } catch (error) {
+      console.error('Error fetching deleted properties:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteProperty = async () => {
+    const reason = (deleteState?.reason || '').trim();
+    if (!deleteState?.property || reason.length < 10) return;
+
+    setDeleteSubmitting(true);
+    try {
+      await propertyAPI.deleteProperty(deleteState.property.property_id, reason);
+      setDeleteState(null);
+      refresh();
+    } catch (error) {
+      const fallback = error?.request
+        ? 'The backend did not respond. Check the backend container and API URL.'
+        : 'Failed to delete property';
+      setDeleteState(current => current ? {
+        ...current,
+        error: formatError(error, fallback),
+      } : current);
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    const propertyId = permanentDeleteState?.property?.property_id;
+    if (!propertyId || permanentDeleteState.confirmation.trim() !== propertyId) return;
+
+    setDeleteSubmitting(true);
+    try {
+      await adminAPI.permanentlyDeleteProperty(
+        propertyId,
+        permanentDeleteState.confirmation.trim()
+      );
+      setPermanentDeleteState(null);
+      refresh();
+    } catch (error) {
+      const fallback = error?.request
+        ? 'The backend did not respond. Check the backend container and API URL.'
+        : 'Failed to permanently delete property';
+      setPermanentDeleteState(current => current ? {
+        ...current,
+        error: formatError(error, fallback),
+      } : current);
+    } finally {
+      setDeleteSubmitting(false);
     }
   };
 
@@ -3153,6 +3218,7 @@ const PropertyModeration = () => {
             <option value="all">All Properties</option>
             <option value="live">Live</option>
             <option value="rejected">Rejected</option>
+            <option value="deleted">Deleted Properties</option>
           </select>
         </div>
       </div>
@@ -3171,7 +3237,7 @@ const PropertyModeration = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-center space-x-5 flex-1 min-w-0">
                     <img
-                      src={property.images?.[0] || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
+                      src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                       alt={property.title}
                       className="w-20 h-20 rounded-[18px] object-cover shadow-sm flex-shrink-0"
                     />
@@ -3195,28 +3261,62 @@ const PropertyModeration = () => {
                             'bg-[#F3F4F6] text-[#4B5563]'
                           }`}
                         >
-                          {property.status.replace('_', ' ').toUpperCase()}
+                          {(property.status || 'unknown').replaceAll('_', ' ').toUpperCase()}
                         </span>
                       </div>
+                      {statusFilter === 'deleted' && (
+                        <div className="mt-2 text-xs text-[#6B7280]">
+                          <p>
+                            <span className="font-semibold text-[#374151]">Reason:</span>{' '}
+                            {property.deletion_reason || 'Not provided'}
+                          </p>
+                          {property.deleted_at && (
+                            <p className="mt-1">
+                              Deleted: {new Date(property.deleted_at).toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2.5 flex-wrap justify-start md:justify-end">
-                    <button
-                      onClick={() => navigate(`/property/${property.property_id}`)}
-                      className="flex items-center space-x-1.5 px-4 py-2 border border-[#E5E7EB] text-[#4B5563] bg-white rounded-full font-bold text-xs hover:bg-gray-50 transition-all shadow-sm"
-                      title="View property"
-                    >
-                      <EyeIcon className="w-3.5 h-3.5" />
-                      <span>View</span>
-                    </button>
-                    <button
-                      onClick={() => navigate(`/host/list-property?edit=${property.property_id}`)}
-                      className="flex items-center space-x-1.5 px-4 py-2 border border-[#DBEAFE] text-[#2563EB] bg-[#EFF6FF] rounded-full font-bold text-xs hover:bg-[#DBEAFE]/80 transition-all shadow-sm"
-                      title="Edit property"
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                      <span>Edit</span>
-                    </button>
+                    {statusFilter !== 'deleted' ? (
+                      <>
+                        <button
+                          onClick={() => navigate(`/property/${property.property_id}`)}
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#E5E7EB] text-[#4B5563] bg-white rounded-full font-bold text-xs hover:bg-gray-50 transition-all shadow-sm"
+                          title="View property"
+                        >
+                          <EyeIcon className="w-3.5 h-3.5" />
+                          <span>View</span>
+                        </button>
+                        <button
+                          onClick={() => navigate(`/host/list-property?edit=${property.property_id}`)}
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#DBEAFE] text-[#2563EB] bg-[#EFF6FF] rounded-full font-bold text-xs hover:bg-[#DBEAFE]/80 transition-all shadow-sm"
+                          title="Edit property"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => setDeleteState({ property, reason: '', error: '' })}
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#FECACA] text-[#DC2626] bg-[#FEF2F2] rounded-full font-bold text-xs hover:bg-[#FEE2E2] transition-all shadow-sm"
+                          title="Delete property"
+                        >
+                          <Trash className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setPermanentDeleteState({ property, confirmation: '', error: '' })}
+                        className="flex items-center space-x-1.5 px-4 py-2 border border-[#991B1B] text-white bg-[#B91C1C] rounded-full font-bold text-xs hover:bg-[#991B1B] transition-all shadow-sm"
+                        title="Permanently delete property"
+                      >
+                        <Trash className="w-3.5 h-3.5" />
+                        <span>Permanently Delete</span>
+                      </button>
+                    )}
                     {canActOn(property) && (
                       <>
                         <button
@@ -3266,6 +3366,127 @@ const PropertyModeration = () => {
         <div className="dashboard-card text-center py-12">
           <Building2 className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
           <p className="text-charcoal-light">No properties in this queue</p>
+        </div>
+      )}
+
+      {deleteState && (
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[160] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-premium">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="text-xl font-bold text-charcoal">Delete property</h4>
+                <p className="text-sm text-charcoal-muted mt-1">{deleteState.property.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteState(null)}
+                className="p-2 text-charcoal-muted hover:text-charcoal"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <label className="block mt-6 text-xs font-bold text-charcoal uppercase tracking-wider">
+              Deletion reason
+            </label>
+            <textarea
+              autoFocus
+              value={deleteState.reason}
+              onChange={(event) => setDeleteState({ ...deleteState, reason: event.target.value })}
+              placeholder="Explain why this property is being deleted"
+              className="input-field w-full min-h-[110px] mt-2 resize-y"
+            />
+            <p className="text-xs text-charcoal-muted mt-2">
+              Minimum 10 characters. The property will move to Deleted Properties.
+            </p>
+            {deleteState.error && (
+              <p className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {deleteState.error}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setDeleteState(null)}
+                className="px-4 py-2 text-sm font-semibold text-charcoal hover:bg-gray-50 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteProperty}
+                disabled={deleteSubmitting || deleteState.reason.trim().length < 10}
+                className="px-4 py-2 bg-[#DC2626] text-white rounded-lg text-sm font-bold hover:bg-[#B91C1C] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleteSubmitting ? 'Deleting...' : 'Delete property'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {permanentDeleteState && (
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[160] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-premium">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="text-xl font-bold text-[#991B1B]">Permanently delete property</h4>
+                <p className="text-sm text-charcoal-muted mt-1">
+                  This removes the archived property and its saved listing details from the database.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPermanentDeleteState(null)}
+                className="p-2 text-charcoal-muted hover:text-charcoal"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-charcoal mt-6">
+              Enter Property ID <span className="font-mono font-bold">{permanentDeleteState.property.property_id}</span> to confirm.
+            </p>
+            <input
+              autoFocus
+              value={permanentDeleteState.confirmation}
+              onChange={(event) => setPermanentDeleteState({
+                ...permanentDeleteState,
+                confirmation: event.target.value,
+              })}
+              className="input-field w-full mt-2 font-mono"
+              placeholder="Property ID"
+            />
+            {permanentDeleteState.error && (
+              <p className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {permanentDeleteState.error}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setPermanentDeleteState(null)}
+                className="px-4 py-2 text-sm font-semibold text-charcoal hover:bg-gray-50 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handlePermanentDelete}
+                disabled={
+                  deleteSubmitting ||
+                  permanentDeleteState.confirmation.trim() !== permanentDeleteState.property.property_id
+                }
+                className="px-4 py-2 bg-[#991B1B] text-white rounded-lg text-sm font-bold hover:bg-[#7F1D1D] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleteSubmitting ? 'Deleting...' : 'Permanently delete'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -4006,6 +4227,151 @@ export const BookingManagement = () => {
   );
 };
 
+// CMS Markdown Editor Component with toolbar and preview toggle
+const CmsMarkdownEditor = ({ value, onChange, label, placeholder, rows = 6 }) => {
+  const [isPreview, setIsPreview] = useState(false);
+  const textareaRef = useRef(null);
+
+  const insertText = (before, after = '') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selected = text.substring(start, end);
+    const replacement = before + (selected || '') + after;
+
+    const newValue = text.substring(0, start) + replacement + text.substring(end);
+    onChange(newValue);
+
+    // Reset cursor position
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + before.length, start + before.length + (selected || '').length);
+    }, 0);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between items-center">
+        <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block">{label}</label>
+        <div className="flex border border-gray-100 rounded-xl overflow-hidden text-[10px] bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={() => setIsPreview(false)}
+            className={`px-3 py-1 font-bold uppercase tracking-wider transition ${!isPreview ? 'bg-charcoal text-white' : 'text-charcoal-muted hover:bg-stone'}`}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsPreview(true)}
+            className={`px-3 py-1 font-bold uppercase tracking-wider transition ${isPreview ? 'bg-charcoal text-white' : 'text-charcoal-muted hover:bg-stone'}`}
+          >
+            Preview
+          </button>
+        </div>
+      </div>
+
+      {!isPreview ? (
+        <div className="border border-gray-150 rounded-2xl bg-white overflow-hidden focus-within:ring-2 focus-within:ring-terracotta/15 focus-within:border-terracotta transition-all shadow-subtle">
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center gap-1.5 p-2 bg-stone/40 border-b border-gray-155">
+            <button
+              type="button"
+              onClick={() => insertText('**', '**')}
+              className="p-1 px-2.5 rounded-lg hover:bg-gray-200 text-xs font-bold text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Bold"
+            >
+              B
+            </button>
+            <button
+              type="button"
+              onClick={() => insertText('*', '*')}
+              className="p-1 px-2.5 rounded-lg hover:bg-gray-200 text-xs italic text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Italic"
+            >
+              I
+            </button>
+            <button
+              type="button"
+              onClick={() => insertText('### ', '')}
+              className="p-1 px-2.5 rounded-lg hover:bg-gray-200 text-xs font-bold text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Heading 3"
+            >
+              H3
+            </button>
+            <div className="w-[1px] h-4 bg-gray-200 mx-1" />
+            <button
+              type="button"
+              onClick={() => insertText('- ', '')}
+              className="p-1 px-2 rounded-lg hover:bg-gray-200 text-[10px] font-bold text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Bullet List"
+            >
+              • List
+            </button>
+            <button
+              type="button"
+              onClick={() => insertText('1. ', '')}
+              className="p-1 px-2 rounded-lg hover:bg-gray-200 text-[10px] font-bold text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Numbered List"
+            >
+              1. List
+            </button>
+            <button
+              type="button"
+              onClick={() => insertText('> ', '')}
+              className="p-1 px-2 rounded-lg hover:bg-gray-200 text-[10px] font-bold text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Quote"
+            >
+              " Quote
+            </button>
+            <button
+              type="button"
+              onClick={() => insertText('[', '](url)')}
+              className="p-1 px-2 rounded-lg hover:bg-gray-200 text-[10px] font-bold text-charcoal bg-white border border-gray-150 shadow-sm transition active:scale-95"
+              title="Insert Link"
+            >
+              Link
+            </button>
+          </div>
+          <textarea
+            ref={textareaRef}
+            rows={rows}
+            className="w-full px-4 py-3 outline-none font-semibold text-charcoal text-sm resize-y bg-transparent"
+            value={value || ''}
+            onChange={e => onChange(e.target.value)}
+            placeholder={placeholder}
+          />
+        </div>
+      ) : (
+        <div className="border border-gray-150 rounded-2xl p-5 bg-stone/20 min-h-[150px] text-sm text-charcoal-light leading-relaxed prose prose-sm max-w-none shadow-inner">
+          {value ? (
+            <ReactMarkdown
+              components={{
+                h1: ({node, ...props}) => <h1 className="text-lg font-bold mt-3 mb-2 text-charcoal" {...props} />,
+                h2: ({node, ...props}) => <h2 className="text-base font-bold mt-2.5 mb-1.5 text-charcoal" {...props} />,
+                h3: ({node, ...props}) => <h3 className="text-sm font-bold mt-2 mb-1 text-charcoal" {...props} />,
+                p: ({node, ...props}) => <p className="mb-2 last:mb-0 text-charcoal-light leading-relaxed" {...props} />,
+                ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-2 space-y-1 text-charcoal-light" {...props} />,
+                ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-2 space-y-1 text-charcoal-light" {...props} />,
+                li: ({node, ...props}) => <li className="text-charcoal-light" {...props} />,
+                blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-terracotta/40 pl-3 italic text-charcoal-muted my-2 bg-stone/40 py-0.5 rounded-r" {...props} />,
+                a: ({node, ...props}) => <a className="text-terracotta hover:underline font-semibold" target="_blank" rel="noopener noreferrer" {...props} />,
+              }}
+            >
+              {value}
+            </ReactMarkdown>
+          ) : (
+            <span className="text-gray-400 italic text-xs">Nothing to preview. Type something in the Edit tab first!</span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // CMS Management Component
 const CMSManagement = () => {
   const [activeSubTab, setActiveSubTab] = useState('hero');
@@ -4089,6 +4455,11 @@ const CMSManagement = () => {
     is_enabled: false
   });
 
+  const [agreementData, setAgreementData] = useState({
+    title: '',
+    agreement_text: ''
+  });
+
   const fetchCMSContent = async () => {
     try {
       setLoading(true);
@@ -4130,6 +4501,9 @@ const CMSManagement = () => {
 
       const supportDoc = docs.find(d => d.section === 'support_content');
       if (supportDoc) setSupportData(supportDoc.content_data);
+
+      const agreementDoc = docs.find(d => d.section === 'agreement');
+      if (agreementDoc) setAgreementData(agreementDoc.content_data || { title: '', agreement_text: '' });
 
     } catch (err) {
       console.error('Failed to load CMS content:', err);
@@ -4259,7 +4633,8 @@ const CMSManagement = () => {
           { id: 'blog', label: 'Blog Posts', icon: FileText },
           { id: 'offer', label: 'Promotional Offer', icon: Tag },
           { id: 'support', label: 'Support Page', icon: HelpCircle },
-          { id: 'footer', label: 'Footer', icon: Phone }
+          { id: 'footer', label: 'Footer', icon: Phone },
+          { id: 'agreement', label: 'Host Agreement', icon: FileText }
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
@@ -4975,9 +5350,14 @@ const CMSManagement = () => {
                               </select>
                             </div>
                             {item.action_type === 'text' ? (
-                              <div>
-                                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Popup Text (Details shown in modal)</label>
-                                <textarea rows={4} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={item.text || ''} onChange={e => updateItem(itemIndex, { text: e.target.value })} />
+                              <div className="mt-2">
+                                <CmsMarkdownEditor
+                                  label="Popup Text (Details shown in modal)"
+                                  value={item.text || ''}
+                                  onChange={val => updateItem(itemIndex, { text: val })}
+                                  placeholder="Enter detailed popup content in Markdown..."
+                                  rows={4}
+                                />
                               </div>
                             ) : (
                               <div>
@@ -4992,9 +5372,9 @@ const CMSManagement = () => {
                   );
                 })}
               </div>
-              <div className="md:col-span-2 rounded-3xl border border-gray-100 bg-stone/60 p-5 space-y-4">
+              <div className="md:col-span-2 rounded-3xl border border-gray-100 bg-stone/60 p-6 space-y-6">
                 <h5 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest">Footer Legal Links</h5>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Privacy Label</label>
                     <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_label || ''} onChange={e => setFooterData({ ...footerData, privacy_label: e.target.value })} />
@@ -5007,17 +5387,32 @@ const CMSManagement = () => {
                     <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Check-in Instructions Label</label>
                     <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.checkin_label || ''} onChange={e => setFooterData({ ...footerData, checkin_label: e.target.value })} />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Privacy Policy Text</label>
-                    <textarea rows={5} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_text || ''} onChange={e => setFooterData({ ...footerData, privacy_text: e.target.value })} />
+                  <div className="md:col-span-3">
+                    <CmsMarkdownEditor
+                      label="Privacy Policy Text"
+                      value={footerData.privacy_text || ''}
+                      onChange={val => setFooterData({ ...footerData, privacy_text: val })}
+                      placeholder="Enter Privacy Policy text in Markdown format..."
+                      rows={6}
+                    />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Terms & Conditions Text</label>
-                    <textarea rows={5} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_text || ''} onChange={e => setFooterData({ ...footerData, terms_text: e.target.value })} />
+                  <div className="md:col-span-3">
+                    <CmsMarkdownEditor
+                      label="Terms & Conditions Text"
+                      value={footerData.terms_text || ''}
+                      onChange={val => setFooterData({ ...footerData, terms_text: val })}
+                      placeholder="Enter Terms & Conditions text in Markdown format..."
+                      rows={6}
+                    />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Check-in Instructions Text</label>
-                    <textarea rows={5} className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.checkin_text || ''} onChange={e => setFooterData({ ...footerData, checkin_text: e.target.value })} />
+                  <div className="md:col-span-3">
+                    <CmsMarkdownEditor
+                      label="Check-in Instructions Text"
+                      value={footerData.checkin_text || ''}
+                      onChange={val => setFooterData({ ...footerData, checkin_text: val })}
+                      placeholder="Enter Check-in Instructions text in Markdown format..."
+                      rows={6}
+                    />
                   </div>
                 </div>
               </div>
@@ -5066,6 +5461,7 @@ const CMSManagement = () => {
                       id: `p_${Date.now()}`,
                       title: 'New Insights Article',
                       excerpt: 'Discover short-term rental trends across major metros.',
+                      content: '',
                       image_url: '',
                       author: 'STR Insights Team',
                       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -5149,16 +5545,30 @@ const CMSManagement = () => {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Excerpt Summary</label>
-                    <textarea
-                      rows={2.5}
-                      className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-sm leading-relaxed"
-                      value={post.excerpt}
-                      onChange={e => {
+                    <CmsMarkdownEditor
+                      label="Excerpt Summary"
+                      value={post.excerpt || ''}
+                      onChange={val => {
                         const updated = [...blogData.posts];
-                        updated[index] = { ...updated[index], excerpt: e.target.value };
+                        updated[index] = { ...updated[index], excerpt: val };
                         setBlogData({ posts: updated });
                       }}
+                      placeholder="Summarize the article in one or two sentences..."
+                      rows={3}
+                    />
+                  </div>
+
+                  <div>
+                    <CmsMarkdownEditor
+                      label="Full Article Content (Markdown)"
+                      value={post.content || ''}
+                      onChange={val => {
+                        const updated = [...blogData.posts];
+                        updated[index] = { ...updated[index], content: val };
+                        setBlogData({ posts: updated });
+                      }}
+                      placeholder="Write the full blog article in Markdown..."
+                      rows={10}
                     />
                   </div>
 
@@ -5601,6 +6011,63 @@ const CMSManagement = () => {
                   <>
                     <Check className="w-4 h-4" />
                     <span>Save Offer Configuration</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* HOST AGREEMENT TAB */}
+        {activeSubTab === 'agreement' && (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="flex items-center space-x-3 mb-6 pb-4 border-b border-sand-100">
+              <div className="p-2.5 bg-terracotta/10 rounded-xl text-terracotta">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-lg font-bold tracking-tight text-charcoal">Short-Term Rental Host Agreement</h4>
+                <p className="text-xs text-charcoal-muted font-medium">Configure the legal agreement text that hosts must review and sign during KYC verification.</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="relative group">
+                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Agreement Title</label>
+                <input
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4.5 py-3 outline-none transition-all duration-300 font-semibold text-charcoal bg-stone/20 focus:bg-white text-sm"
+                  value={agreementData.title || ''}
+                  onChange={e => setAgreementData({ ...agreementData, title: e.target.value })}
+                  placeholder="e.g. SHORT-TERM RENTAL HOST AGREEMENT"
+                />
+              </div>
+
+              <div>
+                <CmsMarkdownEditor
+                  label="Agreement Text Content (Markdown Supported)"
+                  value={agreementData.agreement_text || ''}
+                  onChange={val => setAgreementData({ ...agreementData, agreement_text: val })}
+                  placeholder="Write the full agreement terms and conditions..."
+                  rows={15}
+                />
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-sand-150">
+              <button
+                onClick={() => handleSave('agreement', agreementData)}
+                disabled={saving}
+                className="w-full sm:w-auto btn-premium px-8 py-3.5 flex items-center justify-center space-x-2.5 shadow-subtle shadow-terracotta/15 active:scale-95 transition-all"
+              >
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Saving Agreement...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Save Agreement Configuration</span>
                   </>
                 )}
               </button>

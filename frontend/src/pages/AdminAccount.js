@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
-import { accountAPI } from '../services/api';
+import { accountAPI, bookingAPI } from '../services/api';
 import CouponManagement from '../components/admin/CouponManagement';
 import { BookingManagement, SubscriptionManagement } from './AdminDashboard';
 
@@ -198,6 +198,90 @@ const OverviewTab = () => {
           <span className="flex items-center"><span className="w-3 h-3 rounded bg-charcoal mr-1" />Net</span>
         </div>
       </div>
+
+      <BookingFeeSettings />
+    </div>
+  );
+};
+
+const BookingFeeSettings = () => {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [form, setForm] = useState({
+    platform_fee_percent: 10,
+    platform_fee_label: 'Premium Service Fee',
+  });
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await bookingAPI.getPaymentConfig();
+        setForm({
+          platform_fee_percent: res.data.platform_fee_percent ?? 10,
+          platform_fee_label: res.data.platform_fee_label || 'Premium Service Fee',
+        });
+      } catch (err) {
+        setMessage('Could not load booking fee settings. Using default values.');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setMessage('');
+    try {
+      const res = await bookingAPI.updatePaymentConfig({
+        platform_fee_percent: Number(form.platform_fee_percent),
+        platform_fee_label: form.platform_fee_label,
+      });
+      setForm({
+        platform_fee_percent: res.data.platform_fee_percent ?? form.platform_fee_percent,
+        platform_fee_label: res.data.platform_fee_label || form.platform_fee_label,
+      });
+      setMessage('Booking platform fee updated.');
+    } catch (err) {
+      setMessage(err.response?.data?.detail || 'Failed to update booking platform fee.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="dashboard-card bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-wider text-charcoal-muted font-bold">Guest Booking Fee</p>
+          <h3 className="text-lg font-bold text-charcoal mt-1">Platform fee configuration</h3>
+          <p className="text-sm text-charcoal-light mt-1">This controls the Premium Service Fee shown during guest checkout.</p>
+        </div>
+        <form onSubmit={save} className="grid grid-cols-1 sm:grid-cols-[1fr_120px_auto] gap-3 w-full md:w-auto">
+          <input
+            value={form.platform_fee_label}
+            onChange={(e) => setForm((cur) => ({ ...cur, platform_fee_label: e.target.value }))}
+            className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold outline-none focus:border-terracotta"
+            placeholder="Premium Service Fee"
+            disabled={loading || saving}
+          />
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            value={form.platform_fee_percent}
+            onChange={(e) => setForm((cur) => ({ ...cur, platform_fee_percent: e.target.value }))}
+            className="rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold outline-none focus:border-terracotta"
+            disabled={loading || saving}
+          />
+          <button type="submit" disabled={loading || saving} className="btn-premium px-5 py-3 disabled:opacity-60">
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        </form>
+      </div>
+      {message && <p className="text-xs font-semibold text-charcoal-muted mt-3">{message}</p>}
     </div>
   );
 };

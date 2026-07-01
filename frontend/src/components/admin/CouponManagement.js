@@ -16,17 +16,34 @@ const CouponManagement = () => {
     discount_type: 'percentage',
     discount_value: '',
     coupon_type: 'booking',
-    property_id: ''
+    property_id: '',
+    plan_type: '',
+    property_category: '',
+    bhk_type: '',
+    sqft_range: '',
   });
 
   const filteredCoupons = coupons.filter(c => {
     const matchesSearch = c.code.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          (c.property_id && c.property_id.toLowerCase().includes(searchQuery.toLowerCase()));
+                          (c.property_id && c.property_id.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                          (c.property_category && c.property_category.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                          (c.plan_type && c.plan_type.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesType = filterType === 'all' ? true : c.coupon_type === filterType;
     const matchesStatus = filterStatus === 'all' ? true : (filterStatus === 'active' ? c.is_active : !c.is_active);
     
     return matchesSearch && matchesType && matchesStatus;
   });
+
+  const couponScopeText = (coupon) => {
+    if (coupon.property_id) return `Property: ${coupon.property_id.substring(0, 8)}`;
+    const scope = [
+      coupon.property_category && coupon.property_category.replace('_', ' '),
+      coupon.plan_type,
+      coupon.bhk_type,
+      coupon.sqft_range && `${coupon.sqft_range} sqft`,
+    ].filter(Boolean);
+    return scope.length ? scope.join(' · ') : 'Global';
+  };
 
   const fetchCoupons = async () => {
     setLoading(true);
@@ -60,7 +77,11 @@ const CouponManagement = () => {
       const payload = {
         ...formData,
         discount_value: parseFloat(formData.discount_value),
-        property_id: formData.property_id || null
+        property_id: formData.property_id || null,
+        plan_type: formData.plan_type || null,
+        property_category: formData.property_category || null,
+        bhk_type: formData.bhk_type || null,
+        sqft_range: formData.sqft_range || null,
       };
       await couponAPI.createCoupon(payload);
       setShowForm(false);
@@ -69,7 +90,11 @@ const CouponManagement = () => {
         discount_type: 'percentage',
         discount_value: '',
         coupon_type: 'booking',
-        property_id: ''
+        property_id: '',
+        plan_type: '',
+        property_category: '',
+        bhk_type: '',
+        sqft_range: '',
       });
       fetchCoupons();
     } catch (err) {
@@ -135,7 +160,15 @@ const CouponManagement = () => {
                 <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Applied To</label>
                 <select 
                   value={formData.coupon_type}
-                  onChange={e => setFormData({...formData, coupon_type: e.target.value})}
+                  onChange={e => setFormData({
+                    ...formData,
+                    coupon_type: e.target.value,
+                    property_id: '',
+                    plan_type: '',
+                    property_category: '',
+                    bhk_type: '',
+                    sqft_range: '',
+                  })}
                   className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
                 >
                   <option value="booking">Booking</option>
@@ -186,6 +219,64 @@ const CouponManagement = () => {
                   </select>
                   <p className="text-[10px] text-charcoal-muted mt-1 uppercase tracking-wider">If selected, this coupon will only work for bookings on this specific property.</p>
                 </div>
+              )}
+
+              {formData.coupon_type === 'subscription' && (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Property Type</label>
+                    <select
+                      value={formData.property_category}
+                      onChange={e => setFormData({...formData, property_category: e.target.value})}
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                    >
+                      <option value="">All Property Types</option>
+                      <option value="residential">Residential</option>
+                      <option value="commercial">Commercial</option>
+                      <option value="event_venue">Event Venue</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Subscription Plan Type</label>
+                    <select
+                      value={formData.plan_type}
+                      onChange={e => setFormData({...formData, plan_type: e.target.value})}
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                    >
+                      <option value="">All Plans</option>
+                      <option value="studio">Studio</option>
+                      <option value="1bhk">1 BHK</option>
+                      <option value="2bhk">2 BHK</option>
+                      <option value="3bhk">3 BHK</option>
+                      <option value="4bhk_plus">4 BHK+</option>
+                      <option value="commercial">Commercial</option>
+                      <option value="banquet">Event/Banquet</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">BHK / Size Key</label>
+                    <input
+                      type="text"
+                      value={formData.bhk_type}
+                      onChange={e => setFormData({...formData, bhk_type: e.target.value})}
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                      placeholder="e.g. 2bhk, small, large_event"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Sq.ft Range</label>
+                    <input
+                      type="text"
+                      value={formData.sqft_range}
+                      onChange={e => setFormData({...formData, sqft_range: e.target.value})}
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                      placeholder="e.g. <500, 500-2000, 5000+"
+                    />
+                  </div>
+                </>
               )}
 
               <div className="md:col-span-2 flex space-x-4 pt-6 border-t border-gray-100 mt-4">
@@ -287,9 +378,9 @@ const CouponManagement = () => {
                       )}
                     </td>
                     <td className="px-6 py-4">
-                      {coupon.property_id ? (
+                      {coupon.property_id || coupon.property_category || coupon.plan_type || coupon.bhk_type || coupon.sqft_range ? (
                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-sage/10 text-sage">
-                          Property: {coupon.property_id.substring(0, 8)}
+                          {couponScopeText(coupon)}
                         </span>
                       ) : (
                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-sand-200 text-charcoal">

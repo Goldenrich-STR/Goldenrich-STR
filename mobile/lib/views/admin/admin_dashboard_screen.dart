@@ -154,6 +154,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     final nameCtrl = TextEditingController();
     final monthlyPriceCtrl = TextEditingController();
     final annualPriceCtrl = TextEditingController();
+    final sqftRangeCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     String selectedPlanType = 'studio';
     final formKey = GlobalKey<FormState>();
@@ -232,6 +233,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         },
                       ),
                       const SizedBox(height: 16),
+                      TextFormField(
+                        controller: sqftRangeCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'Sq.ft Range (Optional)',
+                          hintText: 'e.g. <500, 500-2000, 5000+',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       Row(
                         children: [
                           Expanded(
@@ -290,6 +300,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                               'price_monthly': double.parse(monthlyPriceCtrl.text.trim()),
                               'price_annual': double.parse(annualPriceCtrl.text.trim()),
                               'description': descCtrl.text.trim(),
+                              'sqft_range': sqftRangeCtrl.text.trim().isEmpty ? null : sqftRangeCtrl.text.trim(),
                             };
                             
                             final success = await Provider.of<AdminProvider>(context, listen: false)
@@ -3232,8 +3243,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     final codeCtrl = TextEditingController();
     final valCtrl = TextEditingController();
     final propCtrl = TextEditingController();
+    final couponBhkCtrl = TextEditingController();
+    final couponSqftRangeCtrl = TextEditingController();
     String discountType = 'percentage';
     String couponType = 'booking';
+    String couponPlanType = '';
+    String couponPropertyCategory = '';
     final couponFormKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
@@ -3273,7 +3288,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         decoration: const InputDecoration(labelText: 'Discount Type'),
                         items: const [
                           DropdownMenuItem(value: 'percentage', child: Text('Percentage (%)')),
-                          DropdownMenuItem(value: 'flat', child: Text('Flat Discount (₹)')),
+                          DropdownMenuItem(value: 'fixed', child: Text('Flat Discount (₹)')),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -3314,6 +3329,52 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         ),
                         const SizedBox(height: 12),
                       ],
+                      if (couponType == 'subscription') ...[
+                        DropdownButtonFormField<String>(
+                          value: couponPlanType,
+                          decoration: const InputDecoration(labelText: 'Plan Type (Optional)'),
+                          items: const [
+                            DropdownMenuItem(value: '', child: Text('Any Plan')),
+                            DropdownMenuItem(value: 'studio', child: Text('Studio')),
+                            DropdownMenuItem(value: '1bhk', child: Text('1 BHK')),
+                            DropdownMenuItem(value: '2bhk', child: Text('2 BHK')),
+                            DropdownMenuItem(value: '3bhk', child: Text('3 BHK')),
+                            DropdownMenuItem(value: '4bhk_plus', child: Text('4 BHK+')),
+                            DropdownMenuItem(value: 'commercial', child: Text('Commercial')),
+                            DropdownMenuItem(value: 'banquet', child: Text('Event/Banquet')),
+                          ],
+                          onChanged: (val) => setModalState(() => couponPlanType = val ?? ''),
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: couponPropertyCategory,
+                          decoration: const InputDecoration(labelText: 'Property Category (Optional)'),
+                          items: const [
+                            DropdownMenuItem(value: '', child: Text('Any Category')),
+                            DropdownMenuItem(value: 'residential', child: Text('Residential')),
+                            DropdownMenuItem(value: 'commercial', child: Text('Commercial')),
+                            DropdownMenuItem(value: 'event_venue', child: Text('Event Venue')),
+                          ],
+                          onChanged: (val) => setModalState(() => couponPropertyCategory = val ?? ''),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: couponBhkCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'BHK / Size Key (Optional)',
+                            hintText: 'e.g. 2bhk, small, large_event',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: couponSqftRangeCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Sq.ft Range (Optional)',
+                            hintText: 'e.g. <500, 500-2000, 5000+',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       const SizedBox(height: 24),
                       ElevatedButton(
                         onPressed: () async {
@@ -3328,6 +3389,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             'discount_value': numVal,
                             'coupon_type': couponType,
                             'property_id': propCtrl.text.isEmpty ? null : propCtrl.text.trim(),
+                            'plan_type': couponPlanType.isEmpty ? null : couponPlanType,
+                            'property_category': couponPropertyCategory.isEmpty ? null : couponPropertyCategory,
+                            'bhk_type': couponBhkCtrl.text.trim().isEmpty ? null : couponBhkCtrl.text.trim(),
+                            'sqft_range': couponSqftRangeCtrl.text.trim().isEmpty ? null : couponSqftRangeCtrl.text.trim(),
                           };
                           
                           final success = await adminProv.createCoupon(payload);
@@ -4325,6 +4390,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                               'Applicable to: ${(coupon['coupon_type'] ?? 'booking').toString().toUpperCase()}',
                                               style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                                             ),
+                                            if (coupon['plan_type'] != null || coupon['property_category'] != null || coupon['sqft_range'] != null)
+                                              Text(
+                                                [
+                                                  if (coupon['plan_type'] != null) 'Plan: ${coupon['plan_type']}',
+                                                  if (coupon['property_category'] != null) 'Category: ${coupon['property_category']}',
+                                                  if (coupon['bhk_type'] != null) 'Size: ${coupon['bhk_type']}',
+                                                  if (coupon['sqft_range'] != null) 'Sqft: ${coupon['sqft_range']}',
+                                                ].join('  |  '),
+                                                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                              ),
                                           ],
                                         ),
                                         Container(

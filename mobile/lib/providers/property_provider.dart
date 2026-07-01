@@ -179,9 +179,22 @@ class PropertyProvider with ChangeNotifier {
     }
   }
 
-  Future<List<dynamic>> getSubscriptionPlans() async {
+  Future<List<dynamic>> getSubscriptionPlans({
+    String? planType,
+    String? propertyCategory,
+    String? bhkType,
+    double? areaSqft,
+  }) async {
     try {
-      final response = await _apiService.dio.get('/subscriptions/plans');
+      final response = await _apiService.dio.get(
+        '/subscriptions/plans',
+        queryParameters: {
+          if (planType != null && planType.isNotEmpty) 'plan_type': planType,
+          if (propertyCategory != null && propertyCategory.isNotEmpty) 'property_category': propertyCategory,
+          if (bhkType != null && bhkType.isNotEmpty) 'bhk_type': bhkType,
+          if (areaSqft != null) 'area_sqft': areaSqft,
+        },
+      );
       if (response.statusCode == 200) {
         return response.data['plans'] ?? [];
       }
@@ -211,9 +224,22 @@ class PropertyProvider with ChangeNotifier {
     }
   }
 
-  Future<List<dynamic>> getSubscriptionCoupons() async {
+  Future<List<dynamic>> getSubscriptionCoupons({
+    String? planType,
+    String? propertyCategory,
+    String? bhkType,
+    double? areaSqft,
+  }) async {
     try {
-      final response = await _apiService.dio.get('/coupons/subscription');
+      final response = await _apiService.dio.get(
+        '/coupons/subscription',
+        queryParameters: {
+          if (planType != null && planType.isNotEmpty) 'plan_type': planType,
+          if (propertyCategory != null && propertyCategory.isNotEmpty) 'property_category': propertyCategory,
+          if (bhkType != null && bhkType.isNotEmpty) 'bhk_type': bhkType,
+          if (areaSqft != null) 'area_sqft': areaSqft,
+        },
+      );
       if (response.statusCode == 200) {
         return response.data['coupons'] ?? [];
       }
@@ -223,12 +249,21 @@ class PropertyProvider with ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> validateSubscriptionCoupon(String code, String planId) async {
+  Future<Map<String, dynamic>?> validateSubscriptionCoupon(
+    String code,
+    String planId, {
+    String? propertyCategory,
+    String? bhkType,
+    double? areaSqft,
+  }) async {
     try {
       final response = await _apiService.dio.post('/subscriptions/validate-coupon', data: {
         'code': code,
         'plan_id': planId,
-        'billing_cycle': 'monthly'
+        'billing_cycle': 'monthly',
+        if (propertyCategory != null && propertyCategory.isNotEmpty) 'property_category': propertyCategory,
+        if (bhkType != null && bhkType.isNotEmpty) 'bhk_type': bhkType,
+        if (areaSqft != null) 'area_sqft': areaSqft,
       });
       if (response.statusCode == 200) {
         return response.data;

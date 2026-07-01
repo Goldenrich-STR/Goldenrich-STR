@@ -149,6 +149,20 @@ const PRICING_CYCLE_OPTIONS = [
   { value: 'monthly', label: 'Monthly' }
 ];
 
+const getTargetSubscriptionPlanType = (category, bhkType) => {
+  if (category === 'commercial') return 'commercial';
+  if (category === 'event_venue') return 'banquet';
+  const map = {
+    studio: 'studio',
+    '1bhk': '1bhk',
+    '2bhk': '2bhk',
+    '3bhk': '3bhk',
+    '4bhk': '4bhk_plus',
+    '5bhk': '4bhk_plus',
+  };
+  return map[bhkType] || '1bhk';
+};
+
 const VEG_ITEMS = [
   'Chaat Counter', 'Welcome Drinks', 'Soups', 'Veg Starter', 'Veg Main Courses', 
   'Salads', 'Raita', 'Dal', 'Rice/Biryani', 'Assorted Breads/Rotis', 'Desserts'
@@ -446,6 +460,18 @@ const HostListProperty = () => {
   const [pricingSummaryPlan, setPricingSummaryPlan] = useState(null);
   const [subscriptionCoupons, setSubscriptionCoupons] = useState([]);
   const [subscriptionCouponCode, setSubscriptionCouponCode] = useState('');
+  const subscriptionTargetParams = useMemo(
+    () => {
+      const areaSqft = Number(form.area_sqft);
+      return {
+        plan_type: getTargetSubscriptionPlanType(form.category, form.bhk_type),
+        property_category: form.category,
+        bhk_type: form.bhk_type,
+        ...(Number.isFinite(areaSqft) && areaSqft > 0 ? { area_sqft: areaSqft } : {}),
+      };
+    },
+    [form.category, form.bhk_type, form.area_sqft]
+  );
 
   useEffect(() => {
     if (editPropertyId) {
@@ -529,10 +555,14 @@ const HostListProperty = () => {
 
   useEffect(() => {
     bookingAPI.getPaymentConfig().then((r) => setPaymentConfig(r.data)).catch(() => {});
-    subscriptionAPI.getPlans().then((r) => setPlans(r.data.plans || [])).catch(() => {});
-    couponAPI.getSubscriptionCoupons().then((r) => setSubscriptionCoupons(r.data.coupons || [])).catch(() => {});
     if (refreshUser) refreshUser();
   }, [refreshUser]);
+
+  useEffect(() => {
+    subscriptionAPI.getPlans(subscriptionTargetParams).then((r) => setPlans(r.data.plans || [])).catch(() => {});
+    couponAPI.getSubscriptionCoupons(subscriptionTargetParams).then((r) => setSubscriptionCoupons(r.data.coupons || [])).catch(() => {});
+    setSubscriptionCouponCode('');
+  }, [subscriptionTargetParams]);
 
   // Auto-detect and remove duplicates with a popup
   useEffect(() => {
@@ -773,36 +803,11 @@ const HostListProperty = () => {
 
   const matchingPlans = useMemo(() => {
     if (!plans.length) return [];
-    // Suggest plans whose plan_type matches the BHK / Sizing configuration
-    const map = { 
-      // Residential
-      studio: 'studio', 
-      '1bhk': '1bhk', 
-      '2bhk': '2bhk', 
-      '3bhk': '3bhk', 
-      '4bhk': '4bhk_plus',
-      '5bhk': '4bhk_plus',
-
-      // Commercial
-      small: 'commercial',
-      medium: 'commercial',
-      large: 'commercial',
-      extra_large: 'commercial',
-      custom: 'commercial',
-
-      // Event venue
-      small_event: 'banquet',
-      medium_event: 'banquet',
-      large_event: 'banquet',
-      mega_event: 'banquet'
-    };
-    const target = map[form.bhk_type];
-    if (target) {
-      const filtered = plans.filter((p) => p.plan_type === target);
-      if (filtered.length) return filtered;
-    }
+    const target = getTargetSubscriptionPlanType(form.category, form.bhk_type);
+    const filtered = plans.filter((p) => p.plan_type === target);
+    if (filtered.length) return filtered;
     return plans;
-  }, [plans, form.bhk_type]);
+  }, [plans, form.category, form.bhk_type]);
 
   const getSubscriptionBreakdown = (plan = {}) => {
     const planFee = Number(plan.price_monthly) || 0;

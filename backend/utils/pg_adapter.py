@@ -6,7 +6,8 @@ import re
 from typing import Any, Dict, List, Optional, Union
 import asyncpg
 import decimal
-from datetime import datetime
+from datetime import date, datetime
+from enum import Enum
 
 
 logger = logging.getLogger(__name__)
@@ -508,19 +509,17 @@ class PGCollection:
         return True
 
     def _prepare_doc(self, doc):
-        if not isinstance(doc, dict):
-            return doc
-        new_doc = {}
-        for k, v in doc.items():
-            if isinstance(v, datetime):
-                new_doc[k] = v.isoformat()
-            elif isinstance(v, dict):
-                new_doc[k] = self._prepare_doc(v)
-            elif isinstance(v, list):
-                new_doc[k] = [self._prepare_doc(i) if isinstance(i, (dict, list)) else i for i in v]
-            else:
-                new_doc[k] = v
-        return new_doc
+        if isinstance(doc, (datetime, date)):
+            return doc.isoformat()
+        if isinstance(doc, Enum):
+            return doc.value
+        if isinstance(doc, decimal.Decimal):
+            return float(doc)
+        if isinstance(doc, dict):
+            return {key: self._prepare_doc(value) for key, value in doc.items()}
+        if isinstance(doc, (list, tuple)):
+            return [self._prepare_doc(value) for value in doc]
+        return doc
 
 class PGAdapter:
     def __init__(self, dsn):

@@ -21,6 +21,11 @@ class AdminRejectRequest(BaseModel):
 class AdminApproveRequest(BaseModel):
     checklist: Optional[dict] = None
 
+
+class AdminPermanentDeleteRequest(BaseModel):
+    confirmation: str
+
+
 async def get_db():
     from server import db_instance
     return db_instance
@@ -766,6 +771,130 @@ async def get_all_properties(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch properties"
         )
+
+@router.get("/properties/deleted")
+async def get_deleted_properties(
+    limit: int = 50,
+    skip: int = 0,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """List archived property snapshots for admin review."""
+    try:
+        cursor = (
+            db.deleted_properties.find({}, {"_id": 0})
+            .sort("deleted_at", -1)
+            .skip(skip)
+            .limit(limit)
+        )
+        archives = await cursor.to_list(length=limit)
+        properties = []
+
+        for archive in archives:
+            snapshot = dict(archive.get("property_snapshot") or {})
+            property_id = archive.get("property_id") or snapshot.get("property_id")
+            if not property_id:
+                continue
+            if await db.properties.find_one({"property_id": property_id}, {"_id": 0, "property_id": 1}):
+                continue
+
+            snapshot.pop("_id", None)
+            snapshot.update({
+                "property_id": property_id,
+                "owner_id": archive.get("owner_id") or snapshot.get("owner_id"),
+                "title": archive.get("title") or snapshot.get("title") or "Untitled property",
+                "city": archive.get("city") or snapshot.get("city"),
+                "previous_status": archive.get("status") or snapshot.get("status"),
+                "status": "deleted",
+                "deletion_reason": archive.get("reason"),
+                "deleted_by": archive.get("deleted_by"),
+                "deleted_by_role": archive.get("deleted_by_role"),
+                "deleted_at": archive.get("deleted_at"),
+            })
+            properties.append(snapshot)
+
+        total = len(properties)
+        return {
+            "properties": properties,
+            "total": total,
+            "limit": limit,
+            "skip": skip,
+        }
+    except Exception as e:
+        logger.exception("Error fetching deleted properties")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch deleted properties: {str(e)}",
+        )
+
+
+@router.post("/properties/deleted/{property_id}/permanent-delete")
+async def permanently_delete_property(
+    property_id: str,
+    payload: AdminPermanentDeleteRequest,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Permanently remove an archived property snapshot."""
+    try:
+        archive = await db.deleted_properties.find_one(
+            {"property_id": property_id},
+            {"_id": 0},
+        )
+        if not archive:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Deleted property not found",
+            )
+
+        active_property = await db.properties.find_one(
+            {"property_id": property_id},
+            {"_id": 0, "property_id": 1},
+        )
+        if active_property:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This property is active. Delete the active property before permanently deleting its archive.",
+            )
+
+        if (payload.confirmation or "").strip() != property_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Enter the exact Property ID to permanently delete this property",
+            )
+
+        # Booking and payment audit records intentionally remain untouched.
+        await db.blocked_dates.delete_many({"property_id": property_id})
+        await db.external_calendars.delete_many({"property_id": property_id})
+        await db.calendar_sync_logs.delete_many({"property_id": property_id})
+        await db.property_verifications.delete_many({"property_id": property_id})
+        await db.reviews.delete_many({"property_id": property_id})
+        await db.coupons.delete_many({"property_id": property_id})
+        await db.deleted_properties.delete_many({"property_id": property_id})
+        if await db.deleted_properties.find_one(
+            {"property_id": property_id},
+            {"_id": 0, "property_id": 1},
+        ):
+            raise RuntimeError("Archived property record could not be removed from the database")
+
+        logger.warning(
+            "Property permanently deleted: %s by admin %s",
+            property_id,
+            current_user["user_id"],
+        )
+        return {
+            "message": "Property permanently deleted",
+            "property_id": property_id,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Error permanently deleting property %s", property_id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to permanently delete property: {str(e)}",
+        )
+
 
 @router.get("/properties/pending-verification")
 async def get_pending_verifications(

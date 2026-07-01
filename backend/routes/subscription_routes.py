@@ -70,22 +70,95 @@ def _coupon_discount_amount(coupon: dict, amount: float) -> float:
         return round(amount * (value / 100), 2)
     return round(min(amount, value), 2)
 
+def _normalize(value: Optional[str]) -> Optional[str]:
+    return value.strip().lower() if value else None
+
+def _sqft_matches(range_text: Optional[str], area_sqft: Optional[float]) -> bool:
+    if not range_text or area_sqft is None:
+        return True
+
+    text = range_text.strip().lower().replace("sqft", "").replace("sq.ft", "").replace(",", "")
+    text = text.replace(" ", "")
+    aliases = {
+        "small": "<500",
+        "medium": "500-2000",
+        "large": "2000-5000",
+        "extra_large": "5000+",
+        "extralarge": "5000+",
+    }
+    text = aliases.get(text, text)
+    try:
+        if text.startswith("<="):
+            return area_sqft <= float(text[2:])
+        if text.startswith(">="):
+            return area_sqft >= float(text[2:])
+        if text.startswith("<"):
+            return area_sqft < float(text[1:])
+        if text.startswith(">"):
+            return area_sqft > float(text[1:])
+        if text.endswith("+"):
+            return area_sqft >= float(text[:-1])
+        if "-" in text:
+            start, end = text.split("-", 1)
+            return float(start) <= area_sqft <= float(end)
+    except ValueError:
+        return True
+
+    return True
+
+def _target_matches(
+    item: dict,
+    *,
+    plan_type: Optional[str] = None,
+    property_category: Optional[str] = None,
+    bhk_type: Optional[str] = None,
+    area_sqft: Optional[float] = None,
+) -> bool:
+    requested_plan_type = _normalize(plan_type)
+    requested_category = _normalize(property_category)
+    requested_bhk = _normalize(bhk_type)
+
+    item_plan_type = _normalize(item.get("plan_type"))
+    item_category = _normalize(item.get("property_category"))
+    item_bhk = _normalize(item.get("bhk_type"))
+
+    if requested_plan_type and item_plan_type and item_plan_type != requested_plan_type:
+        return False
+    if requested_category and item_category and item_category != requested_category:
+        return False
+    if requested_bhk and item_bhk and item_bhk != requested_bhk:
+        return False
+    return _sqft_matches(item.get("sqft_range"), area_sqft)
+
 # ========== SUBSCRIPTION PLANS (PUBLIC) ==========
 
 @router.get("/plans")
 async def get_subscription_plans(
     plan_type: Optional[SubscriptionPlanType] = None,
+    property_category: Optional[str] = None,
+    bhk_type: Optional[str] = None,
+    area_sqft: Optional[float] = None,
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get all active subscription plans."""
     try:
-        query = {"is_active": True}
+        query = {"is_active": True, "is_deleted": {"$ne": True}}
         
         if plan_type:
             query["plan_type"] = plan_type.value
         
         cursor = db.subscription_plans.find(query, {"_id": 0})
         plans = await cursor.to_list(length=50)
+        plans = [
+            plan for plan in plans
+            if _target_matches(
+                plan,
+                plan_type=plan_type.value if plan_type else None,
+                property_category=property_category,
+                bhk_type=bhk_type,
+                area_sqft=area_sqft,
+            )
+        ]
         
         return {
             "plans": plans,
@@ -106,7 +179,7 @@ async def get_plan_details(
 ):
     """Get subscription plan details."""
     try:
-        plan = await db.subscription_plans.find_one({"plan_id": plan_id}, {"_id": 0})
+        plan = await db.subscription_plans.find_one({"plan_id": plan_id, "is_deleted": {"$ne": True}}, {"_id": 0})
         
         if not plan:
             raise HTTPException(
@@ -125,6 +198,63 @@ async def get_plan_details(
             detail="Failed to fetch plan details"
         )
 
+class ValidateSubscriptionCouponRequest(BaseModel):
+    code: str
+    plan_id: str
+    billing_cycle: str = "monthly"
+    property_category: Optional[str] = None
+    bhk_type: Optional[str] = None
+    area_sqft: Optional[float] = None
+
+@router.post("/validate-coupon")
+async def validate_subscription_coupon(
+    payload: ValidateSubscriptionCouponRequest,
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Validate a host subscription coupon against the selected plan/property size."""
+    try:
+        plan = await db.subscription_plans.find_one(
+            {"plan_id": payload.plan_id, "is_active": True, "is_deleted": {"$ne": True}},
+            {"_id": 0},
+        )
+        if not plan:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Plan not found")
+
+        coupon = await db.coupons.find_one(
+            {
+                "code": payload.code.strip().upper(),
+                "is_active": True,
+                "coupon_type": "subscription",
+            },
+            {"_id": 0},
+        )
+        if not coupon or not _target_matches(
+            coupon,
+            plan_type=plan.get("plan_type"),
+            property_category=payload.property_category,
+            bhk_type=payload.bhk_type,
+            area_sqft=payload.area_sqft,
+        ):
+            return {"valid": False, "discount_amount": 0.0}
+
+        amount_breakdown = _subscription_amount_breakdown(plan, payload.billing_cycle)
+        discount_amount = _coupon_discount_amount(coupon, amount_breakdown["total_amount"])
+        return {
+            "valid": True,
+            "coupon": coupon,
+            "discount_amount": discount_amount,
+            "total_amount": amount_breakdown["total_amount"],
+            "payable_amount": round(amount_breakdown["total_amount"] - discount_amount, 2),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error validating subscription coupon: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to validate subscription coupon"
+        )
+
 # ========== SUBSCRIPTION MANAGEMENT ==========
 
 @router.post("/subscribe")
@@ -136,7 +266,10 @@ async def create_subscription(
     """Create a new subscription for user."""
     try:
         # Get plan details
-        plan = await db.subscription_plans.find_one({"plan_id": subscription_data.plan_id}, {"_id": 0})
+        plan = await db.subscription_plans.find_one(
+            {"plan_id": subscription_data.plan_id, "is_deleted": {"$ne": True}},
+            {"_id": 0},
+        )
         
         if not plan:
             raise HTTPException(
@@ -150,6 +283,13 @@ async def create_subscription(
                 detail="Subscription plan is not active"
             )
         
+        property_context = {}
+        if subscription_data.property_id:
+            property_context = await db.properties.find_one(
+                {"property_id": subscription_data.property_id},
+                {"_id": 0, "category": 1, "bhk_type": 1, "area_sqft": 1},
+            ) or {}
+
         # Calculate amount based on billing cycle, platform fee, and GST.
         amount_breakdown = _subscription_amount_breakdown(plan, subscription_data.billing_cycle)
         coupon_code = subscription_data.coupon_code.strip().upper() if subscription_data.coupon_code else None
@@ -164,6 +304,17 @@ async def create_subscription(
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Invalid subscription coupon code"
+                )
+            if not _target_matches(
+                coupon,
+                plan_type=plan.get("plan_type"),
+                property_category=property_context.get("category"),
+                bhk_type=property_context.get("bhk_type"),
+                area_sqft=property_context.get("area_sqft"),
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This coupon is not valid for the selected subscription plan"
                 )
             discount_amount = _coupon_discount_amount(coupon, amount_breakdown["total_amount"])
         amount = round(amount_breakdown["total_amount"] - discount_amount, 2)
@@ -702,7 +853,7 @@ async def get_admin_subscription_plans(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Admin access required"
             )
-        cursor = db.subscription_plans.find({}, {"_id": 0})
+        cursor = db.subscription_plans.find({"is_deleted": {"$ne": True}}, {"_id": 0})
         plans = await cursor.to_list(length=100)
         return {
             "plans": plans,
@@ -731,7 +882,7 @@ async def toggle_subscription_plan_status(
                 detail="Admin access required"
             )
         
-        plan = await db.subscription_plans.find_one({"plan_id": plan_id})
+        plan = await db.subscription_plans.find_one({"plan_id": plan_id, "is_deleted": {"$ne": True}})
         if not plan:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -740,7 +891,7 @@ async def toggle_subscription_plan_status(
             
         new_status = not plan.get("is_active", True)
         await db.subscription_plans.update_one(
-            {"plan_id": plan_id},
+            {"plan_id": plan_id, "is_deleted": {"$ne": True}},
             {"$set": {"is_active": new_status}}
         )
         
@@ -764,7 +915,7 @@ async def delete_subscription_plan(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Deactivate a subscription plan (Admin only)."""
+    """Soft-delete a subscription plan (Admin only)."""
     try:
         if current_user["role"] != UserRole.ADMIN.value:
             raise HTTPException(
@@ -773,8 +924,13 @@ async def delete_subscription_plan(
             )
         
         result = await db.subscription_plans.update_one(
-            {"plan_id": plan_id},
-            {"$set": {"is_active": False}}
+            {"plan_id": plan_id, "is_deleted": {"$ne": True}},
+            {"$set": {
+                "is_active": False,
+                "is_deleted": True,
+                "deleted_at": datetime.now(timezone.utc),
+                "updated_at": datetime.now(timezone.utc),
+            }}
         )
         
         if result.matched_count == 0:
@@ -783,16 +939,16 @@ async def delete_subscription_plan(
                 detail="Plan not found"
             )
         
-        logger.info(f"Subscription plan deactivated: {plan_id}")
-        return {"message": "Subscription plan deactivated successfully"}
+        logger.info(f"Subscription plan deleted: {plan_id}")
+        return {"message": "Subscription plan deleted successfully"}
     
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error deactivating subscription plan: {str(e)}")
+        logger.error(f"Error deleting subscription plan: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to deactivate subscription plan"
+            detail="Failed to delete subscription plan"
         )
 
 @router.put("/admin/plans/{plan_id}")
@@ -835,7 +991,7 @@ async def update_subscription_plan(
             return {"message": "No changes provided"}
             
         result = await db.subscription_plans.update_one(
-            {"plan_id": plan_id},
+            {"plan_id": plan_id, "is_deleted": {"$ne": True}},
             {"$set": update_data}
         )
         

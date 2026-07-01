@@ -203,6 +203,7 @@ class AdminProvider with ChangeNotifier {
           'price_monthly': data['price_monthly'],
           'price_annual': data['price_annual'],
           'description': data['description'],
+          if (data['sqft_range'] != null) 'sqft_range': data['sqft_range'],
         },
       );
       if (response.statusCode == 200 || response.statusCode == 201) {

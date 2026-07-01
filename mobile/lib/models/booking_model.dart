@@ -72,7 +72,9 @@ class BookingModel {
                    (details != null ? (details['total_amount'] as num?)?.toDouble() ?? 0.0 : 0.0),
       baseAmount: (json['base_amount'] as num?)?.toDouble() ?? 
                   (details != null ? (details['base_amount'] as num?)?.toDouble() ?? 0.0 : 0.0),
-      platformFee: (json['platform_fee'] as num?)?.toDouble() ?? 0.0,
+      platformFee: (json['platform_fee'] as num?)?.toDouble() ??
+          (json['service_fee'] as num?)?.toDouble() ??
+          (details != null ? (details['service_fee'] as num?)?.toDouble() ?? 0.0 : 0.0),
       kycVerificationFee: (json['kyc_verification_fee'] as num?)?.toDouble() ?? 0.0,
       discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0.0,
       bookingStatus: json['booking_status'] ?? '',

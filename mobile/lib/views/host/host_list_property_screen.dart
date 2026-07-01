@@ -968,37 +968,27 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           return;
         }
 
-        final plans = await propProvider.getSubscriptionPlans();
-        
-        // Filter based on BHK / Sizing type
-        const bhkPlanMap = { 
-          'studio': 'studio', 
-          '1bhk': '1bhk', 
-          '2bhk': '2bhk', 
-          '3bhk': '3bhk', 
-          '4bhk': '4bhk_plus',
-          '5bhk': '4bhk_plus',
-          'small': 'commercial',
-          'medium': 'commercial',
-          'large': 'commercial',
-          'extra_large': 'commercial',
-          'custom': 'commercial',
-          'small_event': 'banquet',
-          'medium_event': 'banquet',
-          'large_event': 'banquet',
-          'mega_event': 'banquet'
-        };
-        
-        final targetPlanType = bhkPlanMap[_bhkType.toLowerCase()] ?? '1bhk';
+        final targetPlanType = _targetSubscriptionPlanType();
+        final selectedArea = _selectedAreaSqft();
+        final plans = await propProvider.getSubscriptionPlans(
+          planType: targetPlanType,
+          propertyCategory: _category,
+          bhkType: _bhkType,
+          areaSqft: selectedArea,
+        );
+
         List<dynamic> matchingPlans = plans.where((p) => p['plan_type'] == targetPlanType).toList();
         if (matchingPlans.isEmpty) {
-          matchingPlans = plans; // Fallback to all active plans
+          matchingPlans = await propProvider.getSubscriptionPlans(planType: targetPlanType);
+        }
+        if (matchingPlans.isEmpty) {
+          matchingPlans = await propProvider.getSubscriptionPlans();
         }
         
         setState(() => _isSubmitting = false);
         
         if (mounted) {
-          _showSubscriptionPlanSelector(createdPropertyId, matchingPlans);
+          _showSubscriptionPlanSelector(createdPropertyId, matchingPlans, targetPlanType);
         }
       } catch (e) {
         setState(() => _isSubmitting = false);
@@ -1009,7 +999,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     }
   }
 
-  void _showSubscriptionPlanSelector(String propertyId, List<dynamic> plans) {
+  void _showSubscriptionPlanSelector(String propertyId, List<dynamic> plans, String targetPlanType) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1028,7 +1018,12 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
             final propProvider = Provider.of<PropertyProvider>(context, listen: false);
 
             if (isLoadingCoupons) {
-              propProvider.getSubscriptionCoupons().then((list) {
+              propProvider.getSubscriptionCoupons(
+                planType: targetPlanType,
+                propertyCategory: _category,
+                bhkType: _bhkType,
+                areaSqft: _selectedAreaSqft(),
+              ).then((list) {
                 setModalState(() {
                   coupons = list;
                   isLoadingCoupons = false;
@@ -1076,7 +1071,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Filtered matching plan for your BHK Configuration: ${_bhkType.toUpperCase()}',
+                      'Matching plan for ${_subscriptionSelectionLabel()}',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 13,
@@ -1245,7 +1240,13 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                                           couponError = '';
                                         });
                                         
-                                        final validation = await propProvider.validateSubscriptionCoupon(enteredCode, planId);
+                                        final validation = await propProvider.validateSubscriptionCoupon(
+                                          enteredCode,
+                                          planId,
+                                          propertyCategory: _category,
+                                          bhkType: _bhkType,
+                                          areaSqft: _selectedAreaSqft(),
+                                        );
                                         if (validation != null && validation['valid'] == true) {
                                           setModalState(() {
                                             appliedCouponCode = enteredCode;
@@ -1300,7 +1301,13 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                                           side: const BorderSide(color: AppTheme.primary, width: 0.5),
                                           onPressed: () async {
                                             couponController.text = code;
-                                            final validation = await propProvider.validateSubscriptionCoupon(code, planId);
+                                            final validation = await propProvider.validateSubscriptionCoupon(
+                                              code,
+                                              planId,
+                                              propertyCategory: _category,
+                                              bhkType: _bhkType,
+                                              areaSqft: _selectedAreaSqft(),
+                                            );
                                             if (validation != null && validation['valid'] == true) {
                                               setModalState(() {
                                                 appliedCouponCode = code;
@@ -1713,6 +1720,34 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
         ),
       ),
     );
+  }
+
+  double? _selectedAreaSqft() => double.tryParse(_areaController.text.trim());
+
+  String _targetSubscriptionPlanType() {
+    if (_category == 'commercial') return 'commercial';
+    if (_category == 'event_venue') return 'banquet';
+
+    const bhkPlanMap = {
+      'studio': 'studio',
+      '1bhk': '1bhk',
+      '2bhk': '2bhk',
+      '3bhk': '3bhk',
+      '4bhk': '4bhk_plus',
+      '5bhk': '4bhk_plus',
+    };
+    return bhkPlanMap[_bhkType.toLowerCase()] ?? '1bhk';
+  }
+
+  String _subscriptionSelectionLabel() {
+    final area = _selectedAreaSqft();
+    if (_category == 'commercial') {
+      return 'Commercial space${area == null ? '' : ' - ${area.toStringAsFixed(0)} sqft'}';
+    }
+    if (_category == 'event_venue') {
+      return 'Event venue${area == null ? '' : ' - ${area.toStringAsFixed(0)} sqft'}';
+    }
+    return _bhkType.toUpperCase();
   }
 
   @override

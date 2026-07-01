@@ -18,6 +18,10 @@ class Coupon(BaseModel):
     discount_value: float
     coupon_type: CouponType
     property_id: Optional[str] = None
+    plan_type: Optional[str] = None
+    property_category: Optional[str] = None
+    bhk_type: Optional[str] = None
+    sqft_range: Optional[str] = None
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -27,3 +31,7 @@ class CouponCreate(BaseModel):
     discount_value: float
     coupon_type: CouponType
     property_id: Optional[str] = None
+    plan_type: Optional[str] = None
+    property_category: Optional[str] = None
+    bhk_type: Optional[str] = None
+    sqft_range: Optional[str] = None

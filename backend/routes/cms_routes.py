@@ -211,6 +211,19 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                 "is_active": True,
                 "created_at": now,
                 "updated_at": now
+            },
+            {
+                "content_id": "cms_agreement_default",
+                "page": "landing",
+                "section": "agreement",
+                "content_type": "object",
+                "content_data": {
+                    "title": "SHORT-TERM RENTAL HOST AGREEMENT",
+                    "agreement_text": "This Short-Term Rental Agreement (the \"Agreement\") is entered into by and between the Property Owner (hereinafter referred to as the \"Host\") and X-Space360.\n\n1. Listing Permission: The Host hereby grants X-Space360 the non-exclusive right to list and market their verified properties on the X-Space360 booking application and coordinate reservations.\n\n2. Compliance & Legalities: The Host guarantees that they are the legal owner or authorized representative of the property, holding all necessary local government permissions, and complies with local taxation and occupancy regulations.\n\n3. Platform Services & Fees: X-Space360 coordinates checkout billing, handles guest verification, and processes payouts. X-Space360 will deduct its standard platform service fee from host payouts.\n\n4. Host Standards: The Host agrees to maintain properties in clean, functional, and guest-ready conditions. High hospitality standards, correct GPS geolocation, and physical representation of all amenities are mandatory."
+                },
+                "is_active": True,
+                "created_at": now,
+                "updated_at": now
             }
         ]
         for item in default_content:
@@ -285,6 +298,25 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                     "description": "Book within 7 days and save up to $100 on your next stay. Terms apply.",
                     "button_text": "Log in to claim offer",
                     "image_url": "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=600"
+                },
+                "is_active": True,
+                "created_at": now,
+                "updated_at": now
+            })
+
+        agreement_doc = await db.cms_content.find_one(
+            {"page": "landing", "section": "agreement"}, {"_id": 0}
+        )
+        if not agreement_doc:
+            now = datetime.now(timezone.utc)
+            await db.cms_content.insert_one({
+                "content_id": "cms_agreement_default",
+                "page": "landing",
+                "section": "agreement",
+                "content_type": "object",
+                "content_data": {
+                    "title": "SHORT-TERM RENTAL HOST AGREEMENT",
+                    "agreement_text": "This Short-Term Rental Agreement (the \"Agreement\") is entered into by and between the Property Owner (hereinafter referred to as the \"Host\") and X-Space360.\n\n1. Listing Permission: The Host hereby grants X-Space360 the non-exclusive right to list and market their verified properties on the X-Space360 booking application and coordinate reservations.\n\n2. Compliance & Legalities: The Host guarantees that they are the legal owner or authorized representative of the property, holding all necessary local government permissions, and complies with local taxation and occupancy regulations.\n\n3. Platform Services & Fees: X-Space360 coordinates checkout billing, handles guest verification, and processes payouts. X-Space360 will deduct its standard platform service fee from host payouts.\n\n4. Host Standards: The Host agrees to maintain properties in clean, functional, and guest-ready conditions. High hospitality standards, correct GPS geolocation, and physical representation of all amenities are mandatory."
                 },
                 "is_active": True,
                 "created_at": now,

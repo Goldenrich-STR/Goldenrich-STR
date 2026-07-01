@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { propertyAPI, subscriptionAPI, getImageUrl, accountAPI, uploadAPI, loadRazorpaySdk } from '../services/api';
+import { propertyAPI, subscriptionAPI, getImageUrl, accountAPI, uploadAPI, loadRazorpaySdk, cmsAPI } from '../services/api';
+import ReactMarkdown from 'react-markdown';
 import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2, Clock, Users, Landmark, Briefcase, User } from 'lucide-react';
 import { NotificationBell } from '../components/NotificationCenter';
 import LegalLinks from '../components/LegalLinks';
@@ -27,6 +28,12 @@ const HostDashboard = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAgreementModal, setShowAgreementModal] = useState(false);
   const [verificationSubmitting, setVerificationSubmitting] = useState(false);
+
+  // Dynamic Host Agreement State
+  const [agreementContent, setAgreementContent] = useState({
+    title: 'SHORT-TERM RENTAL HOST AGREEMENT',
+    agreement_text: 'This Short-Term Rental Agreement (the "Agreement") is entered into by and between the Property Owner (hereinafter referred to as the "Host") and X-Space360.\n\n1. Listing Permission: The Host hereby grants X-Space360 the non-exclusive right to list and market their verified properties on the X-Space360 booking application and coordinate reservations.\n\n2. Compliance & Legalities: The Host guarantees that they are the legal owner or authorized representative of the property, holding all necessary local government permissions, and complies with local taxation and occupancy regulations.\n\n3. Platform Services & Fees: X-Space360 coordinates checkout billing, handles guest verification, and processes payouts. X-Space360 will deduct its standard platform service fee from host payouts.\n\n4. Host Standards: The Host agrees to maintain properties in clean, functional, and guest-ready conditions. High hospitality standards, correct GPS geolocation, and physical representation of all amenities are mandatory.'
+  });
   
     // KYC Documents Form State
   const [aadharCard, setAadharCard] = useState('');
@@ -88,18 +95,22 @@ const HostDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const [propRes, subRes, plansRes, configRes, payoutsRes] = await Promise.all([
+      const [propRes, subRes, plansRes, configRes, payoutsRes, cmsRes] = await Promise.all([
         propertyAPI.getHostProperties(),
         subscriptionAPI.getUserSubscriptions(),
         subscriptionAPI.getPlans(),
         subscriptionAPI.getPaymentConfig(),
-        accountAPI.listMyPayouts().catch(() => ({ data: { payouts: [] } }))
+        accountAPI.listMyPayouts().catch(() => ({ data: { payouts: [] } })),
+        cmsAPI.getLandingPage().catch(() => null)
       ]);
       setProperties(propRes.data.properties || []);
       setSubscriptions(subRes.data.subscriptions || []);
       setPlans(plansRes.data.plans || []);
       setPaymentConfig(configRes.data);
       setPayouts(payoutsRes.data.payouts || []);
+      if (cmsRes && cmsRes.data && cmsRes.data.agreement) {
+        setAgreementContent(cmsRes.data.agreement);
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -1365,13 +1376,9 @@ const HostDashboard = () => {
                 </button>
               </div>
 
-              <div className="bg-stone p-6 rounded-2xl text-[11px] text-charcoal-light leading-relaxed h-48 overflow-y-auto mb-6 border border-gray-100 select-none">
-                <p className="font-bold mb-2">SHORT-TERM RENTAL HOST AGREEMENT</p>
-                <p className="mb-2">This Short-Term Rental Agreement (the "Agreement") is entered into by and between the Property Owner (hereinafter referred to as the "Host") and X-Space360.</p>
-                <p className="mb-2">1. Listing Permission: The Host hereby grants X-Space360 the non-exclusive right to list and market their verified properties on the X-Space360 booking application and coordinate reservations.</p>
-                <p className="mb-2">2. Compliance & Legalities: The Host guarantees that they are the legal owner or authorized representative of the property, holding all necessary local government permissions, and complies with local taxation and occupancy regulations.</p>
-                <p className="mb-2">3. Platform Services & Fees: X-Space360 coordinates checkout billing, handles guest verification, and processes payouts. X-Space360 will deduct its standard platform service fee from host payouts.</p>
-                <p className="mb-2">4. Host Standards: The Host agrees to maintain properties in clean, functional, and guest-ready conditions. High hospitality standards, correct GPS geolocation, and physical representation of all amenities are mandatory.</p>
+              <div className="bg-stone p-6 rounded-2xl text-[11px] text-charcoal-light leading-relaxed h-56 overflow-y-auto mb-6 border border-gray-100 select-text prose prose-sm max-w-none markdown-body">
+                <p className="font-bold mb-3 text-sm text-charcoal uppercase tracking-wider">{agreementContent.title || 'SHORT-TERM RENTAL HOST AGREEMENT'}</p>
+                <ReactMarkdown>{agreementContent.agreement_text || ''}</ReactMarkdown>
               </div>
 
               <div className="space-y-4">

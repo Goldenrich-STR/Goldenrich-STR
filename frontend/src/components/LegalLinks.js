@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { cmsAPI } from '../services/api';
 
 const DEFAULT_LEGAL = {
@@ -30,8 +31,8 @@ const LegalLinks = ({ className = '' }) => {
 
   const openLegal = (type) => {
     setModal(type === 'terms'
-      ? { title: 'Terms & Conditions', text: legal.terms_text || DEFAULT_LEGAL.terms_text }
-      : { title: 'Privacy Policy', text: legal.privacy_text || DEFAULT_LEGAL.privacy_text });
+      ? { title: legal.terms_label || 'Terms & Conditions', text: legal.terms_text || DEFAULT_LEGAL.terms_text }
+      : { title: legal.privacy_label || 'Privacy Policy', text: legal.privacy_text || DEFAULT_LEGAL.privacy_text });
   };
 
   return (
@@ -44,9 +45,9 @@ const LegalLinks = ({ className = '' }) => {
             e.stopPropagation();
             openLegal('terms');
           }}
-          className="text-terracotta hover:underline"
+          className="text-terracotta hover:underline font-bold"
         >
-          Terms & Conditions
+          {legal.terms_label || 'Terms & Conditions'}
         </button>
         <span> and </span>
         <button
@@ -56,9 +57,9 @@ const LegalLinks = ({ className = '' }) => {
             e.stopPropagation();
             openLegal('privacy');
           }}
-          className="text-terracotta hover:underline"
+          className="text-terracotta hover:underline font-bold"
         >
-          Privacy Policy
+          {legal.privacy_label || 'Privacy Policy'}
         </button>
       </span>
 
@@ -76,7 +77,9 @@ const LegalLinks = ({ className = '' }) => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-sm text-charcoal-light leading-relaxed whitespace-pre-line">{modal.text}</p>
+            <div className="text-sm text-charcoal-light leading-relaxed prose prose-sm max-w-none markdown-body">
+              <ReactMarkdown>{modal.text}</ReactMarkdown>
+            </div>
           </div>
         </div>
       )}
