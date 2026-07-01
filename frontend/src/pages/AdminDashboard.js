@@ -3007,6 +3007,9 @@ const PropertyModeration = () => {
   const [activeReviewProperty, setActiveReviewProperty] = useState(null);
   const [adminChecklist, setAdminChecklist] = useState({});
   const [propertyRejectionState, setPropertyRejectionState] = useState(null);
+  const [deleteState, setDeleteState] = useState(null);
+  const [permanentDeleteState, setPermanentDeleteState] = useState(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const CHECKLIST_LABELS = {
     property_owner_verification: "Property Owner Verification",
@@ -3028,6 +3031,8 @@ const PropertyModeration = () => {
       fetchAwaitingFinalApproval();
     } else if (statusFilter === 'pending_verification') {
       fetchPendingProperties();
+    } else if (statusFilter === 'deleted') {
+      fetchDeletedProperties();
     } else {
       fetchAllProperties();
     }
@@ -3036,6 +3041,7 @@ const PropertyModeration = () => {
   const refresh = () => {
     if (statusFilter === 'awaiting_final_approval') fetchAwaitingFinalApproval();
     else if (statusFilter === 'pending_verification') fetchPendingProperties();
+    else if (statusFilter === 'deleted') fetchDeletedProperties();
     else fetchAllProperties();
   };
 
@@ -3070,6 +3076,54 @@ const PropertyModeration = () => {
       console.error('Error fetching properties:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDeletedProperties = async () => {
+    try {
+      const response = await adminAPI.getDeletedProperties({ limit: 200 });
+      setProperties(response.data.properties || []);
+    } catch (error) {
+      console.error('Error fetching deleted properties:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteProperty = async () => {
+    const reason = (deleteState?.reason || '').trim();
+    if (!deleteState?.property || reason.length < 10) return;
+
+    setDeleteSubmitting(true);
+    try {
+      await propertyAPI.deleteProperty(deleteState.property.property_id, reason);
+      setDeleteState(null);
+      refresh();
+    } catch (error) {
+      const message = error?.response?.data?.detail || 'Failed to delete property';
+      alert(message);
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    const propertyId = permanentDeleteState?.property?.property_id;
+    if (!propertyId || permanentDeleteState.confirmation.trim() !== propertyId) return;
+
+    setDeleteSubmitting(true);
+    try {
+      await adminAPI.permanentlyDeleteProperty(
+        propertyId,
+        permanentDeleteState.confirmation.trim()
+      );
+      setPermanentDeleteState(null);
+      refresh();
+    } catch (error) {
+      const message = error?.response?.data?.detail || 'Failed to permanently delete property';
+      alert(message);
+    } finally {
+      setDeleteSubmitting(false);
     }
   };
 
@@ -3139,6 +3193,7 @@ const PropertyModeration = () => {
             <option value="all">All Properties</option>
             <option value="live">Live</option>
             <option value="rejected">Rejected</option>
+            <option value="deleted">Deleted Properties</option>
           </select>
         </div>
       </div>
@@ -3157,7 +3212,7 @@ const PropertyModeration = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-center space-x-5 flex-1 min-w-0">
                     <img
-                      src={property.images?.[0] || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
+                      src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                       alt={property.title}
                       className="w-20 h-20 rounded-[18px] object-cover shadow-sm flex-shrink-0"
                     />
@@ -3181,28 +3236,62 @@ const PropertyModeration = () => {
                             'bg-[#F3F4F6] text-[#4B5563]'
                           }`}
                         >
-                          {property.status.replace('_', ' ').toUpperCase()}
+                          {(property.status || 'unknown').replaceAll('_', ' ').toUpperCase()}
                         </span>
                       </div>
+                      {statusFilter === 'deleted' && (
+                        <div className="mt-2 text-xs text-[#6B7280]">
+                          <p>
+                            <span className="font-semibold text-[#374151]">Reason:</span>{' '}
+                            {property.deletion_reason || 'Not provided'}
+                          </p>
+                          {property.deleted_at && (
+                            <p className="mt-1">
+                              Deleted: {new Date(property.deleted_at).toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center space-x-2.5 flex-wrap justify-start md:justify-end">
-                    <button
-                      onClick={() => navigate(`/property/${property.property_id}`)}
-                      className="flex items-center space-x-1.5 px-4 py-2 border border-[#E5E7EB] text-[#4B5563] bg-white rounded-full font-bold text-xs hover:bg-gray-50 transition-all shadow-sm"
-                      title="View property"
-                    >
-                      <EyeIcon className="w-3.5 h-3.5" />
-                      <span>View</span>
-                    </button>
-                    <button
-                      onClick={() => navigate(`/host/list-property?edit=${property.property_id}`)}
-                      className="flex items-center space-x-1.5 px-4 py-2 border border-[#DBEAFE] text-[#2563EB] bg-[#EFF6FF] rounded-full font-bold text-xs hover:bg-[#DBEAFE]/80 transition-all shadow-sm"
-                      title="Edit property"
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                      <span>Edit</span>
-                    </button>
+                    {statusFilter !== 'deleted' ? (
+                      <>
+                        <button
+                          onClick={() => navigate(`/property/${property.property_id}`)}
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#E5E7EB] text-[#4B5563] bg-white rounded-full font-bold text-xs hover:bg-gray-50 transition-all shadow-sm"
+                          title="View property"
+                        >
+                          <EyeIcon className="w-3.5 h-3.5" />
+                          <span>View</span>
+                        </button>
+                        <button
+                          onClick={() => navigate(`/host/list-property?edit=${property.property_id}`)}
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#DBEAFE] text-[#2563EB] bg-[#EFF6FF] rounded-full font-bold text-xs hover:bg-[#DBEAFE]/80 transition-all shadow-sm"
+                          title="Edit property"
+                        >
+                          <Edit className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => setDeleteState({ property, reason: '' })}
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#FECACA] text-[#DC2626] bg-[#FEF2F2] rounded-full font-bold text-xs hover:bg-[#FEE2E2] transition-all shadow-sm"
+                          title="Delete property"
+                        >
+                          <Trash className="w-3.5 h-3.5" />
+                          <span>Delete</span>
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setPermanentDeleteState({ property, confirmation: '' })}
+                        className="flex items-center space-x-1.5 px-4 py-2 border border-[#991B1B] text-white bg-[#B91C1C] rounded-full font-bold text-xs hover:bg-[#991B1B] transition-all shadow-sm"
+                        title="Permanently delete property"
+                      >
+                        <Trash className="w-3.5 h-3.5" />
+                        <span>Permanently Delete</span>
+                      </button>
+                    )}
                     {canActOn(property) && (
                       <>
                         <button
@@ -3252,6 +3341,117 @@ const PropertyModeration = () => {
         <div className="dashboard-card text-center py-12">
           <Building2 className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
           <p className="text-charcoal-light">No properties in this queue</p>
+        </div>
+      )}
+
+      {deleteState && (
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[160] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-premium">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="text-xl font-bold text-charcoal">Delete property</h4>
+                <p className="text-sm text-charcoal-muted mt-1">{deleteState.property.title}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteState(null)}
+                className="p-2 text-charcoal-muted hover:text-charcoal"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <label className="block mt-6 text-xs font-bold text-charcoal uppercase tracking-wider">
+              Deletion reason
+            </label>
+            <textarea
+              autoFocus
+              value={deleteState.reason}
+              onChange={(event) => setDeleteState({ ...deleteState, reason: event.target.value })}
+              placeholder="Explain why this property is being deleted"
+              className="input-field w-full min-h-[110px] mt-2 resize-y"
+            />
+            <p className="text-xs text-charcoal-muted mt-2">
+              Minimum 10 characters. The property will move to Deleted Properties.
+            </p>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setDeleteState(null)}
+                className="px-4 py-2 text-sm font-semibold text-charcoal hover:bg-gray-50 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteProperty}
+                disabled={deleteSubmitting || deleteState.reason.trim().length < 10}
+                className="px-4 py-2 bg-[#DC2626] text-white rounded-lg text-sm font-bold hover:bg-[#B91C1C] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleteSubmitting ? 'Deleting...' : 'Delete property'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {permanentDeleteState && (
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[160] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full shadow-premium">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h4 className="text-xl font-bold text-[#991B1B]">Permanently delete property</h4>
+                <p className="text-sm text-charcoal-muted mt-1">
+                  This removes the archived property and its saved listing details from the database.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPermanentDeleteState(null)}
+                className="p-2 text-charcoal-muted hover:text-charcoal"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-sm text-charcoal mt-6">
+              Enter Property ID <span className="font-mono font-bold">{permanentDeleteState.property.property_id}</span> to confirm.
+            </p>
+            <input
+              autoFocus
+              value={permanentDeleteState.confirmation}
+              onChange={(event) => setPermanentDeleteState({
+                ...permanentDeleteState,
+                confirmation: event.target.value,
+              })}
+              className="input-field w-full mt-2 font-mono"
+              placeholder="Property ID"
+            />
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setPermanentDeleteState(null)}
+                className="px-4 py-2 text-sm font-semibold text-charcoal hover:bg-gray-50 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handlePermanentDelete}
+                disabled={
+                  deleteSubmitting ||
+                  permanentDeleteState.confirmation.trim() !== permanentDeleteState.property.property_id
+                }
+                className="px-4 py-2 bg-[#991B1B] text-white rounded-lg text-sm font-bold hover:bg-[#7F1D1D] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleteSubmitting ? 'Deleting...' : 'Permanently delete'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

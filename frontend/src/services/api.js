@@ -521,6 +521,10 @@ export const couponAPI = {
 // Admin API
 export const adminAPI = {
   getSearchLogs: (params) => apiClient.get('/admin/search-logs', { params }),
+  getDeletedProperties: (params = {}) =>
+    apiClient.get('/admin/properties/deleted', { params }),
+  permanentlyDeleteProperty: (propertyId, confirmation) =>
+    apiClient.post(`/admin/properties/deleted/${propertyId}/permanent-delete`, { confirmation }),
   downloadUsersCsv: async (params = {}) => {
     const res = await apiClient.get('/admin/users/export-csv', {
       params,
