@@ -301,7 +301,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     <div className="space-y-3">
                        <div className="flex justify-between items-center px-1">
                           <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase">Password</label>
-                          <button type="button" className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-wider hover:underline underline-offset-4">Forgot Password?</button>
+                          <button
+                             type="button"
+                             onClick={() => navigate(`/forgot-password?login=${encodeURIComponent(isAdminLogin ? '/admin/login' : '/login')}`)}
+                             className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-wider hover:underline underline-offset-4"
+                          >
+                             Forgot Password?
+                          </button>
                        </div>
                        <div className="relative group">
                           <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-sand-400 group-focus-within:text-terracotta transition-all z-10" />

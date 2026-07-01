@@ -11,7 +11,9 @@ import phonenumbers
 from phonenumbers.phonenumberutil import NumberParseException
 import logging
 import httpx
+import hashlib
 import os
+import re
 import secrets
 from datetime import datetime, timezone
 from urllib.parse import urlencode
@@ -41,6 +43,25 @@ class ResetPasswordRequest(BaseModel):
     password: str
 
 GOLDENRICH_SSO_COOKIE = "goldenrich_sso_state"
+PASSWORD_RESET_TTL_SECONDS = 30 * 60
+
+
+def _password_reset_token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _password_validation_error(password: str) -> str | None:
+    if len(password) < 8:
+        return "Password must be at least 8 characters"
+    if not re.search(r"[A-Z]", password):
+        return "Password must include an uppercase letter"
+    if not re.search(r"[a-z]", password):
+        return "Password must include a lowercase letter"
+    if not re.search(r"\d", password):
+        return "Password must include a number"
+    if not any(not character.isalnum() and not character.isspace() for character in password):
+        return "Password must include a special character"
+    return None
 
 def _env(name: str, default: str = "") -> str:
     return os.getenv(name, default).strip()
@@ -357,25 +378,49 @@ async def forgot_password(request: ForgotPasswordRequest, db: AsyncIOMotorDataba
         user = await db.users.find_one({"email": email}, {"_id": 0})
         if user:
             token = secrets.token_urlsafe(32)
-            expires_at = datetime.now(timezone.utc).timestamp() + 3600
+            now = datetime.now(timezone.utc)
+            expires_at = now.timestamp() + PASSWORD_RESET_TTL_SECONDS
+            await db.password_reset_tokens.update_many(
+                {"user_id": user["user_id"], "used": False},
+                {"$set": {
+                    "used": True,
+                    "invalidated_at": now,
+                    "invalidation_reason": "superseded",
+                }},
+            )
             await db.password_reset_tokens.insert_one({
-                "token": token,
+                "token_hash": _password_reset_token_hash(token),
                 "user_id": user["user_id"],
                 "email": email,
                 "expires_at": expires_at,
                 "used": False,
-                "created_at": datetime.now(timezone.utc),
+                "created_at": now,
             })
             try:
                 from services.email_service import email_service
-                email_service.send_template(
+                login_path = "/admin/login" if user.get("role") == UserRole.ADMIN.value else "/login"
+                reset_url = _frontend_url(
+                    "/reset-password",
+                    {"token": token, "login": login_path},
+                )
+                email_result = email_service.send_template(
                     email,
                     "password_reset",
                     {
                         "name": user.get("full_name", "there"),
-                        "action_url": _frontend_url("/reset-password", {"token": token}),
+                        "email": email,
+                        "action_url": reset_url,
+                        "reset_password_url": reset_url,
+                        "request_date": now,
+                        "reset_request_time": now,
                     },
                 )
+                if not email_result.get("success"):
+                    logger.error(
+                        "Password reset email provider rejected request for %s: %s",
+                        email,
+                        email_result.get("error", "unknown error"),
+                    )
             except Exception as email_err:
                 logger.warning("Password reset email failed for %s: %s", email, email_err)
         return {"message": "If this email is registered, a reset link has been sent."}
@@ -386,20 +431,29 @@ async def forgot_password(request: ForgotPasswordRequest, db: AsyncIOMotorDataba
 @router.post("/reset-password")
 async def reset_password(request: ResetPasswordRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
     """Reset password using a valid password reset token."""
-    token_doc = await db.password_reset_tokens.find_one({"token": request.token, "used": False})
+    token = request.token.strip()
+    token_doc = await db.password_reset_tokens.find_one({
+        "token_hash": _password_reset_token_hash(token),
+        "used": False,
+    })
     if not token_doc or token_doc.get("expires_at", 0) < datetime.now(timezone.utc).timestamp():
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
-    if len(request.password.strip()) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    password_error = _password_validation_error(request.password)
+    if password_error:
+        raise HTTPException(status_code=400, detail=password_error)
+    user = await db.users.find_one({"user_id": token_doc["user_id"]}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
     await db.users.update_one(
         {"user_id": token_doc["user_id"]},
         {"$set": {"password_hash": hash_password(request.password), "updated_at": datetime.now(timezone.utc)}},
     )
     await db.password_reset_tokens.update_one(
-        {"token": request.token},
+        {"token_hash": _password_reset_token_hash(token)},
         {"$set": {"used": True, "used_at": datetime.now(timezone.utc)}},
     )
-    return {"message": "Password reset successfully"}
+    login_path = "/admin/login" if user.get("role") == UserRole.ADMIN.value else "/login"
+    return {"message": "Password reset successfully", "login_path": login_path}
 
 @router.get("/sso/goldenrich/login")
 async def goldenrich_sso_login():

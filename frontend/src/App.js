@@ -8,6 +8,7 @@ import SEO from "./components/SEO";
 // Pages (Code-splitted with dynamic lazy imports)
 const LandingPage = lazy(() => import("./pages/LandingPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
+const PasswordRecoveryPage = lazy(() => import("./pages/PasswordRecoveryPage"));
 const GuestBrowse = lazy(() => import("./pages/GuestBrowse"));
 const GuestBookings = lazy(() => import("./pages/GuestBookings"));
 const HostDashboard = lazy(() => import("./pages/HostDashboard"));
@@ -150,6 +151,8 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<AuthPage />} />
               <Route path="/register" element={<AuthPage />} />
+              <Route path="/forgot-password" element={<PasswordRecoveryPage mode="forgot" />} />
+              <Route path="/reset-password" element={<PasswordRecoveryPage mode="reset" />} />
               <Route path="/admin" element={<AuthPage isAdminLogin={true} />} />
               <Route path="/admin/login" element={<AuthPage isAdminLogin={true} />} />
               <Route path="/property/:id" element={<PropertyDetail />} />

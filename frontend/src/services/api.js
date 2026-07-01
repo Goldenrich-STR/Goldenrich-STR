@@ -164,6 +164,12 @@ export const authAPI = {
 
   adminLogin: (email, password) =>
     apiClient.post('/api/auth/admin-login', { email, password }),
+
+  forgotPassword: (email) =>
+    apiClient.post('/api/auth/forgot-password', { email }),
+
+  resetPassword: (token, password) =>
+    apiClient.post('/api/auth/reset-password', { token, password }),
 };
 
 // Property API
