@@ -1533,7 +1533,7 @@ const LandingPage = () => {
         </div>
 
         {/* ── Hero Content ── */}
-        <div className="relative z-30 max-w-7xl mx-auto px-6 md:px-12 lg:px-20 h-full flex flex-col justify-center pt-24 pb-12 text-left">
+        <div className="relative z-30 max-w-7xl mx-auto px-6 md:px-12 lg:px-20 h-full flex flex-col justify-center pt-40 md:pt-24 pb-12 text-left">
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end w-full">
             {/* Left side: Heading & Search Bar */}
@@ -1643,8 +1643,14 @@ const LandingPage = () => {
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
                     
                     {/* Check-in */}
-                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
-                      <Calendar className="w-5 h-5 text-gray-400 mr-3" />
+                    <div 
+                      onClick={() => {
+                        const el = document.getElementById('landing-check-in');
+                        if (el) { el.focus(); try { el.showPicker(); } catch(e) {} }
+                      }}
+                      className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition group"
+                    >
+                      <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors" />
                       <div className="w-full text-left">
                         <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
                         <input
@@ -1653,19 +1659,25 @@ const LandingPage = () => {
                           type={dates.checkIn ? "date" : "text"}
                           onFocus={(e) => e.target.type = 'date'}
                           onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                          placeholder="Check-in"
+                          placeholder="Add dates"
                           min={todayISO}
                           value={dates.checkIn}
                           onChange={(e) => setDates({ ...dates, checkIn: e.target.value })}
-                          className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5"
+                          className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5 cursor-pointer pointer-events-none md:pointer-events-auto"
                         />
                       </div>
                     </div>
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
                     
                     {/* Check-out */}
-                    <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
-                      <Calendar className="w-5 h-5 text-gray-400 mr-3" />
+                    <div 
+                      onClick={() => {
+                        const el = document.getElementById('landing-check-out');
+                        if (el) { el.focus(); try { el.showPicker(); } catch(e) {} }
+                      }}
+                      className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition group"
+                    >
+                      <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors" />
                       <div className="w-full text-left">
                         <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
                         <input
@@ -1674,11 +1686,11 @@ const LandingPage = () => {
                           type={dates.checkOut ? "date" : "text"}
                           onFocus={(e) => e.target.type = 'date'}
                           onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                          placeholder="Check-out"
+                          placeholder="Add dates"
                           min={dates.checkIn || todayISO}
                           value={dates.checkOut}
                           onChange={(e) => setDates({ ...dates, checkOut: e.target.value })}
-                          className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5"
+                          className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5 cursor-pointer pointer-events-none md:pointer-events-auto"
                         />
                       </div>
                     </div>

@@ -382,7 +382,7 @@ const ReviewForm = ({ user, propertyId, t, setProperty, onSuccess }) => {
       <h3 className="text-2xl font-bold tracking-tight text-charcoal mb-8 tracking-tight relative z-10">Leave a Review</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6 mb-10 relative z-10">
         {Object.entries(subRatings).map(([key, val]) => (
-          <div key={key} className="flex justify-between items-center bg-stone/80 p-5 rounded-2xl border border-sand-100 hover:border-terracotta/30 transition-all duration-300 hover:shadow-sm">
+          <div key={key} className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-stone/80 p-4 sm:p-5 rounded-2xl border border-sand-100 hover:border-terracotta/30 transition-all duration-300 hover:shadow-sm gap-2 sm:gap-0">
             <span className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">{t(key) || key.replace('_', ' ')}</span>
             <div className="flex space-x-1">
               {[1, 2, 3, 4, 5].map((n) => (

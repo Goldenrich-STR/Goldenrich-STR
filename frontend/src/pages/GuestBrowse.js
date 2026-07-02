@@ -749,8 +749,14 @@ const GuestBrowse = () => {
               <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
               
               {/* Check-in */}
-              <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
-                <Calendar className="w-5 h-5 text-gray-400 mr-3" />
+              <div 
+                onClick={() => {
+                  const el = document.getElementById('browse-check-in');
+                  if (el) { el.focus(); try { el.showPicker(); } catch(e) {} }
+                }}
+                className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition group"
+              >
+                <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors" />
                 <div className="w-full text-left">
                   <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
                   <input
@@ -759,19 +765,25 @@ const GuestBrowse = () => {
                     type={filters.check_in ? "date" : "text"}
                     onFocus={(e) => e.target.type = 'date'}
                     onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                    placeholder="Check-in"
+                    placeholder="Add dates"
                     min={todayISO}
                     value={filters.check_in}
                     onChange={(e) => setFilters({ ...filters, check_in: e.target.value })}
-                    className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5"
+                    className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5 cursor-pointer pointer-events-none md:pointer-events-auto"
                   />
                 </div>
               </div>
               <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
               
               {/* Check-out */}
-              <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
-                <Calendar className="w-5 h-5 text-gray-400 mr-3" />
+              <div 
+                onClick={() => {
+                  const el = document.getElementById('browse-check-out');
+                  if (el) { el.focus(); try { el.showPicker(); } catch(e) {} }
+                }}
+                className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition group"
+              >
+                <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors" />
                 <div className="w-full text-left">
                   <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
                   <input
@@ -780,11 +792,11 @@ const GuestBrowse = () => {
                     type={filters.check_out ? "date" : "text"}
                     onFocus={(e) => e.target.type = 'date'}
                     onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                    placeholder="Check-out"
+                    placeholder="Add dates"
                     min={filters.check_in || todayISO}
                     value={filters.check_out}
                     onChange={(e) => setFilters({ ...filters, check_out: e.target.value })}
-                    className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5"
+                    className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5 cursor-pointer pointer-events-none md:pointer-events-auto"
                   />
                 </div>
               </div>
