@@ -2715,7 +2715,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
                     {viewUser.agreement_signature && (
                       <div className="p-5 bg-stone/50 border border-gray-100 rounded-2xl space-y-3">
-                        <h4 className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest border-b border-sand-100 pb-1">GR & Owner Agreement</h4>
+                        <h4 className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest border-b border-sand-100 pb-1">X-Space360 GRP & Owner (Host) Agreement.</h4>
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
                             <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Owner Name</span>

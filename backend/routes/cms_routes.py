@@ -10,6 +10,40 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/cms", tags=["CMS"])
 
+HOST_AGREEMENT_TEXT = """## SHORT-TERM RENTAL HOST AGREEMENT
+
+This Short-Term Rental Host Agreement ("Agreement") is executed between **X-Space360 / Golden Rich Financial & Real Estate Solutions Private Limited** ("Platform") and the property owner or authorized host ("Host") for listing, promotion, booking facilitation, and guest coordination services through the X-Space360 platform.
+
+### 1. Appointment and Listing Authorization
+The Host appoints X-Space360 on a non-exclusive basis to display, promote, and facilitate bookings for the Host's property/properties. The Host confirms that all property information, photographs, documents, amenities, pricing, availability, and location details submitted to X-Space360 are true, complete, current, and not misleading.
+
+### 2. Ownership, Authority, and Compliance
+The Host represents that they are the lawful owner, lessee, manager, or duly authorized representative of the listed property and have full authority to enter into this Agreement. The Host shall remain responsible for all licenses, permissions, society approvals, statutory registrations, tax obligations, safety requirements, and local law compliance applicable to short-term rental operations.
+
+### 3. Platform Role and Services
+X-Space360 acts as a technology-enabled marketplace and service facilitator. The Platform may assist with listing visibility, guest discovery, booking coordination, guest verification, payment facilitation, support, and operational communication. X-Space360 does not assume ownership, possession, tenancy, or direct control of the Host's property.
+
+### 4. Host Duties and Property Standards
+The Host shall maintain the property in a clean, safe, functional, guest-ready, and legally compliant condition. The Host agrees to provide accurate check-in instructions, honor confirmed bookings, maintain promised amenities, respond to platform communications, and ensure that guests receive the accommodation and services represented in the listing.
+
+### 5. Payments, Charges, and Deductions
+The Host authorizes X-Space360 to collect or facilitate collection of booking amounts, applicable platform fees, subscription fees, taxes, penalties, refunds, adjustments, and other lawful deductions as per platform policy. Net payouts, where applicable, shall be processed after deducting platform charges, commissions, taxes, refunds, disputes, or other applicable amounts.
+
+### 6. Cancellations, Refunds, and Guest Issues
+The Host agrees to comply with X-Space360 cancellation, refund, guest grievance, and dispute resolution policies. X-Space360 may withhold or adjust payouts where bookings are cancelled, services are not delivered, guest claims are verified, property standards are breached, or legal/policy violations are identified.
+
+### 7. Documents, Verification, and Declarations
+The Host shall submit valid KYC, ownership, bank, tax, and other verification documents requested by X-Space360. The Host confirms that all submitted details are genuine and authorizes X-Space360 to verify documents and information with internal teams, third-party vendors, government sources, banks, brokers, employees, or other lawful channels.
+
+### 8. Indemnity and Liability
+The Host shall indemnify and hold X-Space360 harmless against claims, losses, penalties, damages, complaints, legal proceedings, guest disputes, regulatory actions, or third-party claims arising from property ownership, inaccurate information, unsafe premises, non-compliance, unauthorized listing, fraud, negligence, or breach of this Agreement by the Host.
+
+### 9. Termination and Suspension
+X-Space360 may suspend, restrict, delist, or terminate the Host's account, listing, subscription, or access if the Host breaches this Agreement, violates platform policies, submits false documents, causes guest harm, fails verification, or engages in unlawful, abusive, fraudulent, or reputation-damaging conduct.
+
+### 10. Acceptance and Electronic Signature
+By entering the Host's legal details and drawing/signing electronically, the Host confirms that they have read, understood, accepted, and agreed to be bound by this Agreement and all applicable X-Space360 platform policies. The electronic signature shall be treated as valid consent and acceptance for platform verification and onboarding purposes."""
+
 async def get_db():
     from server import db_instance
     return db_instance
@@ -217,7 +251,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                 "content_type": "object",
                 "content_data": {
                     "title": "SHORT-TERM RENTAL HOST AGREEMENT",
-                    "agreement_text": "This Short-Term Rental Agreement (the \"Agreement\") is entered into by and between the Property Owner (hereinafter referred to as the \"Host\") and X-Space360.\n\n1. Listing Permission: The Host hereby grants X-Space360 the non-exclusive right to list and market their verified properties on the X-Space360 booking application and coordinate reservations.\n\n2. Compliance & Legalities: The Host guarantees that they are the legal owner or authorized representative of the property, holding all necessary local government permissions, and complies with local taxation and occupancy regulations.\n\n3. Platform Services & Fees: X-Space360 coordinates checkout billing, handles guest verification, and processes payouts. X-Space360 will deduct its standard platform service fee from host payouts.\n\n4. Host Standards: The Host agrees to maintain properties in clean, functional, and guest-ready conditions. High hospitality standards, correct GPS geolocation, and physical representation of all amenities are mandatory."
+                    "agreement_text": HOST_AGREEMENT_TEXT
                 },
                 "is_active": True,
                 "created_at": now,
@@ -312,7 +346,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                 "content_type": "object",
                 "content_data": {
                     "title": "SHORT-TERM RENTAL HOST AGREEMENT",
-                    "agreement_text": "This Short-Term Rental Agreement (the \"Agreement\") is entered into by and between the Property Owner (hereinafter referred to as the \"Host\") and X-Space360.\n\n1. Listing Permission: The Host hereby grants X-Space360 the non-exclusive right to list and market their verified properties on the X-Space360 booking application and coordinate reservations.\n\n2. Compliance & Legalities: The Host guarantees that they are the legal owner or authorized representative of the property, holding all necessary local government permissions, and complies with local taxation and occupancy regulations.\n\n3. Platform Services & Fees: X-Space360 coordinates checkout billing, handles guest verification, and processes payouts. X-Space360 will deduct its standard platform service fee from host payouts.\n\n4. Host Standards: The Host agrees to maintain properties in clean, functional, and guest-ready conditions. High hospitality standards, correct GPS geolocation, and physical representation of all amenities are mandatory."
+                    "agreement_text": HOST_AGREEMENT_TEXT
                 },
                 "is_active": True,
                 "created_at": now,

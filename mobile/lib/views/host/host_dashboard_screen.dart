@@ -1263,7 +1263,7 @@ class _DocumentVerificationSheetState extends State<_DocumentVerificationSheet> 
                             children: [
                               const Icon(Icons.description, color: AppTheme.primary, size: 22),
                               const SizedBox(width: 8),
-                              Text('GR & Owner Agreement', style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+                              Text('X-Space360 GRP & Owner (Host) Agreement.', style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
                               const SizedBox(width: 6),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1274,7 +1274,7 @@ class _DocumentVerificationSheetState extends State<_DocumentVerificationSheet> 
                           ),
                           const SizedBox(height: 12),
                           const Text(
-                            'Review the STR platform agreement terms, enter details and sign below.',
+                            'Review the X-space360 platform T&C - Mutual Agreement between Host & X-space360 enter details and sign.',
                             style: TextStyle(fontSize: 12, color: AppTheme.charcoalLight),
                           ),
                           const SizedBox(height: 14),

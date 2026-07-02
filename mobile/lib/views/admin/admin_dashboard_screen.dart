@@ -2935,7 +2935,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             
                           const SizedBox(height: 24),
 
-                          // Section 3: GR & Owner Agreement
+                          // Section 3: X-Space360 GRP & Owner (Host) Agreement
                           const Text(
                             'AGREEMENT & SIGNATURE',
                             style: TextStyle(
@@ -2960,7 +2960,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     const Text(
-                                      'GR & Owner Agreement',
+                                      'X-Space360 GRP & Owner (Host) Agreement.',
                                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
                                     ),
                                     Container(

@@ -7,6 +7,7 @@ import SEO from '../components/SEO';
 import ChatbotWidget from '../components/ChatbotWidget';
 import LanguageSelector from '../components/LanguageSelector';
 import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
+import LegalDocument from '../components/LegalDocument';
 
 const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
 
@@ -1113,7 +1114,6 @@ const LandingPage = () => {
   const footerLegalItems = [
     { label: footerData.privacy_label || 'Privacy Policy', action_type: 'text', link: '', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text },
     { label: footerData.terms_label || 'Terms & Conditions', action_type: 'text', link: '', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text },
-    { label: 'Cookie Policy', action_type: 'text', link: '', text: 'X-Space360 uses essential cookies to keep accounts, bookings, payments, and security features working smoothly.' },
   ];
   const footerDisplaySections = footerSections;
   const handleFooterLink = (url, fallbackUrl = '/') => {
@@ -2235,20 +2235,39 @@ const LandingPage = () => {
 
       
       {footerPopup && (
-        <div className="fixed inset-0 z-[120] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="bg-white rounded-3xl shadow-elevated border border-gray-100 w-full max-w-xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
-            <div className="flex items-start justify-between gap-6 mb-6">
-              <h3 className="text-2xl font-bold tracking-tight text-charcoal">{footerPopup.title}</h3>
+        <div className="fixed inset-0 z-[120] bg-charcoal/70 backdrop-blur-sm flex items-center justify-center px-4 py-6">
+          <div
+            className="bg-white rounded-2xl shadow-elevated border border-gray-100 w-full max-w-4xl max-h-[88vh] overflow-hidden animate-scale-in"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="footer-legal-title"
+          >
+            <div className="px-6 py-5 md:px-8 border-b border-gray-100 bg-white flex items-start justify-between gap-5">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-terracotta mb-2">
+                  Legal Document
+                </p>
+                <h3 id="footer-legal-title" className="text-2xl md:text-3xl font-bold tracking-tight text-charcoal">
+                  {footerPopup.title}
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setFooterPopup(null)}
-                className="w-10 h-10 rounded-full border border-gray-100 text-charcoal-muted hover:text-charcoal hover:bg-stone transition flex items-center justify-center"
+                className="w-10 h-10 rounded-full border border-gray-100 text-charcoal-muted hover:text-charcoal hover:bg-stone transition flex items-center justify-center shrink-0"
                 aria-label="Close footer details"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-sm text-charcoal-light leading-relaxed whitespace-pre-line">{footerPopup.text}</p>
+            <div className="max-h-[calc(88vh-96px)] overflow-y-auto px-6 py-6 md:px-10 md:py-8">
+              <div className="rounded-xl border border-gray-100 bg-stone/40 px-4 py-3 mb-5">
+                <p className="text-xs leading-relaxed text-charcoal-muted">
+                  Please review this document carefully. These terms explain your rights, responsibilities, and platform usage conditions.
+                </p>
+              </div>
+              <LegalDocument text={footerPopup.text} />
+            </div>
           </div>
         </div>
       )}

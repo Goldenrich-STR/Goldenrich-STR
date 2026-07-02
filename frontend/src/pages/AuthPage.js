@@ -1,16 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star } from 'lucide-react';
 import { authAPI, apiClient } from '../services/api';
 import LegalLinks from '../components/LegalLinks';
 import SEO from '../components/SEO';
+import { INDIAN_CITIES } from '../lib/indianCities';
 
 const AuthPage = ({ isAdminLogin = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, adminLogin, register, logout } = useAuth();
   const forcedLogoutHandled = useRef(false);
+  const cityFieldRef = useRef(null);
   const searchParams = new URLSearchParams(window.location.search);
   const forceLogin = searchParams.get('force_login') === '1';
   const requestedNext = searchParams.get('next') || '';
@@ -41,6 +43,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
   const [otp, setOtp] = useState('');
   const [availableBrokers, setAvailableBrokers] = useState([]);
   const [availableEmployees, setAvailableEmployees] = useState([]);
+  const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (forceLogin && !forcedLogoutHandled.current) {
@@ -67,6 +70,22 @@ const AuthPage = ({ isAdminLogin = false }) => {
     };
     fetchBrokersAndEmployees();
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (cityFieldRef.current && !cityFieldRef.current.contains(event.target)) {
+        setCityDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredCities = useMemo(() => {
+    const query = registerData.city.trim().toLowerCase();
+    if (!query) return INDIAN_CITIES;
+    return INDIAN_CITIES.filter((city) => city.toLowerCase().includes(query));
+  }, [registerData.city]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -422,7 +441,11 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    required
                                 />
                              </div>
-                             <div className="space-y-2">
+                             <div
+                                ref={cityFieldRef}
+                                className="space-y-2 relative"
+                                onMouseEnter={() => setCityDropdownOpen(true)}
+                             >
                                 <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">City</label>
                                 <input
                                    id="register-city"
@@ -430,10 +453,47 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    type="text"
                                    autoComplete="address-level2"
                                    value={registerData.city}
-                                   onChange={(e) => setRegisterData({ ...registerData, city: e.target.value })}
+                                   onFocus={() => setCityDropdownOpen(true)}
+                                   onClick={() => setCityDropdownOpen(true)}
+                                   onKeyDown={(e) => {
+                                      if (e.key === 'Escape') setCityDropdownOpen(false);
+                                   }}
+                                   onChange={(e) => {
+                                      setRegisterData({ ...registerData, city: e.target.value });
+                                      setCityDropdownOpen(true);
+                                   }}
                                    className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
-                                   placeholder="Your City"
+                                   placeholder="Search or select city"
+                                   required
                                 />
+                                {cityDropdownOpen && (
+                                   <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-elevated">
+                                      <div className="max-h-64 overflow-y-auto py-2">
+                                         {filteredCities.length > 0 ? (
+                                            filteredCities.map((city) => (
+                                               <button
+                                                  key={city}
+                                                  type="button"
+                                                  onMouseDown={(e) => e.preventDefault()}
+                                                  onClick={() => {
+                                                     setRegisterData({ ...registerData, city });
+                                                     setCityDropdownOpen(false);
+                                                  }}
+                                                  className={`w-full px-5 py-3 text-left text-sm font-bold transition hover:bg-terracotta/10 hover:text-terracotta ${
+                                                     registerData.city === city ? 'bg-terracotta/10 text-terracotta' : 'text-charcoal'
+                                                  }`}
+                                               >
+                                                  {city}
+                                               </button>
+                                            ))
+                                         ) : (
+                                            <div className="px-5 py-4 text-sm font-semibold text-charcoal-muted">
+                                               No city found
+                                            </div>
+                                         )}
+                                      </div>
+                                   </div>
+                                )}
                              </div>
                           </div>
 
@@ -482,8 +542,8 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                 className="mt-1 w-5 h-5 text-terracotta rounded-lg border-gray-200 focus:ring-terracotta cursor-pointer flex-shrink-0"
                                 required
                              />
-                             <label className="text-[10px] text-charcoal-muted font-bold tracking-tight leading-relaxed uppercase tracking-widest cursor-pointer">
-                                I accept the <LegalLinks />.
+                             <label className="text-xs text-charcoal-muted font-semibold leading-relaxed cursor-pointer">
+                                I accept the <LegalLinks className="inline" />.
                              </label>
                           </div>
                           
