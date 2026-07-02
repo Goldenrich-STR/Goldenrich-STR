@@ -11,6 +11,7 @@ from pathlib import Path
 from uuid import uuid4
 import logging
 import os
+from services.object_storage import store_upload
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/upload", tags=["Uploads"])
@@ -48,9 +49,10 @@ def _detect_image_kind(data: bytes) -> str | None:
     return None
 
 
-def _public_url(filename: str) -> str:
+def _public_url(object_key: str) -> str:
     backend_url = os.environ.get("PUBLIC_BACKEND_URL") or ""
-    return f"{backend_url}/api/uploads/{filename}" if backend_url else f"/api/uploads/{filename}"
+    path = f"/api/uploads/{object_key}"
+    return f"{backend_url}{path}" if backend_url else path
 
 
 @router.post("/image")
@@ -97,8 +99,12 @@ async def upload_image(
         )
 
     filename = f"{uuid4().hex}.{ext}"
-    target = UPLOAD_DIR / filename
-    target.write_bytes(contents)
+    object_key = store_upload(
+        contents,
+        filename,
+        "properties",
+        file.content_type,
+    )
 
     logger.info(
         f"Image uploaded by {current_user['user_id']}: {filename} ({len(contents)} bytes, kind={detected})"
@@ -106,7 +112,7 @@ async def upload_image(
 
     return {
         "filename": filename,
-        "url": _public_url(filename),
+        "url": _public_url(object_key),
         "size": len(contents),
         "content_type": file.content_type,
         "detected_kind": detected,
@@ -165,8 +171,12 @@ async def upload_document(
         )
 
     filename = f"{uuid4().hex}.{ext}"
-    target = UPLOAD_DIR / filename
-    target.write_bytes(contents)
+    object_key = store_upload(
+        contents,
+        filename,
+        "documents",
+        file.content_type,
+    )
 
     logger.info(
         f"Document uploaded by {current_user['user_id']}: {filename} ({len(contents)} bytes, kind={detected})"
@@ -174,7 +184,7 @@ async def upload_document(
 
     return {
         "filename": filename,
-        "url": _public_url(filename),
+        "url": _public_url(object_key),
         "size": len(contents),
         "content_type": file.content_type,
         "detected_kind": detected,
@@ -246,8 +256,12 @@ async def upload_video(
         )
 
     filename = f"{uuid4().hex}.{ext}"
-    target = UPLOAD_DIR / filename
-    target.write_bytes(contents)
+    object_key = store_upload(
+        contents,
+        filename,
+        "properties",
+        file.content_type,
+    )
 
     logger.info(
         f"Video uploaded by {current_user['user_id']}: {filename} ({len(contents)} bytes, kind={detected})"
@@ -255,7 +269,7 @@ async def upload_video(
 
     return {
         "filename": filename,
-        "url": _public_url(filename),
+        "url": _public_url(object_key),
         "size": len(contents),
         "content_type": file.content_type,
         "detected_kind": detected,
