@@ -1393,10 +1393,10 @@ const LandingPage = () => {
                 Sign In
               </button>
               <button
-                onClick={() => navigate('/register')}
-                className="bg-terracotta hover:bg-terracotta-hover text-white px-4 py-1.5 rounded-full transition shadow-subtle"
+                onClick={() => navigate('/register?role=host')}
+                className="bg-terracotta hover:bg-terracotta-hover text-white px-4 py-1.5 rounded-full transition shadow-subtle font-semibold"
               >
-                Get Started
+                Become a Host
               </button>
             </>
           )}
@@ -1485,10 +1485,10 @@ const LandingPage = () => {
                   Sign In
                 </button>
                 <button
-                  onClick={() => { setIsMobileMenuOpen(false); navigate('/register'); }}
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/register?role=host'); }}
                   className="mt-8 bg-terracotta hover:bg-terracotta-hover text-white font-bold py-4 rounded-xl text-center shadow-premium transition"
                 >
-                  Get Started
+                  Become a Host
                 </button>
               </>
             )}
@@ -1654,56 +1654,46 @@ const LandingPage = () => {
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
                     
                     {/* Check-in */}
-                    <div 
-                      onClick={() => {
-                        const el = document.getElementById('landing-check-in');
-                        if (el) { el.focus(); try { el.showPicker(); } catch(e) {} }
-                      }}
-                      className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition group"
-                    >
-                      <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors" />
-                      <div className="w-full text-left">
+                    <div className="relative flex items-center px-4 md:px-6 py-4 w-full md:w-auto border-b border-gray-100 md:border-none hover:bg-gray-50 transition group">
+                      <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
+                      <div className="w-full text-left pointer-events-none z-0">
                         <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
-                        <input
-                          id="landing-check-in"
-                          name="checkIn"
-                          type={dates.checkIn ? "date" : "text"}
-                          onFocus={(e) => e.target.type = 'date'}
-                          onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                          placeholder="Check-in"
-                          min={todayISO}
-                          value={dates.checkIn}
-                          onChange={(e) => setDates({ ...dates, checkIn: e.target.value })}
-                          className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5 cursor-pointer pointer-events-none md:pointer-events-auto"
-                        />
+                        <p className={`font-bold text-sm mt-0.5 ${dates.checkIn ? 'text-charcoal' : 'text-gray-400'}`}>
+                          {dates.checkIn || 'Check-in'}
+                        </p>
                       </div>
+                      <input
+                        id="landing-check-in"
+                        name="checkIn"
+                        type="date"
+                        min={todayISO}
+                        value={dates.checkIn}
+                        onChange={(e) => setDates({ ...dates, checkIn: e.target.value })}
+                        onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
                     </div>
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
                     
                     {/* Check-out */}
-                    <div 
-                      onClick={() => {
-                        const el = document.getElementById('landing-check-out');
-                        if (el) { el.focus(); try { el.showPicker(); } catch(e) {} }
-                      }}
-                      className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition group"
-                    >
-                      <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors" />
-                      <div className="w-full text-left">
+                    <div className="relative flex items-center px-4 md:px-6 py-4 w-full md:w-auto border-b border-gray-100 md:border-none hover:bg-gray-50 transition group">
+                      <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
+                      <div className="w-full text-left pointer-events-none z-0">
                         <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
-                        <input
-                          id="landing-check-out"
-                          name="checkOut"
-                          type={dates.checkOut ? "date" : "text"}
-                          onFocus={(e) => e.target.type = 'date'}
-                          onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                          placeholder="Check-out"
-                          min={dates.checkIn || todayISO}
-                          value={dates.checkOut}
-                          onChange={(e) => setDates({ ...dates, checkOut: e.target.value })}
-                          className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5 cursor-pointer pointer-events-none md:pointer-events-auto"
-                        />
+                        <p className={`font-bold text-sm mt-0.5 ${dates.checkOut ? 'text-charcoal' : 'text-gray-400'}`}>
+                          {dates.checkOut || 'Check-out'}
+                        </p>
                       </div>
+                      <input
+                        id="landing-check-out"
+                        name="checkOut"
+                        type="date"
+                        min={dates.checkIn || todayISO}
+                        value={dates.checkOut}
+                        onChange={(e) => setDates({ ...dates, checkOut: e.target.value })}
+                        onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
                     </div>
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
 

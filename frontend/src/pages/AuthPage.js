@@ -14,6 +14,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
   const searchParams = new URLSearchParams(window.location.search);
   const forceLogin = searchParams.get('force_login') === '1';
   const requestedNext = searchParams.get('next') || '';
+  const initialRole = searchParams.get('role') === 'host' ? 'host' : 'guest';
   const [isLogin, setIsLogin] = useState(location.pathname !== '/register');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,7 +31,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
     phone: '',
     password: '',
     city: '',
-    role: 'guest',
+    role: initialRole,
     lg_code: '',
     employee_code: '',
     terms_accepted: false
