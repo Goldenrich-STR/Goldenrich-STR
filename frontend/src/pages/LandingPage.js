@@ -1670,7 +1670,7 @@ const LandingPage = () => {
                           type={dates.checkIn ? "date" : "text"}
                           onFocus={(e) => e.target.type = 'date'}
                           onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                          placeholder="Add dates"
+                          placeholder="Check-in"
                           min={todayISO}
                           value={dates.checkIn}
                           onChange={(e) => setDates({ ...dates, checkIn: e.target.value })}
@@ -1697,7 +1697,7 @@ const LandingPage = () => {
                           type={dates.checkOut ? "date" : "text"}
                           onFocus={(e) => e.target.type = 'date'}
                           onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                          placeholder="Add dates"
+                          placeholder="Check-out"
                           min={dates.checkIn || todayISO}
                           value={dates.checkOut}
                           onChange={(e) => setDates({ ...dates, checkOut: e.target.value })}

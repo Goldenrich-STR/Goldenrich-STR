@@ -769,7 +769,7 @@ const GuestBrowse = () => {
                     type={filters.check_in ? "date" : "text"}
                     onFocus={(e) => e.target.type = 'date'}
                     onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                    placeholder="Add dates"
+                    placeholder="Check-in"
                     min={todayISO}
                     value={filters.check_in}
                     onChange={(e) => setFilters({ ...filters, check_in: e.target.value })}
@@ -796,7 +796,7 @@ const GuestBrowse = () => {
                     type={filters.check_out ? "date" : "text"}
                     onFocus={(e) => e.target.type = 'date'}
                     onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                    placeholder="Add dates"
+                    placeholder="Check-out"
                     min={filters.check_in || todayISO}
                     value={filters.check_out}
                     onChange={(e) => setFilters({ ...filters, check_out: e.target.value })}
