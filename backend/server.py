@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
+from starlette.concurrency import run_in_threadpool
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
@@ -95,10 +96,40 @@ class DynamicCacheStaticFiles(StaticFiles):
             response.headers["Cache-Control"] = "public, max-age=86400"  # 1 Day default
         return response
 
-# Static files: serve uploaded property images
+# Uploaded files: keep legacy local URLs working and use private S3 when enabled.
 _uploads_dir = ROOT_DIR / "uploads"
 _uploads_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/api/uploads", DynamicCacheStaticFiles(directory=str(_uploads_dir)), name="uploads")
+
+@app.get("/api/uploads/{object_path:path}", include_in_schema=False)
+async def serve_upload(object_path: str):
+    from services.object_storage import presigned_upload_url
+
+    filename = Path(object_path).name
+    if not filename or filename in {".", ".."}:
+        raise HTTPException(status_code=404, detail="Upload not found")
+
+    local_file = _uploads_dir / filename
+    if local_file.is_file():
+        return FileResponse(
+            local_file,
+            headers={"Cache-Control": "public,max-age=31536000,immutable"},
+        )
+
+    try:
+        signed_url = await run_in_threadpool(presigned_upload_url, object_path)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Upload not found")
+    except Exception:
+        logging.exception("Unable to serve upload %s from S3", object_path)
+        raise HTTPException(status_code=503, detail="Upload storage unavailable")
+
+    if not signed_url:
+        raise HTTPException(status_code=404, detail="Upload not found")
+    return RedirectResponse(
+        signed_url,
+        status_code=307,
+        headers={"Cache-Control": "private,no-store"},
+    )
 
 @app.get("/download-apk")
 async def download_apk():
