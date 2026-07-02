@@ -1077,16 +1077,6 @@ const LandingPage = () => {
   };
   const footerData = { ...DEFAULT_FOOTER_DATA, ...(cmsContent?.footer || {}) };
   
-<<<<<<< HEAD
-  // Build raw sections list
-  const rawSections = Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
-    ? [...footerData.footer_sections]
-    : [...DEFAULT_FOOTER_DATA.footer_sections];
-
-  const footerSections = rawSections.map((rawSection, index) => {
-=======
-  const supportFooterItems = DEFAULT_FOOTER_DATA.footer_sections.find(section => section.heading === 'Support')?.items || [];
-
   const expectedFooterHeadings = ['For Guests', 'For Hosts', 'Company', 'Support'];
   const cmsFooterSections = Array.isArray(footerData.footer_sections)
     ? footerData.footer_sections.filter(Boolean)
@@ -1103,12 +1093,11 @@ const LandingPage = () => {
   const footerSections = expectedFooterHeadings.map((heading, index) => {
     const rawSection = rawSections.find(section => section?.heading?.toLowerCase() === heading.toLowerCase())
       || DEFAULT_FOOTER_DATA.footer_sections[index];
->>>>>>> dfdd5aaab99e46f1b2dc1cf2c41144905cc0de09
     const section = rawSection || {};
     return {
       ...section,
       heading: (!section.heading || /^Section\s+\d+$/i.test(section.heading))
-        ? ['For Guests', 'For Hosts', 'Company', 'Support'][index] || `Section ${index + 1}`
+        ? expectedFooterHeadings[index] || `Section ${index + 1}`
         : section.heading,
       items: Array.isArray(section.items) && section.items.length
         ? section.items.filter(Boolean).map(item => ({
