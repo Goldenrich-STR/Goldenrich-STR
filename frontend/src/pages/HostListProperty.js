@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { propertyAPI, subscriptionAPI, uploadAPI, bookingAPI, couponAPI, getImageUrl, loadRazorpaySdk } from '../services/api';
+import { propertyAPI, subscriptionAPI, uploadAPI, couponAPI, getImageUrl } from '../services/api';
 import {
   Building2,
   ArrowLeft,
@@ -20,6 +20,7 @@ import {
   Upload,
   Trash2,
   CreditCard,
+  Copy,
   Sparkles,
   Image as ImageIcon,
   MapPin,
@@ -29,7 +30,38 @@ import {
   Clock,
   Video,
   Play,
+  QrCode,
+  Smartphone,
 } from 'lucide-react';
+
+const SUBSCRIPTION_UPI = {
+  id: 'goldenrich123@idfcbank',
+  name: 'GOLDEN RICH FINANCIAL REAL ESTATE SOLUTIONS PVT LTD',
+};
+
+const COUPON_MIN_TAXABLE_AMOUNT = 10;
+
+const formatSubscriptionAmount = (amount) => {
+  const value = Number(amount) || 0;
+  return value.toLocaleString('en-IN', {
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+};
+
+const buildSubscriptionUpiUrl = ({ amount, note, subscriptionId }) => {
+  const params = new URLSearchParams({
+    pa: SUBSCRIPTION_UPI.id,
+    pn: SUBSCRIPTION_UPI.name,
+    am: Number(amount || 0).toFixed(2),
+    cu: 'INR',
+    tn: note || `X-Space360 subscription ${subscriptionId || ''}`.trim(),
+  });
+  return `upi://pay?${params.toString()}`;
+};
+
+const buildQrImageUrl = (upiUrl) =>
+  `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=${encodeURIComponent(upiUrl)}`;
 
 const CATEGORY_DATA = {
   residential: {
@@ -445,11 +477,10 @@ const HostListProperty = () => {
   });
 
   const [plans, setPlans] = useState([]);
-  const [paymentConfig, setPaymentConfig] = useState(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [createdPropertyId, setCreatedPropertyId] = useState(null);
-  const [mockPayment, setMockPayment] = useState({ isOpen: false, amount: 0, title: '', onConfirm: null });
+  const [upiPayment, setUpiPayment] = useState({ isOpen: false, utr: '', error: '', submitting: false });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [paying, setPaying] = useState(false);
@@ -554,7 +585,6 @@ const HostListProperty = () => {
   }, [editPropertyId]);
 
   useEffect(() => {
-    bookingAPI.getPaymentConfig().then((r) => setPaymentConfig(r.data)).catch(() => {});
     if (refreshUser) refreshUser();
   }, [refreshUser]);
 
@@ -813,19 +843,14 @@ const HostListProperty = () => {
     const planFee = Number(plan.price_monthly) || 0;
     const platformFee = Number(plan.platform_fee) || 0;
     const taxPercent = Number(plan.tax_percent ?? 18);
-    const taxes = Math.round((planFee + platformFee) * (taxPercent / 100));
-    const subtotal = planFee + platformFee + taxes;
+    const taxableAmount = planFee + platformFee;
     const couponCode = subscriptionCouponCode.trim().toUpperCase();
     const coupon = couponCode ? subscriptionCoupons.find((c) => c.code === couponCode) : null;
-    const discount = coupon
-      ? Math.min(
-          subtotal,
-          coupon.discount_type === 'percentage'
-            ? Math.round(subtotal * ((Number(coupon.discount_value) || 0) / 100))
-            : Number(coupon.discount_value) || 0
-        )
-      : 0;
-    const total = subtotal - discount;
+    const discountedTaxableAmount = coupon ? Math.min(taxableAmount, COUPON_MIN_TAXABLE_AMOUNT) : taxableAmount;
+    const discount = coupon ? Math.max(0, taxableAmount - discountedTaxableAmount) : 0;
+    const taxes = Number((discountedTaxableAmount * (taxPercent / 100)).toFixed(2));
+    const subtotal = taxableAmount + taxes;
+    const total = discountedTaxableAmount + taxes;
     return { planFee, platformFee, taxPercent, taxes, subtotal, coupon, discount, total };
   };
 
@@ -1080,12 +1105,54 @@ const HostListProperty = () => {
     };
   };
 
-  const canUseRazorpayTestCheckout = async () => (
-    paymentConfig?.is_mock &&
-    paymentConfig?.key_id?.startsWith('rzp_test_') &&
-    paymentConfig.key_id !== 'rzp_test_demo_key' &&
-    await loadRazorpaySdk() &&
-    !!window.Razorpay
+  const collectUpiPaymentConfirmation = ({ subOrder, plan }) => (
+    new Promise((resolve, reject) => {
+      const amount = Number(subOrder.payable_amount || ((subOrder.amount || 0) / 100));
+      const upiUrl = buildSubscriptionUpiUrl({
+        amount,
+        subscriptionId: subOrder.subscription_id,
+        note: `X-Space360 ${subOrder.plan_name || plan?.plan_name || 'Subscription'}`,
+      });
+      setUpiPayment({
+        isOpen: true,
+        utr: '',
+        error: '',
+        submitting: false,
+        amount,
+        planName: subOrder.plan_name || plan?.plan_name || 'Subscription Plan',
+        subscriptionId: subOrder.subscription_id,
+        razorpayOrderId: subOrder.razorpay_order_id,
+        upiUrl,
+        qrUrl: buildQrImageUrl(upiUrl),
+        onConfirm: async (utr) => {
+          const cleanUtr = String(utr || '').trim();
+          if (cleanUtr.length < 6) {
+            setUpiPayment((prev) => ({ ...prev, error: 'Please enter a valid UTR / transaction ID.' }));
+            return;
+          }
+          try {
+            setUpiPayment((prev) => ({ ...prev, submitting: true, error: '' }));
+            await subscriptionAPI.confirmSubscriptionUpi({
+              subscription_id: subOrder.subscription_id,
+              razorpay_order_id: subOrder.razorpay_order_id,
+              upi_transaction_id: cleanUtr,
+            });
+            setUpiPayment((prev) => ({ ...prev, isOpen: false, submitting: false }));
+            resolve(cleanUtr);
+          } catch (err) {
+            setUpiPayment((prev) => ({
+              ...prev,
+              submitting: false,
+              error: formatError(err, 'Unable to confirm this UPI transaction.'),
+            }));
+          }
+        },
+        onCancel: () => {
+          setUpiPayment((prev) => ({ ...prev, isOpen: false, submitting: false }));
+          reject(new Error('Payment cancelled'));
+        },
+      });
+    })
   );
 
   const processSubscriptionPayment = async (planId, propertyId) => {
@@ -1097,97 +1164,7 @@ const HostListProperty = () => {
     const subOrder = subRes.data;
     const plan = plans.find(p => p.plan_id === planId);
 
-    if (paymentConfig?.is_mock) {
-      if (await canUseRazorpayTestCheckout()) {
-        await new Promise((resolve, reject) => {
-          const rzp = new window.Razorpay({
-            key: paymentConfig.key_id,
-            amount: subOrder.amount,
-            currency: subOrder.currency,
-            name: 'X-Space360',
-            description: `Subscription: ${subOrder.plan_name || plan?.plan_name || 'Plan'}`,
-            prefill: {
-              name: user?.full_name,
-              email: user?.email,
-              contact: user?.phone,
-            },
-            theme: { color: '#006437' },
-            handler: async () => {
-              try {
-                await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
-                resolve();
-              } catch (err) {
-                reject(err);
-              }
-            },
-            modal: { ondismiss: () => reject(new Error('Subscription payment cancelled')) },
-          });
-          rzp.on('payment.failed', (resp) => {
-            reject(new Error(resp?.error?.description || 'Subscription payment failed'));
-          });
-          rzp.open();
-        });
-      } else {
-        await new Promise((resolve, reject) => {
-          setMockPayment({
-            isOpen: true,
-            amount: subOrder.payable_amount || ((subOrder.amount || 0) / 100),
-            title: `${plan?.plan_name || 'Subscription'} Plan`,
-            onConfirm: async () => {
-              try {
-                await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
-                setMockPayment(prev => ({ ...prev, isOpen: false }));
-                resolve();
-              } catch (err) {
-                setMockPayment(prev => ({ ...prev, isOpen: false }));
-                reject(err);
-              }
-            },
-            onCancel: () => {
-              setMockPayment(prev => ({ ...prev, isOpen: false }));
-              reject(new Error('Payment cancelled'));
-            }
-          });
-        });
-      }
-      return subOrder;
-    }
-
-    const sdkLoaded = await loadRazorpaySdk();
-    if (!sdkLoaded || !window.Razorpay) {
-      throw new Error('Razorpay SDK failed to load. Please check your internet connection.');
-    }
-    await new Promise((resolve, reject) => {
-      const rzp = new window.Razorpay({
-        key: subOrder.razorpay_key_id,
-        amount: subOrder.amount,
-        currency: subOrder.currency,
-        name: 'X-Space360',
-        description: `Subscription: ${subOrder.plan_name}`,
-        order_id: subOrder.razorpay_order_id,
-        prefill: {
-          name: user?.full_name,
-          email: user?.email,
-          contact: user?.phone,
-        },
-        theme: { color: '#006437' },
-        handler: async (resp) => {
-          try {
-            await subscriptionAPI.confirmSubscription({
-              subscription_id: subOrder.subscription_id,
-              razorpay_payment_id: resp.razorpay_payment_id,
-              razorpay_order_id: resp.razorpay_order_id,
-              razorpay_signature: resp.razorpay_signature,
-            });
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        },
-        modal: { ondismiss: () => reject(new Error('Subscription payment cancelled')) },
-      });
-      rzp.open();
-    });
+    await collectUpiPaymentConfirmation({ subOrder, plan });
     return subOrder;
   };
 
@@ -2211,7 +2188,7 @@ const HostListProperty = () => {
                     </span>
                   </div>
                   <span className="text-sm sm:text-base font-bold text-charcoal whitespace-nowrap">
-                    ₹{getSubscriptionBreakdown(pricingSummaryPlan).taxes.toLocaleString('en-IN')}
+                    ₹{formatSubscriptionAmount(getSubscriptionBreakdown(pricingSummaryPlan).taxes)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-4 px-3.5 py-3 border-b border-gray-100">
@@ -2236,7 +2213,7 @@ const HostListProperty = () => {
                       </span>
                     </div>
                     <span className="text-sm sm:text-base font-bold text-emerald-800 whitespace-nowrap">
-                      -₹{getSubscriptionBreakdown(pricingSummaryPlan).discount.toLocaleString('en-IN')}
+                      -₹{formatSubscriptionAmount(getSubscriptionBreakdown(pricingSummaryPlan).discount)}
                     </span>
                   </div>
                 )}
@@ -2246,7 +2223,7 @@ const HostListProperty = () => {
                     <p className="text-[10px] font-semibold text-charcoal-light mt-0.5">Inclusive of all taxes</p>
                   </div>
                   <span className="text-xl font-bold text-terracotta whitespace-nowrap">
-                    ₹{getSubscriptionBreakdown(pricingSummaryPlan).total.toLocaleString('en-IN')}
+                    ₹{formatSubscriptionAmount(getSubscriptionBreakdown(pricingSummaryPlan).total)}
                   </span>
                 </div>
               </div>
@@ -2367,37 +2344,104 @@ const HostListProperty = () => {
         </div>
       )}
 
-      {/* Mock Payment Modal */}
-      {mockPayment.isOpen && (
+      {/* UPI Payment Modal */}
+      {upiPayment.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-elevated animate-in zoom-in-95 duration-200">
-            <div className="p-8 text-center">
-              <div className="w-20 h-20 bg-terracotta/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CreditCard className="w-10 h-10 text-terracotta" />
+          <div className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-elevated animate-in zoom-in-95 duration-200">
+            <div className="p-6 md:p-8">
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
+                    <QrCode className="w-6 h-6 text-sage-dark" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-terracotta">UPI Payment</p>
+                    <h3 className="text-xl font-bold text-charcoal leading-tight">{upiPayment.planName}</h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={upiPayment.onCancel}
+                  disabled={upiPayment.submitting}
+                  className="w-9 h-9 rounded-full bg-stone hover:bg-gray-100 text-charcoal-light flex items-center justify-center disabled:opacity-50"
+                  aria-label="Close UPI payment"
+                >
+                  ×
+                </button>
               </div>
-              <h3 className="text-2xl font-bold text-charcoal mb-2">Demo Payment</h3>
-              <p className="text-charcoal-light mb-8">
-                This is a simulation for <strong>{mockPayment.title}</strong>.<br/>
-                Amount: <span className="text-lg font-semibold text-charcoal">₹{mockPayment.amount}</span>
-              </p>
-              
-              <button
-                onClick={mockPayment.onConfirm}
-                className="w-full py-4 bg-terracotta text-white rounded-2xl font-bold text-lg hover:bg-terracotta-dark active:scale-[0.98] transition-all shadow-premium shadow-terracotta/20 mb-4"
-              >
-                Confirm Demo Payment
-              </button>
-              <button
-                onClick={mockPayment.onCancel}
-                className="w-full py-3 text-charcoal-light font-semibold hover:text-charcoal transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-            <div className="bg-stone p-4 text-center border-t border-sand-100">
-              <p className="text-sm text-sand-500 flex items-center justify-center gap-2">
-                <CheckCircle2 className="w-4 h-4" /> Secured Mock Transaction
-              </p>
+
+              <div className="grid md:grid-cols-[220px_1fr] gap-5 items-start">
+                <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm text-center">
+                  <img
+                    src={upiPayment.qrUrl}
+                    alt="Subscription UPI QR code"
+                    className="w-full aspect-square object-contain"
+                  />
+                  <p className="text-xs text-charcoal-muted mt-3">Scan with any UPI app</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Amount payable</p>
+                    <p className="text-3xl font-bold text-sage-dark mt-1">₹{formatSubscriptionAmount(upiPayment.amount)}</p>
+                    <p className="text-xs text-emerald-800 mt-2 leading-relaxed">
+                      QR scan kelyavar UPI app madhe hi amount auto-fill hoil.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-100 p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-charcoal-muted mb-2">UPI ID</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 rounded-lg bg-stone px-3 py-2 text-sm font-bold text-charcoal break-all">
+                        {SUBSCRIPTION_UPI.id}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard?.writeText(SUBSCRIPTION_UPI.id)}
+                        className="w-10 h-10 rounded-lg border border-gray-200 flex items-center justify-center text-charcoal hover:border-terracotta"
+                        aria-label="Copy UPI ID"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <label className="block">
+                    <span className="text-xs font-bold uppercase tracking-wide text-charcoal-muted">UTR / Transaction ID</span>
+                    <input
+                      type="text"
+                      value={upiPayment.utr}
+                      onChange={(e) => setUpiPayment((prev) => ({ ...prev, utr: e.target.value.toUpperCase(), error: '' }))}
+                      placeholder="Enter UTR after payment"
+                      className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-bold uppercase outline-none focus:border-terracotta"
+                      disabled={upiPayment.submitting}
+                    />
+                  </label>
+
+                  {upiPayment.error && (
+                    <p className="text-xs font-semibold text-red-600">{upiPayment.error}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <a
+                  href={upiPayment.upiUrl}
+                  className="flex-1 min-h-[50px] rounded-xl border border-sage/30 bg-white text-sage-dark font-bold flex items-center justify-center gap-2 hover:bg-emerald-50 transition"
+                >
+                  <Smartphone className="w-4 h-4" />
+                  Open UPI App
+                </a>
+                <button
+                  type="button"
+                  onClick={() => upiPayment.onConfirm?.(upiPayment.utr)}
+                  disabled={upiPayment.submitting}
+                  className="flex-1 min-h-[50px] rounded-xl bg-sage-dark text-white font-bold flex items-center justify-center gap-2 shadow-premium shadow-sage-dark/20 hover:bg-sage-dark/90 disabled:opacity-50"
+                >
+                  {upiPayment.submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  {upiPayment.submitting ? 'Confirming...' : 'Payment Done'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

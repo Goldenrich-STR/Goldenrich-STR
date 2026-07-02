@@ -365,7 +365,7 @@ const TransactionsTab = () => {
             </span>
             <input
               type="text"
-              placeholder="Search Customer Name / Phone / Email / Booking / Payment ID..."
+              placeholder="Search Customer Name / Phone / Email / Booking / Payment / UTR ID..."
               value={filters.q}
               onChange={(e) => handleFilterChange({ ...filters, q: e.target.value })}
               className="input-field pl-11 w-full bg-stone/50 focus:bg-white border border-gray-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 rounded-xl transition text-sm py-2.5"
@@ -454,7 +454,7 @@ const TransactionsTab = () => {
                     <th className="py-3 px-4">Amount</th>
                     <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4">Booking ID</th>
-                    <th className="py-3 px-4">Payment ID</th>
+                    <th className="py-3 px-4">Payment / UTR ID</th>
                     <th className="py-3 px-4 text-center rounded-r-xl no-print">Actions</th>
                   </tr>
                 </thead>
@@ -495,7 +495,7 @@ const TransactionsTab = () => {
                         {t.booking_id || '—'}
                       </td>
                       <td className="py-4 px-4 text-charcoal-light text-xs font-mono whitespace-nowrap">
-                        {t.razorpay_payment_id || t.razorpay_payout_id || t.razorpay_refund_id || '—'}
+                        {t.upi_transaction_id || t.razorpay_payment_id || t.razorpay_payout_id || t.razorpay_refund_id || '—'}
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap text-center no-print">
                         <div className="flex items-center justify-center space-x-2">
@@ -1573,9 +1573,10 @@ const InvoiceModal = ({ transaction, onClose }) => {
 
           <div className="bg-stone rounded-xl p-3 text-[11px] text-charcoal-muted flex items-center justify-between">
             <div>
-              <div><span className="font-semibold">Payment Method:</span> Razorpay Online Gateway</div>
+              <div><span className="font-semibold">Payment Method:</span> {t.upi_transaction_id ? 'UPI QR' : 'Razorpay Online Gateway'}</div>
               <div><span className="font-semibold">Payment Status:</span> SUCCESS</div>
               {t.razorpay_payment_id && <div><span className="font-semibold">Razorpay ID:</span> {t.razorpay_payment_id}</div>}
+              {t.upi_transaction_id && <div><span className="font-semibold">UTR / Transaction ID:</span> {t.upi_transaction_id}</div>}
             </div>
             <div className="text-right">
               <span className="inline-block px-2.5 py-1 bg-green-100 text-green-800 rounded-full font-bold text-[10px] uppercase">Paid</span>

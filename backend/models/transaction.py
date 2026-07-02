@@ -86,6 +86,7 @@ class Transaction(BaseModel):
     razorpay_payment_id: Optional[str] = None
     razorpay_refund_id: Optional[str] = None
     razorpay_payout_id: Optional[str] = None
+    upi_transaction_id: Optional[str] = None
 
     # Linked entities
     user_id: Optional[str] = None           # guest or host or whoever

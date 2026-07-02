@@ -230,6 +230,9 @@ export const subscriptionAPI = {
   confirmSubscription: (data) =>
     apiClient.post('/subscriptions/confirm-subscription', null, { params: data }),
 
+  confirmSubscriptionUpi: (data) =>
+    apiClient.post('/subscriptions/confirm-subscription-upi', data),
+
   mockPaySubscription: (subscriptionId, orderId) =>
     apiClient.post('/subscriptions/subscribe/mock-pay', null, {
       params: { subscription_id: subscriptionId, razorpay_order_id: orderId },

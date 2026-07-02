@@ -19,6 +19,12 @@ class ConfirmRegistrationFeeRequest(BaseModel):
     razorpay_order_id: str
     razorpay_signature: str
 
+
+class ConfirmSubscriptionUpiRequest(BaseModel):
+    subscription_id: str
+    upi_transaction_id: str
+    razorpay_order_id: Optional[str] = None
+
 async def get_db():
     from server import db_instance
     return db_instance
@@ -47,6 +53,8 @@ async def _send_subscription_email(db: AsyncIOMotorDatabase, user_id: str, templ
 
 REGISTRATION_FEE_AMOUNT = int(os.getenv("REGISTRATION_FEE_AMOUNT", "50000"))  # ₹500 in paise
 
+COUPON_MIN_TAXABLE_AMOUNT = 10.0
+
 def _subscription_amount_breakdown(plan: dict, billing_cycle: str = "monthly") -> dict:
     plan_fee = float(plan.get("price_monthly") if billing_cycle == "monthly" else plan.get("price_annual") or 0)
     platform_fee = float(plan.get("platform_fee") or 0)
@@ -69,6 +77,26 @@ def _coupon_discount_amount(coupon: dict, amount: float) -> float:
     if coupon.get("discount_type") == "percentage":
         return round(amount * (value / 100), 2)
     return round(min(amount, value), 2)
+
+def _subscription_coupon_breakdown(plan: dict, coupon: Optional[dict], billing_cycle: str = "monthly") -> dict:
+    amount_breakdown = _subscription_amount_breakdown(plan, billing_cycle)
+    taxable_amount = round(amount_breakdown["plan_fee"] + amount_breakdown["platform_fee"], 2)
+    if coupon:
+        discounted_taxable_amount = round(min(taxable_amount, COUPON_MIN_TAXABLE_AMOUNT), 2)
+        discount_amount = round(max(0.0, taxable_amount - discounted_taxable_amount), 2)
+    else:
+        discount_amount = 0.0
+        discounted_taxable_amount = taxable_amount
+    tax_amount = round(discounted_taxable_amount * (amount_breakdown["tax_percent"] / 100), 2)
+    total_amount = round(discounted_taxable_amount + tax_amount, 2)
+    return {
+        **amount_breakdown,
+        "taxable_amount": taxable_amount,
+        "discount_amount": discount_amount,
+        "discounted_taxable_amount": discounted_taxable_amount,
+        "tax_amount": tax_amount,
+        "total_amount": total_amount,
+    }
 
 def _normalize(value: Optional[str]) -> Optional[str]:
     return value.strip().lower() if value else None
@@ -237,14 +265,15 @@ async def validate_subscription_coupon(
         ):
             return {"valid": False, "discount_amount": 0.0}
 
-        amount_breakdown = _subscription_amount_breakdown(plan, payload.billing_cycle)
-        discount_amount = _coupon_discount_amount(coupon, amount_breakdown["total_amount"])
+        amount_breakdown = _subscription_coupon_breakdown(plan, coupon, payload.billing_cycle)
+        discount_amount = amount_breakdown["discount_amount"]
         return {
             "valid": True,
             "coupon": coupon,
             "discount_amount": discount_amount,
             "total_amount": amount_breakdown["total_amount"],
-            "payable_amount": round(amount_breakdown["total_amount"] - discount_amount, 2),
+            "tax_amount": amount_breakdown["tax_amount"],
+            "payable_amount": amount_breakdown["total_amount"],
         }
     except HTTPException:
         raise
@@ -290,11 +319,9 @@ async def create_subscription(
                 {"_id": 0, "category": 1, "bhk_type": 1, "area_sqft": 1},
             ) or {}
 
-        # Calculate amount based on billing cycle, platform fee, and GST.
-        amount_breakdown = _subscription_amount_breakdown(plan, subscription_data.billing_cycle)
+        # Calculate amount based on billing cycle, platform fee, coupon, and GST.
         coupon_code = subscription_data.coupon_code.strip().upper() if subscription_data.coupon_code else None
         coupon = None
-        discount_amount = 0.0
         if coupon_code:
             coupon = await db.coupons.find_one(
                 {"code": coupon_code, "is_active": True, "coupon_type": "subscription"},
@@ -316,8 +343,9 @@ async def create_subscription(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="This coupon is not valid for the selected subscription plan"
                 )
-            discount_amount = _coupon_discount_amount(coupon, amount_breakdown["total_amount"])
-        amount = round(amount_breakdown["total_amount"] - discount_amount, 2)
+        amount_breakdown = _subscription_coupon_breakdown(plan, coupon, subscription_data.billing_cycle)
+        discount_amount = amount_breakdown["discount_amount"]
+        amount = amount_breakdown["total_amount"]
         
         # Calculate dates
         start_date = date.today()
@@ -494,6 +522,88 @@ async def confirm_subscription_payment(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to confirm subscription"
         )
+
+@router.post("/confirm-subscription-upi")
+async def confirm_subscription_upi_payment(
+    payload: ConfirmSubscriptionUpiRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Confirm a host subscription paid through the platform UPI QR."""
+    upi_transaction_id = payload.upi_transaction_id.strip()
+    if len(upi_transaction_id) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please enter a valid UTR / transaction ID."
+        )
+
+    subscription = await db.subscriptions.find_one({"subscription_id": payload.subscription_id}, {"_id": 0})
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    if subscription["user_id"] != current_user["user_id"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+
+    existing = await db.transactions.find_one(
+        {"type": "subscription", "upi_transaction_id": upi_transaction_id},
+        {"_id": 0}
+    )
+    if existing and existing.get("subscription_id") != payload.subscription_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This UTR / transaction ID is already linked to another subscription."
+        )
+
+    await db.subscriptions.update_one(
+        {"subscription_id": payload.subscription_id},
+        {"$set": {
+            "status": SubscriptionStatus.ACTIVE.value,
+            "upi_transaction_id": upi_transaction_id,
+            "razorpay_subscription_id": upi_transaction_id,
+            "updated_at": datetime.now(timezone.utc)
+        }}
+    )
+
+    if subscription.get("property_id"):
+        await db.properties.update_one(
+            {"property_id": subscription["property_id"]},
+            {"$set": {
+                "subscription_id": payload.subscription_id,
+                "subscription_status": "active"
+            }}
+        )
+
+    try:
+        from models.transaction import TransactionType
+        from services.account_service import record_transaction
+        sub_amount = int(round(subscription.get("amount", 0) * 100))
+        await record_transaction(
+            db,
+            type=TransactionType.SUBSCRIPTION,
+            amount=sub_amount,
+            razorpay_order_id=payload.razorpay_order_id,
+            razorpay_payment_id=upi_transaction_id,
+            upi_transaction_id=upi_transaction_id,
+            user_id=subscription["user_id"],
+            subscription_id=payload.subscription_id,
+            notes="Host subscription paid by UPI QR",
+            is_mock=razorpay_service.is_mock,
+        )
+    except Exception as txn_err:
+        logger.warning(f"Failed to record UPI subscription transaction: {txn_err}")
+
+    await _send_subscription_email(
+        db,
+        subscription["user_id"],
+        "subscription_activated",
+        {**subscription, "razorpay_subscription_id": upi_transaction_id},
+        {"payment_id": upi_transaction_id},
+    )
+
+    return {
+        "message": "Subscription activated successfully",
+        "subscription_id": payload.subscription_id,
+        "upi_transaction_id": upi_transaction_id
+    }
 
 @router.post("/subscribe/mock-pay")
 async def mock_pay_subscription(

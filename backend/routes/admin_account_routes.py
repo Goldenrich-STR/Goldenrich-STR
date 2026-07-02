@@ -293,6 +293,7 @@ async def _txn_query_async(
         or_conditions = [
             {"booking_id": {"$regex": q, "$options": "i"}},
             {"razorpay_payment_id": {"$regex": q, "$options": "i"}},
+            {"upi_transaction_id": {"$regex": q, "$options": "i"}},
             {"razorpay_payout_id": {"$regex": q, "$options": "i"}},
             {"razorpay_refund_id": {"$regex": q, "$options": "i"}},
             {"transaction_id": {"$regex": q, "$options": "i"}},
@@ -363,7 +364,7 @@ async def export_transactions_csv(
     buf = io.StringIO()
     fields = [
         "transaction_id", "type", "status", "amount_inr", "currency",
-        "razorpay_order_id", "razorpay_payment_id", "razorpay_refund_id", "razorpay_payout_id",
+        "razorpay_order_id", "razorpay_payment_id", "upi_transaction_id", "razorpay_refund_id", "razorpay_payout_id",
         "user_id", "host_id", "booking_id", "subscription_id", "payout_id", "refund_id",
         "notes", "is_mock", "created_at",
     ]
@@ -378,6 +379,7 @@ async def export_transactions_csv(
             "currency": t.get("currency"),
             "razorpay_order_id": t.get("razorpay_order_id"),
             "razorpay_payment_id": t.get("razorpay_payment_id"),
+            "upi_transaction_id": t.get("upi_transaction_id"),
             "razorpay_refund_id": t.get("razorpay_refund_id"),
             "razorpay_payout_id": t.get("razorpay_payout_id"),
             "user_id": t.get("user_id"),

@@ -161,8 +161,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                     "phone": "+91 8484826247",
                     "facebook_link": "https://facebook.com",
                     "instagram_link": "https://instagram.com",
-                    "twitter_link": "https://twitter.com",
-                    "linkedin_link": "https://linkedin.com",
+                    "youtube_link": "https://youtube.com",
                     "footer_sections": [
                         {"heading": "For Guests", "items": [
                             {"label": "Browse Space", "action_type": "link", "link": "/guest/browse", "text": ""},
@@ -246,8 +245,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                     "phone": "+91 8484826247",
                     "facebook_link": "https://facebook.com",
                     "instagram_link": "https://instagram.com",
-                    "twitter_link": "https://twitter.com",
-                    "linkedin_link": "https://linkedin.com",
+                    "youtube_link": "https://youtube.com",
                     "footer_sections": [
                         {"heading": "For Guests", "items": [
                             {"label": "Browse Space", "action_type": "link", "link": "/guest/browse", "text": ""},

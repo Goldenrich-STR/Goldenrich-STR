@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Building2, MapPin, Mail, Phone, ShieldCheck, CheckCircle2, Sparkles, 
-  Facebook, Instagram, Twitter, Linkedin, Menu, X, ArrowRight, Compass, Users, Milestone, Award
+  Facebook, Instagram, Youtube, Menu, X, ArrowRight, Compass, Users, Milestone, Award
 } from 'lucide-react';
 import apiClient, { getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -73,8 +73,7 @@ const DEFAULT_FOOTER_DATA = {
   phone: '+91 8484826247',
   facebook_link: 'https://facebook.com',
   instagram_link: 'https://instagram.com',
-  twitter_link: 'https://twitter.com',
-  linkedin_link: 'https://linkedin.com',
+  youtube_link: 'https://youtube.com',
   footer_sections: [
     { heading: 'For Guests', items: [
       { label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
@@ -462,11 +461,10 @@ const AboutUs = () => {
               </p>
               <div className="mt-7 flex items-center gap-3">
                 {[
-                  { icon: Facebook, url: footerData.facebook_link || 'https://facebook.com', label: 'Facebook' },
-                  { icon: Instagram, url: footerData.instagram_link || 'https://instagram.com', label: 'Instagram' },
-                  { icon: Twitter, url: footerData.twitter_link || 'https://twitter.com', label: 'Twitter' },
-                  { icon: Linkedin, url: footerData.linkedin_link || 'https://linkedin.com', label: 'LinkedIn' },
-                ].map((social) => {
+                  { icon: Facebook, url: footerData.facebook_link, label: 'Facebook' },
+                  { icon: Instagram, url: footerData.instagram_link, label: 'Instagram' },
+                  { icon: Youtube, url: footerData.youtube_link, label: 'Youtube' },
+                ].filter(social => social.url).map((social) => {
                   const IconComponent = social.icon;
                   return (
                     <a

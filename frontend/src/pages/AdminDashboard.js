@@ -4421,6 +4421,9 @@ const CMSManagement = () => {
     location: '',
     email: '',
     phone: '',
+    facebook_link: '',
+    instagram_link: '',
+    youtube_link: '',
     guests_title: '',
     guest_link_1_label: '',
     guest_link_1_url: '',
@@ -5260,21 +5263,12 @@ const CMSManagement = () => {
                 />
               </div>
               <div>
-                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">Twitter URL</label>
+                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">YouTube URL</label>
                 <input
                   className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
-                  value={footerData.twitter_link || ''}
-                  onChange={e => setFooterData({ ...footerData, twitter_link: e.target.value })}
-                  placeholder="https://twitter.com/..."
-                />
-              </div>
-              <div>
-                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">LinkedIn URL</label>
-                <input
-                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
-                  value={footerData.linkedin_link || ''}
-                  onChange={e => setFooterData({ ...footerData, linkedin_link: e.target.value })}
-                  placeholder="https://linkedin.com/..."
+                  value={footerData.youtube_link || ''}
+                  onChange={e => setFooterData({ ...footerData, youtube_link: e.target.value })}
+                  placeholder="https://youtube.com/..."
                 />
               </div>
 

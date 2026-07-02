@@ -51,6 +51,7 @@ async def record_transaction(
     razorpay_payment_id: Optional[str] = None,
     razorpay_refund_id: Optional[str] = None,
     razorpay_payout_id: Optional[str] = None,
+    upi_transaction_id: Optional[str] = None,
     user_id: Optional[str] = None,
     host_id: Optional[str] = None,
     booking_id: Optional[str] = None,
@@ -73,6 +74,17 @@ async def record_transaction(
         if existing:
             existing.pop("_id", None)
             return Transaction(**existing)
+    if type == TransactionType.SUBSCRIPTION and subscription_id and upi_transaction_id:
+        existing = await db.transactions.find_one(
+            {
+                "type": type.value,
+                "subscription_id": subscription_id,
+                "upi_transaction_id": upi_transaction_id,
+            }
+        )
+        if existing:
+            existing.pop("_id", None)
+            return Transaction(**existing)
 
     txn = Transaction(
         type=type,
@@ -83,6 +95,7 @@ async def record_transaction(
         razorpay_payment_id=razorpay_payment_id,
         razorpay_refund_id=razorpay_refund_id,
         razorpay_payout_id=razorpay_payout_id,
+        upi_transaction_id=upi_transaction_id,
         user_id=user_id,
         host_id=host_id,
         booking_id=booking_id,

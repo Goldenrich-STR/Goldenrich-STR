@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Twitter, Linkedin, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone } from 'lucide-react';
+import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Youtube, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
@@ -517,8 +517,7 @@ const DEFAULT_FOOTER_DATA = {
   phone: '+91 8484826247',
   facebook_link: 'https://facebook.com',
   instagram_link: 'https://instagram.com',
-  twitter_link: 'https://twitter.com',
-  linkedin_link: 'https://linkedin.com',
+  youtube_link: 'https://youtube.com',
   footer_sections: [
     { heading: 'For Guests', items: [
       { label: 'Browse Space', action_type: 'link', link: '/guest/browse', text: '' },
@@ -1079,31 +1078,26 @@ const LandingPage = () => {
   };
   const footerData = { ...DEFAULT_FOOTER_DATA, ...(cmsContent?.footer || {}) };
   
-  const supportFooterItems = DEFAULT_FOOTER_DATA.footer_sections.find(section => section.heading === 'Support')?.items || [];
-
   // Build raw sections list
   const rawSections = Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
     ? [...footerData.footer_sections]
     : [...DEFAULT_FOOTER_DATA.footer_sections];
 
-  const footerSections = ['For Guests', 'For Hosts', 'Company', 'Support'].map((heading, index) => {
-    const rawSection = rawSections.find(section => section?.heading?.toLowerCase() === heading.toLowerCase())
-      || rawSections[index]
-      || DEFAULT_FOOTER_DATA.footer_sections[index];
+  const footerSections = rawSections.map((rawSection, index) => {
     const section = rawSection || {};
-    const normalizedItems = Array.isArray(section.items) && section.items.length
-      ? section.items.filter(Boolean).map(item => ({
-        label: item.label === 'Browse Collections' ? 'Browse Space' : (item.label || ''),
-        action_type: item.action_type || 'link',
-        link: item.link || '',
-        text: item.text || '',
-      }))
-      : [{ label: section.label || '', action_type: section.action_type || 'link', link: section.link || '', text: section.text || '' }];
-
     return {
       ...section,
-      heading,
-      items: heading === 'Support' ? supportFooterItems : normalizedItems,
+      heading: (!section.heading || /^Section\s+\d+$/i.test(section.heading))
+        ? ['For Guests', 'For Hosts', 'Company', 'Support'][index] || `Section ${index + 1}`
+        : section.heading,
+      items: Array.isArray(section.items) && section.items.length
+        ? section.items.filter(Boolean).map(item => ({
+          label: item.label || '',
+          action_type: item.action_type || 'link',
+          link: item.link || '',
+          text: item.text || '',
+        }))
+        : []
     };
   });
 
@@ -2139,11 +2133,10 @@ const LandingPage = () => {
               </p>
               <div className="mt-7 flex items-center gap-3">
                 {[
-                  { icon: Facebook, url: 'https://facebook.com', label: 'Facebook' },
-                  { icon: Instagram, url: 'https://instagram.com', label: 'Instagram' },
-                  { icon: Twitter, url: 'https://twitter.com', label: 'Twitter' },
-                  { icon: Linkedin, url: 'https://linkedin.com', label: 'LinkedIn' },
-                ].map((social) => {
+                  { icon: Facebook, url: footerData.facebook_link, label: 'Facebook' },
+                  { icon: Instagram, url: footerData.instagram_link, label: 'Instagram' },
+                  { icon: Youtube, url: footerData.youtube_link, label: 'Youtube' },
+                ].filter(social => social.url).map((social) => {
                   const IconComponent = social.icon;
                   return (
                     <a
