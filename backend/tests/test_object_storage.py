@@ -29,6 +29,19 @@ class FakeS3:
             f"?operation={operation}&expires={ExpiresIn}"
         )
 
+    def get_object(self, Bucket, Key):
+        stored = self.objects.get((Bucket, Key))
+        if not stored:
+            raise ClientError(
+                {"Error": {"Code": "NoSuchKey", "Message": "Not Found"}},
+                "GetObject",
+            )
+        return {
+            "Body": stored["Body"],
+            "ContentLength": len(stored["Body"]),
+            "ContentType": stored["ContentType"],
+        }
+
 
 def test_local_storage_remains_default(monkeypatch, tmp_path):
     monkeypatch.delenv("S3_UPLOADS_BUCKET", raising=False)
@@ -77,6 +90,7 @@ def test_bare_legacy_url_resolves_from_legacy_prefix(monkeypatch):
     monkeypatch.setenv("S3_UPLOADS_BUCKET", "xspace-prod-uploads")
     monkeypatch.setattr(object_storage, "_client", lambda: fake)
 
-    signed_url = object_storage.presigned_upload_url("old.jpg")
+    stored = object_storage.open_s3_object("old.jpg")
 
-    assert signed_url.startswith("https://signed.example/legacy/old.jpg")
+    assert stored["Body"] == b"old"
+    assert stored["ContentType"] == "image/jpeg"

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -102,7 +102,7 @@ _uploads_dir.mkdir(parents=True, exist_ok=True)
 
 @app.get("/api/uploads/{object_path:path}", include_in_schema=False)
 async def serve_upload(object_path: str):
-    from services.object_storage import presigned_upload_url
+    from services.object_storage import open_s3_object
 
     filename = Path(object_path).name
     if not filename or filename in {".", ".."}:
@@ -116,19 +116,37 @@ async def serve_upload(object_path: str):
         )
 
     try:
-        signed_url = await run_in_threadpool(presigned_upload_url, object_path)
+        s3_object = await run_in_threadpool(open_s3_object, object_path)
     except ValueError:
         raise HTTPException(status_code=404, detail="Upload not found")
     except Exception:
         logging.exception("Unable to serve upload %s from S3", object_path)
         raise HTTPException(status_code=503, detail="Upload storage unavailable")
 
-    if not signed_url:
+    if not s3_object:
         raise HTTPException(status_code=404, detail="Upload not found")
-    return RedirectResponse(
-        signed_url,
-        status_code=307,
-        headers={"Cache-Control": "private,no-store"},
+
+    body = s3_object["Body"]
+
+    def stream_body():
+        try:
+            yield from body.iter_chunks(chunk_size=64 * 1024)
+        finally:
+            body.close()
+
+    headers = {
+        "Cache-Control": s3_object.get(
+            "CacheControl",
+            "public,max-age=31536000,immutable",
+        )
+    }
+    if s3_object.get("ContentLength") is not None:
+        headers["Content-Length"] = str(s3_object["ContentLength"])
+
+    return StreamingResponse(
+        stream_body(),
+        media_type=s3_object.get("ContentType") or "application/octet-stream",
+        headers=headers,
     )
 
 @app.get("/download-apk")

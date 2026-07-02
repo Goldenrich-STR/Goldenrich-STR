@@ -101,13 +101,9 @@ def find_s3_object(object_path: str) -> tuple[str, dict] | None:
     return None
 
 
-def presigned_upload_url(object_path: str, expires_in: int = 300) -> str | None:
+def open_s3_object(object_path: str) -> dict | None:
     found = find_s3_object(object_path)
     if not found:
         return None
     key, _ = found
-    return _client().generate_presigned_url(
-        "get_object",
-        Params={"Bucket": uploads_bucket(), "Key": key},
-        ExpiresIn=expires_in,
-    )
+    return _client().get_object(Bucket=uploads_bucket(), Key=key)
