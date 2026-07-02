@@ -24,14 +24,6 @@ const errorMessage = (error, fallback) => {
 const RecoveryShell = ({ children }) => (
   <main className="min-h-screen bg-[#F6F7F9] flex items-center justify-center px-4 py-10">
     <section className="w-full max-w-md bg-white border border-[#DDE2EA] rounded-lg shadow-premium p-6 sm:p-8">
-      <button
-        type="button"
-        onClick={() => window.location.assign('/')}
-        className="block mx-auto mb-7"
-        title="Go to home page"
-      >
-        <img src="/logo-dark.png" alt="X-Space360" className="h-9 w-auto object-contain" />
-      </button>
       {children}
     </section>
   </main>

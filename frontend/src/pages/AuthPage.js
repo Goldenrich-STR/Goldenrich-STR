@@ -14,6 +14,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
   const searchParams = new URLSearchParams(window.location.search);
   const forceLogin = searchParams.get('force_login') === '1';
   const requestedNext = searchParams.get('next') || '';
+  const initialRole = searchParams.get('role') === 'host' ? 'host' : 'guest';
   const [isLogin, setIsLogin] = useState(location.pathname !== '/register');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,7 +31,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
     phone: '',
     password: '',
     city: '',
-    role: 'guest',
+    role: initialRole,
     lg_code: '',
     employee_code: '',
     terms_accepted: false
@@ -333,23 +334,6 @@ const AuthPage = ({ isAdminLogin = false }) => {
                        {loading ? 'SIGNING IN...' : 'SIGN IN'}
                     </button>
 
-                    {!isAdminLogin && (
-                       <div className="space-y-5 pt-2">
-                          <div className="flex items-center gap-4">
-                             <div className="h-px flex-1 bg-sand-200"></div>
-                             <span className="text-[10px] font-bold tracking-tight uppercase tracking-[0.25em] text-charcoal-muted">or</span>
-                             <div className="h-px flex-1 bg-sand-200"></div>
-                          </div>
-                          <button
-                             type="button"
-                             onClick={handleGoldenRichSso}
-                             className="w-full py-5 rounded-2xl border-2 border-gray-100 bg-white text-charcoal hover:border-terracotta hover:text-terracotta transition-all shadow-sm font-bold tracking-tight text-[11px] uppercase tracking-[0.18em] inline-flex items-center justify-center gap-3"
-                          >
-                             <Building2 className="w-5 h-5" />
-                             <span>Login with GRP</span>
-                          </button>
-                       </div>
-                    )}
                  </form>
               ) : (
                  <div className="space-y-4 animate-slide-up">

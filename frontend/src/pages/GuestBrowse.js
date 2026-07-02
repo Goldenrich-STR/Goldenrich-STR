@@ -684,10 +684,14 @@ const GuestBrowse = () => {
               {/* Location */}
               <div className="relative flex-1 w-full">
                 <div 
-                  onClick={() => setActiveDropdown(activeDropdown === 'location' ? null : 'location')}
-                  className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer rounded-t-2xl md:rounded-l-full border-b border-gray-100 md:border-none hover:bg-gray-50 transition"
+                  onClick={() => {
+                    setActiveDropdown('location');
+                    const el = document.getElementById('browse-destination');
+                    if (el) el.focus();
+                  }}
+                  className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer group rounded-t-2xl md:rounded-l-full border-b border-gray-100 md:border-none hover:bg-gray-50 transition"
                 >
-                  <MapPin className="w-5 h-5 text-gray-400 mr-3" />
+                  <MapPin className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors" />
                   <div className="w-full text-left">
                     <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">Where</p>
                     <input
@@ -749,44 +753,46 @@ const GuestBrowse = () => {
               <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
               
               {/* Check-in */}
-              <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
-                <Calendar className="w-5 h-5 text-gray-400 mr-3" />
-                <div className="w-full text-left">
+              <div className="relative flex items-center px-4 md:px-6 py-4 w-full md:w-auto border-b border-gray-100 md:border-none hover:bg-gray-50 transition group">
+                <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
+                <div className="w-full text-left pointer-events-none z-0">
                   <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
-                  <input
-                    id="browse-check-in"
-                    name="checkIn"
-                    type={filters.check_in ? "date" : "text"}
-                    onFocus={(e) => e.target.type = 'date'}
-                    onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                    placeholder="Check-in"
-                    min={todayISO}
-                    value={filters.check_in}
-                    onChange={(e) => setFilters({ ...filters, check_in: e.target.value })}
-                    className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5"
-                  />
+                  <p className={`font-bold text-sm mt-0.5 ${filters.check_in ? 'text-charcoal' : 'text-gray-400'}`}>
+                    {filters.check_in || 'Check-in'}
+                  </p>
                 </div>
+                <input
+                  id="browse-check-in"
+                  name="checkIn"
+                  type="date"
+                  min={todayISO}
+                  value={filters.check_in}
+                  onChange={(e) => setFilters({ ...filters, check_in: e.target.value })}
+                  onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
               </div>
               <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
               
               {/* Check-out */}
-              <div className="flex items-center px-4 md:px-6 py-4 w-full md:w-auto cursor-pointer border-b border-gray-100 md:border-none hover:bg-gray-50 transition">
-                <Calendar className="w-5 h-5 text-gray-400 mr-3" />
-                <div className="w-full text-left">
+              <div className="relative flex items-center px-4 md:px-6 py-4 w-full md:w-auto border-b border-gray-100 md:border-none hover:bg-gray-50 transition group">
+                <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
+                <div className="w-full text-left pointer-events-none z-0">
                   <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
-                  <input
-                    id="browse-check-out"
-                    name="checkOut"
-                    type={filters.check_out ? "date" : "text"}
-                    onFocus={(e) => e.target.type = 'date'}
-                    onBlur={(e) => { if(!e.target.value) e.target.type = 'text' }}
-                    placeholder="Check-out"
-                    min={filters.check_in || todayISO}
-                    value={filters.check_out}
-                    onChange={(e) => setFilters({ ...filters, check_out: e.target.value })}
-                    className="bg-transparent border-none outline-none text-charcoal font-bold text-sm focus:ring-0 focus:outline-none p-0 w-full md:w-32 [color-scheme:light] placeholder-gray-400 mt-0.5"
-                  />
+                  <p className={`font-bold text-sm mt-0.5 ${filters.check_out ? 'text-charcoal' : 'text-gray-400'}`}>
+                    {filters.check_out || 'Check-out'}
+                  </p>
                 </div>
+                <input
+                  id="browse-check-out"
+                  name="checkOut"
+                  type="date"
+                  min={filters.check_in || todayISO}
+                  value={filters.check_out}
+                  onChange={(e) => setFilters({ ...filters, check_out: e.target.value })}
+                  onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                />
               </div>
               <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
 
