@@ -220,7 +220,10 @@ async def search_properties(
             raw_properties.sort(key=lambda p: p.get("created_at") or "", reverse=True)
         elif sort == "rating_desc":
             raw_properties.sort(
-                key=lambda p: (p.get("rating") or 0, p.get("review_count") or 0),
+                key=lambda p: (
+                    p.get("average_rating") or p.get("rating") or 0,
+                    p.get("reviews_count") or p.get("review_count") or 0,
+                ),
                 reverse=True,
             )
         else:
@@ -254,8 +257,9 @@ async def search_properties(
         except Exception as log_err:
             logger.warning(f"Failed to save search log: {log_err}")
 
-        # Set cache-control header for property search listings (15 minutes)
-        response.headers["Cache-Control"] = "public, max-age=900"
+        # Listing state and availability can change immediately after moderation
+        # or a booking, so clients must not reuse an older search response.
+        response.headers["Cache-Control"] = "no-store"
 
         # Build search-specific SEO metadata
         seo_title = "Browse Stays & Venues | X-Space360"
