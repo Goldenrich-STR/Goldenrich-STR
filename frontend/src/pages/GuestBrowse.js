@@ -684,10 +684,14 @@ const GuestBrowse = () => {
               {/* Location */}
               <div className="relative flex-1 w-full">
                 <div 
-                  onClick={() => setActiveDropdown(activeDropdown === 'location' ? null : 'location')}
-                  className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer rounded-t-2xl md:rounded-l-full border-b border-gray-100 md:border-none hover:bg-gray-50 transition"
+                  onClick={() => {
+                    setActiveDropdown('location');
+                    const el = document.getElementById('browse-destination');
+                    if (el) el.focus();
+                  }}
+                  className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer group rounded-t-2xl md:rounded-l-full border-b border-gray-100 md:border-none hover:bg-gray-50 transition"
                 >
-                  <MapPin className="w-5 h-5 text-gray-400 mr-3" />
+                  <MapPin className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors" />
                   <div className="w-full text-left">
                     <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">Where</p>
                     <input
