@@ -612,6 +612,21 @@ const HostDashboard = () => {
           prefill: {
             name: user?.full_name || '',
             email: user?.email || '',
+            contact: user?.phone || '',
+          },
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: 'Pay via UPI',
+                  instruments: [{ method: 'upi' }],
+                },
+              },
+              sequence: ['block.upi', 'upi', 'card', 'netbanking'],
+              preferences: {
+                show_default_blocks: true,
+              },
+            },
           },
           handler: async (response) => {
             try {
