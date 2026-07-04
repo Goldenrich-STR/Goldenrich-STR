@@ -139,20 +139,25 @@ def _target_matches(
     *,
     plan_type: Optional[str] = None,
     property_category: Optional[str] = None,
+    property_type: Optional[str] = None,
     bhk_type: Optional[str] = None,
     area_sqft: Optional[float] = None,
 ) -> bool:
     requested_plan_type = _normalize(plan_type)
     requested_category = _normalize(property_category)
+    requested_property_type = _normalize(property_type)
     requested_bhk = _normalize(bhk_type)
 
     item_plan_type = _normalize(item.get("plan_type"))
     item_category = _normalize(item.get("property_category"))
+    item_property_type = _normalize(item.get("property_type"))
     item_bhk = _normalize(item.get("bhk_type"))
 
     if requested_plan_type and item_plan_type and item_plan_type != requested_plan_type:
         return False
     if requested_category and item_category and item_category != requested_category:
+        return False
+    if requested_property_type and item_property_type and item_property_type != requested_property_type:
         return False
     if requested_bhk and item_bhk and item_bhk != requested_bhk:
         return False
@@ -164,6 +169,7 @@ def _target_matches(
 async def get_subscription_plans(
     plan_type: Optional[SubscriptionPlanType] = None,
     property_category: Optional[str] = None,
+    property_type: Optional[str] = None,
     bhk_type: Optional[str] = None,
     area_sqft: Optional[float] = None,
     db: AsyncIOMotorDatabase = Depends(get_db)
@@ -183,6 +189,7 @@ async def get_subscription_plans(
                 plan,
                 plan_type=plan_type.value if plan_type else None,
                 property_category=property_category,
+                property_type=property_type,
                 bhk_type=bhk_type,
                 area_sqft=area_sqft,
             )
@@ -231,6 +238,7 @@ class ValidateSubscriptionCouponRequest(BaseModel):
     plan_id: str
     billing_cycle: str = "monthly"
     property_category: Optional[str] = None
+    property_type: Optional[str] = None
     bhk_type: Optional[str] = None
     area_sqft: Optional[float] = None
 
@@ -260,6 +268,7 @@ async def validate_subscription_coupon(
             coupon,
             plan_type=plan.get("plan_type"),
             property_category=payload.property_category,
+            property_type=payload.property_type,
             bhk_type=payload.bhk_type,
             area_sqft=payload.area_sqft,
         ):
@@ -316,8 +325,20 @@ async def create_subscription(
         if subscription_data.property_id:
             property_context = await db.properties.find_one(
                 {"property_id": subscription_data.property_id},
-                {"_id": 0, "category": 1, "bhk_type": 1, "area_sqft": 1},
+                {"_id": 0, "category": 1, "property_type": 1, "bhk_type": 1, "area_sqft": 1},
             ) or {}
+            if property_context and not _target_matches(
+                plan,
+                plan_type=plan.get("plan_type"),
+                property_category=property_context.get("category"),
+                property_type=property_context.get("property_type"),
+                bhk_type=property_context.get("bhk_type"),
+                area_sqft=property_context.get("area_sqft"),
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This subscription plan is not valid for the selected property type",
+                )
 
         # Calculate amount based on billing cycle, platform fee, coupon, and GST.
         coupon_code = subscription_data.coupon_code.strip().upper() if subscription_data.coupon_code else None
@@ -336,6 +357,7 @@ async def create_subscription(
                 coupon,
                 plan_type=plan.get("plan_type"),
                 property_category=property_context.get("category"),
+                property_type=property_context.get("property_type"),
                 bhk_type=property_context.get("bhk_type"),
                 area_sqft=property_context.get("area_sqft"),
             ):
@@ -397,6 +419,7 @@ async def create_subscription(
             "subscription_id": subscription.subscription_id,
             "razorpay_order_id": razorpay_result["order"]["id"],
             "razorpay_key_id": razorpay_service.key_id,
+            "is_mock": razorpay_service.is_mock,
             "amount": int(amount * 100),
             "currency": "INR",
             "plan_name": plan["plan_name"],

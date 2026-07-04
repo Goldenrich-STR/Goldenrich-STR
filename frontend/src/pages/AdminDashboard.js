@@ -308,9 +308,10 @@ const AdminDashboard = () => {
   ] : [];
 
   return (
-    <div className="min-h-screen bg-stone">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-950">
+      <div className="min-h-screen">
       {/* Header */}
-      <header className="header-glass px-4 md:px-8 lg:px-12 py-4" data-testid="admin-header">
+      <header className="bg-white/95 backdrop-blur border-b border-slate-200 px-4 md:px-8 lg:px-10 py-4 sticky top-0 z-30" data-testid="admin-header">
         <div className="w-full flex justify-between items-center">
           <div 
             className="flex items-center space-x-3 cursor-pointer group"
@@ -353,11 +354,29 @@ const AdminDashboard = () => {
         </div>
       </header>
 
-      <div className="w-full px-4 md:px-8 lg:px-12 py-8 mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-4xl font-semibold tracking-tight text-charcoal" data-testid="dashboard-title">
-            Dashboard Overview
-          </h2>
+      <main className="w-full px-4 md:px-8 lg:px-10 py-8 mx-auto">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+              Dashboard / {activeTab === 'cms' ? 'CMS / Landing Page CMS' : activeTab.replace(/-/g, ' ')}
+            </p>
+            <h2 className="text-3xl font-bold tracking-tight text-slate-950" data-testid="dashboard-title">
+              {activeTab === 'cms' ? 'Landing Page CMS Settings' : 'Dashboard Overview'}
+            </h2>
+            {activeTab === 'cms' && (
+              <p className="text-sm text-slate-600 mt-1">Manage content for your landing page sections. Changes will reflect on the website in real-time.</p>
+            )}
+          </div>
+          {activeTab === 'cms' && (
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-charcoal text-white text-sm font-bold hover:bg-black transition"
+            >
+              <EyeIcon className="w-4 h-4" />
+              <span>Preview Website</span>
+            </button>
+          )}
         </div>
 
         {/* Navigation Tabs */}
@@ -529,7 +548,7 @@ const AdminDashboard = () => {
         {activeTab === 'support-messages' && (
           <SupportMessagesManagement />
         )}
-      </div>
+      </main>
 
       {showProfileModal && (
         <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
@@ -635,6 +654,7 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
@@ -4372,6 +4392,18 @@ const CmsMarkdownEditor = ({ value, onChange, label, placeholder, rows = 6 }) =>
   );
 };
 
+const LEGAL_PLACEMENT_OPTIONS = [
+  { id: 'legal_page', label: 'Legal Page' },
+  { id: 'landing_footer', label: 'Landing/Footer' },
+  { id: 'guest_registration', label: 'Guest Registration' },
+  { id: 'host_registration', label: 'Host Registration' },
+  { id: 'booking', label: 'Booking Flow' },
+  { id: 'booking_cancellation', label: 'Booking Cancellation' },
+  { id: 'host_verification', label: 'Host Document Verification' },
+  { id: 'host_onboarding', label: 'Host Onboarding Agreement' },
+  { id: 'host_terms', label: 'Host Terms & Conditions' },
+];
+
 // CMS Management Component
 const CMSManagement = () => {
   const [activeSubTab, setActiveSubTab] = useState('hero');
@@ -4413,6 +4445,10 @@ const CMSManagement = () => {
   });
 
   const [blogData, setBlogData] = useState({
+    page_eyebrow: 'X-SPACE360 JOURNAL',
+    page_title: 'The Journal',
+    page_subtitle: 'Curated insights, local travel guides, and operational updates for short-term renting and event planning.',
+    page_hero_image_url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1600',
     posts: []
   });
 
@@ -4449,6 +4485,22 @@ const CMSManagement = () => {
     checkin_label: '',
     checkin_text: ''
   });
+
+  const [legalTermsData, setLegalTermsData] = useState({
+    title: 'Legal Terms & Platform Policies',
+    version: '2026.1',
+    effective_date: '2026-07-03',
+    terms_label: 'Terms & Conditions',
+    terms_text: '',
+    privacy_label: 'Privacy Policy',
+    privacy_text: '',
+    refund_label: 'Cancellation & Refund Policy',
+    refund_text: '',
+    custom_policies: []
+  });
+  const [expandedLegalPolicy, setExpandedLegalPolicy] = useState('terms');
+  const [isReorderingLegalPolicies, setIsReorderingLegalPolicies] = useState(false);
+  const [showAllLegalChanges, setShowAllLegalChanges] = useState(false);
 
   const [offerData, setOfferData] = useState({
     title: '',
@@ -4494,10 +4546,15 @@ const CMSManagement = () => {
       if (testimonialsDoc) setTestimonialsData(testimonialsDoc.content_data);
 
       const blogDoc = docs.find(d => d.section === 'blog');
-      if (blogDoc) setBlogData(blogDoc.content_data);
+      if (blogDoc) setBlogData(prev => ({ ...prev, ...(blogDoc.content_data || {}) }));
 
       const footerDoc = docs.find(d => d.section === 'footer');
       if (footerDoc) setFooterData(footerDoc.content_data);
+
+      const legalTermsDoc = docs.find(d => d.section === 'legal_terms');
+      if (legalTermsDoc) {
+        setLegalTermsData(prev => ({ ...prev, ...(legalTermsDoc.content_data || {}) }));
+      }
 
       const offerDoc = docs.find(d => d.section === 'offer');
       if (offerDoc) setOfferData(offerDoc.content_data);
@@ -4572,6 +4629,8 @@ const CMSManagement = () => {
           updated[index] = { ...updated[index], image_url: uploadedUrl };
           return { ...prev, posts: updated };
         });
+      } else if (type === 'blog_hero') {
+        setBlogData(prev => ({ ...prev, page_hero_image_url: uploadedUrl }));
       } else if (type === 'testimonial' && index !== null) {
         setTestimonialsData(prev => {
           const updated = [...prev.items];
@@ -4610,6 +4669,145 @@ const CMSManagement = () => {
     });
   };
 
+  const customLegalPolicies = Array.isArray(legalTermsData.custom_policies)
+    ? legalTermsData.custom_policies
+    : [];
+
+  const updateCustomLegalPolicy = (policyId, patch) => {
+    setLegalTermsData(prev => ({
+      ...prev,
+      custom_policies: (Array.isArray(prev.custom_policies) ? prev.custom_policies : []).map(policy =>
+        policy.id === policyId ? { ...policy, ...patch } : policy
+      )
+    }));
+  };
+
+  const deleteCustomLegalPolicy = (policyId) => {
+    setLegalTermsData(prev => ({
+      ...prev,
+      custom_policies: (Array.isArray(prev.custom_policies) ? prev.custom_policies : []).filter(policy => policy.id !== policyId)
+    }));
+    if (expandedLegalPolicy === policyId) {
+      setExpandedLegalPolicy('terms');
+    }
+  };
+
+  const moveCustomLegalPolicy = (policyId, direction) => {
+    setLegalTermsData(prev => {
+      const policies = [...(Array.isArray(prev.custom_policies) ? prev.custom_policies : [])];
+      const index = policies.findIndex(policy => policy.id === policyId);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= policies.length) return prev;
+      [policies[index], policies[target]] = [policies[target], policies[index]];
+      return { ...prev, custom_policies: policies };
+    });
+  };
+
+  const addCustomLegalPolicy = (type = 'policy') => {
+    const id = `custom_${type}_${Date.now()}`;
+    const newPolicy = {
+      id,
+      type,
+      title: type === 'agreement' ? 'New Agreement' : 'New Policy',
+      label: type === 'agreement' ? 'New Agreement' : 'New Policy',
+      text: type === 'agreement'
+        ? '## NEW AGREEMENT\n\nWrite the agreement terms here.'
+        : '## NEW POLICY\n\nWrite the policy terms here.',
+      status: 'Draft',
+      placements: ['legal_page'],
+      last_updated: new Date().toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    };
+
+    setLegalTermsData(prev => ({
+      ...prev,
+      custom_policies: [...(Array.isArray(prev.custom_policies) ? prev.custom_policies : []), newPolicy]
+    }));
+    setExpandedLegalPolicy(id);
+  };
+
+  const resetLegalTermsToDefault = () => {
+    if (!window.confirm('Reset all Legal Terms? This will clear policy/agreement text and remove custom policies.')) return;
+    setLegalTermsData({
+      title: 'Legal Terms & Platform Policies',
+      version: '2026.1',
+      effective_date: '2026-07-03',
+      terms_label: 'Terms & Conditions',
+      terms_text: '',
+      privacy_label: 'Privacy Policy',
+      privacy_text: '',
+      refund_label: 'Cancellation & Refund Policy',
+      refund_text: '',
+      custom_policies: []
+    });
+    setExpandedLegalPolicy('terms');
+  };
+
+  const legalPolicyItems = [
+    legalTermsData.terms_text ? {
+      key: 'terms',
+      number: 1,
+      title: 'Platform Terms & Conditions',
+      labelKey: 'terms_label',
+      textKey: 'terms_text',
+      label: legalTermsData.terms_label || 'Terms & Conditions',
+      text: legalTermsData.terms_text || '',
+      status: 'Active',
+      lastUpdated: '2 Jul 2026, 03:34 PM'
+    } : null,
+    legalTermsData.privacy_text ? {
+      key: 'privacy',
+      number: 2,
+      title: 'Privacy Policy',
+      labelKey: 'privacy_label',
+      textKey: 'privacy_text',
+      label: legalTermsData.privacy_label || 'Privacy Policy',
+      text: legalTermsData.privacy_text || '',
+      status: 'Active',
+      lastUpdated: '30 Jun 2026, 06:35 PM'
+    } : null,
+    legalTermsData.refund_text ? {
+      key: 'refund',
+      number: 3,
+      title: 'Cancellation & Refund Policy',
+      labelKey: 'refund_label',
+      textKey: 'refund_text',
+      label: legalTermsData.refund_label || 'Cancellation & Refund Policy',
+      text: legalTermsData.refund_text || '',
+      status: 'Active',
+      lastUpdated: '28 Jun 2026, 11:01 AM'
+    } : null
+  ].filter(Boolean).concat(customLegalPolicies.map((policy, index) => ({
+    key: policy.id,
+    number: index + 1 + [
+      legalTermsData.terms_text,
+      legalTermsData.privacy_text,
+      legalTermsData.refund_text
+    ].filter(Boolean).length,
+    title: policy.title ?? (policy.type === 'agreement' ? 'New Agreement' : 'New Policy'),
+    label: policy.label ?? policy.title ?? '',
+    text: policy.text || '',
+    status: policy.status || 'Draft',
+    lastUpdated: policy.last_updated || 'Just now',
+    custom: true,
+    type: policy.type || 'policy',
+    placements: Array.isArray(policy.placements) ? policy.placements : []
+  })));
+
+  const countWords = (text = '') => String(text).trim().split(/\s+/).filter(Boolean).length;
+  const legalRecentChanges = legalPolicyItems
+    .filter(policy => policy.status === 'Active' || policy.status === 'Draft')
+    .map(policy => ({
+      title: `Updated ${policy.title}`,
+      by: policy.custom ? 'By Golden Admin' : 'By System Default',
+      date: String(policy.lastUpdated || 'Just now').split(',')[0]
+    }));
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -4637,6 +4835,7 @@ const CMSManagement = () => {
           { id: 'offer', label: 'Promotional Offer', icon: Tag },
           { id: 'support', label: 'Support Page', icon: HelpCircle },
           { id: 'footer', label: 'Footer', icon: Phone },
+          { id: 'legal_terms', label: 'Legal Terms', icon: Shield },
           { id: 'agreement', label: 'Host Agreement', icon: FileText }
         ].map(tab => {
           const Icon = tab.icon;
@@ -5366,50 +5565,6 @@ const CMSManagement = () => {
                   );
                 })}
               </div>
-              <div className="md:col-span-2 rounded-3xl border border-gray-100 bg-stone/60 p-6 space-y-6">
-                <h5 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest">Footer Legal Links</h5>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Privacy Label</label>
-                    <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.privacy_label || ''} onChange={e => setFooterData({ ...footerData, privacy_label: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Terms Label</label>
-                    <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.terms_label || ''} onChange={e => setFooterData({ ...footerData, terms_label: e.target.value })} />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Check-in Instructions Label</label>
-                    <input className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm" value={footerData.checkin_label || ''} onChange={e => setFooterData({ ...footerData, checkin_label: e.target.value })} />
-                  </div>
-                  <div className="md:col-span-3">
-                    <CmsMarkdownEditor
-                      label="Privacy Policy Text"
-                      value={footerData.privacy_text || ''}
-                      onChange={val => setFooterData({ ...footerData, privacy_text: val })}
-                      placeholder="Enter Privacy Policy text in Markdown format..."
-                      rows={6}
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <CmsMarkdownEditor
-                      label="Terms & Conditions Text"
-                      value={footerData.terms_text || ''}
-                      onChange={val => setFooterData({ ...footerData, terms_text: val })}
-                      placeholder="Enter Terms & Conditions text in Markdown format..."
-                      rows={6}
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <CmsMarkdownEditor
-                      label="Check-in Instructions Text"
-                      value={footerData.checkin_text || ''}
-                      onChange={val => setFooterData({ ...footerData, checkin_text: val })}
-                      placeholder="Enter Check-in Instructions text in Markdown format..."
-                      rows={6}
-                    />
-                  </div>
-                </div>
-              </div>
             </div>
 
             <div className="pt-6 border-t border-sand-150">
@@ -5455,14 +5610,15 @@ const CMSManagement = () => {
                       id: `p_${Date.now()}`,
                       title: 'New Insights Article',
                       excerpt: 'Discover short-term rental trends across major metros.',
-                      content: '',
+                      content: '## New Insights Article\n\nWrite the full article here.',
                       image_url: '',
                       author: 'STR Insights Team',
                       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                      read_time: '5 min read'
+                      read_time: '5 min read',
+                      is_active: true
                     }
                   ];
-                  setBlogData({ posts: updatedPosts });
+                  setBlogData({ ...blogData, posts: updatedPosts });
                 }}
                 className="btn-premium px-5 py-2.5 rounded-2xl flex items-center space-x-1.5 text-xs font-bold tracking-tight uppercase tracking-wider"
               >
@@ -5471,19 +5627,117 @@ const CMSManagement = () => {
               </button>
             </div>
 
+            <div className="rounded-3xl border border-gray-100 bg-stone/50 p-6 space-y-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h5 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest">Blog Page Settings</h5>
+                  <p className="text-xs text-charcoal-muted mt-1">Edit the public /blog page hero content and background.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.open('/blog', '_blank')}
+                  className="px-4 py-2 rounded-xl border border-gray-200 bg-white text-xs font-bold text-charcoal hover:bg-gray-50"
+                >
+                  Preview Blog Page
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Hero Eyebrow</label>
+                  <input
+                    className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                    value={blogData.page_eyebrow || ''}
+                    onChange={e => setBlogData({ ...blogData, page_eyebrow: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Hero Title</label>
+                  <input
+                    className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                    value={blogData.page_title || ''}
+                    onChange={e => setBlogData({ ...blogData, page_title: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Hero Image URL</label>
+                  <div className="flex gap-2">
+                    <input
+                      className="min-w-0 flex-1 border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                      value={blogData.page_hero_image_url || ''}
+                      onChange={e => setBlogData({ ...blogData, page_hero_image_url: e.target.value })}
+                    />
+                    <label className="px-4 py-3 rounded-2xl bg-charcoal text-white text-xs font-bold cursor-pointer flex items-center">
+                      Upload
+                      <input type="file" accept="image/*" className="hidden" onChange={e => handleImageUpload(e, 'blog_hero')} />
+                    </label>
+                  </div>
+                </div>
+                <div className="md:col-span-3">
+                  <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Hero Subtitle</label>
+                  <textarea
+                    rows={2}
+                    className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                    value={blogData.page_subtitle || ''}
+                    onChange={e => setBlogData({ ...blogData, page_subtitle: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 gap-8">
+              {(!blogData.posts || blogData.posts.length === 0) && (
+                <div className="rounded-3xl border border-dashed border-gray-200 bg-stone/40 p-10 text-center">
+                  <FileText className="w-10 h-10 text-charcoal-muted mx-auto mb-3" />
+                  <h5 className="text-lg font-bold text-charcoal">No Blog Posts Added</h5>
+                  <p className="text-sm text-charcoal-muted mt-1">Click Add Blog Post to create the first article.</p>
+                </div>
+              )}
               {blogData.posts?.map((post, index) => (
                 <div key={post.id || index} className="p-6 bg-stone/50 rounded-3xl border border-gray-100/80 space-y-5 relative group hover:bg-white hover:shadow-premium transition-all duration-300">
-                  <button
-                    onClick={() => {
-                      const updatedPosts = blogData.posts.filter((_, idx) => idx !== index);
-                      setBlogData({ posts: updatedPosts });
-                    }}
-                    className="absolute top-4 right-4 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition duration-300 active:scale-90"
-                    title="Delete Post"
-                  >
-                    <Trash className="w-4 h-4" />
-                  </button>
+                  <div className="flex flex-wrap items-center justify-between gap-3 pr-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${post.is_active === false ? 'bg-gray-100 text-gray-600' : 'bg-emerald-50 text-emerald-700'}`}>
+                        {post.is_active === false ? 'Hidden' : 'Visible'}
+                      </span>
+                      <span className="text-xs font-bold text-charcoal-muted">Post {index + 1}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...blogData.posts];
+                          updated[index] = { ...updated[index], is_active: post.is_active === false };
+                          setBlogData({ ...blogData, posts: updated });
+                        }}
+                        className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-bold text-charcoal hover:bg-gray-50"
+                      >
+                        {post.is_active === false ? 'Show' : 'Remove from Website'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const clone = { ...post, id: `p_${Date.now()}`, title: `${post.title || 'Blog Post'} Copy` };
+                          const updated = [...blogData.posts];
+                          updated.splice(index + 1, 0, clone);
+                          setBlogData({ ...blogData, posts: updated });
+                        }}
+                        className="px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-bold text-charcoal hover:bg-gray-50"
+                      >
+                        Duplicate
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!window.confirm('Delete this blog post permanently?')) return;
+                          const updatedPosts = blogData.posts.filter((_, idx) => idx !== index);
+                          setBlogData({ ...blogData, posts: updatedPosts });
+                        }}
+                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition duration-300 active:scale-90"
+                        title="Delete Post"
+                      >
+                        <Trash className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
@@ -5494,7 +5748,7 @@ const CMSManagement = () => {
                         onChange={e => {
                           const updated = [...blogData.posts];
                           updated[index] = { ...updated[index], title: e.target.value };
-                          setBlogData({ posts: updated });
+                          setBlogData({ ...blogData, posts: updated });
                         }}
                       />
                     </div>
@@ -5507,7 +5761,7 @@ const CMSManagement = () => {
                           onChange={e => {
                             const updated = [...blogData.posts];
                             updated[index] = { ...updated[index], author: e.target.value };
-                            setBlogData({ posts: updated });
+                            setBlogData({ ...blogData, posts: updated });
                           }}
                         />
                       </div>
@@ -5519,7 +5773,7 @@ const CMSManagement = () => {
                           onChange={e => {
                             const updated = [...blogData.posts];
                             updated[index] = { ...updated[index], date: e.target.value };
-                            setBlogData({ posts: updated });
+                            setBlogData({ ...blogData, posts: updated });
                           }}
                         />
                       </div>
@@ -5531,7 +5785,7 @@ const CMSManagement = () => {
                           onChange={e => {
                             const updated = [...blogData.posts];
                             updated[index] = { ...updated[index], read_time: e.target.value };
-                            setBlogData({ posts: updated });
+                            setBlogData({ ...blogData, posts: updated });
                           }}
                         />
                       </div>
@@ -5545,7 +5799,7 @@ const CMSManagement = () => {
                       onChange={val => {
                         const updated = [...blogData.posts];
                         updated[index] = { ...updated[index], excerpt: val };
-                        setBlogData({ posts: updated });
+                        setBlogData({ ...blogData, posts: updated });
                       }}
                       placeholder="Summarize the article in one or two sentences..."
                       rows={3}
@@ -5559,7 +5813,7 @@ const CMSManagement = () => {
                       onChange={val => {
                         const updated = [...blogData.posts];
                         updated[index] = { ...updated[index], content: val };
-                        setBlogData({ posts: updated });
+                        setBlogData({ ...blogData, posts: updated });
                       }}
                       placeholder="Write the full blog article in Markdown..."
                       rows={10}
@@ -5575,7 +5829,7 @@ const CMSManagement = () => {
                         onChange={e => {
                           const updated = [...blogData.posts];
                           updated[index] = { ...updated[index], image_url: e.target.value };
-                          setBlogData({ posts: updated });
+                          setBlogData({ ...blogData, posts: updated });
                         }}
                         placeholder="Image URL"
                       />
@@ -5591,11 +5845,24 @@ const CMSManagement = () => {
                       </label>
                     </div>
                     {post.image_url && (
-                      <div className="mt-4 relative group overflow-hidden rounded-2xl border border-gray-100/80 shadow-subtle aspect-video max-h-40 w-fit">
-                        <img src={getImageUrl(post.image_url)} alt="Cover Preview" className="w-64 h-full object-cover group-hover:scale-[1.02] transition-all duration-500" />
-                        <div className="absolute top-2 left-2 bg-charcoal/50 backdrop-blur-sm border border-white/10 px-2 py-1 rounded-lg text-[9px] text-white font-bold uppercase tracking-wider">
-                          Cover Preview
+                      <div className="mt-4 flex items-start gap-3">
+                        <div className="relative group overflow-hidden rounded-2xl border border-gray-100/80 shadow-subtle aspect-video max-h-40 w-fit">
+                          <img src={getImageUrl(post.image_url)} alt="Cover Preview" className="w-64 h-full object-cover group-hover:scale-[1.02] transition-all duration-500" />
+                          <div className="absolute top-2 left-2 bg-charcoal/50 backdrop-blur-sm border border-white/10 px-2 py-1 rounded-lg text-[9px] text-white font-bold uppercase tracking-wider">
+                            Cover Preview
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = [...blogData.posts];
+                            updated[index] = { ...updated[index], image_url: '' };
+                            setBlogData({ ...blogData, posts: updated });
+                          }}
+                          className="px-3 py-2 rounded-xl border border-red-100 bg-red-50 text-red-600 text-xs font-bold"
+                        >
+                          Remove Image
+                        </button>
                       </div>
                     )}
                   </div>
@@ -6008,6 +6275,362 @@ const CMSManagement = () => {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* LEGAL TERMS TAB */}
+        {activeSubTab === 'legal_terms' && (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_150px_150px_150px_170px] gap-4 items-center">
+                <div>
+                  <h4 className="text-xl font-bold tracking-tight text-slate-950">Policy Overview</h4>
+                  <p className="text-sm text-slate-500 mt-1">View and manage all legal policies and platform terms.</p>
+                </div>
+                {[
+                  { value: String(legalPolicyItems.filter(policy => policy.status === 'Active').length), label: 'Active Policies', color: 'text-emerald-600' },
+                  { value: String(legalPolicyItems.filter(policy => policy.status === 'Draft').length), label: 'Draft Policies', color: 'text-amber-600' },
+                  { value: '3', label: 'Last Updated', sub: '2 Jul 2026', color: 'text-violet-600' },
+                  { value: <Check className="w-7 h-7" />, label: 'Published', sub: 'Live on Website', color: 'text-emerald-600' }
+                ].map((stat, idx) => (
+                  <div key={idx} className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 min-h-[92px]">
+                    <div className={`text-2xl font-black ${stat.color}`}>{stat.value}</div>
+                    <p className="text-xs font-bold text-slate-950 mt-1">{stat.label}</p>
+                    {stat.sub && <p className="text-[11px] text-slate-500 mt-0.5">{stat.sub}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-terracotta/10 text-terracotta flex items-center justify-center">
+                    <Shield className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-bold tracking-tight text-slate-950">Legal Terms & Platform Policies</h4>
+                    <p className="text-sm text-slate-500 mt-1">Maintain the public legal agreement, privacy policy, and cancellation terms separately from footer layout settings.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    Published
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => addCustomLegalPolicy('policy')}
+                    className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    Add Policy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addCustomLegalPolicy('agreement')}
+                    className="px-4 py-2 rounded-lg bg-charcoal text-white text-sm font-bold hover:bg-black"
+                  >
+                    Add Agreement
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-6">
+                <div>
+                  <label className="text-[11px] font-bold tracking-tight text-slate-600 uppercase tracking-widest block mb-2">Section Title</label>
+                  <input
+                    className="w-full border border-slate-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-xl px-4 py-3 outline-none transition-all font-semibold text-slate-950 bg-white text-sm"
+                    value={legalTermsData.title || ''}
+                    onChange={e => setLegalTermsData({ ...legalTermsData, title: e.target.value })}
+                    placeholder="Legal Terms & Platform Policies"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold tracking-tight text-slate-600 uppercase tracking-widest block mb-2">Policy Version</label>
+                  <input
+                    className="w-full border border-slate-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-xl px-4 py-3 outline-none transition-all font-semibold text-slate-950 bg-white text-sm"
+                    value={legalTermsData.version || ''}
+                    onChange={e => setLegalTermsData({ ...legalTermsData, version: e.target.value })}
+                    placeholder="2026.1"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold tracking-tight text-slate-600 uppercase tracking-widest block mb-2">Effective Date</label>
+                  <input
+                    type="date"
+                    className="w-full border border-slate-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-xl px-4 py-3 outline-none transition-all font-semibold text-slate-950 bg-white text-sm"
+                    value={legalTermsData.effective_date || ''}
+                    onChange={e => setLegalTermsData({ ...legalTermsData, effective_date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold tracking-tight text-slate-600 uppercase tracking-widest block mb-2">Terms Link Label</label>
+                  <input
+                    className="w-full border border-slate-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-xl px-4 py-3 outline-none transition-all font-semibold text-slate-950 bg-white text-sm"
+                    value={legalTermsData.terms_label || ''}
+                    onChange={e => setLegalTermsData({ ...legalTermsData, terms_label: e.target.value })}
+                    placeholder="Terms & Conditions"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {legalPolicyItems.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center">
+                    <Shield className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                    <h5 className="text-lg font-black text-slate-950">No Policies Published</h5>
+                    <p className="text-sm text-slate-500 mt-1">Add a policy or agreement, set it Active, and save changes to publish it.</p>
+                  </div>
+                )}
+                {legalPolicyItems.map(policy => {
+                  const isExpanded = expandedLegalPolicy === policy.key;
+                  const isDraft = policy.status === 'Draft';
+                  return (
+                    <div key={policy.key} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+                      <div className="flex flex-col lg:flex-row lg:items-center gap-3 px-4 py-4">
+                        <div className="flex items-center gap-4 flex-1">
+                          <span className="text-slate-400 font-black">::</span>
+                          <h5 className="text-base font-bold text-slate-950">
+                            {policy.number}. {policy.title || (policy.type === 'agreement' ? 'Untitled Agreement' : 'Untitled Policy')}
+                          </h5>
+                          <span className={`px-3 py-1 rounded-lg text-[11px] font-bold ${isDraft ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                            {policy.status}
+                          </span>
+                          {policy.custom && (
+                            <span className="px-3 py-1 rounded-lg bg-blue-50 text-blue-700 text-[11px] font-bold capitalize">
+                              {policy.type}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 lg:w-64">Last Updated: {policy.lastUpdated}</p>
+                        {isReorderingLegalPolicies && policy.custom && (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => moveCustomLegalPolicy(policy.key, -1)}
+                              className="w-9 h-9 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center"
+                              aria-label="Move policy up"
+                            >
+                              <ChevronUp className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => moveCustomLegalPolicy(policy.key, 1)}
+                              className="w-9 h-9 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 flex items-center justify-center"
+                              aria-label="Move policy down"
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (policy.key === 'host_agreement') {
+                              setActiveSubTab('agreement');
+                              return;
+                            }
+                            setExpandedLegalPolicy(isExpanded ? '' : policy.key);
+                          }}
+                          className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-bold text-slate-800 hover:bg-slate-50"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (policy.key === 'host_agreement') {
+                              setActiveSubTab('agreement');
+                              return;
+                            }
+                            setExpandedLegalPolicy(isExpanded ? '' : policy.key);
+                          }}
+                          className="w-10 h-10 rounded-lg border border-slate-200 text-slate-800 hover:bg-slate-50 flex items-center justify-center"
+                          aria-label={isExpanded ? 'Collapse policy' : 'Expand policy'}
+                        >
+                          <ChevronUp className={`w-4 h-4 transition-transform ${isExpanded ? '' : 'rotate-180'}`} />
+                        </button>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="px-4 pb-4">
+                          {policy.custom && (
+                            <div className="space-y-4 mb-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <label className="text-[10px] font-bold tracking-tight text-slate-500 uppercase tracking-widest block mb-2">Title</label>
+                                <input
+                                  className="w-full border border-slate-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-xl px-4 py-3 outline-none transition-all font-semibold text-slate-950 bg-white text-sm"
+                                  value={policy.title || ''}
+                                  onChange={e => updateCustomLegalPolicy(policy.key, { title: e.target.value, label: e.target.value })}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold tracking-tight text-slate-500 uppercase tracking-widest block mb-2">Type</label>
+                                <select
+                                  className="w-full border border-slate-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-xl px-4 py-3 outline-none transition-all font-semibold text-slate-950 bg-white text-sm"
+                                  value={policy.type || 'policy'}
+                                  onChange={e => updateCustomLegalPolicy(policy.key, { type: e.target.value })}
+                                >
+                                  <option value="policy">Policy</option>
+                                  <option value="agreement">Agreement</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold tracking-tight text-slate-500 uppercase tracking-widest block mb-2">Status</label>
+                                <select
+                                  className="w-full border border-slate-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-xl px-4 py-3 outline-none transition-all font-semibold text-slate-950 bg-white text-sm"
+                                  value={policy.status || 'Draft'}
+                                  onChange={e => updateCustomLegalPolicy(policy.key, { status: e.target.value })}
+                                >
+                                  <option value="Active">Active</option>
+                                  <option value="Draft">Draft</option>
+                                </select>
+                              </div>
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] font-bold tracking-tight text-slate-500 uppercase tracking-widest block mb-2">Apply This To</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                                  {LEGAL_PLACEMENT_OPTIONS.map(option => {
+                                    const checked = Array.isArray(policy.placements) && policy.placements.includes(option.id);
+                                    return (
+                                      <label key={option.id} className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold cursor-pointer transition ${checked ? 'border-terracotta bg-terracotta/10 text-charcoal' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                                        <input
+                                          type="checkbox"
+                                          className="w-4 h-4 rounded border-slate-300 text-terracotta focus:ring-terracotta"
+                                          checked={checked}
+                                          onChange={e => {
+                                            const current = Array.isArray(policy.placements) ? policy.placements : [];
+                                            const next = e.target.checked
+                                              ? [...new Set([...current, option.id])]
+                                              : current.filter(id => id !== option.id);
+                                            updateCustomLegalPolicy(policy.key, { placements: next });
+                                          }}
+                                        />
+                                        <span>{option.label}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {!policy.readOnly && policy.labelKey && (
+                            <div className="mb-4 max-w-md">
+                              <label className="text-[10px] font-bold tracking-tight text-slate-500 uppercase tracking-widest block mb-2">Public Link Label</label>
+                              <input
+                                className="w-full border border-slate-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-xl px-4 py-3 outline-none transition-all font-semibold text-slate-950 bg-white text-sm"
+                                value={policy.label || ''}
+                                onChange={e => setLegalTermsData({ ...legalTermsData, [policy.labelKey]: e.target.value })}
+                              />
+                            </div>
+                          )}
+                          <CmsMarkdownEditor
+                            label={policy.readOnly ? `${policy.title} Preview` : `${policy.title} Content`}
+                            value={policy.text || ''}
+                            onChange={val => {
+                              if (policy.custom) {
+                                updateCustomLegalPolicy(policy.key, { text: val });
+                              } else if (!policy.readOnly && policy.textKey) {
+                                setLegalTermsData({ ...legalTermsData, [policy.textKey]: val });
+                              }
+                            }}
+                            placeholder={`Write ${policy.title} in Markdown...`}
+                            rows={policy.key === 'terms' ? 12 : 8}
+                          />
+                          <div className="flex items-center justify-between px-3 py-2 border border-t-0 border-slate-200 rounded-b-xl bg-slate-50 text-xs text-slate-500">
+                            <span>Word count: {countWords(policy.text)}</span>
+                            <div className="flex items-center gap-4">
+                              {policy.custom && (
+                                <button
+                                  type="button"
+                                  onClick={() => deleteCustomLegalPolicy(policy.key)}
+                                  className="text-red-600 font-bold hover:underline"
+                                >
+                                  Delete
+                                </button>
+                              )}
+                              <span className="text-emerald-600 font-bold">Saved</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h4 className="text-lg font-bold text-slate-950 mb-4">Quick Actions</h4>
+                {[
+                  ['Add New Policy', 'Create a new legal policy section', () => addCustomLegalPolicy('policy')],
+                  ['Reorder Policies', isReorderingLegalPolicies ? 'Reorder mode is active' : 'Move custom policies up or down', () => setIsReorderingLegalPolicies(prev => !prev)],
+                  ['Page Preview', 'Preview the dynamic legal page', () => navigate('/legal')],
+                  ['Reset to Default', 'Restore default policies', resetLegalTermsToDefault]
+                ].map(([title, subtitle, action], idx) => (
+                  <button key={title} type="button" onClick={action || undefined} className="w-full flex items-center gap-4 px-4 py-4 border border-slate-200 first:rounded-t-xl last:rounded-b-xl -mb-px text-left hover:bg-slate-50">
+                    <span className={`w-9 h-9 rounded-xl flex items-center justify-center ${idx === 3 ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+                      {idx === 3 ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    </span>
+                    <span>
+                      <span className="block text-sm font-bold text-slate-950">{title}</span>
+                      <span className="block text-xs text-slate-500">{subtitle}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-bold text-slate-950">Recent Changes</h4>
+                  <button
+                    type="button"
+                    onClick={() => setShowAllLegalChanges(prev => !prev)}
+                    className="text-sm font-bold text-blue-600"
+                  >
+                    {showAllLegalChanges ? 'Show Less' : 'View All'}
+                  </button>
+                </div>
+                {(showAllLegalChanges ? legalRecentChanges : legalRecentChanges.slice(0, 4)).map((change, index) => (
+                  <div key={`recent-${change.title}-${index}`} className="flex items-center justify-between gap-4 py-3 border-b border-slate-100 last:border-b-0">
+                    <div className="flex items-center gap-3">
+                      <span className="w-9 h-9 rounded-xl bg-terracotta/10 text-terracotta flex items-center justify-center">
+                        <FileText className="w-4 h-4" />
+                      </span>
+                      <span>
+                        <span className="block text-sm font-bold text-slate-950">{change.title}</span>
+                        <span className="block text-xs text-slate-500">{change.by}</span>
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-500">{change.date}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-5 pt-2">
+              <button
+                onClick={() => handleSave('legal_terms', legalTermsData)}
+                disabled={saving}
+                className="w-full sm:w-auto px-8 py-4 rounded-xl bg-charcoal text-white font-bold flex items-center justify-center gap-2 hover:bg-black transition disabled:opacity-60"
+              >
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Saving Changes...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Save All Changes</span>
+                  </>
+                )}
+              </button>
+              <p className="text-sm text-slate-500">All changes will be published to the website</p>
             </div>
           </div>
         )}

@@ -44,6 +44,60 @@ X-Space360 may suspend, restrict, delist, or terminate the Host's account, listi
 ### 10. Acceptance and Electronic Signature
 By entering the Host's legal details and drawing/signing electronically, the Host confirms that they have read, understood, accepted, and agreed to be bound by this Agreement and all applicable X-Space360 platform policies. The electronic signature shall be treated as valid consent and acceptance for platform verification and onboarding purposes."""
 
+LEGAL_TERMS_TEXT = """## X-SPACE360 PLATFORM TERMS AND CONDITIONS
+
+These Terms and Conditions ("Terms") govern access to and use of the X-Space360 short-term rental platform operated by Golden Rich Financial & Real Estate Solutions Private Limited ("Company", "Platform", "we", "us", or "our"). By registering, browsing, listing, booking, paying, communicating, or otherwise using the Platform, every guest, host, broker, employee, vendor, or authorized user ("User", "you", or "your") confirms that they have read, understood, and agreed to these Terms.
+
+### 1. Platform Scope
+X-Space360 provides a technology-enabled marketplace for discovery, listing, verification, booking facilitation, payment coordination, guest communication, support, and related operational services for short-term rental spaces, event venues, commercial spaces, residential properties, and other approved listings. The Platform does not transfer ownership, tenancy, leasehold rights, possession, or any interest in listed properties.
+
+### 2. Account Registration and User Obligations
+Users must provide true, complete, current, and verifiable information during registration and while using the Platform. Users are responsible for maintaining confidentiality of login credentials, OTPs, account access, payment instruments, uploaded documents, and all activity performed through their account. The Platform may suspend, restrict, or terminate access where information is false, incomplete, misleading, unauthorized, fraudulent, or harmful to Platform operations.
+
+### 3. Host Listing Responsibilities
+Hosts confirm that they are the lawful owner, lessee, manager, or authorized representative of each listed property. Hosts are responsible for accuracy of property details, pricing, availability, amenities, photographs, tax details, cancellation rules, society permissions, statutory approvals, safety standards, local-law compliance, guest readiness, and honoring confirmed bookings.
+
+### 4. Guest Booking Responsibilities
+Guests agree to use properties lawfully, respectfully, and only for the approved booking purpose. Guests must provide valid identity details when requested, comply with check-in instructions, occupancy limits, house rules, payment terms, local regulations, and Platform policies. Damage, nuisance, illegal activity, unauthorized events, misrepresentation, or breach of booking rules may result in charges, cancellation, account restriction, or legal action.
+
+### 5. Payments, Fees, Taxes, and Payouts
+The Platform may collect or facilitate booking amounts, subscription fees, platform fees, commissions, convenience fees, taxes, security amounts, penalties, refunds, payout adjustments, and other lawful charges. Hosts authorize deduction of applicable amounts before payout. Users are responsible for any taxes, filings, invoices, and compliance obligations applicable to their transaction, role, location, or business activity.
+
+### 6. Cancellations, Refunds, and Disputes
+Cancellations, refunds, rescheduling, no-shows, early check-outs, guest complaints, host breaches, service failures, and payout holds are governed by Platform policies shown during booking, listing, or support review. The Platform may verify evidence, documents, chat history, payment records, photographs, audit notes, and third-party information before approving refunds, deductions, penalties, or dispute resolutions.
+
+### 7. Verification, Documents, and Consent
+Users authorize X-Space360 to collect, store, review, and verify identity, ownership, address, tax, banking, property, signature, audit, and transaction documents through internal teams, employees, brokers, vendors, payment partners, or lawful third-party sources. Submission of forged, altered, unauthorized, or misleading documents may lead to rejection, delisting, payment hold, account termination, and legal action.
+
+### 8. Prohibited Conduct
+Users shall not misuse the Platform, bypass Platform payments, solicit off-platform bookings, upload unlawful content, infringe intellectual property, harass users or staff, manipulate reviews, create duplicate or fake accounts, conceal material facts, perform unauthorized access, interfere with Platform security, or use any listing or booking for unlawful, unsafe, immoral, nuisance-causing, or reputation-damaging activity.
+
+### 9. Content, Communications, and Intellectual Property
+Users grant the Platform a non-exclusive right to use submitted listing content, images, descriptions, reviews, communications, verification records, and operational data for Platform services, marketing, compliance, support, analytics, and trust-and-safety purposes. Platform branding, software, workflows, designs, data structures, logos, and content remain protected intellectual property of the Company or its licensors.
+
+### 10. Limitation of Liability and Indemnity
+To the maximum extent permitted by law, X-Space360 shall not be liable for indirect, incidental, special, punitive, or consequential losses, including loss of profit, reputation, opportunity, data, business interruption, property issues, third-party conduct, force majeure, local-law action, payment gateway failure, or user breach. Users agree to indemnify and hold the Platform harmless from claims, penalties, losses, damages, disputes, or proceedings arising from their account, listing, booking, documents, conduct, non-compliance, negligence, fraud, or breach of these Terms.
+
+### 11. Suspension, Termination, and Policy Updates
+The Platform may update policies, fees, verification standards, operational rules, and these Terms from time to time. Continued use after publication or notification constitutes acceptance. The Platform may suspend, restrict, delist, withhold payouts, cancel bookings, or terminate accounts where required for compliance, safety, fraud prevention, dispute resolution, or protection of users and Platform interests.
+
+### 12. Governing Law and Jurisdiction
+These Terms are governed by the laws of India. Subject to applicable law, courts and competent authorities having jurisdiction over the Company's registered or operating location shall have jurisdiction over disputes arising from Platform use, bookings, payments, listings, verification, or these Terms."""
+
+PRIVACY_POLICY_TEXT = """## PRIVACY POLICY
+
+X-Space360 collects and processes information necessary to operate a secure short-term rental platform, including account details, contact information, identity documents, property details, booking records, payment references, support messages, verification information, device metadata, and operational logs. We use this information for registration, authentication, listing review, booking facilitation, payment coordination, fraud prevention, customer support, legal compliance, analytics, and service improvement.
+
+We may share relevant information with payment partners, verification providers, support teams, employees, brokers, service vendors, legal advisors, auditors, government authorities, and other parties where required to deliver Platform services, comply with law, investigate disputes, prevent fraud, or protect rights and safety.
+
+Users must ensure that submitted personal, property, tax, banking, and verification information is accurate and authorized. The Platform applies reasonable technical and organizational safeguards, but no digital system can be guaranteed completely secure. Users may contact support for reasonable account, correction, or privacy requests subject to legal, operational, and record-retention requirements."""
+
+REFUND_CANCELLATION_TEXT = """## CANCELLATION AND REFUND POLICY
+
+Bookings, cancellations, refunds, payout deductions, penalties, and rescheduling requests are handled according to the policy displayed during booking, the host's approved listing rules, payment gateway status, and Platform review. Refunds may be reduced by applicable platform fees, taxes, payment gateway charges, cancellation penalties, damage claims, service usage, or other lawful deductions.
+
+The Platform may hold, adjust, or deny refunds where a user breaches booking rules, provides false information, fails verification, causes damage, misuses the property, cancels outside the permitted window, or raises a claim without sufficient evidence. Host payouts may be adjusted or withheld for verified guest issues, non-delivery of services, listing misrepresentation, cancellation by host, or policy violations."""
+
 async def get_db():
     from server import db_instance
     return db_instance
@@ -177,7 +231,45 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                 "section": "blog",
                 "content_type": "list",
                 "content_data": {
-                    "posts": []
+                    "page_eyebrow": "X-SPACE360 JOURNAL",
+                    "page_title": "The Journal",
+                    "page_subtitle": "Curated insights, local travel guides, and operational updates for short-term renting and event planning.",
+                    "page_hero_image_url": "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1600",
+                    "posts": [
+                        {
+                            "id": "p1",
+                            "title": "The Future of Short-Term Rentals in India",
+                            "excerpt": "How shifting preferences and hybrid work models are driving growth in STR spaces.",
+                            "content": "## The Future of Short-Term Rentals in India\n\nHow shifting preferences and hybrid work models are driving growth in STR spaces.",
+                            "date": "June 10, 2026",
+                            "author": "Amit Sharma",
+                            "image_url": "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800",
+                            "read_time": "6 min read",
+                            "is_active": True
+                        },
+                        {
+                            "id": "p2",
+                            "title": "Design Tips to Maximize Your Property Yield",
+                            "excerpt": "Curate your space to appeal to high-end travelers with styling and amenity upgrades.",
+                            "content": "## Design Tips to Maximize Your Property Yield\n\nCurate your space to appeal to high-end travelers with styling and amenity upgrades.",
+                            "date": "June 05, 2026",
+                            "author": "Neha Patel",
+                            "image_url": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800",
+                            "read_time": "5 min read",
+                            "is_active": True
+                        },
+                        {
+                            "id": "p3",
+                            "title": "Top 5 Weekend Escapes Near Mumbai & Nashik",
+                            "excerpt": "Explore the most beautiful villa retreats and holiday home collections for your next vacation.",
+                            "content": "## Top 5 Weekend Escapes Near Mumbai & Nashik\n\nExplore the most beautiful villa retreats and holiday home collections for your next vacation.",
+                            "date": "May 28, 2026",
+                            "author": "Vikram Singh",
+                            "image_url": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800",
+                            "read_time": "7 min read",
+                            "is_active": True
+                        }
+                    ]
                 },
                 "is_active": True,
                 "created_at": now,
@@ -252,6 +344,26 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                 "content_data": {
                     "title": "SHORT-TERM RENTAL HOST AGREEMENT",
                     "agreement_text": HOST_AGREEMENT_TEXT
+                },
+                "is_active": True,
+                "created_at": now,
+                "updated_at": now
+            },
+            {
+                "content_id": "cms_legal_terms_default",
+                "page": "landing",
+                "section": "legal_terms",
+                "content_type": "object",
+                "content_data": {
+                    "title": "Legal Terms & Platform Policies",
+                    "version": "2026.1",
+                    "effective_date": "2026-07-03",
+                    "terms_label": "Terms & Conditions",
+                    "terms_text": LEGAL_TERMS_TEXT,
+                    "privacy_label": "Privacy Policy",
+                    "privacy_text": PRIVACY_POLICY_TEXT,
+                    "refund_label": "Cancellation & Refund Policy",
+                    "refund_text": REFUND_CANCELLATION_TEXT
                 },
                 "is_active": True,
                 "created_at": now,
@@ -347,6 +459,32 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                 "content_data": {
                     "title": "SHORT-TERM RENTAL HOST AGREEMENT",
                     "agreement_text": HOST_AGREEMENT_TEXT
+                },
+                "is_active": True,
+                "created_at": now,
+                "updated_at": now
+            })
+
+        legal_terms_doc = await db.cms_content.find_one(
+            {"page": "landing", "section": "legal_terms"}, {"_id": 0}
+        )
+        if not legal_terms_doc:
+            now = datetime.now(timezone.utc)
+            await db.cms_content.insert_one({
+                "content_id": "cms_legal_terms_default",
+                "page": "landing",
+                "section": "legal_terms",
+                "content_type": "object",
+                "content_data": {
+                    "title": "Legal Terms & Platform Policies",
+                    "version": "2026.1",
+                    "effective_date": "2026-07-03",
+                    "terms_label": "Terms & Conditions",
+                    "terms_text": LEGAL_TERMS_TEXT,
+                    "privacy_label": "Privacy Policy",
+                    "privacy_text": PRIVACY_POLICY_TEXT,
+                    "refund_label": "Cancellation & Refund Policy",
+                    "refund_text": REFUND_CANCELLATION_TEXT
                 },
                 "is_active": True,
                 "created_at": now,

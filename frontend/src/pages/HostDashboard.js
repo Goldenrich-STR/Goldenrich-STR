@@ -1380,7 +1380,7 @@ const HostDashboard = () => {
                     required
                   />
                   <span className="text-xs md:text-sm text-charcoal-light font-bold leading-relaxed">
-                    I confirm the submitted details are true, consent to verification, and accept the <LegalLinks />.
+                    I confirm the submitted details are true, consent to verification, and accept the <LegalLinks context="host_verification" />.
                   </span>
                 </label>
 
