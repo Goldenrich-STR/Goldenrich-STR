@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { 
   Building2, MapPin, Mail, Phone, ShieldCheck, CheckCircle2, Sparkles, 
   Facebook, Instagram, Youtube, Menu, X, ArrowRight, BookOpen, Clock, User
@@ -77,8 +78,15 @@ const DEFAULT_FOOTER_DATA = {
   checkin_text: 'Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival. Quiet hours are from 10:00 PM to 7:00 AM.'
 };
 
+const slugify = (value) => String(value || '')
+  .toLowerCase()
+  .replace(/&/g, 'and')
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-|-$/g, '');
+
 const Blog = () => {
   const navigate = useNavigate();
+  const { slug: postSlug } = useParams();
   const { user, logout } = useAuth();
   const [lang, setLang] = useState(localStorage.getItem('preferredLanguage') || 'en');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -99,6 +107,7 @@ const Blog = () => {
   }, []);
 
   const footerData = { ...DEFAULT_FOOTER_DATA, ...(cmsContent?.footer || {}) };
+  const legalData = { ...footerData, ...(cmsContent?.legal_terms || {}) };
   
   let rawSections = Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
     ? [...footerData.footer_sections]
@@ -123,8 +132,15 @@ const Blog = () => {
   });
 
   const footerLegalItems = [
-    { label: footerData.privacy_label || 'Privacy Policy', action_type: 'text', link: '', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text },
-    { label: footerData.terms_label || 'Terms & Conditions', action_type: 'text', link: '', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text },
+    ...(legalData.privacy_text ? [{ label: legalData.privacy_label || 'Privacy Policy', action_type: 'text', link: '', text: legalData.privacy_text }] : []),
+    ...(legalData.terms_text ? [{ label: legalData.terms_label || 'Terms & Conditions', action_type: 'text', link: '', text: legalData.terms_text }] : []),
+    ...(legalData.refund_text ? [{ label: legalData.refund_label || 'Cancellation & Refund Policy', action_type: 'text', link: '', text: legalData.refund_text }] : []),
+    ...(Array.isArray(legalData.custom_policies)
+      ? legalData.custom_policies
+          .filter(policy => policy?.status === 'Active' && policy?.text)
+          .filter(policy => Array.isArray(policy.placements) ? policy.placements.includes('landing_footer') : true)
+          .map(policy => ({ label: policy.label || policy.title || 'Legal Policy', action_type: 'text', link: '', text: policy.text }))
+      : []),
     { label: 'Cookie Policy', action_type: 'text', link: '', text: 'X-Space360 uses essential cookies to keep accounts, bookings, payments, and security features working smoothly.' },
   ];
 
@@ -152,17 +168,54 @@ const Blog = () => {
     });
   };
 
-  const blogPosts = Array.isArray(cmsContent?.blog?.posts) && cmsContent.blog.posts.length > 0
-    ? cmsContent.blog.posts.map((post, idx) => ({
+  const blogSettings = {
+    page_eyebrow: 'X-SPACE360 JOURNAL',
+    page_title: 'The Journal',
+    page_subtitle: 'Curated insights, local travel guides, and operational updates for short-term renting and event planning.',
+    page_hero_image_url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+    ...(cmsContent?.blog || {})
+  };
+
+  const blogPosts = useMemo(() => {
+    const visibleCmsBlogPosts = Array.isArray(cmsContent?.blog?.posts)
+      ? cmsContent.blog.posts.filter(post => post?.is_active !== false)
+      : [];
+
+    return cmsContent?.blog
+      ? visibleCmsBlogPosts.map((post, idx) => ({
         id: post.id || `cms-post-${idx}`,
         title: post.title || 'Untitled',
         excerpt: post.excerpt || '',
+        content: post.content || '',
         date: post.date || 'June 2026',
         author: post.author || 'Editorial Desk',
         image_url: post.image_url || post.img || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
         read_time: post.read_time || '5 min read'
       }))
-    : DEFAULT_BLOG_POSTS;
+      : DEFAULT_BLOG_POSTS;
+  }, [cmsContent]);
+
+  const getPostSlug = (post) => post?.slug || slugify(post?.title) || post?.id;
+
+  useEffect(() => {
+    if (!postSlug) {
+      return;
+    }
+    const matchedPost = blogPosts.find((post) => getPostSlug(post) === postSlug || String(post.id) === postSlug);
+    setSelectedPost(matchedPost || null);
+  }, [postSlug, blogPosts]);
+
+  const openPost = (post) => {
+    setSelectedPost(post);
+    navigate(`/blog/${getPostSlug(post)}`);
+  };
+
+  const closePost = () => {
+    setSelectedPost(null);
+    if (postSlug) {
+      navigate('/blog');
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -321,19 +374,22 @@ const Blog = () => {
 
       {/* Hero Header Section */}
       <div className="relative pt-32 pb-20 md:pt-40 md:pb-28 bg-[#0B1522] text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800')] bg-cover bg-center" />
+        <div
+          className="absolute inset-0 opacity-20 bg-cover bg-center"
+          style={{ backgroundImage: `url(${getImageUrl(blogSettings.page_hero_image_url)})` }}
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-[#0B1522]/60 via-[#0B1522]/90 to-sand-50" />
         
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-6">
           <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 px-4.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest text-[#E0A51B] animate-pulse">
             <BookOpen className="w-3.5 h-3.5" />
-            <span>X-SPACE360 JOURNAL</span>
+            <span>{blogSettings.page_eyebrow}</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight font-serif text-white">
-            The Journal
+            {blogSettings.page_title}
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-3xl mx-auto leading-relaxed font-light font-medium">
-            Curated insights, local travel guides, and operational updates for short-term renting and event planning.
+            {blogSettings.page_subtitle}
           </p>
         </div>
       </div>
@@ -344,7 +400,7 @@ const Blog = () => {
           {blogPosts.map((post) => (
             <div 
               key={post.id}
-              onClick={() => setSelectedPost(post)}
+              onClick={() => openPost(post)}
               className="bg-white rounded-3xl overflow-hidden border border-stone shadow-subtle hover:shadow-premium hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col h-full group"
             >
               <div className="relative aspect-[16/10] overflow-hidden bg-charcoal">
@@ -499,7 +555,7 @@ const Blog = () => {
       {selectedPost && (
         <div 
           className="fixed inset-0 bg-charcoal/70 backdrop-blur-md flex items-center justify-center z-[99999] p-4 md:p-6 transition-all duration-300 animate-fade-in" 
-          onClick={() => setSelectedPost(null)}
+          onClick={closePost}
         >
           <div 
             className="bg-white rounded-3xl max-w-5xl w-full max-h-[85vh] md:max-h-[80vh] overflow-hidden shadow-elevated border border-gray-100 flex flex-col md:flex-row relative animate-scale-up" 
@@ -534,7 +590,7 @@ const Blog = () => {
                 </div>
                 
                 <button
-                  onClick={() => setSelectedPost(null)}
+                  onClick={closePost}
                   className="w-10 h-10 rounded-full bg-gray-50 hover:bg-terracotta hover:text-white flex items-center justify-center transition-all text-charcoal shadow-sm hover:scale-[1.02] active:scale-95"
                   title="Close article"
                 >
@@ -559,7 +615,9 @@ const Blog = () => {
                 </div>
 
                 <div className="text-charcoal-light font-semibold text-sm md:text-base leading-relaxed space-y-5">
-                  {selectedPost.id === 'p1' ? (
+                  {selectedPost.content ? (
+                    <ReactMarkdown>{selectedPost.content}</ReactMarkdown>
+                  ) : selectedPost.id === 'p1' ? (
                     <>
                       <p className="first-letter:text-5xl first-letter:font-bold tracking-tight first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
                         The real estate landscape is undergoing a massive paradigm shift. Traditional long-term leasing, once the gold standard of property investment, is rapidly losing ground to the dynamic world of short-term rentals (STRs). With the rise of hybrid work models, digital nomadism, and a growing consumer preference for unique, home-like experiences over standardized hotel rooms, properties listed on platforms like X-Space360 are seeing unprecedented demand.

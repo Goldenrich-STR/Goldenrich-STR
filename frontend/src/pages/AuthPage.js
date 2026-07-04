@@ -543,7 +543,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                 required
                              />
                              <label className="text-xs text-charcoal-muted font-semibold leading-relaxed cursor-pointer">
-                                I accept the <LegalLinks className="inline" />.
+                                I accept the <LegalLinks className="inline" context={registerData.role === 'host' ? 'host_registration' : 'guest_registration'} />.
                              </label>
                           </div>
                           

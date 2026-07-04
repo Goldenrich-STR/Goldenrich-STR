@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { propertyAPI, subscriptionAPI, uploadAPI, couponAPI, getImageUrl } from '../services/api';
+import { propertyAPI, subscriptionAPI, uploadAPI, couponAPI, getImageUrl, loadRazorpaySdk } from '../services/api';
 import {
   Building2,
   ArrowLeft,
@@ -184,14 +184,14 @@ const PRICING_CYCLE_OPTIONS = [
 const getTargetSubscriptionPlanType = (category, bhkType) => {
   if (category === 'commercial') return 'commercial';
   if (category === 'event_venue') return 'banquet';
-  const map = {
-    studio: 'studio',
-    '1bhk': '1bhk',
-    '2bhk': '2bhk',
-    '3bhk': '3bhk',
-    '4bhk': '4bhk_plus',
-    '5bhk': '4bhk_plus',
-  };
+    const map = {
+      studio: 'studio',
+      '1bhk': '1bhk',
+      '2bhk': '2bhk',
+      '3bhk': '3bhk',
+      '4bhk': '4bhk',
+      '5bhk': '4bhk_plus',
+    };
   return map[bhkType] || '1bhk';
 };
 
@@ -494,14 +494,15 @@ const HostListProperty = () => {
   const subscriptionTargetParams = useMemo(
     () => {
       const areaSqft = Number(form.area_sqft);
-      return {
-        plan_type: getTargetSubscriptionPlanType(form.category, form.bhk_type),
-        property_category: form.category,
-        bhk_type: form.bhk_type,
-        ...(Number.isFinite(areaSqft) && areaSqft > 0 ? { area_sqft: areaSqft } : {}),
-      };
-    },
-    [form.category, form.bhk_type, form.area_sqft]
+        return {
+          plan_type: getTargetSubscriptionPlanType(form.category, form.bhk_type),
+          property_category: form.category,
+          property_type: form.property_type,
+          bhk_type: form.bhk_type,
+          ...(Number.isFinite(areaSqft) && areaSqft > 0 ? { area_sqft: areaSqft } : {}),
+        };
+      },
+    [form.category, form.property_type, form.bhk_type, form.area_sqft]
   );
 
   useEffect(() => {
@@ -834,10 +835,16 @@ const HostListProperty = () => {
   const matchingPlans = useMemo(() => {
     if (!plans.length) return [];
     const target = getTargetSubscriptionPlanType(form.category, form.bhk_type);
-    const filtered = plans.filter((p) => p.plan_type === target);
+    const filtered = plans.filter((p) => {
+      if (p.plan_type !== target) return false;
+      if (p.property_category && p.property_category !== form.category) return false;
+      if (p.property_type && p.property_type !== form.property_type) return false;
+      if (p.bhk_type && p.bhk_type !== form.bhk_type) return false;
+      return true;
+    });
     if (filtered.length) return filtered;
-    return plans;
-  }, [plans, form.category, form.bhk_type]);
+    return [];
+  }, [plans, form.category, form.property_type, form.bhk_type]);
 
   const getSubscriptionBreakdown = (plan = {}) => {
     const planFee = Number(plan.price_monthly) || 0;
@@ -1164,7 +1171,53 @@ const HostListProperty = () => {
     const subOrder = subRes.data;
     const plan = plans.find(p => p.plan_id === planId);
 
-    await collectUpiPaymentConfirmation({ subOrder, plan });
+    if (subOrder.is_mock) {
+      await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
+      return subOrder;
+    }
+
+    const sdkLoaded = await loadRazorpaySdk();
+    if (!sdkLoaded || !window.Razorpay) {
+      throw new Error('Razorpay SDK failed to load. Please check your internet connection.');
+    }
+
+    await new Promise((resolve, reject) => {
+      const rzp = new window.Razorpay({
+        key: subOrder.razorpay_key_id,
+        amount: subOrder.amount,
+        currency: subOrder.currency || 'INR',
+        name: 'X-Space360',
+        description: `Plan: ${subOrder.plan_name || plan?.plan_name || 'Subscription Plan'}`,
+        order_id: subOrder.razorpay_order_id,
+        prefill: {
+          name: user?.full_name || '',
+          email: user?.email || '',
+          contact: user?.phone || '',
+        },
+        theme: { color: '#006437' },
+        handler: async (response) => {
+          try {
+            await subscriptionAPI.confirmSubscription({
+              subscription_id: subOrder.subscription_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            resolve(response);
+          } catch (err) {
+            reject(new Error(formatError(err, 'Payment completed but subscription verification failed.')));
+          }
+        },
+        modal: {
+          ondismiss: () => reject(new Error('Payment cancelled')),
+        },
+      });
+      rzp.on('payment.failed', (resp) => {
+        reject(new Error(resp?.error?.description || 'Payment failed. Please try again.'));
+      });
+      rzp.open();
+    });
+
     return subOrder;
   };
 

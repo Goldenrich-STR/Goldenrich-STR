@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { bookingAPI, reviewAPI, aiCallAPI } from '../services/api';
 import ReviewModal from '../components/ReviewModal';
+import LegalLinks from '../components/LegalLinks';
 import {
   Building2,
   CalendarDays,
@@ -670,6 +671,10 @@ const GuestBookings = () => {
             
             <p className="text-[10px] text-charcoal-muted font-bold text-center uppercase tracking-wider bg-stone py-2 px-3 rounded-xl border border-gray-100 mb-3">
               Contact Support: +91 8484826247
+            </p>
+
+            <p className="text-[11px] text-charcoal-muted font-semibold text-center leading-relaxed mb-3">
+              Cancellation is governed by the <LegalLinks className="inline" context="booking_cancellation" />.
             </p>
 
             <p className="text-[11px] text-charcoal-muted font-bold text-center uppercase tracking-wider bg-stone py-2.5 rounded-xl border border-gray-100">

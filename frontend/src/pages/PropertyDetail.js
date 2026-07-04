@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
+import LegalLinks from '../components/LegalLinks';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
 import {
   ArrowLeft,
@@ -2171,6 +2172,10 @@ const PropertyDetail = () => {
                      : `${property.instant_booking ? t('reserveNow') : t('requestBooking')}`
                 )}
               </button>
+
+              <p className="mt-3 text-[11px] text-charcoal-muted font-semibold leading-relaxed text-center">
+                By continuing, you agree to the <LegalLinks className="inline" context="booking" />.
+              </p>
 
               {property.category === 'event_venue' && (
                 <button

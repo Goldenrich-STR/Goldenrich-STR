@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Youtube, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -1077,6 +1078,7 @@ const LandingPage = () => {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en']?.[key] || key;
   };
   const footerData = { ...DEFAULT_FOOTER_DATA, ...(cmsContent?.footer || {}) };
+  const legalData = { ...footerData, ...(cmsContent?.legal_terms || {}) };
   
   const expectedFooterHeadings = ['For Guests', 'For Hosts', 'Company', 'Support'];
   const cmsFooterSections = Array.isArray(footerData.footer_sections)
@@ -1112,9 +1114,61 @@ const LandingPage = () => {
   });
 
   const footerLegalItems = [
-    { label: footerData.privacy_label || 'Privacy Policy', action_type: 'text', link: '', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text },
-    { label: footerData.terms_label || 'Terms & Conditions', action_type: 'text', link: '', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text },
+    ...(legalData.privacy_text ? [{ label: legalData.privacy_label || 'Privacy Policy', action_type: 'text', link: '', text: legalData.privacy_text }] : []),
+    ...(legalData.terms_text ? [{ label: legalData.terms_label || 'Terms & Conditions', action_type: 'text', link: '', text: legalData.terms_text }] : []),
+    ...(legalData.refund_text ? [{ label: legalData.refund_label || 'Cancellation & Refund Policy', action_type: 'text', link: '', text: legalData.refund_text }] : []),
+    ...(Array.isArray(legalData.custom_policies)
+      ? legalData.custom_policies
+          .filter(policy => policy?.status === 'Active' && policy?.text)
+          .filter(policy => Array.isArray(policy.placements) ? policy.placements.includes('landing_footer') : true)
+          .map(policy => ({ label: policy.label || policy.title || 'Legal Policy', action_type: 'text', link: '', text: policy.text }))
+      : []),
   ];
+  const defaultLandingBlogPosts = [
+    {
+      id: 'p1',
+      title: 'The Future of Short-Term Rentals in India',
+      excerpt: 'How shifting preferences and hybrid work models are driving growth in STR spaces.',
+      date: 'June 10, 2026',
+      author: 'Amit Sharma',
+      img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+      read_time: '6 min read'
+    },
+    {
+      id: 'p2',
+      title: 'Design Tips to Maximize Your Property Yield',
+      excerpt: 'Curate your space to appeal to high-end travelers with styling and amenity upgrades.',
+      date: 'June 05, 2026',
+      author: 'Neha Patel',
+      img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800',
+      read_time: '5 min read'
+    },
+    {
+      id: 'p3',
+      title: 'Top 5 Weekend Escapes Near Mumbai & Nashik',
+      excerpt: 'Explore the most beautiful villa retreats and holiday home collections for your next vacation.',
+      date: 'May 28, 2026',
+      author: 'Vikram Singh',
+      img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800',
+      read_time: '7 min read'
+    }
+  ];
+  const cmsLandingBlogPosts = Array.isArray(cmsContent?.blog?.posts)
+    ? cmsContent.blog.posts
+        .filter(post => post?.is_active !== false)
+        .slice(0, 3)
+        .map(post => ({
+          id: post.id,
+          title: post.title,
+          excerpt: post.excerpt,
+          content: post.content,
+          date: post.date,
+          author: post.author,
+          img: post.image_url || post.img || '',
+          read_time: post.read_time || '5 min read'
+        }))
+    : [];
+  const landingBlogPosts = cmsContent?.blog ? cmsLandingBlogPosts : defaultLandingBlogPosts;
   const footerDisplaySections = footerSections;
   const handleFooterLink = (url, fallbackUrl = '/') => {
     const target = url || fallbackUrl;
@@ -2042,46 +2096,14 @@ const LandingPage = () => {
                 onScroll={(e) => handleSliderScroll(e, setActiveBlog)}
                 className="flex overflow-x-auto pb-10 px-4 md:px-8 gap-6 no-scrollbar snap-x scroll-smooth"
               >
-                {(cmsContent?.blog?.posts?.map(post => ({
-                  id: post.id,
-                  title: post.title,
-                  excerpt: post.excerpt,
-                  date: post.date,
-                  author: post.author,
-                  img: post.image_url || post.img || "",
-                  read_time: post.read_time || "5 min read"
-                })) || [
-                  {
-                    id: 'p1',
-                    title: 'The Future of Short-Term Rentals in India',
-                    excerpt: 'How shifting preferences and hybrid work models are driving growth in STR spaces.',
-                    date: 'June 10, 2026',
-                    author: 'Amit Sharma',
-                    img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800'
-                  },
-                  {
-                    id: 'p2',
-                    title: 'Design Tips to Maximize Your Property Yield',
-                    excerpt: 'Curate your space to appeal to high-end travelers with styling and amenity upgrades.',
-                    date: 'June 05, 2026',
-                    author: 'Neha Patel',
-                    img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800'
-                  },
-                  {
-                    id: 'p3',
-                    title: 'Top 5 Weekend Escapes Near Mumbai & Nashik',
-                    excerpt: 'Explore the most beautiful villa retreats and holiday home collections for your next vacation.',
-                    date: 'May 28, 2026',
-                    author: 'Vikram Singh',
-                    img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800'
-                  }
-                ]).map((post, idx) => (
+                {landingBlogPosts.map((post, idx) => (
                   <div 
                     key={post.id || idx} 
                     onClick={() => setSelectedPost({
                       id: post.id,
                       title: post.title,
                       excerpt: post.excerpt,
+                      content: post.content,
                       date: post.date,
                       author: post.author,
                       image_url: post.img,
@@ -2110,7 +2132,7 @@ const LandingPage = () => {
               {/* ── Blogs Dot indicators ── */}
               <div className="flex justify-center mt-2">
                 <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-full flex items-center justify-center gap-2.5 shadow-subtle">
-                  {(cmsContent?.blog?.posts || [1, 2, 3]).map((_, idx) => (
+                  {landingBlogPosts.map((_, idx) => (
                     <button
                       key={idx}
                       onClick={() => scrollToSlide('slider-blogs', idx)}
@@ -2439,7 +2461,9 @@ const LandingPage = () => {
 
                       {/* Article Paragraphs */}
                       <div className="text-charcoal-light font-semibold text-sm md:text-base leading-relaxed space-y-5">
-                        {selectedPost.id === 'p1' ? (
+                        {selectedPost.content ? (
+                          <ReactMarkdown>{selectedPost.content}</ReactMarkdown>
+                        ) : selectedPost.id === 'p1' ? (
                           <>
                             <p className="first-letter:text-5xl first-letter:font-bold tracking-tight first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
                               The real estate landscape is undergoing a massive paradigm shift. Traditional long-term leasing, once the gold standard of property investment, is rapidly losing ground to the dynamic world of short-term rentals (STRs). With the rise of hybrid work models, digital nomadism, and a growing consumer preference for unique, home-like experiences over standardized hotel rooms, properties listed on platforms like X-Space360 are seeing unprecedented demand.

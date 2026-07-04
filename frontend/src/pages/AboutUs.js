@@ -129,6 +129,7 @@ const AboutUs = () => {
   };
 
   const footerData = { ...DEFAULT_FOOTER_DATA, ...(cmsContent?.footer || {}) };
+  const legalData = { ...footerData, ...(cmsContent?.legal_terms || {}) };
   
   let rawSections = Array.isArray(footerData.footer_sections) && footerData.footer_sections.length
     ? [...footerData.footer_sections]
@@ -153,8 +154,15 @@ const AboutUs = () => {
   });
 
   const footerLegalItems = [
-    { label: footerData.privacy_label || 'Privacy Policy', action_type: 'text', link: '', text: footerData.privacy_text || DEFAULT_FOOTER_DATA.privacy_text },
-    { label: footerData.terms_label || 'Terms & Conditions', action_type: 'text', link: '', text: footerData.terms_text || DEFAULT_FOOTER_DATA.terms_text },
+    ...(legalData.privacy_text ? [{ label: legalData.privacy_label || 'Privacy Policy', action_type: 'text', link: '', text: legalData.privacy_text }] : []),
+    ...(legalData.terms_text ? [{ label: legalData.terms_label || 'Terms & Conditions', action_type: 'text', link: '', text: legalData.terms_text }] : []),
+    ...(legalData.refund_text ? [{ label: legalData.refund_label || 'Cancellation & Refund Policy', action_type: 'text', link: '', text: legalData.refund_text }] : []),
+    ...(Array.isArray(legalData.custom_policies)
+      ? legalData.custom_policies
+          .filter(policy => policy?.status === 'Active' && policy?.text)
+          .filter(policy => Array.isArray(policy.placements) ? policy.placements.includes('landing_footer') : true)
+          .map(policy => ({ label: policy.label || policy.title || 'Legal Policy', action_type: 'text', link: '', text: policy.text }))
+      : []),
     { label: 'Cookie Policy', action_type: 'text', link: '', text: 'X-Space360 uses essential cookies to keep accounts, bookings, payments, and security features working smoothly.' },
   ];
 

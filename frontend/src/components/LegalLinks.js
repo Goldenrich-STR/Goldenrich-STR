@@ -6,12 +6,33 @@ import LegalDocument from './LegalDocument';
 
 const DEFAULT_LEGAL = {
   privacy_label: 'Privacy Policy',
-  privacy_text: 'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.',
+  privacy_text: '',
   terms_label: 'Terms & Conditions',
-  terms_text: 'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.',
+  terms_text: '',
 };
 
-const LegalLinks = ({ className = '' }) => {
+const legalTitleForContext = (context) => {
+  switch (context) {
+    case 'guest_registration':
+      return 'Guest Registration Legal Terms';
+    case 'host_registration':
+      return 'Host Registration Legal Terms';
+    case 'booking':
+      return 'Booking Legal Terms';
+    case 'booking_cancellation':
+      return 'Cancellation Policy';
+    case 'host_verification':
+      return 'Host Verification Agreement';
+    case 'host_onboarding':
+      return 'Host Onboarding Agreement';
+    case 'host_terms':
+      return 'Host Terms & Conditions';
+    default:
+      return 'Legal Terms';
+  }
+};
+
+const LegalLinks = ({ className = '', context = 'general' }) => {
   const [legal, setLegal] = useState(DEFAULT_LEGAL);
   const [modal, setModal] = useState(null);
 
@@ -20,7 +41,7 @@ const LegalLinks = ({ className = '' }) => {
     cmsAPI.getLandingPage()
       .then((res) => {
         if (!mounted) return;
-        setLegal({ ...DEFAULT_LEGAL, ...(res.data?.footer || {}) });
+        setLegal({ ...DEFAULT_LEGAL, ...(res.data?.footer || {}), ...(res.data?.legal_terms || {}) });
       })
       .catch(() => {
         if (mounted) setLegal(DEFAULT_LEGAL);
@@ -30,10 +51,27 @@ const LegalLinks = ({ className = '' }) => {
     };
   }, []);
 
-  const openLegal = (type) => {
-    setModal(type === 'terms'
-      ? { type: 'Terms Agreement', title: legal.terms_label || 'Terms & Conditions', text: legal.terms_text || DEFAULT_LEGAL.terms_text }
-      : { type: 'Privacy Notice', title: legal.privacy_label || 'Privacy Policy', text: legal.privacy_text || DEFAULT_LEGAL.privacy_text });
+  const customDocs = Array.isArray(legal.custom_policies)
+    ? legal.custom_policies.filter(policy => {
+        if (policy?.status !== 'Active' || !policy?.text) return false;
+        const placements = Array.isArray(policy.placements) ? policy.placements : [];
+        return placements.includes(context);
+      })
+    : [];
+
+  const contextDocs = context === 'general'
+    ? [
+        ...(legal.terms_text ? [{ title: legal.terms_label || 'Terms & Conditions', text: legal.terms_text }] : []),
+        ...(legal.privacy_text ? [{ title: legal.privacy_label || 'Privacy Policy', text: legal.privacy_text }] : []),
+      ]
+    : customDocs.map(policy => ({ title: policy.label || policy.title || 'Legal Policy', text: policy.text }));
+
+  const openLegal = (doc) => {
+    setModal({
+      type: legalTitleForContext(context),
+      title: doc.title,
+      text: doc.text || 'No legal content is published at the moment.'
+    });
   };
 
   const modalContent = modal ? createPortal(
@@ -79,29 +117,34 @@ const LegalLinks = ({ className = '' }) => {
   return (
     <>
       <span className={className}>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openLegal('terms');
-          }}
-          className="text-terracotta hover:underline font-bold normal-case tracking-normal"
-        >
-          {legal.terms_label || 'Terms & Conditions'}
-        </button>
-        <span> and </span>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openLegal('privacy');
-          }}
-          className="text-terracotta hover:underline font-bold normal-case tracking-normal"
-        >
-          {legal.privacy_label || 'Privacy Policy'}
-        </button>
+        {contextDocs.length ? contextDocs.map((doc, index) => (
+          <React.Fragment key={`${doc.title}-${index}`}>
+            {index > 0 && <span>{index === contextDocs.length - 1 ? ' and ' : ', '}</span>}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openLegal(doc);
+              }}
+              className="text-terracotta hover:underline font-bold normal-case tracking-normal"
+            >
+              {doc.title}
+            </button>
+          </React.Fragment>
+        )) : (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              openLegal({ title: legalTitleForContext(context), text: '' });
+            }}
+            className="text-terracotta hover:underline font-bold normal-case tracking-normal"
+          >
+            {legalTitleForContext(context)}
+          </button>
+        )}
       </span>
 
       {modalContent}
