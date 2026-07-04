@@ -119,6 +119,24 @@ const BookingConfirmation = () => {
         email: user?.email || '',
         contact: user?.phone || '',
       },
+      config: {
+        display: {
+          blocks: {
+            upiQr: {
+              name: 'Pay via UPI QR',
+              instruments: [
+                {
+                  method: 'upi',
+                },
+              ],
+            },
+          },
+          sequence: ['block.upiQr', 'upi', 'card', 'netbanking'],
+          preferences: {
+            show_default_blocks: true,
+          },
+        },
+      },
       theme: { color: '#006437' },
       handler: async (response) => {
         // Razorpay returns: razorpay_payment_id, razorpay_order_id, razorpay_signature
