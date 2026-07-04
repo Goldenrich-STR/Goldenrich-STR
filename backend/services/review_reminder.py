@@ -71,7 +71,11 @@ async def _send_review_request(db: AsyncIOMotorDatabase, booking: dict) -> bool:
             data={
                 "booking_id": booking["booking_id"],
                 "property_id": booking["property_id"],
+                "property_title": title,
+                "check_in_date": booking.get("check_in_date"),
+                "check_out_date": booking.get("check_out_date"),
                 "deep_link": deep_link,
+                "action_url": deep_link,
             },
         )
         return True

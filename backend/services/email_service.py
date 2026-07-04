@@ -187,7 +187,9 @@ class EmailService:
             return default
 
         # 2. Extract base fields
-        name = get_val(["name", "customer_name", "user_name", "host_name", "guest_name", "full_name"], "there")
+        name = get_val(["name", "customer_name", "user_name", "guest_name", "full_name", "host_name"], "there")
+        host_name = get_val(["host_name"], name)
+        guest_name = get_val(["guest_name", "customer_name"], name)
         email = get_val(["email", "email_address", "mail_id"], "")
         mobile = get_val(["mobile", "phone", "mobile_number", "contact_number"], "")
         property_title = get_val(["property_title", "property_name", "title"], "")
@@ -296,8 +298,8 @@ class EmailService:
             # Names
             "customer_name": name,
             "user_name": name,
-            "host_name": name,
-            "guest_name": name,
+            "host_name": host_name,
+            "guest_name": guest_name,
             # Contacts
             "email": email,
             "mobile": mobile,
@@ -603,6 +605,26 @@ class EmailService:
         cta_url = data.get("action_url") or os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in")
         if isinstance(cta_url, str) and cta_url.startswith("/"):
             cta_url = os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/") + cta_url
+        frontend_url = os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
+
+        # Keep every MSG91 button on a real application route. Protected routes
+        # preserve their destination through login in the frontend.
+        if template in {"host_registration", "subscription_activated"}:
+            cta_url = data.get("action_url") or f"{frontend_url}/host/dashboard"
+        elif template == "customer_registration":
+            cta_url = data.get("action_url") or f"{frontend_url}/dashboard"
+        elif template == "property_approved":
+            cta_url = data.get("action_url") or f"{frontend_url}/host/dashboard"
+        elif template == "property_rejected":
+            property_id = data.get("property_id") or ""
+            cta_url = data.get("action_url") or (
+                f"{frontend_url}/host/list-property?edit={property_id}"
+                if property_id else f"{frontend_url}/host/dashboard"
+            )
+        elif template == "review_reminder":
+            cta_url = data.get("deep_link") or data.get("action_url") or f"{frontend_url}/guest/bookings"
+        elif template == "booking_confirmation":
+            cta_url = data.get("cancellation_policy_url") or f"{frontend_url}/refund-policy"
 
         detail_rows = ""
         for label, key in [

@@ -1,6 +1,7 @@
 """Booking-specific notification triggers and the soft-lock reminder scheduler."""
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -154,6 +155,14 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
             "razorpay_payment_id": booking.get("razorpay_payment_id") or "",
             "razorpay_order_id": booking.get("razorpay_order_id") or "",
             "payment_method": booking.get("payment_method") or "Razorpay",
+            "action_url": (
+                os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
+                + f"/guest/booking-confirmation?booking_id={booking.get('booking_id')}"
+            ),
+            "cancellation_policy_url": (
+                os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
+                + "/refund-policy"
+            ),
         }
 
         # In-App + WhatsApp + SMS via the standard path
