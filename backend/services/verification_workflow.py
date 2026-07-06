@@ -325,7 +325,12 @@ async def on_rm_decision(db: AsyncIOMotorDatabase, verification: dict, approved:
             "Listing needs revision",
             f"RM has flagged your listing '{property_data.get('title')}' for changes: {remarks or 'see details'}. "
             f"Please update and resubmit.",
-            {"property_id": property_id, "remarks": remarks},
+            {
+                "property_id": property_id,
+                "property_title": property_data.get("title"),
+                "rejection_reason": remarks,
+                "remarks": remarks,
+            },
         )
         
         # Notify broker who did the site verification

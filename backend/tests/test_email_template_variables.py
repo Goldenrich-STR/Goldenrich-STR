@@ -171,6 +171,8 @@ def test_property_rejection_and_subscription_expiry_exact_variables():
         "https://www.x-space360.in/host/list-property?edit=prop_456",
     )
     assert rejected["Property_Name"] == "Lake View Villa"
+    assert rejected["Property_Title"] == "Lake View Villa"
+    assert rejected["PropertyName"] == "Lake View Villa"
     assert rejected["Property_ID"] == "prop_456"
     assert rejected["Rejection_Reason"] == "Update ownership document"
 

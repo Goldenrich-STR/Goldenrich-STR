@@ -530,6 +530,11 @@ class EmailService:
             variables.update(
                 {
                     "Property_Name": property_title,
+                    "Property_Title": property_title,
+                    "PropertyName": property_title,
+                    "PropertyTitle": property_title,
+                    "property_name": property_title,
+                    "property_title": property_title,
                     "Property_ID": property_id,
                     "Rejection_Reason": rejection_reason,
                 }
