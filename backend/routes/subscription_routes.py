@@ -46,7 +46,11 @@ async def _send_subscription_email(db: AsyncIOMotorDatabase, user_id: str, templ
                 "payment_id": subscription.get("razorpay_subscription_id"),
                 "subscription_id": subscription.get("subscription_id"),
                 "activation_date": subscription.get("activated_at") or subscription.get("updated_at"),
-                "expiry_date": subscription.get("expires_at") or subscription.get("expiry_date"),
+                "expiry_date": (
+                    subscription.get("end_date")
+                    or subscription.get("expires_at")
+                    or subscription.get("expiry_date")
+                ),
                 "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/") + "/host/dashboard",
                 **(extra or {}),
             },

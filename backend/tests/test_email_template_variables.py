@@ -153,4 +153,54 @@ def test_template_action_urls_are_canonical(monkeypatch):
     assert captured["property_rejected"][0] == "https://www.x-space360.in/host/list-property?edit=prop_123"
     assert captured["review_reminder"][0] == "https://www.x-space360.in/guest/bookings?review=BK123"
     assert captured["customer_registration"][0] == "https://www.x-space360.in/dashboard"
-    assert captured["booking_confirmation"][0] == "https://www.x-space360.in/refund-policy"
+    assert captured["booking_confirmation"][0] == "https://www.x-space360.in/?footer=safety-privacy"
+
+
+def test_property_rejection_and_subscription_expiry_exact_variables():
+    service = EmailService()
+
+    rejected = service._variables_for(
+        "property_rejected",
+        {
+            "property_title": "Lake View Villa",
+            "property_id": "prop_456",
+            "rejection_reason": "Update ownership document",
+        },
+        "Property rejected",
+        "Action required",
+        "https://www.x-space360.in/host/list-property?edit=prop_456",
+    )
+    assert rejected["Property_Name"] == "Lake View Villa"
+    assert rejected["Property_ID"] == "prop_456"
+    assert rejected["Rejection_Reason"] == "Update ownership document"
+
+    activated = service._variables_for(
+        "subscription_activated",
+        {
+            "subscription_id": "sub_123",
+            "plan_name": "Test Plan",
+            "activation_date": "2026-07-06",
+            "end_date": "2026-08-05",
+        },
+        "Subscription activated",
+        "Subscription activated",
+        "https://www.x-space360.in/host/dashboard",
+    )
+    assert activated["Subscription_ID"] == "sub_123"
+    assert activated["Plan_Name"] == "Test Plan"
+    assert activated["Expiry_Date"] == "05 August 2026"
+
+
+def test_payment_and_new_booking_require_their_own_template_ids(monkeypatch):
+    monkeypatch.delenv("MSG91_EMAIL_TEMPLATE_PAYMENT_CONFIRMATION", raising=False)
+    monkeypatch.delenv("MSG91_EMAIL_TEMPLATE_NEW_BOOKING", raising=False)
+    monkeypatch.setenv(
+        "MSG91_EMAIL_TEMPLATE_SUBSCRIPTION_ACTIVATED", "subscription-template"
+    )
+    monkeypatch.setenv(
+        "MSG91_EMAIL_TEMPLATE_BOOKING_CONFIRMATION", "booking-template"
+    )
+    service = EmailService()
+
+    assert service._template_id_for("payment_confirmation") == ""
+    assert service._template_id_for("new_booking") == ""

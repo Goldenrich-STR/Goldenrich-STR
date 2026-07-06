@@ -161,11 +161,12 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
             ),
             "cancellation_policy_url": (
                 os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
-                + "/refund-policy"
+                + "/?footer=safety-privacy"
             ),
         }
 
-        # In-App + WhatsApp + SMS via the standard path
+        # Use the standard path for every host channel so the configured
+        # MSG91 NEW_BOOKING template receives the same booking variables.
         await send_multi_channel_notification(
             db=db,
             user_id=host["user_id"],
@@ -174,18 +175,14 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
             message=message,
             channels=[
                 NotificationChannel.IN_APP,
+                NotificationChannel.EMAIL,
                 NotificationChannel.WHATSAPP,
                 NotificationChannel.SMS,
             ],
             data=data,
         )
 
-        # Email with the dedicated template
-        if host.get("email"):
-            _send_host_booking_email(host["email"], data)
-            logger.info(f"Host booking email sent for {booking.get('booking_id')} to {host['email']}")
-
-        # Also send a confirmation receipt to the guest (in-app + email)
+        # Send booking confirmation and a separate payment receipt to the guest.
         if guest:
             guest_msg = (
                 f"X-Space360: Your booking for {property_title} is confirmed! "
@@ -201,6 +198,28 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
                 data={
                     **data,
                     "property_title": property_title,
+                },
+            )
+
+            await send_multi_channel_notification(
+                db=db,
+                user_id=guest["user_id"],
+                notification_type=NotificationType.PAYMENT_CONFIRMED,
+                title="Payment confirmed",
+                message=f"Payment for booking {booking.get('booking_id')} has been confirmed.",
+                channels=[NotificationChannel.EMAIL],
+                data={
+                    **data,
+                    "property_title": property_title,
+                    "payment_date": (
+                        booking.get("confirmed_at")
+                        or booking.get("updated_at")
+                        or datetime.now(timezone.utc)
+                    ),
+                    "action_url": (
+                        os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
+                        + f"/guest/booking-confirmation?booking_id={booking.get('booking_id')}"
+                    ),
                 },
             )
 
@@ -347,6 +366,16 @@ def schedule_soft_lock_reminder(db: AsyncIOMotorDatabase, booking_id: str, expir
 
 async def notify_guest_refund_processed(db: AsyncIOMotorDatabase, refund_dict: dict) -> None:
     """Send In-App + Email notification to guest when a refund is processed successfully."""
+    if os.getenv("REFUND_EMAIL_ENABLED", "false").strip().lower() not in {
+        "1", "true", "yes", "on",
+    }:
+        logger.info(
+            "Refund notification skipped because REFUND_EMAIL_ENABLED is false "
+            "for booking %s",
+            refund_dict.get("booking_id"),
+        )
+        return
+
     try:
         guest = await db.users.find_one({"user_id": refund_dict["guest_id"]}, {"_id": 0})
         booking = await db.bookings.find_one({"booking_id": refund_dict["booking_id"]}, {"_id": 0})

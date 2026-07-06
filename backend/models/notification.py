@@ -8,6 +8,8 @@ class NotificationType(str, Enum):
     BOOKING_CONFIRMED = "booking_confirmed"
     BOOKING_CANCELLED = "booking_cancelled"
     BOOKING_PENDING_PAYMENT = "booking_pending_payment"
+    BOOKING_REMINDER = "booking_reminder"
+    PAYMENT_CONFIRMED = "payment_confirmed"
     NEW_BOOKING_RECEIVED = "new_booking_received"
     PROPERTY_APPROVED = "property_approved"
     PROPERTY_REJECTED = "property_rejected"

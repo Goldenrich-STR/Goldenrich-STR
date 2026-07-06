@@ -146,6 +146,12 @@ class NotificationService:
         # Use appropriate email template based on type
         if notification_type == NotificationType.BOOKING_CONFIRMED:
             result = email_service.send_template(email, "booking_confirmation", email_data)
+        elif notification_type == NotificationType.BOOKING_REMINDER:
+            result = email_service.send_template(email, "booking_reminder", email_data)
+        elif notification_type == NotificationType.PAYMENT_CONFIRMED:
+            result = email_service.send_template(email, "payment_confirmation", email_data)
+        elif notification_type == NotificationType.NEW_BOOKING_RECEIVED:
+            result = email_service.send_template(email, "new_booking", email_data)
         elif notification_type == NotificationType.BOOKING_CANCELLED:
             result = email_service.send_template(email, "booking_cancellation", email_data)
         elif notification_type == NotificationType.REVIEW_REQUEST:

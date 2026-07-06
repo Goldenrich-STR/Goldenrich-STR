@@ -105,14 +105,8 @@ class EmailService:
                 "MSG91_EMAIL_TEMPLATE_SUBSCRIPTION_RENEWAL_REMINDER",
                 "MSG91_EMAIL_TEMPLATE_SUBSCRIPTION_EXPIRING",
             ],
-            "PAYMENT_CONFIRMATION": [
-                "MSG91_EMAIL_TEMPLATE_PAYMENT_CONFIRMATION",
-                "MSG91_EMAIL_TEMPLATE_SUBSCRIPTION_ACTIVATED",
-            ],
-            "NEW_BOOKING": [
-                "MSG91_EMAIL_TEMPLATE_NEW_BOOKING",
-                "MSG91_EMAIL_TEMPLATE_BOOKING_CONFIRMATION",
-            ],
+            "PAYMENT_CONFIRMATION": ["MSG91_EMAIL_TEMPLATE_PAYMENT_CONFIRMATION"],
+            "NEW_BOOKING": ["MSG91_EMAIL_TEMPLATE_NEW_BOOKING"],
             "TERMS_AND_CONDITIONS": [
                 "MSG91_EMAIL_TEMPLATE_TERMS_AND_CONDITIONS",
             ],
@@ -224,7 +218,7 @@ class EmailService:
         refund_date = get_val(["refund_date", "refunded_at"], "")
         payment_date = get_val(["payment_date", "confirmed_at", "paid_at"], "")
         activation_date = get_val(["activation_date", "activated_at"], "")
-        expiry_date = get_val(["expiry_date", "expires_at", "expiry_at"], "")
+        expiry_date = get_val(["expiry_date", "end_date", "expires_at", "expiry_at"], "")
         request_date = get_val(["request_date", "created_at"], "")
         reset_request_time = get_val(["reset_request_time", "created_at"], "")
         attempt_date = get_val(["attempt_date", "failed_at"], "")
@@ -479,7 +473,98 @@ class EmailService:
             variables[f"var{index}"] = value
             variables[f"VAR{index}"] = value
 
-        # 9. Clean values and return
+        # 9. Pin the exact variable names used by the production MSG91
+        # templates. These explicit assignments intentionally happen last so
+        # casing/alias generation can never replace a button URL.
+        exact_cta_variables = {
+            "subscription_activated": (
+                "Manage_Subscription",
+                "Manage_Subscription_URL",
+                "Manage_Subscription_Link",
+            ),
+            "property_rejected": (
+                "Update_Property",
+                "Update_Property_URL",
+                "Update_Property_Link",
+            ),
+            "property_approved": (
+                "Button_URL",
+                "Action_URL",
+                "Dashboard_URL",
+            ),
+            "review_reminder": (
+                "Leave_Your_Review",
+                "Leave_Your_Review_URL",
+                "Leave_Your_Review_Link",
+            ),
+            "customer_registration": (
+                "Login_To_Your_Account",
+                "Login_To_Your_Account_URL",
+                "Login_To_Your_Account_Link",
+            ),
+            "booking_confirmation": (
+                "View_Cancellation_Policy",
+                "View_Cancellation_Policy_URL",
+                "View_Cancellation_Policy_Link",
+            ),
+            "booking_reminder": (
+                "View_Booking",
+                "View_Booking_URL",
+                "View_Booking_Link",
+            ),
+            "payment_confirmation": (
+                "View_Booking",
+                "View_Booking_URL",
+                "View_Booking_Link",
+            ),
+            "new_booking": (
+                "View_Booking",
+                "View_Booking_URL",
+                "View_Booking_Link",
+            ),
+        }
+        for variable_name in exact_cta_variables.get(template, ()):
+            variables[variable_name] = cta_url
+
+        if template == "property_rejected":
+            variables.update(
+                {
+                    "Property_Name": property_title,
+                    "Property_ID": property_id,
+                    "Rejection_Reason": rejection_reason,
+                }
+            )
+        elif template == "subscription_activated":
+            variables.update(
+                {
+                    "Subscription_ID": subscription_id,
+                    "Plan_Name": plan_name,
+                    "Activation_Date": formatted_activation_date,
+                    "Expiry_Date": formatted_expiry_date,
+                    "Auto_Renewal_Status": auto_renewal_status,
+                }
+            )
+        elif template == "new_booking":
+            variables.update(
+                {
+                    "Host_Name": host_name,
+                    "Guest_Name": guest_name,
+                    "Property_Name": property_title,
+                    "Booking_ID": booking_id,
+                }
+            )
+        elif template == "payment_confirmation":
+            variables.update(
+                {
+                    "Customer_Name": name,
+                    "Property_Name": property_title,
+                    "Booking_ID": booking_id,
+                    "Transaction_ID": transaction_id,
+                    "Payment_Date": formatted_payment_date,
+                }
+            )
+
+        # 10. Clean values and return
         return {k: _clean_msg91_value(v) for k, v in variables.items()}
 
     def _send_msg91_template(self, to_email: str, template: str, subject: str, title: str, cta_url: str, data: Dict) -> Dict:
@@ -488,6 +573,7 @@ class EmailService:
             return {"success": False, "error": f"Missing MSG91 email template id for {template}"}
 
         variables = self._variables_for(template, data, subject, title, cta_url)
+        logger.info("MSG91 CTA resolved template=%s url=%s", template, cta_url)
         if template == "host_documents_rejected":
             logger.info(
                 "MSG91 rejection values resolved: reason=%r upload_url=%r support_email=%r support_number=%r",
@@ -624,7 +710,7 @@ class EmailService:
         elif template == "review_reminder":
             cta_url = data.get("deep_link") or data.get("action_url") or f"{frontend_url}/guest/bookings"
         elif template == "booking_confirmation":
-            cta_url = data.get("cancellation_policy_url") or f"{frontend_url}/refund-policy"
+            cta_url = data.get("cancellation_policy_url") or f"{frontend_url}/?footer=safety-privacy"
 
         detail_rows = ""
         for label, key in [

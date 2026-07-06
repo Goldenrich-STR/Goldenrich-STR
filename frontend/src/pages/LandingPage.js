@@ -1200,6 +1200,23 @@ const LandingPage = () => {
   };
 
   React.useEffect(() => {
+    const footerTarget = new URLSearchParams(window.location.search).get('footer');
+    if (footerTarget !== 'safety-privacy') return;
+
+    const safetyItem = footerDisplaySections
+      .flatMap(section => section.items || [])
+      .find(item => /^safety\s*&\s*privacy$/i.test(item.label || ''));
+
+    if (safetyItem) {
+      setFooterPopup({
+        title: safetyItem.label,
+        text: safetyItem.text || 'Safety and privacy details will be updated soon.',
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cmsContent]);
+
+  React.useEffect(() => {
     const fetchCMS = async () => {
       try {
         const response = await apiClient.get('/cms/landing-page');
