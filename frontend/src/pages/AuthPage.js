@@ -114,7 +114,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
       } else if (userRole === 'employee') {
         navigate('/employee/dashboard');
       } else {
-        navigate('/guest/browse');
+        navigate(requestedNext.startsWith('/guest/') ? requestedNext : '/guest/browse');
       }
     } else {
       setError(result.error);

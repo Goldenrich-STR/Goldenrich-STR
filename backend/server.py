@@ -338,14 +338,21 @@ async def startup_sequence():
     except Exception as e:
         logger.error(f"Failed to start soft-lock reaper: {e}")
 
-    # 5. Start review reminders
+    # 5. Start upcoming-booking reminders
+    try:
+        from services.booking_reminder import start_booking_reminder
+        start_booking_reminder(db_instance)
+    except Exception as e:
+        logger.error(f"Failed to start booking reminder: {e}")
+
+    # 6. Start review reminders
     try:
         from services.review_reminder import start_review_reminder
         start_review_reminder(db_instance)
     except Exception as e:
         logger.error(f"Failed to start review reminder: {e}")
 
-    # 6. Start iCal scheduler
+    # 7. Start iCal scheduler
     try:
         from services.calendar_scheduler import start_calendar_scheduler
 
@@ -353,7 +360,7 @@ async def startup_sequence():
     except Exception as e:
         logger.error(f"Failed to start calendar scheduler: {e}")
 
-    # 7. Start payout sweeper
+    # 8. Start payout sweeper
     try:
         from services.account_service import sweep_payout_eligibility
         payout_interval = int(os.environ.get("PAYOUT_SWEEP_INTERVAL", "3600"))

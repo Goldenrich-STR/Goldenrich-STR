@@ -678,7 +678,14 @@ async def cancel_booking(
 
         # Phase 15 — auto-refund on cancel of a confirmed booking, per policy tier
         refund_info = None
-        if current_status == BookingStatus.CONFIRMED.value and booking_dict.get("payment_status") == "paid":
+        auto_refund_enabled = os.getenv(
+            "AUTO_REFUND_ON_CANCELLATION", "false"
+        ).strip().lower() in {"1", "true", "yes", "on"}
+        if (
+            auto_refund_enabled
+            and current_status == BookingStatus.CONFIRMED.value
+            and booking_dict.get("payment_status") == "paid"
+        ):
             try:
                 from services.account_service import initiate_refund
                 booking_dict["payment_id"] = booking_dict.get("razorpay_payment_id")

@@ -38,13 +38,13 @@ def test_property_approval_msg91_variables():
         },
         "Property approved",
         "Your property is live",
-        "https://uat.x-space360.in/login?force_login=1&next=%2Fhost%2Fdashboard",
+        "https://uat.x-space360.in/host/dashboard",
     )
 
     assert variables["Property_ID"] == "prop_123"
     assert variables["Approval_Date"] == "27 June 2026"
     assert variables["Published_Date"] == "27 June 2026"
-    assert "force_login=1" in variables["Button_URL"]
+    assert variables["Button_URL"] == "https://uat.x-space360.in/host/dashboard"
 
 
 def test_variables_enrichment_and_casing():
@@ -99,3 +99,110 @@ def test_variables_enrichment_and_casing():
     assert variables["View_Cancellation_Policy"] == "https://uat.x-space360.in/booking/123"
     assert variables["View_Cancellation_Policy_URL"] == "https://uat.x-space360.in/booking/123"
 
+
+def test_booking_confirmation_keeps_explicit_host_details():
+    service = EmailService()
+    variables = service._variables_for(
+        "booking_confirmation",
+        {
+            "name": "Guest Person",
+            "customer_name": "Guest Person",
+            "host_name": "Host Person",
+            "host_mobile": "9876543210",
+        },
+        "Booking confirmed",
+        "Booking confirmed",
+        "https://www.x-space360.in/refund-policy",
+    )
+
+    assert variables["Customer_Name"] == "Guest Person"
+    assert variables["Host_Name"] == "Host Person"
+    assert variables["Host_Mobile"] == "9876543210"
+    assert variables["View_Cancellation_Policy"] == "https://www.x-space360.in/refund-policy"
+
+
+def test_template_action_urls_are_canonical(monkeypatch):
+    monkeypatch.setenv("PUBLIC_FRONTEND_URL", "https://www.x-space360.in")
+    service = EmailService()
+    service.provider = "msg91"
+    service.is_demo_mode = False
+
+    captured = {}
+
+    def capture(_to, template, _subject, _title, cta_url, data):
+        captured[template] = (cta_url, data)
+        return {"success": True}
+
+    monkeypatch.setattr(service, "_send_msg91_template", capture)
+
+    service.send_template("host@example.com", "subscription_activated", {})
+    service.send_template(
+        "host@example.com",
+        "property_rejected",
+        {"property_id": "prop_123", "property_title": "Test Property"},
+    )
+    service.send_template(
+        "guest@example.com",
+        "review_reminder",
+        {"deep_link": "https://www.x-space360.in/guest/bookings?review=BK123"},
+    )
+    service.send_template("guest@example.com", "customer_registration", {})
+    service.send_template("guest@example.com", "booking_confirmation", {})
+
+    assert captured["subscription_activated"][0] == "https://www.x-space360.in/host/dashboard"
+    assert captured["property_rejected"][0] == "https://www.x-space360.in/host/list-property?edit=prop_123"
+    assert captured["review_reminder"][0] == "https://www.x-space360.in/guest/bookings?review=BK123"
+    assert captured["customer_registration"][0] == "https://www.x-space360.in/dashboard"
+    assert captured["booking_confirmation"][0] == "https://www.x-space360.in/?footer=safety-privacy"
+
+
+def test_property_rejection_and_subscription_expiry_exact_variables():
+    service = EmailService()
+
+    rejected = service._variables_for(
+        "property_rejected",
+        {
+            "property_title": "Lake View Villa",
+            "property_id": "prop_456",
+            "rejection_reason": "Update ownership document",
+        },
+        "Property rejected",
+        "Action required",
+        "https://www.x-space360.in/host/list-property?edit=prop_456",
+    )
+    assert rejected["Property_Name"] == "Lake View Villa"
+    assert rejected["Property_Title"] == "Lake View Villa"
+    assert rejected["PropertyName"] == "Lake View Villa"
+    assert rejected["Property_ID"] == "prop_456"
+    assert rejected["Rejection_Reason"] == "Update ownership document"
+
+    activated = service._variables_for(
+        "subscription_activated",
+        {
+            "subscription_id": "sub_123",
+            "plan_name": "Test Plan",
+            "activation_date": "2026-07-06",
+            "end_date": "2026-08-05",
+        },
+        "Subscription activated",
+        "Subscription activated",
+        "https://www.x-space360.in/host/dashboard",
+    )
+    assert activated["Subscription_ID"] == "sub_123"
+    assert activated["Plan_Name"] == "Test Plan"
+    assert activated["Expiry_Date"] == "05 August 2026"
+
+
+def test_payment_and_new_booking_require_their_own_template_ids(monkeypatch):
+    monkeypatch.delenv("MSG91_EMAIL_TEMPLATE_PAYMENT_CONFIRMATION", raising=False)
+    monkeypatch.delenv("MSG91_EMAIL_TEMPLATE_NEW_BOOKING", raising=False)
+    monkeypatch.setenv(
+        "MSG91_EMAIL_TEMPLATE_SUBSCRIPTION_ACTIVATED", "subscription-template"
+    )
+    monkeypatch.setenv(
+        "MSG91_EMAIL_TEMPLATE_BOOKING_CONFIRMATION", "booking-template"
+    )
+    service = EmailService()
+
+    assert service._template_id_for("payment_confirmation") == ""
+    assert service._template_id_for("new_booking") == ""

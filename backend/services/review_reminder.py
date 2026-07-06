@@ -54,7 +54,7 @@ async def _send_review_request(db: AsyncIOMotorDatabase, booking: dict) -> bool:
     )
 
     try:
-        await send_multi_channel_notification(
+        result = await send_multi_channel_notification(
             db=db,
             user_id=booking["guest_id"],
             notification_type=NotificationType.REVIEW_REQUEST,
@@ -71,10 +71,15 @@ async def _send_review_request(db: AsyncIOMotorDatabase, booking: dict) -> bool:
             data={
                 "booking_id": booking["booking_id"],
                 "property_id": booking["property_id"],
+                "property_title": title,
+                "check_in_date": booking.get("check_in_date"),
+                "check_out_date": booking.get("check_out_date"),
                 "deep_link": deep_link,
+                "action_url": deep_link,
             },
         )
-        return True
+        email_result = (result.get("results") or {}).get("email") or {}
+        return bool(email_result.get("success"))
     except Exception as e:
         logger.warning(f"[review-reminder] send failed for {booking['booking_id']}: {e}")
         return False
@@ -89,7 +94,7 @@ async def sweep_once(db: AsyncIOMotorDatabase) -> dict:
     # Bookings whose check_out fell in [lower, upper] AND haven't been nudged yet
     cursor = db.bookings.find({
         "booking_status": "confirmed",
-        "payment_status": "paid",
+        "payment_status": {"$in": ["paid", "partially_paid"]},
         "check_out_date": {"$gte": lower, "$lte": upper},
         "review_reminder_sent_at": {"$exists": False},
     }, {"_id": 0})

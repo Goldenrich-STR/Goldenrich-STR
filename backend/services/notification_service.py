@@ -136,7 +136,26 @@ class NotificationService:
         if not email:
             return {"success": False, "error": "No email address"}
         
-        data = data or {}
+        data = dict(data or {})
+        if notification_type == NotificationType.PROPERTY_REJECTED:
+            property_title = (
+                data.get("property_title")
+                or data.get("property_name")
+                or data.get("title")
+            )
+            property_id = data.get("property_id")
+            if not property_title and property_id:
+                property_record = await self.db.properties.find_one(
+                    {"property_id": property_id},
+                    {"_id": 0, "title": 1, "property_name": 1},
+                )
+                property_record = property_record or {}
+                property_title = (
+                    property_record.get("title")
+                    or property_record.get("property_name")
+                )
+            data["property_title"] = property_title or "Your property"
+
         email_data = {
             **data,
             "name": user.get("full_name") or user.get("email") or "there",
@@ -146,6 +165,12 @@ class NotificationService:
         # Use appropriate email template based on type
         if notification_type == NotificationType.BOOKING_CONFIRMED:
             result = email_service.send_template(email, "booking_confirmation", email_data)
+        elif notification_type == NotificationType.BOOKING_REMINDER:
+            result = email_service.send_template(email, "booking_reminder", email_data)
+        elif notification_type == NotificationType.PAYMENT_CONFIRMED:
+            result = email_service.send_template(email, "payment_confirmation", email_data)
+        elif notification_type == NotificationType.NEW_BOOKING_RECEIVED:
+            result = email_service.send_template(email, "new_booking", email_data)
         elif notification_type == NotificationType.BOOKING_CANCELLED:
             result = email_service.send_template(email, "booking_cancellation", email_data)
         elif notification_type == NotificationType.REVIEW_REQUEST:

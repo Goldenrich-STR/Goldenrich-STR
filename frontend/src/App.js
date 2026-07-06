@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { HelmetProvider } from "react-helmet-async";
 import SEO from "./components/SEO";
@@ -40,6 +40,7 @@ const ScreenLoading = () => (
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -54,7 +55,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
   if (!user) {
     const loginPath = allowedRoles?.includes("admin") ? "/admin/login" : "/login";
-    return <Navigate to={loginPath} replace />;
+    const next = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={`${loginPath}?next=${encodeURIComponent(next)}`} replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {

@@ -325,7 +325,12 @@ async def on_rm_decision(db: AsyncIOMotorDatabase, verification: dict, approved:
             "Listing needs revision",
             f"RM has flagged your listing '{property_data.get('title')}' for changes: {remarks or 'see details'}. "
             f"Please update and resubmit.",
-            {"property_id": property_id, "remarks": remarks},
+            {
+                "property_id": property_id,
+                "property_title": property_data.get("title"),
+                "rejection_reason": remarks,
+                "remarks": remarks,
+            },
         )
         
         # Notify broker who did the site verification
@@ -372,7 +377,13 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
             else str(approved_at)
         )
         frontend_url = os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
-        secure_dashboard_url = f"{frontend_url}/login?force_login=1&next=%2Fhost%2Fdashboard"
+        dashboard_url = f"{frontend_url}/host/dashboard"
+        property_title = (
+            property_data.get("title")
+            or property_data.get("property_title")
+            or property_data.get("property_name")
+            or "Your property"
+        )
         await _notify(
             db,
             property_data["owner_id"],
@@ -381,14 +392,23 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
             f"Congratulations! '{property_data.get('title')}' is now live on X-Space360 and accepting bookings.",
             {
                 "property_id": property_data["property_id"],
-                "property_title": property_data.get("title"),
+                "property_title": property_title,
                 "approval_date": approval_date,
                 "published_date": approval_date,
-                "action_url": secure_dashboard_url,
-                "dashboard_url": secure_dashboard_url,
+                "action_url": dashboard_url,
+                "dashboard_url": dashboard_url,
             },
         )
     else:
+        frontend_url = os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
+        property_id = property_data["property_id"]
+        property_title = (
+            property_data.get("title")
+            or property_data.get("property_title")
+            or property_data.get("property_name")
+            or "Your property"
+        )
+        update_url = f"{frontend_url}/host/list-property?edit={property_id}"
         await _notify(
             db,
             property_data["owner_id"],
@@ -397,11 +417,11 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
             f"Unfortunately '{property_data.get('title')}' was not approved: {reason or 'see admin remarks'}. "
             f"You can update and resubmit.",
             {
-                "property_id": property_data["property_id"],
-                "property_title": property_data.get("title"),
+                "property_id": property_id,
+                "property_title": property_title,
                 "reason": reason,
                 "remarks": reason,
-                "action_url": "/host/dashboard",
+                "action_url": update_url,
             },
         )
 

@@ -717,7 +717,7 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
                     "phone": user.phone,
                     "role": role_str,
                     "city": user.city or "",
-                    "action_url": _frontend_url("/host/dashboard" if role_str.lower() == "host" else "/guest/browse"),
+                    "action_url": _frontend_url("/host/dashboard" if role_str.lower() == "host" else "/dashboard"),
                 },
             )
         except Exception as email_err:
