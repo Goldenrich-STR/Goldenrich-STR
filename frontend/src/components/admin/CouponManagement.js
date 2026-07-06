@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { couponAPI, propertyAPI } from '../../services/api';
-import { Plus, Tag, Search, RefreshCw, CheckCircle, Percent, XCircle, Filter, X } from 'lucide-react';
+import { Plus, Tag, Search, RefreshCw, CheckCircle, Percent, XCircle, Filter, X, Trash2 } from 'lucide-react';
 
 const CouponManagement = () => {
   const [coupons, setCoupons] = useState([]);
@@ -108,6 +108,18 @@ const CouponManagement = () => {
       fetchCoupons();
     } catch (err) {
       alert(err.response?.data?.detail || 'Failed to toggle coupon status');
+    }
+  };
+
+  const handleDeleteCoupon = async (coupon) => {
+    const confirmed = window.confirm(`Delete coupon ${coupon.code}? This action cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      await couponAPI.deleteCoupon(coupon.coupon_id);
+      setCoupons(currentCoupons => currentCoupons.filter(item => item.coupon_id !== coupon.coupon_id));
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to delete coupon');
     }
   };
 
@@ -399,17 +411,27 @@ const CouponManagement = () => {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleToggleCoupon(coupon.coupon_id)}
-                        className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition duration-300 ${
-                          coupon.is_active
-                            ? 'bg-red-50 hover:bg-red-100 text-red-600'
-                            : 'bg-green-50 hover:bg-green-100 text-green-600'
-                        }`}
-                      >
-                        {coupon.is_active ? 'Deactivate' : 'Activate'}
-                      </button>
+                    <td className="px-6 py-4">
+                      <div className="flex justify-end items-center gap-2">
+                        <button
+                          onClick={() => handleToggleCoupon(coupon.coupon_id)}
+                          className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition duration-300 ${
+                            coupon.is_active
+                              ? 'bg-red-50 hover:bg-red-100 text-red-600'
+                              : 'bg-green-50 hover:bg-green-100 text-green-600'
+                          }`}
+                        >
+                          {coupon.is_active ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCoupon(coupon)}
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 text-red-600 transition duration-300"
+                          title="Delete coupon"
+                          aria-label={`Delete coupon ${coupon.code}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

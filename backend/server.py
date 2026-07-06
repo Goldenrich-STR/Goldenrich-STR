@@ -414,10 +414,12 @@ async def root():
 
 # Serve the production React build from the same localhost as the API.
 _frontend_build_dir = ROOT_DIR.parent / "frontend" / "build"
-if _frontend_build_dir.exists():
+_frontend_static_dir = _frontend_build_dir / "static"
+_frontend_index_file = _frontend_build_dir / "index.html"
+if _frontend_static_dir.is_dir() and _frontend_index_file.is_file():
     app.mount(
         "/static",
-        DynamicCacheStaticFiles(directory=str(_frontend_build_dir / "static")),
+        DynamicCacheStaticFiles(directory=str(_frontend_static_dir)),
         name="frontend-static",
     )
 

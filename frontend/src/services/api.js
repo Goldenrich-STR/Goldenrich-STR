@@ -534,6 +534,7 @@ export const couponAPI = {
   getPropertyCoupons: (propertyId) => apiClient.get(`/coupons/property/${propertyId}`),
   getSubscriptionCoupons: (params = {}) => apiClient.get('/coupons/subscription', { params }),
   toggleCouponStatus: (couponId) => apiClient.patch(`/coupons/admin/${couponId}/toggle`),
+  deleteCoupon: (couponId) => apiClient.delete(`/coupons/admin/${couponId}`),
 };
 
 // Admin API

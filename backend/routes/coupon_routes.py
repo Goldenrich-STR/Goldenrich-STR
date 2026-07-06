@@ -246,3 +246,36 @@ async def toggle_coupon_status(
             detail="Failed to toggle coupon status"
         )
 
+@router.delete("/admin/{coupon_id}", response_model=dict)
+async def delete_coupon(
+    coupon_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Delete a coupon (Admin only)"""
+    try:
+        if current_user.get("role") != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admins can delete coupons"
+            )
+
+        result = await db.coupons.delete_one({"coupon_id": coupon_id})
+        if result.deleted_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Coupon not found"
+            )
+
+        logger.info(f"Coupon deleted: {coupon_id}")
+        return {"message": "Coupon deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting coupon: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete coupon"
+        )
+

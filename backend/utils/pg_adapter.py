@@ -19,6 +19,18 @@ class PGUpdateResult(int):
         obj.modified_count = modified_count if modified_count is not None else count
         return obj
 
+class PGDeleteResult(int):
+    def __new__(cls, count):
+        obj = super(PGDeleteResult, cls).__new__(cls, count)
+        obj.deleted_count = count
+        return obj
+
+def _command_count(result: str) -> int:
+    try:
+        return int(str(result).split()[-1])
+    except (IndexError, TypeError, ValueError):
+        return 0
+
 class PGCursor:
     def __init__(self, table_name, query, projection, pool, sort=None, skip=0, limit=None):
         self.table_name = table_name
@@ -484,13 +496,13 @@ class PGCollection:
         sql = f"DELETE FROM {self.table_name} WHERE id = (SELECT id FROM {self.table_name} {where_clause} LIMIT 1)"
         async with self.pool.acquire() as conn:
             res = await conn.execute(sql, *params)
-            return True
+            return PGDeleteResult(_command_count(res))
 
     async def delete_many(self, query, **kwargs):
         where_clause, params = PGCursor(self.table_name, query, None, self.pool)._build_where(query)
         async with self.pool.acquire() as conn:
             res = await conn.execute(f"DELETE FROM {self.table_name} {where_clause}", *params)
-            return True
+            return PGDeleteResult(_command_count(res))
 
     async def count_documents(self, query, **kwargs):
         where_clause, params = PGCursor(self.table_name, query, None, self.pool)._build_where(query)

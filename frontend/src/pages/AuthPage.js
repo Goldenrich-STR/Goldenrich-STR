@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star } from 'lucide-react';
+import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star, Eye, EyeOff } from 'lucide-react';
 import { authAPI, apiClient } from '../services/api';
 import LegalLinks from '../components/LegalLinks';
 import SEO from '../components/SEO';
@@ -21,6 +21,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   
   const [loginData, setLoginData] = useState({
     email: '',
@@ -334,14 +335,23 @@ const AuthPage = ({ isAdminLogin = false }) => {
                           <input
                              id="login-password"
                              name="password"
-                             type="password"
+                             type={showLoginPassword ? 'text' : 'password'}
                              autoComplete="current-password"
                              value={loginData.password}
                              onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                             className="w-full pl-16 pr-8 py-5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm placeholder:text-sand-300 placeholder:font-semibold"
+                             className="w-full pl-16 pr-16 py-5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm placeholder:text-sand-300 placeholder:font-semibold"
                              placeholder="••••••••"
                              required
                           />
+                          <button
+                             type="button"
+                             onClick={() => setShowLoginPassword(value => !value)}
+                             className="absolute right-5 top-1/2 -translate-y-1/2 p-2 text-sand-400 hover:text-terracotta transition-colors z-10"
+                             title={showLoginPassword ? 'Hide password' : 'Show password'}
+                             aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
+                          >
+                             {showLoginPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                          </button>
                        </div>
                     </div>
                     
