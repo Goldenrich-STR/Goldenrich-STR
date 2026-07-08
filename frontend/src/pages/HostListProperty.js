@@ -100,10 +100,10 @@ const CATEGORY_DATA = {
   },
   event_venue: {
     propertyTypes: [
-      { value: 'banquet_hall', label: 'Banquet Hall' },
+      { value: 'banquet_hall', label: 'Banquet' },
       { value: 'rooftop', label: 'Rooftop' },
       { value: 'hotel_ballroom', label: 'Hotel Ballroom' },
-      { value: 'garden', label: 'Garden/Lawn' },
+      { value: 'garden_lawn', label: 'Garden Lawn' },
       { value: 'party_plot', label: 'Party Plot' },
     ],
     bhkTypes: [
@@ -183,7 +183,7 @@ const PRICING_CYCLE_OPTIONS = [
 
 const getTargetSubscriptionPlanType = (category, bhkType) => {
   if (category === 'commercial') return 'commercial';
-  if (category === 'event_venue') return 'banquet';
+  if (category === 'event_venue') return 'event_venue';
     const map = {
       studio: 'studio',
       '1bhk': '1bhk',
@@ -193,6 +193,31 @@ const getTargetSubscriptionPlanType = (category, bhkType) => {
       '5bhk': '4bhk_plus',
     };
   return map[bhkType] || '1bhk';
+};
+
+const subscriptionSqftMatches = (rangeText, areaSqft) => {
+  if (!rangeText || !areaSqft) return true;
+  let text = String(rangeText).toLowerCase().replace(/sq\.?ft/g, '').replace(/,/g, '').replace(/\s/g, '');
+  const aliases = {
+    small: '<500',
+    medium: '500-2000',
+    large: '2000-5000',
+    extra_large: '5000+',
+    extralarge: '5000+',
+  };
+  text = aliases[text] || text;
+  const area = Number(areaSqft);
+  if (!Number.isFinite(area) || area <= 0) return true;
+  if (text.startsWith('<=')) return area <= Number(text.slice(2));
+  if (text.startsWith('>=')) return area >= Number(text.slice(2));
+  if (text.startsWith('<')) return area < Number(text.slice(1));
+  if (text.startsWith('>')) return area > Number(text.slice(1));
+  if (text.endsWith('+')) return area >= Number(text.slice(0, -1));
+  if (text.includes('-')) {
+    const [start, end] = text.split('-').map(Number);
+    return Number.isFinite(start) && Number.isFinite(end) ? area >= start && area <= end : true;
+  }
+  return true;
 };
 
 const VEG_ITEMS = [
@@ -840,11 +865,12 @@ const HostListProperty = () => {
       if (p.property_category && p.property_category !== form.category) return false;
       if (p.property_type && p.property_type !== form.property_type) return false;
       if (p.bhk_type && p.bhk_type !== form.bhk_type) return false;
+      if (!subscriptionSqftMatches(p.sqft_range, form.area_sqft)) return false;
       return true;
     });
     if (filtered.length) return filtered;
     return [];
-  }, [plans, form.category, form.property_type, form.bhk_type]);
+  }, [plans, form.category, form.property_type, form.bhk_type, form.area_sqft]);
 
   const getSubscriptionBreakdown = (plan = {}) => {
     const planFee = Number(plan.price_monthly) || 0;
