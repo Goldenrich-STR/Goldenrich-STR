@@ -15,6 +15,7 @@ import hashlib
 import os
 import re
 import secrets
+import time
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 
@@ -44,6 +45,8 @@ class ResetPasswordRequest(BaseModel):
 
 GOLDENRICH_SSO_COOKIE = "goldenrich_sso_state"
 PASSWORD_RESET_TTL_SECONDS = 30 * 60
+SSO_STATE_TTL_SECONDS = 10 * 60
+_sso_state_store: dict[str, float] = {}
 
 
 def _password_reset_token_hash(token: str) -> str:
@@ -85,6 +88,21 @@ def _sso_cookie_secure() -> bool:
     if configured:
         return configured.lower() == "true"
     return _env("PUBLIC_BACKEND_URL", "http://localhost:8001").startswith("https://")
+
+def _remember_sso_state(state: str) -> None:
+    now = time.time()
+    for stored_state, expires_at in list(_sso_state_store.items()):
+        if expires_at <= now:
+            _sso_state_store.pop(stored_state, None)
+    _sso_state_store[state] = now + SSO_STATE_TTL_SECONDS
+
+def _consume_sso_state(state: str | None, expected_state: str | None) -> bool:
+    if not state:
+        return False
+    cookie_matches = bool(expected_state and secrets.compare_digest(state, expected_state))
+    stored_expires_at = _sso_state_store.pop(state, None)
+    stored_matches = bool(stored_expires_at and stored_expires_at > time.time())
+    return cookie_matches or stored_matches
 
 async def get_db():
     from server import db_instance
@@ -467,6 +485,7 @@ async def goldenrich_sso_login():
         )
 
     state = secrets.token_urlsafe(32)
+    _remember_sso_state(state)
     params = {
         "response_type": "code",
         "client_id": client_id,
@@ -498,7 +517,12 @@ async def goldenrich_sso_callback(
         return RedirectResponse(_frontend_url("/sso/goldenrich/callback", {"error": error}))
 
     expected_state = request.cookies.get(GOLDENRICH_SSO_COOKIE)
-    if not state or not expected_state or not secrets.compare_digest(state, expected_state):
+    if not _consume_sso_state(state, expected_state):
+        logger.warning(
+            "GoldenRich SSO invalid state: has_state=%s has_cookie=%s",
+            bool(state),
+            bool(expected_state),
+        )
         return RedirectResponse(_frontend_url("/sso/goldenrich/callback", {"error": "invalid_state"}))
 
     if not code:
