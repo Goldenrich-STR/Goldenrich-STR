@@ -943,6 +943,9 @@ async def create_subscription_plan(
     platform_fee: float = 0.0,
     tax_percent: float = 18.0,
     sqft_range: Optional[str] = None,
+    property_category: Optional[str] = None,
+    property_type: Optional[str] = None,
+    bhk_type: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -963,7 +966,10 @@ async def create_subscription_plan(
             tax_percent=tax_percent,
             description=description,
             validity_days=validity_days,
-            sqft_range=sqft_range
+            sqft_range=sqft_range,
+            property_category=property_category,
+            property_type=property_type,
+            bhk_type=bhk_type,
         )
         
         plan_dict = plan.model_dump()
@@ -1104,6 +1110,9 @@ async def update_subscription_plan(
     validity_days: Optional[int] = None,
     is_active: Optional[bool] = None,
     sqft_range: Optional[str] = None,
+    property_category: Optional[str] = None,
+    property_type: Optional[str] = None,
+    bhk_type: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
@@ -1126,6 +1135,9 @@ async def update_subscription_plan(
         if validity_days is not None: update_data["validity_days"] = validity_days
         if is_active is not None: update_data["is_active"] = is_active
         if sqft_range is not None: update_data["sqft_range"] = sqft_range
+        if property_category is not None: update_data["property_category"] = property_category
+        if property_type is not None: update_data["property_type"] = property_type
+        if bhk_type is not None: update_data["bhk_type"] = bhk_type
         
         if not update_data:
             return {"message": "No changes provided"}

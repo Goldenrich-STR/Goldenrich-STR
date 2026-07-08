@@ -6697,23 +6697,114 @@ const CMSManagement = () => {
   );
 };
 
+const SUBSCRIPTION_PLAN_CATEGORY_OPTIONS = [
+  { value: 'residential', label: 'Residential' },
+  { value: 'commercial', label: 'Commercial' },
+  { value: 'event_venue', label: 'Event Venue' },
+];
+
+const RESIDENTIAL_PLAN_PROPERTY_TYPES = [
+  { value: 'apartment', label: 'Apartment' },
+  { value: 'villa', label: 'Villa' },
+  { value: 'studio', label: 'Studio' },
+  { value: 'independent_house', label: 'Independent House' },
+  { value: 'co_living', label: 'Co-living' },
+  { value: 'farmhouse', label: 'Farmhouse' },
+];
+
+const RESIDENTIAL_PLAN_BHK_TYPES = [
+  { value: 'studio', label: 'Studio' },
+  { value: '1bhk', label: '1 BHK' },
+  { value: '2bhk', label: '2 BHK' },
+  { value: '3bhk', label: '3 BHK' },
+  { value: '4bhk', label: '4 BHK' },
+  { value: '5bhk', label: '5+ BHK' },
+];
+
+const EVENT_VENUE_PLAN_PROPERTY_TYPES = [
+  { value: 'banquet_hall', label: 'Banquet' },
+  { value: 'rooftop', label: 'Rooftop' },
+  { value: 'hotel_ballroom', label: 'Hotel Ballroom' },
+  { value: 'garden_lawn', label: 'Garden Lawn' },
+  { value: 'party_plot', label: 'Party Plot' },
+];
+
+const formatSubscriptionPlanType = (plan = {}) => {
+  const category = plan.property_category || (plan.plan_type === 'commercial' ? 'commercial' : plan.plan_type === 'event_venue' ? 'event_venue' : 'residential');
+  const categoryLabel = SUBSCRIPTION_PLAN_CATEGORY_OPTIONS.find((option) => option.value === category)?.label || category;
+  const propertyTypeOptions = category === 'event_venue' ? EVENT_VENUE_PLAN_PROPERTY_TYPES : RESIDENTIAL_PLAN_PROPERTY_TYPES;
+  const propertyTypeLabel = propertyTypeOptions.find((option) => option.value === plan.property_type)?.label;
+  const bhkLabel = RESIDENTIAL_PLAN_BHK_TYPES.find((option) => option.value === plan.bhk_type || option.value === plan.plan_type)?.label;
+  const rangeLabel = plan.sqft_range ? ` (${plan.sqft_range})` : '';
+  return `${categoryLabel}${propertyTypeLabel ? ` - ${propertyTypeLabel}` : ''}${category === 'residential' && bhkLabel ? ` - ${bhkLabel}` : ''}${rangeLabel}`;
+};
+
+const normalizeCustomSqftRange = (plan) => {
+  if (plan.sqft_range !== 'custom') return plan.sqft_range || '';
+  const min = Number(plan.custom_sqft_min);
+  const max = Number(plan.custom_sqft_max);
+  if (Number.isFinite(min) && Number.isFinite(max) && min > 0 && max >= min) {
+    return `${min}-${max}`;
+  }
+  return '';
+};
+
+const toSqftRangeFormFields = (range = '') => {
+  const knownRanges = new Set(['', 'small', 'medium', 'large', 'extra_large', 'custom']);
+  if (knownRanges.has(range)) return { sqft_range: range, custom_sqft_min: '', custom_sqft_max: '' };
+  const match = String(range).replace(/\s/g, '').match(/^(\d+)-(\d+)$/);
+  return {
+    sqft_range: 'custom',
+    custom_sqft_min: match?.[1] || '',
+    custom_sqft_max: match?.[2] || '',
+  };
+};
+
+const defaultSubscriptionPlanForm = () => ({
+  plan_name: '',
+  ui_category: 'residential',
+  plan_type: '1bhk',
+  price_monthly: '',
+  price_annual: '',
+  platform_fee: '',
+  tax_percent: 18,
+  description: '',
+  validity_days: 30,
+  sqft_range: '',
+  custom_sqft_min: '',
+  custom_sqft_max: '',
+  property_category: 'residential',
+  property_type: 'apartment',
+  bhk_type: '1bhk',
+});
+
+const getPlanEditCategory = (plan = {}) => (
+  plan.property_category || (plan.plan_type === 'commercial' ? 'commercial' : plan.plan_type === 'event_venue' ? 'event_venue' : 'residential')
+);
+
+const normalizePlanForEdit = (plan = {}) => {
+  const uiCategory = getPlanEditCategory(plan);
+  const rangeFields = toSqftRangeFormFields(plan.sqft_range || '');
+  return {
+    ...defaultSubscriptionPlanForm(),
+    ...plan,
+    ui_category: uiCategory,
+    property_category: uiCategory,
+    property_type:
+      plan.property_type ||
+      (uiCategory === 'event_venue' ? EVENT_VENUE_PLAN_PROPERTY_TYPES[0].value : RESIDENTIAL_PLAN_PROPERTY_TYPES[0].value),
+    bhk_type: plan.bhk_type || (!['commercial', 'event_venue'].includes(plan.plan_type) ? plan.plan_type : '1bhk'),
+    ...rangeFields,
+  };
+};
+
 // Subscription Management Component
 export const SubscriptionManagement = () => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [viewPlan, setViewPlan] = useState(null);
-  const [newPlan, setNewPlan] = useState({
-    plan_name: '',
-    plan_type: '1bhk',
-    price_monthly: '',
-    price_annual: '',
-    platform_fee: '',
-    tax_percent: 18,
-    description: '',
-    validity_days: 30,
-    sqft_range: ''
-  });
+  const [newPlan, setNewPlan] = useState(defaultSubscriptionPlanForm());
 
   useEffect(() => {
     fetchPlans();
@@ -6733,20 +6824,44 @@ export const SubscriptionManagement = () => {
   const handleCreatePlan = async (e) => {
     e.preventDefault();
     try {
+      const selectedCategory = newPlan.ui_category || 'residential';
+      const isCommercial = selectedCategory === 'commercial';
+      const isEventVenue = selectedCategory === 'event_venue';
+      const apiPlanType = isCommercial ? 'commercial' : isEventVenue ? 'event_venue' : (newPlan.bhk_type === '5bhk' ? '4bhk_plus' : newPlan.bhk_type);
+      const sqftRange = (isCommercial || isEventVenue) ? normalizeCustomSqftRange(newPlan) : '';
+      if ((isCommercial || isEventVenue) && !sqftRange) {
+        alert('Please select or enter a valid sq.ft range');
+        return;
+      }
+      if (selectedCategory === 'residential' && (!newPlan.property_type || !newPlan.bhk_type)) {
+        alert('Please select residential property type and BHK');
+        return;
+      }
+      if (isEventVenue && !newPlan.property_type) {
+        alert('Please select an event venue property type');
+        return;
+      }
       const payload = {
         ...newPlan,
+        plan_type: apiPlanType,
         price_annual: Number(newPlan.price_annual) || 0,
         platform_fee: Number(newPlan.platform_fee) || 0,
         tax_percent: Number(newPlan.tax_percent) || 0,
-        sqft_range: newPlan.plan_type === 'commercial' ? newPlan.sqft_range : null
+        sqft_range: sqftRange || null,
+        property_category: selectedCategory,
+        property_type: selectedCategory === 'commercial' ? null : newPlan.property_type,
+        bhk_type: selectedCategory === 'residential' ? newPlan.bhk_type : null,
       };
+      delete payload.custom_sqft_min;
+      delete payload.custom_sqft_max;
+      delete payload.ui_category;
       if (newPlan.plan_id) {
         await subscriptionAPI.updatePlan(newPlan.plan_id, payload);
       } else {
         await subscriptionAPI.createPlan(payload);
       }
       setShowAddModal(false);
-      setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', platform_fee: '', tax_percent: 18, description: '', validity_days: 30, sqft_range: '' });
+      setNewPlan(defaultSubscriptionPlanForm());
       fetchPlans();
     } catch (error) {
       alert('Failed to save plan');
@@ -6778,7 +6893,7 @@ export const SubscriptionManagement = () => {
         <h3 className="text-2xl font-bold text-charcoal">Subscription Management</h3>
         <button 
           onClick={() => {
-            setNewPlan({ plan_name: '', plan_type: '1bhk', price_monthly: '', price_annual: '', platform_fee: '', tax_percent: 18, description: '', validity_days: 30, sqft_range: '' });
+            setNewPlan(defaultSubscriptionPlanForm());
             setShowAddModal(true);
           }}
           className="btn-primary flex items-center space-x-2"
@@ -6799,7 +6914,7 @@ export const SubscriptionManagement = () => {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <span className="inline-block px-2 py-1 bg-sage/10 text-sage-dark text-[10px] font-bold tracking-tight uppercase tracking-widest rounded mb-2">
-                    {plan.plan_type === 'commercial' && plan.sqft_range ? `commercial (${plan.sqft_range})` : plan.plan_type}
+                    {formatSubscriptionPlanType(plan)}
                   </span>
                   <h4 className="text-lg font-bold text-charcoal">{plan.plan_name}</h4>
                   <p className="text-[11px] font-semibold text-charcoal-muted/85 font-mono mt-1 mb-2">ID: {plan.plan_id}</p>
@@ -6814,7 +6929,9 @@ export const SubscriptionManagement = () => {
                   </button>
                   <button 
                     onClick={() => {
-                      setNewPlan(plan);
+                      setNewPlan({
+                        ...normalizePlanForEdit(plan),
+                      });
                       setShowAddModal(true);
                     }}
                     className="p-1 text-charcoal-light hover:text-terracotta"
@@ -6892,19 +7009,31 @@ export const SubscriptionManagement = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">BHK Type</label>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Category</label>
                   <select 
                     className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
-                    value={newPlan.plan_type}
-                    onChange={e => setNewPlan({...newPlan, plan_type: e.target.value})}
+                    value={newPlan.ui_category || 'residential'}
+                    onChange={e => {
+                      const category = e.target.value;
+                      setNewPlan({
+                        ...newPlan,
+                        ui_category: category,
+                        property_category: category,
+                        plan_type: category === 'commercial' ? 'commercial' : category === 'event_venue' ? 'event_venue' : (newPlan.bhk_type || '1bhk'),
+                        property_type:
+                          category === 'event_venue'
+                            ? EVENT_VENUE_PLAN_PROPERTY_TYPES[0].value
+                            : category === 'residential'
+                              ? RESIDENTIAL_PLAN_PROPERTY_TYPES[0].value
+                              : '',
+                        bhk_type: category === 'residential' ? (newPlan.bhk_type || '1bhk') : '',
+                        sqft_range: ['commercial', 'event_venue'].includes(category) ? newPlan.sqft_range : '',
+                      });
+                    }}
                   >
-                    <option value="studio">Studio</option>
-                    <option value="1bhk">1 BHK</option>
-                    <option value="2bhk">2 BHK</option>
-                    <option value="3bhk">3 BHK</option>
-                    <option value="4bhk">4 BHK+</option>
-                    <option value="commercial">Commercial</option>
-                    <option value="banquet">Banquet</option>
+                    {SUBSCRIPTION_PLAN_CATEGORY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -6937,7 +7066,52 @@ export const SubscriptionManagement = () => {
                   />
                 </div>
               </div>
-              {newPlan.plan_type === 'commercial' && (
+              {(newPlan.ui_category || 'residential') === 'residential' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Property Type</label>
+                    <select
+                      required
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                      value={newPlan.property_type || 'apartment'}
+                      onChange={e => setNewPlan({...newPlan, property_type: e.target.value})}
+                    >
+                      {RESIDENTIAL_PLAN_PROPERTY_TYPES.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">BHK / Size</label>
+                    <select
+                      required
+                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                      value={newPlan.bhk_type || '1bhk'}
+                      onChange={e => setNewPlan({...newPlan, bhk_type: e.target.value, plan_type: e.target.value})}
+                    >
+                      {RESIDENTIAL_PLAN_BHK_TYPES.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+              {(newPlan.ui_category || 'residential') === 'event_venue' && (
+                <div>
+                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Event Venue Type</label>
+                  <select
+                    required
+                    className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                    value={newPlan.property_type || ''}
+                    onChange={e => setNewPlan({...newPlan, property_type: e.target.value})}
+                  >
+                    {EVENT_VENUE_PLAN_PROPERTY_TYPES.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {['commercial', 'event_venue'].includes(newPlan.ui_category || 'residential') && (
                 <div>
                   <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1">Sq.ft Range</label>
                   <select 
@@ -6953,6 +7127,28 @@ export const SubscriptionManagement = () => {
                     <option value="extra_large">Extra Large (5000+ sqft)</option>
                     <option value="custom">Custom Size</option>
                   </select>
+                  {newPlan.sqft_range === 'custom' && (
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      <input
+                        type="number"
+                        min={1}
+                        required
+                        placeholder="Min sq.ft"
+                        className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                        value={newPlan.custom_sqft_min || ''}
+                        onChange={e => setNewPlan({...newPlan, custom_sqft_min: e.target.value})}
+                      />
+                      <input
+                        type="number"
+                        min={1}
+                        required
+                        placeholder="Max sq.ft"
+                        className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
+                        value={newPlan.custom_sqft_max || ''}
+                        onChange={e => setNewPlan({...newPlan, custom_sqft_max: e.target.value})}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
               <div>
@@ -6991,7 +7187,7 @@ export const SubscriptionManagement = () => {
             <h3 className="text-2xl font-bold tracking-tight text-charcoal mb-1">{viewPlan.plan_name}</h3>
             <p className="text-xs font-mono text-charcoal-muted mb-4">Subscription ID: {viewPlan.plan_id}</p>
             <span className="inline-block px-3 py-1 bg-sage/10 text-sage-dark text-[10px] font-bold tracking-tight uppercase tracking-widest rounded-full mb-6">
-              {viewPlan.plan_type === 'commercial' && viewPlan.sqft_range ? `commercial (${viewPlan.sqft_range})` : viewPlan.plan_type} Configuration
+              {formatSubscriptionPlanType(viewPlan)} Configuration
             </span>
             <div className="space-y-4 mb-8">
               <div className="p-4 bg-stone rounded-2xl">
