@@ -12,6 +12,7 @@ class SubscriptionPlanType(str, Enum):
     FOUR_BHK_PLUS = "4bhk_plus"
     COMMERCIAL = "commercial"
     BANQUET = "banquet"
+    EVENT_VENUE = "event_venue"
 
 class SubscriptionStatus(str, Enum):
     TRIAL = "trial"
@@ -31,6 +32,9 @@ class SubscriptionPlan(BaseModel):
     validity_days: int = 30
     is_active: bool = True
     sqft_range: Optional[str] = None
+    property_category: Optional[str] = None
+    property_type: Optional[str] = None
+    bhk_type: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Subscription(BaseModel):
