@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 
@@ -17,8 +16,8 @@ DEFAULT_SYNC_INTERVAL_MINUTES = int(os.environ.get("ICAL_SYNC_INTERVAL_MINUTES",
 _scheduler: AsyncIOScheduler | None = None
 
 
-def _run_sync(db: AsyncIOMotorDatabase) -> None:
-    asyncio.create_task(sync_all_calendars(db))
+async def _run_sync(db: AsyncIOMotorDatabase) -> None:
+    await sync_all_calendars(db)
 
 
 def start_calendar_scheduler(
