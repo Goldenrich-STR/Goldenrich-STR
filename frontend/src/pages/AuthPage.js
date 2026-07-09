@@ -68,6 +68,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
       missing_code: 'GRP SSO did not return an authorization code. Please try again.',
       sso_not_configured: 'GRP SSO is not configured on this server.',
       sso_callback_failed: 'GRP SSO could not be completed. Please try again.',
+      grp_authorize_loop: 'GRP authorize page redirected back to X-Space360 before completing login. Please ask GRP team to fix their OAuth authorize endpoint.',
     };
     setIsLogin(true);
     setError(messages[ssoError] || `GRP SSO failed: ${ssoError}`);
@@ -141,7 +142,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
 
   const handleGoldenRichSso = () => {
     const backendUrl = (apiClient.defaults.baseURL || '').replace(/\/$/, '');
-    window.location.href = `${backendUrl}/api/auth/sso/goldenrich/login`;
+    window.location.href = `${backendUrl}/api/auth/sso/goldenrich/login?force=1`;
   };
 
   const sendOTP = async () => {

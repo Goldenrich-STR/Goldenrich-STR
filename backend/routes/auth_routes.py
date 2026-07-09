@@ -482,7 +482,7 @@ async def reset_password(request: ResetPasswordRequest, db: AsyncIOMotorDatabase
     return {"message": "Password reset successfully", "login_path": login_path}
 
 @router.get("/sso/goldenrich/login")
-async def goldenrich_sso_login():
+async def goldenrich_sso_login(request: Request, force: bool = False):
     """Start GoldenRich OAuth2 SSO login."""
     client_id = _env("GOLDENRICH_OAUTH_CLIENT_ID")
     authorize_url = _env("GOLDENRICH_OAUTH_AUTHORIZE_URL")
@@ -497,6 +497,13 @@ async def goldenrich_sso_login():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="GoldenRich SSO authorize URL is misconfigured",
         )
+
+    existing_state = request.cookies.get(GOLDENRICH_SSO_COOKIE)
+    if existing_state and not force:
+        logger.warning("GoldenRich SSO loop stopped: authorize endpoint returned to start URL")
+        response = RedirectResponse(_frontend_url("/login", {"sso_error": "grp_authorize_loop"}))
+        response.delete_cookie(GOLDENRICH_SSO_COOKIE)
+        return response
 
     state = secrets.token_urlsafe(32)
     _remember_sso_state(state)
