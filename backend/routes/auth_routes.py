@@ -17,7 +17,7 @@ import re
 import secrets
 import time
 from datetime import datetime, timezone
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -82,6 +82,14 @@ def _goldenrich_redirect_uri() -> str:
         return configured
     backend_url = _env("PUBLIC_BACKEND_URL", "http://localhost:8001").rstrip("/")
     return f"{backend_url}/api/auth/sso/goldenrich/callback"
+
+def _is_self_referencing_authorize_url(authorize_url: str) -> bool:
+    backend_url = _env("PUBLIC_BACKEND_URL", "http://localhost:8001").rstrip("/")
+    authorize_parts = urlparse(authorize_url)
+    backend_parts = urlparse(backend_url)
+    if not authorize_parts.netloc or not backend_parts.netloc:
+        return False
+    return authorize_parts.netloc.lower() == backend_parts.netloc.lower()
 
 def _sso_cookie_secure() -> bool:
     configured = _env("SSO_COOKIE_SECURE")
@@ -483,6 +491,12 @@ async def goldenrich_sso_login():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="GoldenRich SSO is not configured",
         )
+    if _is_self_referencing_authorize_url(authorize_url):
+        logger.error("GoldenRich SSO authorize URL points back to STR: %s", authorize_url)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GoldenRich SSO authorize URL is misconfigured",
+        )
 
     state = secrets.token_urlsafe(32)
     _remember_sso_state(state)
@@ -493,7 +507,8 @@ async def goldenrich_sso_login():
         "scope": _env("GOLDENRICH_OAUTH_SCOPE", "openid profile email"),
         "state": state,
     }
-    response = RedirectResponse(f"{authorize_url}?{urlencode(params)}")
+    separator = "&" if "?" in authorize_url else "?"
+    response = RedirectResponse(f"{authorize_url}{separator}{urlencode(params)}")
     response.set_cookie(
         GOLDENRICH_SSO_COOKIE,
         state,
