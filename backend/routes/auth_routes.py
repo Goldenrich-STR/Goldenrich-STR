@@ -17,7 +17,7 @@ import re
 import secrets
 import time
 from datetime import datetime, timezone
-from urllib.parse import urlencode, urlparse
+from urllib.parse import quote, urlencode, urlparse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -204,10 +204,10 @@ def _extract_sso_profile(userinfo: dict) -> dict:
         or email
     )
     role = _normalize_sso_role(
-        _first_present(userinfo, ("role", "user_type", "designation", "type"))
+        _first_present(userinfo, ("role", "grp_role", "user_type", "designation", "type"))
     )
-    phone = _first_present(userinfo, ("phone", "mobile", "mobile_number", "contact_number"))
-    lg_code = _first_present(userinfo, ("lg_code", "broker_code", "lgCode")).upper()
+    phone = _first_present(userinfo, ("phone", "phone_number", "mobile", "mobile_number", "contact_number"))
+    lg_code = _first_present(userinfo, ("lg_code", "serial_no", "broker_code", "lgCode")).upper()
     employee_code = _first_present(
         userinfo,
         ("employee_code", "employee_id", "emp_code", "rm_code", "uid"),
@@ -515,7 +515,9 @@ async def goldenrich_sso_login(request: Request, force: bool = False):
         "state": state,
     }
     separator = "&" if "?" in authorize_url else "?"
-    response = RedirectResponse(f"{authorize_url}{separator}{urlencode(params)}")
+    redirect_url = f"{authorize_url}{separator}{urlencode(params, quote_via=quote)}"
+    logger.info("GoldenRich SSO authorize redirect URL: %s", redirect_url)
+    response = RedirectResponse(redirect_url)
     response.set_cookie(
         GOLDENRICH_SSO_COOKIE,
         state,
