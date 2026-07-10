@@ -401,7 +401,7 @@ async def create_subscription(
         
         # Create Razorpay order for subscription
         razorpay_result = razorpay_service.create_order(
-            amount=int(amount * 100),  # Convert to paise
+            amount=int(round(amount * 100)),  # Convert to paise
             receipt=subscription.subscription_id[:40]
         )
         
@@ -427,7 +427,7 @@ async def create_subscription(
             "razorpay_order_id": razorpay_result["order"]["id"],
             "razorpay_key_id": razorpay_service.key_id,
             "is_mock": razorpay_service.is_mock,
-            "amount": int(amount * 100),
+            "amount": int(round(amount * 100)),
             "currency": "INR",
             "plan_name": plan["plan_name"],
             "plan_fee": amount_breakdown["plan_fee"],

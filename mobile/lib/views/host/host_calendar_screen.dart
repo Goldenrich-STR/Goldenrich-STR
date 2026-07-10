@@ -450,7 +450,7 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Use this feed link to sync your Goldenrich STR bookings to external channels like Airbnb or Vrbo.',
+                    'Use this feed link to sync your X-Space360 bookings to external channels like Airbnb or Vrbo.',
                     style: TextStyle(fontSize: 13, color: AppTheme.charcoalLight),
                   ),
                   const SizedBox(height: 12),

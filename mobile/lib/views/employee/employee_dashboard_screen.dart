@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/verification_provider.dart';
 import '../../theme.dart';
 import '../../services/api_service.dart';
+import '../auth/login_screen.dart';
+import '../shared/app_logo.dart';
 import 'verification_report_screen.dart';
 
 class EmployeeDashboardScreen extends StatefulWidget {
@@ -1040,6 +1043,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
   @override
   Widget build(BuildContext context) {
     final prov = Provider.of<VerificationProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.currentUser;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -1060,15 +1065,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Goldenrich STR',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.charcoal,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
+                        const AppLogo(height: 24, tintColor: Colors.black, framed: false),
                         Text(
                           'EMPLOYEE (RM) PORTAL',
                           style: TextStyle(
@@ -1083,15 +1080,19 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                     Row(
                       children: [
                         Text(
-                          'RM: Sneha',
+                          'RM: ${user?.fullName.split(' ').first ?? 'User'}',
                           style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
                         ),
                         const SizedBox(width: 12),
                         IconButton(
                           icon: const Icon(Icons.logout, size: 16, color: AppTheme.charcoalMuted),
                           onPressed: () {
-                            // Logout action (mock or back)
-                            Navigator.pop(context);
+                            authProvider.logout();
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                              (route) => false,
+                            );
                           },
                         ),
                       ],

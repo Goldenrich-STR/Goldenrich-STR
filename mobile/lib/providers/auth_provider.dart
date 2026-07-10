@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
@@ -9,10 +10,12 @@ class AuthProvider with ChangeNotifier {
   UserModel? _currentUser;
   String? _token;
   bool _isLoading = false;
+  String? _lastError;
 
   UserModel? get currentUser => _currentUser;
   String? get token => _token;
   bool get isLoading => _isLoading;
+  String? get lastError => _lastError;
   bool get isAuthenticated => _token != null;
   bool get isPromoClaimed => _currentUser?.isPromoClaimed ?? false;
 
@@ -27,7 +30,7 @@ class AuthProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       _token = prefs.getString('propnest_token');
       final userStr = prefs.getString('propnest_user');
-      
+
       if (_token != null && userStr != null) {
         _currentUser = UserModel.fromJson(json.decode(userStr));
       }
@@ -64,11 +67,13 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> verifyOTP(String phone, String otp, {String purpose = 'registration'}) async {
+  Future<bool> verifyOTP(String phone, String otp,
+      {String purpose = 'registration'}) async {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/api/auth/verify-otp', data: {
+      final response =
+          await _apiService.dio.post('/api/auth/verify-otp', data: {
         'phone': phone,
         'otp': otp,
         'purpose': purpose,
@@ -86,15 +91,17 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/api/auth/register', data: userData);
+      final response =
+          await _apiService.dio.post('/api/auth/register', data: userData);
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;
         _token = data['access_token'];
         _currentUser = UserModel.fromJson(data['user']);
-        
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('propnest_token', _token!);
-        await prefs.setString('propnest_user', json.encode(_currentUser!.toJson()));
+        await prefs.setString(
+            'propnest_user', json.encode(_currentUser!.toJson()));
         return true;
       }
       return false;
@@ -114,15 +121,16 @@ class AuthProvider with ChangeNotifier {
         'email': email,
         'password': password,
       });
-      
+
       if (response.statusCode == 200) {
         final data = response.data;
         _token = data['access_token'];
         _currentUser = UserModel.fromJson(data['user']);
-        
+
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('propnest_token', _token!);
-        await prefs.setString('propnest_user', json.encode(_currentUser!.toJson()));
+        await prefs.setString(
+            'propnest_user', json.encode(_currentUser!.toJson()));
         return true;
       }
       return false;
@@ -141,7 +149,8 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         _currentUser = UserModel.fromJson(response.data);
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('propnest_user', json.encode(_currentUser!.toJson()));
+        await prefs.setString(
+            'propnest_user', json.encode(_currentUser!.toJson()));
         notifyListeners();
       }
     } catch (e) {
@@ -151,15 +160,27 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> submitHostVerification(Map<String, dynamic> payload) async {
     _isLoading = true;
+    _lastError = null;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/api/host/submit-verification', data: payload);
+      final response = await _apiService.dio
+          .post('/api/host/submit-verification', data: payload);
       if (response.statusCode == 200) {
         await refreshProfile();
         return true;
       }
+      _lastError = 'Unexpected response: ${response.statusCode}';
+      return false;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['detail'] != null) {
+        _lastError = data['detail'].toString();
+      } else {
+        _lastError = e.message ?? 'Network request failed';
+      }
       return false;
     } catch (e) {
+      _lastError = e.toString();
       return false;
     } finally {
       _isLoading = false;

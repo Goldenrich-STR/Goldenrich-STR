@@ -49,7 +49,7 @@ class RazorpayService {
     return {
       'key': keyId,
       'amount': (amount * 100).round(), // Razorpay expects amount in paise (subunits)
-      'name': 'Goldenrich STR',
+      'name': 'X-Space360',
       'description': '$propertyTitle - Booking $bookingId',
       'order_id': orderId,
       'prefill': {

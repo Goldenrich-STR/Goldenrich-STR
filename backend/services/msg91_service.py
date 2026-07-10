@@ -262,12 +262,12 @@ class MSG91Service:
             }
             return self.send_flow_sms(phone, template_id, variables)
 
-        message = f"Your X-Space360 OTP is {otp}. Valid for 5 minutes. Do not share with anyone."
+        message = f"Your X-Space360 OTP is {otp}. Valid for 2 minutes. Do not share with anyone."
         return self.send_sms(phone, message)
     
     def send_otp_whatsapp(self, phone: str, otp: str) -> Dict:
         """Send OTP via WhatsApp."""
-        message = f"Your X-Space360 OTP is {otp}. Valid for 5 minutes."
+        message = f"Your X-Space360 OTP is {otp}. Valid for 2 minutes."
         return self.send_whatsapp(phone, message)
 
 from datetime import datetime, timezone

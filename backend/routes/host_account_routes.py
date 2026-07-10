@@ -130,7 +130,7 @@ class HostVerificationSubmit(BaseModel):
     property_proof: str
     cancelled_cheque: str
     society_noc: Optional[str] = None
-    shop_act: Optional[str] = None
+    shop_act: str
     gst_certificate: Optional[str] = None
     gst_number: Optional[str] = None
     agreement_owner_name: str
@@ -157,11 +157,10 @@ async def submit_host_verification(
         {"document_type": "aadhar_card", "document_url": payload.aadhar_card},
         {"document_type": "property_proof", "document_url": payload.property_proof},
         {"document_type": "cancelled_cheque", "document_url": payload.cancelled_cheque},
+        {"document_type": "shop_act", "document_url": payload.shop_act},
     ]
     if payload.society_noc:
         docs.append({"document_type": "society_noc", "document_url": payload.society_noc})
-    if payload.shop_act:
-        docs.append({"document_type": "shop_act", "document_url": payload.shop_act})
     if payload.gst_certificate:
         docs.append({"document_type": "gst_certificate", "document_url": payload.gst_certificate})
     if payload.gst_number:

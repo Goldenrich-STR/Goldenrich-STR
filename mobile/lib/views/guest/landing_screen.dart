@@ -6,8 +6,11 @@ import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/property_provider.dart';
 import '../../theme.dart';
+import '../../services/localization_service.dart';
 import '../auth/login_screen.dart';
 import '../shared/app_shell.dart';
+import '../shared/app_logo.dart';
+import 'guest_browse_screen.dart';
 import 'property_detail_screen.dart';
 import '../../services/api_service.dart';
 
@@ -464,15 +467,11 @@ class _LandingScreenState extends State<LandingScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Brand Logo & Text
-          Text(
-            'X-Space360.in',
-            style: GoogleFonts.outfit(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: Colors.white,
-              letterSpacing: -0.5,
-            ),
+          // Brand Logo
+          const AppLogo(
+            height: 22,
+            white: true,
+            framed: false,
           ),
           // Action Buttons
           Row(
@@ -517,7 +516,12 @@ class _LandingScreenState extends State<LandingScreen> {
                           onPressed: () {
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => const LoginScreen()),
+                              MaterialPageRoute(
+                                builder: (context) => const LoginScreen(
+                                  initialSignUpMode: true,
+                                  initialRole: 'host',
+                                ),
+                              ),
                             );
                           },
                           style: ElevatedButton.styleFrom(
@@ -528,13 +532,20 @@ class _LandingScreenState extends State<LandingScreen> {
                             ),
                           ),
                           child: Text(
-                            'Get Started',
+                            'Become\na Host',
+                            textAlign: TextAlign.center,
                             style: GoogleFonts.manrope(
-                              fontSize: 11,
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
+                              height: 1.1,
                             ),
                           ),
+                        ),
+                        IconButton(
+                          onPressed: () => _showWebsiteMenu(context, auth),
+                          icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 24),
+                          tooltip: 'Menu',
                         ),
                       ],
                     ),
@@ -542,6 +553,255 @@ class _LandingScreenState extends State<LandingScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _openHostRegistration(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const LoginScreen(
+          initialSignUpMode: true,
+          initialRole: 'host',
+        ),
+      ),
+    );
+  }
+
+  void _showWebsiteMenu(BuildContext context, AuthProvider auth) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          padding: EdgeInsets.fromLTRB(24, 18, 24, MediaQuery.of(sheetContext).padding.bottom + 24),
+          decoration: const BoxDecoration(
+            color: Color(0xF21E293B),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const AppLogo(height: 26, white: true, framed: false),
+                    IconButton(
+                      onPressed: () => Navigator.pop(sheetContext),
+                      icon: const Icon(Icons.close_rounded, color: Colors.white),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                _buildMenuAction(
+                  icon: Icons.explore_outlined,
+                  label: 'Discover',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const GuestBrowseScreen()));
+                  },
+                ),
+                _buildMenuAction(
+                  icon: Icons.favorite_rounded,
+                  label: 'Wishlist',
+                  iconColor: Colors.redAccent,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AppShell(initialIndex: 1)));
+                  },
+                ),
+                _buildMenuAction(
+                  icon: Icons.route_outlined,
+                  label: 'How It Works',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showHowItWorksSheet(context);
+                  },
+                ),
+                const SizedBox(height: 10),
+                Consumer<LocaleProvider>(
+                  builder: (context, localeProvider, _) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withOpacity(0.12)),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: localeProvider.currentLocale,
+                          dropdownColor: AppTheme.charcoal,
+                          iconEnabledColor: Colors.white,
+                          style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w700),
+                          items: const [
+                            DropdownMenuItem(value: 'en', child: Text('English')),
+                            DropdownMenuItem(value: 'hi', child: Text('Hindi')),
+                            DropdownMenuItem(value: 'mr', child: Text('Marathi')),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              localeProvider.setLocale(value);
+                            }
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const SizedBox(height: 18),
+                if (auth.isAuthenticated) ...[
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AppShell()));
+                    },
+                    child: const Text('Dashboard'),
+                  ),
+                ] else ...[
+                  OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Colors.white30),
+                    ),
+                    child: const Text('Sign In'),
+                  ),
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      _openHostRegistration(context);
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+                    child: const Text('Become a Host'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMenuAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    Color? iconColor,
+  }) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: iconColor ?? Colors.white, size: 24),
+      title: Text(
+        label,
+        style: GoogleFonts.manrope(
+          color: Colors.white,
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white54),
+      onTap: onTap,
+    );
+  }
+
+  void _showHowItWorksSheet(BuildContext context) {
+    final steps = [
+      ('Host Account Setup', 'Register as a host and complete your identity basics.'),
+      ('Choose Subscription', 'Pick a plan that fits your property and hosting goals.'),
+      ('List Property', 'Upload details, pricing, photos, amenities, and availability.'),
+      ('Physical Verification', 'Our team verifies the property before it goes live.'),
+      ('Go Live', 'Start receiving booking requests on X-Space360.'),
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          padding: EdgeInsets.fromLTRB(24, 18, 24, MediaQuery.of(sheetContext).padding.bottom + 24),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'How It Works',
+                      style: GoogleFonts.outfit(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.charcoal,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(sheetContext),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ...steps.asMap().entries.map((entry) {
+                  final index = entry.key + 1;
+                  final step = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor: AppTheme.primary,
+                          child: Text(
+                            '$index',
+                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(step.$1, style: GoogleFonts.manrope(fontWeight: FontWeight.w800, color: AppTheme.charcoal)),
+                              const SizedBox(height: 3),
+                              Text(step.$2, style: GoogleFonts.manrope(fontSize: 12, color: AppTheme.charcoalMuted, height: 1.35)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 6),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(sheetContext);
+                    _openHostRegistration(context);
+                  },
+                  child: const Text('Start Hosting Now'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

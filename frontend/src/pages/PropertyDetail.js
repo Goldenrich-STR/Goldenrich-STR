@@ -625,6 +625,15 @@ const PropertyDetail = () => {
     try {
       const res = await propertyAPI.getProperty(id);
       setProperty(res.data);
+      if (res.data) {
+        if (res.data.veg_price && res.data.veg_price > 0) {
+          setFoodPreference('veg');
+        } else if (res.data.non_veg_price && res.data.non_veg_price > 0) {
+          setFoodPreference('non_veg');
+        } else {
+          setFoodPreference('');
+        }
+      }
       if (res.data && res.data.city) {
         fetchRecommendations(res.data.city, res.data.property_id, res.data.category);
       }
@@ -729,7 +738,11 @@ const PropertyDetail = () => {
   const baseAmount = useMemo(() => {
     let amt = (property?.price_per_night || 0) * nights;
     if (property?.category === 'event_venue') {
-      const platePrice = foodPreference === 'non_veg' ? (property?.non_veg_price || 0) : (property?.veg_price || 0);
+      const platePrice = foodPreference === 'non_veg' 
+        ? (property?.non_veg_price || 0) 
+        : foodPreference === 'veg' 
+        ? (property?.veg_price || 0) 
+        : 0;
       let g = Number(guests);
       if (![100, 200, 300, 400, 500, 600].includes(g)) g = 100;
       amt += g * platePrice * nights;
@@ -965,7 +978,7 @@ const PropertyDetail = () => {
                 <td colspan="2">Venue Rent (₹${property.price_per_night?.toLocaleString('en-IN')} × ${nights} days)</td>
                 <td style="text-align: right; font-weight: 800;">₹${((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</td>
               </tr>
-              ${property.category === 'event_venue' ? `
+              ${property.category === 'event_venue' && foodPreference && (foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) > 0 ? `
               <tr>
                 <td colspan="2">Catering (₹${(foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price)?.toLocaleString('en-IN')} × ${guests} Guests × ${nights} days - ${foodPreference === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'})</td>
                 <td style="text-align: right; font-weight: 800;">₹${((foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) * guests * nights).toLocaleString('en-IN')}</td>
@@ -1310,14 +1323,18 @@ const PropertyDetail = () => {
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
+                  {property.veg_price && Number(property.veg_price) > 0 ? (
+                    <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Veg Price</p>
                      <p className="text-xl font-bold tracking-tight text-terracotta">₹{property.veg_price || 0} <span className="text-xs text-charcoal-light">/ plate</span></p>
-                  </div>
-                  <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
+                    </div>
+                  ) : null}
+                  {property.non_veg_price && Number(property.non_veg_price) > 0 ? (
+                    <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Non-Veg Price</p>
                      <p className="text-xl font-bold tracking-tight text-terracotta">₹{property.non_veg_price || 0} <span className="text-xs text-charcoal-light">/ plate</span></p>
-                  </div>
+                    </div>
+                  ) : null}
                   <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Venue Rent</p>
                      <p className="text-xl font-bold tracking-tight text-charcoal">₹{property.price_per_night || 0} <span className="text-xs text-charcoal-light">/ day</span></p>
@@ -1327,6 +1344,8 @@ const PropertyDetail = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                     {property.packages.map((pkg, idx) => {
                       const isVeg = pkg.type === 'veg';
+                      if (isVeg && (!property.veg_price || Number(property.veg_price) <= 0)) return null;
+                      if (!isVeg && (!property.non_veg_price || Number(property.non_veg_price) <= 0)) return null;
                       const entries = Object.entries(pkg.items || {}).filter(([k, v]) => Number(v) > 0);
                       if (entries.length === 0) return null;
                       
@@ -1983,11 +2002,12 @@ const PropertyDetail = () => {
                     )}
                   </div>
 
-                  {property.category === 'event_venue' && (
+                  {property.category === 'event_venue' && (Number(property.veg_price) > 0 || Number(property.non_veg_price) > 0) && (
                     <div className="w-full mt-2 pt-3 border-t border-sand-100 flex flex-col space-y-3">
                       <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Food Preference</label>
                       <div className="flex flex-col space-y-3">
-                        <div 
+                        {property.veg_price && Number(property.veg_price) > 0 ? (
+                          <div 
                           onClick={() => setFoodPreference('veg')}
                           className="flex items-center justify-between cursor-pointer group hover:bg-stone p-2 -mx-2 rounded-lg transition-colors"
                         >
@@ -2005,8 +2025,10 @@ const PropertyDetail = () => {
                             </span>
                             <span className="text-xs text-charcoal-light">/Plate</span>
                           </div>
-                        </div>
-                        <div 
+                          </div>
+                        ) : null}
+                        {property.non_veg_price && Number(property.non_veg_price) > 0 ? (
+                          <div 
                           onClick={() => setFoodPreference('non_veg')}
                           className="flex items-center justify-between cursor-pointer group hover:bg-stone p-2 -mx-2 rounded-lg transition-colors"
                         >
@@ -2024,7 +2046,8 @@ const PropertyDetail = () => {
                             </span>
                             <span className="text-xs text-charcoal-light">/Plate</span>
                           </div>
-                        </div>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   )}
@@ -2068,7 +2091,8 @@ const PropertyDetail = () => {
                         </span>
                         <span className="text-sm font-bold tracking-tight text-charcoal">₹{((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</span>
                       </div>
-                      <div className="flex justify-between items-center">
+                      {foodPreference && (foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) > 0 && (
+                        <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
                           ₹{(foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)).toLocaleString('en-IN')} × {
                             guests === 100 ? '100' :
@@ -2085,6 +2109,7 @@ const PropertyDetail = () => {
                           (guests === 100 ? 100 : guests === 200 ? 200 : guests === 300 ? 300 : guests === 400 ? 400 : guests === 500 ? 500 : guests === 600 ? 600 : Number(guests) || 100) * nights
                         ).toLocaleString('en-IN')}</span>
                       </div>
+                    )}
                     </>
                   ) : (
                     <div className="flex justify-between items-center">
@@ -2403,7 +2428,7 @@ const PropertyDetail = () => {
                     <span className="col-span-2">Venue Rent (₹{property.price_per_night?.toLocaleString('en-IN')} × {nights} days)</span>
                     <span className="text-right font-bold tracking-tight">₹{((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</span>
                   </div>
-                  {property.category === 'event_venue' && (
+                  {property.category === 'event_venue' && foodPreference && (foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) > 0 && (
                     <div className="py-3 grid grid-cols-3">
                       <span className="col-span-2">Catering (₹{(foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)).toLocaleString('en-IN')} × {guests} Guests × {nights} days - {foodPreference === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'})</span>
                       <span className="text-right font-bold tracking-tight">₹{(

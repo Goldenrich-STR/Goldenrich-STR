@@ -7,12 +7,16 @@ import LegalLinks from '../components/LegalLinks';
 import SEO from '../components/SEO';
 import { INDIAN_CITIES } from '../lib/indianCities';
 
+const OTP_VALIDITY_SECONDS = 120;
+
 const AuthPage = ({ isAdminLogin = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, adminLogin, register, logout } = useAuth();
   const forcedLogoutHandled = useRef(false);
   const cityFieldRef = useRef(null);
+  const otpTimerRef = useRef(null);
+  const otpInputRefs = useRef([]);
   const searchParams = new URLSearchParams(window.location.search);
   const forceLogin = searchParams.get('force_login') === '1';
   const requestedNext = searchParams.get('next') || '';
@@ -22,6 +26,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
   
   const [loginData, setLoginData] = useState({
     email: '',
@@ -42,6 +47,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
   
   const [showOTPVerification, setShowOTPVerification] = useState(false);
   const [otp, setOtp] = useState('');
+  const [otpSecondsRemaining, setOtpSecondsRemaining] = useState(0);
   const [availableBrokers, setAvailableBrokers] = useState([]);
   const [availableEmployees, setAvailableEmployees] = useState([]);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
@@ -56,6 +62,14 @@ const AuthPage = ({ isAdminLogin = false }) => {
   useEffect(() => {
     setIsLogin(location.pathname !== '/register');
   }, [location.pathname]);
+
+  useEffect(() => {
+    return () => {
+      if (otpTimerRef.current) {
+        clearInterval(otpTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const fetchBrokersAndEmployees = async () => {
@@ -87,6 +101,83 @@ const AuthPage = ({ isAdminLogin = false }) => {
     if (!query) return INDIAN_CITIES;
     return INDIAN_CITIES.filter((city) => city.toLowerCase().includes(query));
   }, [registerData.city]);
+
+  const otpTimerLabel = useMemo(() => {
+    const minutes = String(Math.floor(otpSecondsRemaining / 60)).padStart(2, '0');
+    const seconds = String(otpSecondsRemaining % 60).padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  }, [otpSecondsRemaining]);
+
+  const otpDigits = useMemo(() => otp.padEnd(6, ' ').slice(0, 6).split('').map((digit) => digit.trim()), [otp]);
+
+  const startOtpTimer = () => {
+    if (otpTimerRef.current) {
+      clearInterval(otpTimerRef.current);
+    }
+    setOtpSecondsRemaining(OTP_VALIDITY_SECONDS);
+    otpTimerRef.current = setInterval(() => {
+      setOtpSecondsRemaining((current) => {
+        if (current <= 1) {
+          clearInterval(otpTimerRef.current);
+          otpTimerRef.current = null;
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+  };
+
+  const resetOtpFlow = () => {
+    if (otpTimerRef.current) {
+      clearInterval(otpTimerRef.current);
+      otpTimerRef.current = null;
+    }
+    setOtp('');
+    setOtpSecondsRemaining(0);
+    setShowOTPVerification(false);
+  };
+
+  const handleOtpBoxChange = (index, value) => {
+    const digits = value.replace(/\D/g, '').slice(0, 6 - index);
+    const nextOtp = otp.padEnd(6, ' ').slice(0, 6).split('');
+
+    if (!digits) {
+      nextOtp[index] = ' ';
+      setOtp(nextOtp.join('').slice(0, 6));
+      return;
+    }
+
+    digits.split('').forEach((digit, offset) => {
+      nextOtp[index + offset] = digit;
+    });
+
+    setOtp(nextOtp.join('').slice(0, 6));
+    const nextFocusIndex = Math.min(index + digits.length, 5);
+    otpInputRefs.current[nextFocusIndex]?.focus();
+  };
+
+  const handleOtpBoxKeyDown = (index, event) => {
+    if (event.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const getPasswordRules = (password) => ({
+    'Minimum 8 characters': password.length >= 8,
+    'Maximum 32 characters': password.length <= 32,
+    'At least 1 uppercase letter (A-Z)': /[A-Z]/.test(password),
+    'At least 1 lowercase letter (a-z)': /[a-z]/.test(password),
+    'At least 1 number (0-9)': /[0-9]/.test(password),
+    'At least 1 special character': /[^A-Za-z0-9\s]/.test(password),
+    'No spaces allowed': !/\s/.test(password),
+  });
+
+  const getPasswordError = (password) => {
+    if (!password) return 'Please enter password';
+    const rules = getPasswordRules(password);
+    const failedRule = Object.entries(rules).find(([, passed]) => !passed);
+    return failedRule ? failedRule[0] : '';
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -133,6 +224,11 @@ const AuthPage = ({ isAdminLogin = false }) => {
       setError('Please enter phone number');
       return;
     }
+    const passwordError = getPasswordError(registerData.password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
 
     setError('');
     setLoading(true);
@@ -140,8 +236,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
     try {
       const response = await authAPI.sendOTP(registerData.phone, 'registration');
       if (response.data) {
+        setOtp('');
         setShowOTPVerification(true);
         setSuccess(`OTP sent to ${registerData.phone}.`);
+        startOtpTimer();
       }
     } catch (err) {
       const detail = err?.response?.data?.detail;
@@ -152,12 +250,27 @@ const AuthPage = ({ isAdminLogin = false }) => {
   };
 
   const verifyOTP = async () => {
+    const cleanOtp = otp.replace(/\D/g, '');
+    if (otpSecondsRemaining === 0) {
+      setError('OTP expired. Please request a new OTP.');
+      return;
+    }
+    if (cleanOtp.length !== 6) {
+      setError('Please enter the 6-digit verification code.');
+      return;
+    }
+
     setError('');
     setLoading(true);
 
     try {
-      const response = await authAPI.verifyOTP(registerData.phone, otp, 'registration');
+      const response = await authAPI.verifyOTP(registerData.phone, cleanOtp, 'registration');
       if (response.data.verified) {
+        if (otpTimerRef.current) {
+          clearInterval(otpTimerRef.current);
+          otpTimerRef.current = null;
+        }
+        setOtpSecondsRemaining(0);
         setSuccess('Phone verified! Completing registration...');
         handleRegistration();
       }
@@ -266,7 +379,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
               {!isAdminLogin && (
                  <div className="flex bg-sand-200 p-1.5 rounded-2xl border border-gray-200 shadow-inner max-w-sm mx-auto">
                     <button
-                       onClick={() => { setIsLogin(true); setError(''); setSuccess(''); }}
+                       onClick={() => { setIsLogin(true); setError(''); setSuccess(''); resetOtpFlow(); }}
                        className={`flex-1 py-4 rounded-xl font-bold tracking-tight text-[10px] tracking-[0.15em] uppercase transition-all duration-500 ${
                           isLogin ? 'bg-white text-terracotta shadow-premium scale-100' : 'text-charcoal-muted hover:text-charcoal scale-95 opacity-60'
                        }`}
@@ -274,7 +387,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                        Sign In
                     </button>
                     <button
-                       onClick={() => { setIsLogin(false); setError(''); setSuccess(''); setShowOTPVerification(false); }}
+                       onClick={() => { setIsLogin(false); setError(''); setSuccess(''); resetOtpFlow(); }}
                        className={`flex-1 py-4 rounded-xl font-bold tracking-tight text-[10px] tracking-[0.15em] uppercase transition-all duration-500 ${
                           !isLogin ? 'bg-white text-terracotta shadow-premium scale-100' : 'text-charcoal-muted hover:text-charcoal scale-95 opacity-60'
                        }`}
@@ -439,21 +552,41 @@ const AuthPage = ({ isAdminLogin = false }) => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                              <div className="space-y-2">
                                 <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Password</label>
+                                <div className="relative">
                                 <input
                                    id="register-password"
                                    name="password"
-                                   type="password"
+                                   type={showRegisterPassword ? 'text' : 'password'}
                                    autoComplete="new-password"
                                    value={registerData.password}
-                                   onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                                   className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
+                                   onChange={(e) => setRegisterData({
+                                      ...registerData,
+                                      password: e.target.value.replace(/\s/g, '').slice(0, 32)
+                                   })}
+                                   className="w-full px-6 py-3.5 pr-14 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
                                    placeholder="••••••••"
+                                   maxLength={32}
                                    required
                                 />
+                                <button
+                                   type="button"
+                                   onClick={() => setShowRegisterPassword((visible) => !visible)}
+                                   className="absolute right-4 top-1/2 -translate-y-1/2 text-charcoal-muted hover:text-terracotta transition-colors"
+                                   title={showRegisterPassword ? 'Hide password' : 'Show password'}
+                                   aria-label={showRegisterPassword ? 'Hide password' : 'Show password'}
+                                >
+                                   {showRegisterPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </button>
+                                </div>
+                                {registerData.password && getPasswordError(registerData.password) && (
+                                   <p className="px-1 text-xs font-bold text-red-600">
+                                      {getPasswordError(registerData.password)}
+                                   </p>
+                                )}
                              </div>
                              <div
                                 ref={cityFieldRef}
-                                className="space-y-2 relative"
+                                 className="space-y-2 relative z-50"
                                 onMouseEnter={() => setCityDropdownOpen(true)}
                              >
                                 <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">City</label>
@@ -477,7 +610,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                    required
                                 />
                                 {cityDropdownOpen && (
-                                   <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-elevated">
+                                    <div className="absolute left-0 right-0 top-full mt-2 z-[9999] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-elevated">
                                       <div className="max-h-64 overflow-y-auto py-2">
                                          {filteredCities.length > 0 ? (
                                             filteredCities.map((city) => (
@@ -504,8 +637,8 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                       </div>
                                    </div>
                                 )}
-                             </div>
-                          </div>
+                           </div>
+                        </div>
 
                           {registerData.role === 'host' && (
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-fade-in">
@@ -575,18 +708,38 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              <h3 className="text-4xl font-bold tracking-tight text-charcoal tracking-tighter">Verification</h3>
                           </div>
 
-                          <div className="flex justify-center">
-                             <input
-                                id="otp-code"
-                                name="otp"
-                                type="text"
-                                autoComplete="one-time-code"
-                                value={otp}
-                                onChange={(e) => setOtp(e.target.value)}
-                                className="w-full max-w-[320px] text-center text-4xl font-bold tracking-tight tracking-[0.6em] py-7 bg-white rounded-2xl border-2 border-gray-100 focus:border-terracotta focus:ring-12 focus:ring-terracotta/5 transition-all outline-none text-charcoal shadow-inner"
-                                placeholder="000000"
-                                maxLength={6}
-                             />
+                          <div className="space-y-4">
+                             <div className="flex justify-center gap-3">
+                                {Array.from({ length: 6 }).map((_, index) => (
+                                  <input
+                                    key={index}
+                                    ref={(element) => { otpInputRefs.current[index] = element; }}
+                                    type="text"
+                                    inputMode="numeric"
+                                    autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                                    value={otpDigits[index] || ''}
+                                    onChange={(e) => handleOtpBoxChange(index, e.target.value)}
+                                    onKeyDown={(e) => handleOtpBoxKeyDown(index, e)}
+                                    onFocus={(e) => e.target.select()}
+                                    className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-black bg-white rounded-2xl border-2 border-gray-100 focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal shadow-inner"
+                                    maxLength={6}
+                                  />
+                                ))}
+                             </div>
+                             {otpSecondsRemaining > 0 ? (
+                               <p className="text-xs font-bold text-charcoal-muted uppercase tracking-[0.24em]">
+                                  OTP valid for {otpTimerLabel}
+                               </p>
+                             ) : (
+                               <button
+                                 type="button"
+                                 onClick={sendOTP}
+                                 disabled={loading}
+                                 className="text-[10px] font-bold text-terracotta uppercase tracking-[0.3em] hover:text-terracotta-dark transition-colors underline-offset-4 hover:underline"
+                               >
+                                  RESEND OTP
+                               </button>
+                             )}
                           </div>
                           
                           <div className="space-y-6 pt-4">
@@ -599,11 +752,11 @@ const AuthPage = ({ isAdminLogin = false }) => {
                              </button>
                              
                               <button
-                                onClick={sendOTP}
+                                onClick={resetOtpFlow}
                                 disabled={loading}
                                 className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.3em] hover:text-terracotta transition-colors block mx-auto underline-offset-4 hover:underline"
                               >
-                                REQUEST NEW OTP
+                                CHANGE PHONE NUMBER
                               </button>
                           </div>
                        </div>

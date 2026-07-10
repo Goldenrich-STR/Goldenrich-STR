@@ -9,7 +9,6 @@ class ApiService {
   late Dio dio;
   String _baseUrl = AppConfig.activeBaseUrl;
 
-
   ApiService._internal() {
     dio = Dio(BaseOptions(
       baseUrl: _baseUrl,
@@ -28,12 +27,12 @@ class ApiService {
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
-        
+
         // Ensure path starts with /api if not already there
         if (options.path.startsWith('/') && !options.path.startsWith('/api/')) {
           options.path = '/api${options.path}';
         }
-        
+
         return handler.next(options);
       },
       onResponse: (response, handler) {
@@ -56,6 +55,11 @@ class ApiService {
       final prefs = await SharedPreferences.getInstance();
       final customUrl = prefs.getString('custom_api_base_url');
       if (customUrl != null && customUrl.isNotEmpty) {
+        if (!AppConfig.isProduction &&
+            customUrl.contains('uat.x-space360.in')) {
+          await prefs.remove('custom_api_base_url');
+          return;
+        }
         _baseUrl = customUrl;
         dio.options.baseUrl = _baseUrl;
       }

@@ -5,10 +5,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart' as dio;
 import '../../config.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/verification_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
 import '../../models/property_model.dart';
+import '../auth/login_screen.dart';
+import '../shared/app_logo.dart';
 
 class BrokerDashboardScreen extends StatefulWidget {
   const BrokerDashboardScreen({super.key});
@@ -196,25 +199,21 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.currentUser;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: Row(
           children: [
+            const AppLogo(height: 24, tintColor: Colors.black, framed: false),
+            const SizedBox(width: 10),
             Text(
-              'Goldenrich STR ',
+              'Broker Portal',
               style: textTheme.displayMedium?.copyWith(
                 color: AppTheme.charcoal,
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            Text(
-              'BROKERPORTAL',
-              style: textTheme.displayMedium?.copyWith(
-                color: AppTheme.primary,
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -223,9 +222,27 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          Center(
+            child: Text(
+              user?.fullName.split(' ').first ?? 'Broker',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.notifications_none_outlined, color: AppTheme.charcoal),
             onPressed: () {},
+          ),
+          IconButton(
+            tooltip: 'Sign Out',
+            icon: const Icon(Icons.logout, color: AppTheme.primary, size: 20),
+            onPressed: () {
+              authProvider.logout();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            },
           ),
         ],
       ),

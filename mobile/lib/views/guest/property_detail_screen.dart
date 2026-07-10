@@ -1579,7 +1579,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  'One of the most loved homes on Goldenrich STR,\nbased on ratings, reviews, and reliability',
+                                  'One of the most loved homes on X-Space360,\nbased on ratings, reviews, and reliability',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.manrope(
                                     fontSize: 12,
@@ -2960,7 +2960,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'To protect your payment, never transfer money or communicate outside the Goldenrich STR website or app.',
+                'To protect your payment, never transfer money or communicate outside the X-Space360 website or app.',
                 style: GoogleFonts.manrope(
                   fontSize: 11,
                   color: AppTheme.charcoalMuted,

@@ -17,7 +17,7 @@ class OTPService:
 
     def __init__(self):
         """Initialize Redis connection — fall back to in-memory on any failure."""
-        self.otp_expiry = int(os.getenv("OTP_EXPIRY_MINUTES", "5")) * 60
+        self.otp_expiry = int(os.getenv("OTP_EXPIRY_MINUTES", "2")) * 60
         self.max_attempts = int(os.getenv("MAX_OTP_ATTEMPTS", "5"))
         self.otp_storage: Dict[str, tuple] = {}  # key -> (value, expires_at_epoch)
         self.redis_client = None

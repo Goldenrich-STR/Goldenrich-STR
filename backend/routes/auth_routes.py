@@ -53,6 +53,8 @@ def _password_reset_token_hash(token: str) -> str:
 def _password_validation_error(password: str) -> str | None:
     if len(password) < 8:
         return "Password must be at least 8 characters"
+    if len(password) > 32:
+        return "Password must be at most 32 characters"
     if not re.search(r"[A-Z]", password):
         return "Password must include an uppercase letter"
     if not re.search(r"[a-z]", password):
@@ -61,6 +63,8 @@ def _password_validation_error(password: str) -> str | None:
         return "Password must include a number"
     if not any(not character.isalnum() and not character.isspace() for character in password):
         return "Password must include a special character"
+    if any(character.isspace() for character in password):
+        return "Password must not contain spaces"
     return None
 
 def _env(name: str, default: str = "") -> str:
@@ -573,23 +577,33 @@ async def goldenrich_sso_callback(
 async def get_public_brokers_and_employees(db: AsyncIOMotorDatabase = Depends(get_db)):
     """Fetch all active brokers and employees for public registration dropdowns."""
     brokers = await db.users.find(
-        {"role": "broker", "is_active": True, "lg_code": {"$ne": None}},
-        {"user_id": 1, "full_name": 1, "lg_code": 1}
+        {"role": "broker", "is_active": True},
+        {"user_id": 1, "full_name": 1, "lg_code": 1, "uid": 1}
     ).to_list(length=1000)
     
     employees = await db.users.find(
-        {"role": "employee", "is_active": True, "employee_code": {"$ne": None}},
-        {"user_id": 1, "full_name": 1, "employee_code": 1}
+        {"role": "employee", "is_active": True},
+        {"user_id": 1, "full_name": 1, "employee_code": 1, "uid": 1}
     ).to_list(length=1000)
     
     return {
         "brokers": [
-            {"user_id": b["user_id"], "full_name": b["full_name"], "lg_code": b["lg_code"]}
+            {
+                "user_id": b["user_id"],
+                "full_name": b["full_name"],
+                "lg_code": b.get("lg_code") or b.get("uid") or b["user_id"],
+            }
             for b in brokers
+            if b.get("lg_code") or b.get("uid") or b.get("user_id")
         ],
         "employees": [
-            {"user_id": emp["user_id"], "full_name": emp["full_name"], "employee_code": emp["employee_code"]}
+            {
+                "user_id": emp["user_id"],
+                "full_name": emp["full_name"],
+                "employee_code": emp.get("employee_code") or emp.get("uid") or emp["user_id"],
+            }
             for emp in employees
+            if emp.get("employee_code") or emp.get("uid") or emp.get("user_id")
         ]
     }
 
@@ -619,6 +633,13 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Phone number already registered"
             )
+
+        password_error = _password_validation_error(user_data.password)
+        if password_error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=password_error,
+            )
         
         # Hash password
         hashed_password = hash_password(user_data.password)
@@ -629,7 +650,11 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
             lg_code_clean = user_data.lg_code.strip()
             broker = await db.users.find_one({
                 "role": "broker",
-                "lg_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}
+                "$or": [
+                    {"lg_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                    {"uid": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                    {"user_id": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                ],
             })
             if not broker:
                 raise HTTPException(
@@ -644,7 +669,11 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
             employee_code_clean = user_data.employee_code.strip()
             employee = await db.users.find_one({
                 "role": "employee",
-                "employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}
+                "$or": [
+                    {"employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                    {"uid": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                    {"user_id": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                ],
             })
             if not employee:
                 raise HTTPException(

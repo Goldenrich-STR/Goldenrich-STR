@@ -8,12 +8,15 @@ import 'package:dio/dio.dart' show MultipartFile, FormData;
 import '../../providers/verification_provider.dart';
 import '../../providers/account_provider.dart';
 import '../../providers/admin_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../config.dart';
 import '../../theme.dart';
 import '../guest/property_detail_screen.dart';
 import '../host/host_list_property_screen.dart';
 import '../employee/verification_report_screen.dart';
+import '../auth/login_screen.dart';
+import '../shared/app_logo.dart';
 import '../../models/property_model.dart';
 import '../../providers/property_provider.dart';
 
@@ -3546,6 +3549,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     final verificationProvider = Provider.of<VerificationProvider>(context);
     final adminProvider = Provider.of<AdminProvider>(context);
     final accountProvider = Provider.of<AccountProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.currentUser;
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
@@ -3553,14 +3558,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       appBar: AppBar(
         title: Row(
           children: [
-            const Icon(Icons.admin_panel_settings, color: AppTheme.primary, size: 28),
-            const SizedBox(width: 8),
+            const AppLogo(height: 24, tintColor: Colors.black, framed: false),
+            const SizedBox(width: 10),
             Text(
               'Dashboard Overview',
               style: textTheme.displayMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: Center(
+              child: Text(
+                user?.fullName.split(' ').first ?? 'Admin',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Sign Out',
+            icon: const Icon(Icons.logout, color: AppTheme.primary, size: 20),
+            onPressed: () {
+              authProvider.logout();
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            },
+          ),
+        ],
         backgroundColor: AppTheme.background,
         elevation: 0,
         scrolledUnderElevation: 0,

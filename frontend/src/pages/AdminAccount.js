@@ -16,7 +16,10 @@ import { BookingManagement, SubscriptionManagement } from './AdminDashboard';
 
 const fmtINR = (paise) =>
   new Intl.NumberFormat('en-IN', {
-    style: 'currency', currency: 'INR', maximumFractionDigits: 0,
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: Math.abs(Number(paise || 0)) % 100 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
   }).format((paise || 0) / 100);
 
 const TABS = [
@@ -118,9 +121,9 @@ const OverviewTab = () => {
         setChart(
           (ch.data.months || []).map((m) => ({
             label: m.label,
-            inflow: Math.round(m.inflow_paise / 100),
-            refund: Math.round(m.refund_paise / 100),
-            net: Math.round(m.net_paise / 100),
+            inflow: Number(((m.inflow_paise || 0) / 100).toFixed(2)),
+            refund: Number(((m.refund_paise || 0) / 100).toFixed(2)),
+            net: Number(((m.net_paise || 0) / 100).toFixed(2)),
           }))
         );
       } finally {
