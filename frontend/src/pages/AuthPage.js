@@ -72,6 +72,23 @@ const AuthPage = ({ isAdminLogin = false }) => {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ssoError = params.get('sso_error');
+    if (!ssoError) {
+      return;
+    }
+    const messages = {
+      invalid_state: 'GRP SSO session expired or was opened from an old tab. Please click Login with GRP again.',
+      missing_code: 'GRP SSO did not return an authorization code. Please try again.',
+      sso_not_configured: 'GRP SSO is not configured on this server.',
+      sso_callback_failed: 'GRP SSO could not be completed. Please try again.',
+      grp_authorize_loop: 'GRP authorize page redirected back to X-Space360 before completing login. Please ask GRP team to fix their OAuth authorize endpoint.',
+    };
+    setIsLogin(true);
+    setError(messages[ssoError] || `GRP SSO failed: ${ssoError}`);
+  }, [location.search]);
+
+  useEffect(() => {
     const fetchBrokersAndEmployees = async () => {
       try {
         const response = await apiClient.get('/auth/public/brokers-and-employees');
@@ -216,7 +233,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
 
   const handleGoldenRichSso = () => {
     const backendUrl = (apiClient.defaults.baseURL || '').replace(/\/$/, '');
-    window.location.href = `${backendUrl}/api/auth/sso/goldenrich/login`;
+    window.location.href = `${backendUrl}/api/auth/sso/goldenrich/login?force=1`;
   };
 
   const sendOTP = async () => {
@@ -475,6 +492,25 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     >
                        {loading ? 'SIGNING IN...' : 'SIGN IN'}
                     </button>
+
+                    {!isAdminLogin && (
+                       <>
+                          <div className="flex items-center gap-4">
+                             <div className="h-px flex-1 bg-sand-200" />
+                             <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-charcoal-muted">or</span>
+                             <div className="h-px flex-1 bg-sand-200" />
+                          </div>
+                          <button
+                             type="button"
+                             onClick={handleGoldenRichSso}
+                             disabled={loading}
+                             className="w-full py-5 rounded-2xl border-2 border-sand-200 bg-white text-charcoal font-black uppercase tracking-[0.16em] text-xs hover:border-terracotta hover:text-terracotta transition-all shadow-sm flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                             <ShieldCheck className="w-5 h-5" />
+                             Login with GRP
+                          </button>
+                       </>
+                    )}
 
                  </form>
               ) : (

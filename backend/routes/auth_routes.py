@@ -15,8 +15,9 @@ import hashlib
 import os
 import re
 import secrets
+import time
 from datetime import datetime, timezone
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode, urlparse
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -44,6 +45,8 @@ class ResetPasswordRequest(BaseModel):
 
 GOLDENRICH_SSO_COOKIE = "goldenrich_sso_state"
 PASSWORD_RESET_TTL_SECONDS = 30 * 60
+SSO_STATE_TTL_SECONDS = 10 * 60
+_sso_state_store: dict[str, float] = {}
 
 
 def _password_reset_token_hash(token: str) -> str:
@@ -84,11 +87,34 @@ def _goldenrich_redirect_uri() -> str:
     backend_url = _env("PUBLIC_BACKEND_URL", "http://localhost:8001").rstrip("/")
     return f"{backend_url}/api/auth/sso/goldenrich/callback"
 
+def _is_self_referencing_authorize_url(authorize_url: str) -> bool:
+    backend_url = _env("PUBLIC_BACKEND_URL", "http://localhost:8001").rstrip("/")
+    authorize_parts = urlparse(authorize_url)
+    backend_parts = urlparse(backend_url)
+    if not authorize_parts.netloc or not backend_parts.netloc:
+        return False
+    return authorize_parts.netloc.lower() == backend_parts.netloc.lower()
+
 def _sso_cookie_secure() -> bool:
     configured = _env("SSO_COOKIE_SECURE")
     if configured:
         return configured.lower() == "true"
     return _env("PUBLIC_BACKEND_URL", "http://localhost:8001").startswith("https://")
+
+def _remember_sso_state(state: str) -> None:
+    now = time.time()
+    for stored_state, expires_at in list(_sso_state_store.items()):
+        if expires_at <= now:
+            _sso_state_store.pop(stored_state, None)
+    _sso_state_store[state] = now + SSO_STATE_TTL_SECONDS
+
+def _consume_sso_state(state: str | None, expected_state: str | None) -> bool:
+    if not state:
+        return False
+    cookie_matches = bool(expected_state and secrets.compare_digest(state, expected_state))
+    stored_expires_at = _sso_state_store.pop(state, None)
+    stored_matches = bool(stored_expires_at and stored_expires_at > time.time())
+    return cookie_matches or stored_matches
 
 async def get_db():
     from server import db_instance
@@ -182,10 +208,10 @@ def _extract_sso_profile(userinfo: dict) -> dict:
         or email
     )
     role = _normalize_sso_role(
-        _first_present(userinfo, ("role", "user_type", "designation", "type"))
+        _first_present(userinfo, ("role", "grp_role", "user_type", "designation", "type"))
     )
-    phone = _first_present(userinfo, ("phone", "mobile", "mobile_number", "contact_number"))
-    lg_code = _first_present(userinfo, ("lg_code", "broker_code", "lgCode")).upper()
+    phone = _first_present(userinfo, ("phone", "phone_number", "mobile", "mobile_number", "contact_number"))
+    lg_code = _first_present(userinfo, ("lg_code", "serial_no", "broker_code", "lgCode")).upper()
     employee_code = _first_present(
         userinfo,
         ("employee_code", "employee_id", "emp_code", "rm_code", "uid"),
@@ -460,7 +486,7 @@ async def reset_password(request: ResetPasswordRequest, db: AsyncIOMotorDatabase
     return {"message": "Password reset successfully", "login_path": login_path}
 
 @router.get("/sso/goldenrich/login")
-async def goldenrich_sso_login():
+async def goldenrich_sso_login(request: Request, force: bool = False):
     """Start GoldenRich OAuth2 SSO login."""
     client_id = _env("GOLDENRICH_OAUTH_CLIENT_ID")
     authorize_url = _env("GOLDENRICH_OAUTH_AUTHORIZE_URL")
@@ -469,8 +495,22 @@ async def goldenrich_sso_login():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="GoldenRich SSO is not configured",
         )
+    if _is_self_referencing_authorize_url(authorize_url):
+        logger.error("GoldenRich SSO authorize URL points back to STR: %s", authorize_url)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="GoldenRich SSO authorize URL is misconfigured",
+        )
+
+    existing_state = request.cookies.get(GOLDENRICH_SSO_COOKIE)
+    if existing_state and not force:
+        logger.warning("GoldenRich SSO loop stopped: authorize endpoint returned to start URL")
+        response = RedirectResponse(_frontend_url("/login", {"sso_error": "grp_authorize_loop"}))
+        response.delete_cookie(GOLDENRICH_SSO_COOKIE)
+        return response
 
     state = secrets.token_urlsafe(32)
+    _remember_sso_state(state)
     params = {
         "response_type": "code",
         "client_id": client_id,
@@ -478,7 +518,10 @@ async def goldenrich_sso_login():
         "scope": _env("GOLDENRICH_OAUTH_SCOPE", "openid profile email"),
         "state": state,
     }
-    response = RedirectResponse(f"{authorize_url}?{urlencode(params)}")
+    separator = "&" if "?" in authorize_url else "?"
+    redirect_url = f"{authorize_url}{separator}{urlencode(params, quote_via=quote)}"
+    logger.info("GoldenRich SSO authorize redirect URL: %s", redirect_url)
+    response = RedirectResponse(redirect_url)
     response.set_cookie(
         GOLDENRICH_SSO_COOKIE,
         state,
@@ -502,7 +545,12 @@ async def goldenrich_sso_callback(
         return RedirectResponse(_frontend_url("/sso/goldenrich/callback", {"error": error}))
 
     expected_state = request.cookies.get(GOLDENRICH_SSO_COOKIE)
-    if not state or not expected_state or not secrets.compare_digest(state, expected_state):
+    if not _consume_sso_state(state, expected_state):
+        logger.warning(
+            "GoldenRich SSO invalid state: has_state=%s has_cookie=%s",
+            bool(state),
+            bool(expected_state),
+        )
         return RedirectResponse(_frontend_url("/sso/goldenrich/callback", {"error": "invalid_state"}))
 
     if not code:
