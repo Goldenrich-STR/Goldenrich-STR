@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -38,7 +38,7 @@ const AdminAccount = () => {
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
 
-  // Redirect if not admin — defensive, App-level guard also in place
+  // Redirect if not admin - defensive, App-level guard also in place
   useEffect(() => {
     if (user && user.role !== 'admin') navigate('/');
   }, [user, navigate]);
@@ -56,7 +56,7 @@ const AdminAccount = () => {
               <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
-            <h1 className="text-xl font-bold text-charcoal">X-Space360 · Admin Account</h1>
+            <h1 className="text-xl font-bold text-charcoal">X-Space360 Admin Account</h1>
           </div>
           <button
             onClick={logout}
@@ -132,7 +132,7 @@ const OverviewTab = () => {
     })();
   }, []);
 
-  if (loading) return <div data-testid="overview-loading">Loading overview…</div>;
+  if (loading) return <div data-testid="overview-loading">Loading overview...</div>;
   if (!data)   return <div data-testid="overview-empty">No data.</div>;
 
   const rev = data.revenue;
@@ -185,9 +185,19 @@ const OverviewTab = () => {
             <LineChart data={chart} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E7E3D7" />
               <XAxis dataKey="label" stroke="#7D7A6F" fontSize={12} />
-              <YAxis stroke="#7D7A6F" fontSize={12} tickFormatter={(v) => `₹${v / 1000}k`} />
+              <YAxis
+                stroke="#7D7A6F"
+                fontSize={12}
+                tickFormatter={(v) =>
+                  `${new Intl.NumberFormat('en-IN', {
+                    style: 'currency',
+                    currency: 'INR',
+                    maximumFractionDigits: 0,
+                  }).format(v / 1000)}k`
+                }
+              />
               <Tooltip
-                formatter={(v) => [`₹${Number(v).toLocaleString('en-IN')}`, 'value']}
+                formatter={(v) => [fmtINR(Number(v) * 100), 'value']}
               />
               <Line type="monotone" dataKey="inflow" stroke="#006437" strokeWidth={2} dot={{ r: 3 }} />
               <Line type="monotone" dataKey="refund" stroke="#788574" strokeWidth={2} dot={{ r: 3 }} />
@@ -358,6 +368,35 @@ const TransactionsTab = () => {
     }
   };
 
+  const formatMoney = (amount = 0) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(amount || 0));
+  const formatInvoiceDate = (value) => value ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '-') : 'NA';
+  const formatPlanDate = (value) => value ? new Date(value).toLocaleDateString('en-GB').replace(/\//g, '-') : 'NA';
+  const formatPlanLabel = (txn) => {
+    const label = txn.plan?.bhk_type || txn.plan?.plan_type || txn.subscription?.plan_type || txn.type || '';
+    return label ? label.replaceAll('_', ' ').toUpperCase() : 'NA';
+  };
+  const getInvoiceBreakdown = (txn) => {
+    const total = (Number(txn.amount) || 0) / 100;
+    const taxPercent = Number(txn.plan?.tax_percent ?? 18);
+    const taxable = total / (1 + taxPercent / 100);
+    const tax = Math.max(0, total - taxable);
+    const platformFee = txn.plan?.platform_fee != null ? Number(txn.plan.platform_fee) : 0;
+    return {
+      gross: Math.max(0, taxable - platformFee),
+      platformFee,
+      igst: 0,
+      cgst: tax / 2,
+      sgst: tax / 2,
+      total,
+    };
+  };
+
   return (
     <div className="space-y-6" data-testid="transactions-tab">
       <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-5">
@@ -438,7 +477,7 @@ const TransactionsTab = () => {
           </p>
         </div>
 
-        {loading && <div className="text-center py-12 text-charcoal-light" data-testid="transactions-loading">Loading transactions…</div>}
+        {loading && <div className="text-center py-12 text-charcoal-light" data-testid="transactions-loading">Loading transactions...</div>}
         {!loading && items.length === 0 && (
           <p className="text-charcoal-light py-12 text-center" data-testid="transactions-empty">
             No matching transactions found. Try adjusting your search query or filters.
@@ -451,58 +490,75 @@ const TransactionsTab = () => {
               <table className="w-full text-sm text-left border-collapse" data-testid="transactions-table">
                 <thead>
                   <tr className="border-b border-gray-100 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-stone/50">
-                    <th className="py-3 px-4 rounded-l-xl">Date & Time</th>
-                    <th className="py-3 px-4">Customer Details</th>
-                    <th className="py-3 px-4">Type</th>
-                    <th className="py-3 px-4">Amount</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4">Booking ID</th>
-                    <th className="py-3 px-4">Payment / UTR ID</th>
-                    <th className="py-3 px-4 text-center rounded-r-xl no-print">Actions</th>
+                    <th className="py-3 px-4 rounded-l-xl">Invoice Date</th>
+                    <th className="py-3 px-4">Invoice No</th>
+                    <th className="py-3 px-4">Broker</th>
+                    <th className="py-3 px-4">Employee (RM)</th>
+                    <th className="py-3 px-4">Host Name</th>
+                    <th className="py-3 px-4">GST No</th>
+                    <th className="py-3 px-4">Property Type</th>
+                    <th className="py-3 px-4">Gross Amount</th>
+                    <th className="py-3 px-4">Platform Fee</th>
+                    <th className="py-3 px-4">IGST</th>
+                    <th className="py-3 px-4">CGST</th>
+                    <th className="py-3 px-4">SGST</th>
+                    <th className="py-3 px-4">Total Amt.</th>
+                    <th className="py-3 px-4">Plan Start Date</th>
+                    <th className="py-3 px-4">Plan End Date</th>
+                    <th className="py-3 px-4">Refund</th>
+                    <th className="py-3 px-4">Payment Status</th>
+                    <th className="py-3 px-4">Select Service</th>
+                    <th className="py-3 px-4 text-center rounded-r-xl no-print">Invoice Details</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sand-100">
-                  {items.map((t) => (
+                  {items.map((t) => {
+                    const breakdown = getInvoiceBreakdown(t);
+                    return (
                     <tr
                       key={t.transaction_id}
                       className="hover:bg-stone/30 transition text-charcoal"
                       data-testid={`txn-${t.transaction_id}`}
                     >
-                      <td className="py-4 px-4 whitespace-nowrap text-xs font-medium text-charcoal-light">
-                        {new Date(t.created_at).toLocaleString('en-IN', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short'
-                        })}
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-medium text-charcoal-light">{formatInvoiceDate(t.created_at)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-bold text-charcoal">{t.invoice_no || t.transaction_id}</td>
+                      <td className="py-4 px-4 min-w-[170px]">
+                        <div className="font-bold text-charcoal text-sm">{t.broker?.full_name || 'NA'}</div>
+                        <div className="text-xs text-charcoal-muted mt-0.5">{t.broker?.lg_code ? `LG Code: ${t.broker.lg_code}` : 'NA'}</div>
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="font-bold text-charcoal text-sm">{t.user?.full_name || '—'}</div>
-                        <div className="text-xs text-charcoal-muted mt-0.5">{t.user?.email || '—'}</div>
-                        <div className="text-xs text-charcoal-light mt-0.5">{t.user?.phone || '—'}</div>
+                      <td className="py-4 px-4 min-w-[170px]">
+                        <div className="font-bold text-charcoal text-sm">{t.employee?.full_name || 'NA'}</div>
+                        <div className="text-xs text-charcoal-muted mt-0.5">{t.employee?.employee_code ? `Code: ${t.employee.employee_code}` : 'NA'}</div>
                       </td>
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <span className="px-2.5 py-1 rounded-lg bg-gray-50 text-charcoal text-xs font-bold uppercase tracking-wider">
-                          {t.type.replaceAll('_', ' ')}
-                        </span>
+                      <td className="py-4 px-4 min-w-[150px]">
+                        <div className="font-bold text-charcoal text-sm">{t.user?.full_name || 'NA'}</div>
+                        <div className="text-xs text-charcoal-muted mt-0.5">{t.user?.phone || t.user?.email || 'NA'}</div>
                       </td>
-                      <td className="py-4 px-4 font-bold tracking-tight text-sm text-charcoal whitespace-nowrap">
-                        {fmtINR(t.amount)}
-                      </td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs text-charcoal-muted">{t.user?.gst_number || t.user?.gst_no || 'NA'}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-semibold">{formatPlanLabel(t)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.gross)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.platformFee)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{breakdown.igst ? formatMoney(breakdown.igst) : 'NA'}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.cgst)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.sgst)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-sm font-bold">{formatMoney(breakdown.total)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs">{formatPlanDate(t.subscription?.start_date)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs">{formatPlanDate(t.subscription?.end_date)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{t.type === 'refund' ? formatMoney(breakdown.total) : 'NA'}</td>
                       <td className="py-4 px-4 whitespace-nowrap">
                         <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold tracking-tight uppercase tracking-wide ${
                           t.status === 'success' ? 'bg-green-100 text-green-700' :
                           t.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                           'bg-red-100 text-red-700'
-                        }`}>{t.status}</span>
+                        }`}>{t.status === 'success' ? 'Paid' : t.status}</span>
                       </td>
-                      <td className="py-4 px-4 font-semibold text-xs text-charcoal-muted whitespace-nowrap">
-                        {t.booking_id || '—'}
-                      </td>
-                      <td className="py-4 px-4 text-charcoal-light text-xs font-mono whitespace-nowrap">
-                        {t.upi_transaction_id || t.razorpay_payment_id || t.razorpay_payout_id || t.razorpay_refund_id || '—'}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">
+                          {t.type === 'subscription' ? 'Subscription' : t.type.replaceAll('_', ' ')}
+                        </span>
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap text-center no-print">
                         <div className="flex items-center justify-center space-x-2">
-                          {/* Invoice Button */}
                           <button
                             onClick={() => setSelectedInvoiceTxn(t)}
                             className="px-3 py-2 rounded-xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone flex items-center space-x-1.5 transition text-xs font-bold shadow-sm"
@@ -511,8 +567,6 @@ const TransactionsTab = () => {
                             <FileText className="w-4 h-4 text-terracotta" />
                             <span>Invoice</span>
                           </button>
-
-                          {/* Share Button Dropdown */}
                           <div className="relative inline-block text-left">
                             <button
                               onClick={() => setActiveShareId(activeShareId === t.transaction_id ? null : t.transaction_id)}
@@ -522,20 +576,13 @@ const TransactionsTab = () => {
                               <Share2 className="w-4 h-4 text-sage" />
                               <span>Share</span>
                             </button>
-
                             {activeShareId === t.transaction_id && (
                               <div className="absolute right-0 mt-1.5 w-40 rounded-xl bg-white border border-gray-100 shadow-premium z-20 overflow-hidden divide-y divide-sand-100 animate-in fade-in slide-in-from-top-1 duration-150">
-                                <button
-                                  onClick={() => handleShareInvoice(t.transaction_id, 'whatsapp')}
-                                  className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-stone flex items-center space-x-2.5 transition font-bold"
-                                >
+                                <button onClick={() => handleShareInvoice(t.transaction_id, 'whatsapp')} className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-stone flex items-center space-x-2.5 transition font-bold">
                                   <MessageSquare className="w-4 h-4 text-green-600" />
                                   <span>via WhatsApp</span>
                                 </button>
-                                <button
-                                  onClick={() => handleShareInvoice(t.transaction_id, 'email')}
-                                  className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-stone flex items-center space-x-2.5 transition font-bold"
-                                >
+                                <button onClick={() => handleShareInvoice(t.transaction_id, 'email')} className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-stone flex items-center space-x-2.5 transition font-bold">
                                   <Mail className="w-4 h-4 text-blue-600" />
                                   <span>via Email</span>
                                 </button>
@@ -543,8 +590,6 @@ const TransactionsTab = () => {
                             )}
                           </div>
                         </div>
-
-                        {/* Mini inline status bubble for sharing operations */}
                         {sharingStatus && sharingStatus.id === t.transaction_id && (
                           <div className="mt-2 text-center">
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm border ${
@@ -558,7 +603,8 @@ const TransactionsTab = () => {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -698,7 +744,7 @@ const PayoutsTab = () => {
     setBusy(true);
     try {
       const r = await accountAPI.processAllEligible();
-      alert(`Processed ${r.data.processed} · Failed ${r.data.failed}`);
+      alert(`Processed ${r.data.processed} - Failed ${r.data.failed}`);
       await load();
     } finally {
       setBusy(false);
@@ -753,7 +799,7 @@ const PayoutsTab = () => {
       </div>
 
       <div className="dashboard-card overflow-x-auto">
-        {loading && <p className="text-charcoal-light" data-testid="payouts-loading">Loading…</p>}
+        {loading && <p className="text-charcoal-light" data-testid="payouts-loading">Loading...</p>}
         {!loading && items.length === 0 && (
           <p className="text-charcoal-light py-6 text-center" data-testid="payouts-empty">
             No payouts in this bucket
@@ -1153,7 +1199,7 @@ const RefundsTab = () => {
       </div>
 
       <div className="dashboard-card overflow-x-auto">
-        {loading && <p className="text-charcoal-light" data-testid="refunds-loading">Loading…</p>}
+        {loading && <p className="text-charcoal-light" data-testid="refunds-loading">Loading...</p>}
         {!loading && items.length === 0 && (
           <p className="text-charcoal-light py-6 text-center" data-testid="refunds-empty">
             No refunds yet
@@ -1200,7 +1246,7 @@ const RefundsTab = () => {
                     <td className="py-2 pr-3 font-bold">{fmtINR(r.refund_amount)}</td>
                     <td className="py-2 pr-3 text-xs">
                       <span className="px-2 py-0.5 rounded bg-gray-50 font-semibold">
-                        {r.policy_tier} · {r.refund_percent}%
+                        {r.policy_tier} - {r.refund_percent}%
                       </span>
                     </td>
                     <td className="py-2 pr-3">
@@ -1334,7 +1380,7 @@ const InitiateRefundModal = ({ onClose, onDone }) => {
               data-testid="refund-booking-id"
             />
             <p className="text-xs text-charcoal-light mt-1">
-              Leaving the % blank applies platform policy: 100% ≥7d · 50% 2–7d · 0% &lt;48h.
+              Leaving the % blank applies platform policy: 100% >=7d - 50% 2-7d - 0% &lt;48h.
             </p>
           </div>
           <div>
@@ -1376,7 +1422,7 @@ const InitiateRefundModal = ({ onClose, onDone }) => {
             className="px-4 py-2 rounded-lg bg-terracotta text-white font-semibold hover:bg-terracotta-dark disabled:opacity-60"
             data-testid="refund-submit"
           >
-            {busy ? 'Processing…' : 'Process refund'}
+            {busy ? 'Processing...' : 'Process refund'}
           </button>
         </div>
       </div>
@@ -1401,7 +1447,7 @@ const TopHostsTab = () => {
     })();
   }, []);
 
-  if (loading) return <div data-testid="top-hosts-loading">Loading…</div>;
+  if (loading) return <div data-testid="top-hosts-loading">Loading...</div>;
   if (hosts.length === 0) {
     return <div className="dashboard-card text-center py-8 text-charcoal-light" data-testid="top-hosts-empty">
       No confirmed bookings yet
@@ -1423,7 +1469,7 @@ const TopHostsTab = () => {
                 </span>
                 <div>
                   <div className="font-semibold text-charcoal">{h.full_name || h.host_id}</div>
-                  <div className="text-xs text-charcoal-muted">{h.city || '—'} · {h.bookings} bookings</div>
+                  <div className="text-xs text-charcoal-muted">{h.city || '—'} - {h.bookings} bookings</div>
                 </div>
               </div>
               <div className="text-right">
@@ -1446,11 +1492,75 @@ const TopHostsTab = () => {
 
 // ---------------- Invoice Modal Component ----------------
 
+const formatDateForInvoice = (dateStr) => {
+  if (!dateStr) return 'NA';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'NA';
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+};
+
+const numberToWords = (num) => {
+  const a = [
+    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
+  ];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const g = ['', 'Thousand', 'Lakh', 'Crore'];
+
+  const convertGroup = (n) => {
+    let word = '';
+    if (n >= 100) {
+      word += a[Math.floor(n / 100)] + ' Hundred ';
+      n %= 100;
+    }
+    if (n >= 20) {
+      word += b[Math.floor(n / 10)] + ' ';
+      n %= 10;
+    }
+    if (n > 0) {
+      word += a[n] + ' ';
+    }
+    return word;
+  };
+
+  let cleanNum = Math.floor(num);
+  if (cleanNum === 0) return 'Zero';
+
+  let words = '';
+  let groups = [];
+  groups.push(cleanNum % 1000);
+  cleanNum = Math.floor(cleanNum / 1000);
+
+  while (cleanNum > 0) {
+    groups.push(cleanNum % 100);
+    cleanNum = Math.floor(cleanNum / 100);
+  }
+
+  for (let i = groups.length - 1; i >= 0; i--) {
+    let groupVal = groups[i];
+    if (groupVal > 0) {
+      let suffix = g[i] ? ' ' + g[i] + ' ' : '';
+      words += convertGroup(groupVal) + suffix;
+    }
+  }
+
+  let paise = Math.round((num % 1) * 100);
+  if (paise > 0) {
+    words += 'And Paise ' + convertGroup(paise);
+  }
+
+  return words.trim();
+};
+
 const InvoiceModal = ({ transaction, onClose }) => {
   const t = transaction;
   const user = t.user || {};
   const amountINR = (t.amount || 0) / 100;
-  
+
   // 18% GST calculation (GST included in all user payments)
   const gstRate = 0.18;
   const baseAmount = amountINR / (1 + gstRate);
@@ -1459,11 +1569,42 @@ const InvoiceModal = ({ transaction, onClose }) => {
   const sgst = totalGst / 2;
 
   const handlePrint = () => {
-    window.print();
+    const invoice = document.getElementById('printable-invoice');
+    if (!invoice) return;
+
+    const printWindow = window.open('', '_blank', 'width=950,height=1200');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <base href="${window.location.origin}/">
+          <title>Invoice ${t.invoice_no || t.transaction_id || ''}</title>
+          <style>
+            @page { size: A4 portrait; margin: 8mm; }
+            * { box-sizing: border-box; }
+            body { margin: 0; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; }
+            #printable-invoice { width: 100% !important; min-width: 0 !important; margin: 0 auto !important; border: 2px solid #000 !important; box-shadow: none !important; }
+            table { page-break-inside: avoid; }
+            img { max-width: 100%; }
+          </style>
+        </head>
+        <body>${invoice.outerHTML}</body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+    }, 350);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white" data-testid="invoice-modal">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 print:p-0 print:bg-white overflow-y-auto" data-testid="invoice-modal">
       <style>{`
         @media print {
           body * {
@@ -1477,9 +1618,8 @@ const InvoiceModal = ({ transaction, onClose }) => {
             left: 0;
             top: 0;
             width: 100%;
-            border: none !important;
             box-shadow: none !important;
-            padding: 20px !important;
+            padding: 0 !important;
             margin: 0 !important;
           }
           .no-print {
@@ -1487,117 +1627,334 @@ const InvoiceModal = ({ transaction, onClose }) => {
           }
         }
       `}</style>
-      
-      <div id="printable-invoice" className="bg-white rounded-2xl max-w-lg w-full border border-gray-100 shadow-elevated p-6 relative overflow-hidden flex flex-col">
-        {/* Close Button */}
-        <button 
-          onClick={onClose} 
-          className="absolute top-4 right-4 text-charcoal-light hover:text-charcoal no-print"
+
+      {/* Invoice Card Container */}
+      <div className="bg-white rounded-2xl max-w-4xl w-full border border-gray-200 shadow-xl p-8 relative flex flex-col my-8 no-print print:hidden">
+        {/* Modal Close Button (Screen only) */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 no-print"
+          title="Close Modal"
         >
           <XCircle className="w-6 h-6" />
         </button>
 
-        {/* Invoice Header */}
-        <div className="text-center pb-6 border-b border-dashed border-gray-200">
-          <div className="text-xs uppercase tracking-widest text-terracotta font-semibold tracking-tight mb-1">Tax Invoice</div>
-          <h2 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">X-SPACE360</h2>
-          <p className="text-xs text-charcoal-muted mt-1">Short-Term Rentals Platform · India</p>
-          <p className="text-xs text-charcoal-light">GSTIN: 27AAAAA1111A1Z1</p>
-        </div>
-
-        {/* Invoice Info */}
-        <div className="grid grid-cols-2 gap-4 py-6 text-xs border-b border-dashed border-gray-200">
-          <div>
-            <div className="text-charcoal-muted uppercase font-bold tracking-wider mb-1">Customer Details</div>
-            <div className="font-bold text-charcoal text-sm">{user.full_name || '—'}</div>
-            <div className="text-charcoal-light mt-0.5">{user.email || '—'}</div>
-            <div className="text-charcoal-light">{user.phone || '—'}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-charcoal-muted uppercase font-bold tracking-wider mb-1">Invoice Details</div>
-            <div><span className="font-semibold text-charcoal-light">Invoice #:</span> <span className="font-bold text-charcoal">{t.transaction_id}</span></div>
-            <div><span className="font-semibold text-charcoal-light">Date:</span> {new Date(t.created_at).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</div>
-            <div><span className="font-semibold text-charcoal-light">Type:</span> <span className="capitalize font-medium text-terracotta">{t.type.replaceAll('_', ' ')}</span></div>
+        {/* Modal Heading */}
+        <div className="flex items-center justify-between pb-4 mb-6 border-b border-gray-100 no-print">
+          <h3 className="text-lg font-bold text-charcoal">Tax Invoice Details</h3>
+          <div className="flex space-x-2">
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 bg-sage hover:bg-sage-dark text-white rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print / Download PDF</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-200 text-charcoal hover:bg-gray-50 rounded-xl text-xs font-semibold transition"
+            >
+              Close
+            </button>
           </div>
         </div>
 
-        {/* Transaction/Bill details Table */}
-        <div className="py-6 flex-1">
-          <div className="text-xs text-charcoal-muted uppercase font-bold tracking-wider mb-3">Itemized Details</div>
-          <table className="w-full text-xs text-left">
-            <thead>
-              <tr className="border-b border-gray-100 text-charcoal-muted font-bold">
-                <th className="py-2">Description</th>
-                <th className="py-2 text-right">Taxable Val.</th>
-                <th className="py-2 text-right">GST (18%)</th>
-                <th className="py-2 text-right">Total (INR)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-sand-100 text-charcoal">
-                <td className="py-3 font-semibold text-sm">
-                  {t.type === 'booking_payment' ? `Booking Accommodation Fee (${t.booking_id || '—'})` :
-                   t.type === 'registration_fee' ? 'Host Registration Fee' :
-                   t.type === 'subscription' ? 'Host Subscription Premium Plan' :
-                   t.type === 'refund' ? `Accommodation Refund Processed (${t.booking_id || '—'})` :
-                   'Platform Service Transaction'}
-                </td>
-                <td className="py-3 text-right">₹{baseAmount.toFixed(2)}</td>
-                <td className="py-3 text-right">₹{totalGst.toFixed(2)}</td>
-                <td className="py-3 text-right font-bold text-sm">₹{amountINR.toFixed(2)}</td>
-              </tr>
-            </tbody>
-          </table>
+        {/* Invoice View Container */}
+        <div className="overflow-x-auto">
+          {/* Printable Invoice element */}
+          <div id="printable-invoice" className="bg-white text-black font-sans border-2 border-black w-full min-w-[700px] mx-auto text-xs relative" style={{ boxSizing: 'border-box', padding: '2px' }}>
+            
+            {/* Header: Company details and Invoice details */}
+            <table className="w-full border-collapse border-b-2 border-black" style={{ borderCollapse: 'collapse', width: '100%' }}>
+              <tbody>
+                <tr>
+                  <td className="w-1/2 p-3 align-top border-r-2 border-black" style={{ width: '50%', padding: '8px', borderRight: '2px solid black', verticalAlign: 'top' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <img src="/logo.png" alt="X-Space360 Logo" style={{ width: '150px', height: '40px', objectFit: 'contain', objectPosition: 'left center', display: 'block' }} />
+                      <div>
+                        <div className="font-bold text-sm mb-1" style={{ fontSize: '13px', fontWeight: 'bold', lineHeight: '1.15' }}>
+                          Golden Rich Financial & Real Estate<br />Solutions Pvt. Ltd.
+                        </div>
+                        <div style={{ fontSize: '9px', lineHeight: '1.25' }}>
+                          Office No-804, Royal Avaan Avenue,<br />
+                          Opp. Bhosla School Gate, Jehan Circle,<br />
+                          Gangapur Road, Nashik-422013<br />
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '9px', lineHeight: '1.3', marginTop: '2px' }}>
+                      <strong>GSTIN/UIN:</strong> 27AAKCG1285C1ZP<br />
+                      <strong>State Name:</strong> Maharashtra, Code : 27<br />
+                      <strong>Contact:</strong> 9225586001<br />
+                      <strong>Email:</strong> finance.director@goldenrichproperties.com
+                    </div>
+                  </td>
+                  <td className="w-1/2 p-0 align-top" style={{ width: '50%', padding: 0, verticalAlign: 'top' }}>
+                    <table className="w-full border-collapse" style={{ borderCollapse: 'collapse', width: '100%' }}>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid black' }}>
+                          <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Invoice No.</div>
+                            <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{t.invoice_no || t.transaction_id}</div>
+                          </td>
+                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Dated</div>
+                            <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{formatDateForInvoice(t.created_at)}</div>
+                          </td>
+                        </tr>
+                        <tr style={{ borderBottom: '1px solid black' }}>
+                          <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Delivery Note</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
+                          </td>
+                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Mode/Terms of Payment</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                              {t.upi_transaction_id ? 'UPI QR' : 'NET BANKING'}
+                            </div>
+                          </td>
+                        </tr>
+                        <tr style={{ borderBottom: '1px solid black' }}>
+                          <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Reference No. & Date</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
+                          </td>
+                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Other References</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Buyer's Order No.</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
+                          </td>
+                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Dated</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-          {/* GST breakdown table */}
-          <div className="mt-6 bg-stone/50 rounded-xl p-4 border border-sand-100 text-xs">
-            <div className="font-bold text-charcoal-muted uppercase tracking-wider mb-2 text-[10px]">Tax Breakdown</div>
-            <div className="flex justify-between py-1 border-b border-gray-100/60">
-              <span className="text-charcoal-light">CGST (9%)</span>
-              <span className="font-medium text-charcoal">₹{cgst.toFixed(2)}</span>
+            {/* Buyer (Bill to) & Dispatch section */}
+            <table className="w-full border-collapse border-b-2 border-black" style={{ borderCollapse: 'collapse', width: '100%' }}>
+              <tbody>
+                <tr>
+                  <td className="w-1/2 p-3 align-top border-r-2 border-black" style={{ width: '50%', padding: '12px', borderRight: '2px solid black', verticalAlign: 'top' }}>
+                    <div style={{ fontSize: '9px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '2px' }}>Buyer (Bill to)</div>
+                    <div className="font-bold text-xs mb-1" style={{ fontSize: '11px', fontWeight: 'bold' }}>{user.full_name || 'NA'}</div>
+                    <div style={{ fontSize: '9px', lineHeight: '1.4' }}>
+                      Address: {user.address || 'NA'}<br />
+                      GSTIN/UIN: {user.gst_number || user.gst_no || 'NA'}<br />
+                      State Name: {user.gst_number && user.gst_number.length >= 2 ? (user.gst_number.startsWith('27') ? 'Maharashtra, Code : 27' : 'Other State, Code : ' + user.gst_number.substring(0, 2)) : 'Maharashtra, Code : 27'}<br />
+                      Contact Person: {user.full_name || 'NA'}<br />
+                      Email: {user.email || 'NA'}
+                    </div>
+                  </td>
+                  <td className="w-1/2 p-0 align-top" style={{ width: '50%', padding: 0, verticalAlign: 'top' }}>
+                    <table className="w-full border-collapse" style={{ borderCollapse: 'collapse', width: '100%' }}>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid black' }}>
+                          <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Dispatch Document No.</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
+                          </td>
+                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Delivery Note Date</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
+                          </td>
+                        </tr>
+                        <tr style={{ borderBottom: '1px solid black' }}>
+                          <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Dispatched through</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
+                          </td>
+                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Destination</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td colSpan={2} className="p-2" style={{ padding: '8px' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Terms of Delivery</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Description of Goods Table */}
+            <table className="w-full border-collapse border-b-2 border-black text-center text-[10px]" style={{ borderCollapse: 'collapse', width: '100%', fontSize: '10px', textAlign: 'center' }}>
+              <thead>
+                <tr className="bg-gray-50 font-bold" style={{ backgroundColor: '#f9f9f9', fontWeight: 'bold', borderBottom: '2px solid black' }}>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '5%' }}>SI No</th>
+                  <th style={{ padding: '6px 6px', borderRight: '1px solid black', width: '45%', textAlign: 'left' }}>Description of Services</th>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '10%' }}>HSN/SAC</th>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '10%' }}>Services Offer</th>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '10%' }}>GST Rate</th>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '10%' }}>Rate</th>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '8%' }}>per</th>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '8%' }}>Disc. %</th>
+                  <th style={{ padding: '6px 6px', width: '12%', textAlign: 'right' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid #ddd' }}>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>1</td>
+                  <td style={{ padding: '8px 6px', borderRight: '1px solid black', textAlign: 'left', verticalAlign: 'top', fontWeight: 'bold' }}>
+                    {t.type === 'booking_payment' ? `Booking Accommodation Charges [booking_id: ${t.booking_id || 'NA'}]` :
+                     t.type === 'registration_fee' ? 'Host Registration Fee' :
+                     t.type === 'subscription' ? `Property Subscription Charges [${t.subscription?.start_date ? formatDateForInvoice(t.subscription.start_date) : 'NA'} to ${t.subscription?.end_date ? formatDateForInvoice(t.subscription.end_date) : 'NA'}]` :
+                     t.type === 'refund' ? `Accommodation Refund [booking_id: ${t.booking_id || 'NA'}]` :
+                     'Platform Service Charges'}
+                  </td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontFamily: 'monospace' }}>998399</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontWeight: 'bold' }}>01</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>18%</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>Nos</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}></td>
+                  <td style={{ padding: '8px 6px', textAlign: 'right', verticalAlign: 'top', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                </tr>
+                {/* CGST row */}
+                <tr style={{ borderBottom: '1px solid #ddd', color: '#555' }}>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>CGST @ 9%</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
+                </tr>
+                {/* SGST row */}
+                <tr style={{ borderBottom: '1px solid black', color: '#555' }}>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>SGST @ 9%</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
+                </tr>
+                {/* Total row */}
+                <tr style={{ fontWeight: 'bold', backgroundColor: '#f9f9f9', borderBottom: '1px solid black' }}>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 6px', borderRight: '1px solid black', textAlign: 'left' }}>Total</td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black', fontWeight: 'bold' }}>01 Nos</td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: 'monospace' }}>\u20B9{amountINR.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Amount in words */}
+            <div className="py-2 px-3 border-b-2 border-black" style={{ padding: '8px 12px', borderBottom: '2px solid black' }}>
+              <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Amount Chargeable (in words)</div>
+              <div className="font-bold text-xs capitalize" style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                Indian Rupees {numberToWords(amountINR)} Only
+              </div>
             </div>
-            <div className="flex justify-between py-1 border-b border-gray-100/60">
-              <span className="text-charcoal-light">SGST (9%)</span>
-              <span className="font-medium text-charcoal">₹{sgst.toFixed(2)}</span>
+
+            {/* Taxable value and GST breakdown table */}
+            <table className="w-full border-collapse border-b-2 border-black text-center text-[10px]" style={{ borderCollapse: 'collapse', width: '100%', fontSize: '10px', textAlign: 'center', borderBottom: '2px solid black' }}>
+              <thead>
+                <tr className="bg-gray-50 font-bold" style={{ backgroundColor: '#f9f9f9', fontWeight: 'bold', borderBottom: '1px solid black' }}>
+                  <th rowSpan={2} style={{ padding: '6px 6px', borderRight: '1px solid black', textAlign: 'left', width: '20%' }}>HSN/SAC</th>
+                  <th rowSpan={2} style={{ padding: '6px 6px', borderRight: '1px solid black', width: '20%' }}>Taxable Value</th>
+                  <th colSpan={2} style={{ padding: '4px 6px', borderRight: '1px solid black', width: '25%' }}>Central Tax</th>
+                  <th colSpan={2} style={{ padding: '4px 6px', borderRight: '1px solid black', width: '25%' }}>State Tax</th>
+                  <th rowSpan={2} style={{ padding: '6px 6px', width: '10%' }}>Total Tax Amount</th>
+                </tr>
+                <tr className="bg-gray-50 font-bold" style={{ backgroundColor: '#f9f9f9', fontWeight: 'bold', borderBottom: '1px solid black' }}>
+                  <th style={{ padding: '4px', borderRight: '1px solid black' }}>Rate</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid black' }}>Amount</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid black' }}>Rate</th>
+                  <th style={{ padding: '4px', borderRight: '1px solid black' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid black', fontWeight: 'bold' }}>
+                  <td style={{ padding: '6px 6px', borderRight: '1px solid black', textAlign: 'left', fontFamily: 'monospace' }}>998399</td>
+                  <td style={{ padding: '6px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
+                  <td style={{ padding: '6px 6px', fontFamily: 'monospace' }}>{totalGst.toFixed(2)}</td>
+                </tr>
+                <tr style={{ fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>
+                  <td style={{ padding: '6px 6px', borderRight: '1px solid black', textAlign: 'left' }}>Total</td>
+                  <td style={{ padding: '6px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
+                  <td style={{ padding: '6px 6px', fontFamily: 'monospace' }}>{totalGst.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Tax in words */}
+            <div className="py-2 px-3 border-b-2 border-black" style={{ padding: '8px 12px', borderBottom: '2px solid black' }}>
+              <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Tax Amount (in words)</div>
+              <div className="font-bold text-xs capitalize" style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                Indian Rupees {numberToWords(totalGst)} Only
+              </div>
             </div>
-            <div className="flex justify-between py-1 font-bold text-charcoal">
-              <span>Total GST Paid</span>
-              <span>₹{totalGst.toFixed(2)}</span>
-            </div>
+
+            {/* Bank details & Signatures */}
+            <table className="w-full border-collapse text-left text-[10px]" style={{ borderCollapse: 'collapse', width: '100%', textAlign: 'left', fontSize: '10px' }}>
+              <tbody>
+                <tr>
+                  <td className="w-3/5 p-3 align-top border-r-2 border-black" style={{ width: '60%', padding: '12px', borderRight: '2px solid black', verticalAlign: 'top', lineHeight: '1.5' }}>
+                    <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>Company's Bank Details:</div>
+                    <div><strong>A/c Holder's Name:</strong> Golden Rich Financial & Real Estate Solutions Pvt. Ltd.</div>
+                    <div><strong>Bank Name:</strong> IDFC FIRST BANK</div>
+                    <div><strong>A/c No.:</strong> 10250563892</div>
+                    <div><strong>Branch & IFSC Code:</strong> Gangapur Road, Nashik & IDFB0042283</div>
+                    <div style={{ marginTop: '12px', fontSize: '8px', color: '#666', fontStyle: 'italic' }}>
+                      <strong>Declaration:</strong> We declare that this invoice shows the actual price of the Service described and that all particulars are true and correct.
+                    </div>
+                  </td>
+                  <td className="w-2/5 p-3 align-top text-right" style={{ width: '40%', padding: '12px', verticalAlign: 'top', height: '120px' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '24px' }}>For Golden Rich Properties</div>
+                    <div style={{ fontWeight: 'bold', fontSize: '10px', marginTop: '40px' }}>Authorized Signatory</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
           </div>
         </div>
 
-        {/* Invoice Footer Details */}
-        <div className="border-t border-dashed border-gray-200 pt-6">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-charcoal font-bold tracking-tight text-sm uppercase tracking-wider">Total Amount Paid</span>
-            <span className="text-2xl font-bold tracking-tight text-terracotta">₹{amountINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-          </div>
-
-          <div className="bg-stone rounded-xl p-3 text-[11px] text-charcoal-muted flex items-center justify-between">
-            <div>
-              <div><span className="font-semibold">Payment Method:</span> {t.upi_transaction_id ? 'UPI QR' : 'Razorpay Online Gateway'}</div>
-              <div><span className="font-semibold">Payment Status:</span> SUCCESS</div>
-              {t.razorpay_payment_id && <div><span className="font-semibold">Razorpay ID:</span> {t.razorpay_payment_id}</div>}
-              {t.upi_transaction_id && <div><span className="font-semibold">UTR / Transaction ID:</span> {t.upi_transaction_id}</div>}
-            </div>
-            <div className="text-right">
-              <span className="inline-block px-2.5 py-1 bg-green-100 text-green-800 rounded-full font-bold text-[10px] uppercase">Paid</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Buttons */}
+        {/* Modal Bottom Print Button (Screen only) */}
         <div className="mt-6 flex justify-end space-x-3 no-print">
-          <button 
+          <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-200 text-charcoal rounded-xl text-xs font-semibold hover:bg-gray-50 transition"
+            className="px-4 py-2 border border-gray-200 text-charcoal hover:bg-gray-50 rounded-xl text-xs font-semibold transition"
           >
             Close
           </button>
-          <button 
+          <button
             onClick={handlePrint}
-            className="px-4 py-2 bg-terracotta text-white rounded-xl text-xs font-semibold hover:bg-terracotta-dark transition flex items-center space-x-1.5 shadow-sm hover:shadow"
+            className="px-4 py-2 bg-terracotta text-white hover:bg-terracotta-dark rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print Invoice</span>
