@@ -3218,6 +3218,22 @@ const PropertyModeration = () => {
     }
   };
 
+  const handleExportReport = async (verificationId) => {
+    try {
+      const response = await verificationAPI.exportVerificationReport(verificationId);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `verification_report_${verificationId}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Error exporting report:', error);
+      alert('Failed to export verification report');
+    }
+  };
+
   const canActOn = (property) => {
     return statusFilter === 'awaiting_final_approval';
   };
@@ -3725,6 +3741,15 @@ const PropertyModeration = () => {
                 Cancel
               </button>
               <div className="flex items-center space-x-4">
+                {activeReviewProperty.verification_id && (
+                  <button 
+                    type="button" 
+                    onClick={() => handleExportReport(activeReviewProperty.verification_id)} 
+                    className="font-bold text-xs text-[#2563EB] hover:text-[#1D4ED8] uppercase tracking-widest transition-all px-4 py-2 hover:bg-blue-50 rounded-lg flex items-center space-x-1 shadow-sm"
+                  >
+                    <span>📥 Export Report</span>
+                  </button>
+                )}
                 <button 
                   type="button" 
                   onClick={() => rejectProperty(activeReviewProperty.property_id)} 

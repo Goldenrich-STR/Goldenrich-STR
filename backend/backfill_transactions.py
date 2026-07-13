@@ -1,7 +1,6 @@
 """Phase 15 — Backfill Transaction ledger rows from pre-existing bookings,
 paid registration fees and active subscriptions. Idempotent: safe to run multiple times."""
 from __future__ import annotations
-
 import asyncio
 import logging
 import os

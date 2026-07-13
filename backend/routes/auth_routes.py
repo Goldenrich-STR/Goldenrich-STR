@@ -195,7 +195,7 @@ def _normalize_sso_role(raw_role: str | None) -> UserRole:
 
 def _first_present(data: dict, keys: tuple[str, ...]) -> str:
     for key in keys:
-        value = data.get(key)
+        value = data.get(key)   
         if value is not None and str(value).strip():
             return str(value).strip()
     return ""

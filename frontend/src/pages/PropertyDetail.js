@@ -38,7 +38,9 @@ import {
   Tag,
   Lock,
   Minus,
-  Plus
+  Plus,
+  Share2,
+  Heart
 } from 'lucide-react';
 
 const AMENITY_ICONS = {
@@ -448,6 +450,36 @@ const PropertyDetail = () => {
   const [imgIdx, setImgIdx] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
 
+  const [wishlist, setWishlist] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('guest_wishlist')) || [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const handleWishlistToggle = () => {
+    setWishlist(prev => {
+      let updated;
+      if (prev.includes(id)) {
+        updated = prev.filter(pId => pId !== id);
+      } else {
+        updated = [...prev, id];
+      }
+      localStorage.setItem('guest_wishlist', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleShareWhatsApp = () => {
+    if (!property) return;
+    const url = window.location.href;
+    const text = `Check out this amazing property *${property.title}* in *${property.city}* on X-Space360:\n${url}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const isSaved = wishlist.includes(id);
+
   const [blockedDates, setBlockedDates] = useState([]);
   const today = new Date();
   const [calMonth, setCalMonth] = useState(() => {
@@ -498,6 +530,7 @@ const PropertyDetail = () => {
 
   const [reviews, setReviews] = useState([]);
   const [reviewSummary, setReviewSummary] = useState({ rating_avg: 0, rating_count: 0, sub_avgs: {} });
+  const [hasConfirmedBooking, setHasConfirmedBooking] = useState(false);
 
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [recommended, setRecommended] = useState([]);
@@ -554,6 +587,30 @@ const PropertyDetail = () => {
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useEffect(() => {
+    const checkBookingStatus = async () => {
+      if (user && user.role === 'guest') {
+        try {
+          const res = await bookingAPI.getGuestBookings();
+          const guestBookings = res.data.bookings || [];
+          const hasBookedThisProperty = guestBookings.some((b) => {
+            if (b.property_id !== id || b.booking_status !== 'confirmed') {
+              return false;
+            }
+            const todayStr = new Date().toISOString().split('T')[0];
+            return b.check_out_date <= todayStr;
+          });
+          setHasConfirmedBooking(hasBookedThisProperty);
+        } catch (err) {
+          console.error('Failed to load guest bookings:', err);
+        }
+      } else {
+        setHasConfirmedBooking(false);
+      }
+    };
+    checkBookingStatus();
+  }, [user, id]);
 
   const images = useMemo(() => {
     const raw = property?.images?.length
@@ -842,7 +899,19 @@ const PropertyDetail = () => {
 
   const handleBookNow = async (e, paymentType = 'full') => {
     if (!user) {
-      navigate('/login');
+      const pendingBooking = {
+        propertyId: id,
+        checkIn,
+        checkOut,
+        guests,
+        childrenGuests,
+        infantGuests,
+        selectedSlot,
+        foodPreference,
+        paymentType,
+      };
+      localStorage.setItem('pendingBooking', JSON.stringify(pendingBooking));
+      navigate(`/login?next=/property/${id}`);
       return;
     }
     if (user.role !== 'guest') {
@@ -890,6 +959,37 @@ const PropertyDetail = () => {
       setBooking(false);
     }
   };
+
+  useEffect(() => {
+    if (property && user && user.role === 'guest') {
+      const saved = localStorage.getItem('pendingBooking');
+      if (saved) {
+        try {
+          const pending = JSON.parse(saved);
+          if (pending.propertyId === id) {
+            setCheckIn(pending.checkIn || '');
+            setCheckOut(pending.checkOut || '');
+            setGuests(pending.guests || 1);
+            setChildrenGuests(pending.childrenGuests || 0);
+            setInfantGuests(pending.infantGuests || 0);
+            if (pending.selectedSlot) setSelectedSlot(pending.selectedSlot);
+            if (pending.foodPreference) setFoodPreference(pending.foodPreference);
+            if (pending.paymentType) setBookingPaymentType(pending.paymentType);
+            
+            // Clear from storage
+            localStorage.removeItem('pendingBooking');
+            
+            // Trigger booking automatically after restoring the states
+            setTimeout(() => {
+              handleBookNow(null, pending.paymentType || 'full');
+            }, 300);
+          }
+        } catch (e) {
+          console.error('Failed to restore pending booking', e);
+        }
+      }
+    }
+  }, [property, user, id]);
 
   const handleBookNowWithQuotation = () => {
     handleBookNow(null, quotationPaymentType);
@@ -1099,27 +1199,47 @@ const PropertyDetail = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-8 py-8">
-        <div className="mb-8 animate-fade-in">
-           <div className="flex items-center space-x-2 mb-3">
-              <span className="px-3 py-1 bg-terracotta/10 text-terracotta text-[10px] font-bold tracking-tight uppercase tracking-[0.2em] rounded-full">
-                {formatCategoryLabel(property.category)}
-              </span>
-              {property.instant_booking && (
-                <span className="flex items-center text-amber-500 text-[10px] font-bold tracking-tight uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
-                  <Zap className="w-3 h-3 mr-1 fill-current" /> {t('instant')}
-                </span>
-              )}
+        <div className="mb-8 animate-fade-in flex flex-col md:flex-row md:items-end md:justify-between gap-6 border-b border-stone-200 pb-6">
+           <div>
+              <div className="flex items-center space-x-2 mb-3">
+                 <span className="px-3 py-1 bg-terracotta/10 text-terracotta text-[10px] font-bold tracking-tight uppercase tracking-[0.2em] rounded-full">
+                   {formatCategoryLabel(property.category)}
+                 </span>
+                 {property.instant_booking && (
+                   <span className="flex items-center text-amber-500 text-[10px] font-bold tracking-tight uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+                     <Zap className="w-3 h-3 mr-1 fill-current" /> {t('instant')}
+                   </span>
+                 )}
+              </div>
+              <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight mb-4" data-testid="property-title">
+                {property.title}
+              </h1>
+              <div className="flex items-center text-charcoal-muted font-bold text-sm flex-wrap gap-6">
+                <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{property.address}, {property.city}</span>
+                <div className="flex items-center space-x-1">
+                   <Star className="w-4 h-4 text-amber-500 fill-current" />
+                   <span className="text-charcoal font-bold tracking-tight">{property.rating ? property.rating.toFixed(1) : 'New'}</span>
+                   <span className="text-charcoal-muted ml-1 underline cursor-pointer">{property.review_count || 0} Reviews</span>
+                </div>
+              </div>
            </div>
-           <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight mb-4" data-testid="property-title">
-             {property.title}
-           </h1>
-           <div className="flex items-center text-charcoal-muted font-bold text-sm flex-wrap gap-6">
-             <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{property.address}, {property.city}</span>
-             <div className="flex items-center space-x-1">
-                <Star className="w-4 h-4 text-amber-500 fill-current" />
-                <span className="text-charcoal font-bold tracking-tight">{property.rating ? property.rating.toFixed(1) : 'New'}</span>
-                <span className="text-charcoal-muted ml-1 underline cursor-pointer">{property.review_count || 0} Reviews</span>
-             </div>
+           
+           {/* Save and Share Buttons */}
+           <div className="flex items-center space-x-3 select-none shrink-0 mb-1">
+              <button
+                onClick={handleShareWhatsApp}
+                className="flex items-center space-x-2 px-4 py-2 border border-stone-200 rounded-full hover:bg-stone hover:scale-[1.02] active:scale-95 transition-all text-xs font-bold uppercase tracking-wider text-charcoal shadow-subtle cursor-pointer"
+              >
+                <Share2 className="w-3.5 h-3.5 text-charcoal hover:text-green-600 transition-colors" />
+                <span>Share</span>
+              </button>
+              <button
+                onClick={handleWishlistToggle}
+                className="flex items-center space-x-2 px-4 py-2 border border-stone-200 rounded-full hover:bg-stone hover:scale-[1.02] active:scale-95 transition-all text-xs font-bold uppercase tracking-wider text-charcoal shadow-subtle cursor-pointer"
+              >
+                <Heart className={`w-3.5 h-3.5 transition-colors ${isSaved ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-terracotta'}`} />
+                <span>{isSaved ? 'Saved' : 'Save'}</span>
+              </button>
            </div>
         </div>
 
@@ -1754,7 +1874,9 @@ const PropertyDetail = () => {
                </div>
 
                {/* Add Review Form */}
-               <ReviewForm user={user} propertyId={id} t={t} setProperty={setProperty} onSuccess={fetchReviews} />
+               {hasConfirmedBooking && (
+                 <ReviewForm user={user} propertyId={id} t={t} setProperty={setProperty} onSuccess={fetchReviews} />
+               )}
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {reviews.length === 0 ? (

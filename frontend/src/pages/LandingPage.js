@@ -528,7 +528,7 @@ const DEFAULT_FOOTER_DATA = {
     ] },
     { heading: 'For Hosts', items: [
       { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
-      { label: 'Become a Host', action_type: 'link', link: '/register', text: '' }
+      { label: 'Become a Host', action_type: 'link', link: '/register?role=host', text: '' }
     ] },
     { heading: 'Company', items: [
       { label: 'About Us', action_type: 'link', link: '/about-us', text: '' },
@@ -878,7 +878,7 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
           <button
             onClick={() => {
               onClose();
-              navigate(user ? '/dashboard' : '/register');
+              navigate(user ? '/dashboard' : '/register?role=host');
             }}
             className="btn-premium px-12 py-4 text-base shadow-premium hover:scale-[1.02] active:scale-95 transition-transform duration-300"
           >
@@ -1181,13 +1181,13 @@ const LandingPage = () => {
   };
 
   const handleListSpaceClick = () => {
-    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/register');
+    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/register?role=host');
   };
 
   const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
       if (item.link === '/host/list-property') {
-        navigate(user ? item.link : '/register');
+        navigate(user ? item.link : '/register?role=host');
       } else {
         handleFooterLink(item.link, '/');
       }
@@ -1368,7 +1368,11 @@ const LandingPage = () => {
                   <div className="mt-auto border-t border-gray-100 pt-4 flex justify-between items-center">
                     <div>
                       <p className="text-terracotta font-bold tracking-tight text-xl">₹ {(item.price || item.price_per_night || 0).toLocaleString('en-IN')}</p>
-                      <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest mt-0.5">PER NIGHT</p>
+                      <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest mt-0.5">
+                        {item.category === 'commercial' || item.category === 'event_venue'
+                          ? (item.pricing_cycle === 'hourly' ? 'PER HOUR' : item.pricing_cycle === 'weekly' ? 'PER WEEK' : item.pricing_cycle === 'monthly' ? 'PER MONTH' : 'PER DAY')
+                          : 'PER NIGHT'}
+                      </p>
                     </div>
                     <div className="w-10 h-10 rounded-full bg-stone border border-gray-100 flex items-center justify-center group-hover/card:bg-terracotta group-hover/card:border-terracotta transition-all duration-300 shadow-sm">
                       <Search className="w-4 h-4 text-charcoal group-hover/card:text-white transition-colors" />
@@ -2008,7 +2012,7 @@ const LandingPage = () => {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
                 <button 
-                  onClick={() => navigate(user ? '/dashboard' : '/register')}
+                  onClick={() => navigate(user ? '/dashboard' : '/register?role=host')}
                   className="bg-terracotta hover:bg-terracotta-hover text-white font-bold px-8 py-4 rounded-full transition shadow-premium w-full sm:w-auto text-sm uppercase tracking-wider"
                 >
                   {t('listProperty')}

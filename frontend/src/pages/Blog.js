@@ -56,7 +56,7 @@ const DEFAULT_FOOTER_DATA = {
     ] },
     { heading: 'For Hosts', items: [
       { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
-      { label: 'Become a Host', action_type: 'link', link: '/register', text: '' }
+      { label: 'Become a Host', action_type: 'link', link: '/register?role=host', text: '' }
     ] },
     { heading: 'Company', items: [
       { label: 'About Us', action_type: 'link', link: '/about-us', text: '' },
@@ -156,7 +156,7 @@ const Blog = () => {
   const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
       if (item.link === '/host/list-property') {
-        navigate(user ? item.link : '/register');
+        navigate(user ? item.link : '/register?role=host');
       } else {
         handleFooterLink(item.link, '/');
       }

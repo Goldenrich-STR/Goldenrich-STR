@@ -304,11 +304,11 @@ const AuthPage = ({ isAdminLogin = false }) => {
     if (result.success) {
       const userRole = result.user.role;
       if (userRole === 'host') {
-        navigate('/host/dashboard');
+        navigate(requestedNext.startsWith('/host/') ? requestedNext : '/host/dashboard');
       } else if (userRole === 'broker') {
         navigate('/broker/dashboard');
       } else {
-        navigate('/guest/browse');
+        navigate(requestedNext || '/guest/browse');
       }
     } else {
       setError(result.error);

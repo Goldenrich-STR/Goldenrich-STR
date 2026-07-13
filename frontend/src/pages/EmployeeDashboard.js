@@ -526,31 +526,7 @@ const VerificationReviewSection = () => {
                       <Eye className="w-4 h-4" />
                       <span>View Details</span>
                     </button>
-                    <button
-                      onClick={() => {
-                        setSelectedVerification(verification);
-                        setApproveRemarks('');
-                        setApproveError('');
-                        setShowApproveModal(true);
-                      }}
-                      className="flex items-center space-x-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition font-semibold"
-                      data-testid={`approve-${verification.verification_id}`}
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      <span>Approve</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedVerification(verification);
-                        setRejectReason('');
-                        setShowRejectReasonModal(true);
-                      }}
-                      className="flex items-center space-x-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition font-semibold"
-                      data-testid={`reject-${verification.verification_id}`}
-                    >
-                      <XCircle className="w-4 h-4" />
-                      <span>Reject</span>
-                    </button>
+
                   </div>
                 </div>
               </div>
