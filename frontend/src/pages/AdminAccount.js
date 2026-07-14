@@ -381,6 +381,15 @@ const TransactionsTab = () => {
     const label = txn.plan?.bhk_type || txn.plan?.plan_type || txn.subscription?.plan_type || txn.type || '';
     return label ? label.replaceAll('_', ' ').toUpperCase() : 'NA';
   };
+  const formatPropertyName = (txn) => (
+    txn.property?.title ||
+    txn.property?.property_name ||
+    txn.property?.name ||
+    txn.property_name ||
+    txn.property?.property_id ||
+    txn.subscription?.property_id ||
+    'NA'
+  );
   const getInvoiceBreakdown = (txn) => {
     const total = (Number(txn.amount) || 0) / 100;
     const taxPercent = Number(txn.plan?.tax_percent ?? 18);
@@ -388,7 +397,7 @@ const TransactionsTab = () => {
     const tax = Math.max(0, total - taxable);
     const platformFee = txn.plan?.platform_fee != null ? Number(txn.plan.platform_fee) : 0;
     return {
-      gross: Math.max(0, taxable - platformFee),
+      gross: taxable,
       platformFee,
       igst: 0,
       cgst: tax / 2,
@@ -495,6 +504,7 @@ const TransactionsTab = () => {
                     <th className="py-3 px-4">Broker</th>
                     <th className="py-3 px-4">Employee (RM)</th>
                     <th className="py-3 px-4">Host Name</th>
+                    <th className="py-3 px-4">Property</th>
                     <th className="py-3 px-4">GST No</th>
                     <th className="py-3 px-4">Property Type</th>
                     <th className="py-3 px-4">Gross Amount</th>
@@ -533,6 +543,9 @@ const TransactionsTab = () => {
                       <td className="py-4 px-4 min-w-[150px]">
                         <div className="font-bold text-charcoal text-sm">{t.user?.full_name || 'NA'}</div>
                         <div className="text-xs text-charcoal-muted mt-0.5">{t.user?.phone || t.user?.email || 'NA'}</div>
+                      </td>
+                      <td className="py-4 px-4 min-w-[170px]">
+                        <div className="font-bold text-charcoal text-sm">{formatPropertyName(t)}</div>
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap text-xs text-charcoal-muted">{t.user?.gst_number || t.user?.gst_no || 'NA'}</td>
                       <td className="py-4 px-4 whitespace-nowrap text-xs font-semibold">{formatPlanLabel(t)}</td>
@@ -1560,6 +1573,13 @@ const InvoiceModal = ({ transaction, onClose }) => {
   const t = transaction;
   const user = t.user || {};
   const amountINR = (t.amount || 0) / 100;
+  const formatInvoiceMoney = (value) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(value || 0));
 
   // 18% GST calculation (GST included in all user payments)
   const gstRate = 0.18;
@@ -1859,7 +1879,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
                   <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
                   <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
                   <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
-                  <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: 'monospace' }}>\u20B9{amountINR.toFixed(2)}</td>
+                  <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{formatInvoiceMoney(amountINR)}</td>
                 </tr>
               </tbody>
             </table>
