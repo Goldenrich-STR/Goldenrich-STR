@@ -1353,7 +1353,6 @@ const HostListProperty = () => {
                   setStep(0);
                   setSuccess(false);
                   setCreatedPropertyId(null);
-                  setHasActiveSubscription(false);
                   setSubscriptionCouponCode('');
                   setPricingSummaryPlan(null);
                 }}
