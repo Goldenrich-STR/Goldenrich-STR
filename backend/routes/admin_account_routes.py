@@ -74,6 +74,11 @@ def _date_only_for_csv(value) -> str:
     return str(value)
 
 
+def _excel_text(value) -> str:
+    text = str(value or "NA").replace('"', '""')
+    return f'="{text}"'
+
+
 def _property_display_name(property_info: Optional[dict]) -> str:
     if not property_info:
         return "NA"
@@ -735,7 +740,7 @@ async def export_transactions_csv(
         subscription = t.get("subscription") or {}
         created_at = t.get("created_at")
         writer.writerow({
-            "invoice_date": _date_only_for_csv(created_at),
+            "invoice_date": _excel_text(_date_only_for_csv(created_at)),
             "invoice_no": t.get("invoice_no"),
             "transaction_id": t.get("transaction_id"),
             "subscription_id": t.get("subscription_id"),
