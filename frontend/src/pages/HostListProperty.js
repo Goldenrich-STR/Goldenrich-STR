@@ -545,6 +545,12 @@ const HostListProperty = () => {
   }, [form, editPropertyId]);
 
   useEffect(() => {
+    if (!editPropertyId && !createdPropertyId) {
+      setHasActiveSubscription(false);
+    }
+  }, [editPropertyId, createdPropertyId]);
+
+  useEffect(() => {
     if (editPropertyId) {
       setCreatedPropertyId(editPropertyId);
       propertyAPI.getProperty(editPropertyId)
@@ -1353,8 +1359,10 @@ const HostListProperty = () => {
                   setStep(0);
                   setSuccess(false);
                   setCreatedPropertyId(null);
+                  setHasActiveSubscription(false);
                   setSubscriptionCouponCode('');
                   setPricingSummaryPlan(null);
+                  navigate('/host/list-property', { replace: true, state: null });
                 }}
                 className="btn-secondary"
                 data-testid="list-another"
