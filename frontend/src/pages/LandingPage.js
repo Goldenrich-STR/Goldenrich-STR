@@ -956,6 +956,7 @@ const LandingPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [activeBlog, setActiveBlog] = useState(0);
+  const [sliderInteracted, setSliderInteracted] = useState({});
 
   const scrollToSlide = (containerId, index) => {
     const container = document.getElementById(containerId);
@@ -1276,6 +1277,7 @@ const LandingPage = () => {
     const container = document.getElementById(id);
     if (container) {
       container.scrollBy({ left: direction === 'left' ? -350 : 350, behavior: 'smooth' });
+      setSliderInteracted(prev => ({ ...prev, [id]: true }));
     }
   };
 
@@ -1292,7 +1294,7 @@ const LandingPage = () => {
             </div>
             <div>
               <h3 className="text-[22px] font-bold tracking-tight text-charcoal tracking-tight uppercase leading-none mb-1.5">{title}</h3>
-              <p className="text-gray-500 text-[13px] font-medium">{subtitle}</p>
+              <p className="text-gray-550 text-[13px] font-medium">{subtitle}</p>
             </div>
           </div>
           
@@ -1309,12 +1311,20 @@ const LandingPage = () => {
         
         {/* Slider */}
         <div className="max-w-7xl mx-auto relative">
-          <div id={sectionId} className="flex overflow-x-auto pb-10 px-8 gap-6 no-scrollbar snap-x scroll-smooth">
+          <div 
+            id={sectionId} 
+            onScroll={(e) => {
+              if (e.target.scrollLeft > 10 && !sliderInteracted[sectionId]) {
+                setSliderInteracted(prev => ({ ...prev, [sectionId]: true }));
+              }
+            }}
+            className="flex overflow-x-auto pb-10 px-8 gap-6 no-scrollbar snap-x scroll-smooth"
+          >
             {displayItems.map((item, index) => (
               <div 
                 key={item.property_id || index} 
                 onClick={() => navigate(`/property/${item.property_id}`)}
-                className="bg-white rounded-2xl p-4 cursor-pointer hover:-translate-y-1 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 min-w-[300px] md:min-w-[340px] snap-center flex flex-col group/card"
+                className="bg-white rounded-2xl p-4 cursor-pointer hover:-translate-y-1 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 min-w-[300px] md:min-w-[340px] snap-start flex flex-col group/card"
               >
                 <div className="relative h-[220px] rounded-2xl overflow-hidden mb-5">
                   <img 
@@ -1360,7 +1370,7 @@ const LandingPage = () => {
 
                 <div className="px-1 flex-1 flex flex-col">
                   <h4 className="font-bold text-lg text-charcoal mb-1 line-clamp-1 group-hover/card:text-terracotta transition-colors">{item.title}</h4>
-                  <p className="text-gray-500 text-xs font-medium mb-4 flex items-center">
+                  <p className="text-gray-550 text-xs font-medium mb-4 flex items-center">
                     <MapPin className="w-3.5 h-3.5 mr-1.5 text-terracotta/70" />
                     {item.city}, {item.state || item.city}
                   </p>
@@ -1383,16 +1393,18 @@ const LandingPage = () => {
             ))}
             
             {/* View All Card */}
-            <div 
-              onClick={() => navigate(`/guest/browse?category=${categoryKey}`)}
-              className="min-w-[200px] md:min-w-[240px] border border-dashed border-terracotta/30 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-terracotta/5 hover:border-terracotta/50 transition-all duration-300 snap-center group/viewall"
-            >
-              <div className="w-14 h-14 rounded-full bg-terracotta/10 flex items-center justify-center mb-4 group-hover/viewall:scale-110 transition-transform">
-                <ArrowRight className="w-5 h-5 text-terracotta" />
+            {sliderInteracted[sectionId] && (
+              <div 
+                onClick={() => navigate(`/guest/browse?category=${categoryKey}`)}
+                className="min-w-[200px] md:min-w-[240px] border border-dashed border-terracotta/30 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-terracotta/5 hover:border-terracotta/50 transition-all duration-300 snap-start group/viewall"
+              >
+                <div className="w-14 h-14 rounded-full bg-terracotta/10 flex items-center justify-center mb-4 group-hover/viewall:scale-110 transition-transform">
+                  <ArrowRight className="w-5 h-5 text-terracotta" />
+                </div>
+                <span className="font-bold text-charcoal text-sm">View All</span>
+                <span className="font-bold text-gray-500 text-xs mt-1">Properties</span>
               </div>
-              <span className="font-bold text-charcoal text-sm">View All</span>
-              <span className="font-bold text-gray-500 text-xs mt-1">Properties</span>
-            </div>
+            )}
           </div>
         </div>
       </div>
@@ -1942,7 +1954,7 @@ const LandingPage = () => {
                     const typeQuery = collection.property_type ? `&property_type=${collection.property_type}` : '';
                     navigate(`/guest/browse?category=${collection.query}${typeQuery}`);
                   }}
-                  className="relative flex-none w-72 md:w-80 aspect-[4/5] rounded-3xl overflow-hidden group cursor-pointer snap-center shadow-subtle hover:shadow-premium transition-all duration-500"
+                  className="relative flex-none w-72 md:w-80 aspect-[4/5] rounded-3xl overflow-hidden group cursor-pointer snap-start shadow-subtle hover:shadow-premium transition-all duration-500"
                 >
                   <img 
                     src={collection.image} 
