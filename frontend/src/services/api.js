@@ -7,7 +7,10 @@ const configuredBackendUrl = (process.env.REACT_APP_BACKEND_URL || '')
 const isBrowser = typeof window !== 'undefined';
 const isLocalPage = isBrowser && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 const pointsToLocalBackend = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredBackendUrl);
-const defaultBackendUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:8001' : '';
+const productionBackendUrl = isBrowser && /(^|\.)x-space360\.in$/i.test(window.location.hostname)
+  ? 'https://api.x-space360.in'
+  : '';
+const defaultBackendUrl = process.env.NODE_ENV === 'development' ? 'http://localhost:8001' : productionBackendUrl;
 const BACKEND_URL = configuredBackendUrl && !(isBrowser && !isLocalPage && pointsToLocalBackend)
   ? configuredBackendUrl
   : defaultBackendUrl;

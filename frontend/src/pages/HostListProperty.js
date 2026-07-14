@@ -551,6 +551,12 @@ const HostListProperty = () => {
   }, [form, editPropertyId]);
 
   useEffect(() => {
+    if (!editPropertyId && !createdPropertyId) {
+      setHasActiveSubscription(false);
+    }
+  }, [editPropertyId, createdPropertyId]);
+
+  useEffect(() => {
     if (editPropertyId) {
       setCreatedPropertyId(editPropertyId);
       propertyAPI.getProperty(editPropertyId)
@@ -563,9 +569,7 @@ const HostListProperty = () => {
             }, 2000);
             return;
           }
-          if (p.subscription_id && p.subscription_status === 'active') {
-            setHasActiveSubscription(true);
-          }
+          setHasActiveSubscription(!!(p.subscription_id && p.subscription_status === 'active'));
           const backendForm = {
             title: p.title || '',
             description: p.description || '',
@@ -1369,6 +1373,10 @@ const HostListProperty = () => {
                   setStep(0);
                   setSuccess(false);
                   setCreatedPropertyId(null);
+                  setHasActiveSubscription(false);
+                  setSubscriptionCouponCode('');
+                  setPricingSummaryPlan(null);
+                  navigate('/host/list-property', { replace: true, state: null });
                 }}
                 className="btn-secondary"
                 data-testid="list-another"
