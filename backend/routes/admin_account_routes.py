@@ -5,6 +5,7 @@ import csv
 import io
 import logging
 import os
+import re
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from pydantic import BaseModel
@@ -307,6 +308,59 @@ async def _txn_query_async(
     return query
 
 
+async def get_invoice_number(db: AsyncIOMotorDatabase, t: dict) -> str:
+    t_type = t.get("type")
+    if t_type in ("booking_payment", "refund"):
+        prefix = "STRB"
+        types_list = ["booking_payment", "refund"]
+    else:
+        prefix = "STRS"
+        types_list = ["subscription", "registration_fee"]
+        
+    created_at = t.get("created_at")
+    if isinstance(created_at, str):
+        try:
+            created_at = datetime.fromisoformat(created_at)
+        except ValueError:
+            created_at = datetime.now(timezone.utc)
+            
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    
+    # IST is UTC + 5:30
+    ist_tz = timezone(timedelta(hours=5, minutes=30))
+    created_at_ist = created_at.astimezone(ist_tz)
+    
+    year = created_at_ist.year
+    month = created_at_ist.month
+    
+    if month >= 4:
+        start_year = year
+        end_year = year + 1
+    else:
+        start_year = year - 1
+        end_year = year
+        
+    fy_str = f"{str(start_year)[-2:]}-{str(end_year)[-2:]}"
+    
+    fy_start_ist = datetime(start_year, 4, 1, 0, 0, 0, tzinfo=ist_tz)
+    fy_start_utc = fy_start_ist.astimezone(timezone.utc)
+    
+    older_count = await db.transactions.count_documents({
+        "type": {"$in": types_list},
+        "created_at": {"$gte": fy_start_utc, "$lt": created_at}
+    })
+    
+    same_count = await db.transactions.count_documents({
+        "type": {"$in": types_list},
+        "created_at": created_at,
+        "transaction_id": {"$lte": t.get("transaction_id", "")}
+    })
+    
+    count = older_count + same_count
+    return f"{prefix}/{fy_str}/{count:05d}"
+
+
 @router.get("/transactions")
 async def list_transactions(
     type: Optional[str] = None,
@@ -330,16 +384,115 @@ async def list_transactions(
         items = await cursor.to_list(length=limit)
         total = await db.transactions.count_documents(query)
         
-        # Enrich transactions with customer user details
+        # Enrich transactions with invoice, customer, broker, RM and subscription details.
         for t in items:
-            uid = t.get("user_id") or t.get("host_id")
+            t["invoice_no"] = await get_invoice_number(db, t)
+            subscription = None
+            if t.get("subscription_id"):
+                subscription = await db.subscriptions.find_one(
+                    {"subscription_id": t["subscription_id"]},
+                    {"_id": 0},
+                )
+                t["subscription"] = subscription
+                if subscription:
+                    t["plan"] = await db.subscription_plans.find_one(
+                        {"plan_id": subscription.get("plan_id")},
+                        {
+                            "_id": 0,
+                            "plan_id": 1,
+                            "plan_name": 1,
+                            "plan_type": 1,
+                            "property_category": 1,
+                            "property_type": 1,
+                            "bhk_type": 1,
+                            "platform_fee": 1,
+                            "tax_percent": 1,
+                            "price_monthly": 1,
+                            "sqft_range": 1,
+                        },
+                    )
+
+            property_info = None
+            property_id = t.get("property_id") or (subscription or {}).get("property_id")
+            if property_id:
+                property_info = await db.properties.find_one(
+                    {"property_id": property_id},
+                    {"_id": 0, "property_id": 1, "owner_id": 1, "broker_id": 1, "rm_id": 1},
+                )
+
+            uid = t.get("user_id") or t.get("host_id") or (subscription or {}).get("user_id")
             user_info = None
             if uid:
                 user_info = await db.users.find_one(
                     {"user_id": uid},
-                    {"_id": 0, "full_name": 1, "email": 1, "phone": 1}
+                    {
+                        "_id": 0,
+                        "user_id": 1,
+                        "full_name": 1,
+                        "email": 1,
+                        "phone": 1,
+                        "lg_code": 1,
+                        "employee_code": 1,
+                        "broker_id": 1,
+                        "rm_id": 1,
+                        "gst_number": 1,
+                        "gst_no": 1,
+                    },
+                )
+            if not user_info and property_info and property_info.get("owner_id"):
+                user_info = await db.users.find_one(
+                    {"user_id": property_info["owner_id"]},
+                    {
+                        "_id": 0,
+                        "user_id": 1,
+                        "full_name": 1,
+                        "email": 1,
+                        "phone": 1,
+                        "lg_code": 1,
+                        "employee_code": 1,
+                        "broker_id": 1,
+                        "rm_id": 1,
+                        "gst_number": 1,
+                        "gst_no": 1,
+                    },
                 )
             t["user"] = user_info
+            broker_info = None
+            employee_info = None
+            if user_info or property_info:
+                broker_id = (user_info or {}).get("broker_id") or (property_info or {}).get("broker_id")
+                rm_id = (user_info or {}).get("rm_id") or (property_info or {}).get("rm_id")
+                if broker_id:
+                    broker_info = await db.users.find_one(
+                        {"user_id": broker_id, "role": "broker"},
+                        {"_id": 0, "user_id": 1, "full_name": 1, "lg_code": 1, "rm_id": 1},
+                    )
+                if not broker_info and (user_info or {}).get("lg_code"):
+                    broker_info = await db.users.find_one(
+                        {"role": "broker", "lg_code": {"$regex": f"^{re.escape(user_info['lg_code'])}$", "$options": "i"}},
+                        {"_id": 0, "user_id": 1, "full_name": 1, "lg_code": 1, "rm_id": 1},
+                    )
+                if (user_info or {}).get("employee_code"):
+                    employee_info = await db.users.find_one(
+                        {"role": "employee", "employee_code": {"$regex": f"^{re.escape(user_info['employee_code'])}$", "$options": "i"}},
+                        {"_id": 0, "user_id": 1, "full_name": 1, "employee_code": 1},
+                    )
+                if not employee_info and rm_id:
+                    employee_info = await db.users.find_one(
+                        {"user_id": rm_id, "role": "employee"},
+                        {"_id": 0, "user_id": 1, "full_name": 1, "employee_code": 1},
+                    )
+                if not employee_info and broker_info and broker_info.get("rm_id"):
+                    employee_info = await db.users.find_one(
+                        {"user_id": broker_info["rm_id"], "role": "employee"},
+                        {"_id": 0, "user_id": 1, "full_name": 1, "employee_code": 1},
+                    )
+                if not broker_info and (user_info or {}).get("lg_code"):
+                    broker_info = {"full_name": "NA", "lg_code": user_info.get("lg_code")}
+                if not employee_info and (user_info or {}).get("employee_code"):
+                    employee_info = {"full_name": "NA", "employee_code": user_info.get("employee_code")}
+            t["broker"] = broker_info
+            t["employee"] = employee_info
             
         return {"transactions": items, "total": total, "limit": limit, "skip": skip}
     except Exception as e:
@@ -361,46 +514,212 @@ async def export_transactions_csv(
     cursor = db.transactions.find(query, {"_id": 0}).sort("created_at", -1)
     items = await cursor.to_list(length=10000)
 
+    for t in items:
+        t["invoice_no"] = await get_invoice_number(db, t)
+        subscription = None
+        if t.get("subscription_id"):
+            subscription = await db.subscriptions.find_one(
+                {"subscription_id": t["subscription_id"]},
+                {"_id": 0},
+            )
+        t["subscription"] = subscription
+
+        plan = None
+        if subscription and subscription.get("plan_id"):
+            plan = await db.subscription_plans.find_one(
+                {"plan_id": subscription["plan_id"]},
+                {
+                    "_id": 0,
+                    "plan_name": 1,
+                    "plan_type": 1,
+                    "property_type": 1,
+                    "bhk_type": 1,
+                    "platform_fee": 1,
+                    "tax_percent": 1,
+                },
+            )
+        t["plan"] = plan
+
+        property_info = None
+        property_id = t.get("property_id") or (subscription or {}).get("property_id")
+        if property_id:
+            property_info = await db.properties.find_one(
+                {"property_id": property_id},
+                {"_id": 0, "owner_id": 1, "broker_id": 1, "rm_id": 1},
+            )
+
+        uid = t.get("user_id") or t.get("host_id") or (subscription or {}).get("user_id")
+        user_info = None
+        if uid:
+            user_info = await db.users.find_one(
+                {"user_id": uid},
+                {
+                    "_id": 0,
+                    "user_id": 1,
+                    "full_name": 1,
+                    "email": 1,
+                    "phone": 1,
+                    "lg_code": 1,
+                    "employee_code": 1,
+                    "broker_id": 1,
+                    "rm_id": 1,
+                    "gst_number": 1,
+                    "gst_no": 1,
+                },
+            )
+        if not user_info and property_info and property_info.get("owner_id"):
+            user_info = await db.users.find_one(
+                {"user_id": property_info["owner_id"]},
+                {
+                    "_id": 0,
+                    "user_id": 1,
+                    "full_name": 1,
+                    "email": 1,
+                    "phone": 1,
+                    "lg_code": 1,
+                    "employee_code": 1,
+                    "broker_id": 1,
+                    "rm_id": 1,
+                    "gst_number": 1,
+                    "gst_no": 1,
+                },
+            )
+        t["user"] = user_info
+
+        broker_info = None
+        employee_info = None
+        if user_info or property_info:
+            broker_id = (user_info or {}).get("broker_id") or (property_info or {}).get("broker_id")
+            rm_id = (user_info or {}).get("rm_id") or (property_info or {}).get("rm_id")
+            if broker_id:
+                broker_info = await db.users.find_one(
+                    {"user_id": broker_id, "role": "broker"},
+                    {"_id": 0, "full_name": 1, "lg_code": 1, "rm_id": 1},
+                )
+            if not broker_info and (user_info or {}).get("lg_code"):
+                broker_info = await db.users.find_one(
+                    {"role": "broker", "lg_code": {"$regex": f"^{re.escape(user_info['lg_code'])}$", "$options": "i"}},
+                    {"_id": 0, "full_name": 1, "lg_code": 1, "rm_id": 1},
+                )
+            if (user_info or {}).get("employee_code"):
+                employee_info = await db.users.find_one(
+                    {"role": "employee", "employee_code": {"$regex": f"^{re.escape(user_info['employee_code'])}$", "$options": "i"}},
+                    {"_id": 0, "full_name": 1, "employee_code": 1},
+                )
+            if not employee_info and rm_id:
+                employee_info = await db.users.find_one(
+                    {"user_id": rm_id, "role": "employee"},
+                    {"_id": 0, "full_name": 1, "employee_code": 1},
+                )
+            if not employee_info and broker_info and broker_info.get("rm_id"):
+                employee_info = await db.users.find_one(
+                    {"user_id": broker_info["rm_id"], "role": "employee"},
+                    {"_id": 0, "full_name": 1, "employee_code": 1},
+                )
+            if not broker_info and (user_info or {}).get("lg_code"):
+                broker_info = {"full_name": "NA", "lg_code": user_info.get("lg_code")}
+            if not employee_info and (user_info or {}).get("employee_code"):
+                employee_info = {"full_name": "NA", "employee_code": user_info.get("employee_code")}
+        t["broker"] = broker_info
+        t["employee"] = employee_info
+
     buf = io.StringIO()
     fields = [
-        "transaction_id", "type", "status", "amount_inr", "currency",
-        "razorpay_order_id", "razorpay_payment_id", "upi_transaction_id", "razorpay_refund_id", "razorpay_payout_id",
-        "user_id", "host_id", "booking_id", "subscription_id", "payout_id", "refund_id",
-        "notes", "is_mock", "created_at",
+        "invoice_date",
+        "invoice_no",
+        "transaction_id",
+        "subscription_id",
+        "broker_name",
+        "broker_lg_code",
+        "employee_rm_name",
+        "employee_code",
+        "host_name",
+        "host_phone",
+        "host_email",
+        "gst_no",
+        "property_type",
+        "gross_amount",
+        "platform_fee",
+        "igst",
+        "cgst",
+        "sgst",
+        "total_amount",
+        "plan_start_date",
+        "plan_end_date",
+        "refund",
+        "payment_status",
+        "select_service",
+        "payment_utr_id",
+        "razorpay_order_id",
+        "razorpay_payment_id",
+        "booking_id",
+        "payout_id",
+        "refund_id",
+        "currency",
+        "is_mock",
+        "created_at",
     ]
     writer = csv.DictWriter(buf, fieldnames=fields)
     writer.writeheader()
     for t in items:
+        total = round((t.get("amount") or 0) / 100, 2)
+        plan = t.get("plan") or {}
+        tax_percent = float(plan.get("tax_percent") or 18)
+        taxable = round(total / (1 + tax_percent / 100), 2) if tax_percent else total
+        tax = round(max(0, total - taxable), 2)
+        platform_fee = round(float(plan.get("platform_fee") or 0), 2)
+        gross = round(max(0, taxable - platform_fee), 2)
+        cgst = round(tax / 2, 2)
+        sgst = round(tax / 2, 2)
+        user = t.get("user") or {}
+        broker = t.get("broker") or {}
+        employee = t.get("employee") or {}
+        subscription = t.get("subscription") or {}
+        created_at = t.get("created_at")
         writer.writerow({
+            "invoice_date": created_at.strftime("%d-%m-%Y") if isinstance(created_at, datetime) else created_at,
+            "invoice_no": t.get("invoice_no"),
             "transaction_id": t.get("transaction_id"),
-            "type": t.get("type"),
-            "status": t.get("status"),
-            "amount_inr": round((t.get("amount") or 0) / 100, 2),
-            "currency": t.get("currency"),
+            "subscription_id": t.get("subscription_id"),
+            "broker_name": broker.get("full_name") or "NA",
+            "broker_lg_code": broker.get("lg_code") or "NA",
+            "employee_rm_name": employee.get("full_name") or "NA",
+            "employee_code": employee.get("employee_code") or "NA",
+            "host_name": user.get("full_name") or "NA",
+            "host_phone": user.get("phone") or "NA",
+            "host_email": user.get("email") or "NA",
+            "gst_no": user.get("gst_number") or user.get("gst_no") or "NA",
+            "property_type": plan.get("bhk_type") or plan.get("plan_type") or subscription.get("plan_type") or t.get("type"),
+            "gross_amount": gross,
+            "platform_fee": platform_fee,
+            "igst": 0,
+            "cgst": cgst,
+            "sgst": sgst,
+            "total_amount": total,
+            "plan_start_date": subscription.get("start_date") or "NA",
+            "plan_end_date": subscription.get("end_date") or "NA",
+            "refund": total if t.get("type") == "refund" else "NA",
+            "payment_status": "paid" if t.get("status") == "success" else t.get("status"),
+            "select_service": "subscription" if t.get("type") == "subscription" else t.get("type"),
+            "payment_utr_id": t.get("upi_transaction_id") or t.get("razorpay_payment_id") or t.get("razorpay_payout_id") or t.get("razorpay_refund_id") or "NA",
             "razorpay_order_id": t.get("razorpay_order_id"),
             "razorpay_payment_id": t.get("razorpay_payment_id"),
-            "upi_transaction_id": t.get("upi_transaction_id"),
-            "razorpay_refund_id": t.get("razorpay_refund_id"),
-            "razorpay_payout_id": t.get("razorpay_payout_id"),
-            "user_id": t.get("user_id"),
-            "host_id": t.get("host_id"),
             "booking_id": t.get("booking_id"),
-            "subscription_id": t.get("subscription_id"),
             "payout_id": t.get("payout_id"),
             "refund_id": t.get("refund_id"),
-            "notes": t.get("notes"),
+            "currency": t.get("currency"),
             "is_mock": t.get("is_mock"),
             "created_at": (
-                t["created_at"].isoformat()
-                if isinstance(t.get("created_at"), datetime)
-                else t.get("created_at")
+                created_at.isoformat()
+                if isinstance(created_at, datetime)
+                else created_at
             ),
         })
     buf.seek(0)
     filename = f"transactions_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.csv"
     return StreamingResponse(
-        iter([buf.getvalue()]),
-        media_type="text/csv",
+        iter(["\ufeff" + buf.getvalue()]),
+        media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
@@ -439,10 +758,10 @@ async def share_transaction_invoice(
         channel_name = payload.channel.lower()
         amount_inr = round((txn.get("amount") or 0) / 100, 2)
         
-        title = f"Invoice for Transaction {transaction_id}"
+        title = f"Invoice {invoice_no} for Transaction {transaction_id}"
         message = (
             f"Dear {user_info.get('full_name', 'Valued Customer')},\n\n"
-            f"Your invoice of INR {amount_inr} for transaction ID {transaction_id} is generated and ready.\n"
+            f"Your invoice {invoice_no} of INR {amount_inr} for transaction ID {transaction_id} is generated and ready.\n"
             f"Type: {txn.get('type').replace('_', ' ').title()}\n"
             f"Status: SUCCESS\n\n"
             f"Thank you for choosing X-Space360!"
@@ -469,6 +788,7 @@ async def share_transaction_invoice(
                     "name": user_info.get("full_name"),
                     "subject": title,
                     "payment_id": txn.get("razorpay_payment_id") or txn.get("razorpay_order_id") or transaction_id,
+                    "invoice_number": invoice_no,
                     "total_amount": amount_inr,
                     "reason": (txn.get("type") or "transaction").replace("_", " ").title(),
                     "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/") + "/admin/account",
@@ -485,6 +805,7 @@ async def share_transaction_invoice(
                 data={
                     "amount": amount_inr,
                     "transaction_id": transaction_id,
+                    "invoice_no": invoice_no,
                     "created_at": str(txn.get("created_at")),
                     "full_name": user_info.get("full_name")
                 }
