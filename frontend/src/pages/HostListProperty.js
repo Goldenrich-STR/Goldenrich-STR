@@ -557,9 +557,7 @@ const HostListProperty = () => {
             }, 2000);
             return;
           }
-          if (p.subscription_id && p.subscription_status === 'active') {
-            setHasActiveSubscription(true);
-          }
+          setHasActiveSubscription(!!(p.subscription_id && p.subscription_status === 'active'));
           const backendForm = {
             title: p.title || '',
             description: p.description || '',
@@ -1355,6 +1353,9 @@ const HostListProperty = () => {
                   setStep(0);
                   setSuccess(false);
                   setCreatedPropertyId(null);
+                  setHasActiveSubscription(false);
+                  setSubscriptionCouponCode('');
+                  setPricingSummaryPlan(null);
                 }}
                 className="btn-secondary"
                 data-testid="list-another"
