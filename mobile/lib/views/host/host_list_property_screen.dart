@@ -156,6 +156,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       {'value': 'pg', 'label': 'PG'},
       {'value': 'co_living', 'label': 'Co-living'},
       {'value': 'farmhouse', 'label': 'Farmhouse'},
+      {'value': 'resort', 'label': 'Resort'},
     ],
     'commercial': [
       {'value': 'private_office', 'label': 'Private Office'},
@@ -235,6 +236,10 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
         {'value': 'washer', 'label': 'Washing Machine', 'icon': Icons.local_laundry_service},
         {'value': 'heating', 'label': 'Heating System', 'icon': Icons.thermostat},
         {'value': 'fireplace', 'label': 'Indoor Fireplace', 'icon': Icons.fireplace},
+        {'value': 'live_music', 'label': 'Live Music', 'icon': Icons.music_note},
+        {'value': 'food_court', 'label': 'Food Court Available', 'icon': Icons.restaurant},
+        {'value': 'birthday_celebration', 'label': 'Birthday Celebration', 'icon': Icons.cake},
+        {'value': 'indoor_games', 'label': 'Indoor Games', 'icon': Icons.sports_esports},
       ];
     }
   }

@@ -54,6 +54,7 @@ const PROPERTY_TYPES = [
   { value: 'meeting_room', label: 'Meeting Room' },
   { value: 'banquet_hall', label: 'Banquet Hall' },
   { value: 'farmhouse', label: 'Farmhouse' },
+  { value: 'resort', label: 'Resort' },
   { value: 'rooftop', label: 'Rooftop' },
   { value: 'hotel_ballroom', label: 'Hotel Ballroom' },
 ];
@@ -81,7 +82,8 @@ const SIZE_TYPES = [
 const AMENITY_OPTIONS = [
   'wifi', 'ac', 'parking', 'kitchen', 'pool', 'gym', 'tv',
   'fireplace', 'rooftop', 'bar', 'av_system', 'stage', 'catering',
-  'coffee', 'printer', 'restrooms',
+  'coffee', 'printer', 'restrooms', 'live_music', 'food_court',
+  'birthday_celebration', 'indoor_games',
 ];
 
 const SORT_OPTIONS = [
@@ -1298,6 +1300,21 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
            {property.size_sqft && (
              <div className="flex items-center space-x-1 bg-stone border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted">
                <span>{property.size_sqft} sqft</span>
+             </div>
+           )}
+           {property.has_cook && (
+             <div className="flex items-center space-x-1 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md text-[10px] font-bold text-amber-800">
+               <span>Cook: ₹{property.cook_price}/day</span>
+             </div>
+           )}
+           {property.has_cook && property.veg_price && (
+             <div className="flex items-center space-x-1 bg-green-50 border border-green-200 px-2 py-1 rounded-md text-[10px] font-bold text-green-700">
+               <span>Veg: ₹{property.veg_price}</span>
+             </div>
+           )}
+           {property.has_cook && property.non_veg_price && (
+             <div className="flex items-center space-x-1 bg-red-50 border border-red-200 px-2 py-1 rounded-md text-[10px] font-bold text-red-700">
+               <span>Non-Veg: ₹{property.non_veg_price}</span>
              </div>
            )}
            {property.amenities?.slice(0, 2).map((a, i) => (

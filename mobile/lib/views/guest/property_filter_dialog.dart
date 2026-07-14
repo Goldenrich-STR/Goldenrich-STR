@@ -40,6 +40,7 @@ class _PropertyFilterDialogState extends State<PropertyFilterDialog> {
     {'value': 'meeting_room', 'label': 'Meeting Room'},
     {'value': 'banquet_hall', 'label': 'Banquet Hall'},
     {'value': 'farmhouse', 'label': 'Farmhouse'},
+    {'value': 'resort', 'label': 'Resort'},
     {'value': 'rooftop', 'label': 'Rooftop'},
     {'value': 'hotel_ballroom', 'label': 'Hotel Ballroom'},
   ];
@@ -58,7 +59,8 @@ class _PropertyFilterDialogState extends State<PropertyFilterDialog> {
   final List<String> _amenitiesOptions = [
     'wifi', 'ac', 'parking', 'kitchen', 'pool', 'gym', 'tv',
     'fireplace', 'rooftop', 'bar', 'av_system', 'stage', 'catering',
-    'coffee', 'printer', 'restrooms',
+    'coffee', 'printer', 'restrooms', 'live_music', 'food_court',
+    'birthday_celebration', 'indoor_games',
   ];
 
   @override

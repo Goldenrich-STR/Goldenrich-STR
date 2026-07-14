@@ -40,7 +40,11 @@ import {
   Minus,
   Plus,
   Share2,
-  Heart
+  Heart,
+  Music,
+  Pizza,
+  PartyPopper,
+  Gamepad
 } from 'lucide-react';
 
 const AMENITY_ICONS = {
@@ -64,6 +68,10 @@ const AMENITY_ICONS = {
   projector: Tv,
   whiteboard: CheckCircle2,
   power_backup: Flame,
+  live_music: Music,
+  food_court: Pizza,
+  birthday_celebration: PartyPopper,
+  indoor_games: Gamepad,
 };
 
 const AMENITY_LABELS = {
@@ -91,6 +99,10 @@ const AMENITY_LABELS = {
   rooftop: 'Scenic Rooftop Access',
   changing_rooms: 'VIP/Green Changing Rooms',
   security: 'Professional Event Security',
+  live_music: 'Live Music',
+  food_court: 'Food Court Available',
+  birthday_celebration: 'Birthday Celebration',
+  indoor_games: 'Indoor Games',
 };
 
 const getBhkTypeLabel = (category, bhkType, maxGuests) => {
@@ -803,6 +815,17 @@ const PropertyDetail = () => {
       let g = Number(guests);
       if (![100, 200, 300, 400, 500, 600].includes(g)) g = 100;
       amt += g * platePrice * nights;
+    } else if (property?.category === 'residential' && property?.has_cook) {
+      amt += (property?.cook_price || 0) * nights;
+      if (foodPreference) {
+        const platePrice = foodPreference === 'non_veg'
+          ? (property?.non_veg_price || 0)
+          : foodPreference === 'veg'
+          ? (property?.veg_price || 0)
+          : 0;
+        const g = Number(guests) || 1;
+        amt += g * platePrice * nights;
+      }
     }
     return amt;
   }, [property, nights, guests, foodPreference]);
@@ -1435,11 +1458,11 @@ const PropertyDetail = () => {
               </div>
             )}
 
-            {/* Event Details */}
-            {property.category === 'event_venue' && (
+            {/* Event / Food Details */}
+            {(property.category === 'event_venue' || (property.category === 'residential' && property.has_cook && (Number(property.veg_price) > 0 || Number(property.non_veg_price) > 0))) && (
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-6 flex items-center">
-                   Event Venue Details
+                   {property.category === 'event_venue' ? 'Event Venue Details' : 'Catering & Food Packages'}
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -1456,8 +1479,10 @@ const PropertyDetail = () => {
                     </div>
                   ) : null}
                   <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
-                     <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Venue Rent</p>
-                     <p className="text-xl font-bold tracking-tight text-charcoal">₹{property.price_per_night || 0} <span className="text-xs text-charcoal-light">/ day</span></p>
+                     <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">
+                       {property.category === 'event_venue' ? 'Venue Rent' : 'Property Rent'}
+                     </p>
+                     <p className="text-xl font-bold tracking-tight text-charcoal">₹{property.price_per_night || 0} <span className="text-xs text-charcoal-light">/ {property.category === 'event_venue' ? 'day' : 'night'}</span></p>
                   </div>
                 </div>
                 {property.packages && property.packages.length > 0 && (
@@ -2124,9 +2149,9 @@ const PropertyDetail = () => {
                     )}
                   </div>
 
-                  {property.category === 'event_venue' && (Number(property.veg_price) > 0 || Number(property.non_veg_price) > 0) && (
+                  {(property.category === 'event_venue' || (property.category === 'residential' && property.has_cook)) && (Number(property.veg_price) > 0 || Number(property.non_veg_price) > 0) && (
                     <div className="w-full mt-2 pt-3 border-t border-sand-100 flex flex-col space-y-3">
-                      <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Food Preference</label>
+                      <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Food Preference (Catering / Cook)</label>
                       <div className="flex flex-col space-y-3">
                         {property.veg_price && Number(property.veg_price) > 0 ? (
                           <div 
@@ -2205,33 +2230,39 @@ const PropertyDetail = () => {
 
               {nights > 0 && (
                 <div className="mt-6 mb-6 space-y-4 animate-fade-in" data-testid="price-breakdown">
-                  {property.category === 'event_venue' ? (
+                  {property.category === 'event_venue' || (property.category === 'residential' && property.has_cook) ? (
                     <>
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
-                          ₹{property.price_per_night?.toLocaleString('en-IN')} × {nights} {property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')} (Venue)
+                          ₹{property.price_per_night?.toLocaleString('en-IN')} × {nights} {property.category === 'event_venue' ? (property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')) : t('night')} ({property.category === 'event_venue' ? 'Venue' : 'Property Rent'})
                         </span>
                         <span className="text-sm font-bold tracking-tight text-charcoal">₹{((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</span>
                       </div>
+                      {property.category === 'residential' && property.has_cook && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
+                            ₹{property.cook_price?.toLocaleString('en-IN')} × {nights} Nights (Cook Fee)
+                          </span>
+                          <span className="text-sm font-bold tracking-tight text-charcoal">₹{((property.cook_price || 0) * nights).toLocaleString('en-IN')}</span>
+                        </div>
+                      )}
                       {foodPreference && (foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) > 0 && (
                         <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
-                          ₹{(foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)).toLocaleString('en-IN')} × {
-                            guests === 100 ? '100' :
-                            guests === 200 ? '200' :
-                            guests === 300 ? '300' :
-                            guests === 400 ? '400' :
-                            guests === 500 ? '500' :
-                            guests === 600 ? '600' :
-                            Number(guests) || 100
-                          } Guests × {nights} {property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')}{nights !== 1 ? 's' : ''} (Food)
-                        </span>
-                        <span className="text-sm font-bold tracking-tight text-charcoal">₹{(
-                          (foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)) * 
-                          (guests === 100 ? 100 : guests === 200 ? 200 : guests === 300 ? 300 : guests === 400 ? 400 : guests === 500 ? 500 : guests === 600 ? 600 : Number(guests) || 100) * nights
-                        ).toLocaleString('en-IN')}</span>
-                      </div>
-                    )}
+                          <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
+                            ₹{(foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)).toLocaleString('en-IN')} × {
+                              property.category === 'event_venue'
+                                ? ([100, 200, 300, 400, 500, 600].includes(Number(guests)) ? guests : '100')
+                                : guests
+                            } Guests × {nights} {property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')}{nights !== 1 ? 's' : ''} (Food)
+                          </span>
+                          <span className="text-sm font-bold tracking-tight text-charcoal">
+                            ₹{(
+                              (foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)) * 
+                              (property.category === 'event_venue' ? ([100, 200, 300, 400, 500, 600].includes(Number(guests)) ? Number(guests) : 100) : Number(guests) || 1) * nights
+                            ).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div className="flex justify-between items-center">

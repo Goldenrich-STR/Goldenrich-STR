@@ -6735,6 +6735,7 @@ const RESIDENTIAL_PLAN_PROPERTY_TYPES = [
   { value: 'independent_house', label: 'Independent House' },
   { value: 'co_living', label: 'Co-living' },
   { value: 'farmhouse', label: 'Farmhouse' },
+  { value: 'resort', label: 'Resort' },
 ];
 
 const RESIDENTIAL_PLAN_BHK_TYPES = [

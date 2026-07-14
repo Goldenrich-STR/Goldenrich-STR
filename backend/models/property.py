@@ -17,6 +17,7 @@ class PropertyType(str, Enum):
     FARMHOUSE = "farmhouse"
     ROOFTOP = "rooftop"
     HOTEL_BALLROOM = "hotel_ballroom"
+    RESORT = "resort"
 
 class PropertyCategory(str, Enum):
     RESIDENTIAL = "residential"

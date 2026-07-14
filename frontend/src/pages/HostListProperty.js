@@ -72,6 +72,7 @@ const CATEGORY_DATA = {
       { value: 'independent_house', label: 'Independent House' },
       { value: 'co_living', label: 'Co-living' },
       { value: 'farmhouse', label: 'Farmhouse' },
+      { value: 'resort', label: 'Resort' },
     ],
     bhkTypes: [
       { value: 'studio', label: 'Studio' },
@@ -123,6 +124,7 @@ const COMMON_AMENITIES = [
   'wifi', 'ac', 'parking', 'kitchen', 'pool', 'gym', 'tv',
   'fireplace', 'rooftop', 'bar', 'av_system', 'stage', 'catering',
   'coffee', 'printer', 'restrooms', 'washer', 'heating', 'workspace',
+  'live_music', 'food_court', 'birthday_celebration', 'indoor_games',
 ];
 
 const CATEGORY_AMENITIES = {
@@ -137,6 +139,10 @@ const CATEGORY_AMENITIES = {
     { value: 'washer', label: 'Washing Machine' },
     { value: 'heating', label: 'Heating System' },
     { value: 'fireplace', label: 'Indoor Fireplace' },
+    { value: 'live_music', label: 'Live Music' },
+    { value: 'food_court', label: 'Food Court Available' },
+    { value: 'birthday_celebration', label: 'Birthday Celebration' },
+    { value: 'indoor_games', label: 'Indoor Games' },
   ],
   commercial: [
     { value: 'wifi', label: 'Enterprise High-speed WiFi' },
@@ -925,8 +931,16 @@ const HostListProperty = () => {
         if (!form.minimum_stay_days || form.minimum_stay_days < 1) {
           return `Minimum duration must be at least 1 ${form.category === 'residential' ? 'night' : rateUnit}`;
         }
-        if (form.has_cook && (!form.cook_price || Number(form.cook_price) <= 0)) {
-          return 'Please specify a cook price per day';
+        if (form.has_cook) {
+          if (!form.cook_price || Number(form.cook_price) <= 0) {
+            return 'Please specify a cook price per day';
+          }
+          if (form.has_veg && (!form.veg_price || Number(form.veg_price) < 50)) {
+            return 'Minimum Veg price is ₹50/plate when Vegetarian Food option is selected';
+          }
+          if (form.has_non_veg && (!form.non_veg_price || Number(form.non_veg_price) < 50)) {
+            return 'Minimum Non-Veg price is ₹50/plate when Non-Vegetarian Food option is selected';
+          }
         }
       }
     }
@@ -1770,7 +1784,7 @@ const HostListProperty = () => {
                           label="Cook service available at property" 
                           testid="pricing-cook-available" 
                           checked={form.has_cook} 
-                          onChange={(v) => update({ has_cook: v, cook_price: v ? form.cook_price : '' })} 
+                          onChange={(v) => update({ has_cook: v, cook_price: v ? form.cook_price : '', has_veg: v ? form.has_veg : false, has_non_veg: v ? form.has_non_veg : false })} 
                         />
                         {form.has_cook && (
                           <Input 
@@ -1783,6 +1797,141 @@ const HostListProperty = () => {
                           />
                         )}
                       </div>
+                      
+                      {form.has_cook && (
+                        <div className="border-t border-gray-150 pt-4 mt-4 space-y-4">
+                          <h4 className="text-xs font-bold tracking-tight text-charcoal-light uppercase tracking-wider">Food / Catering Menu Options (Veg/Non-Veg Packages)</h4>
+                          <div className="flex flex-wrap gap-6 bg-stone/50 p-4 rounded-2xl border border-gray-100">
+                            <label className="flex items-center space-x-2.5 text-sm font-bold cursor-pointer text-charcoal select-none">
+                              <input
+                                type="checkbox"
+                                checked={!!form.has_veg}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  update({ has_veg: checked, veg_price: checked ? form.veg_price : '' });
+                                }}
+                                className="w-4.5 h-4.5 rounded border-gray-300 text-terracotta focus:ring-terracotta cursor-pointer"
+                              />
+                              <span>Vegetarian Food Available</span>
+                            </label>
+                            <label className="flex items-center space-x-2.5 text-sm font-bold cursor-pointer text-charcoal select-none">
+                              <input
+                                type="checkbox"
+                                checked={!!form.has_non_veg}
+                                onChange={(e) => {
+                                  const checked = e.target.checked;
+                                  update({ has_non_veg: checked, non_veg_price: checked ? form.non_veg_price : '' });
+                                }}
+                                className="w-4.5 h-4.5 rounded border-gray-300 text-terracotta focus:ring-terracotta cursor-pointer"
+                              />
+                              <span>Non-Vegetarian Food Available</span>
+                            </label>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {form.has_veg && (
+                              <Input 
+                                type="number" 
+                                label="Veg Plate Price (₹)" 
+                                testid="pricing-veg-price"
+                                value={form.veg_price} 
+                                onChange={(v) => update({ veg_price: v })} 
+                                placeholder="1200" 
+                              />
+                            )}
+                            {form.has_non_veg && (
+                              <Input 
+                                type="number" 
+                                label="Non-Veg Plate Price (₹)" 
+                                testid="pricing-nonveg-price"
+                                value={form.non_veg_price} 
+                                onChange={(v) => update({ non_veg_price: v })} 
+                                placeholder="1500" 
+                              />
+                            )}
+                          </div>
+
+                          {(form.has_veg || form.has_non_veg) && (
+                            <div className="mt-4">
+                              <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-3">
+                                Food Package / Menu Inclusions
+                              </label>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Veg Column */}
+                                {form.has_veg && (
+                                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                                    <div className="flex items-center px-4 py-3 bg-green-50 border-b border-green-200">
+                                      <div className="w-3 h-3 bg-green-500 rounded-sm mr-2 border border-green-700"></div>
+                                      <span className="font-bold text-green-900 text-sm tracking-wide">Vegetarian Menu</span>
+                                    </div>
+                                    <div className="flex items-center justify-between px-4 py-2 bg-stone/50 border-b border-gray-100">
+                                      <span className="text-xs font-bold tracking-tight text-charcoal">Food items</span>
+                                      <div className="text-right">
+                                        <span className="text-xs font-bold tracking-tight text-charcoal block">Package</span>
+                                        <span className="text-[10px] font-bold text-charcoal-muted line-through">₹{form.veg_price || '1200'}/Plate</span>
+                                      </div>
+                                    </div>
+                                    <div className="divide-y divide-sand-100">
+                                      {vegItemsList.map((item) => (
+                                        <div key={`veg-${item}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-stone/30 transition-colors">
+                                          <EditableItemName 
+                                            initialName={item} 
+                                            onRename={(newName) => handleRenameItem('veg', item, newName)} 
+                                          />
+                                          <input 
+                                            type="number" 
+                                            min="0"
+                                            value={getPackageValue('veg', item)}
+                                            onChange={(e) => handlePackageUpdate('veg', item, e.target.value)}
+                                            className="w-12 text-center bg-transparent border-none text-charcoal font-bold text-sm outline-none focus:ring-0 p-0"
+                                            placeholder="0"
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Non-Veg Column */}
+                                {form.has_non_veg && (
+                                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                                    <div className="flex items-center px-4 py-3 bg-red-50 border-b border-red-200">
+                                      <div className="w-3 h-3 bg-red-500 rounded-full mr-2 border border-red-700"></div>
+                                      <span className="font-bold text-red-900 text-sm tracking-wide">Non Vegetarian Menu</span>
+                                    </div>
+                                    <div className="flex items-center justify-between px-4 py-2 bg-stone/50 border-b border-gray-100">
+                                      <span className="text-xs font-bold tracking-tight text-charcoal">Food items</span>
+                                      <div className="text-right">
+                                        <span className="text-xs font-bold tracking-tight text-charcoal block">Package</span>
+                                        <span className="text-[10px] font-bold text-charcoal-muted line-through">₹{form.non_veg_price || '1500'}/Plate</span>
+                                      </div>
+                                    </div>
+                                    <div className="divide-y divide-sand-100">
+                                      {nonVegItemsList.map((item) => (
+                                        <div key={`nonveg-${item}`} className="flex items-center justify-between px-4 py-2.5 hover:bg-stone/30 transition-colors">
+                                          <EditableItemName 
+                                            initialName={item} 
+                                            onRename={(newName) => handleRenameItem('non_veg', item, newName)} 
+                                          />
+                                          <input 
+                                            type="number" 
+                                            min="0"
+                                            value={getPackageValue('non_veg', item)}
+                                            onChange={(e) => handlePackageUpdate('non_veg', item, e.target.value)}
+                                            className="w-12 text-center bg-transparent border-none text-charcoal font-bold text-sm outline-none focus:ring-0 p-0"
+                                            placeholder="0"
+                                          />
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="border-t border-gray-100/60 pt-3">
                         <Toggle 
                           label="Self cooking option available (Guests can cook themselves)" 

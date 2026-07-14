@@ -11,6 +11,7 @@ export const PROPERTY_TYPE_LABELS = {
   villa: 'Villa',
   bungalow: 'Bungalow',
   farmhouse: 'Farmhouse',
+  resort: 'Resort',
   studio: 'Studio',
   private_office: 'Private Office',
   coworking_space: 'Coworking Space',
