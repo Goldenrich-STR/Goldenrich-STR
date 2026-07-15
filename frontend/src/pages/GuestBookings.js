@@ -251,10 +251,10 @@ const GuestBookings = () => {
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-6 py-12">
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-12">
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight" data-testid="page-title">
+            <h2 className="text-xl md:text-3xl font-bold tracking-tight text-charcoal tracking-tight" data-testid="page-title">
               My Bookings
             </h2>
             <p className="text-charcoal-muted text-sm font-medium mt-1">Manage your stays in one place.</p>
@@ -269,7 +269,7 @@ const GuestBookings = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-8 border-b border-gray-100 mb-8" data-testid="tabs">
+        <div className="flex space-x-4 md:space-x-8 border-b border-gray-100 mb-8 overflow-x-auto" data-testid="tabs">
           {TABS.map((t) => {
             const count = groups[t.key].length;
             const active = tab === t.key;

@@ -62,7 +62,7 @@ const EmployeeDashboard = () => {
   return (
     <div className="min-h-screen bg-stone">
       {/* Header */}
-      <header className="header-glass px-4 md:px-8 lg:px-12 py-4" data-testid="employee-header">
+      <header className="header-glass px-4 md:px-6 lg:px-12 py-4" data-testid="employee-header">
         <div className="w-full flex justify-between items-center">
           <div 
             className="flex items-center space-x-3 cursor-pointer group"
@@ -98,15 +98,15 @@ const EmployeeDashboard = () => {
         </div>
       </header>
 
-      <div className="w-full px-4 md:px-8 lg:px-12 py-8 mx-auto">
+      <div className="w-full px-2 md:px-8 lg:px-12 py-6 md:py-8 mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h2 className="text-4xl font-semibold tracking-tight text-charcoal" data-testid="dashboard-title">
+          <h2 className="text-2xl md:text-4xl font-semibold tracking-tight text-charcoal" data-testid="dashboard-title">
             Employee (RM) Dashboard
           </h2>
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex space-x-2 mb-8 border-b border-stone" data-testid="employee-tabs">
+        <div className="flex space-x-2 mb-8 border-b border-stone overflow-x-auto no-scrollbar shrink-0" data-testid="employee-tabs">
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             { id: 'verifications', label: 'Pending Reviews', icon: FileCheck },
@@ -471,8 +471,8 @@ const VerificationReviewSection = () => {
               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((verification) => (
               <div key={verification.verification_id} className="dashboard-card" data-testid={`verification-${verification.verification_id}`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4 flex-1">
+                <div className="flex flex-col md:flex-row items-start justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:space-x-4 flex-1 w-full">
                     {verification.property_details && (
                       <img
                         src={getImageUrl(verification.property_details.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
@@ -517,7 +517,7 @@ const VerificationReviewSection = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 mt-4 md:mt-0 w-full md:w-auto justify-end">
                     <button
                       onClick={() => handleOpenDetails(verification)}
                       className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold"
@@ -576,8 +576,8 @@ const VerificationReviewSection = () => {
           <div className="space-y-4" data-testid="verification-history-list">
             {historyVerifications.map((verification) => (
               <div key={verification.verification_id} className="dashboard-card bg-stone/50 border border-gray-100" data-testid={`history-${verification.verification_id}`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4 flex-1">
+                <div className="flex flex-col md:flex-row items-start justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:space-x-4 flex-1 w-full">
                     {verification.property_details && (
                       <img
                         src={getImageUrl(verification.property_details.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
@@ -621,7 +621,7 @@ const VerificationReviewSection = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 mt-4 md:mt-0 w-full md:w-auto justify-end">
                     <button
                       onClick={() => handleOpenDetails(verification)}
                       className="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition font-bold text-xs"

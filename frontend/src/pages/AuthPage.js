@@ -318,7 +318,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
   };
 
   return (
-    <div className="h-screen bg-stone flex overflow-hidden selection:bg-terracotta selection:text-white">
+    <div className="min-h-screen lg:h-screen bg-stone flex flex-col lg:flex-row lg:overflow-hidden selection:bg-terracotta selection:text-white">
       <SEO
         title={isAdminLogin ? "Admin Sign In" : (isLogin ? "Sign In" : "Register")}
         robots="noindex,nofollow"
@@ -374,7 +374,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
       </div>
 
       {/* Right Panel: Auth Form */}
-      <div className="w-full lg:w-7/12 flex items-center justify-center p-6 md:p-14 overflow-y-auto h-full bg-white/50 backdrop-blur-xl">
+      <div className="w-full lg:w-7/12 flex items-center justify-center p-6 md:p-14 lg:overflow-y-auto min-h-screen lg:h-full bg-white/50 backdrop-blur-xl">
         <div className="w-full max-w-xl animate-fade-in">
            {/* Logo (Mobile Only) */}
            <div className="lg:hidden text-center mb-10 flex justify-center">
@@ -382,7 +382,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
            </div>
 
            <div className="mb-5 text-center">
-              <h3 className="text-4xl font-bold tracking-tight text-charcoal tracking-tighter mb-2 leading-none">
+              <h3 className="text-2xl md:text-4xl font-bold tracking-tight text-charcoal tracking-tighter mb-2 leading-none">
                  {isAdminLogin ? 'Admin Console' : (isLogin ? 'Welcome Back' : 'Create Account')}
               </h3>
               <p className="text-charcoal-muted font-bold text-[10px] uppercase tracking-[0.25em]">

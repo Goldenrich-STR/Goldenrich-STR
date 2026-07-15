@@ -721,14 +721,14 @@ const HostDashboard = () => {
   return (
     <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
       <header className="glass px-4 md:px-8 lg:px-12 py-4 sticky top-0 z-50">
-        <div className="w-full flex justify-between items-center">
+        <div className="w-full flex justify-between items-center gap-2">
           <div 
             className="flex items-center space-x-3 cursor-pointer group" 
             onClick={() => navigate('/')}
           >
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain" />
           </div>
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center gap-2 md:gap-6">
             <nav className="hidden md:flex items-center space-x-6">
                {[
                  { label: 'CALENDAR', path: '/host/calendar' },
@@ -744,17 +744,17 @@ const HostDashboard = () => {
                  </button>
                ))}
             </nav>
-            <div className="h-6 w-px bg-sand-200"></div>
-            <div className="flex items-center space-x-4">
+            <div className="h-6 w-px bg-sand-200 hidden md:block"></div>
+            <div className="flex items-center gap-2 md:gap-4">
               <NotificationBell />
               <div 
                 onClick={() => setShowProfileModal(true)}
-                className="flex items-center space-x-3 px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
+                className="flex items-center space-x-2 px-2 md:px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
               >
                  <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
                     {user?.full_name?.[0]}
                  </div>
-                 <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">{user?.full_name?.split(' ')[0]}</span>
+                 <span className="hidden sm:block text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">{user?.full_name?.split(' ')[0]}</span>
               </div>
               <button 
                 onClick={() => {
@@ -763,7 +763,7 @@ const HostDashboard = () => {
                     logout();
                   }, 50);
                 }} 
-                className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest hover:underline"
+                className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest hover:underline hidden sm:block"
               >
                 Sign Out
               </button>
@@ -775,7 +775,7 @@ const HostDashboard = () => {
       <div className="w-full px-4 md:px-8 lg:px-12 py-10 mx-auto">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 animate-fade-in">
           <div>
-            <h2 className="text-4xl font-bold tracking-tight text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
+            <h2 className="text-2xl md:text-4xl font-bold tracking-tight text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
               Your Portfolio
             </h2>
             <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Manage your properties and track performance</p>
@@ -796,9 +796,9 @@ const HostDashboard = () => {
 
         {/* Verification Status Banner */}
         {user?.kyc_status === 'pending' && (
-          <div className="bg-amber-50 border-l-4 border-amber-500 rounded-2xl p-6 mb-8 shadow-premium animate-fade-in flex items-center justify-between">
+          <div className="bg-amber-50 border-l-4 border-amber-500 rounded-2xl p-4 md:p-6 mb-8 shadow-premium animate-fade-in flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center space-x-4">
-              <div className="bg-amber-100 p-3 rounded-xl text-amber-600">
+              <div className="bg-amber-100 p-3 rounded-xl text-amber-600 shrink-0">
                 <Lock className="w-6 h-6 animate-pulse" />
               </div>
               <div>
@@ -806,7 +806,7 @@ const HostDashboard = () => {
                 <p className="text-xs text-charcoal-muted mt-1">Your documents are under review. You can list new properties, but guest bookings will remain disabled until approved by the administrator.</p>
               </div>
             </div>
-            <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest bg-amber-500 text-white px-3 py-1.5 rounded-full">Under Review</span>
+            <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest bg-amber-500 text-white px-3 py-1.5 rounded-full self-start sm:self-auto">Under Review</span>
           </div>
         )}
 

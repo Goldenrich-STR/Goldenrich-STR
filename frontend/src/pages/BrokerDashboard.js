@@ -67,23 +67,23 @@ const BrokerDashboard = () => {
     <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
       {/* Header */}
       <header className="glass px-4 md:px-8 lg:px-12 py-4 sticky top-0 z-50">
-        <div className="w-full flex justify-between items-center">
+        <div className="w-full flex justify-between items-center gap-2">
           <div 
             className="flex items-center space-x-3 cursor-pointer group" 
             onClick={() => navigate('/')}
           >
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center gap-2 md:gap-6">
             <NotificationBell />
             <div 
               onClick={() => setShowProfileModal(true)}
-              className="flex items-center space-x-4 px-4 py-2 bg-white/50 border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
+              className="flex items-center space-x-2 px-2 md:px-4 py-2 bg-white/50 border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
             >
                <div className="w-7 h-7 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
                   {user?.full_name?.[0]}
                </div>
-               <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">{user?.full_name}</span>
+               <span className="hidden sm:block text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">{user?.full_name?.split(' ')[0]}</span>
             </div>
             <button
               onClick={() => {
@@ -92,11 +92,11 @@ const BrokerDashboard = () => {
                   logout();
                 }, 50);
               }}
-              className="flex items-center space-x-2 text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-[0.2em] hover:underline transition-all"
+              className="flex items-center space-x-1 text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-[0.2em] hover:underline transition-all"
               data-testid="logout-btn"
             >
               <LogOut className="w-4 h-4" />
-              <span>Sign Out</span>
+              <span className="hidden sm:block">Sign Out</span>
             </button>
           </div>
         </div>
@@ -105,7 +105,7 @@ const BrokerDashboard = () => {
       <div className="w-full px-4 md:px-8 lg:px-12 py-10 mx-auto">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12 animate-fade-in">
           <div>
-            <h2 className="text-4xl font-bold tracking-tight text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
+            <h2 className="text-2xl md:text-4xl font-bold tracking-tight text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
               Operational Command
             </h2>
             <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Global overview of your owner network and properties</p>
@@ -483,8 +483,8 @@ const PropertiesSection = () => {
               .map((property) => (
               <div key={property.property_id} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium group hover:border-terracotta transition-all duration-300" data-testid={`property-${property.property_id}`}>
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                  <div className="flex items-center space-x-6">
-                    <div className="relative overflow-hidden w-24 h-24 rounded-2xl">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:space-x-6 w-full">
+                    <div className="relative overflow-hidden w-24 h-24 rounded-2xl shrink-0">
                       <img
                         src={getImageUrl(property.images[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                         alt={property.title}
@@ -621,8 +621,8 @@ const VerificationsSection = () => {
                   data-testid={`verification-task-${task.property_id}`}
                 >
                   <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-                    <div className="flex items-center space-x-6">
-                      <div className="relative overflow-hidden w-24 h-24 rounded-2xl shadow-sm">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:space-x-6 w-full">
+                      <div className="relative overflow-hidden w-24 h-24 rounded-2xl shadow-sm shrink-0">
                         <img
                           src={getImageUrl(pd.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                           alt={pd.title}

@@ -321,7 +321,7 @@ const HostCalendar = () => {
 
   return (
     <div className="min-h-screen bg-stone">
-      <header className="header-glass px-6 py-4" data-testid="host-calendar-header">
+      <header className="header-glass px-4 md:px-6 py-4" data-testid="host-calendar-header">
         <div className="w-full flex justify-between items-center">
           <div 
             className="flex items-center space-x-3 cursor-pointer group" 
@@ -346,10 +346,10 @@ const HostCalendar = () => {
         </div>
       </header>
 
-      <div className="w-full px-4 md:px-8 lg:px-12 py-8 mx-auto">
+      <div className="w-full px-2 md:px-8 lg:px-12 py-6 md:py-8 mx-auto">
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
           <div>
-            <h2 className="text-4xl font-semibold tracking-tight text-charcoal" data-testid="calendar-title">
+            <h2 className="text-2xl md:text-4xl font-semibold tracking-tight text-charcoal" data-testid="calendar-title">
               Property Calendar
             </h2>
             <p className="text-charcoal-light mt-1">
@@ -435,7 +435,7 @@ const HostCalendar = () => {
                 </button>
               </div>
 
-              <div className="grid grid-cols-7 gap-2.5 text-center text-xs font-bold tracking-tight uppercase tracking-wider text-charcoal-light mb-3">
+              <div className="grid grid-cols-7 gap-1 md:gap-2.5 text-center text-[10px] md:text-xs font-bold tracking-tight uppercase tracking-wider text-charcoal-light mb-3">
                 {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d) => (
                   <div key={d} className="py-2">{d}</div>
                 ))}
@@ -447,7 +447,7 @@ const HostCalendar = () => {
                   <span className="font-bold text-sm">Loading availability details…</span>
                 </div>
               ) : (
-                <div className="grid grid-cols-7 gap-2.5" data-testid="calendar-grid">
+                <div className="grid grid-cols-7 gap-1 md:gap-2.5" data-testid="calendar-grid">
                   {cells.map((d, idx) => {
                     if (!d) return (
                       <div key={idx} className="h-24 bg-gray-50/30 border border-sand-100/50 rounded-xl relative overflow-hidden" />

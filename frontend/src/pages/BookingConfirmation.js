@@ -299,7 +299,7 @@ const BookingConfirmation = () => {
         </div>
       </header>
 
-      <div className="max-w-3xl mx-auto px-8 py-12">
+      <div className="max-w-3xl mx-auto px-4 md:px-8 py-6 md:py-12">
         <div className="bg-white rounded-3xl p-10 border border-gray-100 shadow-premium text-center mb-8 animate-slide-up" data-testid="booking-success-card">
           <div className="relative inline-block mb-6">
              <div className={`absolute inset-0 blur-2xl opacity-20 rounded-full ${isConfirmed ? 'bg-sage' : 'bg-terracotta'}`}></div>

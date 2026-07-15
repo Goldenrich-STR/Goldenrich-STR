@@ -1221,7 +1221,7 @@ const PropertyDetail = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-8">
         <div className="mb-8 animate-fade-in flex flex-col md:flex-row md:items-end md:justify-between gap-6 border-b border-stone-200 pb-6">
            <div>
               <div className="flex items-center space-x-2 mb-3">
@@ -1234,7 +1234,7 @@ const PropertyDetail = () => {
                    </span>
                  )}
               </div>
-              <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight mb-4" data-testid="property-title">
+              <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight mb-4" data-testid="property-title">
                 {property.title}
               </h1>
               <div className="flex items-center text-charcoal-muted font-bold text-sm flex-wrap gap-6">
@@ -1328,7 +1328,7 @@ const PropertyDetail = () => {
           <div className="lg:col-span-2 space-y-12 animate-slide-up" style={{ animationDelay: '200ms' }}>
             {/* Host Profile */}
             {property.host && (
-              <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex items-center justify-between group">
+              <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4 group">
                 <div className="flex items-center space-x-5">
                   <div className="relative">
                     <img
@@ -1597,7 +1597,7 @@ const PropertyDetail = () => {
             {/* Check-in / Check-out Time Section */}
             {(property.check_in_time || property.check_out_time) && (
               <div className="mb-8">
-                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
+                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
                   Check-in &amp; Check-out
                   <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
@@ -1647,13 +1647,13 @@ const PropertyDetail = () => {
             {/* Cook & Taxi Services Section */}
             {(property.has_cook || property.has_self_cook || property.has_taxi) && (
               <div className="mb-8">
-                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
+                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
                    {lang === 'mr' ? 'सेवा आणि स्वयंपाक पर्याय' : lang === 'hi' ? 'सेवाएं और रसोई विकल्प' : 'Services & Kitchen'}
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
                 <div className="space-y-4">
                   {property.has_cook && (
-                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex items-center space-x-6">
+                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:space-x-6">
                       <div className="bg-terracotta/10 p-4 rounded-full text-terracotta">
                         <Utensils className="w-8 h-8" />
                       </div>
@@ -1670,7 +1670,7 @@ const PropertyDetail = () => {
                     </div>
                   )}
                   {property.has_self_cook && (
-                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex items-center space-x-6">
+                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:space-x-6">
                       <div className="bg-emerald-500/10 p-4 rounded-full text-emerald-600">
                         <ChefHat className="w-8 h-8" />
                       </div>
@@ -1687,7 +1687,7 @@ const PropertyDetail = () => {
                     </div>
                   )}
                   {property.has_taxi && (
-                    <div className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium flex items-center space-x-6">
+                    <div className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:space-x-6">
                       <div className="bg-amber-500/10 p-4 rounded-full text-amber-600">
                         <Car className="w-8 h-8" />
                       </div>
@@ -1941,7 +1941,7 @@ const PropertyDetail = () => {
 
           {/* Sticky Booking Widget */}
           <div className="lg:col-span-1">
-            <div className="card-premium sticky top-28 p-8 animate-slide-up" style={{ animationDelay: '400ms' }}>
+            <div className="card-premium sticky top-20 lg:top-28 p-4 md:p-8 animate-slide-up" style={{ animationDelay: '400ms' }}>
               <div className="flex items-baseline justify-between mb-8">
                 <div>
                   {property.category === 'event_venue' ? (

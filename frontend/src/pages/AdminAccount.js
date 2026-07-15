@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -45,7 +45,7 @@ const AdminAccount = () => {
 
   return (
     <div className="min-h-screen bg-stone" data-testid="admin-account-page">
-      <header className="header-glass px-6 py-4">
+      <header className="header-glass px-4 md:px-6 py-4">
         <div className="w-full flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <button
@@ -68,7 +68,7 @@ const AdminAccount = () => {
         </div>
       </header>
 
-      <div className="w-full px-6 py-6">
+      <div className="w-full px-4 md:px-6 py-6">
         <nav className="flex flex-wrap gap-2 mb-6" data-testid="account-tabs">
           {TABS.map((t) => (
             <button

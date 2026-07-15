@@ -638,7 +638,7 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
           <X className="w-5 h-5" />
         </button>
 
-        <div className="overflow-y-auto p-6 md:p-10 custom-scrollbar w-full h-full flex flex-col">
+        <div className="overflow-y-auto p-6 md:p-10 custom-scrollbar w-full h-full">
           {/* Modal Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
           <span className="inline-block px-4 py-1.5 rounded-full bg-terracotta/10 text-terracotta font-semibold tracking-tight text-[10px] uppercase tracking-[0.2em] mb-4 animate-pulse">
@@ -655,15 +655,15 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
         {/* Interactive Timeline Progress */}
         <div className="relative mb-12 max-w-4xl mx-auto w-full px-4">
           {/* Timeline background line for desktop */}
-          <div className="absolute top-[32px] left-[10%] right-[10%] h-[4px] bg-sand-200 z-0 rounded-full"></div>
+          <div className="hidden md:block absolute top-[32px] left-[10%] right-[10%] h-[4px] bg-sand-200 z-0 rounded-full"></div>
           
           {/* Active Progress Bar */}
           <div 
-            className="absolute top-[32px] left-[10%] h-[4px] bg-gradient-to-r from-terracotta to-sage z-0 rounded-full transition-all duration-500 ease-out"
+            className="hidden md:block absolute top-[32px] left-[10%] h-[4px] bg-gradient-to-r from-terracotta to-sage z-0 rounded-full transition-all duration-500 ease-out"
             style={{ width: `${(activeStep - 1) * 20}%` }}
           ></div>
 
-          <div className="grid grid-cols-5 relative z-10">
+          <div className="flex overflow-x-auto no-scrollbar md:grid md:grid-cols-5 relative z-10 justify-between gap-4 md:gap-0 pb-2">
             {stepsData.map((step) => {
               const IconComponent = step.icon;
               const isActive = activeStep === step.id;
@@ -672,7 +672,7 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
                 <button
                   key={step.id}
                   onClick={() => setActiveStep(step.id)}
-                  className="flex flex-col items-center group focus:outline-none"
+                  className="flex flex-col items-center group focus:outline-none flex-shrink-0 w-20 md:w-auto"
                 >
                   <div 
                     className={`w-16 h-16 rounded-full flex items-center justify-center shadow-premium transition-all duration-500 transform ${
@@ -1639,14 +1639,14 @@ const LandingPage = () => {
                      <span className={`text-xs md:text-sm font-bold tracking-[0.2em] uppercase drop-shadow-md ${activeHero.tagColor}`}>
                         {activeHero.tag}
                      </span>
-                     <h2 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.15] text-white drop-shadow-premium max-w-4xl font-serif-hero mt-2">
+                     <h2 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.15] text-white drop-shadow-premium max-w-4xl font-serif-hero mt-2">
                        {activeHero.titlePrefix}
                        <span className={`${activeHero.highlightColor}`}>
                           {activeHero.titleHighlight}
                        </span>
                        {activeHero.titleSuffix}
                      </h2>
-                     <p className="text-3xl md:text-5xl text-white/90 font-handwriting drop-shadow-md mt-4 pb-2">
+                      <p className="text-2xl sm:text-3xl md:text-5xl text-white/90 font-handwriting drop-shadow-md mt-4 pb-2">
                        {activeHero.subtitle}
                      </p>
                   </div>
@@ -1876,7 +1876,7 @@ const LandingPage = () => {
       {/* ── Category Shortcut Strip ── */}
       <div className="w-full bg-[#FDFCF8] relative z-20 py-8 md:py-12 border-b border-sand-100">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
-          <div className="flex flex-row items-start justify-center gap-3 md:gap-20">
+          <div className="flex flex-row flex-wrap items-center justify-center gap-4 md:gap-20">
             {[
               {
                 label: 'Residential',
@@ -1925,8 +1925,8 @@ const LandingPage = () => {
       </div>
 
       {/* Content Section */}
-      <div className="w-full bg-[#FDFCF8] relative z-20 pb-32 pt-14">
-        <div className="max-w-7xl mx-auto px-8">
+      <div className="w-full bg-[#FDFCF8] relative z-20 pb-16 md:pb-32 pt-8 md:pt-14">
+        <div className="max-w-7xl mx-auto px-4 md:px-8">
           {/* Choose a Collection Slider */}
           <div className="mb-24 relative group">
             <div className="flex items-center justify-between mb-8 px-4 md:px-0">
@@ -2549,8 +2549,8 @@ const LandingPage = () => {
           </>
         );
       })()}
-      {/* Floating Scroll Buttons */}
-      <div className="fixed top-1/2 -translate-y-1/2 right-8 flex flex-col space-y-3 z-50">
+      {/* Floating Scroll Buttons - hidden on mobile to avoid blocking content */}
+      <div className="hidden md:flex fixed top-1/2 -translate-y-1/2 right-8 flex-col space-y-3 z-50">
         <button 
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
           className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center shadow-premium hover:bg-white/70 hover:-translate-y-1 transition-all duration-300 cursor-pointer border border-white/20"

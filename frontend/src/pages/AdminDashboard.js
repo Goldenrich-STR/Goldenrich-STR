@@ -312,30 +312,30 @@ const AdminDashboard = () => {
       <div className="min-h-screen">
       {/* Header */}
       <header className="bg-white/95 backdrop-blur border-b border-slate-200 px-4 md:px-8 lg:px-10 py-4 sticky top-0 z-30" data-testid="admin-header">
-        <div className="w-full flex justify-between items-center">
+        <div className="w-full flex justify-between items-center gap-2">
           <div 
             className="flex items-center space-x-3 cursor-pointer group"
             onClick={() => navigate('/')}
           >
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center gap-2 md:gap-6">
             <div 
               onClick={() => setShowProfileModal(true)}
-              className="flex items-center space-x-3 px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
+              className="flex items-center space-x-2 md:space-x-3 px-2 md:px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
             >
                <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
                   {user?.full_name?.[0]}
                </div>
-               <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">Admin: {user?.full_name?.split(' ')[0]}</span>
+               <span className="hidden sm:block text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">Admin: {user?.full_name?.split(' ')[0]}</span>
             </div>
             <button
               onClick={() => navigate('/admin/account')}
-              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-terracotta text-white font-semibold hover:bg-terracotta-dark transition text-sm"
+              className="flex items-center space-x-1 md:space-x-2 px-2 md:px-3 py-1.5 rounded-lg bg-terracotta text-white font-semibold hover:bg-terracotta-dark transition text-xs md:text-sm"
               data-testid="nav-account-btn"
             >
               <IndianRupee className="w-4 h-4" />
-              <span>Account</span>
+              <span className="hidden sm:block">Account</span>
             </button>
             <button
               onClick={() => {
@@ -344,11 +344,11 @@ const AdminDashboard = () => {
                   logout();
                 }, 50);
               }}
-              className="flex items-center space-x-2 text-terracotta hover:underline"
+              className="flex items-center space-x-1 text-terracotta hover:underline"
               data-testid="logout-btn"
             >
               <LogOut className="w-4 h-4" />
-              <span>Logout</span>
+              <span className="hidden sm:block text-sm">Logout</span>
             </button>
           </div>
         </div>
@@ -379,8 +379,9 @@ const AdminDashboard = () => {
           )}
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex space-x-2 mb-8 border-b border-stone" data-testid="admin-tabs">
+        {/* Navigation Tabs - scrollable on mobile */}
+        <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0 mb-8 border-b border-stone" data-testid="admin-tabs">
+          <div className="flex space-x-2 min-w-max md:min-w-0">
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             { id: 'users', label: 'Users', icon: Users },
@@ -388,12 +389,12 @@ const AdminDashboard = () => {
             { id: 'cms', label: 'CMS', icon: TrendingUp },
             { id: 'search-logs', label: 'Search Logs', icon: FileText },
             { id: 'ai-calls', label: 'AI Voice Calls', icon: Phone },
-            { id: 'support-messages', label: 'Support Messages', icon: Mail },
+            { id: 'support-messages', label: 'Support', icon: Mail },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-4 py-3 font-semibold transition ${
+              className={`flex items-center space-x-2 px-3 md:px-4 py-3 font-semibold transition whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'text-terracotta border-b-2 border-terracotta'
                   : 'text-charcoal-light hover:text-charcoal'
@@ -401,9 +402,10 @@ const AdminDashboard = () => {
               data-testid={`tab-${tab.id}`}
             >
               <tab.icon className="w-4 h-4" />
-              <span>{tab.label}</span>
+              <span className="text-xs md:text-sm">{tab.label}</span>
             </button>
           ))}
+          </div>
         </div>
 
         {/* Overview Tab */}

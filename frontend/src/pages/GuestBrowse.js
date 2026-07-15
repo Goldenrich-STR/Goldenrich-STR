@@ -1034,7 +1034,7 @@ const GuestBrowse = () => {
       {/* Results header */}
       <div className="px-4 md:px-8 py-8 w-full flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-charcoal tracking-tight">
              {loading ? t('searching') : (
                 <>
                    {displayedProperties.length} {displayedProperties.length === 1 ? t('spaceFound') : t('spacesFound')}
@@ -1109,9 +1109,9 @@ const GuestBrowse = () => {
           <div
             className={
               viewMode === VIEW_MODES.SPLIT
-                ? 'grid grid-cols-1 lg:grid-cols-2 gap-8 h-[calc(100vh-320px)]'
+                ? 'grid grid-cols-1 lg:grid-cols-2 gap-8 h-auto lg:h-[calc(100vh-320px)]'
                 : viewMode === VIEW_MODES.MAP
-                ? 'h-[calc(100vh-320px)] animate-fade-in'
+                ? 'h-[60vh] lg:h-[calc(100vh-320px)] animate-fade-in'
                 : ''
             }
           >

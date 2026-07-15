@@ -1348,10 +1348,10 @@ const HostListProperty = () => {
     return (
       <div className="min-h-screen bg-stone">
         <Header user={user} logout={logout} navigate={navigate} />
-        <div className="max-w-2xl mx-auto px-6 py-16 text-center">
+        <div className="max-w-2xl mx-auto px-4 md:px-6 py-12 md:py-16 text-center">
           <div className="dashboard-card" data-testid="listing-success">
             <CheckCircle2 className="w-20 h-20 text-sage-dark mx-auto mb-4" />
-            <h2 className="text-3xl font-semibold tracking-tight text-charcoal mb-2">Listing submitted!</h2>
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-charcoal mb-2">Listing submitted!</h2>
             <p className="text-charcoal-light mb-2">
               Your property <strong>{form.title}</strong> is now in the verification queue.
             </p>
@@ -1396,8 +1396,8 @@ const HostListProperty = () => {
     <div className="min-h-screen bg-stone">
       <Header user={user} logout={logout} navigate={navigate} />
 
-      <div className="max-w-4xl mx-auto px-6 py-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-charcoal mb-1" data-testid="form-title">
+      <div className="max-w-4xl mx-auto px-4 md:px-6 py-4 md:py-6">
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-charcoal mb-1" data-testid="form-title">
           List your property
         </h1>
         <p className="text-charcoal-light text-sm mb-6">
