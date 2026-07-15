@@ -1196,7 +1196,7 @@ const PropertyDetail = () => {
           >
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
-          <div className="flex items-center space-x-4 md:space-x-6">
+          <div className="flex items-center space-x-2 md:space-x-6">
             <LanguageSelector
               currentLang={lang}
               onLanguageChange={(newLang) => {
@@ -1206,14 +1206,17 @@ const PropertyDetail = () => {
             />
             <button
               onClick={() => navigate(-1)}
-              className="text-sm font-bold tracking-tight text-charcoal-muted hover:text-terracotta uppercase tracking-widest transition-colors flex items-center space-x-2"
+              className="text-xs md:text-sm font-bold tracking-tight text-charcoal-muted hover:text-terracotta uppercase tracking-widest transition-colors flex items-center space-x-1 md:space-x-2"
               data-testid="back-btn"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>{t('back')}</span>
+              <span className="hidden sm:inline">{t('back')}</span>
             </button>
             {user && (
-              <button onClick={logout} className="px-4 py-2 bg-charcoal text-white text-xs font-bold tracking-tight uppercase tracking-widest rounded-lg hover:bg-terracotta transition-all">
+              <button 
+                onClick={logout} 
+                className="px-2 py-1 md:px-4 md:py-2 bg-charcoal hover:bg-terracotta text-white text-[10px] md:text-xs font-bold tracking-tight uppercase tracking-widest rounded-lg transition-all"
+              >
                 {t('signOut')}
               </button>
             )}
