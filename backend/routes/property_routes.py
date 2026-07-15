@@ -3,6 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List, Optional
 from pydantic import BaseModel
 from models.property import Property, PropertyCreate, PropertyUpdate, PropertyStatus, PropertyCategory
+from models.subscription import SubscriptionStatus
 from models.user import UserRole
 from middleware.auth_middleware import get_current_user, require_role
 from datetime import datetime, timezone
@@ -377,25 +378,39 @@ async def get_property(
                 detail="Property not found"
             )
 
-        # Check if subscription has expired
+        # Check if subscription has expired. Some older property rows may have
+        # subscription_status but a blank subscription_id, so recover the active
+        # subscription link from the subscriptions table before returning details.
+        sub = None
         if property_dict.get("subscription_id"):
             sub = await db.subscriptions.find_one({"subscription_id": property_dict["subscription_id"]})
+        else:
+            sub = await db.subscriptions.find_one(
+                {
+                    "property_id": property_id,
+                    "status": SubscriptionStatus.ACTIVE.value,
+                },
+                {"_id": 0},
+            )
             if sub:
-                property_dict["subscription_status"] = sub.get("status") or property_dict.get("subscription_status")
-                from datetime import date
-                end_date_str = sub.get("end_date")
-                if isinstance(end_date_str, str):
-                    end_date = datetime.strptime(end_date_str.split('T')[0], "%Y-%m-%d").date()
-                elif isinstance(end_date_str, date):
-                    end_date = end_date_str
-                else:
-                    end_date = None
-                
-                if end_date and end_date <= date.today() and not is_owner_or_admin:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Property not found"
-                    )
+                property_dict["subscription_id"] = sub.get("subscription_id") or property_dict.get("subscription_id")
+
+        if sub:
+            property_dict["subscription_status"] = sub.get("status") or property_dict.get("subscription_status")
+            from datetime import date
+            end_date_str = sub.get("end_date")
+            if isinstance(end_date_str, str):
+                end_date = datetime.strptime(end_date_str.split('T')[0], "%Y-%m-%d").date()
+            elif isinstance(end_date_str, date):
+                end_date = end_date_str
+            else:
+                end_date = None
+
+            if end_date and end_date <= date.today() and not is_owner_or_admin:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Property not found"
+                )
 
         # Attach host profile (include phone and email if they have a confirmed booking, are owner, or admin)
         host_projection = {
