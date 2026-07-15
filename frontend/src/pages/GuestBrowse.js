@@ -671,7 +671,7 @@ const GuestBrowse = () => {
       )}
 
       {/* Top Search Bar */}
-      <div className="bg-white/80 backdrop-blur sticky top-0 z-30 px-4 md:px-8 py-4 border-b border-gray-100 shadow-sm relative">
+      <div className="bg-white/80 backdrop-blur relative md:sticky md:top-0 z-30 px-4 md:px-8 py-4 border-b border-gray-100 shadow-sm">
         {/* Transparent overlay to close active dropdowns on clicking outside */}
         {activeDropdown && (
           <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActiveDropdown(null)} />

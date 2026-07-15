@@ -1606,14 +1606,14 @@ const LandingPage = () => {
         <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#FDFCF8] border-t border-gray-100/40 z-20" />
 
         {/* ── Dot Slider Indicators ── */}
-        <div className="absolute bottom-12 left-0 right-0 z-30 flex justify-center items-center space-x-3">
+        <div className="absolute bottom-2.5 md:bottom-12 left-0 right-0 z-30 flex justify-center items-center space-x-2 md:space-x-3">
           {heroSlides.map((slide, index) => {
             const tagColor = slide?.tagColor || DEFAULT_HERO_SLIDES[0].tagColor;
             return (
               <button
                 key={index}
                 onClick={() => setCurrentHeroSlide(index)}
-                className={`w-3 h-3 rounded-full transition-all duration-300 shadow-sm ${
+                className={`w-1.5 h-1.5 md:w-3 md:h-3 rounded-full transition-all duration-300 shadow-sm ${
                   index === currentHeroSlide 
                     ? `${tagColor.replace('text-', 'bg-')} scale-125` 
                     : 'bg-white/70 hover:bg-white'
@@ -1624,7 +1624,7 @@ const LandingPage = () => {
         </div>
 
         {/* ── Hero Content ── */}
-        <div className="relative z-30 max-w-7xl mx-auto px-6 md:px-12 lg:px-20 h-full flex flex-col justify-center pt-40 md:pt-24 pb-12 text-left">
+        <div className="relative z-30 max-w-7xl mx-auto px-6 md:px-12 lg:px-20 h-full flex flex-col justify-center pt-20 md:pt-24 pb-12 text-left">
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end w-full">
             {/* Left side: Heading & Search Bar */}
@@ -1671,9 +1671,9 @@ const LandingPage = () => {
                           const el = document.getElementById('landing-destination');
                           if (el) el.focus();
                         }}
-                        className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer group rounded-t-2xl md:rounded-l-full border-b border-gray-100 md:border-none hover:bg-gray-50 transition"
+                        className="flex items-center px-3 md:px-6 py-2.5 md:py-4 w-full cursor-pointer group rounded-t-2xl md:rounded-l-full border-b border-gray-100 md:border-none hover:bg-gray-50 transition"
                       >
-                        <MapPin className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors" />
+                        <MapPin className="w-4 h-4 md:w-5 md:h-5 text-gray-400 mr-2 md:mr-3 group-hover:text-terracotta transition-colors" />
                         <div className="w-full text-left">
                           <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">Where</p>
                           <input
@@ -1738,8 +1738,8 @@ const LandingPage = () => {
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
                     
                     {/* Check-in */}
-                    <div className="relative flex items-center px-4 md:px-6 py-4 w-full md:w-auto border-b border-gray-100 md:border-none hover:bg-gray-50 transition group">
-                      <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
+                    <div className="relative flex items-center px-3 md:px-6 py-2.5 md:py-4 w-full md:w-auto border-b border-gray-100 md:border-none hover:bg-gray-50 transition group">
+                      <Calendar className="w-4 h-4 md:w-5 md:h-5 text-gray-400 mr-2 md:mr-3 group-hover:text-terracotta transition-colors z-0" />
                       <div className="w-full text-left pointer-events-none z-0">
                         <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
                         <p className={`font-bold text-sm mt-0.5 ${dates.checkIn ? 'text-charcoal' : 'text-gray-400'}`}>
@@ -1760,8 +1760,8 @@ const LandingPage = () => {
                     <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
                     
                     {/* Check-out */}
-                    <div className="relative flex items-center px-4 md:px-6 py-4 w-full md:w-auto border-b border-gray-100 md:border-none hover:bg-gray-50 transition group">
-                      <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
+                    <div className="relative flex items-center px-3 md:px-6 py-2.5 md:py-4 w-full md:w-auto border-b border-gray-100 md:border-none hover:bg-gray-50 transition group">
+                      <Calendar className="w-4 h-4 md:w-5 md:h-5 text-gray-400 mr-2 md:mr-3 group-hover:text-terracotta transition-colors z-0" />
                       <div className="w-full text-left pointer-events-none z-0">
                         <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
                         <p className={`font-bold text-sm mt-0.5 ${dates.checkOut ? 'text-charcoal' : 'text-gray-400'}`}>
@@ -1855,12 +1855,12 @@ const LandingPage = () => {
 
                     
                     {/* Search Button */}
-                    <div className="p-2 w-full md:w-auto">
+                    <div className="p-1.5 md:p-2 w-full md:w-auto">
                       <button
                         onClick={handleSearch}
-                        className="w-full md:w-auto bg-terracotta hover:bg-terracotta/90 text-white py-3 md:py-4 md:px-8 rounded-xl md:rounded-full transition-all duration-300 flex items-center justify-center shadow-subtle cursor-pointer"
+                        className="w-full md:w-auto bg-terracotta hover:bg-terracotta/90 text-white py-2.5 md:py-4 md:px-8 rounded-xl md:rounded-full transition-all duration-300 flex items-center justify-center shadow-subtle cursor-pointer"
                       >
-                        <Search className="w-5 h-5 text-white" />
+                        <Search className="w-4 h-4 md:w-5 md:h-5 text-white" />
                       </button>
                     </div>
                   </div>
