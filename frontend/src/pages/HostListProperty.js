@@ -569,7 +569,8 @@ const HostListProperty = () => {
             }, 2000);
             return;
           }
-          setHasActiveSubscription(!!(p.subscription_id && p.subscription_status === 'active'));
+          const subscriptionStatus = String(p.subscription_status || '').toLowerCase();
+          setHasActiveSubscription(subscriptionStatus === 'active' || !!(p.subscription_id && subscriptionStatus === 'active'));
           const backendForm = {
             title: p.title || '',
             description: p.description || '',
