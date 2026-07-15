@@ -1287,14 +1287,14 @@ const LandingPage = () => {
     return (
       <div className="relative mb-24 group">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 px-8 max-w-7xl mx-auto">
-          <div className="flex items-center">
-            <div className="w-12 h-12 rounded-full bg-terracotta/10 flex items-center justify-center mr-4 shrink-0">
+        <div className="flex items-center justify-between mb-8 px-4 md:px-8 max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-start md:items-center text-left">
+            <div className="w-12 h-12 rounded-full bg-terracotta/10 flex items-center justify-center mb-3 md:mb-0 md:mr-4 shrink-0">
               <IconComponent className="w-6 h-6 text-terracotta" />
             </div>
             <div>
-              <h3 className="text-[22px] font-bold tracking-tight text-charcoal tracking-tight uppercase leading-none mb-1.5">{title}</h3>
-              <p className="text-gray-550 text-[13px] font-medium">{subtitle}</p>
+              <h3 className="text-[20px] md:text-[22px] font-bold tracking-tight text-charcoal tracking-tight uppercase leading-none mb-2 md:mb-1.5">{title}</h3>
+              <p className="text-gray-550 text-xs md:text-[13px] font-medium leading-relaxed">{subtitle}</p>
             </div>
           </div>
           
