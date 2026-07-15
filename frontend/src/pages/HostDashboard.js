@@ -763,7 +763,7 @@ const HostDashboard = () => {
                     logout();
                   }, 50);
                 }} 
-                className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest hover:underline hidden sm:block"
+                className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest hover:underline cursor-pointer"
               >
                 Sign Out
               </button>
