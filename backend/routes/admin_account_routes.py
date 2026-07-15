@@ -50,6 +50,47 @@ def _strip(doc: dict) -> dict:
     return doc
 
 
+def _date_only_for_csv(value) -> str:
+    if not value:
+        return "NA"
+    if isinstance(value, datetime):
+        return value.strftime("%d-%m-%Y")
+    if isinstance(value, date):
+        return value.strftime("%d-%m-%Y")
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return "NA"
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            return parsed.strftime("%d-%m-%Y")
+        except ValueError:
+            pass
+        try:
+            parsed_date = datetime.strptime(raw.split("T", 1)[0], "%Y-%m-%d")
+            return parsed_date.strftime("%d-%m-%Y")
+        except ValueError:
+            return raw.split("T", 1)[0]
+    return str(value)
+
+
+def _excel_text(value) -> str:
+    text = str(value or "NA").replace('"', '""')
+    return f'="{text}"'
+
+
+def _property_display_name(property_info: Optional[dict]) -> str:
+    if not property_info:
+        return "NA"
+    return (
+        property_info.get("title")
+        or property_info.get("property_name")
+        or property_info.get("name")
+        or property_info.get("property_id")
+        or "NA"
+    )
+
+
 # --------------- Overview ----------------
 
 @router.get("/overview")
@@ -417,8 +458,18 @@ async def list_transactions(
             if property_id:
                 property_info = await db.properties.find_one(
                     {"property_id": property_id},
-                    {"_id": 0, "property_id": 1, "owner_id": 1, "broker_id": 1, "rm_id": 1},
+                    {
+                        "_id": 0,
+                        "property_id": 1,
+                        "title": 1,
+                        "property_name": 1,
+                        "name": 1,
+                        "owner_id": 1,
+                        "broker_id": 1,
+                        "rm_id": 1,
+                    },
                 )
+            t["property"] = property_info
 
             uid = t.get("user_id") or t.get("host_id") or (subscription or {}).get("user_id")
             user_info = None
@@ -545,8 +596,18 @@ async def export_transactions_csv(
         if property_id:
             property_info = await db.properties.find_one(
                 {"property_id": property_id},
-                {"_id": 0, "owner_id": 1, "broker_id": 1, "rm_id": 1},
+                {
+                    "_id": 0,
+                    "property_id": 1,
+                    "title": 1,
+                    "property_name": 1,
+                    "name": 1,
+                    "owner_id": 1,
+                    "broker_id": 1,
+                    "rm_id": 1,
+                },
             )
+        t["property"] = property_info
 
         uid = t.get("user_id") or t.get("host_id") or (subscription or {}).get("user_id")
         user_info = None
@@ -634,6 +695,7 @@ async def export_transactions_csv(
         "employee_rm_name",
         "employee_code",
         "host_name",
+        "property_name",
         "host_phone",
         "host_email",
         "gst_no",
@@ -668,16 +730,17 @@ async def export_transactions_csv(
         taxable = round(total / (1 + tax_percent / 100), 2) if tax_percent else total
         tax = round(max(0, total - taxable), 2)
         platform_fee = round(float(plan.get("platform_fee") or 0), 2)
-        gross = round(max(0, taxable - platform_fee), 2)
+        gross = taxable
         cgst = round(tax / 2, 2)
         sgst = round(tax / 2, 2)
         user = t.get("user") or {}
         broker = t.get("broker") or {}
         employee = t.get("employee") or {}
+        property_info = t.get("property") or {}
         subscription = t.get("subscription") or {}
         created_at = t.get("created_at")
         writer.writerow({
-            "invoice_date": created_at.strftime("%d-%m-%Y") if isinstance(created_at, datetime) else created_at,
+            "invoice_date": _excel_text(_date_only_for_csv(created_at)),
             "invoice_no": t.get("invoice_no"),
             "transaction_id": t.get("transaction_id"),
             "subscription_id": t.get("subscription_id"),
@@ -686,6 +749,7 @@ async def export_transactions_csv(
             "employee_rm_name": employee.get("full_name") or "NA",
             "employee_code": employee.get("employee_code") or "NA",
             "host_name": user.get("full_name") or "NA",
+            "property_name": _property_display_name(property_info),
             "host_phone": user.get("phone") or "NA",
             "host_email": user.get("email") or "NA",
             "gst_no": user.get("gst_number") or user.get("gst_no") or "NA",

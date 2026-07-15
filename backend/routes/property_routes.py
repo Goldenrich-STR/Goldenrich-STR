@@ -381,6 +381,7 @@ async def get_property(
         if property_dict.get("subscription_id"):
             sub = await db.subscriptions.find_one({"subscription_id": property_dict["subscription_id"]})
             if sub:
+                property_dict["subscription_status"] = sub.get("status") or property_dict.get("subscription_status")
                 from datetime import date
                 end_date_str = sub.get("end_date")
                 if isinstance(end_date_str, str):
