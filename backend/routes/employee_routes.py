@@ -267,10 +267,15 @@ async def get_verification_details(
 @router.get("/verifications/{verification_id}/export-report")
 async def export_verification_report_xlsx(
     verification_id: str,
-    current_user: dict = Depends(require_employee),
+    current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Export a single verification report as a Luxury Premium XLSX."""
+    if current_user["role"] not in (UserRole.EMPLOYEE.value, "admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Employee or Admin access required"
+        )
     print(f"DEBUG: Generating Luxury Report for {verification_id}")
     try:
         # Get full verification details
