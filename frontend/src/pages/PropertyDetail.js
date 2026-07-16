@@ -543,6 +543,7 @@ const PropertyDetail = () => {
   const [reviews, setReviews] = useState([]);
   const [reviewSummary, setReviewSummary] = useState({ rating_avg: 0, rating_count: 0, sub_avgs: {} });
   const [hasConfirmedBooking, setHasConfirmedBooking] = useState(false);
+  const [showMobileBookingDrawer, setShowMobileBookingDrawer] = useState(false);
 
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [recommended, setRecommended] = useState([]);
@@ -1224,7 +1225,7 @@ const PropertyDetail = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-8">
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-8 pb-24 lg:pb-8">
         <div className="mb-8 animate-fade-in flex flex-col md:flex-row md:items-end md:justify-between gap-6 border-b border-stone-200 pb-6">
            <div>
               <div className="flex items-center space-x-2 mb-3">
@@ -2646,6 +2647,267 @@ const PropertyDetail = () => {
                 className="flex-1 py-4 bg-terracotta text-white font-bold tracking-tight text-xs uppercase tracking-widest rounded-2xl hover:bg-terracotta-dark shadow-premium hover:shadow-premium transition-all"
               >
                 Confirm & Pay ({quotationPaymentType === 'advance' ? `${advancePercent}% Advance` : 'Full'})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Sticky Bottom Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 px-6 py-4 flex items-center justify-between z-50 lg:hidden shadow-lg select-none">
+        <div className="flex flex-col">
+          <div className="flex items-baseline space-x-1">
+            <span className="text-xl font-black text-charcoal">₹{property.price_per_night?.toLocaleString('en-IN') || 0}</span>
+            <span className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider">
+              {property.category === 'event_venue' ? '/ day' : `/ ${t('night')}`}
+            </span>
+          </div>
+          {checkIn && checkOut && (
+            <span className="text-[10px] font-bold text-terracotta uppercase tracking-wider mt-0.5">
+              {new Date(checkIn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} - {new Date(checkOut).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={() => setShowMobileBookingDrawer(true)}
+          className="btn-premium px-6 py-3 text-xs uppercase tracking-widest font-black shadow-premium rounded-xl"
+        >
+          {checkIn && checkOut ? 'Reserve' : 'Select Dates'}
+        </button>
+      </div>
+
+      {/* Mobile Booking Drawer (Bottom Sheet) */}
+      {showMobileBookingDrawer && (
+        <div className="fixed inset-0 z-[1001] lg:hidden">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in"
+            onClick={() => setShowMobileBookingDrawer(false)}
+          ></div>
+          
+          {/* Sheet Panel */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[2rem] shadow-2xl border-t border-gray-100 p-6 max-h-[85vh] overflow-y-auto flex flex-col animate-slide-up">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-6 flex-shrink-0">
+              <div>
+                <h3 className="text-lg font-black text-charcoal">Check details & Reserve</h3>
+                <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mt-0.5">
+                  ₹{property.price_per_night?.toLocaleString('en-IN')} / {property.category === 'event_venue' ? 'day' : t('night')}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowMobileBookingDrawer(false)}
+                className="w-8 h-8 rounded-full bg-stone flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Form Fields */}
+            <div className="space-y-6 flex-1">
+              
+              {/* Date Inputs */}
+              <div className="bg-stone/80 rounded-2xl border border-gray-100">
+                <div className="grid grid-cols-2 divide-x divide-sand-200">
+                  <div className="p-4 text-left">
+                    <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block">{t('checkIn')}</label>
+                    <input
+                      type="date"
+                      value={checkIn}
+                      min={todayISO}
+                      onChange={(e) => setCheckIn(e.target.value)}
+                      className="w-full text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none"
+                    />
+                  </div>
+                  <div className="p-4 text-left">
+                    <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block">{t('checkOut')}</label>
+                    <input
+                      type="date"
+                      value={checkOut}
+                      min={checkIn || todayISO}
+                      onChange={(e) => setCheckOut(e.target.value)}
+                      className="w-full text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Guest Selector */}
+              <div className="p-4 bg-stone/80 rounded-2xl border border-gray-100">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">
+                    {property.category === 'commercial' ? 'Total Staff' : t('totalGuests')}
+                  </label>
+                  {property.category !== 'event_venue' && property.category !== 'commercial' && (
+                    <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest shrink-0">
+                      {t('maxGuests').replace('{count}', maxGuests)}
+                    </span>
+                  )}
+                </div>
+                
+                {property.category === 'event_venue' ? (
+                  <div className="relative w-full">
+                    <select
+                      value={guests}
+                      onChange={(e) => setGuests(Number(e.target.value))}
+                      className="w-full p-2 text-xs font-bold tracking-tight text-charcoal bg-white border border-gray-200 rounded-xl outline-none"
+                    >
+                      <option value={100}>Less than 100</option>
+                      <option value={200}>100-200</option>
+                      <option value={300}>200-300</option>
+                      <option value={400}>300-400</option>
+                      <option value={500}>400-500</option>
+                      <option value={600}>Greater than 500</option>
+                    </select>
+                  </div>
+                ) : property.category === 'commercial' ? (
+                  <input
+                    type="number"
+                    min="1"
+                    max={maxGuests}
+                    value={guests}
+                    onChange={(e) => setGuests(Math.max(1, Math.min(maxGuests, Number(e.target.value) || 1)))}
+                    className="w-full p-2 text-xs font-bold tracking-tight text-charcoal bg-white border border-gray-200 rounded-xl outline-none"
+                  />
+                ) : (
+                  <div className="space-y-4 mt-2">
+                    {[
+                      { key: 'adults_m', title: 'Adults', subtitle: 'Age 13+', value: adultGuests, minusDisabled: adultGuests <= 1, plusDisabled: !canAddChargeableGuest, onMinus: () => updateAdultGuests(-1), onPlus: () => updateAdultGuests(1) },
+                      { key: 'children_m', title: 'Children', subtitle: 'Ages 2-12', value: childrenGuests, minusDisabled: childrenGuests <= 0, plusDisabled: !canAddChargeableGuest, onMinus: () => updateChildrenGuests(-1), onPlus: () => updateChildrenGuests(1) },
+                      { key: 'infants_m', title: 'Infants', subtitle: 'Under 2', value: infantGuests, minusDisabled: infantGuests <= 0, plusDisabled: infantGuests >= 5, onMinus: () => updateInfantGuests(-1), onPlus: () => updateInfantGuests(1) }
+                    ].map((item) => (
+                      <div key={item.key} className="flex items-center justify-between bg-white p-3 rounded-xl">
+                        <div>
+                          <div className="text-xs font-bold text-charcoal">{item.title}</div>
+                          <div className="text-[10px] text-charcoal-muted mt-0.5">{item.subtitle}</div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={item.onMinus}
+                            disabled={item.minusDisabled}
+                            className="w-7 h-7 rounded-full bg-gray-50 text-charcoal-muted flex items-center justify-center hover:bg-sand-200 disabled:opacity-40"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="text-xs font-bold text-charcoal w-4 text-center">{item.value}</span>
+                          <button
+                            type="button"
+                            onClick={item.onPlus}
+                            disabled={item.plusDisabled}
+                            className="w-7 h-7 rounded-full bg-gray-50 text-charcoal flex items-center justify-center hover:bg-sand-200 disabled:opacity-40"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Food Preference & Timings */}
+              {(property.category === 'event_venue' || (property.category === 'residential' && property.has_cook)) && (Number(property.veg_price) > 0 || Number(property.non_veg_price) > 0) && (
+                <div className="p-4 bg-stone/80 rounded-2xl border border-gray-100 space-y-3">
+                  <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Food Preference</label>
+                  <div className="flex flex-col space-y-2">
+                    {property.veg_price && Number(property.veg_price) > 0 && (
+                      <div 
+                        onClick={() => setFoodPreference('veg')}
+                        className="flex items-center justify-between cursor-pointer p-2 bg-white rounded-xl"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${foodPreference === 'veg' ? 'border-green-500' : 'border-gray-200'}`}>
+                            {foodPreference === 'veg' && <div className="w-2 h-2 rounded-full bg-green-500" />}
+                          </div>
+                          <span className="text-xs font-bold text-charcoal">Vegetarian</span>
+                        </div>
+                        <span className="text-xs font-bold text-charcoal">₹{property.veg_price}/Plate</span>
+                      </div>
+                    )}
+                    {property.non_veg_price && Number(property.non_veg_price) > 0 && (
+                      <div 
+                        onClick={() => setFoodPreference('non_veg')}
+                        className="flex items-center justify-between cursor-pointer p-2 bg-white rounded-xl"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${foodPreference === 'non_veg' ? 'border-red-500' : 'border-gray-200'}`}>
+                            {foodPreference === 'non_veg' && <div className="w-2 h-2 rounded-full bg-red-500" />}
+                          </div>
+                          <span className="text-xs font-bold text-charcoal">Non Vegetarian</span>
+                        </div>
+                        <span className="text-xs font-bold text-charcoal">₹{property.non_veg_price}/Plate</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Timing Slots */}
+              {property.category === 'event_venue' && (
+                <div className="p-4 bg-stone/80 rounded-2xl border border-gray-100 space-y-3">
+                  <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Select Timing Slot</label>
+                  <div className="flex flex-col space-y-2">
+                    {availableSlots.map(slot => (
+                      <div 
+                        key={slot.key}
+                        onClick={() => setSelectedSlot(slot.key)}
+                        className={`flex items-center justify-between cursor-pointer p-3 rounded-xl border-2 ${selectedSlot === slot.key ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 bg-white'}`}
+                      >
+                        <span className="text-xs font-bold text-charcoal">{slot.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Pricing Breakdown inside Drawer */}
+              {nights > 0 && (
+                <div className="p-4 bg-stone/50 rounded-2xl border border-gray-100 space-y-3">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-charcoal-muted">Rent ({nights} {property.category === 'event_venue' ? 'day' : 'night'}{nights > 1 ? 's' : ''})</span>
+                    <span className="font-bold text-charcoal">₹{((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</span>
+                  </div>
+                  {property.category === 'residential' && property.has_cook && (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-charcoal-muted">Cook Fee ({nights} nights)</span>
+                      <span className="font-bold text-charcoal">₹{((property.cook_price || 0) * nights).toLocaleString('en-IN')}</span>
+                    </div>
+                  )}
+                  {foodPreference && (foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) > 0 && (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-charcoal-muted">Catering ({guests} Guests)</span>
+                      <span className="font-bold text-charcoal">
+                        ₹{(
+                          (foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)) * 
+                          (property.category === 'event_venue' ? ([100, 200, 300, 400, 500, 600].includes(Number(guests)) ? Number(guests) : 100) : Number(guests) || 1) * nights
+                        ).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-charcoal-muted">Service Fee</span>
+                    <span className="font-bold text-charcoal">₹{Math.round(serviceFee).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-charcoal-muted">Taxes & GST</span>
+                    <span className="font-bold text-charcoal">₹{Math.round(taxes).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="border-t border-gray-200 pt-2 flex justify-between items-center text-sm font-black">
+                    <span className="text-charcoal">Total Amount</span>
+                    <span className="text-terracotta text-lg">₹{Math.round(total).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <button
+                onClick={() => handleBookNow(null, bookingPaymentType)}
+                disabled={booking || !checkIn || !checkOut || nights === 0}
+                className="btn-premium w-full py-4 text-xs font-black uppercase tracking-widest shadow-premium"
+              >
+                {booking ? 'Reserving...' : 'Book Now'}
               </button>
             </div>
           </div>
