@@ -1213,13 +1213,13 @@ const GuestBrowse = () => {
 
 const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlisted, onWishlistToggle, onShare }) => (
   <div
-    className={`card-premium group cursor-pointer ${compact ? 'flex min-h-[240px]' : 'flex flex-col'} transition-all duration-500`}
+    className={`card-premium group cursor-pointer ${compact ? 'flex flex-col sm:flex-row min-h-[240px]' : 'flex flex-col'} transition-all duration-500`}
     onClick={onClick}
     onMouseEnter={() => onHover && onHover(property.property_id)}
     onMouseLeave={() => onHover && onHover(null)}
     style={style}
   >
-    <div className={`relative overflow-hidden ${compact ? 'w-1/3 rounded-l-2xl' : 'h-72 rounded-t-2xl'}`}>
+    <div className={`relative overflow-hidden ${compact ? 'w-full sm:w-1/3 rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none h-48 sm:h-auto' : 'h-72 rounded-t-2xl'}`}>
       <img
         src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?w=800'}
         alt={property.title}
@@ -1254,7 +1254,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
             }}
             className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-subtle hover:bg-white hover:scale-[1.03] transition cursor-pointer"
             title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
-         >
+          >
             <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'}`} />
          </button>
       </div>
@@ -1272,7 +1272,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
         </div>
       </div>
     </div>
-    <div className={`p-5 flex flex-col justify-between ${compact ? 'w-2/3 rounded-r-2xl' : 'flex-1 rounded-b-2xl'} bg-white`}>
+    <div className={`p-5 flex flex-col justify-between ${compact ? 'w-full sm:w-2/3 rounded-b-2xl sm:rounded-r-2xl sm:rounded-bl-none' : 'flex-1 rounded-b-2xl'} bg-white`}>
       <div>
         <div className="flex items-center justify-between mb-2">
            <span className="text-[10px] font-bold tracking-tight text-sage-dark uppercase tracking-widest bg-sage/10 px-2 py-0.5 rounded">
@@ -1325,7 +1325,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
         </div>
         {/* Check-in / Check-out time badges */}
         {(property.check_in_time || property.check_out_time) && (
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             {property.check_in_time && (
               <div className="flex items-center gap-1 bg-sage/10 border border-sage/20 px-2 py-1 rounded-md">
                 <span className="text-[9px] font-bold text-sage-dark uppercase tracking-wider">Check-in</span>

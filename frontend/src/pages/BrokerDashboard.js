@@ -380,7 +380,7 @@ const MyOwnersSection = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6" data-testid="owners-list">
           {owners.map((owner) => (
             <div key={owner.user_id} className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium hover:border-terracotta transition-all duration-300 group" data-testid={`owner-${owner.user_id}`}>
-              <div className="flex items-start space-x-6">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
                 <div className="relative flex-shrink-0">
                    <div className="absolute inset-0 bg-terracotta blur-xl opacity-0 group-hover:opacity-20 transition-opacity"></div>
                    <img
@@ -389,7 +389,7 @@ const MyOwnersSection = () => {
                      className="relative w-20 h-20 rounded-2xl object-cover border-2 border-white shadow-sm"
                    />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 w-full text-center sm:text-left">
                   <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
                     <h4 className="text-lg font-bold tracking-tight text-charcoal truncate">{owner.full_name}</h4>
                     <span className={`inline-flex px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${

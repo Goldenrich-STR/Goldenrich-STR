@@ -1486,9 +1486,9 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
   return (
     <div data-testid="user-management">
       <div className="dashboard-card mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h3 className="text-2xl font-bold text-charcoal">User Management</h3>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
             <button
               onClick={handleExportUsers}
               className="px-5 py-2 rounded-2xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-[#FAF9F6] flex items-center space-x-1.5 transition text-sm font-bold shadow-sm bg-white"
@@ -1608,8 +1608,8 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
           )}
           {displayedUsers.map((user) => (
             <div key={user.user_id} className="dashboard-card hover:shadow-subtle transition-all group" data-testid={`user-${user.user_id}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                   <div className="relative">
                     {user.profile_image ? (
                       <img
@@ -1627,7 +1627,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   <div>
                     <h4 className="font-bold text-charcoal text-lg">{user.full_name}</h4>
                     <p className="text-sm text-charcoal-light">{user.email} | {user.phone}</p>
-                    <div className="flex items-center space-x-2 mt-1">
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="inline-block px-2 py-0.5 bg-terracotta/10 text-terracotta text-[10px] font-bold tracking-tight uppercase tracking-wider rounded">
                         {user.role}
                       </span>
@@ -1656,7 +1656,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 w-full lg:w-auto justify-end border-t border-gray-100 lg:border-none pt-3 lg:pt-0">
                   <button
                     onClick={() => setViewUser(user)}
                     className="p-2 text-charcoal-light hover:text-terracotta transition"
@@ -4749,7 +4749,8 @@ const CMSManagement = () => {
       </div>
 
       {/* Sub-tab Navigation */}
-      <div className="flex flex-wrap gap-2.5 p-1.5 bg-gray-50/60 rounded-2xl mb-8 w-fit max-w-full">
+      <div className="overflow-x-auto -mx-4 px-4 pb-2 mb-8 border-b border-stone/10 lg:border-none lg:pb-0 lg:overflow-visible custom-modal-scrollbar">
+        <div className="flex flex-nowrap lg:flex-wrap gap-2.5 p-1.5 bg-gray-50/60 rounded-2xl w-max lg:w-fit max-w-none lg:max-w-full">
         {[
           { id: 'hero', label: 'Hero Details', icon: Sparkles },
           { id: 'how_it_works', label: 'How It Works', icon: ListTodo },
@@ -4778,6 +4779,7 @@ const CMSManagement = () => {
             </button>
           );
         })}
+        </div>
       </div>
 
       {/* Form Content */}
