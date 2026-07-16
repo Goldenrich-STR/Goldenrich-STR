@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import apiClient, { verificationAPI, getImageUrl } from '../services/api';
+import apiClient, { verificationAPI, getImageUrl, accountAPI, uploadAPI } from '../services/api';
 import { createPortal } from 'react-dom';
 import { formatCategoryLabel, formatDisplayLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
 import { NotificationBell } from '../components/NotificationCenter';
 import { 
   Users, Building2, FileCheck, Target, IndianRupee, 
   AlertCircle, Plus, CheckCircle, XCircle, Clock, 
-  MapPin, Camera, LogOut, Bell, ChevronRight, ChevronLeft
+  MapPin, Camera, LogOut, Bell, ChevronRight, ChevronLeft,
+  CheckCircle2, Upload, FileText, Eye, Trash2, Check, User, Landmark, Briefcase
 } from 'lucide-react';
 
 const BrokerDashboard = () => {
@@ -347,6 +348,7 @@ const BrokerDashboard = () => {
 const MyOwnersSection = () => {
   const [owners, setOwners] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedOwnerKyc, setSelectedOwnerKyc] = useState(null);
 
   useEffect(() => {
     fetchOwners();
@@ -414,10 +416,18 @@ const MyOwnersSection = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                    <span className="inline-flex px-3 py-1 bg-stone text-terracotta text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full border border-gray-100">
-                      {owner.property_count || 0} Assets
-                    </span>
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 flex-wrap gap-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="inline-flex px-3 py-1 bg-stone text-terracotta text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full border border-gray-100">
+                        {owner.property_count || 0} Assets
+                      </span>
+                      <button
+                        onClick={() => setSelectedOwnerKyc(owner)}
+                        className="inline-flex px-3 py-1 border border-terracotta/20 hover:border-terracotta hover:bg-terracotta hover:text-white text-terracotta text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full transition-all"
+                      >
+                        Documents
+                      </button>
+                    </div>
                     <span className="text-[9px] text-charcoal-muted font-bold">
                       📅 Registered: {new Date(owner.created_at || owner.timestamp || Date.now()).toLocaleDateString('en-IN', {
                         day: 'numeric', month: 'short', year: 'numeric'
@@ -435,6 +445,17 @@ const MyOwnersSection = () => {
           <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Owners Assigned</h4>
           <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">You haven't been assigned any property owners yet.</p>
         </div>
+      )}
+
+      {selectedOwnerKyc && (
+        <OwnerVerificationModal
+          owner={selectedOwnerKyc}
+          onClose={() => setSelectedOwnerKyc(null)}
+          onSubmitted={() => {
+            setSelectedOwnerKyc(null);
+            fetchOwners();
+          }}
+        />
       )}
     </div>
   );
@@ -2065,6 +2086,625 @@ const PropertyDetailsModal = ({ property, onClose }) => {
             </div>
           </div>
         </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+// Modal: broker uploads owner KYC documents + signatures and submits verification
+const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
+  const [kycStatus, setKycStatus] = useState('unverified');
+  const [kycDocuments, setKycDocuments] = useState([]);
+  const [kycRemarks, setKycRemarks] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [uploadingDocs, setUploadingDocs] = useState({});
+
+  // Document states
+  const [aadharCard, setAadharCard] = useState('');
+  const [propertyProof, setPropertyProof] = useState('');
+  const [cancelledCheque, setCancelledCheque] = useState('');
+  const [societyNoc, setSocietyNoc] = useState('');
+  const [shopAct, setShopAct] = useState('');
+  const [gstCertificate, setGstCertificate] = useState('');
+  const [gstNumber, setGstNumber] = useState('');
+  const [agreementOwnerName, setAgreementOwnerName] = useState('');
+  const [agreementOwnerAddress, setAgreementOwnerAddress] = useState('');
+  const [agreementSignature, setAgreementSignature] = useState('');
+  const [verificationConsent, setVerificationConsent] = useState(false);
+
+  // Canvas signature
+  const canvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [penWidth] = useState(3);
+  const [showAgreementModal, setShowAgreementModal] = useState(false);
+
+  useEffect(() => {
+    fetchKycData();
+  }, [owner.user_id]);
+
+  const fetchKycData = async () => {
+    try {
+      const res = await accountAPI.getOwnerKYC(owner.user_id);
+      const data = res.data;
+      setKycStatus(data.kyc_status);
+      setKycDocuments(data.kyc_documents || []);
+      setKycRemarks(data.kyc_remarks || '');
+      
+      const aadhar = data.kyc_documents?.find(d => d.document_type === 'aadhar_card')?.document_url || '';
+      const prop = data.kyc_documents?.find(d => d.document_type === 'property_proof')?.document_url || '';
+      const cheque = data.kyc_documents?.find(d => d.document_type === 'cancelled_cheque')?.document_url || '';
+      const society = data.kyc_documents?.find(d => d.document_type === 'society_noc')?.document_url || '';
+      const shopActVal = data.kyc_documents?.find(d => d.document_type === 'shop_act')?.document_url || '';
+      const gstCert = data.kyc_documents?.find(d => d.document_type === 'gst_certificate')?.document_url || '';
+      const gstNum = data.kyc_documents?.find(d => d.document_type === 'gst_number')?.document_url || '';
+
+      setAadharCard(aadhar);
+      setPropertyProof(prop);
+      setCancelledCheque(cheque);
+      setSocietyNoc(society);
+      setShopAct(shopActVal);
+      setGstCertificate(gstCert);
+      setGstNumber(gstNum);
+
+      setAgreementOwnerName(data.agreement_owner_name || owner.full_name || '');
+      setAgreementOwnerAddress(data.agreement_owner_address || '');
+      setAgreementSignature(data.agreement_signature || '');
+    } catch (e) {
+      console.error('Error fetching owner KYC:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDocUpload = async (file, docType) => {
+    if (!file) return;
+    setUploadingDocs(prev => ({ ...prev, [docType]: true }));
+    try {
+      const res = await uploadAPI.uploadDocument(file);
+      if (docType === 'aadhar') setAadharCard(res.url);
+      else if (docType === 'property') setPropertyProof(res.url);
+      else if (docType === 'cheque') setCancelledCheque(res.url);
+      else if (docType === 'gst') setGstCertificate(res.url);
+      else if (docType === 'society') setSocietyNoc(res.url);
+      else if (docType === 'shop_act') setShopAct(res.url);
+
+      await accountAPI.saveOwnerDraftDocument(owner.user_id, {
+        document_type: docType,
+        document_url: res.url
+      });
+      fetchKycData();
+    } catch (err) {
+      alert(`Failed to upload ${docType}: ` + (err.response?.data?.detail || err.message));
+    } finally {
+      setUploadingDocs(prev => ({ ...prev, [docType]: false }));
+    }
+  };
+
+  const handleRejectedDocRemove = async (docType) => {
+    if (!window.confirm('Remove this rejected document and upload a new one?')) return;
+    setUploadingDocs(prev => ({ ...prev, [docType]: true }));
+    try {
+      await accountAPI.deleteOwnerRejectedDraftDocument(owner.user_id, docType);
+      if (docType === 'aadhar') setAadharCard('');
+      else if (docType === 'property') setPropertyProof('');
+      else if (docType === 'cheque') setCancelledCheque('');
+      else if (docType === 'gst') setGstCertificate('');
+      else if (docType === 'society') setSocietyNoc('');
+      else if (docType === 'shop_act') setShopAct('');
+      fetchKycData();
+    } catch (err) {
+      alert('Failed to remove document: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setUploadingDocs(prev => ({ ...prev, [docType]: false }));
+    }
+  };
+
+  const getFileName = (url) => {
+    if (!url) return '';
+    try {
+      const decoded = decodeURIComponent(url);
+      const parts = decoded.split('/');
+      const filename = parts[parts.length - 1];
+      return filename.split('?')[0];
+    } catch (e) {
+      return 'document_file';
+    }
+  };
+
+  // Drawing signature
+  const startDrawing = (e) => {
+    if (e.cancelable) e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = penWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1F2937';
+    
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    if (clientX === undefined || clientY === undefined) return;
+    
+    const x = (clientX - rect.left) * (canvas.width / rect.width);
+    const y = (clientY - rect.top) * (canvas.height / rect.height);
+    
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setIsDrawing(true);
+  };
+
+  const draw = (e) => {
+    if (!isDrawing) return;
+    if (e.cancelable) e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    if (clientX === undefined || clientY === undefined) return;
+    
+    const x = (clientX - rect.left) * (canvas.width / rect.width);
+    const y = (clientY - rect.top) * (canvas.height / rect.height);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const handleSaveSignatureAndAgreement = async () => {
+    if (!agreementOwnerName.trim()) {
+      alert('Please enter Owner Name');
+      return;
+    }
+    if (!agreementOwnerAddress.trim()) {
+      alert('Please enter Owner Address');
+      return;
+    }
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const blank = document.createElement('canvas');
+    blank.width = canvas.width;
+    blank.height = canvas.height;
+    if (canvas.toDataURL() === blank.toDataURL()) {
+      alert('Please draw signature first');
+      return;
+    }
+
+    const dataUrl = canvas.toDataURL('image/png');
+    try {
+      const arr = dataUrl.split(',');
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      const sigFile = new File([u8arr], 'signature.png', { type: mime });
+      
+      setUploadingDocs(prev => ({ ...prev, signature: true }));
+      const res = await uploadAPI.uploadDocument(sigFile);
+      setAgreementSignature(res.url);
+
+      await accountAPI.saveOwnerDraftAgreement(owner.user_id, {
+        agreement_owner_name: agreementOwnerName,
+        agreement_owner_address: agreementOwnerAddress,
+        agreement_signature: res.url
+      });
+      setShowAgreementModal(false);
+      alert('Agreement draft saved successfully');
+    } catch (err) {
+      alert('Failed to save signature: ' + err.message);
+    } finally {
+      setUploadingDocs(prev => ({ ...prev, signature: false }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!aadharCard || !propertyProof || !cancelledCheque || !shopAct || !agreementSignature) {
+      alert('Please upload all mandatory documents and sign the agreement.');
+      return;
+    }
+    if (!verificationConsent) {
+      alert('Please accept the Terms & Conditions consent.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await accountAPI.submitOwnerVerification(owner.user_id, {
+        aadhar_card: aadharCard,
+        property_proof: propertyProof,
+        cancelled_cheque: cancelledCheque,
+        society_noc: societyNoc || null,
+        shop_act: shopAct || null,
+        gst_certificate: gstCertificate || null,
+        gst_number: gstNumber || null,
+        agreement_owner_name: agreementOwnerName,
+        agreement_owner_address: agreementOwnerAddress,
+        agreement_signature: agreementSignature,
+        terms_accepted: true,
+        terms_version: 'host-verification-2026-06'
+      });
+      alert('KYC submitted successfully for Admin review!');
+      onSubmitted();
+    } catch (err) {
+      alert('Verification submission failed: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const getDocStatus = (docType) => {
+    const doc = kycDocuments.find(d => d.document_type === docType);
+    return doc ? doc.status : null;
+  };
+
+  const getDocRejectionReason = (docType) => {
+    const doc = kycDocuments.find(d => d.document_type === docType);
+    return doc ? doc.rejection_reason : null;
+  };
+
+  const renderDocCard = (number, title, description, docType, value, accept, isMandatory, Icon) => {
+    const backendDocTypeMap = {
+      aadhar: 'aadhar_card',
+      property: 'property_proof',
+      cheque: 'cancelled_cheque',
+      society: 'society_noc',
+      shop_act: 'shop_act',
+      gst: 'gst_certificate'
+    };
+    const dbType = backendDocTypeMap[docType];
+    const docStatus = getDocStatus(dbType);
+    const rejectionReason = getDocRejectionReason(dbType);
+    const canReplaceDocument = docStatus === 'rejected' || kycStatus === 'rejected';
+
+    return (
+      <div className="bg-white rounded-none border border-sand-200 p-6 shadow-sm flex flex-col justify-between min-h-[18rem] h-auto relative overflow-hidden transition-all duration-300 hover:shadow-premium hover:border-terracotta group">
+        <div className="absolute top-0 left-0 bg-terracotta text-white font-black text-[10px] tracking-wider px-3.5 py-1.5 rounded-none shadow-sm">
+          {number}
+        </div>
+        <div className="flex flex-col items-center flex-1 w-full">
+          <div className="w-14 h-14 rounded-none bg-sand-50 border border-sand-200 flex items-center justify-center mb-4 group-hover:bg-terracotta/5 transition-colors">
+            <Icon className="w-6 h-6 text-terracotta" />
+          </div>
+          <h4 className="text-sm font-black text-charcoal text-center mb-1">
+            {title} {isMandatory && <span className="text-red-500 font-bold ml-1">*</span>}
+          </h4>
+          <p className="text-[11px] text-charcoal-muted font-bold text-center mb-4 leading-normal max-w-[90%]">{description}</p>
+          
+          {docType === 'gst' && (
+            <div className="w-full mb-3 text-left">
+              <label className="text-[8px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">
+                GST Number (Optional)
+              </label>
+              <input
+                type="text"
+                placeholder="Enter GST Number"
+                value={gstNumber}
+                onChange={(e) => setGstNumber(e.target.value)}
+                className="w-full px-3 py-2 border border-sand-200 rounded-none text-[11px] outline-none focus:border-terracotta font-semibold"
+              />
+            </div>
+          )}
+
+          {value ? (
+            <div className="flex flex-col items-center mb-4 space-y-1">
+              {docStatus === 'approved' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 border border-green-200 rounded-full text-[9px] font-black uppercase tracking-wider">
+                  <Check className="w-3 h-3" />
+                  Verified
+                </span>
+              ) : docStatus === 'rejected' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-600 border border-red-200 rounded-full text-[9px] font-black uppercase tracking-wider">
+                  <AlertCircle className="w-3 h-3" />
+                  Rejected
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-[9px] font-black uppercase tracking-wider animate-pulse">
+                  <Clock className="w-3 h-3" />
+                  Pending
+                </span>
+              )}
+              {docStatus === 'rejected' && rejectionReason && (
+                <span className="text-[9px] text-red-600 font-bold max-w-[220px] text-center leading-relaxed" title={rejectionReason}>
+                  {rejectionReason}
+                </span>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        {value ? (
+          <>
+            <div className="bg-sand-50/80 border border-sand-200 rounded-none p-3 flex items-center justify-between mt-auto w-full">
+              <div className="flex items-center space-x-2 min-w-0">
+                <div className="bg-red-50 text-red-500 p-2 rounded-none flex-shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div className="text-left min-w-0">
+                  <p className="text-[11px] font-black text-charcoal truncate max-w-[100px] sm:max-w-[120px]" title={getFileName(value)}>
+                    {getFileName(value)}
+                  </p>
+                  <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">Uploaded File</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-1.5">
+                <a
+                  href={getImageUrl(value)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-1.5 hover:bg-sand-200 rounded-none text-charcoal-muted hover:text-terracotta transition-colors"
+                  title="View File"
+                >
+                  <Eye className="w-4 h-4" />
+                </a>
+                <label className="p-1.5 hover:bg-sand-200 rounded-none text-charcoal-muted hover:text-terracotta cursor-pointer transition-colors" title="Change File">
+                  <Upload className="w-4 h-4" />
+                  <input
+                    type="file"
+                    accept={accept}
+                    onChange={(e) => handleDocUpload(e.target.files[0], docType)}
+                    className="hidden"
+                    disabled={uploadingDocs[docType]}
+                  />
+                </label>
+                {canReplaceDocument && (
+                  <button
+                    type="button"
+                    onClick={() => handleRejectedDocRemove(docType)}
+                    disabled={uploadingDocs[docType]}
+                    className="p-1.5 hover:bg-red-100 text-red-500 disabled:opacity-50 transition-colors"
+                    title="Remove Rejected File"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+            {canReplaceDocument && (
+              <label className="mt-2 w-full inline-flex items-center justify-center gap-2 border border-red-200 bg-red-50 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-red-600 cursor-pointer hover:bg-red-100 transition-colors">
+                <Upload className="w-3.5 h-3.5" />
+                {uploadingDocs[docType] ? 'Uploading...' : 'Replace Document'}
+                <input
+                  type="file"
+                  accept={accept}
+                  onChange={(e) => handleDocUpload(e.target.files[0], docType)}
+                  className="hidden"
+                  disabled={uploadingDocs[docType]}
+                />
+              </label>
+            )}
+          </>
+        ) : (
+          <label className="w-full border-2 border-dashed border-sand-300 hover:border-terracotta bg-white hover:bg-sand-50/50 rounded-none p-5 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 min-h-[7rem] mt-auto">
+            <div className="bg-sand-50 p-2.5 rounded-none mb-2 flex items-center justify-center">
+              {uploadingDocs[docType] ? (
+                <div className="w-4 h-4 border-2 border-terracotta border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4 text-charcoal-muted" />
+              )}
+            </div>
+            <span className="text-[10px] font-black text-charcoal uppercase tracking-wider text-center">
+              {uploadingDocs[docType] ? 'Uploading...' : 'Upload Document'}
+            </span>
+            <span className="text-[8px] text-charcoal-muted font-bold mt-0.5 text-center">PDF, JPG or PNG (Max. 5MB)</span>
+            <input
+              type="file"
+              accept={accept}
+              onChange={(e) => handleDocUpload(e.target.files[0], docType)}
+              className="hidden"
+              disabled={uploadingDocs[docType]}
+            />
+          </label>
+        )}
+      </div>
+    );
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[9999] flex items-center justify-center p-6">
+      <div className="bg-white rounded-[2rem] p-8 max-w-4xl w-full shadow-elevated border border-gray-100 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-start mb-6 border-b border-gray-100 pb-4">
+          <div>
+            <h3 className="text-2xl font-bold tracking-tight text-charcoal">KYC Documents — {owner.full_name}</h3>
+            <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mt-1">Upload files and sign host agreement</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <span className={`inline-flex px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
+              kycStatus === 'approved' ? 'bg-sage/10 text-sage-dark' : 'bg-amber-100 text-amber-700'
+            }`}>
+              KYC Status: {kycStatus}
+            </span>
+            <button 
+              onClick={onClose} 
+              className="w-8 h-8 rounded-full bg-stone flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-all"
+            >
+              <Plus className="w-5 h-5 rotate-45" />
+            </button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-10 font-bold text-charcoal-muted uppercase text-xs tracking-widest">Loading owner KYC parameters...</div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {kycRemarks && (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-xs text-red-800">
+                <span className="font-bold uppercase tracking-wider text-[10px] block mb-1">Verification Rejection reason:</span>
+                {kycRemarks}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {renderDocCard("01", "Aadhar Card", "Aadhaar Card of the host / property owner", "aadhar", aadharCard, "image/*,application/pdf", true, User)}
+              {renderDocCard("02", "Property Proof", "Index 2 / Light Bill / Tax Receipt", "property", propertyProof, "image/*,application/pdf", true, Building2)}
+              {renderDocCard("03", "Cancelled Cheque", "Cancelled cheque for payout verification", "cheque", cancelledCheque, "image/*,application/pdf", true, Landmark)}
+              {renderDocCard("04", "Shop Act", "Shop & Establishment Act certificate", "shop_act", shopAct, "image/*,application/pdf", true, Briefcase)}
+              {renderDocCard("05", "Society NOC", "Society No Objection Certificate (Optional)", "society", societyNoc, "image/*,application/pdf", false, Building2)}
+              {renderDocCard("06", "GST Certificate", "GST registration document (Optional)", "gst", gstCertificate, "image/*,application/pdf", false, FileText)}
+            </div>
+
+            {/* Host Agreement Section */}
+            <div className="bg-stone/50 border border-sand-200 p-6 rounded-none space-y-4">
+              <h4 className="text-sm font-black text-charcoal tracking-tight">Host STR Service Agreement</h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">Agreement Owner Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter owner's full legal name"
+                    value={agreementOwnerName}
+                    onChange={(e) => setAgreementOwnerName(e.target.value)}
+                    className="w-full px-3 py-2 border border-sand-200 rounded-none text-xs outline-none focus:border-terracotta font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">Agreement Owner Address</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter owner's permanent address"
+                    value={agreementOwnerAddress}
+                    onChange={(e) => setAgreementOwnerAddress(e.target.value)}
+                    className="w-full px-3 py-2 border border-sand-200 rounded-none text-xs outline-none focus:border-terracotta font-semibold"
+                  />
+                </div>
+              </div>
+
+              {agreementSignature ? (
+                <div className="p-4 bg-white border border-sand-200 rounded-none flex items-center justify-between">
+                  <div>
+                    <span className="text-[8px] font-black text-charcoal-muted uppercase tracking-wider block">Signature Saved</span>
+                    <img src={getImageUrl(agreementSignature)} alt="Owner Signature" className="h-12 object-contain mt-1" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAgreementSignature('')}
+                    className="text-xs text-red-500 font-bold uppercase tracking-wider hover:underline"
+                  >
+                    Resign
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowAgreementModal(true)}
+                  className="w-full py-3 border-2 border-dashed border-sand-300 hover:border-terracotta bg-white text-xs font-black uppercase tracking-wider text-charcoal text-center"
+                >
+                  Draw Agreement Signature
+                </button>
+              )}
+            </div>
+
+            {/* Terms and Consent Checkbox */}
+            <div className="flex items-start space-x-3">
+              <input
+                type="checkbox"
+                id="consent-check"
+                checked={verificationConsent}
+                onChange={(e) => setVerificationConsent(e.target.checked)}
+                className="mt-1"
+                required
+              />
+              <label htmlFor="consent-check" className="text-[11px] font-bold text-charcoal-muted leading-relaxed cursor-pointer">
+                I hereby declare that all information, documents, and agreement signatures uploaded on behalf of {owner.full_name} are correct and true. I authorize the platform administrators to verify these documents.
+              </label>
+            </div>
+
+            <div className="flex justify-end space-x-4 border-t border-gray-100 pt-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-3 border border-gray-200 text-charcoal-muted hover:text-charcoal rounded-xl text-xs uppercase tracking-widest font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting || !aadharCard || !propertyProof || !cancelledCheque || !shopAct || !agreementSignature || !verificationConsent}
+                className="btn-premium px-8 py-3 shadow-premium text-xs uppercase tracking-widest font-bold disabled:opacity-50"
+              >
+                {submitting ? 'Submitting...' : 'Submit Verification'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Modal: Draw Signature */}
+        {showAgreementModal && (
+          <div className="fixed inset-0 bg-charcoal/80 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
+            <div className="bg-white rounded-[2rem] p-8 max-w-lg w-full shadow-elevated border border-gray-100">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-charcoal">Draw Owner Signature</h3>
+                  <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mt-1">Please ask the owner to sign on the screen</p>
+                </div>
+                <button 
+                  onClick={() => setShowAgreementModal(false)}
+                  className="w-8 h-8 rounded-full bg-stone flex items-center justify-center text-charcoal-muted hover:text-terracotta"
+                >
+                  <Plus className="w-5 h-5 rotate-45" />
+                </button>
+              </div>
+
+              <div className="border border-sand-200 rounded-none overflow-hidden bg-stone mb-4">
+                <canvas
+                  ref={canvasRef}
+                  width={500}
+                  height={150}
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={() => setIsDrawing(false)}
+                  onMouseLeave={() => setIsDrawing(false)}
+                  onTouchStart={startDrawing}
+                  onTouchMove={draw}
+                  onTouchEnd={() => setIsDrawing(false)}
+                  className="w-full block bg-white cursor-crosshair"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <button
+                  type="button"
+                  onClick={clearCanvas}
+                  className="text-xs text-charcoal-muted font-bold uppercase tracking-wider hover:text-charcoal"
+                >
+                  Clear Pad
+                </button>
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAgreementModal(false)}
+                    className="px-4 py-2 border border-gray-200 text-xs font-bold uppercase tracking-wider text-charcoal-muted hover:text-charcoal rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveSignatureAndAgreement}
+                    className="px-6 py-2 bg-charcoal hover:bg-terracotta text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all"
+                  >
+                    Save Signature
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>,
     document.body

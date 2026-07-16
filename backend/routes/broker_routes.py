@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pydantic import BaseModel
 from typing import List, Optional
 from models.lead import Lead, LeadCreate, LeadUpdate, LeadStatus
 from models.verification import PropertyVerification, VerificationSubmit, VerificationStatus, GeoTaggedPhoto
@@ -509,3 +510,235 @@ async def get_subscription_alerts(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch subscription alerts"
         )
+
+
+# ========== OWNER KYC MANAGEMENT ==========
+
+async def get_assigned_owner(owner_id: str, broker_id: str, db):
+    owner = await db.users.find_one({"user_id": owner_id, "broker_id": broker_id, "role": "host"})
+    if not owner:
+        raise HTTPException(
+            status_code=404,
+            detail="Owner not found or not assigned to this broker"
+        )
+    return owner
+
+class BrokerDraftDocumentUpload(BaseModel):
+    document_type: str
+    document_url: str
+
+class BrokerDraftAgreementUpdate(BaseModel):
+    agreement_owner_name: Optional[str] = None
+    agreement_owner_address: Optional[str] = None
+    agreement_signature: Optional[str] = None
+
+from routes.host_account_routes import HostVerificationSubmit
+
+@router.get("/owner/{owner_id}/kyc")
+async def get_owner_kyc(
+    owner_id: str,
+    current_user: dict = Depends(require_broker),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get KYC details and documents for an assigned owner."""
+    owner = await get_assigned_owner(owner_id, current_user["user_id"], db)
+    return {
+        "kyc_status": owner.get("kyc_status", "unverified"),
+        "kyc_documents": owner.get("kyc_documents") or [],
+        "agreement_owner_name": owner.get("agreement_owner_name"),
+        "agreement_owner_address": owner.get("agreement_owner_address"),
+        "agreement_signature": owner.get("agreement_signature"),
+        "agreement_signed_at": owner.get("agreement_signed_at"),
+        "kyc_remarks": owner.get("kyc_remarks"),
+    }
+
+@router.patch("/owner/{owner_id}/kyc/documents/draft")
+async def save_owner_draft_document(
+    owner_id: str,
+    payload: BrokerDraftDocumentUpload,
+    current_user: dict = Depends(require_broker),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Save a draft KYC document for the assigned owner."""
+    owner = await get_assigned_owner(owner_id, current_user["user_id"], db)
+    accepted_at = datetime.now(timezone.utc)
+    doc_type = payload.document_type
+    mapping = {
+        "aadhar": "aadhar_card",
+        "property": "property_proof",
+        "cheque": "cancelled_cheque",
+        "society": "society_noc",
+        "shop_act": "shop_act",
+        "gst": "gst_certificate"
+    }
+    mapped_type = mapping.get(doc_type, doc_type)
+    
+    current_docs = owner.get("kyc_documents") or []
+    if not isinstance(current_docs, list):
+        current_docs = list(current_docs)
+        
+    updated = False
+    for doc in current_docs:
+        if doc.get("document_type") == mapped_type:
+            doc["document_url"] = payload.document_url
+            doc["status"] = "pending"
+            doc["rejection_reason"] = None
+            doc["uploaded_at"] = accepted_at.isoformat()
+            updated = True
+            break
+            
+    if not updated:
+        current_docs.append({
+            "document_type": mapped_type,
+            "document_url": payload.document_url,
+            "status": "pending",
+            "rejection_reason": None,
+            "uploaded_at": accepted_at.isoformat()
+        })
+        
+    await db.users.update_one(
+        {"user_id": owner_id},
+        {"$set": {"kyc_documents": current_docs, "updated_at": accepted_at}}
+    )
+    return {"message": "Draft document saved", "kyc_documents": current_docs}
+
+@router.delete("/owner/{owner_id}/kyc/documents/draft/{document_type}")
+async def delete_owner_rejected_draft_document(
+    owner_id: str,
+    document_type: str,
+    current_user: dict = Depends(require_broker),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Remove a rejected KYC document so a replacement can be uploaded."""
+    owner = await get_assigned_owner(owner_id, current_user["user_id"], db)
+    mapping = {
+        "aadhar": "aadhar_card",
+        "property": "property_proof",
+        "cheque": "cancelled_cheque",
+        "society": "society_noc",
+        "shop_act": "shop_act",
+        "gst": "gst_certificate"
+    }
+    mapped_type = mapping.get(document_type, document_type)
+    
+    current_docs = list(owner.get("kyc_documents") or [])
+    target = next(
+        (doc for doc in current_docs if doc.get("document_type") == mapped_type),
+        None,
+    )
+    if not target:
+        raise HTTPException(404, detail="Document not found")
+    if target.get("status") != "rejected" and owner.get("kyc_status") != "rejected":
+        raise HTTPException(409, detail="Only rejected documents can be removed")
+        
+    remaining_docs = [
+        doc for doc in current_docs if doc.get("document_type") != mapped_type
+    ]
+    updated_at = datetime.now(timezone.utc)
+    await db.users.update_one(
+        {"user_id": owner_id},
+        {"$set": {"kyc_documents": remaining_docs, "updated_at": updated_at}}
+    )
+    return {"message": "Rejected document removed", "kyc_documents": remaining_docs}
+
+@router.patch("/owner/{owner_id}/kyc/agreement/draft")
+async def save_owner_draft_agreement(
+    owner_id: str,
+    payload: BrokerDraftAgreementUpdate,
+    current_user: dict = Depends(require_broker),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Save draft agreement info for the owner."""
+    await get_assigned_owner(owner_id, current_user["user_id"], db)
+    accepted_at = datetime.now(timezone.utc)
+    update_data = {}
+    if payload.agreement_owner_name is not None:
+        update_data["agreement_owner_name"] = payload.agreement_owner_name
+    if payload.agreement_owner_address is not None:
+        update_data["agreement_owner_address"] = payload.agreement_owner_address
+    if payload.agreement_signature is not None:
+        update_data["agreement_signature"] = payload.agreement_signature
+        update_data["agreement_signed_at"] = accepted_at.isoformat()
+        
+    if update_data:
+        update_data["updated_at"] = accepted_at
+        await db.users.update_one(
+            {"user_id": owner_id},
+            {"$set": update_data}
+        )
+    return {"message": "Draft agreement updated successfully"}
+
+@router.post("/owner/{owner_id}/submit-verification")
+async def submit_owner_verification(
+    owner_id: str,
+    payload: HostVerificationSubmit,
+    current_user: dict = Depends(require_broker),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Submit host verification documents for the owner."""
+    owner = await get_assigned_owner(owner_id, current_user["user_id"], db)
+    if not payload.terms_accepted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Terms & Conditions consent is required",
+        )
+        
+    accepted_at = datetime.now(timezone.utc)
+    docs = [
+        {"document_type": "aadhar_card", "document_url": payload.aadhar_card, "status": "pending", "uploaded_at": accepted_at.isoformat()},
+        {"document_type": "property_proof", "document_url": payload.property_proof, "status": "pending", "uploaded_at": accepted_at.isoformat()},
+        {"document_type": "cancelled_cheque", "document_url": payload.cancelled_cheque, "status": "pending", "uploaded_at": accepted_at.isoformat()},
+        {"document_type": "shop_act", "document_url": payload.shop_act, "status": "pending", "uploaded_at": accepted_at.isoformat()},
+    ]
+    if payload.society_noc:
+        docs.append({"document_type": "society_noc", "document_url": payload.society_noc, "status": "pending", "uploaded_at": accepted_at.isoformat()})
+    if payload.gst_certificate:
+        docs.append({"document_type": "gst_certificate", "document_url": payload.gst_certificate, "status": "pending", "uploaded_at": accepted_at.isoformat()})
+    if payload.gst_number:
+        docs.append({"document_type": "gst_number", "document_url": payload.gst_number, "status": "pending", "uploaded_at": accepted_at.isoformat()})
+        
+    await db.users.update_one(
+        {"user_id": owner_id},
+        {
+            "$set": {
+                "kyc_status": "pending",
+                "kyc_documents": docs,
+                "agreement_owner_name": payload.agreement_owner_name,
+                "agreement_owner_address": payload.agreement_owner_address,
+                "agreement_signature": payload.agreement_signature,
+                "agreement_signed_at": accepted_at.isoformat(),
+                "verification_terms_accepted": True,
+                "verification_terms_accepted_at": accepted_at.isoformat(),
+                "verification_terms_version": payload.terms_version or "host-verification",
+                "updated_at": accepted_at
+            }
+        }
+    )
+    
+    # Notify admins
+    try:
+        from services.notification_service import NotificationService
+        from models.notification import NotificationType, NotificationChannel
+        
+        admins_cursor = db.users.find({"role": "admin"})
+        admins = await admins_cursor.to_list(length=100)
+        
+        notification_service = NotificationService(db)
+        for admin in admins:
+            await notification_service.send_notification(
+                user_id=admin["user_id"],
+                notification_type=NotificationType.VERIFICATION_SUBMITTED,
+                channels=[NotificationChannel.IN_APP],
+                title="New Host Document Verification Request",
+                message=f"Host {owner.get('full_name', 'Unknown')} has submitted documents via broker {current_user.get('full_name', 'Unknown')}.",
+                data={
+                    "host_id": owner_id,
+                    "host_name": owner.get("full_name"),
+                    "request_type": "host_verification"
+                }
+            )
+    except Exception as n_err:
+        logger.warning(f"Failed to notify admins of host verification: {n_err}")
+        
+    return {"message": "Verification documents submitted successfully"}
+

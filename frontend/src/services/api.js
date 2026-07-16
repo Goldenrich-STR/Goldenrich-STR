@@ -498,6 +498,18 @@ export const accountAPI = {
     apiClient.delete(`/host/kyc/documents/draft/${documentType}`),
   saveDraftAgreement: (payload) =>
     apiClient.patch('/host/kyc/agreement/draft', payload),
+
+  // Broker-Owner KYC Management
+  getOwnerKYC: (ownerId) =>
+    apiClient.get(`/broker/owner/${ownerId}/kyc`),
+  saveOwnerDraftDocument: (ownerId, payload) =>
+    apiClient.patch(`/broker/owner/${ownerId}/kyc/documents/draft`, payload),
+  deleteOwnerRejectedDraftDocument: (ownerId, documentType) =>
+    apiClient.delete(`/broker/owner/${ownerId}/kyc/documents/draft/${documentType}`),
+  saveOwnerDraftAgreement: (ownerId, payload) =>
+    apiClient.patch(`/broker/owner/${ownerId}/kyc/agreement/draft`, payload),
+  submitOwnerVerification: (ownerId, payload) =>
+    apiClient.post(`/broker/owner/${ownerId}/submit-verification`, payload),
 };
 
 // Reviews & Ratings — Phase 18
