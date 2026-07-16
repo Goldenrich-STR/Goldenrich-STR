@@ -1908,76 +1908,27 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Role</label>
-                  <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
-                    <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
-                      <Shield className="w-5 h-5" />
-                    </div>
-                    <select 
-                      className="flex-1 px-4 py-3 outline-none text-charcoal font-bold bg-transparent w-full text-xs uppercase tracking-wider appearance-none cursor-pointer pr-10"
-                      value={newUser.role}
-                      onChange={e => setNewUser({...newUser, role: e.target.value})}
-                    >
-                      <option value="guest">Guest</option>
-                      <option value="host">Host</option>
-                      <option value="broker">Broker</option>
-                      <option value="employee">Employee</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                    <div className="absolute right-4 pointer-events-none text-charcoal-muted">
-                      <ChevronRight className="w-4 h-4 transform rotate-90" />
-                    </div>
+              <div>
+                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Role</label>
+                <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                  <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <select 
+                    className="flex-1 px-4 py-3 outline-none text-charcoal font-bold bg-transparent w-full text-xs uppercase tracking-wider appearance-none cursor-pointer pr-10"
+                    value={newUser.role}
+                    onChange={e => setNewUser({...newUser, role: e.target.value})}
+                  >
+                    <option value="guest">Guest</option>
+                    <option value="host">Host</option>
+                    <option value="broker">Broker</option>
+                    <option value="employee">Employee</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <div className="absolute right-4 pointer-events-none text-charcoal-muted">
+                    <ChevronRight className="w-4 h-4 transform rotate-90" />
                   </div>
                 </div>
-                <div>
-                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">City</label>
-                  <div className={`relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all ${isCodeLocked ? 'opacity-50 bg-gray-50/50' : ''}`}>
-                    <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
-                      <MapPin className="w-5 h-5" />
-                    </div>
-                    <input 
-                      required={!isCodeLocked}
-                      disabled={isCodeLocked}
-                      placeholder="e.g. Mumbai"
-                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm disabled:cursor-not-allowed"
-                      value={newUser.city}
-                      onChange={e => setNewUser({...newUser, city: e.target.value})}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className={newUser.role === 'admin' ? "col-span-2" : ""}>
-                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">State</label>
-                  <div className={`relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all ${isCodeLocked ? 'opacity-50 bg-gray-50/50' : ''}`}>
-                    <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
-                      <Building2 className="w-5 h-5" />
-                    </div>
-                    <input 
-                      required={!isCodeLocked}
-                      disabled={isCodeLocked}
-                      placeholder="e.g. Maharashtra"
-                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm disabled:cursor-not-allowed"
-                      value={newUser.state}
-                      onChange={e => setNewUser({...newUser, state: e.target.value})}
-                    />
-                  </div>
-                </div>
-                {newUser.role !== 'admin' && (
-                  <div>
-                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Birthdate</label>
-                    <PremiumDatePicker 
-                      value={newUser.birthdate}
-                      onChange={dateStr => setNewUser({...newUser, birthdate: dateStr})}
-                      required={newUser.role !== 'admin' && !isCodeLocked}
-                      disabled={isCodeLocked}
-                      leftIcon={<Calendar className="w-5 h-5" />}
-                    />
-                  </div>
-                )}
               </div>
 
               {(newUser.role === 'broker' || newUser.role === 'employee') && (
@@ -2261,83 +2212,28 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   </div>
                 </div>
 
-                {/* Role & City */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Role</label>
-                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
-                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
-                        <User className="w-5 h-5" />
-                      </div>
-                      <select 
-                        className="flex-1 px-4 py-3 outline-none text-charcoal font-bold bg-transparent w-full text-xs uppercase tracking-wider appearance-none cursor-pointer pr-10"
-                        value={editUser.role || 'guest'}
-                        onChange={e => setEditUser({...editUser, role: e.target.value})}
-                      >
-                        <option value="guest">Guest</option>
-                        <option value="host">Host</option>
-                        <option value="broker">Broker</option>
-                        <option value="employee">Employee</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                      <div className="absolute right-4 pointer-events-none text-charcoal-muted">
-                        <ChevronRight className="w-4 h-4 transform rotate-90" />
-                      </div>
+                {/* Role */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Role</label>
+                  <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
+                    <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <select 
+                      className="flex-1 px-4 py-3 outline-none text-charcoal font-bold bg-transparent w-full text-xs uppercase tracking-wider appearance-none cursor-pointer pr-10"
+                      value={editUser.role || 'guest'}
+                      onChange={e => setEditUser({...editUser, role: e.target.value})}
+                    >
+                      <option value="guest">Guest</option>
+                      <option value="host">Host</option>
+                      <option value="broker">Broker</option>
+                      <option value="employee">Employee</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <div className="absolute right-4 pointer-events-none text-charcoal-muted">
+                      <ChevronRight className="w-4 h-4 transform rotate-90" />
                     </div>
                   </div>
-
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">City</label>
-                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
-                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
-                        <MapPin className="w-5 h-5" />
-                      </div>
-                      <input 
-                        required
-                        placeholder="e.g. Mumbai"
-                        className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm"
-                        value={editUser.city || ''}
-                        onChange={e => setEditUser({...editUser, city: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* State & Birthdate */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">State</label>
-                    <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
-                      <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70">
-                        <Building2 className="w-5 h-5" />
-                      </div>
-                      <select 
-                        required
-                        className="flex-1 px-4 py-3 outline-none text-[#1A1A1A] font-semibold bg-transparent w-full text-sm appearance-none cursor-pointer pr-10"
-                        value={editUser.state || ''}
-                        onChange={e => setEditUser({...editUser, state: e.target.value})}
-                      >
-                        <option value="" disabled>Select State</option>
-                        {INDIAN_STATES.map(st => (
-                          <option key={st} value={st}>{st}</option>
-                        ))}
-                      </select>
-                      <div className="absolute right-4 pointer-events-none text-charcoal-muted">
-                        <ChevronRight className="w-4 h-4 transform rotate-90" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {editUser.role !== 'admin' && (
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block">Birthdate</label>
-                      <PremiumDatePicker 
-                        value={editUser.birthdate ? editUser.birthdate.substring(0, 10) : ''}
-                        onChange={dateStr => setEditUser({...editUser, birthdate: dateStr})}
-                        required={editUser.role !== 'admin'}
-                      />
-                    </div>
-                  )}
                 </div>
 
                 {/* Franchise & Branch (Conditional) */}
