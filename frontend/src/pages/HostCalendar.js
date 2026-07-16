@@ -322,26 +322,33 @@ const HostCalendar = () => {
   return (
     <div className="min-h-screen bg-stone">
       <header className="header-glass px-4 md:px-6 py-4" data-testid="host-calendar-header">
-        <div className="w-full flex justify-between items-center">
-          <div 
-            className="flex items-center space-x-3 cursor-pointer group" 
-            onClick={() => navigate('/')}
-          >
-            <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
-          </div>
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/host/dashboard')}
-              className="text-charcoal-light hover:text-terracotta flex items-center space-x-1"
-              data-testid="back-to-dashboard-btn"
+        <div className="w-full flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+          <div className="flex items-center justify-between w-full sm:w-auto">
+            <div 
+              className="flex items-center space-x-3 cursor-pointer group" 
+              onClick={() => navigate('/')}
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Dashboard</span>
-            </button>
-            <span className="text-charcoal-light">Welcome, {user?.full_name}</span>
-            <button onClick={logout} className="text-terracotta hover:underline">
+              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
+            </div>
+            <button onClick={logout} className="text-terracotta hover:underline text-xs font-bold uppercase tracking-wider sm:hidden">
               Logout
             </button>
+          </div>
+          <div className="flex items-center justify-between sm:justify-end space-x-4 w-full sm:w-auto border-t border-sand-100 sm:border-none pt-2 sm:pt-0">
+            <button
+              onClick={() => navigate('/host/dashboard')}
+              className="text-charcoal-light hover:text-terracotta flex items-center space-x-1 text-xs sm:text-sm font-bold uppercase tracking-wider"
+              data-testid="back-to-dashboard-btn"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Dashboard</span>
+            </button>
+            <div className="flex items-center space-x-4">
+              <span className="text-charcoal-light text-xs font-medium">Welcome, {user?.full_name?.split(' ')[0]}</span>
+              <button onClick={logout} className="text-terracotta hover:underline text-xs font-bold uppercase tracking-wider hidden sm:block">
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>

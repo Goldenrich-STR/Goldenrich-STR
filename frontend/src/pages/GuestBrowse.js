@@ -1121,7 +1121,7 @@ const GuestBrowse = () => {
                 className={
                   viewMode === VIEW_MODES.SPLIT
                     ? 'overflow-y-auto pr-4 space-y-6 custom-scrollbar'
-                    : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 animate-slide-up'
+                    : 'flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar scroll-smooth sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-6 animate-slide-up w-full'
                 }
               >
                 {displayedProperties.map((p, idx) => (
@@ -1213,13 +1213,13 @@ const GuestBrowse = () => {
 
 const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlisted, onWishlistToggle, onShare }) => (
   <div
-    className={`card-premium group cursor-pointer ${compact ? 'flex flex-col sm:flex-row min-h-[240px]' : 'flex flex-col'} transition-all duration-500`}
+    className={`card-premium group cursor-pointer shrink-0 snap-start ${compact ? 'w-full sm:w-auto flex flex-col sm:flex-row min-h-[240px]' : 'w-[280px] sm:w-auto flex flex-col'} transition-all duration-500`}
     onClick={onClick}
     onMouseEnter={() => onHover && onHover(property.property_id)}
     onMouseLeave={() => onHover && onHover(null)}
     style={style}
   >
-    <div className={`relative overflow-hidden ${compact ? 'w-full sm:w-1/3 rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none h-48 sm:h-auto' : 'h-72 rounded-t-2xl'}`}>
+    <div className={`relative overflow-hidden ${compact ? 'w-full sm:w-1/3 rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none h-48 sm:h-auto' : 'h-48 sm:h-72 rounded-t-2xl'}`}>
       <img
         src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?w=800'}
         alt={property.title}
