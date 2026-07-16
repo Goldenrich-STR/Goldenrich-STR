@@ -46,21 +46,21 @@ const AdminAccount = () => {
   return (
     <div className="min-h-screen bg-stone" data-testid="admin-account-page">
       <header className="header-glass px-4 md:px-6 py-4">
-        <div className="w-full flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+        <div className="w-full flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
             <button
               onClick={() => navigate('/admin/dashboard')}
-              className="text-terracotta hover:underline flex items-center space-x-1"
+              className="text-terracotta hover:underline flex items-center space-x-1 text-xs sm:text-sm font-bold uppercase tracking-wider shrink-0"
               data-testid="back-to-admin-dashboard"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back</span>
             </button>
-            <h1 className="text-xl font-bold text-charcoal">X-Space360 Admin Account</h1>
+            <h1 className="text-sm sm:text-lg font-bold text-charcoal truncate">Admin Account</h1>
           </div>
           <button
             onClick={logout}
-            className="text-terracotta hover:underline"
+            className="text-terracotta hover:underline text-xs sm:text-sm font-bold uppercase tracking-wider shrink-0"
             data-testid="logout-btn"
           >
             Logout
@@ -149,12 +149,12 @@ const OverviewTab = () => {
 
   return (
     <div className="space-y-6" data-testid="overview-tab">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => (
-          <div key={c.label} className="dashboard-card border border-gray-100 shadow-sm hover:shadow transition bg-white p-5 rounded-2xl" data-testid={c.testid}>
+          <div key={c.label} className="dashboard-card border border-gray-100 shadow-sm hover:shadow transition bg-white p-4 sm:p-5 rounded-2xl" data-testid={c.testid}>
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs uppercase tracking-wider text-charcoal-muted font-bold">{c.label}</p>
+                <p className="text-xs uppercase tracking-wider text-charcoal-muted font-bold leading-tight">{c.label}</p>
                 {c.paidValue && (
                   <p className="text-xs text-charcoal-light mt-1.5 flex items-center">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5"></span>
@@ -167,11 +167,11 @@ const OverviewTab = () => {
                     Pending: <span className="font-semibold text-yellow-700 ml-1">{c.pendingValue}</span>
                   </p>
                 )}
-                <p className="text-2xl font-bold tracking-tight text-charcoal mt-2">{c.value}</p>
+                <p className="text-lg sm:text-2xl font-bold tracking-tight text-charcoal mt-2">{c.value}</p>
                 {c.sub && <p className="text-xs text-charcoal-light mt-1.5 font-medium">{c.sub}</p>}
               </div>
-              <div className="p-2.5 rounded-xl bg-stone border border-sand-100">
-                <c.icon className="w-5 h-5 text-terracotta" />
+              <div className="p-2 rounded-xl bg-stone border border-sand-100 shrink-0">
+                <c.icon className="w-4 h-4 sm:w-5 sm:h-5 text-terracotta" />
               </div>
             </div>
           </div>
@@ -181,7 +181,7 @@ const OverviewTab = () => {
       <div className="dashboard-card" data-testid="mrr-chart-card">
         <h3 className="text-lg font-bold text-charcoal mb-4">Revenue trend (last 6 months)</h3>
         <div style={{ width: '100%', height: 260 }}>
-          <ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chart} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E7E3D7" />
               <XAxis dataKey="label" stroke="#7D7A6F" fontSize={12} />

@@ -721,16 +721,39 @@ const HostDashboard = () => {
   return (
     <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
       <header className="glass px-4 md:px-8 lg:px-12 py-4 sticky top-0 z-50">
-        <div className="w-full flex justify-between items-center gap-2">
-          <div 
-            className="flex items-center space-x-3 cursor-pointer group" 
-            onClick={() => navigate('/')}
-          >
-            <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain" />
+        <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="w-full flex justify-between items-center">
+            <div 
+              className="flex items-center space-x-3 cursor-pointer group" 
+              onClick={() => navigate('/')}
+            >
+              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain" />
+            </div>
+            <div className="flex items-center space-x-3 md:hidden">
+              <NotificationBell />
+              <div 
+                onClick={() => setShowProfileModal(true)}
+                className="w-7 h-7 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold text-white cursor-pointer"
+              >
+                 {user?.full_name?.[0]}
+              </div>
+              <button 
+                onClick={() => {
+                  navigate('/');
+                  setTimeout(() => {
+                    logout();
+                  }, 50);
+                }} 
+                className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-wider hover:underline cursor-pointer"
+              >
+                Sign Out
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 md:gap-6">
-            <nav className="hidden md:flex items-center space-x-6">
+          <div className="flex flex-row items-center gap-3 w-full md:w-auto border-t border-sand-100 md:border-none pt-2 md:pt-0 overflow-x-auto no-scrollbar">
+            <nav className="flex items-center space-x-6 shrink-0">
                {[
+                 { label: 'DASHBOARD', path: '/host/dashboard' },
                  { label: 'CALENDAR', path: '/host/calendar' },
                  { label: 'PAYOUTS', path: '/host/payouts' },
                  { label: 'BOOKINGS', path: '/host/bookings' }
@@ -738,14 +761,18 @@ const HostDashboard = () => {
                  <button
                    key={item.label}
                    onClick={() => navigate(item.path)}
-                   className="text-[10px] font-bold tracking-tight text-charcoal-muted hover:text-terracotta tracking-[0.2em] transition-colors"
+                   className={`text-[10px] font-bold tracking-tight tracking-[0.2em] transition-colors shrink-0 ${
+                     item.path === '/host/dashboard' 
+                       ? 'text-terracotta border-b-2 border-terracotta pb-0.5' 
+                       : 'text-charcoal-muted hover:text-terracotta'
+                   }`}
                  >
                    {item.label}
                  </button>
                ))}
             </nav>
             <div className="h-6 w-px bg-sand-200 hidden md:block"></div>
-            <div className="flex items-center gap-2 md:gap-4">
+            <div className="hidden md:flex items-center gap-2 md:gap-4">
               <NotificationBell />
               <div 
                 onClick={() => setShowProfileModal(true)}
@@ -754,7 +781,7 @@ const HostDashboard = () => {
                  <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
                     {user?.full_name?.[0]}
                  </div>
-                 <span className="hidden sm:block text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">{user?.full_name?.split(' ')[0]}</span>
+                 <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">{user?.full_name?.split(' ')[0]}</span>
               </div>
               <button 
                 onClick={() => {
@@ -831,7 +858,7 @@ const HostDashboard = () => {
         )}
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-12 animate-slide-up" data-testid="stats-grid">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 mb-12 animate-slide-up" data-testid="stats-grid">
           {stats.map((stat, idx) => {
             const isClickable = !!stat.statusFilter;
             const isActive = isClickable && filterStatus === stat.statusFilter;
@@ -844,7 +871,7 @@ const HostDashboard = () => {
                     setCurrentPage(1);
                   }
                 }}
-                className={`bg-white rounded-3xl p-8 border shadow-premium group transition-all duration-500 ${
+                className={`bg-white rounded-3xl p-4 sm:p-8 border shadow-premium group transition-all duration-500 ${
                   isClickable 
                     ? 'cursor-pointer hover:border-terracotta hover:scale-[1.02]' 
                     : ''

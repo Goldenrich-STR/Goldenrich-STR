@@ -63,22 +63,22 @@ const EmployeeDashboard = () => {
     <div className="min-h-screen bg-stone">
       {/* Header */}
       <header className="header-glass px-4 md:px-6 lg:px-12 py-4" data-testid="employee-header">
-        <div className="w-full flex justify-between items-center">
+        <div className="w-full flex justify-between items-center flex-wrap gap-2">
           <div 
             className="flex items-center space-x-3 cursor-pointer group"
             onClick={() => navigate('/')}
           >
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <div 
               onClick={() => setShowProfileModal(true)}
-              className="flex items-center space-x-3 px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
+              className="flex items-center space-x-1.5 sm:space-x-3 px-2 sm:px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
             >
-               <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
+               <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
                   {user?.full_name?.[0]}
                </div>
-               <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">RM: {user?.full_name?.split(' ')[0]}</span>
+               <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest hidden xs:block">RM: {user?.full_name?.split(' ')[0]}</span>
             </div>
             <NotificationBell />
             <button
@@ -88,11 +88,11 @@ const EmployeeDashboard = () => {
                   logout();
                 }, 50);
               }}
-              className="flex items-center space-x-2 text-terracotta hover:underline"
+              className="flex items-center space-x-1 text-terracotta hover:underline text-xs font-bold"
               data-testid="logout-btn"
             >
-              <LogOut className="w-4 h-4" />
-              <span>Logout</span>
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Logout</span>
             </button>
           </div>
         </div>
@@ -139,7 +139,7 @@ const EmployeeDashboard = () => {
             ) : (
               <>
                 {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" data-testid="stats-grid">
+                <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8" data-testid="stats-grid">
                   {statCards.map((stat, idx) => (
                     <div key={idx} className="dashboard-card" data-testid={`stat-card-${idx}`}>
                       <stat.icon className={`w-8 h-8 text-${stat.color} mb-3`} />

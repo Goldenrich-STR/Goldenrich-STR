@@ -1760,7 +1760,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
       {/* Add User Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-premium animate-slide-up overflow-y-auto max-h-[92vh]">
+          <div className="bg-white rounded-3xl p-4 sm:p-8 max-w-2xl w-full shadow-premium animate-slide-up overflow-y-auto max-h-[92vh]">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
               <div className="flex items-center space-x-3.5">
                 <div className="w-12 h-12 rounded-full bg-terracotta/5 border border-terracotta/10 flex items-center justify-center flex-shrink-0">

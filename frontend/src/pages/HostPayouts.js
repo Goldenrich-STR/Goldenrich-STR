@@ -71,15 +71,33 @@ const HostPayouts = () => {
     <div className="min-h-screen bg-stone" data-testid="host-payouts-page">
       {/* Header matching Host Central branding */}
       <header className="header-glass sticky top-0 z-50 px-4 md:px-6 py-4">
-        <div className="w-full flex justify-between items-center gap-2">
-          <div 
-            className="flex items-center space-x-3 cursor-pointer group" 
-            onClick={() => navigate('/')}
-          >
-            <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
+        <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center justify-between w-full md:w-auto">
+            <div 
+              className="flex items-center space-x-3 cursor-pointer group" 
+              onClick={() => navigate('/')}
+            >
+              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
+            </div>
+            <div className="flex items-center space-x-3 md:hidden">
+              <span className="text-xs font-bold text-charcoal-muted">
+                {user?.full_name?.split(' ')[0]}
+              </span>
+              <button 
+                onClick={() => {
+                  navigate('/');
+                  setTimeout(() => {
+                    logout();
+                  }, 50);
+                }} 
+                className="text-xs font-bold tracking-tight text-terracotta hover:underline uppercase cursor-pointer"
+              >
+                Logout
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 md:gap-6">
-            <nav className="hidden md:flex items-center space-x-6">
+          <div className="flex flex-row items-center gap-3 w-full md:w-auto border-t border-sand-100 md:border-none pt-2 md:pt-0 overflow-x-auto no-scrollbar">
+            <nav className="flex items-center space-x-6 shrink-0">
                {[
                  { label: 'DASHBOARD', path: '/host/dashboard' },
                  { label: 'CALENDAR', path: '/host/calendar' },
@@ -89,9 +107,9 @@ const HostPayouts = () => {
                  <button
                    key={item.label}
                    onClick={() => navigate(item.path)}
-                   className={`text-[10px] font-bold tracking-tight tracking-[0.2em] transition-colors ${
+                   className={`text-[10px] font-bold tracking-tight tracking-[0.2em] transition-colors shrink-0 ${
                      item.path === '/host/payouts' 
-                       ? 'text-terracotta border-b border-terracotta pb-0.5' 
+                       ? 'text-terracotta border-b-2 border-terracotta pb-0.5' 
                        : 'text-charcoal-muted hover:text-terracotta'
                    }`}
                  >
@@ -100,8 +118,8 @@ const HostPayouts = () => {
                ))}
             </nav>
             <div className="h-6 w-px bg-sand-200 hidden md:block"></div>
-            <div className="flex items-center gap-2 md:gap-4">
-              <span className="text-xs font-bold text-charcoal-muted hidden sm:inline">
+            <div className="hidden md:flex items-center gap-2 md:gap-4">
+              <span className="text-xs font-bold text-charcoal-muted">
                 Welcome, {user?.full_name?.split(' ')[0]}
               </span>
               <button 
@@ -347,68 +365,114 @@ const HostPayouts = () => {
               </p>
             </div>
           )}
-
           {!loading && payouts.length > 0 && (
-            <div className="overflow-x-auto rounded-2xl border border-gray-100">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-stone/80 border-b border-gray-100 text-left text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-muted">
-                    <th className="py-4 px-4">Eligible since</th>
-                    <th className="py-4 px-4">Property</th>
-                    <th className="py-4 px-4 text-right">Gross</th>
-                    <th className="py-4 px-4 text-right">Platform fee</th>
-                    <th className="py-4 px-4 text-right">Net to you</th>
-                    <th className="py-4 px-4 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-sand-150">
-                  {payouts.map((p) => (
-                    <tr
-                      key={p.payout_id}
-                      className="hover:bg-stone/30 transition-colors"
-                      data-testid={`my-payout-${p.payout_id}`}
-                    >
-                      <td className="py-4 px-4 font-semibold text-charcoal text-xs">
+            <>
+              {/* Mobile Card List View */}
+              <div className="rounded-2xl border border-gray-100 divide-y divide-sand-150 sm:hidden bg-white">
+                {payouts.map((p) => (
+                  <div key={p.payout_id} className="p-4 flex flex-col gap-3" data-testid={`my-payout-mobile-${p.payout_id}`}>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-charcoal-muted">
                         {new Date(p.eligible_at).toLocaleDateString('en-IN', {
                           day: '2-digit',
                           month: 'short',
                           year: 'numeric'
                         })}
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="font-bold text-charcoal">{p.property?.title || p.property_id}</div>
-                        <div className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-terracotta mt-0.5">{p.property?.city}</div>
-                      </td>
-                      <td className="py-4 px-4 text-right font-semibold text-charcoal-muted text-xs">
-                        {fmtINR(p.gross_amount)}
-                      </td>
-                      <td className="py-4 px-4 text-right font-semibold text-charcoal-muted text-xs">
-                        {fmtINR(p.platform_fee)}
-                      </td>
-                      <td className="py-4 px-4 text-right font-bold tracking-tight text-emerald-600 text-sm">
-                        {fmtINR(p.net_amount)}
-                      </td>
-                      <td className="py-4 px-4 text-center">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase tracking-wider border ${
-                          p.status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
-                          p.status === 'eligible' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
-                          p.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                          p.status === 'needs_destination' ? 'bg-orange-50 text-orange-700 border-orange-200' :
-                          'bg-red-50 text-red-700 border-red-200'
-                        }`}>
-                          {p.status === 'paid' && <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
-                          {p.status === 'eligible' && <Clock className="w-3.5 h-3.5 mr-1" />}
-                          {p.status === 'failed' && <XCircle className="w-3.5 h-3.5 mr-1" />}
-                          {p.status === 'needs_destination' && <AlertCircle className="w-3.5 h-3.5 mr-1" />}
-                          {p.status === 'processing' && <Clock className="w-3.5 h-3.5 mr-1" />}
-                          <span>{p.status}</span>
-                        </span>
-                      </td>
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-wider border ${
+                        p.status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
+                        p.status === 'eligible' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                        p.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                        p.status === 'needs_destination' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                        'bg-red-50 text-red-700 border-red-200'
+                      }`}>
+                        {p.status}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="font-bold text-charcoal text-sm leading-tight">{p.property?.title || p.property_id}</div>
+                      <div className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-terracotta mt-0.5">{p.property?.city}</div>
+                    </div>
+                    <div className="flex justify-between text-xs pt-2 border-t border-sand-100 gap-2">
+                      <div>
+                        <span className="text-charcoal-light block text-[9px] uppercase font-bold tracking-wider">Gross</span>
+                        <span className="font-semibold text-charcoal">{fmtINR(p.gross_amount)}</span>
+                      </div>
+                      <div>
+                        <span className="text-charcoal-light block text-[9px] uppercase font-bold tracking-wider">Fee</span>
+                        <span className="font-semibold text-charcoal">{fmtINR(p.platform_fee)}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-charcoal-light block text-[9px] uppercase font-bold tracking-wider">Net Payout</span>
+                        <span className="font-bold text-emerald-600 text-sm">{fmtINR(p.net_amount)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden sm:block overflow-x-auto rounded-2xl border border-gray-100">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-stone/80 border-b border-gray-100 text-left text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-muted">
+                      <th className="py-4 px-4">Eligible since</th>
+                      <th className="py-4 px-4">Property</th>
+                      <th className="py-4 px-4 text-right">Gross</th>
+                      <th className="py-4 px-4 text-right">Platform fee</th>
+                      <th className="py-4 px-4 text-right">Net to you</th>
+                      <th className="py-4 px-4 text-center">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-sand-150">
+                    {payouts.map((p) => (
+                      <tr
+                        key={p.payout_id}
+                        className="hover:bg-stone/30 transition-colors"
+                        data-testid={`my-payout-${p.payout_id}`}
+                      >
+                        <td className="py-4 px-4 font-semibold text-charcoal text-xs">
+                          {new Date(p.eligible_at).toLocaleDateString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="font-bold text-charcoal">{p.property?.title || p.property_id}</div>
+                          <div className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-terracotta mt-0.5">{p.property?.city}</div>
+                        </td>
+                        <td className="py-4 px-4 text-right font-semibold text-charcoal-muted text-xs">
+                          {fmtINR(p.gross_amount)}
+                        </td>
+                        <td className="py-4 px-4 text-right font-semibold text-charcoal-muted text-xs">
+                          {fmtINR(p.platform_fee)}
+                        </td>
+                        <td className="py-4 px-4 text-right font-bold tracking-tight text-emerald-600 text-sm">
+                          {fmtINR(p.net_amount)}
+                        </td>
+                        <td className="py-4 px-4 text-center">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase tracking-wider border ${
+                            p.status === 'paid' ? 'bg-green-50 text-green-700 border-green-200' :
+                            p.status === 'eligible' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                            p.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                            p.status === 'needs_destination' ? 'bg-orange-50 text-orange-700 border-orange-200' :
+                            'bg-red-50 text-red-700 border-red-200'
+                          }`}>
+                            {p.status === 'paid' && <CheckCircle2 className="w-3.5 h-3.5 mr-1" />}
+                            {p.status === 'eligible' && <Clock className="w-3.5 h-3.5 mr-1" />}
+                            {p.status === 'failed' && <XCircle className="w-3.5 h-3.5 mr-1" />}
+                            {p.status === 'needs_destination' && <AlertCircle className="w-3.5 h-3.5 mr-1" />}
+                            {p.status === 'processing' && <Clock className="w-3.5 h-3.5 mr-1" />}
+                            <span>{p.status}</span>
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

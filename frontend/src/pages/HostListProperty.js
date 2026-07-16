@@ -2790,18 +2790,18 @@ const HostListProperty = () => {
 };
 
 const Header = ({ user, logout, navigate }) => (
-  <header className="header-glass px-6 py-4">
-    <div className="max-w-4xl mx-auto flex justify-between items-center">
+  <header className="header-glass px-4 py-4 animate-fade-in">
+    <div className="max-w-4xl mx-auto flex justify-between items-center flex-wrap gap-2">
       <div className="flex items-center space-x-2">
-        <Building2 className="w-6 h-6 text-terracotta" />
-        <span className="text-xl font-bold text-charcoal">X-Space360</span>
+        <Building2 className="w-5 h-5 text-terracotta" />
+        <span className="text-lg font-bold text-charcoal tracking-tight">X-Space360</span>
       </div>
-      <div className="flex items-center space-x-4">
-        <button onClick={() => navigate('/host/dashboard')} className="text-charcoal-light hover:text-terracotta">
+      <div className="flex items-center space-x-3 text-xs sm:text-sm font-semibold">
+        <button onClick={() => navigate('/host/dashboard')} className="text-charcoal-light hover:text-terracotta font-bold uppercase tracking-wider">
           Dashboard
         </button>
-        <span className="text-charcoal-light hidden sm:inline">{user?.full_name}</span>
-        <button onClick={logout} className="text-terracotta hover:underline">Logout</button>
+        <span className="text-charcoal-light hidden xs:inline">{user?.full_name?.split(' ')[0]}</span>
+        <button onClick={logout} className="text-terracotta hover:underline font-bold uppercase tracking-wider">Logout</button>
       </div>
     </div>
   </header>

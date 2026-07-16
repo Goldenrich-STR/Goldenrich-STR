@@ -224,15 +224,33 @@ const HostBookings = () => {
     <div className="min-h-screen bg-stone">
       {/* Header matching HostDashboard.js */}
       <header className="header-glass sticky top-0 z-50 px-4 md:px-6 py-4">
-        <div className="w-full flex justify-between items-center gap-2">
-          <div 
-            className="flex items-center space-x-3 cursor-pointer group" 
-            onClick={() => navigate('/')}
-          >
-            <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
+        <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center justify-between w-full md:w-auto">
+            <div 
+              className="flex items-center space-x-3 cursor-pointer group" 
+              onClick={() => navigate('/')}
+            >
+              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
+            </div>
+            <div className="flex items-center space-x-3 md:hidden">
+              <span className="text-xs font-bold text-charcoal-muted">
+                {user?.full_name?.split(' ')[0]}
+              </span>
+              <button 
+                onClick={() => {
+                  navigate('/');
+                  setTimeout(() => {
+                    logout();
+                  }, 50);
+                }} 
+                className="text-xs font-bold tracking-tight text-terracotta hover:underline uppercase cursor-pointer"
+              >
+                Logout
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 md:gap-6">
-            <nav className="hidden md:flex items-center space-x-6">
+          <div className="flex flex-row items-center gap-3 w-full md:w-auto border-t border-sand-100 md:border-none pt-2 md:pt-0 overflow-x-auto no-scrollbar">
+            <nav className="flex items-center space-x-6 shrink-0">
                {[
                  { label: 'DASHBOARD', path: '/host/dashboard' },
                  { label: 'CALENDAR', path: '/host/calendar' },
@@ -242,9 +260,9 @@ const HostBookings = () => {
                  <button
                    key={item.label}
                    onClick={() => navigate(item.path)}
-                   className={`text-[10px] font-bold tracking-tight tracking-[0.2em] transition-colors ${
+                   className={`text-[10px] font-bold tracking-tight tracking-[0.2em] transition-colors shrink-0 ${
                      item.path === '/host/bookings' 
-                       ? 'text-terracotta border-b border-terracotta pb-0.5' 
+                       ? 'text-terracotta border-b-2 border-terracotta pb-0.5' 
                        : 'text-charcoal-muted hover:text-terracotta'
                    }`}
                  >
@@ -253,8 +271,8 @@ const HostBookings = () => {
                ))}
             </nav>
             <div className="h-6 w-px bg-sand-200 hidden md:block"></div>
-            <div className="flex items-center gap-2 md:gap-4">
-              <span className="text-xs font-bold text-charcoal-muted hidden sm:inline">
+            <div className="hidden md:flex items-center gap-2 md:gap-4">
+              <span className="text-xs font-bold text-charcoal-muted">
                 Welcome, {user?.full_name?.split(' ')[0]}
               </span>
               <button 
@@ -306,51 +324,51 @@ const HostBookings = () => {
         ) : (
           <>
             {/* Overview Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
-              <div className="dashboard-card p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-10">
+              <div className="dashboard-card p-4 sm:p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
                 <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-light">Active Properties</span>
                 <div className="flex items-baseline justify-between mt-4">
-                  <span className="text-3xl font-bold tracking-tight text-charcoal">{summaryStats.propertiesCount}</span>
-                  <div className="p-2 rounded-xl bg-terracotta/5 text-terracotta">
-                    <Building className="w-5 h-5" />
+                  <span className="text-2xl sm:text-3xl font-bold tracking-tight text-charcoal">{summaryStats.propertiesCount}</span>
+                  <div className="p-2 rounded-xl bg-terracotta/5 text-terracotta shrink-0">
+                    <Building className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </div>
               </div>
-              <div className="dashboard-card p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
+              <div className="dashboard-card p-4 sm:p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
                 <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-light">Total Bookings</span>
                 <div className="flex items-baseline justify-between mt-4">
-                  <span className="text-3xl font-bold tracking-tight text-charcoal">{summaryStats.totalReservations}</span>
-                  <div className="p-2 rounded-xl bg-indigo-500/5 text-indigo-500">
-                    <CalendarDays className="w-5 h-5" />
+                  <span className="text-2xl sm:text-3xl font-bold tracking-tight text-charcoal">{summaryStats.totalReservations}</span>
+                  <div className="p-2 rounded-xl bg-indigo-500/5 text-indigo-500 shrink-0">
+                    <CalendarDays className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </div>
               </div>
-              <div className="dashboard-card p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
+              <div className="dashboard-card p-4 sm:p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
                 <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-light">Confirmed Stays</span>
                 <div className="flex items-baseline justify-between mt-4">
-                  <span className="text-3xl font-bold tracking-tight text-charcoal">{summaryStats.confirmedStays}</span>
-                  <div className="p-2 rounded-xl bg-emerald-500/5 text-emerald-500">
-                    <CheckCircle2 className="w-5 h-5" />
+                  <span className="text-2xl sm:text-3xl font-bold tracking-tight text-charcoal">{summaryStats.confirmedStays}</span>
+                  <div className="p-2 rounded-xl bg-emerald-500/5 text-emerald-500 shrink-0">
+                    <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </div>
               </div>
-              <div className="dashboard-card p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
+              <div className="dashboard-card p-4 sm:p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
                 <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-light">Pending Payments</span>
                 <div className="flex items-baseline justify-between mt-4">
-                  <span className="text-3xl font-bold tracking-tight text-charcoal">{summaryStats.pendingPayment}</span>
-                  <div className="p-2 rounded-xl bg-amber-500/5 text-amber-500">
-                    <Clock className="w-5 h-5 animate-pulse" />
+                  <span className="text-2xl sm:text-3xl font-bold tracking-tight text-charcoal">{summaryStats.pendingPayment}</span>
+                  <div className="p-2 rounded-xl bg-amber-500/5 text-amber-500 shrink-0">
+                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
                   </div>
                 </div>
               </div>
-              <div className="dashboard-card p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between">
+              <div className="dashboard-card p-4 sm:p-6 bg-white rounded-3xl border border-gray-100/80 shadow-sm flex flex-col justify-between col-span-2 sm:col-span-1">
                 <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal-light">Gross Booking Value</span>
                 <div className="flex items-baseline justify-between mt-4">
-                  <span className="text-xl sm:text-2xl font-bold tracking-tight text-charcoal">
+                  <span className="text-lg sm:text-2xl font-bold tracking-tight text-charcoal">
                     ₹{Math.round(summaryStats.totalRevenue).toLocaleString('en-IN')}
                   </span>
-                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600">
-                    <Wallet className="w-5 h-5" />
+                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 shrink-0">
+                    <Wallet className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                 </div>
               </div>

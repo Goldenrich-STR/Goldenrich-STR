@@ -745,7 +745,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                           </div>
 
                           <div className="space-y-4">
-                             <div className="flex justify-center gap-3">
+                             <div className="flex justify-center gap-1.5 sm:gap-3">
                                 {Array.from({ length: 6 }).map((_, index) => (
                                   <input
                                     key={index}
@@ -757,7 +757,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                     onChange={(e) => handleOtpBoxChange(index, e.target.value)}
                                     onKeyDown={(e) => handleOtpBoxKeyDown(index, e)}
                                     onFocus={(e) => e.target.select()}
-                                    className="w-12 h-14 sm:w-14 sm:h-16 text-center text-2xl font-black bg-white rounded-2xl border-2 border-gray-100 focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal shadow-inner"
+                                    className="w-8 h-11 xs:w-10 xs:h-13 sm:w-14 sm:h-16 text-center text-lg sm:text-2xl font-black bg-white rounded-xl sm:rounded-2xl border-2 border-gray-100 focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal shadow-inner"
                                     maxLength={6}
                                   />
                                 ))}
