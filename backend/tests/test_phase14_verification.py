@@ -22,7 +22,8 @@ CRED = {
 
 def _login(role):
     email, pw = CRED[role]
-    r = requests.post(f"{API}/auth/login", json={"email": email, "password": pw}, timeout=15)
+    path = "admin-login" if role == "admin" else "login"
+    r = requests.post(f"{API}/auth/{path}", json={"email": email, "password": pw}, timeout=15)
     assert r.status_code == 200, f"login {role}: {r.status_code} {r.text}"
     data = r.json()
     return data["access_token"], data["user"]["user_id"]
@@ -75,8 +76,12 @@ def db():
 def test_full_happy_path(tokens, db):
     host_tok, host_id = tokens["host"]
     broker_tok, broker_id = tokens["broker"]
-    emp_tok, _ = tokens["employee"]
+    emp_tok, emp_id = tokens["employee"]
     admin_tok, _ = tokens["admin"]
+
+    # Assign host and broker to employee RM
+    db.users.update_one({"user_id": host_id}, {"$set": {"rm_id": emp_id}})
+    db.users.update_one({"user_id": broker_id}, {"$set": {"rm_id": emp_id}})
 
     pid = _make_property(host_tok, "happy")
     try:
@@ -151,9 +156,13 @@ def test_full_happy_path(tokens, db):
 
 # ============== RM rejection ==============
 def test_rm_rejection_branch(tokens, db):
-    host_tok, _ = tokens["host"]
-    broker_tok, _ = tokens["broker"]
-    emp_tok, _ = tokens["employee"]
+    host_tok, host_id = tokens["host"]
+    broker_tok, broker_id = tokens["broker"]
+    emp_tok, emp_id = tokens["employee"]
+
+    # Assign host and broker to employee RM
+    db.users.update_one({"user_id": host_id}, {"$set": {"rm_id": emp_id}})
+    db.users.update_one({"user_id": broker_id}, {"$set": {"rm_id": emp_id}})
     pid = _make_property(host_tok, "rmrej")
     try:
         requests.post(f"{API}/properties/{pid}/submit-verification", headers=_h(host_tok), timeout=15).raise_for_status()
@@ -185,10 +194,14 @@ def test_rm_rejection_branch(tokens, db):
 
 # ============== Admin rejection after RM approval ==============
 def test_admin_rejection_branch(tokens, db):
-    host_tok, _ = tokens["host"]
-    broker_tok, _ = tokens["broker"]
-    emp_tok, _ = tokens["employee"]
+    host_tok, host_id = tokens["host"]
+    broker_tok, broker_id = tokens["broker"]
+    emp_tok, emp_id = tokens["employee"]
     admin_tok, _ = tokens["admin"]
+
+    # Assign host and broker to employee RM
+    db.users.update_one({"user_id": host_id}, {"$set": {"rm_id": emp_id}})
+    db.users.update_one({"user_id": broker_id}, {"$set": {"rm_id": emp_id}})
     pid = _make_property(host_tok, "adminrej")
     try:
         requests.post(f"{API}/properties/{pid}/submit-verification", headers=_h(host_tok), timeout=15).raise_for_status()
@@ -220,9 +233,14 @@ def test_admin_rejection_branch(tokens, db):
 
 # ============== Admin approve guard (no RM approval yet) ==============
 def test_admin_approve_guard(tokens, db):
-    host_tok, _ = tokens["host"]
-    broker_tok, _ = tokens["broker"]
+    host_tok, host_id = tokens["host"]
+    broker_tok, broker_id = tokens["broker"]
+    emp_tok, emp_id = tokens["employee"]
     admin_tok, _ = tokens["admin"]
+
+    # Assign host and broker to employee RM
+    db.users.update_one({"user_id": host_id}, {"$set": {"rm_id": emp_id}})
+    db.users.update_one({"user_id": broker_id}, {"$set": {"rm_id": emp_id}})
     pid = _make_property(host_tok, "guard")
     try:
         requests.post(f"{API}/properties/{pid}/submit-verification", headers=_h(host_tok), timeout=15).raise_for_status()
