@@ -776,12 +776,50 @@ const HostDashboard = () => {
               <NotificationBell />
               <div 
                 onClick={() => setShowProfileModal(true)}
-                className="flex items-center space-x-2 px-2 md:px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 12px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '9999px',
+                  boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  flexShrink: 0
+                }}
+                className="hover:border-terracotta"
               >
-                 <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
+                 <div 
+                   style={{
+                     width: '24px',
+                     height: '24px',
+                     borderRadius: '50%',
+                     backgroundColor: '#7A9A85',
+                     display: 'flex',
+                     alignItems: 'center',
+                     justifyContent: 'center',
+                     fontSize: '10px',
+                     fontWeight: 'bold',
+                     color: '#ffffff',
+                     flexShrink: 0
+                   }}
+                 >
                     {user?.full_name?.[0]}
                  </div>
-                 <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">{user?.full_name?.split(' ')[0]}</span>
+                 <span 
+                   style={{
+                     fontSize: '10px',
+                     fontWeight: 'bold',
+                     color: '#2A2A2A',
+                     textTransform: 'uppercase',
+                     letterSpacing: '0.1em',
+                     whiteSpace: 'nowrap'
+                   }}
+                 >
+                   {user?.full_name?.split(' ')[0]}
+                 </span>
               </div>
               <button 
                 onClick={() => {

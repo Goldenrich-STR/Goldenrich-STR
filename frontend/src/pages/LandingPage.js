@@ -1285,7 +1285,7 @@ const LandingPage = () => {
     const displayItems = items || [];
 
     return (
-      <div className="relative mb-24 group">
+      <div className="relative mb-12 md:mb-24 group">
         {/* Header */}
         <div className="flex items-center justify-between mb-8 px-4 md:px-8 max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-start md:items-center text-left">
@@ -1925,10 +1925,10 @@ const LandingPage = () => {
       </div>
 
       {/* Content Section */}
-      <div className="w-full bg-[#FDFCF8] relative z-20 pb-16 md:pb-32 pt-8 md:pt-14">
+      <div className="w-full bg-[#FDFCF8] relative z-20 pb-8 md:pb-32 pt-8 md:pt-14">
         <div className="max-w-7xl mx-auto px-4 md:px-8">
           {/* Choose a Collection Slider */}
-          <div className="mb-24 relative group">
+          <div className="mb-12 md:mb-24 relative group">
             <div className="flex items-center justify-between mb-8 px-4 md:px-0">
               <h3 className="text-3xl md:text-4xl font-bold text-charcoal tracking-tight">Discover Our Collections</h3>
               
@@ -2012,7 +2012,7 @@ const LandingPage = () => {
 
 
           {/* Ready to Host Section */}
-          <div className="bg-[#1a1a1a] rounded-2xl md:rounded-3xl p-8 md:p-16 text-center text-white mb-24 md:mb-32 relative overflow-hidden shadow-elevated">
+          <div className="bg-[#1a1a1a] rounded-2xl md:rounded-3xl p-8 md:p-16 text-center text-white mb-12 md:mb-32 relative overflow-hidden shadow-elevated">
             <div className="absolute top-0 right-0 w-80 h-80 bg-terracotta/10 rounded-full blur-3xl -mr-28 -mt-28"></div>
             <div className="relative z-10 max-w-3xl mx-auto">
               <h3 
@@ -2037,7 +2037,7 @@ const LandingPage = () => {
           </div>
 
                     {/* Testimonials (Loved by Guests & Hosts) */}
-          <div className="mb-32 text-center">
+          <div className="mb-12 md:mb-32 text-center">
             <span className="text-xs font-bold tracking-tight tracking-[0.2em] text-terracotta uppercase">{t('guestStories')}</span>
             <h3 className="text-4xl font-bold text-charcoal mt-3 mb-4 tracking-tight">{t('lovedByGuests')}</h3>
             <p className="text-gray-550 text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('testimonialsSub')}</p>
@@ -2118,7 +2118,7 @@ const LandingPage = () => {
             </div>
           </div>
           {/* Blogs Section (Our Journal) */}
-          <div className="mb-32 text-center">
+          <div className="mb-12 md:mb-32 text-center">
             <span className="text-xs font-bold tracking-tight tracking-[0.2em] text-terracotta uppercase">{t('ourJournal')}</span>
             <h3 className="text-4xl font-bold text-charcoal mt-3 mb-4 tracking-tight">{t('latestBlog')}</h3>
             <p className="text-gray-505 text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('blogSub')}</p>

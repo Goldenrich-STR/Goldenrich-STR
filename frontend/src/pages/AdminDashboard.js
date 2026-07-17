@@ -322,12 +322,12 @@ const AdminDashboard = () => {
           <div className="flex items-center gap-2 md:gap-6">
             <div 
               onClick={() => setShowProfileModal(true)}
-              className="flex items-center space-x-2 md:space-x-3 px-2 md:px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
+              className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all shrink-0"
             >
-               <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
+               <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white shrink-0">
                   {user?.full_name?.[0]}
                </div>
-               <span className="hidden sm:block text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">Admin: {user?.full_name?.split(' ')[0]}</span>
+               <span className="hidden sm:block text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest whitespace-nowrap">Admin: {user?.full_name?.split(' ')[0]}</span>
             </div>
             <button
               onClick={() => navigate('/admin/account')}

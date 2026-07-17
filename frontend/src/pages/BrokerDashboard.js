@@ -79,12 +79,12 @@ const BrokerDashboard = () => {
             <NotificationBell />
             <div 
               onClick={() => setShowProfileModal(true)}
-              className="flex items-center space-x-2 px-2 md:px-4 py-2 bg-white/50 border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
+              className="flex items-center gap-2 px-2 md:px-4 py-2 bg-white/50 border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all shrink-0"
             >
-               <div className="w-7 h-7 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
+               <div className="w-7 h-7 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white shrink-0">
                   {user?.full_name?.[0]}
                </div>
-               <span className="hidden sm:block text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">{user?.full_name?.split(' ')[0]}</span>
+               <span className="hidden sm:block text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest whitespace-nowrap">{user?.full_name?.split(' ')[0]}</span>
             </div>
             <button
               onClick={() => {
