@@ -902,10 +902,55 @@ const SUGGESTED_DESTINATIONS = [
 ];
 
 const PREMIUM_COLLECTIONS = [
-  { id: 'villas-resorts', label: 'Villas & Resorts', image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=600', query: 'residential', property_type: 'villa' },
-  { id: 'residential-stays', label: 'Residential Stays', image: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=600', query: 'residential', property_type: 'apartment' },
-  { id: 'commercial-spaces', label: 'Commercial Spaces', image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=600', query: 'commercial' },
-  { id: 'event-venues', label: 'Event Venues', image: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=600', query: 'event_venue' }
+  {
+    id: 'luxury-villas',
+    label: 'Luxury Villas & Farmhouses',
+    subtitle: 'Private pools, lush lawns & royal stays across India',
+    detail: 'From Alibaug to Coorg, our hand-picked villas offer complete privacy, personal caretakers, BBQ setups & breathtaking views. Perfect for family vacations, pre-wedding shoots & weekend escapes.',
+    tag: 'Most Booked',
+    image: 'https://images.unsplash.com/photo-1744448365250-9b6aa1a7e4a3?auto=format&fit=crop&q=80&w=900',
+    query: 'residential',
+    property_type: 'villa'
+  },
+  {
+    id: 'wedding-venues',
+    label: 'Intimate Wedding & Event Venues',
+    subtitle: 'Magical backdrops for your dream celebration',
+    detail: 'Say goodbye to Big Fat Weddings, say hello to intimate, curated celebration venues with floral-wrapped courtyards, rooftop terraces & in-house chefs. Available for 50 to 300 guests.',
+    tag: 'Trending',
+    image: 'https://images.pexels.com/photos/12153938/pexels-photo-12153938.jpeg?auto=compress&cs=tinysrgb&w=900',
+    query: 'event_venue',
+    property_type: 'banquet_hall'
+  },
+  {
+    id: 'residential-stays',
+    label: 'Premium Apartments & Homes',
+    subtitle: 'Fully serviced urban homes with hotel-grade amenities',
+    detail: 'Monthly or nightly, our premium residential properties come with AC, WiFi, housekeeping & verified hosts. Ideal for business travelers, relocating professionals & long-term stays in metro cities.',
+    tag: 'New Launches',
+    image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&q=80&w=900',
+    query: 'residential',
+    property_type: 'apartment'
+  },
+  {
+    id: 'commercial-spaces',
+    label: 'Commercial & Co-working Spaces',
+    subtitle: 'Premium offices and collaborative work studios',
+    detail: 'Short-term or long-term rentals for startups, corporate offsites, and growing teams. Our commercial spaces include boardrooms, co-working zones, event halls & plug-and-play setups.',
+    tag: 'Corporate Picks',
+    image: 'https://images.unsplash.com/photo-1497366412874-3415097a27e7?auto=format&fit=crop&q=80&w=900',
+    query: 'commercial'
+  },
+  {
+    id: 'hilltop-retreats',
+    label: 'Hilltop & Nature Retreats',
+    subtitle: 'Escape the city into the mountains & forests',
+    detail: 'Nestled in Coorg, Munnar, Lonavala & Ooty, these serene retreats offer forest canopy views, bonfire evenings, yoga decks & waterfalls right at your doorstep. Zero connectivity, 100% peace.',
+    tag: 'Handpicked',
+    image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=900',
+    query: 'residential',
+    property_type: 'cottage'
+  }
 ];
 
 const STANDARD_FEATURES = [
@@ -918,6 +963,117 @@ const STANDARD_FEATURES = [
   { label: 'Games & Recreation', icon: Gamepad2 },
   { label: 'Green Open Spaces', icon: Trees }
 ];
+
+/* ====================================================================
+   CollectionsSection — Full-bleed, edge-to-edge, Saffron Stay-inspired
+   ==================================================================== */
+const CollectionsSection = ({ navigate }) => {
+  const [expanded, setExpanded] = React.useState(null);
+  const sliderRef = React.useRef(null);
+
+  const handleCardClick = (id) => {
+    setExpanded(prev => prev === id ? null : id);
+  };
+
+  const scroll = (dir) => {
+    if (sliderRef.current) {
+      sliderRef.current.scrollBy({ left: dir === 'left' ? -420 : 420, behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <section className="w-full bg-[#FDFCF8] pt-10 md:pt-16 pb-10 md:pb-20 overflow-x-hidden">
+      {/* Header — centered like Saffron Stay style */}
+      <div className="flex flex-col items-center text-center mb-8 px-6 md:px-12 lg:px-20">
+        <p className="text-terracotta text-xs font-bold uppercase tracking-widest mb-2">X-Space360 Collections</p>
+        <h2 className="text-3xl md:text-4xl font-bold text-charcoal tracking-tight leading-tight mb-6">
+          Discover Our Collections
+        </h2>
+        {/* Nav arrows inline below heading */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => scroll('left')}
+            className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal shadow-sm"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => scroll('right')}
+            className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal shadow-sm"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Cards Strip — spacer divs for reliable padding (overflow-x: hidden parent bug fix) */}
+      <div
+        ref={sliderRef}
+        className="flex overflow-x-auto no-scrollbar gap-4 snap-x scroll-smooth pb-4 justify-start xl:justify-center"
+      >
+        {/* Left Spacer */}
+        <div className="shrink-0 min-w-[24px] md:min-w-[48px] lg:min-w-[80px] xl:hidden h-1" />
+        {PREMIUM_COLLECTIONS.map((col) => {
+          const isOpen = expanded === col.id;
+          return (
+            <div
+              key={col.id}
+              onClick={() => handleCardClick(col.id)}
+              className={`relative flex-none snap-start rounded-none overflow-hidden cursor-pointer transition-all duration-500 shadow-md hover:shadow-xl
+                ${isOpen
+                  ? 'w-[340px] md:w-[420px] aspect-[3/4]'
+                  : 'w-[200px] md:w-[240px] aspect-[3/4]'
+                }`}
+              style={{ willChange: 'width' }}
+            >
+              {/* Background Image */}
+              <img
+                src={col.image}
+                alt={col.label}
+                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 scale-100 hover:scale-[1.03]"
+              />
+
+              {/* Gradient overlay — heavier at bottom */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+
+              {/* Tag badge */}
+              <div className="absolute top-4 left-4">
+                <span className="bg-white/90 backdrop-blur-sm text-charcoal text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
+                  {col.tag}
+                </span>
+              </div>
+
+              {/* Collapsed: just title */}
+              <div className={`absolute inset-0 p-5 flex flex-col justify-end transition-all duration-300 ${isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mb-1">Explore</p>
+                <h3 className="text-white text-lg md:text-xl font-bold leading-snug">{col.label}</h3>
+              </div>
+
+              {/* Expanded: full detail */}
+              <div className={`absolute inset-0 p-6 flex flex-col justify-end transition-all duration-500 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mb-2">Explore</p>
+                <h3 className="text-white text-xl md:text-2xl font-bold leading-snug mb-2">{col.label}</h3>
+                <p className="text-white/80 text-xs md:text-sm font-medium leading-relaxed mb-4">{col.detail}</p>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const typeQuery = col.property_type ? `&property_type=${col.property_type}` : '';
+                    navigate(`/guest/browse?category=${col.query}${typeQuery}`);
+                  }}
+                  className="self-start bg-white text-charcoal text-xs font-bold uppercase tracking-widest px-5 py-2.5 rounded-full hover:bg-stone transition shadow-premium hover:scale-[1.02] active:scale-95"
+                >
+                  Browse Properties →
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        {/* Right Spacer */}
+        <div className="shrink-0 min-w-[24px] md:min-w-[48px] lg:min-w-[80px] xl:hidden h-1" />
+      </div>
+    </section>
+  );
+};
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -1047,6 +1203,15 @@ const LandingPage = () => {
   }, [currentHeroSlide, loadedHeroSlides, heroSlides]);
 
   const [lang, setLang] = useState(localStorage.getItem('preferredLanguage') || 'en');
+  const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [currentPromoSlide, setCurrentPromoSlide] = useState(0);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentPromoSlide((prev) => (prev === 0 ? 1 : 0));
+    }, 5500);
+    return () => clearInterval(timer);
+  }, []);
 
   const [wishlist, setWishlist] = useState(() => {
     try {
@@ -1128,36 +1293,45 @@ const LandingPage = () => {
   const defaultLandingBlogPosts = [
     {
       id: 'p1',
-      title: 'The Future of Short-Term Rentals in India',
+      title: 'Guide to hotel rewards programmes, deals and booking strategies',
       excerpt: 'How shifting preferences and hybrid work models are driving growth in STR spaces.',
-      date: 'June 10, 2026',
-      author: 'Amit Sharma',
-      img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+      date: '20 April 2026',
+      author: 'Skyscanner',
+      img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=800',
       read_time: '6 min read'
     },
     {
       id: 'p2',
-      title: 'Design Tips to Maximize Your Property Yield',
+      title: 'Guide to hotel room types, amenities & policies',
       excerpt: 'Curate your space to appeal to high-end travelers with styling and amenity upgrades.',
-      date: 'June 05, 2026',
-      author: 'Neha Patel',
-      img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800',
+      date: '20 April 2026',
+      author: 'Skyscanner',
+      img: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=800',
       read_time: '5 min read'
     },
     {
       id: 'p3',
-      title: 'Top 5 Weekend Escapes Near Mumbai & Nashik',
+      title: 'The Smarter Summer Report Your guide to smarter summer planning',
       excerpt: 'Explore the most beautiful villa retreats and holiday home collections for your next vacation.',
-      date: 'May 28, 2026',
-      author: 'Vikram Singh',
-      img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800',
+      date: '27 April 2026',
+      author: 'Skyscanner',
+      img: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=800',
       read_time: '7 min read'
+    },
+    {
+      id: 'p4',
+      title: 'Are Indian cricket fans the best cricket fans in the world?',
+      excerpt: 'Exploring the vibrant passion, energy, and dedication of cricket fans across India.',
+      date: '16 October 2023',
+      author: 'Noelia Guinon',
+      img: 'https://images.unsplash.com/photo-1531415080290-bc98528c165a?auto=format&fit=crop&q=80&w=800',
+      read_time: '5 min read'
     }
   ];
   const cmsLandingBlogPosts = Array.isArray(cmsContent?.blog?.posts)
     ? cmsContent.blog.posts
         .filter(post => post?.is_active !== false)
-        .slice(0, 3)
+        .slice(0, 4)
         .map(post => ({
           id: post.id,
           title: post.title,
@@ -1293,7 +1467,7 @@ const LandingPage = () => {
               <IconComponent className="w-6 h-6 text-terracotta" />
             </div>
             <div>
-              <h3 className="text-[20px] md:text-[22px] font-bold tracking-tight text-charcoal tracking-tight uppercase leading-none mb-2 md:mb-1.5">{title}</h3>
+              <h3 className="text-[20px] md:text-[22px] font-bold tracking-tight text-charcoal uppercase leading-none mb-2 md:mb-1.5">{title}</h3>
               <p className="text-gray-550 text-xs md:text-[13px] font-medium leading-relaxed">{subtitle}</p>
             </div>
           </div>
@@ -1924,62 +2098,13 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Content Section */}
-      <div className="w-full bg-[#FDFCF8] relative z-20 pb-8 md:pb-32 pt-8 md:pt-14">
-        <div className="max-w-7xl mx-auto px-4 md:px-8">
-          {/* Choose a Collection Slider */}
-          <div className="mb-12 md:mb-24 relative group">
-            <div className="flex items-center justify-between mb-8 px-4 md:px-0">
-              <h3 className="text-3xl md:text-4xl font-bold text-charcoal tracking-tight">Discover Our Collections</h3>
-              
-              {/* Navigation Arrows */}
-              <div className="hidden md:flex space-x-3">
-                <button onClick={() => scrollSlider('left', 'slider-collections')} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm">
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button onClick={() => scrollSlider('right', 'slider-collections')} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm">
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            
-            <div 
-              id="slider-collections"
-              className="flex overflow-x-auto pb-8 gap-6 no-scrollbar snap-x scroll-smooth px-4 md:px-0"
-            >
-              {PREMIUM_COLLECTIONS.map((collection) => (
-                <button
-                  key={collection.id}
-                  onClick={() => {
-                    const typeQuery = collection.property_type ? `&property_type=${collection.property_type}` : '';
-                    navigate(`/guest/browse?category=${collection.query}${typeQuery}`);
-                  }}
-                  className="relative flex-none w-72 md:w-80 aspect-[4/5] rounded-3xl overflow-hidden group cursor-pointer snap-start shadow-subtle hover:shadow-premium transition-all duration-500"
-                >
-                  <img 
-                    src={collection.image} 
-                    alt={collection.label}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-charcoal/90 via-charcoal/20 to-transparent"></div>
-                  
-                  <div className="absolute inset-0 p-6 flex flex-col justify-end text-left">
-                    <p className="text-white/80 text-xs font-bold uppercase tracking-widest mb-2 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">Explore</p>
-                    <h4 className="text-white text-2xl font-serif italic font-bold leading-tight group-hover:-translate-y-1 transition-transform duration-300">
-                      {collection.label}
-                    </h4>
-                  </div>
-                </button>
-              ))}
-            </div>
-            
-            {/* Simple static line indicator for scroll */}
-            <div className="flex justify-center mt-4 hidden md:flex">
-              <div className="w-48 h-1 bg-sand-200 rounded-full overflow-hidden relative">
-                <div className="w-16 h-full bg-terracotta/40 rounded-full absolute left-0" />
-              </div>
-            </div>
-          </div>
+      {/* Content Section — full width, overflow guard */}
+      <div className="w-full bg-[#FDFCF8] relative z-20 overflow-x-hidden">
+
+        {/* ===== Discover Our Collections — Full Width ===== */}
+        <CollectionsSection navigate={navigate} />
+        {/* Property Sliders — also full-width, padded inline */}
+        <div className="pb-8 md:pb-32 pt-4 md:pt-8">
           {/* Residential Collection Slider */}
           {renderPropertySlider(
             'slider-residential',
@@ -2011,30 +2136,96 @@ const LandingPage = () => {
           )}
 
 
-          {/* Ready to Host Section */}
-          <div className="bg-[#1a1a1a] rounded-2xl md:rounded-3xl p-8 md:p-16 text-center text-white mb-12 md:mb-32 relative overflow-hidden shadow-elevated">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-terracotta/10 rounded-full blur-3xl -mr-28 -mt-28"></div>
-            <div className="relative z-10 max-w-3xl mx-auto">
-              <h3 
-                className="text-3xl md:text-5xl font-bold text-terracotta tracking-tight mb-4 md:mb-6 leading-tight tracking-tight"
-                dangerouslySetInnerHTML={{ __html: t('readyToHost') }}
+          {/* Ad Campaign Carousel (Promo & Host) */}
+          <div className="px-6 md:px-12 lg:px-20 mb-12 md:mb-24">
+          <div className="relative rounded-[2rem] overflow-hidden shadow-premium h-[300px] md:h-[350px] bg-stone">
+            {/* Slide 1: Guest Promo */}
+            <div className={`absolute inset-0 flex items-center transition-all duration-700 ${currentPromoSlide === 0 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
+              <div 
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url('/images/premium_banner_bg.png')` }}
               />
-              <p className="text-gray-300 text-base md:text-lg font-medium leading-relaxed mb-10 max-w-2xl mx-auto">
-                {t('ctaParagraph')}
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+              <div className="absolute inset-0 bg-gradient-to-r from-charcoal/80 via-charcoal/40 to-transparent" />
+              
+              <div className="relative z-10 w-full px-8 md:px-16 text-left max-w-xl md:max-w-2xl text-white">
+                <h3 className="text-3xl md:text-5xl font-bold tracking-tight mb-3 text-white">
+                  Save on your next luxury stay
+                </h3>
+                <p className="text-white/95 text-xs md:text-sm font-semibold leading-relaxed mb-6 max-w-md">
+                  We've pulled together some top premium deals, so you can find an amazing residential, commercial, or event space at an even better price.
+                </p>
                 <button 
-                  onClick={() => navigate(user ? '/dashboard' : '/register?role=host')}
-                  className="bg-terracotta hover:bg-terracotta-hover text-white font-bold px-8 py-4 rounded-full transition shadow-premium w-full sm:w-auto text-sm uppercase tracking-wider"
+                  onClick={() => navigate('/guest/browse')}
+                  className="bg-white hover:bg-stone text-charcoal font-bold px-8 py-3 rounded-full transition shadow-premium text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 duration-200"
                 >
-                  {t('listProperty')}
+                  See Property Deals
                 </button>
-                <a href="#" className="text-white hover:text-terracotta font-bold text-sm transition-colors duration-300">
-                  {t('learnFees')}
-                </a>
+              </div>
+
+              {/* Floating Badge */}
+              <div className="absolute right-8 md:right-24 bottom-6 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-10 bg-white text-blue-600 px-5 py-3 rounded-2xl shadow-elevated flex items-center gap-3 border border-sand-200">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                  <Hotel className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none">Up to</p>
+                  <p className="text-xl font-black text-blue-600 tracking-tight leading-none mt-1">35% off</p>
+                </div>
               </div>
             </div>
+
+            {/* Slide 2: Host Campaign */}
+            <div className={`absolute inset-0 flex items-center transition-all duration-700 ${currentPromoSlide === 1 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
+              <div 
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url('/images/host_banner_bg.png')` }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-charcoal/80 via-charcoal/40 to-transparent" />
+              
+              <div className="relative z-10 w-full px-8 md:px-16 text-left max-w-xl md:max-w-2xl text-white">
+                <h3 className="text-3xl md:text-5xl font-bold tracking-tight mb-3 text-white">
+                  Ready to Host with Us?
+                </h3>
+                <p className="text-white/95 text-xs md:text-sm font-semibold leading-relaxed mb-6 max-w-md">
+                  Join India's most exclusive short-term rental network and turn your premium space into a high-yielding asset.
+                </p>
+                <div className="flex flex-wrap items-center gap-4">
+                  <button 
+                    onClick={() => navigate(user ? '/dashboard' : '/register?role=host')}
+                    className="bg-terracotta hover:bg-terracotta/90 text-white font-bold px-8 py-3 rounded-full transition shadow-premium text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 duration-200"
+                  >
+                    List Your Property
+                  </button>
+                  <a href="#" className="text-white hover:text-terracotta text-xs font-bold transition-colors duration-300">
+                    Learn about our fees →
+                  </a>
+                </div>
+              </div>
+
+              {/* Floating Badge */}
+              <div className="absolute right-8 md:right-24 bottom-6 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-10 bg-white text-terracotta px-5 py-3 rounded-2xl shadow-elevated flex items-center gap-3 border border-sand-200">
+                <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5 text-terracotta" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none">Free</p>
+                  <p className="text-xl font-black text-terracotta tracking-tight leading-none mt-1">3-Mo Trial</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Slider Dot Indicators */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+              {[0, 1].map((idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentPromoSlide(idx)}
+                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${currentPromoSlide === idx ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/70'}`}
+                />
+              ))}
+            </div>
           </div>
+          </div>{/* end banner px-wrapper */}
 
                     {/* Testimonials (Loved by Guests & Hosts) */}
           <div className="mb-12 md:mb-32 text-center">
@@ -2117,69 +2308,123 @@ const LandingPage = () => {
               </div>
             </div>
           </div>
-          {/* Blogs Section (Our Journal) */}
-          <div className="mb-12 md:mb-32 text-center">
-            <span className="text-xs font-bold tracking-tight tracking-[0.2em] text-terracotta uppercase">{t('ourJournal')}</span>
-            <h3 className="text-4xl font-bold text-charcoal mt-3 mb-4 tracking-tight">{t('latestBlog')}</h3>
-            <p className="text-gray-505 text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('blogSub')}</p>
+          {/* Blogs Section (Clean 2x2 Grid) */}
+          <div className="mb-12 md:mb-32 text-left max-w-7xl mx-auto px-4 md:px-8">
+            <h3 className="text-3xl md:text-4xl font-bold text-charcoal tracking-tight mb-8">
+              Plan smart, explore more
+            </h3>
 
-            <div className="max-w-7xl mx-auto relative px-4 md:px-8">
-              <div 
-                id="slider-blogs" 
-                onScroll={(e) => handleSliderScroll(e, setActiveBlog)}
-                className="flex overflow-x-auto pb-10 px-4 md:px-8 gap-6 no-scrollbar snap-x scroll-smooth"
-              >
-                {landingBlogPosts.map((post, idx) => (
-                  <div 
-                    key={post.id || idx} 
-                    onClick={() => setSelectedPost({
-                      id: post.id,
-                      title: post.title,
-                      excerpt: post.excerpt,
-                      content: post.content,
-                      date: post.date,
-                      author: post.author,
-                      image_url: post.img,
-                      read_time: post.read_time || '5 min read'
-                    })}
-                    className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-premium hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col min-w-[280px] sm:min-w-[320px] md:min-w-[360px] snap-center flex-1 text-left"
-                  >
-                    <div className="h-48 overflow-hidden relative">
-                      <img src={post.img} alt={post.title} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="p-6 flex-1 flex flex-col justify-between">
-                      <div>
-                        <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-wider">{post.date}</span>
-                        <h4 className="font-bold text-lg text-charcoal mt-2 mb-3 leading-snug hover:text-terracotta transition-colors line-clamp-2">{post.title}</h4>
-                        <p className="text-gray-550 text-gray-500 text-sm font-medium leading-relaxed line-clamp-2 mb-4">{post.excerpt}</p>
-                      </div>
-                      <div className="flex items-center justify-between pt-4 border-t border-sand-100">
-                        <span className="text-xs font-bold text-charcoal-muted">By {post.author}</span>
-                        <span className="text-xs font-bold tracking-tight text-terracotta uppercase tracking-wider">{t('readArticle')}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* ── Blogs Dot indicators ── */}
-              <div className="flex justify-center mt-2">
-                <div className="bg-slate-900/60 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-full flex items-center justify-center gap-2.5 shadow-subtle">
-                  {landingBlogPosts.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => scrollToSlide('slider-blogs', idx)}
-                      className={`rounded-full transition-all duration-300 ${
-                        idx === activeBlog
-                          ? 'w-2.5 h-2.5 bg-terracotta/60'
-                          : 'w-2 h-2 bg-white/30 hover:bg-white/50'
-                      }`}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+              {landingBlogPosts.map((post, idx) => (
+                <div 
+                  key={post.id || idx} 
+                  onClick={() => setSelectedPost({
+                    id: post.id,
+                    title: post.title,
+                    excerpt: post.excerpt,
+                    content: post.content,
+                    date: post.date,
+                    author: post.author,
+                    image_url: post.img,
+                    read_time: post.read_time || '5 min read'
+                  })}
+                  className="group cursor-pointer flex flex-col text-left"
+                >
+                  {/* Rectangular Image */}
+                  <div className="aspect-[2/1] overflow-hidden rounded-xl bg-stone relative">
+                    <img 
+                      src={post.img} 
+                      alt={post.title} 
+                      className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-500" 
                     />
-                  ))}
+                  </div>
+                  
+                  {/* Metadata underneath */}
+                  <h4 className="font-bold text-lg md:text-xl text-charcoal mt-4 mb-2 leading-snug group-hover:text-terracotta transition-colors line-clamp-2">
+                    {post.title}
+                  </h4>
+                  <p className="text-xs text-gray-500 font-semibold">
+                    {post.date} &nbsp;•&nbsp; <span className="text-blue-600 hover:underline">{post.author}</span>
+                  </p>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
+
+          {/* FAQ Section */}
+          <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8 md:mb-12 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12 text-left">
+            {/* Left Info Panel */}
+            <div className="lg:col-span-5 flex flex-col justify-center space-y-4">
+              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest leading-none">FAQS</span>
+              <h3 className="text-3xl md:text-5xl font-black text-charcoal tracking-tight leading-tight">
+                Questions people ask before they start.
+              </h3>
+              <p className="text-gray-505 text-gray-500 font-medium text-sm md:text-base leading-relaxed">
+                Still need help? Book a 15-minute call with an advisor — no pressure, no commitment.
+              </p>
+              <div className="pt-2">
+                <button 
+                  onClick={() => navigate('/support')}
+                  className="bg-black hover:bg-black/90 text-white font-bold px-8 py-3.5 rounded-full transition shadow-premium text-xs uppercase tracking-widest inline-flex items-center gap-2"
+                >
+                  <span>Contact Advisor</span>
+                  <span className="text-xs">↗</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Right Accordion List */}
+            <div className="lg:col-span-7 space-y-4">
+              {[
+                {
+                  question: "What is X-Space360 and how does it work?",
+                  answer: "X-Space360 is a curated premium short-term rental network. We connect property owners (hosts) with guests seeking high-end residential, commercial, or event spaces. All listed spaces undergo a strict coordinate geofencing and physical RM (Relationship Manager) quality audit before going live."
+                },
+                {
+                  question: "How can I register my property as a Host?",
+                  answer: "You can register as a Host from our portal. You need to upload standard verification documents (Aadhaar Card, Property Proof, cancelled cheque, and Shop Act license). Our team will schedule a physical inspection, and once verified, your property gets a green trust badge and goes live."
+                },
+                {
+                  question: "What types of properties can I list?",
+                  answer: "You can list three main categories of properties: Residential (apartments, villas, studios, farmhouses), Commercial (private offices, meeting rooms, co-working desks), and Event Venues (banquet halls, garden lawns, rooftops)."
+                },
+                {
+                  question: "How are guest bookings and payments secured?",
+                  answer: "We use dynamic checkout locks with secure signatures (via Razorpay double locks). When a guest reserves, a 10-minute lock blocks the calendar to prevent double bookings. Payouts are directly settled to the host's bank account following tax-compliant invoice protocols."
+                },
+                {
+                  question: "Are there any hidden fees or charges for listing?",
+                  answer: "No. There are no hidden fees. A refundable registration fee of ₹500 is charged during host document submission, which initiates the physical verification audit. All subscription tiers start with an extensive 3-month free trial."
+                }
+              ].map((faq, index) => {
+                const isOpen = openFaqIndex === index;
+                return (
+                  <div 
+                    key={index} 
+                    className="bg-white rounded-2xl border border-sand-200 shadow-sm transition-all duration-300 overflow-hidden"
+                  >
+                    <button
+                      onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                      className="w-full px-6 py-5 flex items-center justify-between text-left font-bold text-sm md:text-base text-charcoal hover:bg-stone/20 transition-colors"
+                    >
+                      <span>{faq.question}</span>
+                      {isOpen ? (
+                        <ChevronUp className="w-5 h-5 text-gray-500 shrink-0 ml-4" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-gray-500 shrink-0 ml-4" />
+                      )}
+                    </button>
+                    {isOpen && (
+                      <div className="px-6 pb-6 text-xs md:text-sm text-gray-500 font-semibold leading-relaxed border-t border-sand-100 pt-4 animate-slide-down">
+                        {faq.answer}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
 
           
         </div>
