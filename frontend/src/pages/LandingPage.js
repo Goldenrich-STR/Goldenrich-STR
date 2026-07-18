@@ -949,7 +949,7 @@ const PREMIUM_COLLECTIONS = [
     tag: 'Handpicked',
     image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=900',
     query: 'residential',
-    property_type: 'cottage'
+    property_type: 'resort'
   }
 ];
 
@@ -982,7 +982,7 @@ const CollectionsSection = ({ navigate }) => {
   };
 
   return (
-    <section className="w-full bg-[#FDFCF8] pt-10 md:pt-16 pb-10 md:pb-20 overflow-x-hidden">
+    <section className="w-full bg-[#FDFCF8] pt-10 md:pt-16 pb-4 md:pb-6 overflow-x-hidden">
       {/* Header — centered like Saffron Stay style */}
       <div className="flex flex-col items-center text-center mb-8 px-6 md:px-12 lg:px-20">
         <p className="text-terracotta text-xs font-bold uppercase tracking-widest mb-2">X-Space360 Collections</p>
@@ -1454,37 +1454,34 @@ const LandingPage = () => {
       setSliderInteracted(prev => ({ ...prev, [id]: true }));
     }
   };
-
   const renderPropertySlider = (sectionId, title, subtitle, IconComponent, categoryKey, items) => {
     const displayItems = items || [];
 
     return (
-      <div className="relative mb-12 md:mb-24 group">
+      <div className="relative mb-4 md:mb-6 group">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 px-4 md:px-8 max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-start md:items-center text-left">
-            <div className="w-12 h-12 rounded-full bg-terracotta/10 flex items-center justify-center mb-3 md:mb-0 md:mr-4 shrink-0">
-              <IconComponent className="w-6 h-6 text-terracotta" />
-            </div>
-            <div>
-              <h3 className="text-[20px] md:text-[22px] font-bold tracking-tight text-charcoal uppercase leading-none mb-2 md:mb-1.5">{title}</h3>
-              <p className="text-gray-550 text-xs md:text-[13px] font-medium leading-relaxed">{subtitle}</p>
-            </div>
+        <div className="flex items-end justify-between mb-6 px-6 md:px-12 lg:px-20 w-full">
+          <div className="text-left">
+            <h3 className="text-xl md:text-2xl font-bold tracking-tight text-charcoal flex items-center gap-2">
+              <span>{title}</span>
+              <IconComponent className="w-5 h-5 text-charcoal/85 stroke-[2]" />
+            </h3>
+            <p className="text-gray-550 text-xs md:text-sm font-medium mt-1">{subtitle}</p>
           </div>
           
           {/* Navigation Arrows */}
-          <div className="hidden md:flex space-x-3">
-            <button onClick={() => scrollSlider('left', sectionId)} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm">
-              <ChevronLeft className="w-5 h-5" />
+          <div className="hidden md:flex space-x-2">
+            <button onClick={() => scrollSlider('left', sectionId)} className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm">
+              <ChevronLeft className="w-4 h-4" />
             </button>
-            <button onClick={() => scrollSlider('right', sectionId)} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm">
-              <ChevronRight className="w-5 h-5" />
+            <button onClick={() => scrollSlider('right', sectionId)} className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm">
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
         
         {/* Slider */}
-        <div className="max-w-7xl mx-auto relative">
+        <div className="w-full relative px-6 md:px-12 lg:px-20">
           <div 
             id={sectionId} 
             onScroll={(e) => {
@@ -1492,15 +1489,15 @@ const LandingPage = () => {
                 setSliderInteracted(prev => ({ ...prev, [sectionId]: true }));
               }
             }}
-            className="flex overflow-x-auto pb-10 px-8 gap-6 no-scrollbar snap-x scroll-smooth"
+            className="flex overflow-x-auto pb-4 gap-6 no-scrollbar snap-x scroll-smooth"
           >
             {displayItems.map((item, index) => (
               <div 
                 key={item.property_id || index} 
                 onClick={() => navigate(`/property/${item.property_id}`)}
-                className="bg-white rounded-2xl p-4 cursor-pointer hover:-translate-y-1 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 min-w-[300px] md:min-w-[340px] snap-start flex flex-col group/card"
+                className="bg-transparent cursor-pointer transition-all duration-300 min-w-[240px] md:min-w-[280px] w-[240px] md:w-[280px] snap-start flex flex-col group/card"
               >
-                <div className="relative h-[220px] rounded-2xl overflow-hidden mb-5">
+                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-3">
                   <img 
                     src={item.img || getImageUrl(item.images?.[0]) || PROPERTY_IMAGE_FALLBACK}
                     alt={item.title} 
@@ -1510,57 +1507,42 @@ const LandingPage = () => {
                       currentTarget.onerror = null;
                       currentTarget.src = PROPERTY_IMAGE_FALLBACK;
                     }}
-                    className="w-full h-full object-cover group-hover/card:scale-105 transition duration-700" 
+                    className="w-full h-full object-cover group-hover/card:scale-[1.03] transition duration-500" 
                   />
-                  {/* Rating Pill */}
-                  <div className="absolute top-4 left-4 bg-white/95 backdrop-blur-md rounded-full px-3 py-1.5 flex items-center shadow-sm">
-                    <Star className="w-3.5 h-3.5 text-[#eab308] fill-current mr-1.5" />
-                    <span className="text-xs font-bold text-gray-800">{item.rating || '4.90'}</span>
-                  </div>
                   
-                  {/* Right Actions */}
-                  <div className="absolute top-4 right-4 flex space-x-2 z-20">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleShareWhatsApp(item); }}
-                      className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.03] transition cursor-pointer"
-                    >
-                      <Share2 className="w-4 h-4 text-gray-600 hover:text-green-600" />
-                    </button>
+                  {/* Right Actions (Wishlist like Airbnb) */}
+                  <div className="absolute top-3 right-3 z-20">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                      className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.03] transition cursor-pointer"
+                      className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.05] transition cursor-pointer"
                     >
-                      <Heart className={`w-4 h-4 ${wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-gray-600 hover:text-terracotta'}`} />
+                      <Heart className={`w-4 h-4 ${wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-gray-700'}`} />
                     </button>
-                  </div>
-
-                  {/* Type Pill */}
-                  <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-md rounded-full px-3 py-1 shadow-sm">
-                    <span className="text-[10px] font-bold text-terracotta uppercase tracking-wider">
-                      {item.type || item.property_type || 'VILLA'}
-                    </span>
                   </div>
                 </div>
 
-                <div className="px-1 flex-1 flex flex-col">
-                  <h4 className="font-bold text-lg text-charcoal mb-1 line-clamp-1 group-hover/card:text-terracotta transition-colors">{item.title}</h4>
-                  <p className="text-gray-550 text-xs font-medium mb-4 flex items-center">
-                    <MapPin className="w-3.5 h-3.5 mr-1.5 text-terracotta/70" />
-                    {item.city}, {item.state || item.city}
+                <div className="flex-1 flex flex-col px-0.5">
+                  <div className="flex justify-between items-start gap-2 mb-1">
+                    <h4 className="font-semibold text-sm md:text-base text-charcoal line-clamp-1 group-hover/card:text-terracotta transition-colors">
+                      {item.title}
+                    </h4>
+                    <span className="flex items-center text-xs font-semibold text-charcoal shrink-0">
+                      <Star className="w-3.5 h-3.5 text-[#eab308] fill-current mr-1" />
+                      {item.rating || '4.9'}
+                    </span>
+                  </div>
+                  
+                  <p className="text-gray-550 text-xs font-medium mb-1">
+                    {item.type || item.property_type || 'Property'} in {item.city}
                   </p>
                   
-                  <div className="mt-auto border-t border-gray-100 pt-4 flex justify-between items-center">
-                    <div>
-                      <p className="text-terracotta font-bold tracking-tight text-xl">₹ {(item.price || item.price_per_night || 0).toLocaleString('en-IN')}</p>
-                      <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest mt-0.5">
-                        {item.category === 'commercial' || item.category === 'event_venue'
-                          ? (item.pricing_cycle === 'hourly' ? 'PER HOUR' : item.pricing_cycle === 'weekly' ? 'PER WEEK' : item.pricing_cycle === 'monthly' ? 'PER MONTH' : 'PER DAY')
-                          : 'PER NIGHT'}
-                      </p>
-                    </div>
-                    <div className="w-10 h-10 rounded-full bg-stone border border-gray-100 flex items-center justify-center group-hover/card:bg-terracotta group-hover/card:border-terracotta transition-all duration-300 shadow-sm">
-                      <Search className="w-4 h-4 text-charcoal group-hover/card:text-white transition-colors" />
-                    </div>
+                  <div className="mt-auto flex items-baseline">
+                    <span className="font-bold text-sm md:text-base text-charcoal">₹{(item.price || item.price_per_night || 0).toLocaleString('en-IN')}</span>
+                    <span className="text-gray-500 text-[10px] md:text-xs ml-1 font-normal">
+                      &nbsp;/ {item.category === 'commercial' || item.category === 'event_venue'
+                        ? (item.pricing_cycle === 'hourly' ? 'hour' : item.pricing_cycle === 'weekly' ? 'week' : item.pricing_cycle === 'monthly' ? 'month' : 'day')
+                        : 'night'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1570,13 +1552,12 @@ const LandingPage = () => {
             {sliderInteracted[sectionId] && (
               <div 
                 onClick={() => navigate(`/guest/browse?category=${categoryKey}`)}
-                className="min-w-[200px] md:min-w-[240px] border border-dashed border-terracotta/30 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-terracotta/5 hover:border-terracotta/50 transition-all duration-300 snap-start group/viewall"
+                className="min-w-[160px] md:min-w-[180px] aspect-[4/3] border border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 snap-start group/viewall"
               >
-                <div className="w-14 h-14 rounded-full bg-terracotta/10 flex items-center justify-center mb-4 group-hover/viewall:scale-110 transition-transform">
-                  <ArrowRight className="w-5 h-5 text-terracotta" />
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-2 group-hover/viewall:scale-105 transition-transform">
+                  <ArrowRight className="w-4 h-4 text-charcoal" />
                 </div>
-                <span className="font-bold text-charcoal text-sm">View All</span>
-                <span className="font-bold text-gray-500 text-xs mt-1">Properties</span>
+                <span className="font-semibold text-charcoal text-xs">View All</span>
               </div>
             )}
           </div>
@@ -2097,14 +2078,13 @@ const LandingPage = () => {
           </div>
         </div>
       </div>
-
       {/* Content Section — full width, overflow guard */}
       <div className="w-full bg-[#FDFCF8] relative z-20 overflow-x-hidden">
 
         {/* ===== Discover Our Collections — Full Width ===== */}
         <CollectionsSection navigate={navigate} />
         {/* Property Sliders — also full-width, padded inline */}
-        <div className="pb-8 md:pb-32 pt-4 md:pt-8">
+        <div className="pb-4 md:pb-16 pt-2 md:pt-4">
           {/* Residential Collection Slider */}
           {renderPropertySlider(
             'slider-residential',
@@ -2135,6 +2115,28 @@ const LandingPage = () => {
             properties.event_venue
           )}
 
+
+          {/* Post Property Free Banner */}
+          <div className="px-6 md:px-12 lg:px-20 mb-8 md:mb-12">
+            <div className="bg-[#FFF9EA] border border-[#FBEFCD] rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+              <div className="text-left">
+                <h4 className="text-xl md:text-2xl font-bold text-charcoal flex items-baseline gap-1.5">
+                  <span>Post your Property for</span>
+                  <span className="font-serif italic text-terracotta text-2xl md:text-3xl leading-none">Free</span>
+                </h4>
+                <p className="text-gray-550 text-xs md:text-sm font-medium mt-1">
+                  List it on X-Space360 and get genuine, verified booking leads.
+                </p>
+              </div>
+              <button 
+                onClick={() => navigate(user ? '/host/list-property' : '/register?role=host')}
+                className="self-start md:self-auto bg-[#FBBF24] hover:bg-[#F59E0B] text-charcoal font-bold px-6 py-3 rounded-full shadow-sm hover:scale-[1.02] active:scale-95 transition-all text-xs md:text-sm flex items-center gap-2 cursor-pointer duration-200"
+              >
+                <span>Post Property</span>
+                <span className="bg-white text-[9px] text-[#D97706] font-extrabold uppercase px-1.5 py-0.5 rounded tracking-wider">Free</span>
+              </button>
+            </div>
+          </div>
 
           {/* Ad Campaign Carousel (Promo & Host) */}
           <div className="px-6 md:px-12 lg:px-20 mb-12 md:mb-24">
@@ -2268,22 +2270,23 @@ const LandingPage = () => {
                     avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100"
                   }
                 ]).map((item, idx) => (
-                  <div key={idx} className="bg-white rounded-2xl p-8 border border-gray-100 shadow-subtle text-left flex flex-col justify-between hover:shadow-premium transition-all duration-300 min-w-[280px] sm:min-w-[320px] md:min-w-[360px] snap-center flex-1">
+                  <div key={idx} className="bg-[#FDFCF8] rounded-3xl p-8 border border-sand-200/80 text-left flex flex-col justify-between transition-all duration-300 min-w-[280px] sm:min-w-[320px] md:min-w-[360px] snap-center flex-1 relative hover:border-terracotta/40 hover:shadow-subtle">
+                    <span className="absolute top-6 right-8 text-6xl font-serif text-terracotta/15 select-none pointer-events-none">“</span>
                     <div>
-                      <div className="flex items-center space-x-1 text-amber-500 mb-6">
+                      <div className="flex items-center space-x-1 text-terracotta mb-6">
                         {[...Array(item.stars)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-current" />
+                          <Star key={i} className="w-3.5 h-3.5 fill-current" />
                         ))}
                       </div>
-                      <p className="text-charcoal-light italic font-medium leading-relaxed mb-8">
+                      <p className="text-charcoal font-serif italic text-base leading-relaxed mb-8 relative z-10">
                         "{item.text}"
                       </p>
                     </div>
-                    <div className="flex items-center space-x-4">
-                      <img src={item.avatar} alt={item.author} className="w-12 h-12 rounded-full object-cover" />
+                    <div className="flex items-center space-x-4 border-t border-sand-100 pt-4 mt-auto">
+                      <img src={item.avatar} alt={item.author} className="w-10 h-10 rounded-full object-cover" />
                       <div>
-                        <h4 className="font-bold text-charcoal text-sm">{item.author}</h4>
-                        <p className="text-gray-400 text-xs font-semibold">{item.role}</p>
+                        <h4 className="font-bold text-charcoal text-xs tracking-tight">{item.author}</h4>
+                        <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mt-0.5">{item.role}</p>
                       </div>
                     </div>
                   </div>
