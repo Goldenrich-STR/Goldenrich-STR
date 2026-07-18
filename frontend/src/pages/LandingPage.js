@@ -2165,7 +2165,7 @@ const LandingPage = () => {
               </div>
 
               {/* Floating Badge */}
-              <div className="absolute right-8 md:right-24 bottom-6 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-10 bg-white text-blue-600 px-5 py-3 rounded-2xl shadow-elevated flex items-center gap-3 border border-sand-200">
+              <div className="hidden md:flex absolute right-24 top-1/2 -translate-y-1/2 z-10 bg-white text-blue-600 px-5 py-3 rounded-2xl shadow-elevated items-center gap-3 border border-sand-200">
                 <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
                   <Hotel className="w-5 h-5 text-blue-600" />
                 </div>
@@ -2205,7 +2205,7 @@ const LandingPage = () => {
               </div>
 
               {/* Floating Badge */}
-              <div className="absolute right-8 md:right-24 bottom-6 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-10 bg-white text-terracotta px-5 py-3 rounded-2xl shadow-elevated flex items-center gap-3 border border-sand-200">
+              <div className="hidden md:flex absolute right-24 top-1/2 -translate-y-1/2 z-10 bg-white text-terracotta px-5 py-3 rounded-2xl shadow-elevated items-center gap-3 border border-sand-200">
                 <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
                   <Sparkles className="w-5 h-5 text-terracotta" />
                 </div>
