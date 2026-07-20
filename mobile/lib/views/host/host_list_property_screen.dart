@@ -154,6 +154,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       {'value': 'studio', 'label': 'Studio'},
       {'value': 'independent_house', 'label': 'Independent House'},
       {'value': 'pg', 'label': 'PG'},
+      {'value': 'co_living', 'label': 'Co-living'},
       {'value': 'farmhouse', 'label': 'Farmhouse'},
       {'value': 'resort', 'label': 'Resort'},
     ],

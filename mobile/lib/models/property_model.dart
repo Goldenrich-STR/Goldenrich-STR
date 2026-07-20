@@ -37,6 +37,8 @@ class PropertyModel {
   final double? cookPrice;
   final bool hasSelfCook;
   final bool hasTaxi;
+  final double? rating;
+  final int? reviewCount;
 
   PropertyModel({
     required this.propertyId,
@@ -75,6 +77,8 @@ class PropertyModel {
     this.cookPrice,
     required this.hasSelfCook,
     required this.hasTaxi,
+    this.rating,
+    this.reviewCount,
   });
 
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
@@ -116,6 +120,8 @@ class PropertyModel {
       cookPrice: (json['cook_price'] as num?)?.toDouble(),
       hasSelfCook: json['has_self_cook'] ?? false,
       hasTaxi: json['has_taxi'] ?? false,
+      rating: (json['rating'] as num?)?.toDouble() ?? (json['rating_avg'] as num?)?.toDouble(),
+      reviewCount: (json['review_count'] as num?)?.toInt() ?? (json['rating_count'] as num?)?.toInt(),
     );
   }
 
@@ -157,6 +163,8 @@ class PropertyModel {
       'cook_price': cookPrice,
       'has_self_cook': hasSelfCook,
       'has_taxi': hasTaxi,
+      'rating': rating,
+      'review_count': reviewCount,
     };
   }
 }

@@ -946,98 +946,100 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           const SizedBox(height: 16),
 
                           // Small Guest Favourite Badge
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Column(
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Text(
-                                          '4.95',
-                                          style: GoogleFonts.manrope(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w800,
-                                            color: AppTheme.charcoal,
+                          if (prop.rating != null && prop.rating! > 0) ...[
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  Column(
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            prop.rating!.toStringAsFixed(1),
+                                            style: GoogleFonts.manrope(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppTheme.charcoal,
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 2),
-                                        const Icon(Icons.star, size: 14, color: AppTheme.charcoal),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '★★★★★',
-                                      style: GoogleFonts.manrope(
-                                        fontSize: 8,
-                                        color: AppTheme.charcoalMuted,
+                                          const SizedBox(width: 2),
+                                          const Icon(Icons.star, size: 14, color: AppTheme.charcoal),
+                                        ],
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                Container(width: 1, height: 28, color: Colors.grey.shade200),
-                                Column(
-                                  children: [
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(Icons.keyboard_double_arrow_left_rounded, size: 14, color: AppTheme.charcoal),
-                                        Text(
-                                          'Guest favourite',
-                                          style: GoogleFonts.manrope(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w800,
-                                            color: AppTheme.charcoal,
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        List.generate(prop.rating!.round().clamp(1, 5), (index) => '★').join(''),
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 8,
+                                          color: AppTheme.charcoalMuted,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Container(width: 1, height: 28, color: Colors.grey.shade200),
+                                  Column(
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.keyboard_double_arrow_left_rounded, size: 14, color: AppTheme.charcoal),
+                                          Text(
+                                            'Guest favourite',
+                                            style: GoogleFonts.manrope(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w800,
+                                              color: AppTheme.charcoal,
+                                            ),
                                           ),
+                                          const Icon(Icons.keyboard_double_arrow_right_rounded, size: 14, color: AppTheme.charcoal),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Highly rated stay',
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 10,
+                                          color: AppTheme.charcoalMuted,
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                        const Icon(Icons.keyboard_double_arrow_right_rounded, size: 14, color: AppTheme.charcoal),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Highly rated stay',
-                                      style: GoogleFonts.manrope(
-                                        fontSize: 10,
-                                        color: AppTheme.charcoalMuted,
-                                        fontWeight: FontWeight.w600,
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                Container(width: 1, height: 28, color: Colors.grey.shade200),
-                                Column(
-                                  children: [
-                                    Text(
-                                      '22',
-                                      style: GoogleFonts.manrope(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppTheme.charcoal,
+                                    ],
+                                  ),
+                                  Container(width: 1, height: 28, color: Colors.grey.shade200),
+                                  Column(
+                                    children: [
+                                      Text(
+                                        (prop.reviewCount ?? 0).toString(),
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTheme.charcoal,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Reviews',
-                                      style: GoogleFonts.manrope(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.charcoalMuted,
-                                        decoration: TextDecoration.underline,
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Reviews',
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.charcoalMuted,
+                                          decoration: TextDecoration.underline,
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 20),
+                            const SizedBox(height: 20),
+                          ],
 
                           const Divider(height: 1),
                           const SizedBox(height: 20),
@@ -1564,37 +1566,38 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           const SizedBox(height: 32),
 
                           // Large Wreath Guest Favourite Banner
-                          Center(
-                            child: Column(
-                              children: [
-                                LaurelWreathWidget(rating: 4.95),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Guest favourite',
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppTheme.charcoal,
+                          if (prop.rating != null && prop.rating! > 0) ...[
+                            Center(
+                              child: Column(
+                                children: [
+                                  LaurelWreathWidget(rating: prop.rating ?? 4.95),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Guest favourite',
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.charcoal,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'One of the most loved homes on X-Space360,\nbased on ratings, reviews, and reliability',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.manrope(
-                                    fontSize: 12,
-                                    color: AppTheme.charcoalMuted,
-                                    fontWeight: FontWeight.w500,
-                                    height: 1.4,
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'One of the most loved homes on X-Space360,\nbased on ratings, reviews, and reliability',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 12,
+                                      color: AppTheme.charcoalMuted,
+                                      fontWeight: FontWeight.w500,
+                                      height: 1.4,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 32),
-
-                          const Divider(height: 1),
-                          const SizedBox(height: 32),
+                            const SizedBox(height: 32),
+                            const Divider(height: 1),
+                            const SizedBox(height: 32),
+                          ],
 
                           // Stay Dates Selection Card
                           Text(
@@ -2748,7 +2751,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '566',
+                          (prop.reviewCount ?? 0).toString(),
                           style: GoogleFonts.manrope(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
@@ -2772,7 +2775,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         Row(
                           children: [
                             Text(
-                              '4.79',
+                              prop.rating != null && prop.rating! > 0 ? prop.rating!.toStringAsFixed(1) : '—',
                               style: GoogleFonts.manrope(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,

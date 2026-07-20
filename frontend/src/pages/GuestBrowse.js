@@ -1265,11 +1265,15 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
               <Zap className="w-3.5 h-3.5 fill-current" />
            </div>
         )}
-        <div className="ml-auto flex items-center text-white space-x-1.5 drop-shadow-subtle">
-           <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-           <span className="text-sm font-bold tracking-tight text-white">4.8</span>
-           <span className="text-[10px] text-white/80 font-bold ml-1">(120 Reviews)</span>
-        </div>
+        {property.rating && property.rating > 0 ? (
+          <div className="ml-auto flex items-center text-white space-x-1.5 drop-shadow-subtle">
+             <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+             <span className="text-sm font-bold tracking-tight text-white">{Number(property.rating).toFixed(1)}</span>
+             {property.review_count && property.review_count > 0 ? (
+               <span className="text-[10px] text-white/80 font-bold ml-1">({property.review_count} Reviews)</span>
+             ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
     <div className={`p-5 flex flex-col justify-between ${compact ? 'w-full sm:w-2/3 rounded-b-2xl sm:rounded-r-2xl sm:rounded-bl-none' : 'flex-1 rounded-b-2xl'} bg-white`}>

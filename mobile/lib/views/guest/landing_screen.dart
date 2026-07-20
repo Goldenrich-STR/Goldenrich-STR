@@ -260,7 +260,7 @@ class _LandingScreenState extends State<LandingScreen> {
             // A. Residential Collection
             _buildCollectionSection(
               context,
-              title: 'Residential Collection',
+              title: 'RESIDENTIAL COLLECTION',
               subtitle: 'Luxury homes, apartments, and private stays.',
               properties: residentialProps,
             ),
@@ -270,7 +270,7 @@ class _LandingScreenState extends State<LandingScreen> {
             // B. Commercial Spaces
             _buildCollectionSection(
               context,
-              title: 'Commercial Spaces',
+              title: 'COMMERCIAL SPACES',
               subtitle: 'Premium offices, co-working spaces, and retail.',
               properties: commercialProps.isEmpty ? residentialProps : commercialProps,
             ),
@@ -280,17 +280,12 @@ class _LandingScreenState extends State<LandingScreen> {
             // C. Events & Functions
             _buildCollectionSection(
               context,
-              title: 'Events & Functions',
+              title: 'FITNESS & FUNCTIONS',
               subtitle: 'Banquet halls, rooftops, and celebration venues.',
               properties: eventProps,
             ),
 
-            const SizedBox(height: 32),
-
-            // Post Property Banner
-            _buildPostPropertyFreeBanner(context),
-
-            const SizedBox(height: 32),
+            const SizedBox(height: 48),
 
             // 4. READY TO HOST BANNER
             _buildReadyToHostBanner(context, auth),
@@ -983,9 +978,10 @@ class _LandingScreenState extends State<LandingScreen> {
               Text(
                 title,
                 style: GoogleFonts.outfit(
-                  fontSize: 18,
+                  fontSize: 14,
                   fontWeight: FontWeight.w900,
                   color: AppTheme.charcoal,
+                  letterSpacing: 0.5,
                 ),
               ),
               const SizedBox(height: 2),
@@ -1002,7 +998,7 @@ class _LandingScreenState extends State<LandingScreen> {
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 240,
+          height: 260,
           child: properties.isEmpty
               ? Container(
                   margin: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -1039,18 +1035,28 @@ class _LandingScreenState extends State<LandingScreen> {
                       },
                       child: Container(
                         width: 200,
-                        margin: const EdgeInsets.only(right: 16.0, bottom: 6.0),
-                        color: Colors.transparent,
+                        margin: const EdgeInsets.only(right: 14.0, bottom: 6.0),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.stone),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            AspectRatio(
-                              aspectRatio: 4 / 3,
+                            Expanded(
                               child: Stack(
                                 children: [
                                   Positioned.fill(
                                     child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                                       child: Image.network(
                                         prop.images.isNotEmpty
                                             ? prop.images[0]
@@ -1065,115 +1071,101 @@ class _LandingScreenState extends State<LandingScreen> {
                                       ),
                                     ),
                                   ),
-                                  // Wishlist Button (Heart) Top Right
+                                  // Rating Badge Top Left
+                                  if (prop.rating != null && prop.rating! > 0)
+                                    Positioned(
+                                      top: 10,
+                                      left: 10,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.9),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.star, color: Color(0xFFD4AF37), size: 12),
+                                            const SizedBox(width: 2),
+                                            Text(
+                                              prop.rating!.toStringAsFixed(1),
+                                              style: GoogleFonts.manrope(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w800,
+                                                color: AppTheme.charcoal,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  // Action Buttons Top Right
                                   Positioned(
                                     top: 10,
                                     right: 10,
-                                    child: Container(
-                                      width: 28,
-                                      height: 28,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.9),
-                                        shape: BoxShape.circle,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.05),
-                                            blurRadius: 4,
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(5),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.9),
+                                            shape: BoxShape.circle,
                                           ),
-                                        ],
-                                      ),
-                                      child: const Center(
-                                        child: Icon(Icons.favorite_border, color: AppTheme.charcoal, size: 14),
-                                      ),
+                                          child: const Icon(Icons.share_outlined, color: AppTheme.charcoal, size: 14),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          padding: const EdgeInsets.all(5),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.9),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: const Icon(Icons.favorite_border, color: AppTheme.charcoal, size: 14),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            // Details Below Image
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 2.0),
+                              padding: const EdgeInsets.all(12.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  // Title and Star Rating in Row
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          prop.title,
-                                          style: GoogleFonts.manrope(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppTheme.charcoal,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(Icons.star, color: Color(0xFFD4AF37), size: 12),
-                                          const SizedBox(width: 2),
-                                          Text(
-                                            '4.9',
-                                            style: GoogleFonts.manrope(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppTheme.charcoal,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  // Type and Location
                                   Text(
-                                    '${prop.propertyType ?? "Property"} in ${prop.city}',
-                                    style: GoogleFonts.manrope(
-                                      fontSize: 11,
-                                      color: AppTheme.charcoalMuted,
-                                      fontWeight: FontWeight.w500,
+                                    prop.title,
+                                    style: GoogleFonts.outfit(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.charcoal,
                                     ),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 4),
-                                  // Price
+                                  const SizedBox(height: 2),
                                   Row(
                                     crossAxisAlignment: CrossAxisAlignment.baseline,
                                     textBaseline: TextBaseline.alphabetic,
                                     children: [
                                       Text(
-                                        '₹${(prop.pricePerNight * (auth.isPromoClaimed ? 0.9 : 1.0)).toStringAsFixed(0)}',
-                                        style: GoogleFonts.manrope(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTheme.charcoal,
-                                        ),
-                                      ),
-                                      Text(
                                         prop.category.toLowerCase() == 'commercial' || prop.category.toLowerCase() == 'event_venue'
-                                            ? ' / day'
-                                            : ' / night',
+                                            ? '₹${(prop.pricePerNight * (auth.isPromoClaimed ? 0.9 : 1.0)).toStringAsFixed(0)} / day'
+                                            : '₹${(prop.pricePerNight * (auth.isPromoClaimed ? 0.9 : 1.0)).toStringAsFixed(0)} / night',
                                         style: GoogleFonts.manrope(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: AppTheme.charcoalMuted,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                          color: AppTheme.primary,
                                         ),
                                       ),
                                       if (auth.isPromoClaimed) ...[
-                                        const SizedBox(width: 6),
+                                        const SizedBox(width: 4),
                                         Text(
                                           '₹${prop.pricePerNight.toStringAsFixed(0)}',
                                           style: GoogleFonts.manrope(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w500,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w600,
                                             color: AppTheme.charcoalMuted,
                                             decoration: TextDecoration.lineThrough,
                                           ),
@@ -1192,111 +1184,6 @@ class _LandingScreenState extends State<LandingScreen> {
                 ),
         ),
       ],
-    );
-  }
-
-  // --- POST PROPERTY FREE BANNER ---
-  Widget _buildPostPropertyFreeBanner(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF9EA), // Cream / light-yellow background
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFFBEFCD), width: 1), // Thin yellow border
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            'Post your Property for ',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF2D2D2D),
-                            ),
-                          ),
-                          Text(
-                            'Free',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primary, // Terracotta / primary color
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'List it on X-Space360 and get genuine, verified booking leads.',
-                        style: GoogleFonts.manrope(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF6B6B6B),
-                          height: 1.4,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                _openHostRegistration(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFBBF24), // Branded gold/yellow
-                foregroundColor: const Color(0xFF1E293B),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Post Property',
-                    style: GoogleFonts.manrope(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      'FREE',
-                      style: GoogleFonts.manrope(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFFFBBF24),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1413,19 +1300,9 @@ class _LandingScreenState extends State<LandingScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'GUEST STORIES',
-                style: GoogleFonts.outfit(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFFC25A3F), // Terracotta primary
-                  letterSpacing: 1.5,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
                 'Loved by Guests & Hosts',
                 style: GoogleFonts.outfit(
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.w900,
                   color: AppTheme.charcoal,
                 ),
@@ -1434,8 +1311,8 @@ class _LandingScreenState extends State<LandingScreen> {
               Text(
                 'Hear from our community members about their experience.',
                 style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
                   color: AppTheme.charcoalMuted,
                 ),
               ),
@@ -1444,7 +1321,7 @@ class _LandingScreenState extends State<LandingScreen> {
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 190,
+          height: 160,
           child: ListView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -1474,74 +1351,52 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _buildTestimonialCard(String name, String review, String avatarUrl) {
     return Container(
-      width: 250,
-      margin: const EdgeInsets.only(right: 14.0, bottom: 6.0),
-      padding: const EdgeInsets.all(20),
+      width: 240,
+      margin: const EdgeInsets.only(right: 12.0, bottom: 4.0),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFDFCF8), // Warm cream background
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFEFECE6)),
+        border: Border.all(color: AppTheme.stone),
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Giant quotes mark in top-right corner
-          Positioned(
-            right: 0,
-            top: -10,
-            child: Text(
-              '“',
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 64,
-                fontWeight: FontWeight.w900,
-                color: const Color(0xFFC25A3F).withOpacity(0.08), // Light terracotta quote mark
-                height: 1.0,
-              ),
+          Row(
+            children: List.generate(
+              5,
+              (index) => const Icon(Icons.star, color: Color(0xFFD4AF37), size: 14),
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 8),
+          Expanded(
+            child: Text(
+              review,
+              style: GoogleFonts.manrope(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.charcoalLight,
+                height: 1.3,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
             children: [
-              // Stars
-              Row(
-                children: List.generate(
-                  5,
-                  (index) => const Icon(Icons.star, color: Color(0xFFC25A3F), size: 14),
-                ),
+              CircleAvatar(
+                radius: 12,
+                backgroundImage: NetworkImage(avatarUrl),
               ),
-              const SizedBox(height: 12),
-              // Review Quote
-              Expanded(
-                child: Text(
-                  '"$review"',
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.charcoal,
-                    height: 1.4,
-                  ),
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
+              const SizedBox(width: 8),
+              Text(
+                name,
+                style: GoogleFonts.outfit(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.charcoal,
                 ),
-              ),
-              const SizedBox(height: 12),
-              // Author Info
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundImage: NetworkImage(avatarUrl),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    name,
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.charcoal,
-                    ),
-                  ),
-                ],
               ),
             ],
           ),

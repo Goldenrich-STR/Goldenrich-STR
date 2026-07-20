@@ -9,6 +9,7 @@ import ChatbotWidget from '../components/ChatbotWidget';
 import LanguageSelector from '../components/LanguageSelector';
 import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 import LegalDocument from '../components/LegalDocument';
+import ScrollReveal from '../components/ui/ScrollReveal';
 
 const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
 
@@ -984,93 +985,97 @@ const CollectionsSection = ({ navigate }) => {
   return (
     <section className="w-full bg-[#FDFCF8] pt-10 md:pt-16 pb-4 md:pb-6 overflow-x-hidden">
       {/* Header — centered like Saffron Stay style */}
-      <div className="flex flex-col items-center text-center mb-8 px-6 md:px-12 lg:px-20">
-        <p className="text-terracotta text-xs font-bold uppercase tracking-widest mb-2">X-Space360 Collections</p>
-        <h2 className="text-3xl md:text-4xl font-bold text-charcoal tracking-tight leading-tight mb-6">
-          Discover Our Collections
-        </h2>
-        {/* Nav arrows inline below heading */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => scroll('left')}
-            className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal shadow-sm"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal shadow-sm"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+      <ScrollReveal duration="duration-[800ms]">
+        <div className="flex flex-col items-center text-center mb-8 px-6 md:px-12 lg:px-20">
+          <p className="text-terracotta text-xs font-bold uppercase tracking-widest mb-2">X-Space360 Collections</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-charcoal tracking-tight leading-tight mb-6">
+            Discover Our Collections
+          </h2>
+          {/* Nav arrows inline below heading */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => scroll('left')}
+              className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal shadow-sm"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => scroll('right')}
+              className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal shadow-sm"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
         </div>
-      </div>
+      </ScrollReveal>
 
       {/* Cards Strip — spacer divs for reliable padding (overflow-x: hidden parent bug fix) */}
-      <div
-        ref={sliderRef}
-        className="flex overflow-x-auto no-scrollbar gap-4 snap-x scroll-smooth pb-4 justify-start xl:justify-center"
-      >
-        {/* Left Spacer */}
-        <div className="shrink-0 min-w-[24px] md:min-w-[48px] lg:min-w-[80px] xl:hidden h-1" />
-        {PREMIUM_COLLECTIONS.map((col) => {
-          const isOpen = expanded === col.id;
-          return (
-            <div
-              key={col.id}
-              onClick={() => handleCardClick(col.id)}
-              className={`relative flex-none snap-start rounded-none overflow-hidden cursor-pointer transition-all duration-500 shadow-md hover:shadow-xl
-                ${isOpen
-                  ? 'w-[340px] md:w-[420px] aspect-[3/4]'
-                  : 'w-[200px] md:w-[240px] aspect-[3/4]'
-                }`}
-              style={{ willChange: 'width' }}
-            >
-              {/* Background Image */}
-              <img
-                src={col.image}
-                alt={col.label}
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 scale-100 hover:scale-[1.03]"
-              />
+      <ScrollReveal duration="duration-[1000ms]" delay={150}>
+        <div
+          ref={sliderRef}
+          className="flex overflow-x-auto no-scrollbar gap-4 snap-x scroll-smooth pb-4 justify-start xl:justify-center"
+        >
+          {/* Left Spacer */}
+          <div className="shrink-0 min-w-[24px] md:min-w-[48px] lg:min-w-[80px] xl:hidden h-1" />
+          {PREMIUM_COLLECTIONS.map((col) => {
+            const isOpen = expanded === col.id;
+            return (
+              <div
+                key={col.id}
+                onClick={() => handleCardClick(col.id)}
+                className={`relative flex-none snap-start rounded-none overflow-hidden cursor-pointer transition-all duration-500 shadow-md hover:shadow-xl
+                  ${isOpen
+                    ? 'w-[340px] md:w-[420px] aspect-[3/4]'
+                    : 'w-[200px] md:w-[240px] aspect-[3/4]'
+                  }`}
+                style={{ willChange: 'width' }}
+              >
+                {/* Background Image */}
+                <img
+                  src={col.image}
+                  alt={col.label}
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 scale-100 hover:scale-[1.03]"
+                />
 
-              {/* Gradient overlay — heavier at bottom */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+                {/* Gradient overlay — heavier at bottom */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
 
-              {/* Tag badge */}
-              <div className="absolute top-4 left-4">
-                <span className="bg-white/90 backdrop-blur-sm text-charcoal text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
-                  {col.tag}
-                </span>
+                {/* Tag badge */}
+                <div className="absolute top-4 left-4">
+                  <span className="bg-white/90 backdrop-blur-sm text-charcoal text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
+                    {col.tag}
+                  </span>
+                </div>
+
+                {/* Collapsed: just title */}
+                <div className={`absolute inset-0 p-5 flex flex-col justify-end transition-all duration-300 ${isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                  <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mb-1">Explore</p>
+                  <h3 className="text-white text-lg md:text-xl font-bold leading-snug">{col.label}</h3>
+                </div>
+
+                {/* Expanded: full detail */}
+                <div className={`absolute inset-0 p-6 flex flex-col justify-end transition-all duration-500 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
+                  <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mb-2">Explore</p>
+                  <h3 className="text-white text-xl md:text-2xl font-bold leading-snug mb-2">{col.label}</h3>
+                  <p className="text-white/80 text-xs md:text-sm font-medium leading-relaxed mb-4">{col.detail}</p>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const typeQuery = col.property_type ? `&property_type=${col.property_type}` : '';
+                      navigate(`/guest/browse?category=${col.query}${typeQuery}`);
+                    }}
+                    className="self-start bg-white text-charcoal text-xs font-bold uppercase tracking-widest px-5 py-2.5 rounded-full hover:bg-stone transition shadow-premium hover:scale-[1.02] active:scale-95"
+                  >
+                    Browse Properties →
+                  </button>
+                </div>
               </div>
-
-              {/* Collapsed: just title */}
-              <div className={`absolute inset-0 p-5 flex flex-col justify-end transition-all duration-300 ${isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-                <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mb-1">Explore</p>
-                <h3 className="text-white text-lg md:text-xl font-bold leading-snug">{col.label}</h3>
-              </div>
-
-              {/* Expanded: full detail */}
-              <div className={`absolute inset-0 p-6 flex flex-col justify-end transition-all duration-500 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-                <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mb-2">Explore</p>
-                <h3 className="text-white text-xl md:text-2xl font-bold leading-snug mb-2">{col.label}</h3>
-                <p className="text-white/80 text-xs md:text-sm font-medium leading-relaxed mb-4">{col.detail}</p>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const typeQuery = col.property_type ? `&property_type=${col.property_type}` : '';
-                    navigate(`/guest/browse?category=${col.query}${typeQuery}`);
-                  }}
-                  className="self-start bg-white text-charcoal text-xs font-bold uppercase tracking-widest px-5 py-2.5 rounded-full hover:bg-stone transition shadow-premium hover:scale-[1.02] active:scale-95"
-                >
-                  Browse Properties →
-                </button>
-              </div>
-            </div>
-          );
-        })}
-        {/* Right Spacer */}
-        <div className="shrink-0 min-w-[24px] md:min-w-[48px] lg:min-w-[80px] xl:hidden h-1" />
-      </div>
+            );
+          })}
+          {/* Right Spacer */}
+          <div className="shrink-0 min-w-[24px] md:min-w-[48px] lg:min-w-[80px] xl:hidden h-1" />
+        </div>
+      </ScrollReveal>
     </section>
   );
 };
@@ -2029,55 +2034,57 @@ const LandingPage = () => {
       </div>
 
       {/* ── Category Shortcut Strip ── */}
-      <div className="w-full bg-[#FDFCF8] relative z-20 py-8 md:py-12 border-b border-sand-100">
-        <div className="max-w-7xl mx-auto px-4 md:px-8">
-          <div className="flex flex-row flex-wrap items-center justify-center gap-4 md:gap-20">
-            {[
-              {
-                label: 'Residential',
-                icon: Home,
-                category: 'residential',
-                desc: 'Homes & Villas',
-                bg: 'bg-terracotta',
-                ring: 'ring-terracotta/20',
-                shadow: 'shadow-terracotta/30'
-              },
-              {
-                label: 'Commercial',
-                icon: Briefcase,
-                category: 'commercial',
-                desc: 'Offices & Co-working',
-                bg: 'bg-[#4a3f35]',
-                ring: 'ring-[#4a3f35]/20',
-                shadow: 'shadow-[#4a3f35]/20'
-              },
-              {
-                label: 'Event Venue',
-                icon: PartyPopper,
-                category: 'event_venue',
-                desc: 'Halls & Rooftops',
-                bg: 'bg-[#4a6b50]',
-                ring: 'ring-[#4a6b50]/20',
-                shadow: 'shadow-[#4a6b50]/20'
-              }
-            ].map(({ label, icon: Icon, category, desc, bg, ring, shadow }) => (
-              <button
-                key={category}
-                onClick={() => navigate(`/guest/browse?category=${category}`)}
-                className="group flex flex-col items-center gap-2 md:gap-3 cursor-pointer w-28 md:w-auto"
-              >
-                <div className={`w-14 h-14 md:w-20 md:h-20 rounded-full ${bg} flex items-center justify-center ring-4 ${ring} shadow-premium ${shadow} group-hover:scale-[1.03] group-hover:shadow-elevated transition-all duration-300 active:scale-95`}>
-                  <Icon className="w-6 h-6 md:w-9 md:h-9 text-white" />
-                </div>
-                <div className="text-center px-1">
-                  <p className="text-charcoal font-bold tracking-tight text-[11px] md:text-[14px] tracking-tight leading-snug">{label}</p>
-                  <p className="text-gray-400 text-[9px] md:text-[11px] font-medium mt-0.5 leading-tight">{desc}</p>
-                </div>
-              </button>
-            ))}
+      <ScrollReveal duration="duration-[800ms]">
+        <div className="w-full bg-[#FDFCF8] relative z-20 py-8 md:py-12 border-b border-sand-100">
+          <div className="max-w-7xl mx-auto px-4 md:px-8">
+            <div className="flex flex-row flex-wrap items-center justify-center gap-4 md:gap-20">
+              {[
+                {
+                  label: 'Residential',
+                  icon: Home,
+                  category: 'residential',
+                  desc: 'Homes & Villas',
+                  bg: 'bg-terracotta',
+                  ring: 'ring-terracotta/20',
+                  shadow: 'shadow-terracotta/30'
+                },
+                {
+                  label: 'Commercial',
+                  icon: Briefcase,
+                  category: 'commercial',
+                  desc: 'Offices & Co-working',
+                  bg: 'bg-[#4a3f35]',
+                  ring: 'ring-[#4a3f35]/20',
+                  shadow: 'shadow-[#4a3f35]/20'
+                },
+                {
+                  label: 'Event Venue',
+                  icon: PartyPopper,
+                  category: 'event_venue',
+                  desc: 'Halls & Rooftops',
+                  bg: 'bg-[#4a6b50]',
+                  ring: 'ring-[#4a6b50]/20',
+                  shadow: 'shadow-[#4a6b50]/20'
+                }
+              ].map(({ label, icon: Icon, category, desc, bg, ring, shadow }) => (
+                <button
+                  key={category}
+                  onClick={() => navigate(`/guest/browse?category=${category}`)}
+                  className="group flex flex-col items-center gap-2 md:gap-3 cursor-pointer w-28 md:w-auto"
+                >
+                  <div className={`w-14 h-14 md:w-20 md:h-20 rounded-full ${bg} flex items-center justify-center ring-4 ${ring} shadow-premium ${shadow} group-hover:scale-[1.03] group-hover:shadow-elevated transition-all duration-300 active:scale-95`}>
+                    <Icon className="w-6 h-6 md:w-9 md:h-9 text-white" />
+                  </div>
+                  <div className="text-center px-1">
+                    <p className="text-charcoal font-bold tracking-tight text-[11px] md:text-[14px] tracking-tight leading-snug">{label}</p>
+                    <p className="text-gray-400 text-[9px] md:text-[11px] font-medium mt-0.5 leading-tight">{desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      </ScrollReveal>
       {/* Content Section — full width, overflow guard */}
       <div className="w-full bg-[#FDFCF8] relative z-20 overflow-x-hidden">
 
@@ -2086,151 +2093,162 @@ const LandingPage = () => {
         {/* Property Sliders — also full-width, padded inline */}
         <div className="pb-4 md:pb-16 pt-2 md:pt-4">
           {/* Residential Collection Slider */}
-          {renderPropertySlider(
-            'slider-residential',
-            'Residential Collection',
-            'Luxury homes, apartments, and private stays.',
-            Building2,
-            'residential',
-            properties.residential
-          )}
+          <ScrollReveal duration="duration-[900ms]">
+            {renderPropertySlider(
+              'slider-residential',
+              'Residential Collection',
+              'Luxury homes, apartments, and private stays.',
+              Building2,
+              'residential',
+              properties.residential
+            )}
+          </ScrollReveal>
 
           {/* Commercial Spaces Slider */}
-          {renderPropertySlider(
-            'slider-commercial',
-            'Commercial Spaces',
-            'Premium offices, co-working spaces, and retail.',
-            Briefcase,
-            'commercial',
-            properties.commercial
-          )}
+          <ScrollReveal duration="duration-[900ms]">
+            {renderPropertySlider(
+              'slider-commercial',
+              'Commercial Spaces',
+              'Premium offices, co-working spaces, and retail.',
+              Briefcase,
+              'commercial',
+              properties.commercial
+            )}
+          </ScrollReveal>
 
           {/* Events & Functions Slider */}
-          {renderPropertySlider(
-            'slider-events',
-            'Events & Functions',
-            'Banquet halls, rooftops, and celebration venues.',
-            PartyPopper,
-            'event_venue',
-            properties.event_venue
-          )}
+          <ScrollReveal duration="duration-[900ms]">
+            {renderPropertySlider(
+              'slider-events',
+              'Events & Functions',
+              'Banquet halls, rooftops, and celebration venues.',
+              PartyPopper,
+              'event_venue',
+              properties.event_venue
+            )}
+          </ScrollReveal>
 
 
           {/* Post Property Free Banner */}
-          <div className="px-6 md:px-12 lg:px-20 mb-8 md:mb-12">
-            <div className="bg-[#FFF9EA] border border-[#FBEFCD] rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-              <div className="text-left">
-                <h4 className="text-xl md:text-2xl font-bold text-charcoal flex items-baseline gap-1.5">
-                  <span>Post your Property for</span>
-                  <span className="font-serif italic text-terracotta text-2xl md:text-3xl leading-none">Free</span>
-                </h4>
-                <p className="text-gray-550 text-xs md:text-sm font-medium mt-1">
-                  List it on X-Space360 and get genuine, verified booking leads.
-                </p>
-              </div>
-              <button 
-                onClick={() => navigate(user ? '/host/list-property' : '/register?role=host')}
-                className="self-start md:self-auto bg-[#FBBF24] hover:bg-[#F59E0B] text-charcoal font-bold px-6 py-3 rounded-full shadow-sm hover:scale-[1.02] active:scale-95 transition-all text-xs md:text-sm flex items-center gap-2 cursor-pointer duration-200"
-              >
-                <span>Post Property</span>
-                <span className="bg-white text-[9px] text-[#D97706] font-extrabold uppercase px-1.5 py-0.5 rounded tracking-wider">Free</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Ad Campaign Carousel (Promo & Host) */}
-          <div className="px-6 md:px-12 lg:px-20 mb-12 md:mb-24">
-          <div className="relative rounded-[2rem] overflow-hidden shadow-premium h-[300px] md:h-[350px] bg-stone">
-            {/* Slide 1: Guest Promo */}
-            <div className={`absolute inset-0 flex items-center transition-all duration-700 ${currentPromoSlide === 0 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
-              <div 
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url('/images/premium_banner_bg.png')` }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-charcoal/80 via-charcoal/40 to-transparent" />
-              
-              <div className="relative z-10 w-full px-8 md:px-16 text-left max-w-xl md:max-w-2xl text-white">
-                <h3 className="text-3xl md:text-5xl font-bold tracking-tight mb-3 text-white">
-                  Save on your next luxury stay
-                </h3>
-                <p className="text-white/95 text-xs md:text-sm font-semibold leading-relaxed mb-6 max-w-md">
-                  We've pulled together some top premium deals, so you can find an amazing residential, commercial, or event space at an even better price.
-                </p>
+          <ScrollReveal duration="duration-[800ms]">
+            <div className="px-6 md:px-12 lg:px-20 mb-8 md:mb-12">
+              <div className="bg-[#FFF9EA] border border-[#FBEFCD] rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+                <div className="text-left">
+                  <h4 className="text-xl md:text-2xl font-bold text-charcoal flex items-baseline gap-1.5">
+                    <span>Post your Property for</span>
+                    <span className="font-serif italic text-terracotta text-2xl md:text-3xl leading-none">Free</span>
+                  </h4>
+                  <p className="text-gray-550 text-xs md:text-sm font-medium mt-1">
+                    List it on X-Space360 and get genuine, verified booking leads.
+                  </p>
+                </div>
                 <button 
-                  onClick={() => navigate('/guest/browse')}
-                  className="bg-white hover:bg-stone text-charcoal font-bold px-8 py-3 rounded-full transition shadow-premium text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 duration-200"
+                  onClick={() => navigate(user ? '/host/list-property' : '/register?role=host')}
+                  className="self-start md:self-auto bg-[#FBBF24] hover:bg-[#F59E0B] text-charcoal font-bold px-6 py-3 rounded-full shadow-sm hover:scale-[1.02] active:scale-95 transition-all text-xs md:text-sm flex items-center gap-2 cursor-pointer duration-200"
                 >
-                  See Property Deals
+                  <span>Post Property</span>
+                  <span className="bg-white text-[9px] text-[#D97706] font-extrabold uppercase px-1.5 py-0.5 rounded tracking-wider">Free</span>
                 </button>
               </div>
+            </div>
+          </ScrollReveal>
 
-              {/* Floating Badge */}
-              <div className="hidden md:flex absolute right-24 top-1/2 -translate-y-1/2 z-10 bg-white text-blue-600 px-5 py-3 rounded-2xl shadow-elevated items-center gap-3 border border-sand-200">
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-                  <Hotel className="w-5 h-5 text-blue-600" />
+          {/* Ad Campaign Carousel (Promo & Host) */}
+          <ScrollReveal duration="duration-[1000ms]">
+            <div className="px-6 md:px-12 lg:px-20 mb-12 md:mb-24">
+              <div className="relative rounded-[2rem] overflow-hidden shadow-premium h-[300px] md:h-[350px] bg-stone">
+                {/* Slide 1: Guest Promo */}
+                <div className={`absolute inset-0 flex items-center transition-all duration-700 ${currentPromoSlide === 0 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ backgroundImage: `url('/images/premium_banner_bg.png')` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-charcoal/80 via-charcoal/40 to-transparent" />
+                  
+                  <div className="relative z-10 w-full px-8 md:px-16 text-left max-w-xl md:max-w-2xl text-white">
+                    <h3 className="text-3xl md:text-5xl font-bold tracking-tight mb-3 text-white">
+                      Save on your next luxury stay
+                    </h3>
+                    <p className="text-white/95 text-xs md:text-sm font-semibold leading-relaxed mb-6 max-w-md">
+                      We've pulled together some top premium deals, so you can find an amazing residential, commercial, or event space at an even better price.
+                    </p>
+                    <button 
+                      onClick={() => navigate('/guest/browse')}
+                      className="bg-white hover:bg-stone text-charcoal font-bold px-8 py-3 rounded-full transition shadow-premium text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 duration-200"
+                    >
+                      See Property Deals
+                    </button>
+                  </div>
+
+                  {/* Floating Badge */}
+                  <div className="hidden md:flex absolute right-24 top-1/2 -translate-y-1/2 z-10 bg-white text-blue-600 px-5 py-3 rounded-2xl shadow-elevated items-center gap-3 border border-sand-200">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                      <Hotel className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none">Up to</p>
+                      <p className="text-xl font-black text-blue-600 tracking-tight leading-none mt-1">35% off</p>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none">Up to</p>
-                  <p className="text-xl font-black text-blue-600 tracking-tight leading-none mt-1">35% off</p>
+
+                {/* Slide 2: Host Campaign */}
+                <div className={`absolute inset-0 flex items-center transition-all duration-700 ${currentPromoSlide === 1 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ backgroundImage: `url('/images/host_banner_bg.png')` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-charcoal/80 via-charcoal/40 to-transparent" />
+                  
+                  <div className="relative z-10 w-full px-8 md:px-16 text-left max-w-xl md:max-w-2xl text-white">
+                    <h3 className="text-3xl md:text-5xl font-bold tracking-tight mb-3 text-white">
+                      Ready to Host with Us?
+                    </h3>
+                    <p className="text-white/95 text-xs md:text-sm font-semibold leading-relaxed mb-6 max-w-md">
+                      Join India's most exclusive short-term rental network and turn your premium space into a high-yielding asset.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-4">
+                      <button 
+                        onClick={() => navigate(user ? '/dashboard' : '/register?role=host')}
+                        className="bg-terracotta hover:bg-terracotta/90 text-white font-bold px-8 py-3 rounded-full transition shadow-premium text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 duration-200"
+                      >
+                        List Your Property
+                      </button>
+                      <a href="#" className="text-white hover:text-terracotta text-xs font-bold transition-colors duration-300">
+                        Learn about our fees →
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Floating Badge */}
+                  <div className="hidden md:flex absolute right-24 top-1/2 -translate-y-1/2 z-10 bg-white text-terracotta px-5 py-3 rounded-2xl shadow-elevated items-center gap-3 border border-sand-200">
+                    <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-5 h-5 text-terracotta" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none">Free</p>
+                      <p className="text-xl font-black text-terracotta tracking-tight leading-none mt-1">3-Mo Trial</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Slider Dot Indicators */}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                  {[0, 1].map((idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentPromoSlide(idx)}
+                      className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${currentPromoSlide === idx ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/70'}`}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
-
-            {/* Slide 2: Host Campaign */}
-            <div className={`absolute inset-0 flex items-center transition-all duration-700 ${currentPromoSlide === 1 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
-              <div 
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url('/images/host_banner_bg.png')` }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-charcoal/80 via-charcoal/40 to-transparent" />
-              
-              <div className="relative z-10 w-full px-8 md:px-16 text-left max-w-xl md:max-w-2xl text-white">
-                <h3 className="text-3xl md:text-5xl font-bold tracking-tight mb-3 text-white">
-                  Ready to Host with Us?
-                </h3>
-                <p className="text-white/95 text-xs md:text-sm font-semibold leading-relaxed mb-6 max-w-md">
-                  Join India's most exclusive short-term rental network and turn your premium space into a high-yielding asset.
-                </p>
-                <div className="flex flex-wrap items-center gap-4">
-                  <button 
-                    onClick={() => navigate(user ? '/dashboard' : '/register?role=host')}
-                    className="bg-terracotta hover:bg-terracotta/90 text-white font-bold px-8 py-3 rounded-full transition shadow-premium text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 duration-200"
-                  >
-                    List Your Property
-                  </button>
-                  <a href="#" className="text-white hover:text-terracotta text-xs font-bold transition-colors duration-300">
-                    Learn about our fees →
-                  </a>
-                </div>
-              </div>
-
-              {/* Floating Badge */}
-              <div className="hidden md:flex absolute right-24 top-1/2 -translate-y-1/2 z-10 bg-white text-terracotta px-5 py-3 rounded-2xl shadow-elevated items-center gap-3 border border-sand-200">
-                <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
-                  <Sparkles className="w-5 h-5 text-terracotta" />
-                </div>
-                <div>
-                  <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none">Free</p>
-                  <p className="text-xl font-black text-terracotta tracking-tight leading-none mt-1">3-Mo Trial</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Slider Dot Indicators */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-              {[0, 1].map((idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentPromoSlide(idx)}
-                  className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${currentPromoSlide === idx ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/70'}`}
-                />
-              ))}
-            </div>
-          </div>
-          </div>{/* end banner px-wrapper */}
+          </ScrollReveal>{/* end banner px-wrapper */}
 
                     {/* Testimonials (Loved by Guests & Hosts) */}
-          <div className="mb-12 md:mb-32 text-center">
+          <ScrollReveal duration="duration-[900ms]">
+            <div className="mb-12 md:mb-32 text-center">
             <span className="text-xs font-bold tracking-tight tracking-[0.2em] text-terracotta uppercase">{t('guestStories')}</span>
             <h3 className="text-4xl font-bold text-charcoal mt-3 mb-4 tracking-tight">{t('lovedByGuests')}</h3>
             <p className="text-gray-550 text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('testimonialsSub')}</p>
@@ -2311,9 +2329,11 @@ const LandingPage = () => {
               </div>
             </div>
           </div>
+          </ScrollReveal>
           {/* Blogs Section (Clean 2x2 Grid) */}
-          <div className="mb-12 md:mb-32 text-left max-w-7xl mx-auto px-4 md:px-8">
-            <h3 className="text-3xl md:text-4xl font-bold text-charcoal tracking-tight mb-8">
+          <ScrollReveal duration="duration-[900ms]">
+            <div className="mb-12 md:mb-32 text-left max-w-7xl mx-auto px-4 md:px-8">
+              <h3 className="text-3xl md:text-4xl font-bold text-charcoal tracking-tight mb-8">
               Plan smart, explore more
             </h3>
 
@@ -2353,10 +2373,12 @@ const LandingPage = () => {
               ))}
             </div>
           </div>
+          </ScrollReveal>
 
           {/* FAQ Section */}
-          <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8 md:mb-12 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12 text-left">
-            {/* Left Info Panel */}
+          <ScrollReveal duration="duration-[950ms]">
+            <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8 md:mb-12 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12 text-left">
+              {/* Left Info Panel */}
             <div className="lg:col-span-5 flex flex-col justify-center space-y-4">
               <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest leading-none">FAQS</span>
               <h3 className="text-3xl md:text-5xl font-black text-charcoal tracking-tight leading-tight">
@@ -2427,6 +2449,7 @@ const LandingPage = () => {
               })}
             </div>
           </div>
+          </ScrollReveal>
 
 
           
