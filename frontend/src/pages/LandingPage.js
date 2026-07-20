@@ -8,6 +8,7 @@ import SEO from '../components/SEO';
 import ChatbotWidget from '../components/ChatbotWidget';
 import LanguageSelector from '../components/LanguageSelector';
 import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
+import { getRecentlyVisitedProperties, RECENTLY_VISITED_PROPERTIES_EVENT } from '../lib/recentlyVisitedProperties';
 import LegalDocument from '../components/LegalDocument';
 import ScrollReveal from '../components/ui/ScrollReveal';
 
@@ -1221,6 +1222,8 @@ const LandingPage = () => {
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [activeBlog, setActiveBlog] = useState(0);
   const [sliderInteracted, setSliderInteracted] = useState({});
+  const [recentlyVisitedProperties, setRecentlyVisitedProperties] = useState(() => getRecentlyVisitedProperties());
+  const [isNavScrolled, setIsNavScrolled] = useState(false);
 
   const scrollToSlide = (containerId, index) => {
     const container = document.getElementById(containerId);
@@ -1484,6 +1487,31 @@ const LandingPage = () => {
   }, [cmsContent]);
 
   React.useEffect(() => {
+    const handleScroll = () => {
+      setIsNavScrolled(window.scrollY > 24);
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  React.useEffect(() => {
+    const refreshRecentlyVisited = () => {
+      setRecentlyVisitedProperties(getRecentlyVisitedProperties());
+    };
+
+    refreshRecentlyVisited();
+    window.addEventListener('storage', refreshRecentlyVisited);
+    window.addEventListener(RECENTLY_VISITED_PROPERTIES_EVENT, refreshRecentlyVisited);
+
+    return () => {
+      window.removeEventListener('storage', refreshRecentlyVisited);
+      window.removeEventListener(RECENTLY_VISITED_PROPERTIES_EVENT, refreshRecentlyVisited);
+    };
+  }, []);
+
+  React.useEffect(() => {
     const fetchCMS = async () => {
       try {
         const response = await apiClient.get('/cms/landing-page');
@@ -1660,24 +1688,51 @@ const LandingPage = () => {
     );
   };
 
-  const recentlyVisitedProperties = [
-    ...(properties.residential || []),
-    ...(properties.event_venue || []),
-    ...(properties.commercial || [])
-  ].slice(0, 5);
+  const faqItems = [
+    {
+      question: "What is X-Space360 and how does it work?",
+      answer: "X-Space360 is a curated premium short-term rental network. We connect property owners (hosts) with guests seeking high-end residential, commercial, or event spaces. All listed spaces undergo a strict coordinate geofencing and physical RM quality audit before going live."
+    },
+    {
+      question: "How can I register my property as a Host?",
+      answer: "You can register as a Host from our portal. Upload the required verification documents, our team schedules a physical inspection, and once verified your property gets a green trust badge and goes live."
+    },
+    {
+      question: "What types of properties can I list?",
+      answer: "You can list Residential spaces like villas and apartments, Commercial spaces like offices and meeting rooms, and Event Venues like banquet halls, lawns, and rooftops."
+    },
+    {
+      question: "How are guest bookings and payments secured?",
+      answer: "We use secure checkout locks and Razorpay payment verification. When a guest reserves, the calendar is temporarily locked to prevent double bookings and payouts are settled through tax-compliant invoice protocols."
+    },
+    {
+      question: "Are there any hidden fees or charges for listing?",
+      answer: "No. There are no hidden fees. A refundable registration fee of Rs. 500 is charged during host document submission, and subscription tiers start with a 3-month free trial."
+    }
+  ];
 
   return (
     <div className="min-h-screen bg-white font-sans text-[#2A2A2A] overflow-x-hidden selection:bg-terracotta/20">
       <SEO type="website" seo={cmsContent?.seo} breadcrumbs={[{ name: "Home", url: "/" }]} />
       {/* Navbar */}
-      <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-white px-8 md:px-[12vw] h-24">
+      <nav
+        className={`fixed top-0 left-0 right-0 w-full z-50 flex justify-between items-center px-8 md:px-[12vw] h-20 md:h-24 transition-all duration-300 ${
+          isNavScrolled
+            ? 'bg-white/95 text-charcoal shadow-subtle backdrop-blur-xl border-b border-gray-100'
+            : 'bg-transparent text-white'
+        }`}
+      >
         {/* Left Logo */}
         <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
-          <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain logo-white" />
+          <img
+            src="/logo.png"
+            alt="X-Space360 Logo"
+            className={`h-8 md:h-10 w-auto object-contain transition-all duration-300 ${isNavScrolled ? '' : 'logo-white'}`}
+          />
         </div>
 
         {/* Center Menu Links (Flat Style) */}
-        <div className="hidden md:flex items-center space-x-8 font-bold text-xs uppercase tracking-widest text-white/90">
+        <div className={`hidden md:flex items-center space-x-8 font-bold text-xs uppercase tracking-widest transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
@@ -1713,7 +1768,7 @@ const LandingPage = () => {
         {/* Right Side Options */}
         <div className="hidden md:flex items-center space-x-4">
           {/* Language Selector */}
-          <div className="bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
+          <div className={`backdrop-blur-md px-3 py-1.5 rounded-full border transition-all duration-300 ${isNavScrolled ? 'bg-gray-50 border-gray-200' : 'bg-white/10 border-white/20'}`}>
             <LanguageSelector
               currentLang={lang}
               onLanguageChange={(newLang) => {
@@ -1726,7 +1781,11 @@ const LandingPage = () => {
           {/* Get in Touch Button */}
           <button 
             onClick={() => navigate('/support')}
-            className="flex items-center gap-2 border border-white/40 hover:bg-white/10 rounded-full px-5 py-2 transition font-bold text-xs tracking-wider uppercase text-white shadow-sm"
+            className={`flex items-center gap-2 rounded-full px-5 py-2 transition font-bold text-xs tracking-wider uppercase shadow-sm border ${
+              isNavScrolled
+                ? 'border-gray-200 text-charcoal hover:bg-gray-50'
+                : 'border-white/40 text-white hover:bg-white/10'
+            }`}
           >
             <Phone className="w-3.5 h-3.5" />
             <span>Get in Touch</span>
@@ -1737,7 +1796,11 @@ const LandingPage = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-10 h-10 rounded-full bg-white/25 hover:bg-white/35 text-white flex items-center justify-center border border-white/30 transition shadow-subtle"
+                className={`w-10 h-10 rounded-full flex items-center justify-center border transition shadow-subtle ${
+                  isNavScrolled
+                    ? 'bg-gray-50 hover:bg-gray-100 text-charcoal border-gray-200'
+                    : 'bg-white/25 hover:bg-white/35 text-white border-white/30'
+                }`}
                 title="Dashboard"
               >
                 <User className="w-4.5 h-4.5" />
@@ -1752,7 +1815,11 @@ const LandingPage = () => {
           ) : (
             <button
               onClick={() => navigate('/login')}
-              className="w-10 h-10 rounded-full bg-white/25 hover:bg-white/35 text-white flex items-center justify-center border border-white/30 transition shadow-subtle"
+              className={`w-10 h-10 rounded-full flex items-center justify-center border transition shadow-subtle ${
+                isNavScrolled
+                  ? 'bg-gray-50 hover:bg-gray-100 text-charcoal border-gray-200'
+                  : 'bg-white/25 hover:bg-white/35 text-white border-white/30'
+              }`}
               title="Sign In"
             >
               <User className="w-4.5 h-4.5" />
@@ -1762,7 +1829,7 @@ const LandingPage = () => {
 
         {/* Mobile Hamburger Icon */}
         <div className="md:hidden flex items-center">
-          <button onClick={() => setIsMobileMenuOpen(true)} className="text-white hover:text-terracotta transition p-2">
+          <button onClick={() => setIsMobileMenuOpen(true)} className={`${isNavScrolled ? 'text-charcoal' : 'text-white'} hover:text-terracotta transition p-2`}>
             <Menu className="w-8 h-8 drop-shadow-subtle" />
           </button>
         </div>
@@ -2178,6 +2245,7 @@ const LandingPage = () => {
               ))}
             </div>
 
+            {recentlyVisitedProperties.length > 0 && (
             <div className="mt-12 md:mt-16 pt-8 md:pt-10 border-t border-sand-200">
               <div className="flex items-end justify-between gap-4 mb-6">
                 <div className="text-left">
@@ -2263,6 +2331,7 @@ const LandingPage = () => {
                 ))}
               </div>
             </div>
+            )}
           </div>
         </div>
       </ScrollReveal>
@@ -2556,6 +2625,8 @@ const LandingPage = () => {
           </div>
           </ScrollReveal>
 
+          {false && (
+          <>
           {/* FAQ Section */}
           <ScrollReveal duration="duration-[950ms]">
             <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8 md:mb-12 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12 text-left">
@@ -2631,6 +2702,8 @@ const LandingPage = () => {
             </div>
           </div>
           </ScrollReveal>
+          </>
+          )}
 
 
           
@@ -2639,7 +2712,55 @@ const LandingPage = () => {
 
       <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,#0b1b2e_0%,#07111e_48%,#101722_100%)] pointer-events-none" />
-        <div className="relative z-10 w-full px-6 py-12 md:px-10 lg:px-14 xl:px-20">
+        <div className="relative z-10 w-full px-6 py-16 md:px-10 md:py-20 lg:px-14 xl:px-20">
+          <div className="mx-auto mb-16 grid max-w-7xl grid-cols-1 gap-10 border-b border-white/10 pb-14 text-left lg:grid-cols-12 lg:gap-14">
+            <div className="lg:col-span-5">
+              <span className="text-[10px] font-bold text-[#E0A51B] uppercase tracking-widest leading-none">FAQS</span>
+              <h3 className="mt-5 text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+                Questions people ask before they start.
+              </h3>
+              <p className="mt-5 max-w-md text-sm md:text-base font-medium leading-relaxed text-white/62">
+                Still need help? Book a 15-minute call with an advisor, no pressure and no commitment.
+              </p>
+              <button
+                onClick={() => navigate('/support')}
+                className="mt-7 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-xs font-bold uppercase tracking-widest text-[#081321] shadow-premium transition hover:bg-[#E0A51B]"
+              >
+                <span>Contact Advisor</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 lg:col-span-7">
+              {faqItems.map((faq, index) => {
+                const isOpen = openFaqIndex === index;
+                return (
+                  <div
+                    key={faq.question}
+                    className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] shadow-subtle backdrop-blur-sm transition-all duration-300"
+                  >
+                    <button
+                      onClick={() => setOpenFaqIndex(isOpen ? null : index)}
+                      className="flex w-full items-center justify-between px-5 py-5 text-left text-sm font-bold text-white transition hover:bg-white/[0.04] md:px-6 md:text-base"
+                    >
+                      <span>{faq.question}</span>
+                      {isOpen ? (
+                        <ChevronUp className="ml-4 h-5 w-5 shrink-0 text-[#E0A51B]" />
+                      ) : (
+                        <ChevronDown className="ml-4 h-5 w-5 shrink-0 text-white/60" />
+                      )}
+                    </button>
+                    {isOpen && (
+                      <div className="border-t border-white/10 px-5 pb-6 pt-4 text-xs font-medium leading-relaxed text-white/62 md:px-6 md:text-sm">
+                        {faq.answer}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.45fr_repeat(5,1fr)] lg:gap-12">
             <div className="max-w-xs">
               <button

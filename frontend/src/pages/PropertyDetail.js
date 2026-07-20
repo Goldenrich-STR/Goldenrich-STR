@@ -6,6 +6,7 @@ import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
 import LegalLinks from '../components/LegalLinks';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
+import { saveRecentlyVisitedProperty } from '../lib/recentlyVisitedProperties';
 import {
   ArrowLeft,
   Building2,
@@ -696,6 +697,7 @@ const PropertyDetail = () => {
       const res = await propertyAPI.getProperty(id);
       setProperty(res.data);
       if (res.data) {
+        saveRecentlyVisitedProperty(res.data);
         if (res.data.veg_price && res.data.veg_price > 0) {
           setFoodPreference('veg');
         } else if (res.data.non_veg_price && res.data.non_veg_price > 0) {
