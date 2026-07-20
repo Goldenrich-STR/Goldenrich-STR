@@ -1933,41 +1933,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
               {(newUser.role === 'broker' || newUser.role === 'employee') && (
                 <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up">
-                    <div>
-                      <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Franchise</label>
-                      <div className={`relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all ${isCodeLocked ? 'opacity-50 bg-gray-50/50' : ''}`}>
-                        <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
-                          <Building2 className="w-5 h-5" />
-                        </div>
-                        <input 
-                          required={!isCodeLocked}
-                          disabled={isCodeLocked}
-                          placeholder="e.g. Golden"
-                          className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm disabled:cursor-not-allowed"
-                          value={newUser.franchise}
-                          onChange={e => setNewUser({...newUser, franchise: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Branch</label>
-                      <div className={`relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all ${isCodeLocked ? 'opacity-50 bg-gray-50/50' : ''}`}>
-                        <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
-                          <MapPin className="w-5 h-5" />
-                        </div>
-                        <input 
-                          required={!isCodeLocked}
-                          disabled={isCodeLocked}
-                          placeholder="e.g. Bandra"
-                          className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm disabled:cursor-not-allowed"
-                          value={newUser.branch}
-                          onChange={e => setNewUser({...newUser, branch: e.target.value})}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 mt-4 animate-slide-up">
+                  <div className="grid grid-cols-1 gap-4 animate-slide-up">
                     {newUser.role === 'broker' ? (
                       <div>
                         <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Broker Code</label>
@@ -3907,6 +3873,43 @@ export const BookingManagement = () => {
                       Property details unavailable (ID: {booking.property_id})
                     </p>
                   )}
+
+                  <div className="rounded-xl border border-sand-100 bg-stone/70 p-3">
+                    <div className="flex items-start space-x-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-terracotta/10 flex items-center justify-center text-terracotta shrink-0">
+                        <UserPlus className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">
+                          Assigned Broker
+                        </p>
+                        {booking.broker ? (
+                          <>
+                            <p className="text-sm font-bold text-charcoal truncate">
+                              {booking.broker.full_name || 'Assigned Broker'}
+                            </p>
+                            <p className="text-xs text-charcoal-light truncate">
+                              {booking.broker.email || booking.broker.phone || booking.broker.user_id}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                              {booking.broker.lg_code && (
+                                <span className="inline-block px-1.5 py-0.5 bg-white text-charcoal-muted text-[9px] font-bold tracking-tight uppercase rounded border border-gray-100">
+                                  LG: {booking.broker.lg_code}
+                                </span>
+                              )}
+                              <span className="inline-block px-1.5 py-0.5 bg-white text-charcoal-muted text-[9px] font-bold tracking-tight uppercase rounded border border-gray-100">
+                                ID: {booking.broker.user_id}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-xs text-charcoal-muted italic">
+                            No broker assigned to this property
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Section 2: Owner & Guest Details */}
@@ -4064,6 +4067,30 @@ export const BookingManagement = () => {
                     {selectedBooking.payment_status}
                   </span>
                 </div>
+              </div>
+
+              <div className="bg-stone p-4 rounded-2xl border border-gray-100">
+                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">
+                  Assigned Broker
+                </p>
+                {selectedBooking.broker ? (
+                  <div>
+                    <p className="text-sm font-bold text-charcoal">
+                      {selectedBooking.broker.full_name || 'Assigned Broker'}
+                    </p>
+                    <p className="text-xs text-charcoal-light">
+                      {[selectedBooking.broker.email, selectedBooking.broker.phone].filter(Boolean).join(' | ')}
+                    </p>
+                    <p className="text-[10px] text-charcoal-muted font-mono mt-1 break-all">
+                      {selectedBooking.broker.lg_code ? `LG: ${selectedBooking.broker.lg_code} | ` : ''}
+                      ID: {selectedBooking.broker.user_id}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-charcoal-muted italic">
+                    No broker assigned to this booking property.
+                  </p>
+                )}
               </div>
 
               {/* Dates & Guest */}

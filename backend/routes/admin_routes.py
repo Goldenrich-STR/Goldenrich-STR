@@ -1197,7 +1197,7 @@ async def get_all_bookings(
         bookings = await cursor.to_list(length=limit)
         total = await db.bookings.count_documents(query)
         
-        # Enrich bookings with Property, Host, and Guest details
+        # Enrich bookings with Property, Host, Guest, and assigned Broker details.
         property_ids = list({b.get("property_id") for b in bookings if b.get("property_id")})
         guest_ids = list({b.get("guest_id") for b in bookings if b.get("guest_id")})
         host_ids = list({b.get("host_id") for b in bookings if b.get("host_id")})
@@ -1206,23 +1206,60 @@ async def get_all_bookings(
         if property_ids:
             props = await db.properties.find(
                 {"property_id": {"$in": property_ids}},
-                {"_id": 0, "property_id": 1, "title": 1, "city": 1, "images": 1, "price_per_night": 1, "bhk_type": 1, "category": 1}
+                {
+                    "_id": 0,
+                    "property_id": 1,
+                    "title": 1,
+                    "city": 1,
+                    "images": 1,
+                    "price_per_night": 1,
+                    "bhk_type": 1,
+                    "category": 1,
+                    "broker_id": 1,
+                }
             ).to_list(length=len(property_ids))
             properties_map = {p["property_id"]: p for p in props}
             
         users_map = {}
-        all_user_ids = list(set(guest_ids + host_ids))
+        property_broker_ids = [
+            p.get("broker_id")
+            for p in properties_map.values()
+            if p.get("broker_id")
+        ]
+        all_user_ids = list(set(guest_ids + host_ids + property_broker_ids))
         if all_user_ids:
             users = await db.users.find(
                 {"user_id": {"$in": all_user_ids}},
-                {"_id": 0, "user_id": 1, "full_name": 1, "email": 1, "phone": 1}
+                {"_id": 0, "user_id": 1, "full_name": 1, "email": 1, "phone": 1, "lg_code": 1, "broker_id": 1}
             ).to_list(length=len(all_user_ids))
             users_map = {u["user_id"]: u for u in users}
+
+        host_broker_ids = [
+            users_map.get(host_id, {}).get("broker_id")
+            for host_id in host_ids
+            if users_map.get(host_id, {}).get("broker_id")
+        ]
+        missing_broker_ids = list({
+            broker_id
+            for broker_id in host_broker_ids
+            if broker_id not in users_map
+        })
+        if missing_broker_ids:
+            brokers = await db.users.find(
+                {"user_id": {"$in": missing_broker_ids}},
+                {"_id": 0, "user_id": 1, "full_name": 1, "email": 1, "phone": 1, "lg_code": 1}
+            ).to_list(length=len(missing_broker_ids))
+            users_map.update({u["user_id"]: u for u in brokers})
             
         for b in bookings:
-            b["property"] = properties_map.get(b.get("property_id"))
+            property_info = properties_map.get(b.get("property_id"))
+            host_info = users_map.get(b.get("host_id"))
+            broker_id = (property_info or {}).get("broker_id") or (host_info or {}).get("broker_id")
+            b["property"] = property_info
             b["guest"] = users_map.get(b.get("guest_id"))
-            b["host"] = users_map.get(b.get("host_id"))
+            b["host"] = host_info
+            b["broker_id"] = broker_id
+            b["broker"] = users_map.get(broker_id) if broker_id else None
             
         return {
             "bookings": bookings,

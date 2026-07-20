@@ -15,44 +15,44 @@ const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1600596542815
 
 const DEFAULT_HERO_SLIDES = [
   {
-    src: '/videos/hero/pexels-thevisionaryvows-33485971.webp',
-    tag: 'WEDDING VENUES',
-    tagColor: 'text-terracotta',
-    titlePrefix: 'Make Your Dream Wedding ',
-    titleHighlight: 'Unforgettable',
-    highlightColor: 'text-terracotta',
-    titleSuffix: '',
-    subtitle: 'Perfect venues for your perfect day'
-  },
-  {
-    src: '/videos/hero/pexels-akshay-mr-187831647-12414221.webp',
-    tag: 'RESIDENTIAL SPACES',
-    tagColor: 'text-terracotta',
-    titlePrefix: 'Find Your Perfect Place to Call ',
-    titleHighlight: 'Home',
-    highlightColor: 'text-terracotta',
-    titleSuffix: '',
-    subtitle: 'Comfortable spaces for you and your family'
-  },
-  {
-    src: '/videos/hero/hero_commercial.png',
+    src: '/videos/hero/pexels-contact-me-923323219715-262056873-12703092.jpg',
     tag: 'COMMERCIAL SPACES',
-    tagColor: 'text-terracotta',
-    titlePrefix: 'Elevate Your ',
-    titleHighlight: 'Business',
-    highlightColor: 'text-terracotta',
-    titleSuffix: ' Presence',
-    subtitle: 'Right space to grow your business'
+    tagColor: 'text-white',
+    titlePrefix: 'Premium Office ',
+    titleHighlight: 'Spaces',
+    highlightColor: 'text-white',
+    titleSuffix: '',
+    badges: ['High-Speed Wi-Fi', 'Meeting Rooms', 'Workstations']
   },
   {
-    src: '/videos/hero/hero_resort.png',
-    tag: 'RESORT VILLAS',
-    tagColor: 'text-terracotta',
-    titlePrefix: 'Relax, Recharge & ',
-    titleHighlight: 'Rejuvenate',
-    highlightColor: 'text-terracotta',
+    src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg',
+    tag: 'RESIDENTIAL SPACES',
+    tagColor: 'text-white',
+    titlePrefix: 'Cozy Luxury ',
+    titleHighlight: 'Homes',
+    highlightColor: 'text-white',
     titleSuffix: '',
-    subtitle: 'Luxury villas for your perfect getaway'
+    badges: ['Fully Furnished', 'Prime Locations', 'Homely Vibe']
+  },
+  {
+    src: '/videos/hero/pexels-thevisionaryvows-33485961.jpg',
+    tag: 'WEDDING VENUES',
+    tagColor: 'text-white',
+    titlePrefix: 'Beautiful Wedding ',
+    titleHighlight: 'Venues',
+    highlightColor: 'text-white',
+    titleSuffix: '',
+    badges: ['Banquet Halls', 'Catering Friendly', 'Premium Setup']
+  },
+  {
+    src: '/videos/hero/pexels-roman-odintsov-4870616.jpg',
+    tag: 'RESORT VILLAS',
+    tagColor: 'text-white',
+    titlePrefix: 'Scenic Resort ',
+    titleHighlight: 'Villas',
+    highlightColor: 'text-white',
+    titleSuffix: '',
+    badges: ['Private Pools', 'Scenic Views', 'Lawn & Gardens']
   }
 ];
 
@@ -902,6 +902,95 @@ const SUGGESTED_DESTINATIONS = [
   { city: "Karjat", state: "Maharashtra", desc: "A hidden gem", icon: Home }
 ];
 
+const DESTINATION_SHORTCUTS = [
+  'Nashik',
+  'Igatpuri',
+  'Bhandardara',
+  'Lonavala',
+  'Mahabaleshwar',
+  'Panchgani',
+  'Alibaug',
+  'Konkan',
+  'Pune',
+  'Mumbai',
+  'Karjat',
+  'Matheran',
+  'Trimbakeshwar',
+  'Saputara',
+  'Daman',
+  'North Goa'
+];
+
+const DestinationLineIcon = ({ variant = 0 }) => {
+  const shapeSets = [
+    (
+      <>
+        <path d="M14 50 31 18l12 20 7-12 16 24" />
+        <path d="M25 36c7-2 14 2 22-1" />
+        <path d="M34 17c4 6 3 13-1 20" />
+      </>
+    ),
+    (
+      <>
+        <path d="M16 50V29c0-8 7-14 15-14h15c8 0 14 6 14 14v21" />
+        <path d="M24 50V33h12v17M44 50V31h9" />
+        <path d="M16 50h48" />
+      </>
+    ),
+    (
+      <>
+        <path d="M13 49h52M18 45l9-24 12 18 9-27 16 33" />
+        <path d="M25 36c5 4 10 4 15 0s10-4 16 0" />
+      </>
+    ),
+    (
+      <>
+        <path d="M18 50c7-18 18-26 36-32" />
+        <path d="M31 37c10-1 18 3 28 13" />
+        <path d="M43 14l19 9-20 7z" />
+      </>
+    ),
+    (
+      <>
+        <path d="M18 52h42V25L39 12 18 25z" />
+        <path d="M30 52V35h15v17M26 28h5M38 28h5M50 28h5" />
+        <path d="M60 16c6 3 8 8 5 14" />
+      </>
+    ),
+    (
+      <>
+        <path d="M15 50c8-8 15-11 24-8 10 4 17 2 26-7" />
+        <path d="M20 32c9 7 18 7 27 0s14-7 21-1" />
+        <path d="M51 20l7 12M58 20l-7 12" />
+      </>
+    ),
+    (
+      <>
+        <path d="M17 50h44M24 50V25h25v25" />
+        <path d="M37 50V34h10v16M24 25l13-12 12 12" />
+        <path d="M52 23l9 9M61 23l-9 9" />
+      </>
+    ),
+    (
+      <>
+        <path d="M14 51c8-18 18-29 31-33 7-2 13-1 20 4" />
+        <path d="M21 42c11-5 22-5 34 0" />
+        <path d="M48 17c8 12 7 22-3 30" />
+      </>
+    )
+  ];
+
+  return (
+    <svg viewBox="0 0 80 64" className="h-16 w-20 md:h-[74px] md:w-24" fill="none" aria-hidden="true">
+      <path d="M48 7c10 7 12 20 7 34s-19 14-29 9S15 32 25 20 38 0 48 7z" fill="#F3A5AD" opacity="0.9" />
+      <path d="M56 10c9 10 7 28-2 39s-24 11-30 2 3-20 12-29S47 0 56 10z" fill="#FFD4A6" opacity="0.9" />
+      <g stroke="#1F1F1F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {shapeSets[variant % shapeSets.length]}
+      </g>
+    </svg>
+  );
+};
+
 const PREMIUM_COLLECTIONS = [
   {
     id: 'luxury-villas',
@@ -951,6 +1040,16 @@ const PREMIUM_COLLECTIONS = [
     image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=900',
     query: 'residential',
     property_type: 'resort'
+  },
+  {
+    id: 'resort-villas',
+    label: 'Resort Villas & Pool Stays',
+    subtitle: 'Private resort-style escapes for families and groups',
+    detail: 'Scenic villas, pool stays, and weekend resorts near Nashik, Lonavala, Alibaug, Konkan, and Goa with lawns, caretakers, and premium leisure amenities.',
+    tag: 'Resort Picks',
+    image: '/videos/hero/pexels-roman-odintsov-4870616.jpg',
+    query: 'residential',
+    property_type: 'villa'
   }
 ];
 
@@ -972,8 +1071,9 @@ const CollectionsSection = ({ navigate }) => {
   const [expanded, setExpanded] = React.useState(null);
   const sliderRef = React.useRef(null);
 
-  const handleCardClick = (id) => {
-    setExpanded(prev => prev === id ? null : id);
+  const handleCardClick = (col) => {
+    const typeQuery = col.property_type ? `&property_type=${col.property_type}` : '';
+    navigate(`/guest/browse?category=${col.query}${typeQuery}`);
   };
 
   const scroll = (dir) => {
@@ -983,25 +1083,26 @@ const CollectionsSection = ({ navigate }) => {
   };
 
   return (
-    <section className="w-full bg-[#FDFCF8] pt-10 md:pt-16 pb-4 md:pb-6 overflow-x-hidden">
+    <section className="w-full bg-white pt-10 md:pt-16 pb-4 md:pb-6 overflow-x-hidden">
       {/* Header — centered like Saffron Stay style */}
       <ScrollReveal duration="duration-[800ms]">
-        <div className="flex flex-col items-center text-center mb-8 px-6 md:px-12 lg:px-20">
-          <p className="text-terracotta text-xs font-bold uppercase tracking-widest mb-2">X-Space360 Collections</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-charcoal tracking-tight leading-tight mb-6">
-            Discover Our Collections
+        <div className="flex items-end justify-between gap-4 mb-8 px-4 md:px-[10vw]">
+          <h2 className="font-serif text-2xl md:text-3xl font-bold text-charcoal tracking-tight">
+            Discover Our Collection
           </h2>
           {/* Nav arrows inline below heading */}
-          <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3 text-charcoal">
             <button
               onClick={() => scroll('left')}
-              className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal shadow-sm"
+              className="p-1 hover:text-terracotta transition"
+              aria-label="Previous collection"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
               onClick={() => scroll('right')}
-              className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal shadow-sm"
+              className="p-1 hover:text-terracotta transition"
+              aria-label="Next collection"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -1013,16 +1114,19 @@ const CollectionsSection = ({ navigate }) => {
       <ScrollReveal duration="duration-[1000ms]" delay={150}>
         <div
           ref={sliderRef}
-          className="flex overflow-x-auto no-scrollbar gap-4 snap-x scroll-smooth pb-4 justify-start xl:justify-center"
+          className="flex overflow-x-auto no-scrollbar gap-4 snap-x scroll-smooth pb-4 justify-start px-4 md:px-[10vw]"
         >
           {/* Left Spacer */}
-          <div className="shrink-0 min-w-[24px] md:min-w-[48px] lg:min-w-[80px] xl:hidden h-1" />
           {PREMIUM_COLLECTIONS.map((col) => {
             const isOpen = expanded === col.id;
             return (
               <div
                 key={col.id}
-                onClick={() => handleCardClick(col.id)}
+                onClick={() => handleCardClick(col)}
+                onMouseEnter={() => setExpanded(col.id)}
+                onMouseLeave={() => setExpanded(null)}
+                onFocus={() => setExpanded(col.id)}
+                onBlur={() => setExpanded(null)}
                 className={`relative flex-none snap-start rounded-none overflow-hidden cursor-pointer transition-all duration-500 shadow-md hover:shadow-xl
                   ${isOpen
                     ? 'w-[340px] md:w-[420px] aspect-[3/4]'
@@ -1064,7 +1168,7 @@ const CollectionsSection = ({ navigate }) => {
                       const typeQuery = col.property_type ? `&property_type=${col.property_type}` : '';
                       navigate(`/guest/browse?category=${col.query}${typeQuery}`);
                     }}
-                    className="self-start bg-white text-charcoal text-xs font-bold uppercase tracking-widest px-5 py-2.5 rounded-full hover:bg-stone transition shadow-premium hover:scale-[1.02] active:scale-95"
+                    className="hidden"
                   >
                     Browse Properties →
                   </button>
@@ -1073,7 +1177,6 @@ const CollectionsSection = ({ navigate }) => {
             );
           })}
           {/* Right Spacer */}
-          <div className="shrink-0 min-w-[24px] md:min-w-[48px] lg:min-w-[80px] xl:hidden h-1" />
         </div>
       </ScrollReveal>
     </section>
@@ -1149,24 +1252,8 @@ const LandingPage = () => {
   };
 
   const heroSlides = React.useMemo(() => {
-    const configuredSlides = Array.isArray(cmsContent?.hero?.slides)
-      ? cmsContent.hero.slides
-          .map((slide) => getImageUrl(typeof slide === 'string' ? slide : slide?.image_url))
-          .filter(Boolean)
-      : [];
-    const legacyImage = getImageUrl(cmsContent?.hero?.image_url);
-    const sources = configuredSlides.length
-      ? configuredSlides
-      : legacyImage
-        ? [legacyImage]
-        : [];
-
-    if (!sources.length) return DEFAULT_HERO_SLIDES;
-    return sources.map((src, index) => ({
-      ...DEFAULT_HERO_SLIDES[index % DEFAULT_HERO_SLIDES.length],
-      src
-    }));
-  }, [cmsContent?.hero]);
+    return DEFAULT_HERO_SLIDES;
+  }, []);
 
   const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
   const [loadedHeroSlides, setLoadedHeroSlides] = useState(() => new Set([0]));
@@ -1465,7 +1552,7 @@ const LandingPage = () => {
     return (
       <div className="relative mb-4 md:mb-6 group">
         {/* Header */}
-        <div className="flex items-end justify-between mb-6 px-6 md:px-12 lg:px-20 w-full">
+        <div className="flex items-end justify-between mb-6 px-4 md:px-[10vw] w-full">
           <div className="text-left">
             <h3 className="text-xl md:text-2xl font-bold tracking-tight text-charcoal flex items-center gap-2">
               <span>{title}</span>
@@ -1486,7 +1573,7 @@ const LandingPage = () => {
         </div>
         
         {/* Slider */}
-        <div className="w-full relative px-6 md:px-12 lg:px-20">
+        <div className="w-full relative px-4 md:px-[10vw]">
           <div 
             id={sectionId} 
             onScroll={(e) => {
@@ -1531,10 +1618,12 @@ const LandingPage = () => {
                     <h4 className="font-semibold text-sm md:text-base text-charcoal line-clamp-1 group-hover/card:text-terracotta transition-colors">
                       {item.title}
                     </h4>
-                    <span className="flex items-center text-xs font-semibold text-charcoal shrink-0">
-                      <Star className="w-3.5 h-3.5 text-[#eab308] fill-current mr-1" />
-                      {item.rating || '4.9'}
-                    </span>
+                    {item.rating && (
+                      <span className="flex items-center text-xs font-semibold text-charcoal shrink-0">
+                        <Star className="w-3.5 h-3.5 text-[#eab308] fill-current mr-1" />
+                        {item.rating}
+                      </span>
+                    )}
                   </div>
                   
                   <p className="text-gray-550 text-xs font-medium mb-1">
@@ -1571,87 +1660,104 @@ const LandingPage = () => {
     );
   };
 
+  const recentlyVisitedProperties = [
+    ...(properties.residential || []),
+    ...(properties.event_venue || []),
+    ...(properties.commercial || [])
+  ].slice(0, 5);
+
   return (
-    <div className="min-h-screen bg-[#FDFCF8] font-sans text-[#2A2A2A] overflow-x-hidden selection:bg-terracotta/20">
+    <div className="min-h-screen bg-white font-sans text-[#2A2A2A] overflow-x-hidden selection:bg-terracotta/20">
       <SEO type="website" seo={cmsContent?.seo} breadcrumbs={[{ name: "Home", url: "/" }]} />
       {/* Navbar */}
-      <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-white px-6 md:px-12 lg:px-20 h-20">
+      <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-white px-8 md:px-[12vw] h-24">
         {/* Left Logo */}
         <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
           <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain logo-white" />
         </div>
 
-        {/* Center Pill Links — Glass Transparent style */}
-        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-white/95 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-premium">
+        {/* Center Menu Links (Flat Style) */}
+        <div className="hidden md:flex items-center space-x-8 font-bold text-xs uppercase tracking-widest text-white/90">
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
-            className="hover:text-terracotta transition"
+            className="hover:text-terracotta transition-colors duration-200"
           >
             Discover
           </a>
-          <a
-            href="#"
-            onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
-            className="hover:text-terracotta transition flex items-center space-x-1"
-          >
-            <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
-            <span>Wishlist</span>
-          </a>
+          {user && (
+            <a
+              href="#"
+              onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
+              className="hover:text-terracotta transition-colors duration-200 flex items-center gap-1"
+            >
+              <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 animate-pulse" />
+              <span>Wishlist</span>
+            </a>
+          )}
           <button
             onClick={() => setShowHowItWorksModal(true)}
-            className="hover:text-terracotta transition"
+            className="hover:text-terracotta transition-colors duration-200 uppercase"
           >
             How It Works
           </button>
-          <div className="w-[1px] h-4 bg-white/20" />
-          <LanguageSelector
-            currentLang={lang}
-            onLanguageChange={(newLang) => {
-              setLang(newLang);
-              localStorage.setItem('preferredLanguage', newLang);
-            }}
-          />
-          <div className="w-[1px] h-4 bg-white/20" />
+          <a
+            href="#"
+            onClick={(e) => { e.preventDefault(); navigate(user ? '/host/list-property' : '/register?role=host'); }}
+            className="hover:text-terracotta transition-colors duration-200"
+          >
+            List your Property
+          </a>
+        </div>
+
+        {/* Right Side Options */}
+        <div className="hidden md:flex items-center space-x-4">
+          {/* Language Selector */}
+          <div className="bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
+            <LanguageSelector
+              currentLang={lang}
+              onLanguageChange={(newLang) => {
+                setLang(newLang);
+                localStorage.setItem('preferredLanguage', newLang);
+              }}
+            />
+          </div>
+
+          {/* Get in Touch Button */}
+          <button 
+            onClick={() => navigate('/support')}
+            className="flex items-center gap-2 border border-white/40 hover:bg-white/10 rounded-full px-5 py-2 transition font-bold text-xs tracking-wider uppercase text-white shadow-sm"
+          >
+            <Phone className="w-3.5 h-3.5" />
+            <span>Get in Touch</span>
+          </button>
+
+          {/* User/Profile Button */}
           {user ? (
-            <>
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="hover:text-terracotta transition font-bold tracking-tight text-terracotta"
+                className="w-10 h-10 rounded-full bg-white/25 hover:bg-white/35 text-white flex items-center justify-center border border-white/30 transition shadow-subtle"
+                title="Dashboard"
               >
-                Dashboard
+                <User className="w-4.5 h-4.5" />
               </button>
               <button
                 onClick={handleSignOut}
-                className="bg-terracotta hover:bg-terracotta-hover text-white px-4 py-1.5 rounded-full transition shadow-subtle"
+                className="bg-terracotta hover:bg-terracotta/90 text-white font-bold text-[10px] uppercase tracking-wider px-4 py-2 rounded-full transition shadow-premium"
               >
                 Sign Out
               </button>
-            </>
+            </div>
           ) : (
-            <>
-              <button
-                onClick={() => navigate('/login')}
-                className="hover:text-terracotta transition"
-              >
-                Sign In
-              </button>
-              <button
-                onClick={() => navigate('/register?role=host')}
-                className="bg-terracotta hover:bg-terracotta-hover text-white px-4 py-1.5 rounded-full transition shadow-subtle font-semibold"
-              >
-                Become a Host
-              </button>
-            </>
+            <button
+              onClick={() => navigate('/login')}
+              className="w-10 h-10 rounded-full bg-white/25 hover:bg-white/35 text-white flex items-center justify-center border border-white/30 transition shadow-subtle"
+              title="Sign In"
+            >
+              <User className="w-4.5 h-4.5" />
+            </button>
           )}
-        </div>
-
-        {/* Right — Get the app (Desktop) */}
-        <div className="hidden md:flex items-center">
-          <button onClick={() => navigate('/login')} className="flex items-center space-x-2 border border-white/50 rounded-full px-5 py-2 hover:bg-white/20 transition backdrop-blur-sm shadow-sm text-white">
-            <span className="text-xs font-semibold uppercase tracking-widest">Get the app</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
         </div>
 
         {/* Mobile Hamburger Icon */}
@@ -1693,6 +1799,19 @@ const LandingPage = () => {
               className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-white/10"
             >
               How It Works
+            </button>
+            <button
+              onClick={() => { setIsMobileMenuOpen(false); navigate(user ? '/host/list-property' : '/register?role=host'); }}
+              className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-white/10"
+            >
+              List your Property
+            </button>
+            <button
+              onClick={() => { setIsMobileMenuOpen(false); navigate('/support'); }}
+              className="text-left text-2xl font-bold text-blue-400 flex items-center gap-2 py-2 border-b border-white/10"
+            >
+              <Phone className="w-5 h-5" />
+              <span>Get in Touch</span>
             </button>
             <div className="py-2 border-b border-white/10 flex items-center justify-between">
               <span className="text-2xl font-bold">Language</span>
@@ -1741,7 +1860,8 @@ const LandingPage = () => {
       )}
 
       {/* ===== PREMIUM SLIDING IMAGE HERO ===== */}
-      <div className="relative h-[80vh] min-h-[650px] w-full z-30">
+      <section className="relative w-full z-30 bg-white px-4 md:px-[10vw] pt-0 pb-0">
+      <div className="relative h-[62vh] min-h-[560px] max-h-[640px] w-full z-30 overflow-visible bg-white shadow-premium">
         
         {/* ── Sliding/Fading Background Images ── */}
         {heroSlides.map((slide, index) => (
@@ -1759,334 +1879,395 @@ const LandingPage = () => {
           />
         ))}
 
-        {/* ── 60% dark overlay ── */}
-        <div className="absolute inset-0 bg-black/60 z-20 transition-opacity duration-1000" />
-
-        {/* ── Solid Bottom Divider Strip ── */}
-        <div className="absolute bottom-0 left-0 right-0 h-8 bg-[#FDFCF8] border-t border-gray-100/40 z-20" />
+        {/* ── 65% dark overlay ── */}
+        <div className="absolute inset-0 bg-black/65 z-10 transition-opacity duration-1000" />
 
         {/* ── Dot Slider Indicators ── */}
-        <div className="absolute bottom-2.5 md:bottom-12 left-0 right-0 z-30 flex justify-center items-center space-x-2 md:space-x-3">
+        <div className="absolute bottom-8 left-0 right-0 z-30 flex justify-center items-center space-x-2 md:space-x-3">
           {heroSlides.map((slide, index) => {
-            const tagColor = slide?.tagColor || DEFAULT_HERO_SLIDES[0].tagColor;
             return (
               <button
                 key={index}
                 onClick={() => setCurrentHeroSlide(index)}
-                className={`w-1.5 h-1.5 md:w-3 md:h-3 rounded-full transition-all duration-300 shadow-sm ${
+                className={`w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full transition-all duration-300 shadow-sm ${
                   index === currentHeroSlide 
-                    ? `${tagColor.replace('text-', 'bg-')} scale-125` 
-                    : 'bg-white/70 hover:bg-white'
+                    ? `bg-white scale-125` 
+                    : 'bg-white/50 hover:bg-white'
                 }`}
               />
             );
           })}
         </div>
 
-        {/* ── Hero Content ── */}
-        <div className="relative z-30 max-w-7xl mx-auto px-6 md:px-12 lg:px-20 h-full flex flex-col justify-center pt-20 md:pt-24 pb-12 text-left">
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end w-full">
-            {/* Left side: Heading & Search Bar */}
-            <div className="lg:col-span-12 flex flex-col items-start w-full">
-
-
-              {/* Dynamic Headline from Slider */}
-              {(() => {
-                const activeHero = heroSlides[currentHeroSlide] || heroSlides[0] || DEFAULT_HERO_SLIDES[0];
-                return (
-                  <div className="flex flex-col space-y-2 mb-4 w-full" key={currentHeroSlide}>
-                     <span className={`text-xs md:text-sm font-bold tracking-[0.2em] uppercase drop-shadow-md ${activeHero.tagColor}`}>
-                        {activeHero.tag}
+        {/* ── Hero Content (Centered with Spacing & font-lufga) ── */}
+        <div className="relative z-20 max-w-6xl mx-auto px-6 md:px-12 h-full flex flex-col justify-center items-center text-center pt-24 pb-16">
+          {(() => {
+            const activeHero = heroSlides[currentHeroSlide] || heroSlides[0] || DEFAULT_HERO_SLIDES[0];
+            return (
+              <div className="flex flex-col items-center space-y-6 w-full animate-fade-in" key={currentHeroSlide}>
+                 <span className="text-[9px] md:text-[10px] font-bold tracking-[0.25em] uppercase px-4 py-1.5 rounded-full text-white bg-white/10 backdrop-blur-md border border-white/20 drop-shadow-md">
+                    {activeHero.tag}
+                 </span>
+                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-bold leading-[1.25] text-white drop-shadow-premium font-lufga tracking-tight">
+                   {activeHero.titlePrefix} {activeHero.titleHighlight} {activeHero.titleSuffix}
+                 </h2>
+                 
+                 {/* Custom Badges / Batches instead of Subtitle */}
+                 <div className="flex flex-wrap justify-center gap-2.5">
+                   {activeHero.badges && activeHero.badges.map((badge, idx) => (
+                     <span key={idx} className="border border-white/30 bg-white/10 backdrop-blur-md rounded-full px-4 py-1 text-white font-bold text-[10px] tracking-wider uppercase drop-shadow-sm select-none">
+                       {badge}
                      </span>
-                     <h2 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold leading-[1.15] text-white drop-shadow-premium max-w-4xl font-serif-hero mt-2">
-                       {activeHero.titlePrefix}
-                       <span className={`${activeHero.highlightColor}`}>
-                          {activeHero.titleHighlight}
-                       </span>
-                       {activeHero.titleSuffix}
-                     </h2>
-                      <p className="text-2xl sm:text-3xl md:text-5xl text-white/90 font-handwriting drop-shadow-md mt-4 pb-2">
-                       {activeHero.subtitle}
-                     </p>
-                  </div>
-                );
-              })()}
+                   ))}
+                 </div>
 
-              {/* ── Search Bar ── */}
-              <div className="mt-8 w-full max-w-5xl relative">
-                {/* Transparent overlay to close active dropdowns on clicking outside */}
-                {activeDropdown && (
-                  <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActiveDropdown(null)} />
-                )}
+                 {/* ── Search Container Embedded Directly inside Hero below Badges ── */}
+                 <div className="w-full mt-8 relative max-w-5xl text-left">
+                    {/* Transparent overlay to close active dropdowns on clicking outside */}
+                    {activeDropdown && (
+                      <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActiveDropdown(null)} />
+                    )}
 
-                {/* Capsule Search Bar */}
-                <div className="flex flex-col md:flex-row items-center bg-white rounded-2xl md:rounded-full w-full shadow-elevated border border-gray-100 relative z-50">
-                    
-                    {/* Location */}
-                    <div className="relative flex-1 w-full">
-                      <div 
-                        onClick={() => {
-                          setActiveDropdown('location');
-                          const el = document.getElementById('landing-destination');
-                          if (el) el.focus();
-                        }}
-                        className="flex items-center px-3 md:px-6 py-2.5 md:py-4 w-full cursor-pointer group rounded-t-2xl md:rounded-l-full border-b border-gray-100 md:border-none hover:bg-gray-50 transition"
-                      >
-                        <MapPin className="w-4 h-4 md:w-5 md:h-5 text-gray-400 mr-2 md:mr-3 group-hover:text-terracotta transition-colors" />
-                        <div className="w-full text-left">
-                          <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">Where</p>
-                          <input
-                            id="landing-destination"
-                            name="destination"
-                            type="text"
-                            autoComplete="address-level2"
-                            value={locationQuery}
-                            onFocus={() => setActiveDropdown('location')}
-                            onChange={(e) => {
-                              setLocationQuery(e.target.value);
+                    {/* Capsule Search Bar */}
+                    <div className="flex flex-col md:flex-row items-center bg-white rounded-3xl md:rounded-full w-full shadow-elevated border border-sand-200/80 p-2 md:p-3 relative z-50">
+                        
+                        {/* Location */}
+                        <div className="relative flex-1 w-full">
+                          <div 
+                            onClick={() => {
                               setActiveDropdown('location');
+                              const el = document.getElementById('landing-destination');
+                              if (el) el.focus();
                             }}
-                            placeholder="Location"
-                            className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-400 font-bold text-sm focus:ring-0 focus:outline-none p-0 mt-0.5"
+                            className="flex items-center px-4 md:px-6 py-3 w-full cursor-pointer group rounded-3xl md:rounded-full hover:bg-stone/50 transition duration-200"
+                          >
+                            <MapPin className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
+                            <div className="w-full text-left">
+                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Where</p>
+                              <input
+                                id="landing-destination"
+                                name="destination"
+                                type="text"
+                                autoComplete="address-level2"
+                                value={locationQuery}
+                                onFocus={() => setActiveDropdown('location')}
+                                onChange={(e) => {
+                                  setLocationQuery(e.target.value);
+                                  setActiveDropdown('location');
+                                }}
+                                placeholder="Select Location"
+                                className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-400 font-extrabold text-sm focus:ring-0 focus:outline-none p-0 mt-1"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Airbnb-style Suggested Destinations Dropdown */}
+                          {activeDropdown === 'location' && (
+                            <div className="absolute left-0 top-full mt-3 w-80 bg-white border border-gray-100 rounded-3xl shadow-elevated z-50 p-4 max-h-96 overflow-y-auto">
+                              <p className="text-xs font-bold tracking-tight text-gray-400 uppercase tracking-wider mb-3 px-2">Suggested destinations</p>
+                              <div className="space-y-1">
+                                {SUGGESTED_DESTINATIONS.filter(dest => 
+                                  !locationQuery || 
+                                  dest.city.toLowerCase().includes(locationQuery.toLowerCase()) || 
+                                  dest.state.toLowerCase().includes(locationQuery.toLowerCase())
+                                ).map((dest, i) => (
+                                  <button
+                                    key={i}
+                                    type="button"
+                                    onClick={() => {
+                                      setLocationQuery(dest.city);
+                                      setActiveDropdown(null);
+                                    }}
+                                    className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-stone transition text-left"
+                                  >
+                                    <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
+                                      {(() => {
+                                        const DestIcon = dest.icon || MapPin;
+                                        return <DestIcon className="w-5 h-5 text-gray-500" />;
+                                      })()}
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-bold text-charcoal">{dest.city}, {dest.state}</p>
+                                      <p className="text-xs text-gray-400 font-semibold mt-0.5">{dest.desc}</p>
+                                    </div>
+                                  </button>
+                                ))}
+                                {SUGGESTED_DESTINATIONS.filter(dest => 
+                                  !locationQuery || 
+                                  dest.city.toLowerCase().includes(locationQuery.toLowerCase()) || 
+                                  dest.state.toLowerCase().includes(locationQuery.toLowerCase())
+                                ).length === 0 && (
+                                  <p className="text-xs font-semibold text-gray-400 p-2 italic text-center">No locations matched. Press enter to search anyway.</p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+                        
+                        {/* Check-in */}
+                        <div className="relative flex items-center px-4 md:px-6 py-3 w-full md:w-auto hover:bg-stone/50 rounded-full transition duration-200 group shrink-0">
+                          <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
+                          <div className="w-full text-left pointer-events-none z-0">
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Check-in</p>
+                            <p className={`font-extrabold text-sm mt-1 leading-none ${dates.checkIn ? 'text-charcoal' : 'text-gray-400'}`}>
+                              {dates.checkIn || 'Select Date'}
+                            </p>
+                          </div>
+                          <input
+                            id="landing-check-in"
+                            name="checkIn"
+                            type="date"
+                            min={todayISO}
+                            value={dates.checkIn}
+                            onChange={(e) => setDates({ ...dates, checkIn: e.target.value })}
+                            onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                           />
                         </div>
-                      </div>
-
-                      {/* Airbnb-style Suggested Destinations Dropdown */}
-                      {activeDropdown === 'location' && (
-                        <div className="absolute left-0 top-full mt-3 w-80 bg-white border border-gray-100 rounded-3xl shadow-elevated z-50 p-4 max-h-96 overflow-y-auto">
-                          <p className="text-xs font-bold tracking-tight text-gray-400 uppercase tracking-wider mb-3 px-2">Suggested destinations</p>
-                          <div className="space-y-1">
-                            {SUGGESTED_DESTINATIONS.filter(dest => 
-                              !locationQuery || 
-                              dest.city.toLowerCase().includes(locationQuery.toLowerCase()) || 
-                              dest.state.toLowerCase().includes(locationQuery.toLowerCase())
-                            ).map((dest, i) => (
-                              <button
-                                key={i}
-                                type="button"
-                                onClick={() => {
-                                  setLocationQuery(dest.city);
-                                  setActiveDropdown(null);
-                                }}
-                                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-stone transition text-left"
-                              >
-                                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
-                                  {(() => {
-                                    const DestIcon = dest.icon || MapPin;
-                                    return <DestIcon className="w-5 h-5 text-gray-500" />;
-                                  })()}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-bold text-charcoal">{dest.city}, {dest.state}</p>
-                                  <p className="text-xs text-gray-400 font-semibold mt-0.5">{dest.desc}</p>
-                                </div>
-                              </button>
-                            ))}
-                            {SUGGESTED_DESTINATIONS.filter(dest => 
-                              !locationQuery || 
-                              dest.city.toLowerCase().includes(locationQuery.toLowerCase()) || 
-                              dest.state.toLowerCase().includes(locationQuery.toLowerCase())
-                            ).length === 0 && (
-                              <p className="text-xs font-semibold text-gray-400 p-2 italic text-center">No locations matched. Press enter to search anyway.</p>
-                            )}
+                        
+                        {/* Arrow Separator */}
+                        <div className="hidden md:flex items-center text-gray-300 mx-1 shrink-0">
+                          <ArrowRight className="w-4 h-4" />
+                        </div>
+                        
+                        {/* Check-out */}
+                        <div className="relative flex items-center px-4 md:px-6 py-3 w-full md:w-auto hover:bg-stone/50 rounded-full transition duration-200 group shrink-0">
+                          <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
+                          <div className="w-full text-left pointer-events-none z-0">
+                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Check-out</p>
+                            <p className={`font-extrabold text-sm mt-1 leading-none ${dates.checkOut ? 'text-charcoal' : 'text-gray-400'}`}>
+                              {dates.checkOut || 'Select Date'}
+                            </p>
                           </div>
+                          <input
+                            id="landing-check-out"
+                            name="checkOut"
+                            type="date"
+                            min={dates.checkIn || todayISO}
+                            value={dates.checkOut}
+                            onChange={(e) => setDates({ ...dates, checkOut: e.target.value })}
+                            onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          />
                         </div>
-                      )}
-                    </div>
-                    <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
-                    
-                    {/* Check-in */}
-                    <div className="relative flex items-center px-3 md:px-6 py-2.5 md:py-4 w-full md:w-auto border-b border-gray-100 md:border-none hover:bg-gray-50 transition group">
-                      <Calendar className="w-4 h-4 md:w-5 md:h-5 text-gray-400 mr-2 md:mr-3 group-hover:text-terracotta transition-colors z-0" />
-                      <div className="w-full text-left pointer-events-none z-0">
-                        <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
-                        <p className={`font-bold text-sm mt-0.5 ${dates.checkIn ? 'text-charcoal' : 'text-gray-400'}`}>
-                          {dates.checkIn || 'Check-in'}
-                        </p>
-                      </div>
-                      <input
-                        id="landing-check-in"
-                        name="checkIn"
-                        type="date"
-                        min={todayISO}
-                        value={dates.checkIn}
-                        onChange={(e) => setDates({ ...dates, checkIn: e.target.value })}
-                        onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      />
-                    </div>
-                    <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
-                    
-                    {/* Check-out */}
-                    <div className="relative flex items-center px-3 md:px-6 py-2.5 md:py-4 w-full md:w-auto border-b border-gray-100 md:border-none hover:bg-gray-50 transition group">
-                      <Calendar className="w-4 h-4 md:w-5 md:h-5 text-gray-400 mr-2 md:mr-3 group-hover:text-terracotta transition-colors z-0" />
-                      <div className="w-full text-left pointer-events-none z-0">
-                        <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
-                        <p className={`font-bold text-sm mt-0.5 ${dates.checkOut ? 'text-charcoal' : 'text-gray-400'}`}>
-                          {dates.checkOut || 'Check-out'}
-                        </p>
-                      </div>
-                      <input
-                        id="landing-check-out"
-                        name="checkOut"
-                        type="date"
-                        min={dates.checkIn || todayISO}
-                        value={dates.checkOut}
-                        onChange={(e) => setDates({ ...dates, checkOut: e.target.value })}
-                        onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      />
-                    </div>
-                    <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+                        <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
 
-
-                    
-                    {/* Guests Selector with Airbnb style +/- counter popover */}
-                    <div className="relative flex-1 w-full">
-                      <div 
-                        onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                        className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer hover:bg-gray-50 transition rounded-b-2xl md:rounded-none"
-                      >
-                        <User className="w-5 h-5 text-gray-400 mr-3" />
-                        <div className="text-left">
-                          <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">Who</p>
-                          <p className="text-charcoal font-bold text-sm mt-0.5 whitespace-nowrap">
-                            {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      {activeDropdown === 'guests' && (
-                        <div className="absolute right-0 top-full mt-3 w-72 bg-white border border-gray-100 rounded-3xl shadow-elevated z-50 p-6 space-y-5">
-                          {/* Adults Row */}
-                          <div className="flex items-center justify-between">
-                            <div className="text-left">
-                              <p className="text-sm font-bold text-charcoal">Adults</p>
-                              <p className="text-xs text-gray-400 font-semibold mt-0.5">Age 13 or above</p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <button
-                                type="button"
-                                onClick={() => setGuestCounts({ ...guestCounts, adults: Math.max(1, guestCounts.adults - 1) })}
-                                className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
-                              >
-                                -
-                              </button>
-                              <span className="w-4 text-center text-sm font-bold text-charcoal">{guestCounts.adults}</span>
-                              <button
-                                type="button"
-                                onClick={() => setGuestCounts({ ...guestCounts, adults: guestCounts.adults + 1 })}
-                                className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
-                              >
-                                +
-                              </button>
+                        {/* Guests */}
+                        <div className="relative flex-1 w-full">
+                          <div 
+                            onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
+                            className="flex items-center px-4 md:px-6 py-3 w-full cursor-pointer hover:bg-stone/50 rounded-full transition duration-200 group"
+                          >
+                            <User className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
+                            <div className="w-full text-left">
+                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Guests</p>
+                              <p className="text-charcoal font-extrabold text-sm mt-1 leading-none whitespace-nowrap">
+                                {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
+                              </p>
                             </div>
                           </div>
                           
-                          {/* Children Row */}
-                          <div className="flex items-center justify-between">
-                            <div className="text-left">
-                              <p className="text-sm font-bold text-charcoal">Children</p>
-                              <p className="text-xs text-gray-400 font-semibold mt-0.5">Ages 2–12</p>
+                          {activeDropdown === 'guests' && (
+                            <div className="absolute right-0 top-full mt-3 w-72 bg-white border border-gray-100 rounded-3xl shadow-elevated z-50 p-6 space-y-5">
+                              {/* Adults Row */}
+                              <div className="flex items-center justify-between">
+                                <div className="text-left">
+                                  <p className="text-sm font-bold text-charcoal">Adults</p>
+                                  <p className="text-xs text-gray-400 font-semibold mt-0.5">Age 13 or above</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => setGuestCounts({ ...guestCounts, adults: Math.max(1, guestCounts.adults - 1) })}
+                                    className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                                  >
+                                    -
+                                  </button>
+                                  <span className="w-4 text-center text-sm font-bold text-charcoal">{guestCounts.adults}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setGuestCounts({ ...guestCounts, adults: guestCounts.adults + 1 })}
+                                    className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              {/* Children Row */}
+                              <div className="flex items-center justify-between">
+                                <div className="text-left">
+                                  <p className="text-sm font-bold text-charcoal">Children</p>
+                                  <p className="text-xs text-gray-400 font-semibold mt-0.5">Ages 2–12</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => setGuestCounts({ ...guestCounts, children: Math.max(0, guestCounts.children - 1) })}
+                                    className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                                  >
+                                    -
+                                  </button>
+                                  <span className="w-4 text-center text-sm font-bold text-charcoal">{guestCounts.children}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setGuestCounts({ ...guestCounts, children: guestCounts.children + 1 })}
+                                    className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <button
-                                type="button"
-                                onClick={() => setGuestCounts({ ...guestCounts, children: Math.max(0, guestCounts.children - 1) })}
-                                className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
-                              >
-                                -
-                              </button>
-                              <span className="w-4 text-center text-sm font-bold text-charcoal">{guestCounts.children}</span>
-                              <button
-                                type="button"
-                                onClick={() => setGuestCounts({ ...guestCounts, children: guestCounts.children + 1 })}
-                                className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
+                          )}
                         </div>
-                      )}
-                    </div>
 
-                    
-                    {/* Search Button */}
-                    <div className="p-1.5 md:p-2 w-full md:w-auto">
-                      <button
-                        onClick={handleSearch}
-                        className="w-full md:w-auto bg-terracotta hover:bg-terracotta/90 text-white py-2.5 md:py-4 md:px-8 rounded-xl md:rounded-full transition-all duration-300 flex items-center justify-center shadow-subtle cursor-pointer"
-                      >
-                        <Search className="w-4 h-4 md:w-5 md:h-5 text-white" />
-                      </button>
-                    </div>
+                        {/* Search Button */}
+                        <div className="w-full md:w-auto p-1 shrink-0">
+                          <button
+                            onClick={handleSearch}
+                            className="w-full md:w-auto bg-[#1A1A1A] hover:bg-black text-white font-bold text-xs uppercase tracking-widest px-8 py-4 rounded-2xl md:rounded-full transition duration-200 shadow-md cursor-pointer"
+                          >
+                            SEARCH
+                          </button>
+                        </div>
+                      </div>
                   </div>
-              </div>
-            </div>
-
-
-          </div>
-
+                 </div>
+            );
+          })()}
         </div>
       </div>
+      </section>
 
       {/* ── Category Shortcut Strip ── */}
       <ScrollReveal duration="duration-[800ms]">
-        <div className="w-full bg-[#FDFCF8] relative z-20 py-8 md:py-12 border-b border-sand-100">
-          <div className="max-w-7xl mx-auto px-4 md:px-8">
-            <div className="flex flex-row flex-wrap items-center justify-center gap-4 md:gap-20">
-              {[
-                {
-                  label: 'Residential',
-                  icon: Home,
-                  category: 'residential',
-                  desc: 'Homes & Villas',
-                  bg: 'bg-terracotta',
-                  ring: 'ring-terracotta/20',
-                  shadow: 'shadow-terracotta/30'
-                },
-                {
-                  label: 'Commercial',
-                  icon: Briefcase,
-                  category: 'commercial',
-                  desc: 'Offices & Co-working',
-                  bg: 'bg-[#4a3f35]',
-                  ring: 'ring-[#4a3f35]/20',
-                  shadow: 'shadow-[#4a3f35]/20'
-                },
-                {
-                  label: 'Event Venue',
-                  icon: PartyPopper,
-                  category: 'event_venue',
-                  desc: 'Halls & Rooftops',
-                  bg: 'bg-[#4a6b50]',
-                  ring: 'ring-[#4a6b50]/20',
-                  shadow: 'shadow-[#4a6b50]/20'
-                }
-              ].map(({ label, icon: Icon, category, desc, bg, ring, shadow }) => (
+        <div className="w-full bg-white relative z-20 py-8 md:py-12 border-b border-sand-100">
+          <div className="px-4 md:px-[10vw]">
+            <div className="flex items-center justify-between gap-4 mb-6 md:mb-8">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <h2 className="font-serif text-2xl md:text-3xl font-bold text-charcoal tracking-tight">Pick a Destination</h2>
                 <button
-                  key={category}
-                  onClick={() => navigate(`/guest/browse?category=${category}`)}
-                  className="group flex flex-col items-center gap-2 md:gap-3 cursor-pointer w-28 md:w-auto"
+                  type="button"
+                  onClick={() => setLocationQuery('Nashik')}
+                  className="inline-flex items-center gap-1 text-xs md:text-sm font-semibold text-charcoal-muted hover:text-terracotta transition"
                 >
-                  <div className={`w-14 h-14 md:w-20 md:h-20 rounded-full ${bg} flex items-center justify-center ring-4 ${ring} shadow-premium ${shadow} group-hover:scale-[1.03] group-hover:shadow-elevated transition-all duration-300 active:scale-95`}>
-                    <Icon className="w-6 h-6 md:w-9 md:h-9 text-white" />
+                  <MapPin className="w-3.5 h-3.5" />
+                  Show nearby locations
+                </button>
+              </div>
+              <div className="hidden md:flex items-center gap-3 text-charcoal">
+                <ChevronLeft className="w-5 h-5" />
+                <ChevronRight className="w-5 h-5" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-x-4 gap-y-8 md:gap-x-8 md:gap-y-10">
+              {DESTINATION_SHORTCUTS.map((label, index) => (
+                <button
+                  key={label}
+                  onClick={() => navigate(`/guest/browse?city=${encodeURIComponent(label)}`)}
+                  className="group flex flex-col items-center gap-2 cursor-pointer"
+                >
+                  <div className="flex h-20 md:h-24 items-center justify-center transition-transform duration-300 group-hover:-translate-y-1">
+                    <DestinationLineIcon variant={index} />
                   </div>
-                  <div className="text-center px-1">
-                    <p className="text-charcoal font-bold tracking-tight text-[11px] md:text-[14px] tracking-tight leading-snug">{label}</p>
-                    <p className="text-gray-400 text-[9px] md:text-[11px] font-medium mt-0.5 leading-tight">{desc}</p>
-                  </div>
+                  <p className="text-charcoal font-medium text-sm md:text-base tracking-tight leading-snug">{label}</p>
                 </button>
               ))}
+            </div>
+
+            <div className="mt-12 md:mt-16 pt-8 md:pt-10 border-t border-sand-200">
+              <div className="flex items-end justify-between gap-4 mb-6">
+                <div className="text-left">
+                  <h2 className="font-serif text-2xl md:text-3xl font-bold text-charcoal tracking-tight">Recently Visited</h2>
+                  <div className="mt-6 inline-flex flex-col items-start">
+                    <span className="text-sm md:text-base font-bold text-charcoal">Properties</span>
+                    <span className="mt-2 h-[2px] w-full bg-charcoal" />
+                  </div>
+                </div>
+                <div className="hidden md:flex items-center gap-3 text-charcoal">
+                  <span
+                    type="button"
+                    onClick={() => scrollSlider('left', 'slider-recently-visited')}
+                    className="p-1 hover:text-terracotta transition"
+                    aria-label="Previous recently visited properties"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => scrollSlider('right', 'slider-recently-visited')}
+                    className="p-1 hover:text-terracotta transition"
+                    aria-label="Next recently visited properties"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div
+                id="slider-recently-visited"
+                className="flex overflow-x-auto gap-4 md:gap-6 pb-4 no-scrollbar snap-x scroll-smooth"
+              >
+                {recentlyVisitedProperties.map((item, index) => (
+                  <button
+                    key={item.property_id || index}
+                    type="button"
+                    onClick={() => navigate(`/property/${item.property_id}`)}
+                    className="min-w-[260px] md:min-w-[285px] w-[260px] md:w-[285px] bg-white rounded-xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-elevated transition text-left snap-start"
+                  >
+                    <div className="relative aspect-[16/10] bg-stone overflow-hidden">
+                      <img
+                        src={item.img || getImageUrl(item.images?.[0]) || PROPERTY_IMAGE_FALLBACK}
+                        alt={item.title}
+                        loading="lazy"
+                        decoding="async"
+                        onError={({ currentTarget }) => {
+                          currentTarget.onerror = null;
+                          currentTarget.src = PROPERTY_IMAGE_FALLBACK;
+                        }}
+                        className="w-full h-full object-cover"
+                      />
+                      {item.rating && (
+                        <div className="absolute top-3 left-3 bg-charcoal/70 text-white rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
+                          <span>{item.rating}</span>
+                          <Star className="w-3 h-3 text-[#E0A51B] fill-current" />
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
+                        className="absolute top-3 right-3 text-white"
+                        aria-label="Toggle wishlist"
+                      >
+                        <Heart className={`w-5 h-5 drop-shadow-md ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                      </button>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-bold text-charcoal text-sm md:text-base line-clamp-1">{item.title}</h3>
+                      <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-charcoal-muted">
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>{item.city || 'Maharashtra'}{item.state ? `, ${item.state}` : ''}</span>
+                      </p>
+                      <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-charcoal-muted font-semibold line-clamp-1">
+                        Up to {item.max_guests || item.guests || 4} Guests
+                        <span className="mx-1">-</span>
+                        {item.bedrooms || item.rooms || 1} Room{(item.bedrooms || item.rooms || 1) > 1 ? 's' : ''}
+                        <span className="mx-1">-</span>
+                        {item.bathrooms || item.baths || 1} Bath{(item.bathrooms || item.baths || 1) > 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </ScrollReveal>
       {/* Content Section — full width, overflow guard */}
-      <div className="w-full bg-[#FDFCF8] relative z-20 overflow-x-hidden">
+      <div className="w-full bg-white relative z-20 overflow-x-hidden">
 
         {/* ===== Discover Our Collections — Full Width ===== */}
         <CollectionsSection navigate={navigate} />
@@ -2131,7 +2312,7 @@ const LandingPage = () => {
 
           {/* Post Property Free Banner */}
           <ScrollReveal duration="duration-[800ms]">
-            <div className="px-6 md:px-12 lg:px-20 mb-8 md:mb-12">
+            <div className="px-4 md:px-[10vw] mb-8 md:mb-12">
               <div className="bg-[#FFF9EA] border border-[#FBEFCD] rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
                 <div className="text-left">
                   <h4 className="text-xl md:text-2xl font-bold text-charcoal flex items-baseline gap-1.5">
@@ -2155,7 +2336,7 @@ const LandingPage = () => {
 
           {/* Ad Campaign Carousel (Promo & Host) */}
           <ScrollReveal duration="duration-[1000ms]">
-            <div className="px-6 md:px-12 lg:px-20 mb-12 md:mb-24">
+            <div className="px-4 md:px-[10vw] mb-12 md:mb-24">
               <div className="relative rounded-[2rem] overflow-hidden shadow-premium h-[300px] md:h-[350px] bg-stone">
                 {/* Slide 1: Guest Promo */}
                 <div className={`absolute inset-0 flex items-center transition-all duration-700 ${currentPromoSlide === 0 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
