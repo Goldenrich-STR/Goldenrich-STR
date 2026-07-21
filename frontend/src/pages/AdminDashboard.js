@@ -3317,6 +3317,7 @@ const PropertyModeration = () => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [propertySearch, setPropertySearch] = useState('');
   const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -3359,7 +3360,7 @@ const PropertyModeration = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [propertyTypeFilter, dateFrom, dateTo]);
+  }, [propertySearch, propertyTypeFilter, dateFrom, dateTo]);
 
   const refresh = () => {
     if (statusFilter === 'awaiting_final_approval') fetchAwaitingFinalApproval();
@@ -3536,6 +3537,19 @@ const PropertyModeration = () => {
   };
 
   const filteredProperties = properties.filter((property) => {
+    const search = propertySearch.trim().toLowerCase();
+    if (search) {
+      const searchableText = [
+        property.title,
+        property.property_id,
+        property.city,
+        property.state,
+        property.category,
+        property.property_type,
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!searchableText.includes(search)) return false;
+    }
+
     if (propertyTypeFilter !== 'all' && property.property_type !== propertyTypeFilter) {
       return false;
     }
@@ -3600,6 +3614,7 @@ const PropertyModeration = () => {
     const parts = [
       'properties',
       statusFilter,
+      propertySearch.trim() ? propertySearch.trim().replace(/\s+/g, '-') : null,
       propertyTypeFilter !== 'all' ? propertyTypeFilter : null,
       dateFrom || null,
       dateTo || null
@@ -3613,6 +3628,7 @@ const PropertyModeration = () => {
   };
 
   const clearPropertyFilters = () => {
+    setPropertySearch('');
     setPropertyTypeFilter('all');
     setDateFrom('');
     setDateTo('');
@@ -3623,7 +3639,18 @@ const PropertyModeration = () => {
       <div className="dashboard-card mb-6">
         <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5 mb-4">
           <h3 className="text-2xl font-bold text-charcoal">Property Moderation</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-3 flex-1">
+            <div className="relative md:col-span-2 xl:col-span-2">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
+              <input
+                type="search"
+                value={propertySearch}
+                onChange={(e) => setPropertySearch(e.target.value)}
+                className="input-field w-full pl-11"
+                placeholder="Search property name, ID, city..."
+                aria-label="Search properties"
+              />
+            </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
