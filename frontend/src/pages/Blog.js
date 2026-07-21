@@ -10,6 +10,20 @@ import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
 
+const blogSchema = {
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "@id": "https://x-space360.in/blog#blog",
+  url: "https://x-space360.in/blog",
+  name: "X-Space360 Travel and Property Blog",
+  description:
+    "Read travel guides, property booking tips, host resources, workspace insights and event venue ideas.",
+  publisher: {
+    "@id": "https://x-space360.in/#organization",
+  },
+  inLanguage: "en-IN",
+};
+
 const DEFAULT_BLOG_POSTS = [
   {
     id: 'p1',
@@ -228,7 +242,20 @@ const Blog = () => {
 
   return (
     <div className="min-h-screen bg-sand-50 font-sans text-charcoal">
-      <SEO title={`The Journal | X-Space360 Blog`} description="Discover curated perspectives, design tips, and weekend getaway guides." />
+      <SEO
+        title="Travel, Property and Host Guides"
+        description="Explore travel guides, villa booking tips, host resources, workspace insights and event venue ideas from X-Space360."
+        path="/blog"
+        type="website"
+        keywords={[
+          "travel blog India",
+          "villa booking guide",
+          "host tips",
+          "workspace guide",
+          "event venue guide",
+        ]}
+        schema={blogSchema}
+      />
 
       {/* Header / Navbar */}
       <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-charcoal px-6 md:px-12 lg:px-20 h-20 bg-white/80 backdrop-blur-md border-b border-stone">
