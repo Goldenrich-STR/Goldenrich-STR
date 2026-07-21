@@ -3317,6 +3317,9 @@ const PropertyModeration = () => {
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   
@@ -3353,6 +3356,10 @@ const PropertyModeration = () => {
       fetchAllProperties();
     }
   }, [statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [propertyTypeFilter, dateFrom, dateTo]);
 
   const refresh = () => {
     if (statusFilter === 'awaiting_final_approval') fetchAwaitingFinalApproval();
@@ -3519,36 +3526,185 @@ const PropertyModeration = () => {
     return statusFilter === 'awaiting_final_approval';
   };
 
+  const getPropertyDate = (property) => {
+    const rawDate = statusFilter === 'deleted'
+      ? (property.deleted_at || property.updated_at || property.created_at)
+      : (property.created_at || property.updated_at || property.deleted_at);
+    if (!rawDate) return null;
+    const parsed = new Date(rawDate);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const filteredProperties = properties.filter((property) => {
+    if (propertyTypeFilter !== 'all' && property.property_type !== propertyTypeFilter) {
+      return false;
+    }
+
+    const propertyDate = getPropertyDate(property);
+    if (dateFrom) {
+      const from = new Date(`${dateFrom}T00:00:00`);
+      if (!propertyDate || propertyDate < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(`${dateTo}T23:59:59`);
+      if (!propertyDate || propertyDate > to) return false;
+    }
+
+    return true;
+  });
+
+  const escapeCsv = (value) => {
+    const text = value === null || value === undefined ? '' : String(value);
+    return `"${text.replaceAll('"', '""')}"`;
+  };
+
+  const handleDownloadProperties = () => {
+    if (!filteredProperties.length) {
+      alert('No properties found for selected filters');
+      return;
+    }
+
+    const headers = [
+      'Property ID',
+      'Title',
+      'City',
+      'State',
+      'Category',
+      'Property Type',
+      'Status',
+      'Price Per Night',
+      'Created At',
+      'Updated At',
+      'Deleted At'
+    ];
+    const rows = filteredProperties.map((property) => [
+      property.property_id,
+      property.title,
+      property.city,
+      property.state,
+      formatCategoryLabel(property.category),
+      formatPropertyTypeLabel(property.property_type),
+      formatReadableText(property.status || 'unknown'),
+      property.price_per_night || 0,
+      property.created_at ? new Date(property.created_at).toLocaleString() : '',
+      property.updated_at ? new Date(property.updated_at).toLocaleString() : '',
+      property.deleted_at ? new Date(property.deleted_at).toLocaleString() : ''
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map(escapeCsv).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const parts = [
+      'properties',
+      statusFilter,
+      propertyTypeFilter !== 'all' ? propertyTypeFilter : null,
+      dateFrom || null,
+      dateTo || null
+    ].filter(Boolean);
+    link.href = url;
+    link.setAttribute('download', `${parts.join('_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const clearPropertyFilters = () => {
+    setPropertyTypeFilter('all');
+    setDateFrom('');
+    setDateTo('');
+  };
+
   return (
     <div data-testid="property-moderation">
       <div className="dashboard-card mb-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5 mb-4">
           <h3 className="text-2xl font-bold text-charcoal">Property Moderation</h3>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="input-field w-64"
-            data-testid="status-filter"
-          >
-            <option value="awaiting_final_approval">Awaiting Final Approval (RM-approved)</option>
-            <option value="pending_verification">Pending Verification (broker queue)</option>
-            <option value="all">All Properties</option>
-            <option value="draft">Draft</option>
-            <option value="live">Live</option>
-            <option value="rejected">Rejected</option>
-            <option value="deleted">Deleted Properties</option>
-          </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 flex-1">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="input-field"
+              data-testid="status-filter"
+            >
+              <option value="awaiting_final_approval">Awaiting Final Approval</option>
+              <option value="pending_verification">Pending Verification</option>
+              <option value="all">All Statuses</option>
+              <option value="draft">Draft</option>
+              <option value="under_review">Under Review</option>
+              <option value="live">Live</option>
+              <option value="rejected">Rejected</option>
+              <option value="blocked">Blocked</option>
+              <option value="deleted">Deleted Properties</option>
+            </select>
+            <select
+              value={propertyTypeFilter}
+              onChange={(e) => setPropertyTypeFilter(e.target.value)}
+              className="input-field"
+              data-testid="property-type-filter"
+            >
+              <option value="all">All Property Types</option>
+              <option value="apartment">Apartment</option>
+              <option value="villa">Villa</option>
+              <option value="studio">Studio</option>
+              <option value="independent_house">Independent House</option>
+              <option value="co_living">Co-living</option>
+              <option value="private_office">Private Office</option>
+              <option value="co_working">Co-working</option>
+              <option value="meeting_room">Meeting Room</option>
+              <option value="banquet_hall">Banquet Hall</option>
+              <option value="farmhouse">Farmhouse</option>
+              <option value="rooftop">Rooftop</option>
+              <option value="hotel_ballroom">Hotel Ballroom</option>
+              <option value="resort">Resort</option>
+            </select>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="input-field"
+              aria-label="From date"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="input-field"
+              aria-label="To date"
+            />
+            <button
+              type="button"
+              onClick={handleDownloadProperties}
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#047857] text-white font-bold text-sm hover:bg-[#065F46] transition shadow-sm"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download CSV</span>
+            </button>
+            <button
+              type="button"
+              onClick={clearPropertyFilters}
+              className="px-4 py-3 rounded-xl border border-[#E5E7EB] bg-white text-[#4B5563] font-bold text-sm hover:bg-gray-50 transition"
+            >
+              Clear Filters
+            </button>
+          </div>
         </div>
+        <p className="text-xs font-semibold text-[#6B7280]">
+          Showing {filteredProperties.length} of {properties.length} properties for the selected status, type and date range.
+        </p>
       </div>
 
       {loading ? (
         <div className="text-center py-12">
           <p className="text-charcoal-light">Loading properties...</p>
         </div>
-      ) : properties.length > 0 ? (
+      ) : filteredProperties.length > 0 ? (
         <div data-testid="properties-list">
           <div className="space-y-4">
-            {[...properties]
+            {[...filteredProperties]
               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((property) => (
               <div key={property.property_id} className="bg-white border border-[#F3F4F6] rounded-[24px] p-5 shadow-sm hover:shadow-subtle transition-all mb-4" data-testid={`property-${property.property_id}`}>
@@ -3658,7 +3814,7 @@ const PropertyModeration = () => {
               </div>
             ))}
           </div>
-          {properties.length > itemsPerPage && (
+          {filteredProperties.length > itemsPerPage && (
             <div className="mt-8 flex justify-center items-center space-x-4">
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -3668,11 +3824,11 @@ const PropertyModeration = () => {
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <span className="text-sm font-semibold text-charcoal">
-                Page {currentPage} of {Math.ceil(properties.length / itemsPerPage)}
+                Page {currentPage} of {Math.ceil(filteredProperties.length / itemsPerPage)}
               </span>
               <button 
-                onClick={() => setCurrentPage(p => Math.min(Math.ceil(properties.length / itemsPerPage), p + 1))}
-                disabled={currentPage === Math.ceil(properties.length / itemsPerPage)}
+                onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredProperties.length / itemsPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(filteredProperties.length / itemsPerPage)}
                 className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
