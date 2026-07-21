@@ -36,6 +36,8 @@ const slugify = (value) => String(value || '')
   .replace(/[^a-z0-9]+/g, '-')
   .replace(/^-|-$/g, '');
 
+const SITE_URL = 'https://x-space360.in';
+
 const LegalPage = () => {
   const location = useLocation();
   const [legalData, setLegalData] = useState(DEFAULT_LEGAL);
@@ -109,13 +111,44 @@ const LegalPage = () => {
     if (requestedSlug === 'refund-policy') return documents.find(doc => doc.id === 'refund-policy') || null;
     return documents.find(doc => slugify(doc.title) === requestedSlug || doc.id === requestedSlug) || documents[0] || null;
   }, [documents, requestedSlug]);
+  const isLegalIndex = location.pathname === '/legal' || location.pathname === '/legal/';
+  const canonicalPath = isLegalIndex ? '/legal' : location.pathname;
+  const legalTitle = isLegalIndex ? 'Legal Policies and Terms' : (selectedDoc?.title || 'Legal Policies and Terms');
+  const legalDescription = isLegalIndex
+    ? 'Read X-Space360 terms and conditions, privacy policy, cancellation policy, refund policy, host rules and guest guidelines.'
+    : `Review ${selectedDoc?.title || 'X-Space360 legal policies'}, including terms for property listings, bookings, payments, cancellations, refunds and platform use.`;
+  const legalSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": `${SITE_URL}${canonicalPath}#webpage`,
+    url: `${SITE_URL}${canonicalPath}`,
+    name: isLegalIndex ? "X-Space360 Legal Policies" : (selectedDoc?.title || "X-Space360 Legal Policies"),
+    description: isLegalIndex
+      ? "Review X-Space360 terms, privacy policy, cancellation policy, refund policy, host rules and guest guidelines."
+      : legalDescription,
+    isPartOf: {
+      "@id": "https://x-space360.in/#website",
+    },
+    about: {
+      "@id": "https://x-space360.in/#organization",
+    },
+    inLanguage: "en-IN",
+  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-950">
       <SEO
-        title={selectedDoc?.title || legalData.title}
-        description="Review X-Space360 legal terms, policies, privacy terms, refund rules, and platform agreements."
-        canonicalUrl={`${window.location.origin}${location.pathname}`}
+        title={legalTitle}
+        description={legalDescription}
+        path={canonicalPath}
+        keywords={[
+          "X-Space360 legal policy",
+          "booking cancellation policy",
+          "refund policy",
+          "host terms",
+          "guest terms",
+        ]}
+        schema={legalSchema}
         type="website"
       />
 
@@ -136,8 +169,14 @@ const LegalPage = () => {
             Legal / Platform Policies
           </p>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-950">
-            {legalData.title || 'Legal Terms & Platform Policies'}
+            {isLegalIndex ? 'X-Space360 Legal Policies' : (legalData.title || 'Legal Terms & Platform Policies')}
           </h1>
+          {isLegalIndex && (
+            <p className="text-sm md:text-base text-slate-700 mt-3 max-w-3xl leading-7">
+              Review the policies that govern property listings, bookings, payments, cancellations,
+              refunds and the use of X-Space360 by guests, hosts and partners.
+            </p>
+          )}
           <p className="text-sm text-slate-600 mt-2">
             Version {legalData.version || '2026.1'} · Effective {legalData.effective_date || '2026-07-03'}
           </p>
