@@ -7,7 +7,7 @@ class AdminProvider with ChangeNotifier {
   Map<String, dynamic> _dashboardStats = {};
   List<dynamic> _usersList = [];
   int _usersTotal = 0;
-  
+
   List<dynamic> _bookingsList = [];
   List<dynamic> _subscriptionPlans = [];
   List<dynamic> _cmsContent = [];
@@ -15,12 +15,13 @@ class AdminProvider with ChangeNotifier {
   List<dynamic> _searchLogsList = [];
   List<dynamic> _aiCallsList = [];
   List<dynamic> _aiAgentsList = [];
+  List<dynamic> _supportTicketsList = [];
 
   bool get isLoading => _isLoading;
   Map<String, dynamic> get dashboardStats => _dashboardStats;
   List<dynamic> get usersList => _usersList;
   int get usersTotal => _usersTotal;
-  
+
   List<dynamic> get bookingsList => _bookingsList;
   List<dynamic> get subscriptionPlans => _subscriptionPlans;
   List<dynamic> get cmsContent => _cmsContent;
@@ -28,6 +29,7 @@ class AdminProvider with ChangeNotifier {
   List<dynamic> get searchLogsList => _searchLogsList;
   List<dynamic> get aiCallsList => _aiCallsList;
   List<dynamic> get aiAgentsList => _aiAgentsList;
+  List<dynamic> get supportTicketsList => _supportTicketsList;
 
   Future<void> getDashboardStats() async {
     _isLoading = true;
@@ -140,7 +142,8 @@ class AdminProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.patch('/admin/users/$userId', data: data);
+      final response =
+          await _apiService.dio.patch('/admin/users/$userId', data: data);
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -150,13 +153,54 @@ class AdminProvider with ChangeNotifier {
     }
   }
 
+  Future<void> getSupportTickets({String statusFilter = 'all'}) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio.get(
+        '/support-tickets/admin',
+        queryParameters: {'status_filter': statusFilter},
+      );
+      if (response.statusCode == 200) {
+        _supportTicketsList = response.data['tickets'] ?? [];
+      }
+    } catch (e) {
+      _supportTicketsList = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> updateSupportTicket(
+      String ticketId, Map<String, dynamic> data) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio
+          .patch('/support-tickets/admin/$ticketId', data: data);
+      if (response.statusCode == 200) {
+        await getSupportTickets();
+        return true;
+      }
+    } catch (e) {
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+    return false;
+  }
+
   // Bookings
   Future<void> getBookings({String? statusFilter}) async {
     _isLoading = true;
     notifyListeners();
     try {
       final Map<String, dynamic> queryParams = {};
-      if (statusFilter != null && statusFilter.isNotEmpty && statusFilter.toLowerCase() != 'all') {
+      if (statusFilter != null &&
+          statusFilter.isNotEmpty &&
+          statusFilter.toLowerCase() != 'all') {
         queryParams['status_filter'] = statusFilter.toLowerCase();
       }
       final response = await _apiService.dio.get(
@@ -223,7 +267,8 @@ class AdminProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.delete('/subscriptions/admin/plans/$planId');
+      final response =
+          await _apiService.dio.delete('/subscriptions/admin/plans/$planId');
       if (response.statusCode == 200) {
         await getSubscriptionPlans();
         return true;
@@ -243,7 +288,8 @@ class AdminProvider with ChangeNotifier {
     notifyListeners();
     try {
       print('DEBUG: Calling getCMSContent...');
-      final response = await _apiService.dio.get('/cms/admin/content', queryParameters: {'page': 'landing'});
+      final response = await _apiService.dio
+          .get('/cms/admin/content', queryParameters: {'page': 'landing'});
       print('DEBUG: getCMSContent status code: ${response.statusCode}');
       print('DEBUG: getCMSContent response data: ${response.data}');
       if (response.statusCode == 200) {
@@ -259,7 +305,8 @@ class AdminProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> updateCMSContent(String contentId, Map<String, dynamic> data) async {
+  Future<bool> updateCMSContent(
+      String contentId, Map<String, dynamic> data) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -369,7 +416,8 @@ class AdminProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/ai-calls/agents', data: data);
+      final response =
+          await _apiService.dio.post('/ai-calls/agents', data: data);
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       return false;
@@ -383,7 +431,8 @@ class AdminProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.patch('/ai-calls/agents/$agentId/active');
+      final response =
+          await _apiService.dio.patch('/ai-calls/agents/$agentId/active');
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -397,7 +446,8 @@ class AdminProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.delete('/ai-calls/agents/$agentId');
+      final response =
+          await _apiService.dio.delete('/ai-calls/agents/$agentId');
       return response.statusCode == 200;
     } catch (e) {
       return false;

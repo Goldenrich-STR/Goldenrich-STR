@@ -243,6 +243,12 @@ async def create_booking(
             food_pref = booking_data.food_preference.lower()
             plate_price = property_dict.get("non_veg_price", 0) if food_pref == "non_veg" else property_dict.get("veg_price", 0)
             base_amount += plate_price * booking_data.number_of_guests * num_nights
+        elif property_dict.get("category") in {"residential", "commercial"}:
+            included_guests = int(property_dict.get("max_guests") or 1)
+            requested_guests = max(1, int(booking_data.number_of_guests or 1))
+            extra_guest_price = float(property_dict.get("extra_guest_price") or 0)
+            extra_guests = max(0, requested_guests - included_guests)
+            base_amount += extra_guest_price * extra_guests * num_nights
             
         # Apply promo discount
         user = await db.users.find_one({"user_id": current_user["user_id"]})

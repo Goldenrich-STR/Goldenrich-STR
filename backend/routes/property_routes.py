@@ -481,6 +481,30 @@ async def get_host_properties(
     try:
         cursor = db.properties.find({"owner_id": current_user["user_id"]}, {"_id": 0}).sort("created_at", -1)
         properties = await cursor.to_list(length=100)
+        sub_ids = [p.get("subscription_id") for p in properties if p.get("subscription_id")]
+        subscriptions = {}
+        plans = {}
+        if sub_ids:
+            sub_rows = await db.subscriptions.find(
+                {"subscription_id": {"$in": sub_ids}},
+                {"_id": 0},
+            ).to_list(length=len(sub_ids))
+            subscriptions = {s.get("subscription_id"): s for s in sub_rows}
+            plan_ids = [s.get("plan_id") for s in sub_rows if s.get("plan_id")]
+            if plan_ids:
+                plan_rows = await db.subscription_plans.find(
+                    {"plan_id": {"$in": plan_ids}},
+                    {"_id": 0},
+                ).to_list(length=len(plan_ids))
+                plans = {p.get("plan_id"): p for p in plan_rows}
+
+        for prop in properties:
+            sub = subscriptions.get(prop.get("subscription_id")) or {}
+            plan = plans.get(sub.get("plan_id")) or {}
+            prop["subscription_plan_name"] = plan.get("plan_name") or sub.get("plan_type") or "Trial"
+            prop["subscription_purchase_date"] = sub.get("start_date") or sub.get("created_at")
+            prop["subscription_renewal_date"] = sub.get("end_date") or sub.get("trial_end_date")
+            prop["subscription_status"] = sub.get("status") or prop.get("subscription_status") or "trial"
         
         return {
             "properties": properties,

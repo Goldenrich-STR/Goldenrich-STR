@@ -9,7 +9,7 @@ import {
   Edit, Eye as EyeIcon, Shield, ChevronLeft, ChevronRight, Tag,
   Check, ListTodo, Heart, FileText, Sparkles, UploadCloud,
   Mail, EyeOff, Lock, User, MapPin, Eye, Camera, Info, ArrowLeft,
-  Search, ChevronDown, ChevronUp
+  Search, ChevronDown, ChevronUp, Crop, SlidersHorizontal
 } from 'lucide-react';
 import SearchLogsManagement from '../components/admin/SearchLogsManagement';
 import AICallsManagement from '../components/admin/AICallsManagement';
@@ -385,6 +385,7 @@ const AdminDashboard = () => {
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             { id: 'users', label: 'Users', icon: Users },
+            { id: 'control-management', label: 'Control Management', icon: Shield },
             { id: 'properties', label: 'Properties', icon: Building2 },
             { id: 'cms', label: 'CMS', icon: TrendingUp },
             { id: 'search-logs', label: 'Search Logs', icon: FileText },
@@ -520,6 +521,10 @@ const AdminDashboard = () => {
         {/* Users Tab */}
         {activeTab === 'users' && (
           <UserManagement roleFilter={roleFilter} setRoleFilter={setRoleFilter} />
+        )}
+
+        {activeTab === 'control-management' && (
+          <ControlManagement />
         )}
 
         {/* Properties Tab */}
@@ -986,7 +991,282 @@ const SupportMessagesManagement = () => {
   );
 };
 
+const ControlManagement = () => {
+  const [admins, setAdmins] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadControls = async () => {
+    setLoading(true);
+    try {
+      const [adminRes, employeeRes] = await Promise.all([
+        apiClient.get('/admin/users', { params: { role: 'admin', limit: 200 } }),
+        apiClient.get('/admin/users', { params: { role: 'employee', limit: 200 } }),
+      ]);
+      setAdmins(adminRes.data.users || []);
+      setEmployees(employeeRes.data.users || []);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadControls();
+  }, []);
+
+  const updateControl = async (user, patch) => {
+    await apiClient.patch(`/admin/users/${user.user_id}`, patch);
+    await loadControls();
+  };
+
+  const accessLabels = {
+    users: 'Users',
+    properties: 'Properties',
+    bookings: 'Bookings',
+    accounts: 'Accounts',
+    payouts: 'Payouts',
+    cms: 'CMS',
+    support: 'Support',
+    reports: 'Reports',
+    audit: 'Audit Logs',
+  };
+
+  const renderControlRow = (user) => (
+    <tr key={user.user_id} className="border-b border-gray-100">
+      <td className="py-3 pr-4">
+        <div className="font-bold text-charcoal">{user.full_name}</div>
+        <div className="text-xs text-charcoal-muted">{user.email}</div>
+      </td>
+      <td className="py-3 pr-4 capitalize">{user.role}</td>
+      <td className="py-3 pr-4">
+        <select
+          value={user.department || ''}
+          onChange={(e) => updateControl(user, { department: e.target.value })}
+          className="input-field text-xs"
+        >
+          <option value="">Department</option>
+          <option value="accounts">Accounts</option>
+          <option value="operations">Operations</option>
+          <option value="sales">Sales</option>
+          <option value="support">Support</option>
+          <option value="verification">Verification</option>
+          <option value="finance">Finance</option>
+        </select>
+      </td>
+      <td className="py-3 pr-4">
+        <select
+          value={user.admin_scope || 'department'}
+          onChange={(e) => updateControl(user, { admin_scope: e.target.value })}
+          className="input-field text-xs"
+        >
+          <option value="global">Global</option>
+          <option value="franchise">Franchise</option>
+          <option value="branch">Branch</option>
+          <option value="department">Department</option>
+        </select>
+      </td>
+      <td className="py-3 pr-4">{user.franchise || '-'}</td>
+      <td className="py-3 pr-4">{user.branch || '-'}</td>
+      <td className="py-3 pr-4">
+        <div className="flex flex-wrap gap-1 max-w-md">
+          {Object.entries(accessLabels).map(([value, label]) => {
+            const selected = (user.access_controls || []).includes(value);
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  const current = user.access_controls || [];
+                  const next = selected ? current.filter((x) => x !== value) : [...current, value];
+                  updateControl(user, { access_controls: next });
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold ${selected ? 'bg-terracotta text-white' : 'bg-gray-100 text-charcoal-muted'}`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </td>
+      <td className="py-3 pr-4">
+        {user.role === 'admin' ? (
+          <button
+            type="button"
+            onClick={() => updateControl(user, { admin_delete_protected: !user.admin_delete_protected })}
+            className={`px-3 py-1 rounded-full text-xs font-bold ${user.admin_delete_protected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}
+          >
+            {user.admin_delete_protected ? 'Protected' : 'Deletable'}
+          </button>
+        ) : '-'}
+      </td>
+    </tr>
+  );
+
+  return (
+    <div className="space-y-6" data-testid="control-management-section">
+      <div className="dashboard-card">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-2xl font-bold text-charcoal">Control Management</h3>
+            <p className="text-sm text-charcoal-muted mt-1">
+              Assign employee controls by department, franchise, branch and specific admin modules.
+            </p>
+          </div>
+          <button onClick={loadControls} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold hover:bg-gray-50">
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          ['Admins', admins.length, Shield],
+          ['Employees', employees.length, Users],
+          ['Departments', new Set([...admins, ...employees].map((u) => u.department).filter(Boolean)).size, Building2],
+          ['Scoped Controls', [...admins, ...employees].filter((u) => (u.access_controls || []).length).length, ListTodo],
+        ].map(([label, value, Icon]) => (
+          <div key={label} className="dashboard-card">
+            <Icon className="w-6 h-6 text-terracotta mb-3" />
+            <p className="text-2xl font-bold text-charcoal">{value}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-charcoal-muted mt-1">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="dashboard-card overflow-x-auto">
+        {loading ? (
+          <p className="text-center py-10 text-charcoal-muted">Loading controls...</p>
+        ) : (
+          <table className="w-full text-sm min-w-[1150px]">
+            <thead className="text-left text-charcoal-muted uppercase text-xs tracking-wider">
+              <tr className="border-b border-gray-100">
+                <th className="py-3 pr-4">User</th>
+                <th className="py-3 pr-4">Role</th>
+                <th className="py-3 pr-4">Department</th>
+                <th className="py-3 pr-4">Scope</th>
+                <th className="py-3 pr-4">Franchise</th>
+                <th className="py-3 pr-4">Branch</th>
+                <th className="py-3 pr-4">Specific Controls</th>
+                <th className="py-3 pr-4">Admin Delete</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...admins, ...employees].map(renderControlRow)}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // User Management Component
+const ImageCropModal = ({ file, onCancel, onCrop }) => {
+  const [imageUrl, setImageUrl] = useState('');
+  const [zoom, setZoom] = useState(1);
+  const imgRef = useRef(null);
+
+  useEffect(() => {
+    if (!file) return undefined;
+    const url = URL.createObjectURL(file);
+    setImageUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const cropImage = () => {
+    const image = imgRef.current;
+    if (!image) return;
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const naturalW = image.naturalWidth;
+    const naturalH = image.naturalHeight;
+    const sourceSize = Math.min(naturalW, naturalH) / zoom;
+    const sx = Math.max(0, (naturalW - sourceSize) / 2);
+    const sy = Math.max(0, (naturalH - sourceSize) / 2);
+
+    ctx.clearRect(0, 0, size, size);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(image, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+    ctx.restore();
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const cropped = new File([blob], file.name.replace(/\.[^.]+$/, '-cropped.jpg'), {
+        type: 'image/jpeg',
+        lastModified: Date.now(),
+      });
+      onCrop(cropped);
+    }, 'image/jpeg', 0.9);
+  };
+
+  if (!file) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[140] flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-elevated">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-terracotta/10 text-terracotta flex items-center justify-center">
+              <Crop className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-charcoal">Crop Profile Image</h3>
+              <p className="text-xs text-charcoal-muted font-semibold">Adjust zoom and save a square avatar.</p>
+            </div>
+          </div>
+          <button type="button" onClick={onCancel} className="text-charcoal-muted hover:text-charcoal">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="mx-auto w-72 h-72 rounded-full overflow-hidden bg-stone border-4 border-sand-100 shadow-inner">
+          {imageUrl && (
+            <img
+              ref={imgRef}
+              src={imageUrl}
+              alt="Crop preview"
+              className="w-full h-full object-cover"
+              style={{ transform: `scale(${zoom})` }}
+            />
+          )}
+        </div>
+
+        <div className="mt-5">
+          <label className="text-xs font-bold uppercase tracking-widest text-charcoal-muted flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4" /> Zoom
+          </label>
+          <input
+            type="range"
+            min="1"
+            max="2.5"
+            step="0.05"
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="w-full mt-3 accent-terracotta"
+          />
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
+          <button type="button" onClick={onCancel} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-charcoal">
+            Cancel
+          </button>
+          <button type="button" onClick={cropImage} className="px-5 py-2 rounded-xl bg-terracotta text-white text-sm font-bold">
+            Crop & Upload
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const UserManagement = ({ roleFilter, setRoleFilter }) => {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1016,9 +1296,14 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     uid: '',
     profile_image: '',
     lg_code: '',
-    employee_code: ''
+    employee_code: '',
+    admin_delete_protected: true,
+    admin_scope: 'global',
+    department: '',
+    access_controls: []
   });
   const [uploading, setUploading] = useState(false);
+  const [cropState, setCropState] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -1060,35 +1345,34 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+    setCropState({ file, target: 'new' });
+    e.target.value = '';
+  };
+
+  const uploadCroppedImage = async (file, target) => {
     setUploading(true);
     try {
       const res = await uploadAPI.uploadImage(file);
-      setNewUser(prev => ({ ...prev, profile_image: res.url }));
+      if (target === 'edit') {
+        setEditUser(prev => ({ ...prev, profile_image: res.url }));
+      } else {
+        setNewUser(prev => ({ ...prev, profile_image: res.url }));
+      }
       alert('Profile image uploaded successfully');
     } catch (error) {
       console.error('Image upload error:', error);
       alert(formatError(error, 'Failed to upload image'));
     } finally {
       setUploading(false);
+      setCropState(null);
     }
   };
 
   const handleEditImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
-    setUploading(true);
-    try {
-      const res = await uploadAPI.uploadImage(file);
-      setEditUser(prev => ({ ...prev, profile_image: res.url }));
-      alert('Profile image uploaded successfully');
-    } catch (error) {
-      console.error('Image upload error:', error);
-      alert(formatError(error, 'Failed to upload image'));
-    } finally {
-      setUploading(false);
-    }
+    setCropState({ file, target: 'edit' });
+    e.target.value = '';
   };
 
   useEffect(() => {
@@ -1249,7 +1533,11 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         uid: '',
         profile_image: '',
         lg_code: '',
-        employee_code: ''
+        employee_code: '',
+        admin_delete_protected: true,
+        admin_scope: 'global',
+        department: '',
+        access_controls: []
       });
       fetchUsers();
       fetchBrokersAndEmployees();
@@ -1277,6 +1565,10 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         profile_image: editUser.profile_image,
         lg_code: editUser.lg_code,
         employee_code: editUser.employee_code,
+        admin_delete_protected: editUser.admin_delete_protected,
+        admin_scope: editUser.admin_scope,
+        department: editUser.department,
+        access_controls: editUser.access_controls || [],
         is_active: editUser.is_active
       };
       
@@ -1485,6 +1777,19 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
   return (
     <div data-testid="user-management">
+      <style>{`
+        input.password-no-native-eye::-ms-reveal,
+        input.password-no-native-eye::-ms-clear {
+          display: none;
+        }
+      `}</style>
+      {cropState && (
+        <ImageCropModal
+          file={cropState.file}
+          onCancel={() => setCropState(null)}
+          onCrop={(croppedFile) => uploadCroppedImage(croppedFile, cropState.target)}
+        />
+      )}
       <div className="dashboard-card mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h3 className="text-2xl font-bold text-charcoal">User Management</h3>
@@ -1681,13 +1986,20 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   >
                     {user.is_active ? 'Deactivate' : 'Activate'}
                   </button>
+                  {(() => {
+                    const isDefaultAdmin = String(user.email || '').toLowerCase() === 'admin@goldenrichstay.com';
+                    const isProtectedAdmin = user.role === 'admin' && user.admin_delete_protected && !isDefaultAdmin;
+                    return (
                   <button
                     onClick={() => deleteUser(user.user_id)}
-                    className="p-2 text-charcoal-light hover:text-red-600 transition"
-                    title="Delete Permanently"
+                    disabled={isProtectedAdmin}
+                    className="p-2 text-charcoal-light hover:text-red-600 transition disabled:opacity-40 disabled:hover:text-charcoal-light disabled:cursor-not-allowed"
+                    title={isProtectedAdmin ? 'Protected admin cannot be deleted' : 'Delete Permanently'}
                   >
                     <Trash className="w-5 h-5" />
                   </button>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -1892,9 +2204,13 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                     <Lock className="w-5 h-5" />
                   </div>
                   <input 
-                    type={showAddPassword ? "text" : "password"} required
+                    type="text"
+                    style={showAddPassword ? {} : { WebkitTextSecurity: 'disc' }}
+                    autoComplete="new-password"
+                    inputMode="text"
+                    required
                     placeholder="••••••••••••"
-                    className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm pr-12"
+                    className="password-no-native-eye flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm pr-12"
                     value={newUser.password}
                     onChange={e => setNewUser({...newUser, password: e.target.value})}
                   />
@@ -1930,6 +2246,104 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   </div>
                 </div>
               </div>
+
+              {(newUser.role === 'admin' || newUser.role === 'employee') && (
+                <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 space-y-4 animate-slide-up">
+                  <div>
+                    <h4 className="text-sm font-bold text-charcoal">Control Management</h4>
+                    <p className="text-xs text-charcoal-muted font-semibold mt-1">
+                      Set admin deletion protection, department, franchise/branch scope and employee permissions.
+                    </p>
+                  </div>
+
+                  {newUser.role === 'admin' && (
+                    <label className="flex items-start gap-3 p-3 rounded-xl bg-white border border-blue-100 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newUser.admin_delete_protected}
+                        onChange={(e) => setNewUser({ ...newUser, admin_delete_protected: e.target.checked })}
+                        className="mt-1 accent-terracotta"
+                      />
+                      <span>
+                        <span className="block text-sm font-bold text-charcoal">Protected Admin</span>
+                        <span className="block text-xs text-charcoal-muted font-semibold">
+                          Enabled admins cannot be deleted by other admins. Disable this only for removable branch/franchise admins.
+                        </span>
+                      </span>
+                    </label>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs font-bold tracking-widest text-charcoal-muted uppercase block mb-1.5">Department</label>
+                      <select
+                        value={newUser.department}
+                        onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
+                        className="input-field text-sm"
+                      >
+                        <option value="">Select department</option>
+                        <option value="accounts">Accounts</option>
+                        <option value="operations">Operations</option>
+                        <option value="sales">Sales</option>
+                        <option value="support">Support</option>
+                        <option value="verification">Verification</option>
+                        <option value="finance">Finance</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold tracking-widest text-charcoal-muted uppercase block mb-1.5">Access Scope</label>
+                      <select
+                        value={newUser.admin_scope}
+                        onChange={(e) => setNewUser({ ...newUser, admin_scope: e.target.value })}
+                        className="input-field text-sm"
+                      >
+                        <option value="global">Global Admin</option>
+                        <option value="franchise">Franchise Admin</option>
+                        <option value="branch">Branch Admin</option>
+                        <option value="department">Department Only</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold tracking-widest text-charcoal-muted uppercase block mb-1.5">Delete Policy</label>
+                      <div className={`px-4 py-3 rounded-xl text-xs font-bold ${newUser.role === 'admin' && newUser.admin_delete_protected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        {newUser.role === 'admin' && newUser.admin_delete_protected ? 'Cannot be deleted' : 'Can be deleted'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold tracking-widest text-charcoal-muted uppercase block mb-2">Specific Controls</label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {[
+                        ['users', 'Users'],
+                        ['properties', 'Properties'],
+                        ['bookings', 'Bookings'],
+                        ['accounts', 'Accounts'],
+                        ['payouts', 'Payouts'],
+                        ['cms', 'CMS'],
+                        ['support', 'Support'],
+                        ['reports', 'Reports'],
+                        ['audit', 'Audit Logs'],
+                      ].map(([value, label]) => (
+                        <label key={value} className="flex items-center gap-2 rounded-xl bg-white border border-blue-100 px-3 py-2 text-xs font-bold text-charcoal cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newUser.access_controls.includes(value)}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...newUser.access_controls, value]
+                                : newUser.access_controls.filter((item) => item !== value);
+                              setNewUser({ ...newUser, access_controls: next });
+                            }}
+                            className="accent-terracotta"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {(newUser.role === 'broker' || newUser.role === 'employee') && (
                 <>
@@ -2162,9 +2576,12 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                       <Lock className="w-5 h-5" />
                     </div>
                     <input 
-                      type={showPassword ? "text" : "password"}
+                      type="text"
+                      style={showPassword ? {} : { WebkitTextSecurity: 'disc' }}
+                      autoComplete="new-password"
+                      inputMode="text"
                       placeholder="••••••••"
-                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm pr-12"
+                      className="password-no-native-eye flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm pr-12"
                       value={editUser.password || ''}
                       onChange={e => setEditUser({...editUser, password: e.target.value})}
                     />
@@ -2899,7 +3316,7 @@ const PropertyModeration = () => {
   const navigate = useNavigate();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('awaiting_final_approval');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   
@@ -3116,6 +3533,7 @@ const PropertyModeration = () => {
             <option value="awaiting_final_approval">Awaiting Final Approval (RM-approved)</option>
             <option value="pending_verification">Pending Verification (broker queue)</option>
             <option value="all">All Properties</option>
+            <option value="draft">Draft</option>
             <option value="live">Live</option>
             <option value="rejected">Rejected</option>
             <option value="deleted">Deleted Properties</option>
@@ -3265,7 +3683,27 @@ const PropertyModeration = () => {
       ) : (
         <div className="dashboard-card text-center py-12">
           <Building2 className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
-          <p className="text-charcoal-light">No properties in this queue</p>
+          <p className="text-charcoal-light">
+            {statusFilter === 'awaiting_final_approval'
+              ? 'No RM-approved properties are awaiting final approval right now. Check Pending Verification or All Properties.'
+              : 'No properties in this queue'}
+          </p>
+          {statusFilter === 'awaiting_final_approval' && (
+            <div className="mt-5 flex items-center justify-center gap-3 flex-wrap">
+              <button
+                onClick={() => setStatusFilter('pending_verification')}
+                className="px-4 py-2 rounded-full bg-terracotta text-white text-xs font-bold hover:bg-terracotta-dark transition"
+              >
+                View Pending Verification
+              </button>
+              <button
+                onClick={() => setStatusFilter('all')}
+                className="px-4 py-2 rounded-full border border-gray-200 text-charcoal text-xs font-bold hover:bg-gray-50 transition"
+              >
+                View All Properties
+              </button>
+            </div>
+          )}
         </div>
       )}
 

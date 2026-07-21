@@ -22,6 +22,26 @@ import {
   CreditCard,
   Copy,
   Sparkles,
+  Plus,
+  X,
+  Pencil,
+  Save,
+  Wifi,
+  Wind,
+  Car,
+  Utensils,
+  Waves,
+  Dumbbell,
+  Tv,
+  WashingMachine,
+  Flame,
+  Coffee,
+  Printer,
+  Bath,
+  Monitor,
+  Presentation,
+  BatteryCharging,
+  Mic2,
   Image as ImageIcon,
   MapPin,
   Sun,
@@ -38,8 +58,6 @@ const SUBSCRIPTION_UPI = {
   id: 'goldenrich123@idfcbank',
   name: 'GOLDEN RICH FINANCIAL REAL ESTATE SOLUTIONS PVT LTD',
 };
-
-const COUPON_MIN_TAXABLE_AMOUNT = 10;
 
 const formatSubscriptionAmount = (amount) => {
   const value = Number(amount) || 0;
@@ -167,6 +185,58 @@ const CATEGORY_AMENITIES = {
     { value: 'changing_rooms', label: 'VIP/Green Changing Rooms' },
     { value: 'security', label: 'Professional Event Security' },
   ]
+};
+
+const AMENITY_ICONS = {
+  wifi: Wifi,
+  ac: Wind,
+  parking: Car,
+  kitchen: Utensils,
+  pool: Waves,
+  gym: Dumbbell,
+  tv: Tv,
+  washer: WashingMachine,
+  heating: Flame,
+  fireplace: Flame,
+  coffee: Coffee,
+  printer: Printer,
+  restrooms: Bath,
+  workspace: Monitor,
+  projector: Presentation,
+  whiteboard: Presentation,
+  power_backup: BatteryCharging,
+  av_system: Mic2,
+  stage: Mic2,
+  catering: Utensils,
+  bar: Coffee,
+  rooftop: Building2,
+  changing_rooms: Home,
+  security: ShieldCheck,
+};
+
+const slugifyAmenity = (label) =>
+  label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const getAmenityIcon = (value, label = '') => {
+  const key = value || slugifyAmenity(label);
+  if (AMENITY_ICONS[key]) return AMENITY_ICONS[key];
+  const text = `${key} ${label}`.toLowerCase();
+  if (text.includes('wifi') || text.includes('internet')) return Wifi;
+  if (text.includes('parking')) return Car;
+  if (text.includes('kitchen') || text.includes('cook')) return Utensils;
+  if (text.includes('pool') || text.includes('swim')) return Waves;
+  if (text.includes('gym') || text.includes('fitness')) return Dumbbell;
+  if (text.includes('tv')) return Tv;
+  if (text.includes('wash')) return WashingMachine;
+  if (text.includes('coffee') || text.includes('tea')) return Coffee;
+  if (text.includes('printer')) return Printer;
+  if (text.includes('projector') || text.includes('board')) return Presentation;
+  if (text.includes('power') || text.includes('backup')) return BatteryCharging;
+  return Sparkles;
 };
 
 const STEPS = [
@@ -423,6 +493,9 @@ const initialForm = {
   area_sqft: '',
   max_guests: 6,
   price_per_night: '',
+  pricing_display_mode: 'per_night',
+  per_person_price: '',
+  extra_guest_price: '',
   pricing_cycle: 'day',
   minimum_stay_days: 1,
   amenities: [],
@@ -523,6 +596,10 @@ const HostListProperty = () => {
   const [pricingSummaryPlan, setPricingSummaryPlan] = useState(null);
   const [subscriptionCoupons, setSubscriptionCoupons] = useState([]);
   const [subscriptionCouponCode, setSubscriptionCouponCode] = useState('');
+  const [newHouseRule, setNewHouseRule] = useState('');
+  const [editingRuleIndex, setEditingRuleIndex] = useState(null);
+  const [editingRuleValue, setEditingRuleValue] = useState('');
+  const [newAmenityLabel, setNewAmenityLabel] = useState('');
   const subscriptionTargetParams = useMemo(
     () => {
       const areaSqft = Number(form.area_sqft);
@@ -587,6 +664,9 @@ const HostListProperty = () => {
             area_sqft: p.area_sqft !== null && p.area_sqft !== undefined ? String(p.area_sqft) : '',
             max_guests: p.max_guests !== null && p.max_guests !== undefined ? String(p.max_guests) : 6,
             price_per_night: p.price_per_night !== null && p.price_per_night !== undefined ? String(p.price_per_night) : '',
+            pricing_display_mode: p.pricing_display_mode || 'per_night',
+            per_person_price: p.per_person_price !== null && p.per_person_price !== undefined ? String(p.per_person_price) : '',
+            extra_guest_price: p.extra_guest_price !== null && p.extra_guest_price !== undefined ? String(p.extra_guest_price) : '',
             pricing_cycle: p.pricing_cycle || 'day',
             minimum_stay_days: p.minimum_stay_days || 1,
             amenities: p.amenities || [],
@@ -890,15 +970,20 @@ const HostListProperty = () => {
     const planFee = Number(plan.price_monthly) || 0;
     const platformFee = Number(plan.platform_fee) || 0;
     const taxPercent = Number(plan.tax_percent ?? 18);
-    const taxableAmount = planFee + platformFee;
     const couponCode = subscriptionCouponCode.trim().toUpperCase();
     const coupon = couponCode ? subscriptionCoupons.find((c) => c.code === couponCode) : null;
-    const discountedTaxableAmount = coupon ? Math.min(taxableAmount, COUPON_MIN_TAXABLE_AMOUNT) : taxableAmount;
-    const discount = coupon ? Math.max(0, taxableAmount - discountedTaxableAmount) : 0;
-    const taxes = Number((discountedTaxableAmount * (taxPercent / 100)).toFixed(2));
-    const subtotal = taxableAmount + taxes;
-    const total = discountedTaxableAmount + taxes;
-    return { planFee, platformFee, taxPercent, taxes, subtotal, coupon, discount, total };
+    const taxableAmount = planFee + platformFee;
+    const taxes = Number((taxableAmount * (taxPercent / 100)).toFixed(2));
+    const grossTotal = taxableAmount + taxes;
+    const rawDiscount = coupon
+      ? coupon.discount_type === 'percentage'
+        ? grossTotal * ((Number(coupon.discount_value) || 0) / 100)
+        : Number(coupon.discount_value) || 0
+      : 0;
+    const discount = Math.min(grossTotal, Math.max(0, Number(rawDiscount.toFixed(2))));
+    const subtotal = grossTotal;
+    const total = Math.max(0, grossTotal - discount);
+    return { planFee, platformFee, taxPercent, taxes, subtotal, coupon, discount, discountedPlanFee: planFee, total };
   };
 
   const validateStep = () => {
@@ -989,6 +1074,76 @@ const HostListProperty = () => {
         ? form.amenities.filter((x) => x !== a)
         : [...form.amenities, a],
     });
+  };
+
+  const houseRuleItems = useMemo(() => {
+    if (!form.house_rules || form.house_rules.trim().startsWith('{')) return [];
+    return form.house_rules
+      .split('\n')
+      .map((rule) => rule.trim())
+      .filter(Boolean);
+  }, [form.house_rules]);
+
+  const saveHouseRules = (rules) => {
+    update({ house_rules: rules.map((rule) => rule.trim()).filter(Boolean).join('\n') });
+  };
+
+  const addHouseRule = () => {
+    const rule = newHouseRule.trim();
+    if (!rule) return;
+    saveHouseRules([...houseRuleItems, rule]);
+    setNewHouseRule('');
+  };
+
+  const removeHouseRule = (index) => {
+    saveHouseRules(houseRuleItems.filter((_, i) => i !== index));
+    if (editingRuleIndex === index) {
+      setEditingRuleIndex(null);
+      setEditingRuleValue('');
+    }
+  };
+
+  const startEditHouseRule = (index) => {
+    setEditingRuleIndex(index);
+    setEditingRuleValue(houseRuleItems[index] || '');
+  };
+
+  const saveEditedHouseRule = () => {
+    if (editingRuleIndex === null) return;
+    const rules = [...houseRuleItems];
+    const nextValue = editingRuleValue.trim();
+    if (nextValue) {
+      rules[editingRuleIndex] = nextValue;
+    } else {
+      rules.splice(editingRuleIndex, 1);
+    }
+    saveHouseRules(rules);
+    setEditingRuleIndex(null);
+    setEditingRuleValue('');
+  };
+
+  const availableAmenityOptions = useMemo(() => {
+    const base = CATEGORY_AMENITIES[form.category] || CATEGORY_AMENITIES.residential;
+    const options = [...base];
+    form.amenities.forEach((value) => {
+      if (!options.some((item) => item.value === value)) {
+        options.push({
+          value,
+          label: value.replace(/^custom_/, '').replace(/_/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase()),
+          custom: true,
+        });
+      }
+    });
+    return options;
+  }, [form.category, form.amenities]);
+
+  const addCustomAmenity = () => {
+    const label = newAmenityLabel.trim();
+    if (!label) return;
+    const value = `custom_${slugifyAmenity(label) || Date.now()}`;
+    const nextAmenities = form.amenities.includes(value) ? form.amenities : [...form.amenities, value];
+    update({ amenities: nextAmenities });
+    setNewAmenityLabel('');
   };
 
   const handleFileUpload = async (e) => {
@@ -1139,6 +1294,9 @@ const HostListProperty = () => {
       area_sqft: Number(form.area_sqft),
       max_guests: Number(form.max_guests),
       price_per_night: Number(form.price_per_night),
+      pricing_display_mode: 'per_night',
+      per_person_price: form.category === 'event_venue' ? null : (form.per_person_price ? Number(form.per_person_price) : null),
+      extra_guest_price: form.category === 'event_venue' ? null : (form.extra_guest_price ? Number(form.extra_guest_price) : null),
       pricing_cycle: form.pricing_cycle || 'day',
       minimum_stay_days: Number(form.minimum_stay_days),
       amenities: form.amenities,
@@ -1752,7 +1910,91 @@ const HostListProperty = () => {
                       onChange={(v) => update({ minimum_stay_days: v })} 
                     />
                   </div>
-                  <Textarea label="House rules (If Applicable)" testid="pricing-rules" value={form.house_rules} onChange={(v) => update({ house_rules: v })} rows={3} placeholder="Quiet hours after 10 PM, no parties, etc." />
+                  {(form.category === 'residential' || form.category === 'commercial') && (
+                    <div className="mt-4 bg-blue-50/50 border border-blue-100 rounded-2xl p-4">
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="hidden">
+                        <Input
+                          type="number"
+                          label={form.category === 'commercial' ? 'Per person/staff price (₹)' : 'Per person price (₹)'}
+                          testid="pricing-per-person-price"
+                          value={form.per_person_price}
+                          onChange={(v) => update({ per_person_price: v })}
+                          placeholder={form.pricing_display_mode === 'per_person' ? '1200' : '0'}
+                        />
+                        </div>
+                        <Input
+                          type="number"
+                          label={form.category === 'commercial' ? 'Extra person/staff price (₹)' : 'Extra person price (₹)'}
+                          testid="pricing-extra-guest-price"
+                          value={form.extra_guest_price}
+                          onChange={(v) => update({ extra_guest_price: v })}
+                          placeholder="1000"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+                    <div className="mb-3">
+                      <h3 className="text-sm font-bold text-charcoal">House rules</h3>
+                      <p className="text-xs text-charcoal-muted font-semibold mt-1">Add rules one by one. You can edit or remove them anytime.</p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        value={newHouseRule}
+                        onChange={(e) => setNewHouseRule(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addHouseRule();
+                          }
+                        }}
+                        className="flex-1 bg-stone border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta font-semibold text-charcoal"
+                        placeholder="e.g. Quiet hours after 10 PM"
+                        data-testid="pricing-rule-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={addHouseRule}
+                        className="inline-flex items-center justify-center gap-2 bg-charcoal text-white rounded-xl px-4 py-3 text-xs font-bold hover:bg-black transition"
+                        data-testid="pricing-rule-add"
+                      >
+                        <Plus className="w-4 h-4" /> Add Rule
+                      </button>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {houseRuleItems.length === 0 ? (
+                        <div className="text-xs font-semibold text-charcoal-light bg-stone rounded-xl px-4 py-3">No house rules added yet.</div>
+                      ) : houseRuleItems.map((rule, index) => (
+                        <div key={`${rule}-${index}`} className="flex items-center gap-2 bg-stone border border-gray-100 rounded-xl px-3 py-2">
+                          {editingRuleIndex === index ? (
+                            <input
+                              type="text"
+                              value={editingRuleValue}
+                              onChange={(e) => setEditingRuleValue(e.target.value)}
+                              className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:border-terracotta"
+                              autoFocus
+                            />
+                          ) : (
+                            <span className="flex-1 text-sm font-semibold text-charcoal">{rule}</span>
+                          )}
+                          {editingRuleIndex === index ? (
+                            <button type="button" onClick={saveEditedHouseRule} className="p-2 rounded-lg text-green-700 hover:bg-green-50" aria-label="Save rule">
+                              <Save className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <button type="button" onClick={() => startEditHouseRule(index)} className="p-2 rounded-lg text-charcoal-muted hover:bg-white" aria-label="Edit rule">
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button type="button" onClick={() => removeHouseRule(index)} className="p-2 rounded-lg text-red-500 hover:bg-red-50" aria-label="Delete rule">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   {/* Check-in / Check-out Time */}
                   <div className="bg-stone rounded-2xl border border-gray-100 p-4">
                     <h3 className="text-sm font-bold text-charcoal mb-3 flex items-center gap-2 uppercase tracking-wider">
@@ -1968,24 +2210,74 @@ const HostListProperty = () => {
               <h2 className="text-xl font-bold text-charcoal mb-2">What amenities do you offer?</h2>
               <p className="text-sm text-charcoal-light">Pick all that apply. You can edit this later.</p>
               <div className="flex flex-wrap gap-2 mb-6" data-testid="amenities-pills">
-                {(CATEGORY_AMENITIES[form.category] || CATEGORY_AMENITIES.residential).map((a) => {
+                {availableAmenityOptions.map((a) => {
                   const active = form.amenities.includes(a.value);
+                  const AmenityIcon = getAmenityIcon(a.value, a.label);
                   return (
                     <button
                       key={a.value}
                       type="button"
-                      onClick={() => toggleAmenity(a.value)}
-                      className={`text-sm px-4 py-2 rounded-full border transition ${
+                      onClick={() => !a.custom && toggleAmenity(a.value)}
+                      className={`inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border transition ${
                         active
                           ? 'bg-terracotta text-white border-terracotta'
                           : 'bg-white text-charcoal border-gray-200 hover:border-terracotta'
                       }`}
                       data-testid={`amenity-${a.value}`}
                     >
-                      {a.label}
+                      <AmenityIcon className="w-4 h-4" />
+                      <span>{a.label}</span>
+                      {a.custom && (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleAmenity(a.value);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleAmenity(a.value);
+                            }
+                          }}
+                          className="ml-1 rounded-full p-0.5 hover:bg-white/20"
+                          aria-label={`Remove ${a.label}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </span>
+                      )}
                     </button>
                   );
                 })}
+              </div>
+              <div className="bg-stone border border-gray-100 rounded-2xl p-4 mb-6">
+                <h3 className="text-sm font-bold text-charcoal mb-3">Add custom amenity</h3>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={newAmenityLabel}
+                    onChange={(e) => setNewAmenityLabel(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addCustomAmenity();
+                      }
+                    }}
+                    className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta font-semibold text-charcoal"
+                    placeholder="e.g. Jacuzzi, Lake View, EV Charging"
+                    data-testid="amenity-custom-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={addCustomAmenity}
+                    className="inline-flex items-center justify-center gap-2 bg-charcoal text-white rounded-xl px-4 py-3 text-xs font-bold hover:bg-black transition"
+                    data-testid="amenity-custom-add"
+                  >
+                    <Plus className="w-4 h-4" /> Add Amenity
+                  </button>
+                </div>
               </div>
 
               {form.category === 'event_venue' && (
@@ -2351,8 +2643,8 @@ const HostListProperty = () => {
                 label="Amenities" 
                 value={
                   form.amenities.map(val => {
-                    const found = (CATEGORY_AMENITIES[form.category] || CATEGORY_AMENITIES.residential).find(item => item.value === val);
-                    return found ? found.label : val;
+                    const found = availableAmenityOptions.find(item => item.value === val);
+                    return found ? found.label : val.replace(/^custom_/, '').replace(/_/g, ' ');
                   }).join(', ') || '—'
                 } 
               />

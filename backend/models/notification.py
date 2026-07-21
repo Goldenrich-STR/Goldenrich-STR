@@ -26,6 +26,8 @@ class NotificationType(str, Enum):
     DISPUTE_RAISED = "dispute_raised"
     REVIEW_REQUEST = "review_request"
     REFUND_RECEIVED = "refund_received"
+    SUPPORT_TICKET_CREATED = "support_ticket_created"
+    SUPPORT_TICKET_UPDATED = "support_ticket_updated"
 
 class NotificationChannel(str, Enum):
     SMS = "sms"

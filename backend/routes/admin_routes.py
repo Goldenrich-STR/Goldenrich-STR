@@ -383,6 +383,10 @@ async def create_user(
             "employee_code": user_data.employee_code,
             "broker_id": broker_id,
             "rm_id": rm_id,
+            "admin_delete_protected": user_data.admin_delete_protected,
+            "admin_scope": user_data.admin_scope,
+            "department": user_data.department,
+            "access_controls": user_data.access_controls,
             "terms_accepted": True,
             "is_active": True,
             "created_at": datetime.now(timezone.utc),
@@ -451,7 +455,11 @@ async def update_user(
             update_fields["password_hash"] = hash_password(user_data.password)
 
         # Other profile fields
-        for field in ["full_name", "role", "city", "state", "franchise", "branch", "birthdate", "profile_image", "is_active", "employee_code"]:
+        for field in [
+            "full_name", "role", "city", "state", "franchise", "branch",
+            "birthdate", "profile_image", "is_active", "employee_code",
+            "admin_delete_protected", "admin_scope", "department", "access_controls"
+        ]:
             val = getattr(user_data, field)
             if val is not None:
                 # If role changed, set lg_code appropriately
@@ -570,6 +578,29 @@ async def delete_user(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="You cannot delete your own account"
             )
+
+        target_user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+        if not target_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        if target_user.get("role") == UserRole.ADMIN.value:
+            admin_count = await db.users.count_documents({"role": UserRole.ADMIN.value})
+            if admin_count <= 1:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Create another admin before deleting this admin"
+                )
+
+            default_admin_email = os.environ.get("ADMIN_EMAIL", "").strip().lower()
+            is_default_env_admin = target_user.get("email", "").strip().lower() == default_admin_email
+            if target_user.get("admin_delete_protected", False) and not is_default_env_admin:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This admin is protected and cannot be deleted"
+                )
             
         result = await db.users.delete_one({"user_id": user_id})
         

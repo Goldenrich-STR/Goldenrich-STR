@@ -119,7 +119,12 @@ async def list_my_payouts(
             {"property_id": p["property_id"]},
             {"_id": 0, "title": 1, "city": 1},
         )
+        booking = await db.bookings.find_one(
+            {"booking_id": p["booking_id"]},
+            {"_id": 0, "check_in_date": 1, "check_out_date": 1, "total_amount": 1},
+        )
         p["property"] = prop
+        p["booking"] = booking
     return {"payouts": items, "total": len(items)}
 
 

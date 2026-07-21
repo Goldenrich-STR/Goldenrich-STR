@@ -282,7 +282,8 @@ async def mark_booking_payout_eligible(
     total_rupees = int(booking.get("total_amount", 0))
     gross_paise = total_rupees * 100
     fee_paise = int(round(gross_paise * PLATFORM_FEE_PCT))
-    net_paise = gross_paise - fee_paise
+    tds_paise = int(round(gross_paise * 0.01))
+    net_paise = gross_paise - fee_paise - tds_paise
 
     payout = Payout(
         host_id=booking["host_id"],
@@ -290,6 +291,7 @@ async def mark_booking_payout_eligible(
         property_id=booking["property_id"],
         gross_amount=gross_paise,
         platform_fee=fee_paise,
+        tds_amount=tds_paise,
         net_amount=net_paise,
         destination_type=dest_type,
         destination_ref=_mask_account(dest_ref),
@@ -453,3 +455,60 @@ async def sweep_payout_eligibility(db: AsyncIOMotorDatabase) -> int:
     if count:
         logger.info(f"[payout-sweep] marked {count} bookings as payout_eligible")
     return count
+
+
+async def process_auto_eligible_payouts(
+    db: AsyncIOMotorDatabase,
+    *,
+    admin_id: str = "system_auto_payout",
+    limit: int = 100,
+) -> dict:
+    """Automatically process eligible payouts.
+
+    This is intentionally conservative:
+    - only ELIGIBLE payouts are processed
+    - payouts without destination stay in NEEDS_DESTINATION
+    - process_payout remains idempotent for already-paid rows
+    """
+    cursor = (
+        db.payouts.find({"status": PayoutStatus.ELIGIBLE.value}, {"_id": 0})
+        .sort("eligible_at", 1)
+        .limit(limit)
+    )
+    payouts = await cursor.to_list(length=limit)
+    processed = 0
+    failed = 0
+    skipped = 0
+
+    for payout_doc in payouts:
+        payout_id = payout_doc.get("payout_id")
+        if not payout_id:
+            skipped += 1
+            continue
+        try:
+            payout = await process_payout(db, payout_id, admin_id=admin_id)
+            if payout.status == PayoutStatus.PAID:
+                processed += 1
+            elif payout.status in {PayoutStatus.FAILED, PayoutStatus.NEEDS_DESTINATION}:
+                failed += 1
+            else:
+                skipped += 1
+        except Exception as exc:
+            failed += 1
+            logger.warning(f"auto payout failed for {payout_id}: {exc}")
+
+    summary = {
+        "total": len(payouts),
+        "processed": processed,
+        "failed": failed,
+        "skipped": skipped,
+    }
+    if payouts:
+        logger.info(
+            "[auto-payout] total=%s processed=%s failed=%s skipped=%s",
+            summary["total"],
+            summary["processed"],
+            summary["failed"],
+            summary["skipped"],
+        )
+    return summary

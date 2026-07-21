@@ -134,10 +134,20 @@ const SupportPage = () => {
       setLoading(true);
       const res = await cmsAPI.getSupportPage();
       if (res.data?.support_content) {
+        const cmsFaqs = Array.isArray(res.data.support_content.faq_items)
+          ? res.data.support_content.faq_items.filter(item => item?.question)
+          : [];
         setSupportData({
           ...DEFAULT_SUPPORT_DATA,
           ...res.data.support_content
         });
+        if (cmsFaqs.length > 0) {
+          setFaqs(cmsFaqs.map((item, index) => ({
+            id: item.id || `cms-support-faq-${index}`,
+            question: item.question || '',
+            answer: item.answer || ''
+          })));
+        }
       }
     } catch (err) {
       console.error('Failed to load support page dynamic content:', err);

@@ -6,7 +6,6 @@ import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
 import LegalLinks from '../components/LegalLinks';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
-import { saveRecentlyVisitedProperty } from '../lib/recentlyVisitedProperties';
 import {
   ArrowLeft,
   Building2,
@@ -39,13 +38,7 @@ import {
   Tag,
   Lock,
   Minus,
-  Plus,
-  Share2,
-  Heart,
-  Music,
-  Pizza,
-  PartyPopper,
-  Gamepad
+  Plus
 } from 'lucide-react';
 
 const AMENITY_ICONS = {
@@ -69,10 +62,6 @@ const AMENITY_ICONS = {
   projector: Tv,
   whiteboard: CheckCircle2,
   power_backup: Flame,
-  live_music: Music,
-  food_court: Pizza,
-  birthday_celebration: PartyPopper,
-  indoor_games: Gamepad,
 };
 
 const AMENITY_LABELS = {
@@ -100,10 +89,6 @@ const AMENITY_LABELS = {
   rooftop: 'Scenic Rooftop Access',
   changing_rooms: 'VIP/Green Changing Rooms',
   security: 'Professional Event Security',
-  live_music: 'Live Music',
-  food_court: 'Food Court Available',
-  birthday_celebration: 'Birthday Celebration',
-  indoor_games: 'Indoor Games',
 };
 
 const getBhkTypeLabel = (category, bhkType, maxGuests) => {
@@ -463,36 +448,6 @@ const PropertyDetail = () => {
   const [imgIdx, setImgIdx] = useState(0);
   const [showGallery, setShowGallery] = useState(false);
 
-  const [wishlist, setWishlist] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('guest_wishlist')) || [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  const handleWishlistToggle = () => {
-    setWishlist(prev => {
-      let updated;
-      if (prev.includes(id)) {
-        updated = prev.filter(pId => pId !== id);
-      } else {
-        updated = [...prev, id];
-      }
-      localStorage.setItem('guest_wishlist', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const handleShareWhatsApp = () => {
-    if (!property) return;
-    const url = window.location.href;
-    const text = `Check out this amazing property *${property.title}* in *${property.city}* on X-Space360:\n${url}`;
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
-  };
-
-  const isSaved = wishlist.includes(id);
-
   const [blockedDates, setBlockedDates] = useState([]);
   const today = new Date();
   const [calMonth, setCalMonth] = useState(() => {
@@ -543,8 +498,6 @@ const PropertyDetail = () => {
 
   const [reviews, setReviews] = useState([]);
   const [reviewSummary, setReviewSummary] = useState({ rating_avg: 0, rating_count: 0, sub_avgs: {} });
-  const [hasConfirmedBooking, setHasConfirmedBooking] = useState(false);
-  const [showMobileBookingDrawer, setShowMobileBookingDrawer] = useState(false);
 
   const [availableCoupons, setAvailableCoupons] = useState([]);
   const [recommended, setRecommended] = useState([]);
@@ -602,30 +555,6 @@ const PropertyDetail = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  useEffect(() => {
-    const checkBookingStatus = async () => {
-      if (user && user.role === 'guest') {
-        try {
-          const res = await bookingAPI.getGuestBookings();
-          const guestBookings = res.data.bookings || [];
-          const hasBookedThisProperty = guestBookings.some((b) => {
-            if (b.property_id !== id || b.booking_status !== 'confirmed') {
-              return false;
-            }
-            const todayStr = new Date().toISOString().split('T')[0];
-            return b.check_out_date <= todayStr;
-          });
-          setHasConfirmedBooking(hasBookedThisProperty);
-        } catch (err) {
-          console.error('Failed to load guest bookings:', err);
-        }
-      } else {
-        setHasConfirmedBooking(false);
-      }
-    };
-    checkBookingStatus();
-  }, [user, id]);
-
   const images = useMemo(() => {
     const raw = property?.images?.length
       ? property.images
@@ -659,21 +588,25 @@ const PropertyDetail = () => {
   const maxGuests = Math.max(1, Number(property?.max_guests) || 6);
   const adultGuests = Number(guests) || 1;
   const chargeableGuests = Math.max(1, adultGuests + childrenGuests);
-  const canAddChargeableGuest = chargeableGuests < maxGuests;
+  const guestLimit = property?.category === 'event_venue' ? maxGuests : 1000;
+  const canAddChargeableGuest = chargeableGuests < guestLimit;
+  const includedGuests = Math.max(1, Number(property?.max_guests) || 1);
+  const extraGuests = property?.category === 'event_venue' ? 0 : Math.max(0, chargeableGuests - includedGuests);
+  const pricingDisplayMode = 'per_night';
 
   const updateAdultGuests = (delta) => {
     setGuests((current) => {
       const currentAdults = Math.max(1, Number(current) || 1);
-      if (delta > 0 && currentAdults + childrenGuests >= maxGuests) return currentAdults;
-      return Math.max(1, Math.min(maxGuests, currentAdults + delta));
+      if (delta > 0 && currentAdults + childrenGuests >= guestLimit) return currentAdults;
+      return Math.max(1, Math.min(guestLimit, currentAdults + delta));
     });
   };
 
   const updateChildrenGuests = (delta) => {
     setChildrenGuests((current) => {
       const next = Math.max(0, current + delta);
-      if (delta > 0 && adultGuests + current >= maxGuests) return current;
-      return Math.min(maxGuests - adultGuests, next);
+      if (delta > 0 && adultGuests + current >= guestLimit) return current;
+      return Math.min(Math.max(0, guestLimit - adultGuests), next);
     });
   };
 
@@ -697,7 +630,6 @@ const PropertyDetail = () => {
       const res = await propertyAPI.getProperty(id);
       setProperty(res.data);
       if (res.data) {
-        saveRecentlyVisitedProperty(res.data);
         if (res.data.veg_price && res.data.veg_price > 0) {
           setFoodPreference('veg');
         } else if (res.data.non_veg_price && res.data.non_veg_price > 0) {
@@ -807,6 +739,9 @@ const PropertyDetail = () => {
     return Math.max(0, diff);
   }, [checkIn, checkOut, property?.category]);
 
+  const perPersonTotal = (Number(property?.per_person_price) || 0) * chargeableGuests * nights;
+  const extraGuestTotal = (Number(property?.extra_guest_price) || 0) * extraGuests * nights;
+
   const baseAmount = useMemo(() => {
     let amt = (property?.price_per_night || 0) * nights;
     if (property?.category === 'event_venue') {
@@ -818,20 +753,14 @@ const PropertyDetail = () => {
       let g = Number(guests);
       if (![100, 200, 300, 400, 500, 600].includes(g)) g = 100;
       amt += g * platePrice * nights;
-    } else if (property?.category === 'residential' && property?.has_cook) {
-      amt += (property?.cook_price || 0) * nights;
-      if (foodPreference) {
-        const platePrice = foodPreference === 'non_veg'
-          ? (property?.non_veg_price || 0)
-          : foodPreference === 'veg'
-          ? (property?.veg_price || 0)
-          : 0;
-        const g = Number(guests) || 1;
-        amt += g * platePrice * nights;
-      }
+    } else if (property?.category === 'residential' || property?.category === 'commercial') {
+      const requestedGuests = Math.max(1, Number(chargeableGuests) || 1);
+      const includedGuestsForPricing = Math.max(1, Number(property?.max_guests) || 1);
+      const extraGuestsForPricing = Math.max(0, requestedGuests - includedGuestsForPricing);
+      amt += (Number(property?.extra_guest_price) || 0) * extraGuestsForPricing * nights;
     }
     return amt;
-  }, [property, nights, guests, foodPreference]);
+  }, [property, nights, guests, chargeableGuests, foodPreference]);
 
   const taxPercent = property?.category === 'event_venue'
     ? readPercent(parsedPolicies?.taxes, 18)
@@ -925,19 +854,7 @@ const PropertyDetail = () => {
 
   const handleBookNow = async (e, paymentType = 'full') => {
     if (!user) {
-      const pendingBooking = {
-        propertyId: id,
-        checkIn,
-        checkOut,
-        guests,
-        childrenGuests,
-        infantGuests,
-        selectedSlot,
-        foodPreference,
-        paymentType,
-      };
-      localStorage.setItem('pendingBooking', JSON.stringify(pendingBooking));
-      navigate(`/login?next=/property/${id}`);
+      navigate('/login');
       return;
     }
     if (user.role !== 'guest') {
@@ -956,15 +873,6 @@ const PropertyDetail = () => {
       );
       return;
     }
-    if (property?.category !== 'event_venue' && chargeableGuests > maxGuests) {
-      setBookingError(
-        property?.category === 'commercial'
-          ? `Maximum staff allowed is ${maxGuests}`
-          : `Maximum guests allowed is ${maxGuests}`
-      );
-      return;
-    }
-
     setBooking(true);
     setBookingError('');
     try {
@@ -985,37 +893,6 @@ const PropertyDetail = () => {
       setBooking(false);
     }
   };
-
-  useEffect(() => {
-    if (property && user && user.role === 'guest') {
-      const saved = localStorage.getItem('pendingBooking');
-      if (saved) {
-        try {
-          const pending = JSON.parse(saved);
-          if (pending.propertyId === id) {
-            setCheckIn(pending.checkIn || '');
-            setCheckOut(pending.checkOut || '');
-            setGuests(pending.guests || 1);
-            setChildrenGuests(pending.childrenGuests || 0);
-            setInfantGuests(pending.infantGuests || 0);
-            if (pending.selectedSlot) setSelectedSlot(pending.selectedSlot);
-            if (pending.foodPreference) setFoodPreference(pending.foodPreference);
-            if (pending.paymentType) setBookingPaymentType(pending.paymentType);
-            
-            // Clear from storage
-            localStorage.removeItem('pendingBooking');
-            
-            // Trigger booking automatically after restoring the states
-            setTimeout(() => {
-              handleBookNow(null, pending.paymentType || 'full');
-            }, 300);
-          }
-        } catch (e) {
-          console.error('Failed to restore pending booking', e);
-        }
-      }
-    }
-  }, [property, user, id]);
 
   const handleBookNowWithQuotation = () => {
     handleBookNow(null, quotationPaymentType);
@@ -1199,7 +1076,7 @@ const PropertyDetail = () => {
           >
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
-          <div className="flex items-center space-x-2 md:space-x-6">
+          <div className="flex items-center space-x-4 md:space-x-6">
             <LanguageSelector
               currentLang={lang}
               onLanguageChange={(newLang) => {
@@ -1209,17 +1086,14 @@ const PropertyDetail = () => {
             />
             <button
               onClick={() => navigate(-1)}
-              className="text-xs md:text-sm font-bold tracking-tight text-charcoal-muted hover:text-terracotta uppercase tracking-widest transition-colors flex items-center space-x-1 md:space-x-2"
+              className="text-sm font-bold tracking-tight text-charcoal-muted hover:text-terracotta uppercase tracking-widest transition-colors flex items-center space-x-2"
               data-testid="back-btn"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">{t('back')}</span>
+              <span>{t('back')}</span>
             </button>
             {user && (
-              <button 
-                onClick={logout} 
-                className="px-2 py-1 md:px-4 md:py-2 bg-charcoal hover:bg-terracotta text-white text-[10px] md:text-xs font-bold tracking-tight uppercase tracking-widest rounded-lg transition-all"
-              >
+              <button onClick={logout} className="px-4 py-2 bg-charcoal text-white text-xs font-bold tracking-tight uppercase tracking-widest rounded-lg hover:bg-terracotta transition-all">
                 {t('signOut')}
               </button>
             )}
@@ -1227,48 +1101,28 @@ const PropertyDetail = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 md:py-8 pb-24 lg:pb-8">
-        <div className="mb-8 animate-fade-in flex flex-col md:flex-row md:items-end md:justify-between gap-6 border-b border-stone-200 pb-6">
-           <div>
-              <div className="flex items-center space-x-2 mb-3">
-                 <span className="px-3 py-1 bg-terracotta/10 text-terracotta text-[10px] font-bold tracking-tight uppercase tracking-[0.2em] rounded-full">
-                   {formatCategoryLabel(property.category)}
-                 </span>
-                 {property.instant_booking && (
-                   <span className="flex items-center text-amber-500 text-[10px] font-bold tracking-tight uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
-                     <Zap className="w-3 h-3 mr-1 fill-current" /> {t('instant')}
-                   </span>
-                 )}
-              </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight mb-4" data-testid="property-title">
-                {property.title}
-              </h1>
-              <div className="flex items-center text-charcoal-muted font-bold text-sm flex-wrap gap-6">
-                <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{property.address}, {property.city}</span>
-                <div className="flex items-center space-x-1">
-                   <Star className="w-4 h-4 text-amber-500 fill-current" />
-                   <span className="text-charcoal font-bold tracking-tight">{property.rating ? property.rating.toFixed(1) : 'New'}</span>
-                   <span className="text-charcoal-muted ml-1 underline cursor-pointer">{property.review_count || 0} Reviews</span>
-                </div>
-              </div>
+      <div className="max-w-7xl mx-auto px-8 py-8">
+        <div className="mb-8 animate-fade-in">
+           <div className="flex items-center space-x-2 mb-3">
+              <span className="px-3 py-1 bg-terracotta/10 text-terracotta text-[10px] font-bold tracking-tight uppercase tracking-[0.2em] rounded-full">
+                {formatCategoryLabel(property.category)}
+              </span>
+              {property.instant_booking && (
+                <span className="flex items-center text-amber-500 text-[10px] font-bold tracking-tight uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+                  <Zap className="w-3 h-3 mr-1 fill-current" /> {t('instant')}
+                </span>
+              )}
            </div>
-           
-           {/* Save and Share Buttons */}
-           <div className="flex items-center space-x-3 select-none shrink-0 mb-1">
-              <button
-                onClick={handleShareWhatsApp}
-                className="flex items-center space-x-2 px-4 py-2 border border-stone-200 rounded-full hover:bg-stone hover:scale-[1.02] active:scale-95 transition-all text-xs font-bold uppercase tracking-wider text-charcoal shadow-subtle cursor-pointer"
-              >
-                <Share2 className="w-3.5 h-3.5 text-charcoal hover:text-green-600 transition-colors" />
-                <span>Share</span>
-              </button>
-              <button
-                onClick={handleWishlistToggle}
-                className="flex items-center space-x-2 px-4 py-2 border border-stone-200 rounded-full hover:bg-stone hover:scale-[1.02] active:scale-95 transition-all text-xs font-bold uppercase tracking-wider text-charcoal shadow-subtle cursor-pointer"
-              >
-                <Heart className={`w-3.5 h-3.5 transition-colors ${isSaved ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-terracotta'}`} />
-                <span>{isSaved ? 'Saved' : 'Save'}</span>
-              </button>
+           <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight mb-4" data-testid="property-title">
+             {property.title}
+           </h1>
+           <div className="flex items-center text-charcoal-muted font-bold text-sm flex-wrap gap-6">
+             <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{property.address}, {property.city}</span>
+             <div className="flex items-center space-x-1">
+                <Star className="w-4 h-4 text-amber-500 fill-current" />
+                <span className="text-charcoal font-bold tracking-tight">{property.rating ? property.rating.toFixed(1) : 'New'}</span>
+                <span className="text-charcoal-muted ml-1 underline cursor-pointer">{property.review_count || 0} Reviews</span>
+             </div>
            </div>
         </div>
 
@@ -1334,7 +1188,7 @@ const PropertyDetail = () => {
           <div className="lg:col-span-2 space-y-12 animate-slide-up" style={{ animationDelay: '200ms' }}>
             {/* Host Profile */}
             {property.host && (
-              <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex flex-col sm:flex-row items-start sm:items-center sm:justify-between gap-4 group">
+              <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex items-center justify-between group">
                 <div className="flex items-center space-x-5">
                   <div className="relative">
                     <img
@@ -1464,11 +1318,11 @@ const PropertyDetail = () => {
               </div>
             )}
 
-            {/* Event / Food Details */}
-            {(property.category === 'event_venue' || (property.category === 'residential' && property.has_cook && (Number(property.veg_price) > 0 || Number(property.non_veg_price) > 0))) && (
+            {/* Event Details */}
+            {property.category === 'event_venue' && (
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-6 flex items-center">
-                   {property.category === 'event_venue' ? 'Event Venue Details' : 'Catering & Food Packages'}
+                   Event Venue Details
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
@@ -1485,10 +1339,8 @@ const PropertyDetail = () => {
                     </div>
                   ) : null}
                   <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
-                     <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">
-                       {property.category === 'event_venue' ? 'Venue Rent' : 'Property Rent'}
-                     </p>
-                     <p className="text-xl font-bold tracking-tight text-charcoal">₹{property.price_per_night || 0} <span className="text-xs text-charcoal-light">/ {property.category === 'event_venue' ? 'day' : 'night'}</span></p>
+                     <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Venue Rent</p>
+                     <p className="text-xl font-bold tracking-tight text-charcoal">₹{property.price_per_night || 0} <span className="text-xs text-charcoal-light">/ day</span></p>
                   </div>
                 </div>
                 {property.packages && property.packages.length > 0 && (
@@ -1603,7 +1455,7 @@ const PropertyDetail = () => {
             {/* Check-in / Check-out Time Section */}
             {(property.check_in_time || property.check_out_time) && (
               <div className="mb-8">
-                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
+                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
                   Check-in &amp; Check-out
                   <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
@@ -1653,13 +1505,13 @@ const PropertyDetail = () => {
             {/* Cook & Taxi Services Section */}
             {(property.has_cook || property.has_self_cook || property.has_taxi) && (
               <div className="mb-8">
-                <h2 className="text-xl md:text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
+                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
                    {lang === 'mr' ? 'सेवा आणि स्वयंपाक पर्याय' : lang === 'hi' ? 'सेवाएं और रसोई विकल्प' : 'Services & Kitchen'}
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
                 <div className="space-y-4">
                   {property.has_cook && (
-                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:space-x-6">
+                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex items-center space-x-6">
                       <div className="bg-terracotta/10 p-4 rounded-full text-terracotta">
                         <Utensils className="w-8 h-8" />
                       </div>
@@ -1676,7 +1528,7 @@ const PropertyDetail = () => {
                     </div>
                   )}
                   {property.has_self_cook && (
-                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:space-x-6">
+                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex items-center space-x-6">
                       <div className="bg-emerald-500/10 p-4 rounded-full text-emerald-600">
                         <ChefHat className="w-8 h-8" />
                       </div>
@@ -1693,7 +1545,7 @@ const PropertyDetail = () => {
                     </div>
                   )}
                   {property.has_taxi && (
-                    <div className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:space-x-6">
+                    <div className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium flex items-center space-x-6">
                       <div className="bg-amber-500/10 p-4 rounded-full text-amber-600">
                         <Car className="w-8 h-8" />
                       </div>
@@ -1905,9 +1757,7 @@ const PropertyDetail = () => {
                </div>
 
                {/* Add Review Form */}
-               {hasConfirmedBooking && (
-                 <ReviewForm user={user} propertyId={id} t={t} setProperty={setProperty} onSuccess={fetchReviews} />
-               )}
+               <ReviewForm user={user} propertyId={id} t={t} setProperty={setProperty} onSuccess={fetchReviews} />
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {reviews.length === 0 ? (
@@ -1947,7 +1797,7 @@ const PropertyDetail = () => {
 
           {/* Sticky Booking Widget */}
           <div className="lg:col-span-1">
-            <div className="card-premium sticky top-20 lg:top-28 p-4 md:p-8 animate-slide-up" style={{ animationDelay: '400ms' }}>
+            <div className="card-premium sticky top-28 p-8 animate-slide-up" style={{ animationDelay: '400ms' }}>
               <div className="flex items-baseline justify-between mb-8">
                 <div>
                   {property.category === 'event_venue' ? (
@@ -1962,10 +1812,12 @@ const PropertyDetail = () => {
                   ) : (
                     <>
                       <span className="text-3xl font-bold tracking-tight text-charcoal tracking-tight">
-                        ₹{property.price_per_night?.toLocaleString('en-IN') || 0}
+                        ₹{pricingDisplayMode === 'per_person' ? Number(property.per_person_price || 0).toLocaleString('en-IN') : property.price_per_night?.toLocaleString('en-IN') || 0}
                       </span>
                       <span className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest ml-1">
-                        {property.category === 'commercial' 
+                        {pricingDisplayMode === 'per_person'
+                          ? ' / person'
+                          : property.category === 'commercial' 
                           ? (property.pricing_cycle === 'hourly' ? ` / ${t('hour')}` : property.pricing_cycle === 'weekly' ? ` / ${t('week')}` : property.pricing_cycle === 'monthly' ? ` / ${t('month')}` : ` / ${t('day')}`)
                           : ` / ${t('night')}`}
                       </span>
@@ -2074,10 +1926,10 @@ const PropertyDetail = () => {
                           <input
                             type="number"
                             min="1"
-                            max={maxGuests}
+                            max={guestLimit}
                             value={guests}
                             onChange={(e) => {
-                              const nextGuests = Math.max(1, Math.min(maxGuests, Number(e.target.value) || 1));
+                              const nextGuests = Math.max(1, Math.min(guestLimit, Number(e.target.value) || 1));
                               setGuests(nextGuests);
                             }}
                             className="w-16 text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none"
@@ -2155,9 +2007,9 @@ const PropertyDetail = () => {
                     )}
                   </div>
 
-                  {(property.category === 'event_venue' || (property.category === 'residential' && property.has_cook)) && (Number(property.veg_price) > 0 || Number(property.non_veg_price) > 0) && (
+                  {property.category === 'event_venue' && (Number(property.veg_price) > 0 || Number(property.non_veg_price) > 0) && (
                     <div className="w-full mt-2 pt-3 border-t border-sand-100 flex flex-col space-y-3">
-                      <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Food Preference (Catering / Cook)</label>
+                      <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Food Preference</label>
                       <div className="flex flex-col space-y-3">
                         {property.veg_price && Number(property.veg_price) > 0 ? (
                           <div 
@@ -2236,41 +2088,37 @@ const PropertyDetail = () => {
 
               {nights > 0 && (
                 <div className="mt-6 mb-6 space-y-4 animate-fade-in" data-testid="price-breakdown">
-                  {property.category === 'event_venue' || (property.category === 'residential' && property.has_cook) ? (
+                  {property.category === 'event_venue' ? (
                     <>
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
-                          ₹{property.price_per_night?.toLocaleString('en-IN')} × {nights} {property.category === 'event_venue' ? (property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')) : t('night')} ({property.category === 'event_venue' ? 'Venue' : 'Property Rent'})
+                          ₹{property.price_per_night?.toLocaleString('en-IN')} × {nights} {property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')} (Venue)
                         </span>
                         <span className="text-sm font-bold tracking-tight text-charcoal">₹{((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</span>
                       </div>
-                      {property.category === 'residential' && property.has_cook && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
-                            ₹{property.cook_price?.toLocaleString('en-IN')} × {nights} Nights (Cook Fee)
-                          </span>
-                          <span className="text-sm font-bold tracking-tight text-charcoal">₹{((property.cook_price || 0) * nights).toLocaleString('en-IN')}</span>
-                        </div>
-                      )}
                       {foodPreference && (foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) > 0 && (
                         <div className="flex justify-between items-center">
-                          <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
-                            ₹{(foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)).toLocaleString('en-IN')} × {
-                              property.category === 'event_venue'
-                                ? ([100, 200, 300, 400, 500, 600].includes(Number(guests)) ? guests : '100')
-                                : guests
-                            } Guests × {nights} {property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')}{nights !== 1 ? 's' : ''} (Food)
-                          </span>
-                          <span className="text-sm font-bold tracking-tight text-charcoal">
-                            ₹{(
-                              (foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)) * 
-                              (property.category === 'event_venue' ? ([100, 200, 300, 400, 500, 600].includes(Number(guests)) ? Number(guests) : 100) : Number(guests) || 1) * nights
-                            ).toLocaleString('en-IN')}
-                          </span>
-                        </div>
-                      )}
+                        <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
+                          ₹{(foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)).toLocaleString('en-IN')} × {
+                            guests === 100 ? '100' :
+                            guests === 200 ? '200' :
+                            guests === 300 ? '300' :
+                            guests === 400 ? '400' :
+                            guests === 500 ? '500' :
+                            guests === 600 ? '600' :
+                            Number(guests) || 100
+                          } Guests × {nights} {property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')}{nights !== 1 ? 's' : ''} (Food)
+                        </span>
+                        <span className="text-sm font-bold tracking-tight text-charcoal">₹{(
+                          (foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)) * 
+                          (guests === 100 ? 100 : guests === 200 ? 200 : guests === 300 ? 300 : guests === 400 ? 400 : guests === 500 ? 500 : guests === 600 ? 600 : Number(guests) || 100) * nights
+                        ).toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
                     </>
                   ) : (
+                    <>
+                    {pricingDisplayMode !== 'per_person' && (
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
                         ₹{property.price_per_night?.toLocaleString('en-IN')} × {nights} {
@@ -2279,8 +2127,26 @@ const PropertyDetail = () => {
                             : t('night')
                         }
                       </span>
-                      <span className="text-sm font-bold tracking-tight text-charcoal">₹{baseAmount.toLocaleString('en-IN')}</span>
+                      <span className="text-sm font-bold tracking-tight text-charcoal">₹{((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</span>
                     </div>
+                    )}
+                    {pricingDisplayMode === 'per_person' && Number(property.per_person_price) > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
+                          ₹{Number(property.per_person_price).toLocaleString('en-IN')} × {chargeableGuests} {property.category === 'commercial' ? 'staff' : 'guests'} × {nights} {property.category === 'commercial' ? 'day' : 'night'}{nights !== 1 ? 's' : ''}
+                        </span>
+                        <span className="text-sm font-bold tracking-tight text-charcoal">₹{perPersonTotal.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    {extraGuests > 0 && Number(property.extra_guest_price) > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-bold text-terracotta underline decoration-sand-300 underline-offset-4">
+                          Extra {property.category === 'commercial' ? 'staff' : 'guests'}: ₹{Number(property.extra_guest_price).toLocaleString('en-IN')} × {extraGuests} × {nights} {property.category === 'commercial' ? 'day' : 'night'}{nights !== 1 ? 's' : ''}
+                        </span>
+                        <span className="text-sm font-bold tracking-tight text-terracotta">₹{extraGuestTotal.toLocaleString('en-IN')}</span>
+                      </div>
+                    )}
+                    </>
                   )}
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">{platformFeeLabel} ({platformFeePercent}%)</span>
@@ -2649,267 +2515,6 @@ const PropertyDetail = () => {
                 className="flex-1 py-4 bg-terracotta text-white font-bold tracking-tight text-xs uppercase tracking-widest rounded-2xl hover:bg-terracotta-dark shadow-premium hover:shadow-premium transition-all"
               >
                 Confirm & Pay ({quotationPaymentType === 'advance' ? `${advancePercent}% Advance` : 'Full'})
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Mobile Sticky Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 px-6 py-4 flex items-center justify-between z-50 lg:hidden shadow-lg select-none">
-        <div className="flex flex-col">
-          <div className="flex items-baseline space-x-1">
-            <span className="text-xl font-black text-charcoal">₹{property.price_per_night?.toLocaleString('en-IN') || 0}</span>
-            <span className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider">
-              {property.category === 'event_venue' ? '/ day' : `/ ${t('night')}`}
-            </span>
-          </div>
-          {checkIn && checkOut && (
-            <span className="text-[10px] font-bold text-terracotta uppercase tracking-wider mt-0.5">
-              {new Date(checkIn).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} - {new Date(checkOut).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-            </span>
-          )}
-        </div>
-        <button
-          onClick={() => setShowMobileBookingDrawer(true)}
-          className="btn-premium px-6 py-3 text-xs uppercase tracking-widest font-black shadow-premium rounded-xl"
-        >
-          {checkIn && checkOut ? 'Reserve' : 'Select Dates'}
-        </button>
-      </div>
-
-      {/* Mobile Booking Drawer (Bottom Sheet) */}
-      {showMobileBookingDrawer && (
-        <div className="fixed inset-0 z-[1001] lg:hidden">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-fade-in"
-            onClick={() => setShowMobileBookingDrawer(false)}
-          ></div>
-          
-          {/* Sheet Panel */}
-          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[2rem] shadow-2xl border-t border-gray-100 p-6 max-h-[85vh] overflow-y-auto flex flex-col animate-slide-up">
-            
-            {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100 mb-6 flex-shrink-0">
-              <div>
-                <h3 className="text-lg font-black text-charcoal">Check details & Reserve</h3>
-                <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mt-0.5">
-                  ₹{property.price_per_night?.toLocaleString('en-IN')} / {property.category === 'event_venue' ? 'day' : t('night')}
-                </p>
-              </div>
-              <button
-                onClick={() => setShowMobileBookingDrawer(false)}
-                className="w-8 h-8 rounded-full bg-stone flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Form Fields */}
-            <div className="space-y-6 flex-1">
-              
-              {/* Date Inputs */}
-              <div className="bg-stone/80 rounded-2xl border border-gray-100">
-                <div className="grid grid-cols-2 divide-x divide-sand-200">
-                  <div className="p-4 text-left">
-                    <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block">{t('checkIn')}</label>
-                    <input
-                      type="date"
-                      value={checkIn}
-                      min={todayISO}
-                      onChange={(e) => setCheckIn(e.target.value)}
-                      className="w-full text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none"
-                    />
-                  </div>
-                  <div className="p-4 text-left">
-                    <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block">{t('checkOut')}</label>
-                    <input
-                      type="date"
-                      value={checkOut}
-                      min={checkIn || todayISO}
-                      onChange={(e) => setCheckOut(e.target.value)}
-                      className="w-full text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Guest Selector */}
-              <div className="p-4 bg-stone/80 rounded-2xl border border-gray-100">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">
-                    {property.category === 'commercial' ? 'Total Staff' : t('totalGuests')}
-                  </label>
-                  {property.category !== 'event_venue' && property.category !== 'commercial' && (
-                    <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest shrink-0">
-                      {t('maxGuests').replace('{count}', maxGuests)}
-                    </span>
-                  )}
-                </div>
-                
-                {property.category === 'event_venue' ? (
-                  <div className="relative w-full">
-                    <select
-                      value={guests}
-                      onChange={(e) => setGuests(Number(e.target.value))}
-                      className="w-full p-2 text-xs font-bold tracking-tight text-charcoal bg-white border border-gray-200 rounded-xl outline-none"
-                    >
-                      <option value={100}>Less than 100</option>
-                      <option value={200}>100-200</option>
-                      <option value={300}>200-300</option>
-                      <option value={400}>300-400</option>
-                      <option value={500}>400-500</option>
-                      <option value={600}>Greater than 500</option>
-                    </select>
-                  </div>
-                ) : property.category === 'commercial' ? (
-                  <input
-                    type="number"
-                    min="1"
-                    max={maxGuests}
-                    value={guests}
-                    onChange={(e) => setGuests(Math.max(1, Math.min(maxGuests, Number(e.target.value) || 1)))}
-                    className="w-full p-2 text-xs font-bold tracking-tight text-charcoal bg-white border border-gray-200 rounded-xl outline-none"
-                  />
-                ) : (
-                  <div className="space-y-4 mt-2">
-                    {[
-                      { key: 'adults_m', title: 'Adults', subtitle: 'Age 13+', value: adultGuests, minusDisabled: adultGuests <= 1, plusDisabled: !canAddChargeableGuest, onMinus: () => updateAdultGuests(-1), onPlus: () => updateAdultGuests(1) },
-                      { key: 'children_m', title: 'Children', subtitle: 'Ages 2-12', value: childrenGuests, minusDisabled: childrenGuests <= 0, plusDisabled: !canAddChargeableGuest, onMinus: () => updateChildrenGuests(-1), onPlus: () => updateChildrenGuests(1) },
-                      { key: 'infants_m', title: 'Infants', subtitle: 'Under 2', value: infantGuests, minusDisabled: infantGuests <= 0, plusDisabled: infantGuests >= 5, onMinus: () => updateInfantGuests(-1), onPlus: () => updateInfantGuests(1) }
-                    ].map((item) => (
-                      <div key={item.key} className="flex items-center justify-between bg-white p-3 rounded-xl">
-                        <div>
-                          <div className="text-xs font-bold text-charcoal">{item.title}</div>
-                          <div className="text-[10px] text-charcoal-muted mt-0.5">{item.subtitle}</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="button"
-                            onClick={item.onMinus}
-                            disabled={item.minusDisabled}
-                            className="w-7 h-7 rounded-full bg-gray-50 text-charcoal-muted flex items-center justify-center hover:bg-sand-200 disabled:opacity-40"
-                          >
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          <span className="text-xs font-bold text-charcoal w-4 text-center">{item.value}</span>
-                          <button
-                            type="button"
-                            onClick={item.onPlus}
-                            disabled={item.plusDisabled}
-                            className="w-7 h-7 rounded-full bg-gray-50 text-charcoal flex items-center justify-center hover:bg-sand-200 disabled:opacity-40"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Food Preference & Timings */}
-              {(property.category === 'event_venue' || (property.category === 'residential' && property.has_cook)) && (Number(property.veg_price) > 0 || Number(property.non_veg_price) > 0) && (
-                <div className="p-4 bg-stone/80 rounded-2xl border border-gray-100 space-y-3">
-                  <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Food Preference</label>
-                  <div className="flex flex-col space-y-2">
-                    {property.veg_price && Number(property.veg_price) > 0 && (
-                      <div 
-                        onClick={() => setFoodPreference('veg')}
-                        className="flex items-center justify-between cursor-pointer p-2 bg-white rounded-xl"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${foodPreference === 'veg' ? 'border-green-500' : 'border-gray-200'}`}>
-                            {foodPreference === 'veg' && <div className="w-2 h-2 rounded-full bg-green-500" />}
-                          </div>
-                          <span className="text-xs font-bold text-charcoal">Vegetarian</span>
-                        </div>
-                        <span className="text-xs font-bold text-charcoal">₹{property.veg_price}/Plate</span>
-                      </div>
-                    )}
-                    {property.non_veg_price && Number(property.non_veg_price) > 0 && (
-                      <div 
-                        onClick={() => setFoodPreference('non_veg')}
-                        className="flex items-center justify-between cursor-pointer p-2 bg-white rounded-xl"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${foodPreference === 'non_veg' ? 'border-red-500' : 'border-gray-200'}`}>
-                            {foodPreference === 'non_veg' && <div className="w-2 h-2 rounded-full bg-red-500" />}
-                          </div>
-                          <span className="text-xs font-bold text-charcoal">Non Vegetarian</span>
-                        </div>
-                        <span className="text-xs font-bold text-charcoal">₹{property.non_veg_price}/Plate</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Timing Slots */}
-              {property.category === 'event_venue' && (
-                <div className="p-4 bg-stone/80 rounded-2xl border border-gray-100 space-y-3">
-                  <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Select Timing Slot</label>
-                  <div className="flex flex-col space-y-2">
-                    {availableSlots.map(slot => (
-                      <div 
-                        key={slot.key}
-                        onClick={() => setSelectedSlot(slot.key)}
-                        className={`flex items-center justify-between cursor-pointer p-3 rounded-xl border-2 ${selectedSlot === slot.key ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 bg-white'}`}
-                      >
-                        <span className="text-xs font-bold text-charcoal">{slot.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Pricing Breakdown inside Drawer */}
-              {nights > 0 && (
-                <div className="p-4 bg-stone/50 rounded-2xl border border-gray-100 space-y-3">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-charcoal-muted">Rent ({nights} {property.category === 'event_venue' ? 'day' : 'night'}{nights > 1 ? 's' : ''})</span>
-                    <span className="font-bold text-charcoal">₹{((property.price_per_night || 0) * nights).toLocaleString('en-IN')}</span>
-                  </div>
-                  {property.category === 'residential' && property.has_cook && (
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-charcoal-muted">Cook Fee ({nights} nights)</span>
-                      <span className="font-bold text-charcoal">₹{((property.cook_price || 0) * nights).toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  {foodPreference && (foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) > 0 && (
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-charcoal-muted">Catering ({guests} Guests)</span>
-                      <span className="font-bold text-charcoal">
-                        ₹{(
-                          (foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)) * 
-                          (property.category === 'event_venue' ? ([100, 200, 300, 400, 500, 600].includes(Number(guests)) ? Number(guests) : 100) : Number(guests) || 1) * nights
-                        ).toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-charcoal-muted">Service Fee</span>
-                    <span className="font-bold text-charcoal">₹{Math.round(serviceFee).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-charcoal-muted">Taxes & GST</span>
-                    <span className="font-bold text-charcoal">₹{Math.round(taxes).toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="border-t border-gray-200 pt-2 flex justify-between items-center text-sm font-black">
-                    <span className="text-charcoal">Total Amount</span>
-                    <span className="text-terracotta text-lg">₹{Math.round(total).toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <button
-                onClick={() => handleBookNow(null, bookingPaymentType)}
-                disabled={booking || !checkIn || !checkOut || nights === 0}
-                className="btn-premium w-full py-4 text-xs font-black uppercase tracking-widest shadow-premium"
-              >
-                {booking ? 'Reserving...' : 'Book Now'}
               </button>
             </div>
           </div>

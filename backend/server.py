@@ -58,6 +58,7 @@ from routes.review_routes import router as review_router
 from routes.webhook_routes import router as webhook_router
 from routes.coupon_routes import router as coupon_router
 from routes.ai_agent_routes import router as ai_agent_router
+from routes.support_ticket_routes import router as support_ticket_router
 
 # Include routers with /api prefix
 app.include_router(auth_router, prefix="/api")
@@ -77,6 +78,7 @@ app.include_router(review_router, prefix="/api")
 app.include_router(webhook_router, prefix="/api")
 app.include_router(coupon_router, prefix="/api")
 app.include_router(ai_agent_router, prefix="/api")
+app.include_router(support_ticket_router, prefix="/api")
 from routes.seo_routes import router as seo_router
 app.include_router(seo_router)
 
@@ -280,7 +282,8 @@ async def startup_sequence():
             "transactions", "payouts", "refunds", "reviews", 
             "notifications", "subscription_plans", "subscriptions", "cms_content", "leads", "coupons",
             "deleted_properties", "search_logs", "ai_calls", "ai_agents", "calendar_sync_logs",
-            "contact_messages", "commissions", "password_reset_tokens", "platform_settings"
+            "contact_messages", "support_tickets", "commissions", "password_reset_tokens", "platform_settings",
+            "payout_job_runs"
         ]
         for table in tables:
             await db_instance.ensure_table(table)
@@ -303,6 +306,7 @@ async def startup_sequence():
         await db_instance.payouts.create_index("payout_id", unique=True)
         await db_instance.payouts.create_index("booking_id", unique=True)
         await db_instance.payouts.create_index([("status", 1), ("eligible_at", -1)])
+        await db_instance.payout_job_runs.create_index([("ran_at", -1)])
         await db_instance.refunds.create_index("refund_id", unique=True)
         await db_instance.refunds.create_index("booking_id")
         await db_instance.reviews.create_index("review_id", unique=True)
@@ -361,22 +365,52 @@ async def startup_sequence():
     except Exception as e:
         logger.error(f"Failed to start calendar scheduler: {e}")
 
-    # 8. Start payout sweeper
+    # 8. Start automatic payout engine
     try:
-        from services.account_service import sweep_payout_eligibility
+        from services.account_service import (
+            process_auto_eligible_payouts,
+            sweep_payout_eligibility,
+        )
         payout_interval = int(os.environ.get("PAYOUT_SWEEP_INTERVAL", "3600"))
+        auto_payout_enabled = os.environ.get("AUTO_PAYOUT_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
+        auto_payout_limit = int(os.environ.get("AUTO_PAYOUT_BATCH_LIMIT", "100"))
         async def _payout_loop():
             await asyncio.sleep(10)
             while True:
                 try:
-                    await sweep_payout_eligibility(db_instance)
+                    marked = await sweep_payout_eligibility(db_instance)
+                    summary = {"total": 0, "processed": 0, "failed": 0, "skipped": 0}
+                    if auto_payout_enabled:
+                        summary = await process_auto_eligible_payouts(
+                            db_instance,
+                            admin_id="system_auto_payout",
+                            limit=auto_payout_limit,
+                        )
+                    try:
+                        await db_instance.payout_job_runs.insert_one({
+                            "job": "auto_payout",
+                            "marked_eligible": marked,
+                            "auto_payout_enabled": auto_payout_enabled,
+                            "processed": summary.get("processed", 0),
+                            "failed": summary.get("failed", 0),
+                            "skipped": summary.get("skipped", 0),
+                            "total": summary.get("total", 0),
+                            "ran_at": __import__("datetime").datetime.utcnow(),
+                        })
+                    except Exception as audit_err:
+                        logger.warning(f"failed to write payout job run log: {audit_err}")
                 except Exception as e:
-                    logger.warning(f"payout sweep failed: {e}")
+                    logger.warning(f"auto payout engine failed: {e}")
                 await asyncio.sleep(payout_interval)
         asyncio.create_task(_payout_loop())
-        logger.info(f"Payout eligibility sweeper started (interval={payout_interval}s)")
+        logger.info(
+            "Automatic payout engine started (interval=%ss, auto_process=%s, batch_limit=%s)",
+            payout_interval,
+            auto_payout_enabled,
+            auto_payout_limit,
+        )
     except Exception as e:
-        logger.error(f"Failed to start payout sweeper: {e}")
+        logger.error(f"Failed to start automatic payout engine: {e}")
 
     # 8. Start subscription status sweeper
     try:
