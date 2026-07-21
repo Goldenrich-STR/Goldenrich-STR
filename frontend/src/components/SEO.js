@@ -1,6 +1,10 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
 
+const SITE_NAME = "X-Space360";
+const SITE_URL = "https://x-space360.in";
+const DEFAULT_IMAGE = `${SITE_URL}/images/xspace360-og-image.jpg`;
+
 const DEFAULT_ORG_SCHEMA = {
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -79,7 +83,11 @@ const DEFAULT_LOCAL_BUSINESS_SCHEMA = {
 const SEO = ({
   title,
   description,
-  keywords,
+  path = "/",
+  image = DEFAULT_IMAGE,
+  keywords = [],
+  noIndex = false,
+  schema = null,
   canonicalUrl,
   robots,
   type = "website", // website, property, listing, blog, host, faq
@@ -87,12 +95,21 @@ const SEO = ({
   breadcrumbs = [],
   seo = null // API returned seo object: {title, description, keywords, canonical, image, robots}
 }) => {
-  const pageTitle = seo?.title || (title ? `${title} | X-Space360` : "X-Space360 | Short-term Rentals & Event Venues");
+  const baseTitle = seo?.title || title || "Short-term Rentals & Event Venues";
+  const pageTitle = baseTitle.includes(SITE_NAME) ? baseTitle : `${baseTitle} | ${SITE_NAME}`;
   const pageDesc = seo?.description || description || "Explore short-term rentals, premium villas, commercial spaces, and event venues across India on X-Space360.";
-  const pageKeywords = seo?.keywords || keywords || "short term rentals, luxury villas, event venues, banquet halls, co-working spaces, offices";
-  const pageCanonical = seo?.canonical || canonicalUrl || window.location.href;
-  const pageRobots = seo?.robots || robots || "index,follow";
-  const pageImage = seo?.image || "https://x-space360.in/favicon_rich.jpg";
+  const resolvedKeywords = seo?.keywords || keywords;
+  const pageKeywords = Array.isArray(resolvedKeywords)
+    ? resolvedKeywords.join(", ")
+    : (resolvedKeywords || "short term rentals, luxury villas, event venues, banquet halls, co-working spaces, offices");
+  const normalizedPath = path === "/" ? "/" : `/${String(path || "/").replace(/^\/+/, "")}`;
+  const pageCanonical = seo?.canonical || canonicalUrl || `${SITE_URL}${normalizedPath}`;
+  const pageRobots = seo?.robots || robots || (
+    noIndex
+      ? "noindex, nofollow"
+      : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
+  );
+  const pageImage = seo?.image || image || DEFAULT_IMAGE;
 
   // 1. Generate BreadcrumbList Schema
   let breadcrumbSchema = null;
@@ -267,16 +284,23 @@ const SEO = ({
   if (breadcrumbSchema) {
     finalSchemas.push(breadcrumbSchema);
   }
+  if (schema) {
+    if (Array.isArray(schema)) {
+      finalSchemas.push(...schema);
+    } else {
+      finalSchemas.push(schema);
+    }
+  }
 
   return (
     <Helmet>
-      {/* Title & Standard Meta */}
+      {/* Basic SEO */}
       <title>{pageTitle}</title>
       <meta name="description" content={pageDesc} />
-      <meta name="keywords" content={pageKeywords} />
+      {pageKeywords && <meta name="keywords" content={pageKeywords} />}
       <meta name="robots" content={pageRobots} />
 
-      {/* Canonical Link */}
+      {/* Canonical */}
       <link rel="canonical" href={pageCanonical} />
 
       {/* Multilingual hreflang Support */}
@@ -289,9 +313,11 @@ const SEO = ({
       <meta property="og:title" content={pageTitle} />
       <meta property="og:description" content={pageDesc} />
       <meta property="og:image" content={pageImage} />
+      <meta property="og:image:alt" content={`${baseTitle} - ${SITE_NAME}`} />
       <meta property="og:url" content={pageCanonical} />
       <meta property="og:type" content={type === "blog" ? "article" : type === "property" ? "place" : "website"} />
-      <meta property="og:site_name" content="X-Space360" />
+      <meta property="og:site_name" content={SITE_NAME} />
+      <meta property="og:locale" content="en_IN" />
 
       {/* Twitter Card Tags */}
       <meta name="twitter:card" content="summary_large_image" />
