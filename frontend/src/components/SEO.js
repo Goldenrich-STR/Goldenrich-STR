@@ -279,7 +279,7 @@ const SEO = ({
       <meta property="og:image" content={pageImage} />
       <meta property="og:image:alt" content={`${baseTitle} - ${SITE_NAME}`} />
       <meta property="og:url" content={pageCanonical} />
-      <meta property="og:type" content={type === "blog" ? "article" : type === "property" ? "place" : "website"} />
+      <meta property="og:type" content={type === "blog" || type === "article" ? "article" : type === "property" ? "place" : "website"} />
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:locale" content="en_IN" />
 
