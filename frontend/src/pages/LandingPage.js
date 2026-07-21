@@ -1070,7 +1070,7 @@ const CollectionsSection = ({ navigate }) => {
 
   return (
     <section className="w-full bg-white pt-10 md:pt-16 pb-4 md:pb-6 overflow-x-hidden">
-      <div className="max-w-[1440px] mx-auto px-4 md:px-[10vw]">
+      <div className="w-full px-4 md:px-[10vw]">
         {/* Header */}
         <ScrollReveal duration="duration-[800ms]">
           <div className="flex items-end justify-between gap-4 mb-8">
@@ -1188,6 +1188,18 @@ const LandingPage = () => {
     commercial: [],
     event_venue: []
   });
+  const signatureProperties = React.useMemo(() => {
+    const all = [
+      ...(properties.residential || []),
+      ...(properties.commercial || []),
+      ...(properties.event_venue || [])
+    ];
+    return all.filter(item => {
+      const type = (item.property_type || item.type || '').toLowerCase();
+      const price = item.price_per_night || item.price || 0;
+      return (type.includes('villa') || type.includes('resort')) && price >= 50000;
+    });
+  }, [properties]);
   const [loading, setLoading] = useState(true);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
 
@@ -2315,9 +2327,8 @@ const LandingPage = () => {
         {/* ===== Discover Our Collections — Full Width ===== */}
         <CollectionsSection navigate={navigate} />
 
-        {/* ===== Brand Comparison Banner ===== */}
         <section className="w-full bg-stone py-8 md:py-12 border-y border-gray-100">
-          <div className="max-w-[1440px] mx-auto px-4 md:px-[10vw] text-center">
+          <div className="w-full px-4 md:px-[10vw] text-center">
             <h3 className="font-serif text-lg md:text-xl font-bold text-charcoal mb-6 tracking-tight">
               Compare stays across your favourite brands
             </h3>
@@ -2684,7 +2695,7 @@ const LandingPage = () => {
               };
 
               return (
-                <div className="w-full max-w-7xl mx-auto px-6 md:px-10 lg:px-14 xl:px-20 mt-16 mb-24">
+                <div className="w-full px-4 md:px-[10vw] mt-16 mb-24">
                   {/* Split card banner */}
                   <div className="w-full bg-[#E5DFD9] rounded-3xl overflow-hidden shadow-lg flex flex-col md:flex-row h-auto md:h-[380px] mb-16 border border-[#dcd6d0]">
                     {/* Left text area */}
@@ -2775,79 +2786,56 @@ const LandingPage = () => {
                       id="signature-properties-scroll"
                       className="flex gap-6 overflow-x-auto no-scrollbar pb-4"
                     >
-                      {[
-                        {
-                          id: 'sig-1',
-                          name: 'Udaipur Palace Lakeview Villa',
-                          location: 'Udaipur, Rajasthan',
-                          price: '₹95,000',
-                          img: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80&w=800'
-                        },
-                        {
-                          id: 'sig-2',
-                          name: 'Goa Beachside Luxury Villa',
-                          location: 'Candolim, Goa',
-                          price: '₹85,000',
-                          img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=800'
-                        },
-                        {
-                          id: 'sig-3',
-                          name: 'Manali Snowpeaks Celebration Villa',
-                          location: 'Manali, Himachal Pradesh',
-                          price: '₹70,000',
-                          img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800'
-                        },
-                        {
-                          id: 'sig-4',
-                          name: 'Alibaug Coconut Orchard Pool Villa',
-                          location: 'Alibaug, Maharashtra',
-                          price: '₹55,000',
-                          img: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&q=80&w=800'
-                        },
-                        {
-                          id: 'sig-5',
-                          name: 'Karjat Waterfall Estate',
-                          location: 'Karjat, Maharashtra',
-                          price: '₹1,20,000',
-                          img: 'https://images.unsplash.com/photo-1729605411999-5a1c8972a169?auto=format&fit=crop&q=80&w=800'
-                        }
-                      ].map((prop) => (
-                        <div
-                          key={prop.id}
-                          className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-white rounded-3xl overflow-hidden border border-gray-150 shadow-subtle flex-shrink-0 group cursor-pointer"
-                        >
-                          <div className="relative h-48 md:h-52 overflow-hidden">
-                            <img
-                              src={prop.img}
-                              alt={prop.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                            />
-                            {/* Goldenblack Signature Badge */}
-                            <div className="absolute top-3 left-3 z-10">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-black/95 border border-[#D4AF37] text-[8px] font-serif font-bold uppercase tracking-wider text-[#D4AF37] shadow">
-                                <Crown className="w-2.5 h-2.5 text-[#D4AF37] fill-[#D4AF37]/20" />
-                                SIGNATURE SERIES
-                              </span>
+                      {signatureProperties.length > 0 ? (
+                        signatureProperties.map((item) => (
+                          <div
+                            key={item.property_id}
+                            onClick={() => navigate(`/property/${item.property_id}`)}
+                            className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-white rounded-3xl overflow-hidden border border-gray-150 shadow-subtle flex-shrink-0 group cursor-pointer"
+                          >
+                            <div className="relative h-48 md:h-52 overflow-hidden">
+                              <img
+                                src={getImageUrl(item.images?.[0]) || PROPERTY_IMAGE_FALLBACK}
+                                alt={item.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                              />
+                              {/* Goldenblack Signature Badge */}
+                              <div className="absolute top-3 left-3 z-10">
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-black/95 border border-[#D4AF37] text-[8px] font-serif font-bold uppercase tracking-wider text-[#D4AF37] shadow">
+                                  <Crown className="w-2.5 h-2.5 text-[#D4AF37] fill-[#D4AF37]/20" />
+                                  SIGNATURE SERIES
+                                </span>
+                              </div>
+                              {/* Favorite Icon */}
+                              <div className="absolute top-3 right-3 p-2 bg-white/90 rounded-full hover:bg-white shadow-sm transition-all duration-300 z-10">
+                                <Heart 
+                                  className={`w-4 h-4 transition-colors ${
+                                    wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'
+                                  }`} 
+                                  onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
+                                />
+                              </div>
                             </div>
-                            {/* Favorite Icon */}
-                            <div className="absolute top-3 right-3 p-2 bg-white/90 rounded-full hover:bg-white shadow-sm transition-all duration-300 z-10">
-                              <Heart className="w-4 h-4 text-charcoal hover:fill-red-500 hover:text-red-500 transition-colors" />
+                            <div className="p-5 text-left">
+                              <h4 className="font-bold text-sm text-charcoal truncate mb-1 group-hover:text-amber-600 transition-colors">
+                                {item.title}
+                              </h4>
+                              <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider mb-3">
+                                {item.property_type || item.type || 'Villa'} in {item.city}
+                              </p>
+                              <div className="flex items-baseline gap-1">
+                                <span className="font-black text-sm text-charcoal">₹{(item.price_per_night || item.price || 0).toLocaleString('en-IN')}</span>
+                                <span className="text-[10px] text-gray-500 font-semibold">/ night</span>
+                              </div>
                             </div>
                           </div>
-                          <div className="p-5 text-left">
-                            <h4 className="font-bold text-sm text-charcoal truncate mb-1 group-hover:text-amber-600 transition-colors">
-                              {prop.name}
-                            </h4>
-                            <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider mb-3">
-                              Villa in {prop.location}
-                            </p>
-                            <div className="flex items-baseline gap-1">
-                              <span className="font-black text-sm text-charcoal">{prop.price}</span>
-                              <span className="text-[10px] text-gray-500 font-semibold">/ day</span>
-                            </div>
-                          </div>
+                        ))
+                      ) : (
+                        /* Placeholder when database has no 50k+ villas/resorts yet */
+                        <div className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-gray-50 rounded-3xl overflow-hidden border border-dashed border-gray-250 p-6 flex flex-col justify-center items-center text-center text-gray-400 font-medium">
+                          <p className="text-xs">No active Signature Series properties currently in database.</p>
                         </div>
-                      ))}
+                      )}
 
                       {/* View All Card at the end */}
                       <div
