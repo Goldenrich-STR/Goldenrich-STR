@@ -96,6 +96,24 @@ const DEFAULT_FAQS = [
   }
 ];
 
+const SUPPORT_SEO_FAQS = [
+  {
+    question: "How do I book a property on X-Space360?",
+    answer:
+      "Search for your preferred destination, select a property, check availability, review the pricing and policies, and complete the booking using the available payment options.",
+  },
+  {
+    question: "How can I contact X-Space360 support?",
+    answer:
+      "You can contact X-Space360 through the support form, customer support email or phone number displayed on the Support page.",
+  },
+  {
+    question: "How can I cancel a booking?",
+    answer:
+      "Open your booking details, select the cancellation option and review the applicable refund amount under the cancellation policy before confirming.",
+  },
+];
+
 const SupportPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -245,6 +263,20 @@ const SupportPage = () => {
     faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
     faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const schemaFaqs = faqs.length ? faqs : SUPPORT_SEO_FAQS;
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": "https://x-space360.in/support#faq",
+    mainEntity: schemaFaqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  };
 
   // Auto-expand single result
   useEffect(() => {
@@ -271,7 +303,18 @@ const SupportPage = () => {
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] font-sans text-charcoal overflow-x-hidden selection:bg-terracotta/20">
-      <SEO title="Need Help? Contact Support - X-Space360" description="Contact X-Space360 support for help with booking, listings, subscription plans, and property verifications." />
+      <SEO
+        title="Help and Support Center"
+        description="Get help with X-Space360 bookings, cancellations, refunds, payments, host accounts and property listings."
+        path="/support"
+        keywords={[
+          "X-Space360 support",
+          "booking help",
+          "refund support",
+          "host support",
+        ]}
+        schema={faqSchema}
+      />
       
       {/* Navbar - Solid background for support page */}
       <nav className="sticky top-0 z-50 flex justify-between items-center text-charcoal bg-white/95 backdrop-blur-md px-6 md:px-12 lg:px-20 h-20 border-b border-sand-200 shadow-sm">
