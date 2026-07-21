@@ -91,6 +91,23 @@ const AMENITY_LABELS = {
   security: 'Professional Event Security',
 };
 
+const SITE_URL = 'https://x-space360.in';
+
+const toAbsoluteSiteUrl = (value) => {
+  if (!value) return null;
+  const cleanValue = String(value).split('#')[0].trim();
+  if (!cleanValue) return null;
+  if (/^https?:\/\//i.test(cleanValue)) return cleanValue;
+  if (cleanValue.startsWith('/api/')) return `${SITE_URL}${cleanValue}`;
+  if (cleanValue.startsWith('api/')) return `${SITE_URL}/${cleanValue}`;
+  if (cleanValue.startsWith('/uploads/')) return `${SITE_URL}/api${cleanValue}`;
+  if (cleanValue.startsWith('uploads/')) return `${SITE_URL}/api/${cleanValue}`;
+  if (/\.(png|jpe?g|webp|gif|avif)$/i.test(cleanValue)) {
+    return `${SITE_URL}/api/uploads/${cleanValue.replace(/^\/+/, '')}`;
+  }
+  return `${SITE_URL}/${cleanValue.replace(/^\/+/, '')}`;
+};
+
 const getBhkTypeLabel = (category, bhkType, maxGuests) => {
   if (!bhkType) return 'N/A';
   if (category === 'commercial') {
@@ -1047,24 +1064,100 @@ const PropertyDetail = () => {
   }
 
 
-  const seoData = {
-    ...property,
-    reviews: reviews
+  const propertySlug = property.slug || property.property_slug || property.property_id;
+  const propertyPath = `/property/${propertySlug}`;
+  const propertyName = property.name || property.title || 'Property';
+  const propertyType = formatPropertyTypeLabel(property.property_type || property.propertyType || property.category || 'property');
+  const propertyCity = property.city || 'India';
+  const bedroomLabel = getBhkTypeLabel(property.category, property.bhk_type || property.bedrooms, property.max_guests);
+  const guestCapacity = Number(property.guestCapacity || property.max_guests || property.maxGuests || 0);
+  const seoImages = images
+    .map((img) => toAbsoluteSiteUrl(img))
+    .filter(Boolean);
+  const coverImage = toAbsoluteSiteUrl(property.coverImage || property.cover_image) || seoImages[0];
+  const amenitiesForSeo = Array.isArray(property.amenities) ? property.amenities : [];
+  const propertySeoDescription = `Book ${propertyName}, a ${propertyType} in ${propertyCity} with ${bedroomLabel} bedrooms, ${guestCapacity || 'flexible'} guest capacity and selected amenities.`;
+  const propertyKeywords = [
+    `${propertyType} in ${propertyCity}`,
+    `${propertyCity} property booking`,
+    propertyName,
+    ...amenitiesForSeo.slice(0, 6).map((amenity) => `${formatReadableText(amenity)} ${propertyCity}`)
+  ].filter(Boolean);
+  const propertySchema = {
+    "@context": "https://schema.org",
+    "@type": property.category === "commercial" ? "Place" : "Accommodation",
+    "@id": `${SITE_URL}${propertyPath}#property`,
+    "name": propertyName,
+    "description": property.description || propertySeoDescription,
+    "url": `${SITE_URL}${propertyPath}`,
+    "image": seoImages.length ? seoImages : [coverImage].filter(Boolean),
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": property.address || "",
+      "addressLocality": propertyCity,
+      "addressRegion": property.state || "",
+      "postalCode": property.pin_code || "",
+      "addressCountry": "IN"
+    },
+    "geo": property.latitude && property.longitude ? {
+      "@type": "GeoCoordinates",
+      "latitude": Number(property.latitude),
+      "longitude": Number(property.longitude)
+    } : undefined,
+    "amenityFeature": amenitiesForSeo.map((amenity) => ({
+      "@type": "LocationFeatureSpecification",
+      "name": formatReadableText(amenity),
+      "value": true
+    })),
+    "maximumAttendeeCapacity": guestCapacity || undefined,
+    "numberOfRooms": property.bhk_type || property.bedrooms || undefined,
+    "offers": {
+      "@type": "Offer",
+      "price": Number(property.price_per_night || property.price || 0),
+      "priceCurrency": "INR",
+      "availability": property.status === "live" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "url": `${SITE_URL}${propertyPath}`
+    },
+    "aggregateRating": (property.rating || reviewSummary.rating_avg) && (property.review_count || reviewSummary.rating_count) ? {
+      "@type": "AggregateRating",
+      "ratingValue": Number(property.rating || reviewSummary.rating_avg),
+      "reviewCount": Number(property.review_count || reviewSummary.rating_count),
+      "bestRating": "5",
+      "worstRating": "1"
+    } : undefined,
+    "review": reviews.slice(0, 5).map((review) => ({
+      "@type": "Review",
+      "author": {
+        "@type": "Person",
+        "name": review.guest_name || review.user_name || "Guest"
+      },
+      "datePublished": review.created_at ? String(review.created_at).substring(0, 10) : undefined,
+      "reviewBody": review.comment || "",
+      "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": Number(review.rating || 5),
+        "bestRating": "5",
+        "worstRating": "1"
+      }
+    }))
   };
   const seoBreadcrumbs = [
     { name: "Home", url: "/" },
     { name: property.category === "residential" ? "Residential" : property.category === "commercial" ? "Commercial" : "Event Venues", url: `/guest/browse?category=${property.category}` },
     { name: property.city, url: `/guest/browse?city=${property.city}` },
-    { name: property.title, url: `/property/${property.property_id}` }
+    { name: propertyName, url: propertyPath }
   ];
 
   return (
     <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
       <SEO
-        title={property.title}
-        description={property.description}
+        title={`${propertyName} in ${propertyCity}`}
+        description={propertySeoDescription}
+        path={propertyPath}
+        image={coverImage}
+        keywords={propertyKeywords}
         type="property"
-        data={seoData}
+        schema={propertySchema}
         breadcrumbs={seoBreadcrumbs}
         seo={property?.seo}
       />

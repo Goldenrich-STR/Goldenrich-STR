@@ -93,13 +93,13 @@ const SEO = ({
   // 2. Main Page Schema
   let pageSchema = null;
 
-  if (type === "website") {
+  if (!schema && type === "website") {
     pageSchema = [
       organizationSchema,
       websiteSchema,
       DEFAULT_LOCAL_BUSINESS_SCHEMA
     ];
-  } else if (type === "property" && data) {
+  } else if (!schema && type === "property" && data?.property_id) {
     const p = data;
     const basePrice = p.price_per_night || p.price || 0;
     const cleanImages = Array.isArray(p.images) && p.images.length > 0
@@ -175,7 +175,7 @@ const SEO = ({
     }
 
     pageSchema = accommodationSchema;
-  } else if (type === "listing" && Array.isArray(data.properties)) {
+  } else if (!schema && type === "listing" && Array.isArray(data.properties)) {
     const listItems = data.properties.map((p, idx) => ({
       "@type": "ListItem",
       "position": idx + 1,
@@ -196,7 +196,7 @@ const SEO = ({
         "itemListElement": listItems
       }
     };
-  } else if (type === "blog" && data) {
+  } else if (!schema && type === "blog" && data) {
     const post = data;
     pageSchema = {
       "@context": "https://schema.org",
@@ -212,7 +212,7 @@ const SEO = ({
       "publisher": organizationSchema,
       "description": post.excerpt || pageDesc
     };
-  } else if (type === "host" && data) {
+  } else if (!schema && type === "host" && data) {
     const host = data;
     pageSchema = {
       "@context": "https://schema.org",
@@ -222,7 +222,7 @@ const SEO = ({
       "jobTitle": "Property Host",
       "worksFor": organizationSchema
     };
-  } else if (type === "faq" && Array.isArray(data.faqs)) {
+  } else if (!schema && type === "faq" && Array.isArray(data.faqs)) {
     pageSchema = {
       "@context": "https://schema.org",
       "@type": "FAQPage",
