@@ -9,10 +9,34 @@ import ChatbotWidget from '../components/ChatbotWidget';
 import LanguageSelector from '../components/LanguageSelector';
 import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 import { getRecentlyVisitedProperties, RECENTLY_VISITED_PROPERTIES_EVENT } from '../lib/recentlyVisitedProperties';
+import { organizationSchema, websiteSchema } from '../lib/seoSchemas';
 import LegalDocument from '../components/LegalDocument';
 import ScrollReveal from '../components/ui/ScrollReveal';
 
 const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
+
+const homeSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    organizationSchema,
+    websiteSchema,
+    {
+      "@type": "WebPage",
+      "@id": "https://x-space360.in/#webpage",
+      url: "https://x-space360.in/",
+      name: "Book Stays, Workspaces and Event Venues | X-Space360",
+      description:
+        "Discover and book villas, farmhouses, commercial workspaces and event venues across India.",
+      isPartOf: {
+        "@id": "https://x-space360.in/#website",
+      },
+      about: {
+        "@id": "https://x-space360.in/#organization",
+      },
+      inLanguage: "en-IN",
+    },
+  ],
+};
 
 const DEFAULT_HERO_SLIDES = [
   {
@@ -1861,7 +1885,22 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-white font-sans text-[#2A2A2A] overflow-x-hidden selection:bg-terracotta/20">
-      <SEO type="website" seo={cmsContent?.seo} breadcrumbs={[{ name: "Home", url: "/" }]} />
+      <SEO
+        title="Book Stays, Workspaces and Event Venues"
+        description="Discover and book villas, farmhouses, residential stays, commercial workspaces and event venues across India with X-Space360."
+        path="/"
+        keywords={[
+          "villa booking",
+          "farmhouse booking",
+          "workspace booking",
+          "event venue booking",
+          "X-Space360",
+        ]}
+        type="home"
+        schema={homeSchema}
+        seo={cmsContent?.seo}
+        breadcrumbs={[{ name: "Home", url: "/" }]}
+      />
       {/* Navbar */}
       <nav
         className={`fixed top-0 left-0 right-0 w-full z-50 flex justify-between items-center px-8 md:px-[12vw] h-20 md:h-24 transition-all duration-300 ${
