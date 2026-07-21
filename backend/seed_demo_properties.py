@@ -32,7 +32,7 @@ DEMO_PROPERTIES = [
         "latitude": 15.5164,
         "longitude": 73.7632,
         "area_sqft": 4500,
-        "price_per_night": 22000,
+        "price_per_night": 52000,
         "amenities": ["wifi", "pool", "ac", "parking", "kitchen", "chef", "jacuzzi"],
         "images": [
             "https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&q=80&w=1200",
@@ -98,7 +98,7 @@ DEMO_PROPERTIES = [
         "latitude": 24.5764,
         "longitude": 73.6835,
         "area_sqft": 6500,
-        "price_per_night": 45000,
+        "price_per_night": 65000,
         "amenities": ["wifi", "ac", "parking", "kitchen", "rooftop", "lake_view", "butler"],
         "images": [
             "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=1200",
@@ -296,7 +296,7 @@ DEMO_PROPERTIES = [
         "latitude": 18.9102,
         "longitude": 73.3284,
         "area_sqft": 5200,
-        "price_per_night": 26000,
+        "price_per_night": 58000,
         "amenities": ["wifi", "pool", "ac", "parking", "kitchen", "gym", "game_room"],
         "images": [
             "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=1200",
@@ -602,7 +602,7 @@ DEMO_PROPERTIES = [
         "latitude": 20.0078,
         "longitude": 73.7656,
         "area_sqft": 6000,
-        "price_per_night": 45000,
+        "price_per_night": 65000,
         "amenities": ["ac", "stage", "parking", "av_system", "catering"],
         "images": [
             "https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&q=80&w=1200"
@@ -690,7 +690,7 @@ DEMO_PROPERTIES = [
         "latitude": 19.0688,
         "longitude": 72.8211,
         "area_sqft": 3000,
-        "price_per_night": 35000,
+        "price_per_night": 75000,
         "amenities": ["wifi", "ac", "parking", "kitchen", "sea_view", "concierge"],
         "images": [
             "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=1200"

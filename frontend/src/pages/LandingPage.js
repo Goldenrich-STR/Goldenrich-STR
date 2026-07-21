@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Youtube, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone } from 'lucide-react';
+import { Crown, Building2, MapPin, Calendar, Star, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Youtube, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
@@ -23,7 +23,7 @@ const DEFAULT_HERO_SLIDES = [
     titleHighlight: 'Spaces',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['High-Speed Wi-Fi', 'Meeting Rooms', 'Workstations']
+    badges: ['15% OFF On Weekday Bookings*']
   },
   {
     src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg',
@@ -33,7 +33,7 @@ const DEFAULT_HERO_SLIDES = [
     titleHighlight: 'Homes',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['Fully Furnished', 'Prime Locations', 'Homely Vibe']
+    badges: ['50% OFF on 2nd Night*']
   },
   {
     src: '/videos/hero/pexels-thevisionaryvows-33485961.jpg',
@@ -43,7 +43,7 @@ const DEFAULT_HERO_SLIDES = [
     titleHighlight: 'Venues',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['Banquet Halls', 'Catering Friendly', 'Premium Setup']
+    badges: ['26% OFF On All Sunday Events']
   },
   {
     src: '/videos/hero/pexels-roman-odintsov-4870616.jpg',
@@ -53,7 +53,7 @@ const DEFAULT_HERO_SLIDES = [
     titleHighlight: 'Villas',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['Private Pools', 'Scenic Views', 'Lawn & Gardens']
+    badges: ['30% OFF on Midweek Getaways*']
   }
 ];
 
@@ -903,92 +903,60 @@ const SUGGESTED_DESTINATIONS = [
   { city: "Karjat", state: "Maharashtra", desc: "A hidden gem", icon: Home }
 ];
 
+const DESTINATION_CONFIGS = {
+  'Nashik': { iconName: 'temple_hindu' },
+  'Igatpuri': { iconName: 'waves' },
+  'Trimbakeshwar': { iconName: 'temple_hindu' },
+  'Bhandardara': { iconName: 'sailing' },
+  'Saputara': { iconName: 'tram' },
+  'Vaitarna': { iconName: 'water' },
+  'Jawhar': { iconName: 'castle' },
+  'Wada': { iconName: 'fort' },
+  'Lonavala': { iconName: 'landscape' },
+  'Mahabaleshwar': { iconName: 'nutrition' },
+  'Panchgani': { iconName: 'terrain' },
+  'Alibaug': { iconName: 'lighthouse' },
+  'Karjat': { iconName: 'hiking' },
+  'Pune': { iconName: 'fort' },
+  'Mumbai': { iconName: 'location_city' },
+  'Goa': { iconName: 'beach_access' }
+};
+
 const DESTINATION_SHORTCUTS = [
   'Nashik',
   'Igatpuri',
+  'Trimbakeshwar',
   'Bhandardara',
+  'Saputara',
+  'Vaitarna',
+  'Jawhar',
+  'Wada',
   'Lonavala',
   'Mahabaleshwar',
   'Panchgani',
   'Alibaug',
-  'Konkan',
+  'Karjat',
   'Pune',
   'Mumbai',
-  'Karjat',
-  'Matheran',
-  'Trimbakeshwar',
-  'Saputara',
-  'Daman',
-  'North Goa'
+  'Goa'
 ];
 
-const DestinationLineIcon = ({ variant = 0 }) => {
-  const shapeSets = [
-    (
-      <>
-        <path d="M14 50 31 18l12 20 7-12 16 24" />
-        <path d="M25 36c7-2 14 2 22-1" />
-        <path d="M34 17c4 6 3 13-1 20" />
-      </>
-    ),
-    (
-      <>
-        <path d="M16 50V29c0-8 7-14 15-14h15c8 0 14 6 14 14v21" />
-        <path d="M24 50V33h12v17M44 50V31h9" />
-        <path d="M16 50h48" />
-      </>
-    ),
-    (
-      <>
-        <path d="M13 49h52M18 45l9-24 12 18 9-27 16 33" />
-        <path d="M25 36c5 4 10 4 15 0s10-4 16 0" />
-      </>
-    ),
-    (
-      <>
-        <path d="M18 50c7-18 18-26 36-32" />
-        <path d="M31 37c10-1 18 3 28 13" />
-        <path d="M43 14l19 9-20 7z" />
-      </>
-    ),
-    (
-      <>
-        <path d="M18 52h42V25L39 12 18 25z" />
-        <path d="M30 52V35h15v17M26 28h5M38 28h5M50 28h5" />
-        <path d="M60 16c6 3 8 8 5 14" />
-      </>
-    ),
-    (
-      <>
-        <path d="M15 50c8-8 15-11 24-8 10 4 17 2 26-7" />
-        <path d="M20 32c9 7 18 7 27 0s14-7 21-1" />
-        <path d="M51 20l7 12M58 20l-7 12" />
-      </>
-    ),
-    (
-      <>
-        <path d="M17 50h44M24 50V25h25v25" />
-        <path d="M37 50V34h10v16M24 25l13-12 12 12" />
-        <path d="M52 23l9 9M61 23l-9 9" />
-      </>
-    ),
-    (
-      <>
-        <path d="M14 51c8-18 18-29 31-33 7-2 13-1 20 4" />
-        <path d="M21 42c11-5 22-5 34 0" />
-        <path d="M48 17c8 12 7 22-3 30" />
-      </>
-    )
-  ];
-
+const DestinationLineIcon = ({ label }) => {
+  const config = DESTINATION_CONFIGS[label] || { iconName: 'landscape' };
+  
   return (
-    <svg viewBox="0 0 80 64" className="h-16 w-20 md:h-[74px] md:w-24" fill="none" aria-hidden="true">
-      <path d="M48 7c10 7 12 20 7 34s-19 14-29 9S15 32 25 20 38 0 48 7z" fill="#F3A5AD" opacity="0.9" />
-      <path d="M56 10c9 10 7 28-2 39s-24 11-30 2 3-20 12-29S47 0 56 10z" fill="#FFD4A6" opacity="0.9" />
-      <g stroke="#1F1F1F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        {shapeSets[variant % shapeSets.length]}
-      </g>
-    </svg>
+    <div className="relative flex items-center justify-center h-16 w-20 md:h-[74px] md:w-24">
+      {/* Background blobs exactly as requested */}
+      <svg viewBox="0 0 80 64" className="absolute inset-0 h-full w-full" fill="none" aria-hidden="true">
+        <path d="M48 7c10 7 12 20 7 34s-19 14-29 9S15 32 25 20 38 0 48 7z" fill="#F3A5AD" opacity="0.9" />
+        <path d="M56 10c9 10 7 28-2 39s-24 11-30 2 3-20 12-29S47 0 56 10z" fill="#FFD4A6" opacity="0.9" />
+      </svg>
+      
+      {/* Real Google Material Symbol */}
+      <span className="material-symbols-outlined text-[32px] md:text-[36px] text-[#1F1F1F] font-light relative z-10 select-none">
+        {config.iconName}
+      </span>
+    </div>
   );
 };
 
@@ -1002,6 +970,16 @@ const PREMIUM_COLLECTIONS = [
     image: 'https://images.unsplash.com/photo-1744448365250-9b6aa1a7e4a3?auto=format&fit=crop&q=80&w=900',
     query: 'residential',
     property_type: 'villa'
+  },
+  {
+    id: 'hilltop-retreats',
+    label: 'Signature Series',
+    subtitle: 'The ultimate pinnacle of private luxury stays',
+    detail: 'A curated portfolio of India’s most exclusive private estates, featuring infinity pools, personalized butler service, master chefs, and unparalleled tranquility.',
+    tag: 'Signature Series',
+    image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=900',
+    query: 'residential',
+    property_type: 'resort'
   },
   {
     id: 'wedding-venues',
@@ -1033,16 +1011,6 @@ const PREMIUM_COLLECTIONS = [
     query: 'commercial'
   },
   {
-    id: 'hilltop-retreats',
-    label: 'Hilltop & Nature Retreats',
-    subtitle: 'Escape the city into the mountains & forests',
-    detail: 'Nestled in Coorg, Munnar, Lonavala & Ooty, these serene retreats offer forest canopy views, bonfire evenings, yoga decks & waterfalls right at your doorstep. Zero connectivity, 100% peace.',
-    tag: 'Handpicked',
-    image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=900',
-    query: 'residential',
-    property_type: 'resort'
-  },
-  {
     id: 'resort-villas',
     label: 'Resort Villas & Pool Stays',
     subtitle: 'Private resort-style escapes for families and groups',
@@ -1069,117 +1037,113 @@ const STANDARD_FEATURES = [
    CollectionsSection — Full-bleed, edge-to-edge, Saffron Stay-inspired
    ==================================================================== */
 const CollectionsSection = ({ navigate }) => {
-  const [expanded, setExpanded] = React.useState(null);
   const sliderRef = React.useRef(null);
 
   const handleCardClick = (col) => {
+    if (col.id === 'hilltop-retreats') {
+      navigate('/guest/browse?signature=true');
+      return;
+    }
     const typeQuery = col.property_type ? `&property_type=${col.property_type}` : '';
     navigate(`/guest/browse?category=${col.query}${typeQuery}`);
   };
 
   const scroll = (dir) => {
     if (sliderRef.current) {
-      sliderRef.current.scrollBy({ left: dir === 'left' ? -420 : 420, behavior: 'smooth' });
+      sliderRef.current.scrollBy({ left: dir === 'left' ? -320 : 320, behavior: 'smooth' });
     }
   };
 
   return (
     <section className="w-full bg-white pt-10 md:pt-16 pb-4 md:pb-6 overflow-x-hidden">
-      {/* Header — centered like Saffron Stay style */}
-      <ScrollReveal duration="duration-[800ms]">
-        <div className="flex items-end justify-between gap-4 mb-8 px-4 md:px-[10vw]">
-          <h2 className="font-serif text-2xl md:text-3xl font-bold text-charcoal tracking-tight">
-            Discover Our Collection
-          </h2>
-          {/* Nav arrows inline below heading */}
-          <div className="hidden md:flex items-center gap-3 text-charcoal">
-            <button
-              onClick={() => scroll('left')}
-              className="p-1 hover:text-terracotta transition"
-              aria-label="Previous collection"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => scroll('right')}
-              className="p-1 hover:text-terracotta transition"
-              aria-label="Next collection"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      </ScrollReveal>
-
-      {/* Cards Strip — spacer divs for reliable padding (overflow-x: hidden parent bug fix) */}
-      <ScrollReveal duration="duration-[1000ms]" delay={150}>
-        <div
-          ref={sliderRef}
-          className="flex overflow-x-auto no-scrollbar gap-4 snap-x scroll-smooth pb-4 justify-start px-4 md:px-[10vw]"
-        >
-          {/* Left Spacer */}
-          {PREMIUM_COLLECTIONS.map((col) => {
-            const isOpen = expanded === col.id;
-            return (
-              <div
-                key={col.id}
-                onClick={() => handleCardClick(col)}
-                onMouseEnter={() => setExpanded(col.id)}
-                onMouseLeave={() => setExpanded(null)}
-                onFocus={() => setExpanded(col.id)}
-                onBlur={() => setExpanded(null)}
-                className={`relative flex-none snap-start rounded-none overflow-hidden cursor-pointer transition-all duration-500 shadow-md hover:shadow-xl
-                  ${isOpen
-                    ? 'w-[340px] md:w-[420px] aspect-[3/4]'
-                    : 'w-[200px] md:w-[240px] aspect-[3/4]'
-                  }`}
-                style={{ willChange: 'width' }}
+      <div className="max-w-[1440px] mx-auto px-4 md:px-[10vw]">
+        {/* Header */}
+        <ScrollReveal duration="duration-[800ms]">
+          <div className="flex items-end justify-between gap-4 mb-8">
+            <h2 className="font-serif text-2xl md:text-3xl font-bold text-charcoal tracking-tight">
+              Discover Our Collection
+            </h2>
+            {/* Nav arrows aligned with content */}
+            <div className="hidden md:flex items-center gap-3 text-charcoal">
+              <button
+                onClick={() => scroll('left')}
+                className="p-2 border border-gray-200 rounded-full hover:bg-gray-50 hover:text-terracotta transition-all duration-300"
+                aria-label="Previous collection"
               >
-                {/* Background Image */}
-                <img
-                  src={col.image}
-                  alt={col.label}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 scale-100 hover:scale-[1.03]"
-                />
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => scroll('right')}
+                className="p-2 border border-gray-200 rounded-full hover:bg-gray-50 hover:text-terracotta transition-all duration-300"
+                aria-label="Next collection"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </ScrollReveal>
 
-                {/* Gradient overlay — heavier at bottom */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
-
-                {/* Tag badge */}
-                <div className="absolute top-4 left-4">
-                  <span className="bg-white/90 backdrop-blur-sm text-charcoal text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
-                    {col.tag}
-                  </span>
-                </div>
-
-                {/* Collapsed: just title */}
-                <div className={`absolute inset-0 p-5 flex flex-col justify-end transition-all duration-300 ${isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-                  <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mb-1">Explore</p>
-                  <h3 className="text-white text-lg md:text-xl font-bold leading-snug">{col.label}</h3>
-                </div>
-
-                {/* Expanded: full detail */}
-                <div className={`absolute inset-0 p-6 flex flex-col justify-end transition-all duration-500 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
-                  <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest mb-2">Explore</p>
-                  <h3 className="text-white text-xl md:text-2xl font-bold leading-snug mb-2">{col.label}</h3>
-                  <p className="text-white/80 text-xs md:text-sm font-medium leading-relaxed mb-4">{col.detail}</p>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const typeQuery = col.property_type ? `&property_type=${col.property_type}` : '';
-                      navigate(`/guest/browse?category=${col.query}${typeQuery}`);
-                    }}
-                    className="hidden"
+        {/* Bounded Cards Strip */}
+        <ScrollReveal duration="duration-[1000ms]" delay={150}>
+          <div className="overflow-hidden">
+            <div
+              ref={sliderRef}
+              className="flex overflow-x-auto no-scrollbar gap-5 snap-x scroll-smooth pb-4 justify-start"
+            >
+              {PREMIUM_COLLECTIONS.map((col) => {
+                return (
+                  <div
+                    key={col.id}
+                    onClick={() => handleCardClick(col)}
+                    className="relative flex-none snap-start w-[240px] md:w-[300px] aspect-[3/4] overflow-hidden cursor-pointer rounded-2xl group shadow-md hover:shadow-xl transition-all duration-500"
                   >
-                    Browse Properties →
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-          {/* Right Spacer */}
-        </div>
-      </ScrollReveal>
+                    {/* Background Image */}
+                    <img
+                      src={col.image}
+                      alt={col.label}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                    />
+
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/10 transition-opacity duration-300 group-hover:opacity-90" />
+
+                    {/* Tag badge */}
+                    <div className="absolute top-4 left-4 z-10">
+                      {col.tag === 'Signature Series' ? (
+                        <div className="bg-black border border-[#D4AF37]/50 px-3 py-1 rounded-none shadow-md flex items-center gap-1.5">
+                          <Crown className="w-3 h-3 text-[#D4AF37] fill-[#D4AF37]/20" />
+                          <span className="text-[#D4AF37] text-[9px] font-extrabold uppercase tracking-[0.15em] font-serif">
+                            Signature Series
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="bg-white/95 text-charcoal text-[9px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
+                          {col.tag}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Card Content - stable and smooth slide-up */}
+                    <div className="absolute inset-0 p-5 md:p-6 flex flex-col justify-end z-10">
+                      <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest mb-1">Explore</p>
+                      <h3 className="text-white text-lg md:text-xl font-bold leading-snug transition-transform duration-500 group-hover:-translate-y-1">
+                        {col.label}
+                      </h3>
+                      
+                      {/* Detailed Description */}
+                      <div className="max-h-0 opacity-0 overflow-hidden transition-all duration-500 ease-in-out group-hover:max-h-[120px] group-hover:opacity-100 group-hover:mt-2">
+                        <p className="text-white/80 text-[11px] md:text-xs leading-relaxed">
+                          {col.detail}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </ScrollReveal>
+      </div>
     </section>
   );
 };
@@ -1704,10 +1668,6 @@ const LandingPage = () => {
     {
       question: "How are guest bookings and payments secured?",
       answer: "We use secure checkout locks and Razorpay payment verification. When a guest reserves, the calendar is temporarily locked to prevent double bookings and payouts are settled through tax-compliant invoice protocols."
-    },
-    {
-      question: "Are there any hidden fees or charges for listing?",
-      answer: "No. There are no hidden fees. A refundable registration fee of Rs. 500 is charged during host document submission, and subscription tiers start with a 3-month free trial."
     }
   ];
 
@@ -1946,8 +1906,8 @@ const LandingPage = () => {
           />
         ))}
 
-        {/* ── 65% dark overlay ── */}
-        <div className="absolute inset-0 bg-black/65 z-10 transition-opacity duration-1000" />
+        {/* ── 35% dark overlay ── */}
+        <div className="absolute inset-0 bg-black/35 z-10 transition-opacity duration-1000" />
 
         {/* ── Dot Slider Indicators ── */}
         <div className="absolute bottom-8 left-0 right-0 z-30 flex justify-center items-center space-x-2 md:space-x-3">
@@ -1982,7 +1942,7 @@ const LandingPage = () => {
                  {/* Custom Badges / Batches instead of Subtitle */}
                  <div className="flex flex-wrap justify-center gap-2.5">
                    {activeHero.badges && activeHero.badges.map((badge, idx) => (
-                     <span key={idx} className="border border-white/30 bg-white/10 backdrop-blur-md rounded-full px-4 py-1 text-white font-bold text-[10px] tracking-wider uppercase drop-shadow-sm select-none">
+                     <span key={idx} className="border border-white bg-white/10 backdrop-blur-md rounded-full px-6 py-2 text-white font-bold text-xs md:text-sm drop-shadow-sm select-none">
                        {badge}
                      </span>
                    ))}
@@ -2238,7 +2198,7 @@ const LandingPage = () => {
                   className="group flex flex-col items-center gap-2 cursor-pointer"
                 >
                   <div className="flex h-20 md:h-24 items-center justify-center transition-transform duration-300 group-hover:-translate-y-1">
-                    <DestinationLineIcon variant={index} />
+                    <DestinationLineIcon label={label} />
                   </div>
                   <p className="text-charcoal font-medium text-sm md:text-base tracking-tight leading-snug">{label}</p>
                 </button>
@@ -2340,6 +2300,47 @@ const LandingPage = () => {
 
         {/* ===== Discover Our Collections — Full Width ===== */}
         <CollectionsSection navigate={navigate} />
+
+        {/* ===== Brand Comparison Banner ===== */}
+        <section className="w-full bg-stone py-8 md:py-12 border-y border-gray-100">
+          <div className="max-w-[1440px] mx-auto px-4 md:px-[10vw] text-center">
+            <h3 className="font-serif text-lg md:text-xl font-bold text-charcoal mb-6 tracking-tight">
+              Compare stays across your favourite brands
+            </h3>
+            <div className="flex flex-wrap items-center justify-center gap-8 md:gap-14">
+              <img
+                src="/images/logos/booking.svg"
+                alt="Booking.com"
+                className="h-7 md:h-10 object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
+              />
+              <img
+                src="https://www.skyscanner.co.in/images/websites/h_mq.png"
+                alt="MakeMyTrip"
+                className="h-7 md:h-10 object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
+              />
+              <img
+                src="https://www.skyscanner.co.in/images/websites/d_ct.png"
+                alt="Trip.com"
+                className="h-7 md:h-10 object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
+              />
+              <img
+                src="https://www.skyscanner.co.in/images/websites/h_xp.png"
+                alt="Expedia"
+                className="h-7 md:h-10 object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
+              />
+              <img
+                src="https://www.skyscanner.co.in/images/websites/h_hc.png"
+                alt="Hotels.com"
+                className="h-7 md:h-10 object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
+              />
+              <img
+                src="/images/logos/airbnb.svg"
+                alt="Airbnb"
+                className="h-7 md:h-10 object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
+              />
+            </div>
+          </div>
+        </section>
         {/* Property Sliders — also full-width, padded inline */}
         <div className="pb-4 md:pb-16 pt-2 md:pt-4">
           {/* Residential Collection Slider */}
@@ -2365,6 +2366,167 @@ const LandingPage = () => {
               properties.commercial
             )}
           </ScrollReveal>
+
+          {/* ===== The X-Space360 Standard Banner (Full Width Landscape Slider) ===== */}
+          {(() => {
+            // Local stateful slider inside an IIFE
+            const StandardSlider = () => {
+              const slides = [
+                'https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?auto=format&fit=crop&q=80&w=1600', // Gourmet chef plating / food
+                'https://images.unsplash.com/photo-1536122985607-4fe00b283652?auto=format&fit=crop&q=80&w=1600', // Active Billiards/Snooker play
+                'https://images.unsplash.com/photo-1609220136736-443140cffec6?auto=format&fit=crop&q=80&w=1600', // Indian family vacation
+                'https://images.unsplash.com/photo-1729605411999-5a1c8972a169?auto=format&fit=crop&q=80&w=1600'  // Private pool
+              ];
+              const [currentIndex, setCurrentIndex] = useState(0);
+
+              useEffect(() => {
+                const interval = setInterval(() => {
+                  setCurrentIndex((prev) => (prev + 1) % slides.length);
+                }, 5000);
+                return () => clearInterval(interval);
+              }, [slides.length]);
+
+              return (
+                <div className="relative w-full h-[520px] md:h-[600px] overflow-hidden my-12 md:my-16">
+                  {/* Sliding Background Images */}
+                  {slides.map((slide, idx) => (
+                    <div
+                      key={idx}
+                      className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                        idx === currentIndex ? 'opacity-100 z-0' : 'opacity-0 z-[-1]'
+                      }`}
+                    >
+                      <img
+                        src={slide}
+                        alt={`X-Space360 Standard ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ))}
+                  
+                  {/* Dark overlay */}
+                  <div className="absolute inset-0 bg-black/45 z-10" />
+
+                  {/* Slider Dots indicators */}
+                  <div className="absolute bottom-6 left-8 md:left-12 z-30 flex items-center space-x-2">
+                    {slides.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentIndex(idx)}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                          idx === currentIndex 
+                            ? 'w-6 bg-white' 
+                            : 'w-1.5 bg-white/40 hover:bg-white/80'
+                        }`}
+                        aria-label={`Go to slide ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Floating Overlay Card on the right */}
+                  <div className="absolute inset-y-0 right-0 w-full md:w-[480px] lg:w-[550px] bg-black/65 backdrop-blur-md flex flex-col justify-center px-8 md:px-12 text-left text-white border-l border-white/10 z-20">
+                    <span className="text-amber-400 font-extrabold text-[10px] uppercase tracking-[0.2em] mb-2">
+                      Hospitality Reimagined
+                    </span>
+                    <h3 className="font-lufga text-3xl md:text-4xl font-bold mb-3 tracking-tight text-white leading-tight">
+                      The X-Space360 Standard
+                    </h3>
+                    <p className="text-white/80 text-xs md:text-sm leading-relaxed mb-8">
+                      Enjoy our handpicked signature features designed to make every stay effortlessly luxurious, memorable, and unique.
+                    </p>
+
+                    {/* Features Grid */}
+                    <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <Waves className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div>
+                          <h5 className="font-semibold text-sm text-white leading-tight">Private Pool</h5>
+                          <p className="text-white/60 text-[10px] mt-0.5">Exclusive access stays</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <ChefHat className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div>
+                          <h5 className="font-semibold text-sm text-white leading-tight">In-house Chef</h5>
+                          <p className="text-white/60 text-[10px] mt-0.5">Gourmet dining on demand</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <ConciergeBell className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div>
+                          <h5 className="font-semibold text-sm text-white leading-tight">Butler Service</h5>
+                          <p className="text-white/60 text-[10px] mt-0.5">Personalized assistance</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <UserCheck className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div>
+                          <h5 className="font-semibold text-sm text-white leading-tight">Caretaker Onsite</h5>
+                          <p className="text-white/60 text-[10px] mt-0.5">24/7 guest support</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <Compass className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div>
+                          <h5 className="font-semibold text-sm text-white leading-tight">Local Experiences</h5>
+                          <p className="text-white/60 text-[10px] mt-0.5">Curated local guides</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <Gamepad2 className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div>
+                          <h5 className="font-semibold text-sm text-white leading-tight">Recreation & Games</h5>
+                          <p className="text-white/60 text-[10px] mt-0.5">Indoor & outdoor setups</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <Trees className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div>
+                          <h5 className="font-semibold text-sm text-white leading-tight">Green Open Spaces</h5>
+                          <p className="text-white/60 text-[10px] mt-0.5">Lush gardens & lawns</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <PartyPopper className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div>
+                          <h5 className="font-semibold text-sm text-white leading-tight">Custom Events</h5>
+                          <p className="text-white/60 text-[10px] mt-0.5">Bespoke celebrations</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            };
+            return (
+              <ScrollReveal duration="duration-[1000ms]">
+                <StandardSlider />
+              </ScrollReveal>
+            );
+          })()}
 
           {/* Events & Functions Slider */}
           <ScrollReveal duration="duration-[900ms]">
@@ -2495,6 +2657,210 @@ const LandingPage = () => {
               </div>
             </div>
           </ScrollReveal>{/* end banner px-wrapper */}
+
+          {/* ===== Signature Series Split Banner & Carousel Section ===== */}
+          {(() => {
+            const SignatureSplitBanner = () => {
+              const handleArrowClick = (direction) => {
+                const slider = document.getElementById('signature-properties-scroll');
+                if (slider) {
+                  const scrollAmount = direction === 'left' ? -350 : 350;
+                  slider.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                }
+              };
+
+              return (
+                <div className="w-full max-w-7xl mx-auto px-6 md:px-10 lg:px-14 xl:px-20 mt-16 mb-24">
+                  {/* Split card banner */}
+                  <div className="w-full bg-[#E5DFD9] rounded-3xl overflow-hidden shadow-lg flex flex-col md:flex-row h-auto md:h-[380px] mb-16 border border-[#dcd6d0]">
+                    {/* Left text area */}
+                    <div className="w-full md:w-[45%] p-8 md:p-10 flex flex-col justify-center text-left text-[#3c3732]">
+                      <div>
+                        <h4 className="font-serif text-xl md:text-2xl font-bold leading-relaxed mb-6">
+                          List your home amongst India's <span className="italic font-normal">finest</span> luxury villas. and become part of our prestigious homeowner community...
+                        </h4>
+                        <ul className="space-y-3.5 text-xs font-semibold text-[#5a544e]">
+                          <li className="flex items-center gap-2.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
+                            Trusted by 300+ HNIs, Industrialists, & Celebrities
+                          </li>
+                          <li className="flex items-center gap-2.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
+                            Earn 40% net margins upon partnering with us
+                          </li>
+                          <li className="flex items-center gap-2.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
+                            Enhance the warmth and beauty of your Villa
+                          </li>
+                          <li className="flex items-center gap-2.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
+                            Peace of mind with an end-to-end hospitality operation
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Right single image area with brown/warm overlay */}
+                    <div className="w-full md:w-[55%] relative h-[280px] md:h-full overflow-hidden">
+                      <img
+                        src="https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1200"
+                        alt="Amarah Villa Dining"
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Brown / Warm sepia tint overlay */}
+                      <div className="absolute inset-0 bg-[#8c7b50]/15 mix-blend-multiply pointer-events-none" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent z-10 pointer-events-none" />
+
+                      {/* Info overlay (bottom-left) */}
+                      <div className="absolute bottom-6 left-6 z-20 text-left text-white">
+                        <h5 className="font-serif text-lg font-bold leading-tight text-white">Amarah</h5>
+                        <p className="text-white/80 text-[10px] uppercase tracking-wider mt-0.5">Assagao, Goa</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Horizontal Signature Properties list */}
+                  <div className="w-full text-left relative mt-16">
+                    <div className="flex justify-between items-end mb-6">
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <h3 className="font-lufga text-2xl md:text-3xl font-bold tracking-tight text-charcoal">
+                            Signature Series
+                          </h3>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black border border-[#D4AF37] text-[9px] font-serif font-bold uppercase tracking-[0.15em] text-[#D4AF37] shadow-lg shrink-0">
+                            <Crown className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
+                            SIGNATURE SERIES
+                          </span>
+                        </div>
+                        <p className="text-gray-505 text-gray-500 font-medium text-xs md:text-sm mt-1.5">
+                          Handpicked, ultra-premium villas starting from ₹50,000/night.
+                        </p>
+                      </div>
+                      
+                      {/* Nav Arrows */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleArrowClick('left')}
+                          className="w-9 h-9 rounded-full border border-gray-250 flex items-center justify-center hover:bg-stone-50 transition cursor-pointer animate-scale-in"
+                          aria-label="Previous Properties"
+                        >
+                          <ChevronLeft className="w-5 h-5 text-charcoal-muted" />
+                        </button>
+                        <button
+                          onClick={() => handleArrowClick('right')}
+                          className="w-9 h-9 rounded-full border border-gray-250 flex items-center justify-center hover:bg-stone-50 transition cursor-pointer animate-scale-in"
+                          aria-label="Next Properties"
+                        >
+                          <ChevronRight className="w-5 h-5 text-charcoal-muted" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Scrollable list */}
+                    <div
+                      id="signature-properties-scroll"
+                      className="flex gap-6 overflow-x-auto no-scrollbar pb-4"
+                    >
+                      {[
+                        {
+                          id: 'sig-1',
+                          name: 'Udaipur Palace Lakeview Villa',
+                          location: 'Udaipur, Rajasthan',
+                          price: '₹95,000',
+                          img: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80&w=800'
+                        },
+                        {
+                          id: 'sig-2',
+                          name: 'Goa Beachside Luxury Villa',
+                          location: 'Candolim, Goa',
+                          price: '₹85,000',
+                          img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=800'
+                        },
+                        {
+                          id: 'sig-3',
+                          name: 'Manali Snowpeaks Celebration Villa',
+                          location: 'Manali, Himachal Pradesh',
+                          price: '₹70,000',
+                          img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800'
+                        },
+                        {
+                          id: 'sig-4',
+                          name: 'Alibaug Coconut Orchard Pool Villa',
+                          location: 'Alibaug, Maharashtra',
+                          price: '₹55,000',
+                          img: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?auto=format&fit=crop&q=80&w=800'
+                        },
+                        {
+                          id: 'sig-5',
+                          name: 'Karjat Waterfall Estate',
+                          location: 'Karjat, Maharashtra',
+                          price: '₹1,20,000',
+                          img: 'https://images.unsplash.com/photo-1729605411999-5a1c8972a169?auto=format&fit=crop&q=80&w=800'
+                        }
+                      ].map((prop) => (
+                        <div
+                          key={prop.id}
+                          className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-white rounded-3xl overflow-hidden border border-gray-150 shadow-subtle flex-shrink-0 group cursor-pointer"
+                        >
+                          <div className="relative h-48 md:h-52 overflow-hidden">
+                            <img
+                              src={prop.img}
+                              alt={prop.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                            />
+                            {/* Goldenblack Signature Badge */}
+                            <div className="absolute top-3 left-3 z-10">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-black/95 border border-[#D4AF37] text-[8px] font-serif font-bold uppercase tracking-wider text-[#D4AF37] shadow">
+                                <Crown className="w-2.5 h-2.5 text-[#D4AF37] fill-[#D4AF37]/20" />
+                                SIGNATURE SERIES
+                              </span>
+                            </div>
+                            {/* Favorite Icon */}
+                            <div className="absolute top-3 right-3 p-2 bg-white/90 rounded-full hover:bg-white shadow-sm transition-all duration-300 z-10">
+                              <Heart className="w-4 h-4 text-charcoal hover:fill-red-500 hover:text-red-500 transition-colors" />
+                            </div>
+                          </div>
+                          <div className="p-5 text-left">
+                            <h4 className="font-bold text-sm text-charcoal truncate mb-1 group-hover:text-amber-600 transition-colors">
+                              {prop.name}
+                            </h4>
+                            <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider mb-3">
+                              Villa in {prop.location}
+                            </p>
+                            <div className="flex items-baseline gap-1">
+                              <span className="font-black text-sm text-charcoal">{prop.price}</span>
+                              <span className="text-[10px] text-gray-500 font-semibold">/ day</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* View All Card at the end */}
+                      <div
+                        onClick={() => navigate('/guest/browse?category=Signature')}
+                        className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-[#fbfbfa] hover:bg-[#E5DFD9]/60 rounded-3xl overflow-hidden border-2 border-dashed border-gray-200 flex-shrink-0 flex flex-col justify-center items-center p-8 group cursor-pointer transition-all duration-300"
+                      >
+                        <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300 mb-4 border border-gray-100">
+                          <ArrowRight className="w-5 h-5 text-[#8c7b50]" />
+                        </div>
+                        <h4 className="font-bold text-sm text-charcoal mb-1 group-hover:text-[#8c7b50] transition-colors">
+                          View All Signature
+                        </h4>
+                        <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">
+                          Browse all premium properties
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            };
+            return (
+              <ScrollReveal duration="duration-[900ms]">
+                <SignatureSplitBanner />
+              </ScrollReveal>
+            );
+          })()}
 
                     {/* Testimonials (Loved by Guests & Hosts) */}
           <ScrollReveal duration="duration-[900ms]">
@@ -2710,21 +3076,21 @@ const LandingPage = () => {
         </div>
       </div>
 
-      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,#0b1b2e_0%,#07111e_48%,#101722_100%)] pointer-events-none" />
-        <div className="relative z-10 w-full px-6 py-16 md:px-10 md:py-20 lg:px-14 xl:px-20">
-          <div className="mx-auto mb-16 grid max-w-7xl grid-cols-1 gap-10 border-b border-white/10 pb-14 text-left lg:grid-cols-12 lg:gap-14">
+      {/* Separate FAQ Section */}
+      <section className="relative overflow-hidden border-t border-gray-100 bg-[#fbfbfa] text-charcoal py-20 md:py-24">
+        <div className="relative z-10 w-full px-6 md:px-10 lg:px-14 xl:px-20 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 gap-10 text-left lg:grid-cols-12 lg:gap-14">
             <div className="lg:col-span-5">
-              <span className="text-[10px] font-bold text-[#E0A51B] uppercase tracking-widest leading-none">FAQS</span>
-              <h3 className="mt-5 text-3xl md:text-5xl font-black text-white tracking-tight leading-tight">
+              <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest leading-none">FAQS</span>
+              <h3 className="mt-5 text-3xl md:text-5xl font-black text-charcoal tracking-tight leading-tight">
                 Questions people ask before they start.
               </h3>
-              <p className="mt-5 max-w-md text-sm md:text-base font-medium leading-relaxed text-white/62">
+              <p className="mt-5 max-w-md text-sm md:text-base font-medium leading-relaxed text-charcoal-muted">
                 Still need help? Book a 15-minute call with an advisor, no pressure and no commitment.
               </p>
               <button
                 onClick={() => navigate('/support')}
-                className="mt-7 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-xs font-bold uppercase tracking-widest text-[#081321] shadow-premium transition hover:bg-[#E0A51B]"
+                className="mt-7 inline-flex items-center gap-2 rounded-full bg-black px-8 py-3.5 text-xs font-bold uppercase tracking-widest text-white shadow-premium transition hover:bg-black/90"
               >
                 <span>Contact Advisor</span>
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -2737,21 +3103,21 @@ const LandingPage = () => {
                 return (
                   <div
                     key={faq.question}
-                    className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] shadow-subtle backdrop-blur-sm transition-all duration-300"
+                    className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm hover:shadow-md transition-all duration-300"
                   >
                     <button
                       onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                      className="flex w-full items-center justify-between px-5 py-5 text-left text-sm font-bold text-white transition hover:bg-white/[0.04] md:px-6 md:text-base"
+                      className="flex w-full items-center justify-between px-5 py-5 text-left text-sm font-bold text-charcoal transition hover:bg-gray-50 md:px-6 md:text-base"
                     >
                       <span>{faq.question}</span>
                       {isOpen ? (
-                        <ChevronUp className="ml-4 h-5 w-5 shrink-0 text-[#E0A51B]" />
+                        <ChevronUp className="ml-4 h-5 w-5 shrink-0 text-amber-500" />
                       ) : (
-                        <ChevronDown className="ml-4 h-5 w-5 shrink-0 text-white/60" />
+                        <ChevronDown className="ml-4 h-5 w-5 shrink-0 text-gray-400" />
                       )}
                     </button>
                     {isOpen && (
-                      <div className="border-t border-white/10 px-5 pb-6 pt-4 text-xs font-medium leading-relaxed text-white/62 md:px-6 md:text-sm">
+                      <div className="border-t border-gray-100 px-5 pb-6 pt-4 text-xs font-medium leading-relaxed text-charcoal-muted md:px-6 md:text-sm bg-gray-50/50">
                         {faq.answer}
                       </div>
                     )}
@@ -2760,7 +3126,13 @@ const LandingPage = () => {
               })}
             </div>
           </div>
+        </div>
+      </section>
 
+      {/* Main Footer Section */}
+      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium">
+        <div className="absolute inset-0 bg-[#081321] pointer-events-none" />
+        <div className="relative z-10 w-full px-6 py-16 md:px-10 md:py-16 lg:px-14 xl:px-20">
           <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.45fr_repeat(5,1fr)] lg:gap-12">
             <div className="max-w-xs">
               <button

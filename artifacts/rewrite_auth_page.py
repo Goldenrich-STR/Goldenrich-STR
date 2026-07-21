@@ -1,4 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import os
+
+file_path = r"c:\Users\Legend\Desktop\Goldenrich-STR\frontend\src\pages\AuthPage.js"
+
+new_code = """import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star, Eye, EyeOff, X } from 'lucide-react';
@@ -185,8 +189,8 @@ const AuthPage = ({ isAdminLogin = false }) => {
     'At least 1 uppercase letter (A-Z)': /[A-Z]/.test(password),
     'At least 1 lowercase letter (a-z)': /[a-z]/.test(password),
     'At least 1 number (0-9)': /[0-9]/.test(password),
-    'At least 1 special character': /[^A-Za-z0-9\s]/.test(password),
-    'No spaces allowed': !/\s/.test(password),
+    'At least 1 special character': /[^A-Za-z0-9\\s]/.test(password),
+    'No spaces allowed': !/\\s/.test(password),
   });
 
   const getPasswordError = (password) => {
@@ -318,14 +322,14 @@ const AuthPage = ({ isAdminLogin = false }) => {
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-4 select-none selection:bg-terracotta selection:text-white">
+    <div className="min-h-screen w-full bg-charcoal/40 backdrop-blur-sm flex items-center justify-center p-4 select-none selection:bg-terracotta selection:text-white">
       <SEO
         title={isAdminLogin ? "Admin Sign In" : (isLogin ? "Sign In" : "Register")}
         robots="noindex,nofollow"
       />
 
       {/* StayVista style Modal Box (Fixed height to prevent page scrolling) */}
-      <div className="relative w-full max-w-[980px] bg-white rounded-3xl shadow-2xl flex overflow-hidden border border-gray-150 h-[650px] z-10">
+      <div className="relative w-full max-w-[850px] bg-white rounded-3xl shadow-2xl flex overflow-hidden border border-gray-150 h-[590px]">
         
         {/* Close Button */}
         <button
@@ -340,9 +344,9 @@ const AuthPage = ({ isAdminLogin = false }) => {
         <div className="hidden md:block md:w-[42%] p-3 h-full">
           <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm">
             <img
-              src="https://images.unsplash.com/photo-1675657144361-98ae33e6b6f9?auto=format&fit=crop&q=80&w=800"
+              src="https://images.unsplash.com/photo-1729605411999-5a1c8972a169?auto=format&fit=crop&q=80&w=800"
               alt="X-Space360 Villa"
-              className="absolute inset-0 w-full h-full object-cover blur-[2.5px] scale-105"
+              className="absolute inset-0 w-full h-full object-cover"
             />
             {/* Linear overlay */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/15 to-black/60 z-10" />
@@ -356,13 +360,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
 
               {/* Middle Text and Pill Badge */}
               <div className="mb-6 flex flex-col items-center">
-                <h4 className="font-lufga text-white text-2xl md:text-3xl font-extrabold leading-tight mb-2 tracking-tight drop-shadow-sm">
+                <h4 className="font-serif text-2xl font-bold leading-tight mb-2 tracking-tight">
                   Book a Room.<br />Enjoy A Villa Getaway
                 </h4>
-                <p className="text-white text-xs font-semibold max-w-[220px] mb-4 drop-shadow-sm">
+                <p className="text-white/80 text-[11px] font-medium max-w-[200px] mb-4">
                   Enjoy the luxuries & privacy of a villa with
                 </p>
-                <div className="border border-dashed border-white/80 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-1.5 text-xs font-bold tracking-wide text-white drop-shadow-sm">
+                <div className="border border-dashed border-white/60 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-1.5 text-xs font-bold tracking-wide">
                   Rooms Starting at ₹5,000*
                 </div>
               </div>
@@ -376,9 +380,9 @@ const AuthPage = ({ isAdminLogin = false }) => {
           {/* Top Header Section */}
           <div className="w-full">
             {/* Mini Logo */}
-            <div className="mb-4 flex items-center justify-between pr-10">
+            <div className="mb-4 flex items-center justify-between">
               <img src="/logo.png" alt="X-Space360" className="h-8 w-auto object-contain" />
-              {/* Toggle Button next to logo but away from close button */}
+              {/* Optional Toggle Button instead of traditional tabs */}
               {!isAdminLogin && (
                 <button
                   type="button"
@@ -388,7 +392,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     setSuccess('');
                     resetOtpFlow();
                   }}
-                  className="text-xs font-bold text-terracotta hover:underline uppercase tracking-wider mr-4"
+                  className="text-xs font-bold text-terracotta hover:underline uppercase tracking-wider"
                 >
                   {isLogin ? "Or Sign Up" : "Or Sign In"}
                 </button>
@@ -762,3 +766,9 @@ const AuthPage = ({ isAdminLogin = false }) => {
 };
 
 export default AuthPage;
+"""
+
+with open(file_path, "w", encoding="utf-8") as f:
+    f.write(new_code)
+
+print("AuthPage.js successfully updated with StayVista-style responsive modal layout!")

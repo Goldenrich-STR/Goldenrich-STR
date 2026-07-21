@@ -1,15 +1,52 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Globe, ChevronDown, Check, Languages } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Home, Briefcase, PartyPopper, ChevronDown, Layers } from 'lucide-react';
 
-const LANGUAGES = [
-  { code: 'en', label: 'English', nativeLabel: 'English' },
-  { code: 'hi', label: 'Hindi', nativeLabel: 'हिन्दी' },
-  { code: 'mr', label: 'Marathi', nativeLabel: 'मराठी' }
+const CATEGORIES = [
+  {
+    key: 'residential',
+    title: 'Residential Stays',
+    description: 'Villas, apartments & holiday homes.',
+    icon: Home,
+    color: 'text-gray-900 bg-gray-50 border border-gray-200',
+    subtypes: [
+      { label: 'Villas', value: 'villa' },
+      { label: 'Apartments', value: 'apartment' },
+      { label: 'Studios', value: 'studio' },
+      { label: 'Farmhouses', value: 'farmhouse' }
+    ]
+  },
+  {
+    key: 'commercial',
+    title: 'Commercial Spaces',
+    description: 'Offices, desks & meeting rooms.',
+    icon: Briefcase,
+    color: 'text-gray-900 bg-gray-50 border border-gray-200',
+    subtypes: [
+      { label: 'Private Offices', value: 'private_office' },
+      { label: 'Co-working Desks', value: 'co_working' },
+      { label: 'Meeting Rooms', value: 'meeting_room' }
+    ]
+  },
+  {
+    key: 'event_venue',
+    title: 'Event Venues',
+    description: 'Banquet halls, lawns & rooftops.',
+    icon: PartyPopper,
+    color: 'text-gray-900 bg-gray-50 border border-gray-200',
+    subtypes: [
+      { label: 'Banquet Halls', value: 'banquet_hall' },
+      { label: 'Rooftops', value: 'rooftop' },
+      { label: 'Hotel Ballrooms', value: 'hotel_ballroom' },
+      { label: 'Resorts & Lawns', value: 'resort' }
+    ]
+  }
 ];
 
-const LanguageSelector = ({ currentLang, onLanguageChange }) => {
+const LanguageSelector = () => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -23,18 +60,26 @@ const LanguageSelector = ({ currentLang, onLanguageChange }) => {
     };
   }, []);
 
-  const selectedLang = LANGUAGES.find(l => l.code === currentLang) || LANGUAGES[0];
+  const handleCategoryClick = (categoryKey) => {
+    navigate(`/guest/browse?category=${categoryKey}`);
+    setIsOpen(false);
+  };
+
+  const handleSubtypeClick = (categoryKey, subtypeValue) => {
+    navigate(`/guest/browse?category=${categoryKey}&property_type=${subtypeValue}`);
+    setIsOpen(false);
+  };
 
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 bg-white/80 hover:bg-white border border-gray-200 hover:border-terracotta rounded-full px-3.5 py-2 shadow-sm transition-all duration-300 cursor-pointer group"
+        className="flex items-center space-x-2 bg-white/85 hover:bg-white border border-gray-200 hover:border-terracotta rounded-full px-4 py-2 shadow-sm transition-all duration-300 cursor-pointer group"
       >
-        <Globe className="w-3.5 h-3.5 text-charcoal-light group-hover:text-terracotta transition-colors" />
-        <span className="text-[11px] font-semibold tracking-tight text-charcoal group-hover:text-terracotta transition-colors tracking-wide">
-          {selectedLang.nativeLabel}
+        <Layers className="w-4 h-4 text-charcoal-light group-hover:text-terracotta transition-colors" />
+        <span className="text-[12px] font-bold tracking-wide text-charcoal group-hover:text-terracotta transition-colors">
+          Property Types
         </span>
         <ChevronDown 
           className={`w-3.5 h-3.5 text-charcoal-muted group-hover:text-terracotta transition-transform duration-300 ${
@@ -44,40 +89,45 @@ const LanguageSelector = ({ currentLang, onLanguageChange }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-3 w-52 rounded-2xl bg-white/95 backdrop-blur-md border border-gray-100 shadow-elevated p-2 z-[999] origin-top-right animate-scale-up ring-1 ring-black/5">
-          <div className="space-y-1">
-            {LANGUAGES.map((lang) => {
-              const isSelected = lang.code === currentLang;
+        <div className="absolute right-0 md:-right-48 mt-3 w-[calc(100vw-2rem)] md:w-[650px] rounded-3xl bg-white border border-gray-200 shadow-elevated p-6 z-[999] origin-top-right animate-scale-up ring-1 ring-black/5 text-gray-900">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {CATEGORIES.map((cat) => {
+              const Icon = cat.icon;
               return (
-                <button
-                  key={lang.code}
-                  onClick={() => {
-                    onLanguageChange(lang.code);
-                    setIsOpen(false);
-                  }}
-                  className={`group w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs font-bold transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-sm ${
-                    isSelected
-                      ? 'bg-terracotta/10 text-terracotta border border-terracotta/20'
-                      : 'text-charcoal hover:bg-stone border border-transparent hover:border-gray-100'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-1.5 rounded-lg transition-colors duration-300 ${isSelected ? 'bg-terracotta/20 text-terracotta' : 'bg-gray-50 text-charcoal-muted group-hover:bg-terracotta/10 group-hover:text-terracotta'}`}>
-                      <Languages className="w-3.5 h-3.5" />
+                <div key={cat.key} className="flex flex-col space-y-3">
+                  {/* Category Header */}
+                  <div 
+                    onClick={() => handleCategoryClick(cat.key)}
+                    className="flex items-start space-x-3 p-2 rounded-2xl hover:bg-stone/50 cursor-pointer group/item transition-all duration-300 text-gray-900"
+                  >
+                    <div className={`p-2.5 rounded-xl shrink-0 ${cat.color} transition-transform group-hover/item:scale-105 flex items-center justify-center`}>
+                      <Icon className="w-5 h-5 text-gray-900" />
                     </div>
-                    <span className="flex flex-col">
-                      <span className="font-bold tracking-tight tracking-wide">{lang.nativeLabel}</span>
-                      {lang.nativeLabel !== lang.label && (
-                        <span className="text-[9px] font-bold text-charcoal-light group-hover:text-terracotta/70 transition-colors uppercase tracking-widest mt-0.5">{lang.label}</span>
-                      )}
-                    </span>
+                    <div className="text-left">
+                      <h4 className="text-sm font-extrabold text-gray-900 group-hover/item:text-terracotta transition-colors">
+                        {cat.title}
+                      </h4>
+                      <p className="text-[10px] font-bold text-gray-400 mt-0.5 leading-tight">
+                        {cat.description}
+                      </p>
+                    </div>
                   </div>
-                  {isSelected && (
-                    <div className="w-5 h-5 rounded-full bg-terracotta/20 flex items-center justify-center animate-pulse">
-                      <Check className="w-3 h-3 text-terracotta" />
-                    </div>
-                  )}
-                </button>
+
+                  <hr className="border-gray-100/85" />
+
+                  {/* Subtypes List */}
+                  <div className="flex flex-col space-y-1 pl-2">
+                    {cat.subtypes.map((sub) => (
+                      <button
+                        key={sub.value}
+                        onClick={() => handleSubtypeClick(cat.key, sub.value)}
+                        className="w-full text-left px-3 py-2 text-xs font-bold text-gray-700 hover:text-terracotta hover:bg-gray-50 rounded-xl transition-all duration-200"
+                      >
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               );
             })}
           </div>

@@ -8,6 +8,7 @@ import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
 import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 import {
+  Crown,
   Building2,
   Search,
   MapPin,
@@ -347,12 +348,13 @@ const GuestBrowse = () => {
 
   const [filters, setFilters] = useState(() => {
     const params = new URLSearchParams(window.location.search);
+    const isSignature = params.get('signature') === 'true';
     return {
       city: params.get('city') || '',
       category: params.get('category') || 'residential',
       property_type: params.get('property_type') || '',
       bhk_type: '',
-      min_price: '',
+      min_price: isSignature ? '50000' : '',
       max_price: '',
       guests: params.get('guests') || '',
       instant_booking: false,
@@ -378,6 +380,13 @@ const GuestBrowse = () => {
       setShowWishlistOnly(true);
     }
     
+    const isSignature = params.get('signature') === 'true';
+    if (isSignature) {
+      setFilters(prev => ({
+        ...prev,
+        min_price: '50000'
+      }));
+    }
     if (city || category || propertyType || checkIn || checkOut || guests) {
       setFilters(prev => ({
         ...prev,
@@ -1034,15 +1043,19 @@ const GuestBrowse = () => {
       {/* Results header */}
       <div className="px-4 md:px-8 py-8 w-full flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-charcoal tracking-tight">
-             {loading ? t('searching') : (
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-serif font-bold tracking-tight text-charcoal tracking-tight">
+             {new URLSearchParams(window.location.search).get('signature') === 'true' ? (
+                "Signature Series"
+             ) : loading ? t('searching') : (
                 <>
                    {displayedProperties.length} {displayedProperties.length === 1 ? t('spaceFound') : t('spacesFound')}
                 </>
              )}
           </h2>
           <p className="text-charcoal-muted font-medium mt-1">
-             {filters.city ? t('curatedResults').replace('{city}', filters.city) : t('discoverExclusive')}
+             {new URLSearchParams(window.location.search).get('signature') === 'true'
+                ? "Indulge in India's most ultra-luxury private villas and premium resort stays."
+                : filters.city ? t('curatedResults').replace('{city}', filters.city) : t('discoverExclusive')}
           </p>
         </div>
 
@@ -1228,11 +1241,20 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
       <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
       
       <div className="absolute top-4 left-4 flex gap-2">
-         <div className="glass px-3 py-1 rounded-full shadow-sm">
-            <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal">
-               {formatCategoryLabel(property.category)}
-            </span>
-         </div>
+         {property.price_per_night >= 50000 ? (
+           <div className="bg-black border border-[#D4AF37]/50 px-3.5 py-1.5 rounded-none shadow-md flex items-center gap-1.5">
+             <Crown className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
+             <span className="text-[#D4AF37] text-[10px] font-extrabold uppercase tracking-[0.2em] font-serif">
+               Signature Series
+             </span>
+           </div>
+         ) : (
+           <div className="glass px-3 py-1 rounded-full shadow-sm">
+              <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal">
+                 {formatCategoryLabel(property.category)}
+              </span>
+           </div>
+         )}
       </div>
       
       {/* Share & Wishlist Buttons overlay */}
