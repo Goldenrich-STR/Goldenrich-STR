@@ -1,30 +1,10 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
+import { organizationSchema } from "../lib/seoSchemas";
 
 const SITE_NAME = "X-Space360";
 const SITE_URL = "https://x-space360.in";
 const DEFAULT_IMAGE = `${SITE_URL}/images/xspace360-og-image.jpg`;
-
-const DEFAULT_ORG_SCHEMA = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  "@id": "https://x-space360.in/#organization",
-  "name": "X-Space360",
-  "url": "https://x-space360.in",
-  "logo": "https://x-space360.in/favicon_rich.jpg",
-  "email": "support@x-space360.in",
-  "telephone": "+919876543210",
-  "foundingDate": "2024-01-01",
-  "brand": {
-    "@type": "Brand",
-    "name": "X-Space360"
-  },
-  "sameAs": [
-    "https://www.facebook.com/xspace360",
-    "https://www.instagram.com/xspace360",
-    "https://twitter.com/xspace360"
-  ]
-};
 
 const DEFAULT_WEBSITE_SCHEMA = {
   "@context": "https://schema.org",
@@ -131,7 +111,7 @@ const SEO = ({
 
   if (type === "website") {
     pageSchema = [
-      DEFAULT_ORG_SCHEMA,
+      organizationSchema,
       DEFAULT_WEBSITE_SCHEMA,
       DEFAULT_LOCAL_BUSINESS_SCHEMA
     ];
@@ -245,7 +225,7 @@ const SEO = ({
         "@type": "Person",
         "name": post.author || "X-Space360 Editor"
       },
-      "publisher": DEFAULT_ORG_SCHEMA,
+      "publisher": organizationSchema,
       "description": post.excerpt || pageDesc
     };
   } else if (type === "host" && data) {
@@ -256,7 +236,7 @@ const SEO = ({
       "name": host.full_name,
       "image": host.profile_image ? (host.profile_image.startsWith("http") ? host.profile_image : `https://x-space360.in/api/uploads/${host.profile_image}`) : undefined,
       "jobTitle": "Property Host",
-      "worksFor": DEFAULT_ORG_SCHEMA
+      "worksFor": organizationSchema
     };
   } else if (type === "faq" && Array.isArray(data.faqs)) {
     pageSchema = {
