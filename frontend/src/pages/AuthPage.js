@@ -378,21 +378,6 @@ const AuthPage = ({ isAdminLogin = false }) => {
             {/* Mini Logo */}
             <div className="mb-4 flex items-center justify-between pr-10">
               <img src="/logo.png" alt="X-Space360" className="h-8 w-auto object-contain" />
-              {/* Toggle Button next to logo but away from close button */}
-              {!isAdminLogin && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsLogin(prev => !prev);
-                    setError('');
-                    setSuccess('');
-                    resetOtpFlow();
-                  }}
-                  className="text-xs font-bold text-terracotta hover:underline uppercase tracking-wider mr-4"
-                >
-                  {isLogin ? "Or Sign Up" : "Or Sign In"}
-                </button>
-              )}
             </div>
 
             {/* Title / Subtext */}
@@ -443,7 +428,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     <button
                       type="button"
                       onClick={() => navigate(`/forgot-password?login=${encodeURIComponent(isAdminLogin ? '/admin/login' : '/login')}`)}
-                      className="text-[9px] font-bold text-terracotta uppercase hover:underline"
+                      className="text-[9px] font-bold text-blue-600 uppercase hover:underline"
                     >
                       Forgot?
                     </button>
@@ -493,6 +478,22 @@ const AuthPage = ({ isAdminLogin = false }) => {
                       <ShieldCheck className="w-4 h-4" />
                       Login with GRP
                     </button>
+
+                    <div className="mt-4 text-center text-xs font-semibold text-gray-500">
+                      Don't have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsLogin(false);
+                          setError('');
+                          setSuccess('');
+                          resetOtpFlow();
+                        }}
+                        className="text-blue-600 hover:underline font-extrabold cursor-pointer ml-1 text-xs"
+                      >
+                        Sign Up
+                      </button>
+                    </div>
                   </>
                 )}
               </form>
@@ -678,6 +679,22 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     >
                       {loading ? 'Continuing...' : 'Continue'}
                     </button>
+
+                    <div className="mt-4 text-center text-xs font-semibold text-gray-500">
+                      Already have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsLogin(true);
+                          setError('');
+                          setSuccess('');
+                          resetOtpFlow();
+                        }}
+                        className="text-blue-600 hover:underline font-extrabold cursor-pointer ml-1 text-xs"
+                      >
+                        Log In
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   // OTP VERIFICATION STEP

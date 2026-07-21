@@ -942,34 +942,196 @@ const DESTINATION_SHORTCUTS = [
 ];
 
 const DestinationLineIcon = ({ label }) => {
-  const config = DESTINATION_CONFIGS[label] || { iconName: 'landscape' };
-  const iconMap = {
-    temple_hindu: Home,
-    waves: Waves,
-    sailing: Waves,
-    tram: Compass,
-    water: Waves,
-    castle: Hotel,
-    fort: Building2,
-    landscape: Trees,
-    nutrition: Trees,
-    terrain: Trees,
-    lighthouse: Compass,
-    hiking: Compass,
-    location_city: Building2,
-    beach_access: Waves,
+  // Define custom hand-drawn outline SVGs with subtle theme accent fills for each destination
+  const renderCustomSVG = () => {
+    const strokeColor = "#2C2C2C";
+    const accentFill = "#E8D8C8"; // Light sand accent
+    const accentHighlight = "#E0A96D"; // Golden terracotta accent
+
+    switch (label) {
+      case 'Nashik': // Wine & Vineyards
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="25" y="8" width="12" height="18" rx="2" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M31 8V4H31.5" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M12 28C12 21.3726 17.3726 16 24 16V28H12Z" fill={accentFill} />
+            <circle cx="21" cy="30" r="4" fill={accentHighlight} opacity="0.8" />
+            <path d="M15 16C15 22.6274 20.3726 28 27 28" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M21 28V38" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M17 38H25" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="15" cy="22" r="2" fill={strokeColor} />
+            <circle cx="19" cy="19" r="2" fill={strokeColor} />
+          </svg>
+        );
+      case 'Igatpuri': // Waterfall & Lake
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 32C12 20 20 18 24 24C28 30 36 28 40 18" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M14 26C18 36 30 36 34 26" fill={accentFill} opacity="0.6" />
+            <path d="M24 10V38" stroke={strokeColor} strokeWidth="1.5" strokeDasharray="3 3" />
+            <path d="M20 16V34" stroke={strokeColor} strokeWidth="1.5" strokeDasharray="3 3" />
+            <path d="M28 14V36" stroke={strokeColor} strokeWidth="1.5" strokeDasharray="3 3" />
+            <circle cx="24" cy="40" r="1.5" fill={strokeColor} />
+            <circle cx="28" cy="39" r="1" fill={strokeColor} />
+            <circle cx="20" cy="38" r="1" fill={strokeColor} />
+          </svg>
+        );
+      case 'Trimbakeshwar': // Temple / Spiritual
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24 6L14 18H34L24 6Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <rect x="16" y="18" width="16" height="18" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M24 6V2" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M24 2H29" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" fill={accentHighlight} />
+            <circle cx="24" cy="26" r="4" stroke={strokeColor} strokeWidth="1.5" fill={accentHighlight} />
+            <path d="M10 36H38" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        );
+      case 'Bhandardara': // Mountains & Lake
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="30" cy="18" r="7" fill={accentHighlight} opacity="0.75" />
+            <path d="M6 34L18 16L28 28L36 20L42 34H6Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M10 38C18 38 22 41 38 38" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M14 41C20 41 24 43 34 41" stroke={strokeColor} strokeWidth="1" strokeLinecap="round" />
+          </svg>
+        );
+      case 'Saputara': // Hill Station / Sunrise
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="24" cy="20" r="8" stroke={strokeColor} strokeWidth="1.5" fill={accentHighlight} />
+            <path d="M8 32C16 26 22 28 28 32C34 36 40 32 40 32" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M4 36H44" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" fill={accentFill} />
+            <path d="M12 10L14 13" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M36 10L34 13" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M24 7V10" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        );
+      case 'Vaitarna': // Lake / River
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 18C16 14 20 22 28 18C36 14 40 18 40 18" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M8 26C16 22 20 30 28 26C36 22 40 26 40 26" fill={accentFill} opacity="0.5" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M8 34C16 30 20 38 28 34C36 30 40 34 40 34" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="32" cy="12" r="3" fill={accentHighlight} />
+          </svg>
+        );
+      case 'Jawhar': // Palace / Heritage
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 38V20H14V38" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M34 38V20H40V38" stroke={strokeColor} strokeWidth="1.5" />
+            <rect x="14" y="16" width="20" height="22" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M18 16C18 10.4772 20.6863 6 24 6C27.3137 6 30 10.4772 30 16" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M21 28C21 26.3431 22.3431 25 24 25C25.6569 25 27 26.3431 27 28V38H21V28Z" stroke={strokeColor} strokeWidth="1.5" />
+          </svg>
+        );
+      case 'Wada': // Farms & Countryside
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="22" width="16" height="16" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M6 22L18 12L30 22" stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <circle cx="34" cy="24" r="6" fill={accentHighlight} opacity="0.8" />
+            <path d="M34 18V38" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M30 30H38" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M15 28H21V38H15V28Z" stroke={strokeColor} strokeWidth="1.5" />
+          </svg>
+        );
+      case 'Lonavala': // Caves / Forest
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 38C10 28.0589 16.268 20 24 20C31.732 20 38 28.0589 38 38" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M18 38C18 33.5817 20.6863 30 24 30C27.3137 30 30 33.5817 30 38" fill="#FFF" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M6 38H42" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="24" cy="12" r="3" fill={accentHighlight} />
+          </svg>
+        );
+      case 'Mahabaleshwar': // Strawberry & Hills
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24 10C24 10 14 14 14 26C14 34 19 38 24 38C29 38 34 34 34 26C34 14 24 10 24 10Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M24 10C24 7 26 5 28 6" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M21 11C23 12 25 12 27 11" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.2" />
+            <circle cx="20" cy="20" r="1" fill={strokeColor} />
+            <circle cx="28" cy="22" r="1" fill={strokeColor} />
+            <circle cx="24" cy="27" r="1" fill={strokeColor} />
+            <circle cx="18" cy="29" r="1" fill={strokeColor} />
+            <circle cx="30" cy="30" r="1" fill={strokeColor} />
+          </svg>
+        );
+      case 'Panchgani': // Table Land / Plateau
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 26H40" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" />
+            <path d="M12 26V36H36V26" stroke={strokeColor} strokeWidth="1.5" fill={accentFill} />
+            <path d="M6 38H42" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="24" cy="14" r="5" fill={accentHighlight} />
+          </svg>
+        );
+      case 'Alibaug': // Palms & Beach
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="16" r="6" fill={accentHighlight} opacity="0.8" />
+            <path d="M14 12C16 18 15 32 15 38" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" />
+            <path d="M15 16C10 14 6 18 6 18" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M15 14C22 11 26 14 26 14" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M15 20C21 21 24 19 24 19" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M8 38C14 38 20 40 38 38" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        );
+      case 'Karjat': // Rivers / Waterfalls
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 20L16 10L24 18L32 8L42 18" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M12 24C16 28 20 28 24 24C28 20 32 20 36 24" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" fill={accentFill} />
+            <path d="M12 32C16 36 20 36 24 32C28 28 32 28 36 32" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="28" cy="14" r="2.5" fill={accentHighlight} />
+          </svg>
+        );
+      case 'Pune': // Heritage Fort Gateway
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="8" y="14" width="32" height="24" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M18 38V24C18 20.6863 20.6863 18 24 18C27.3137 18 30 20.6863 30 24V38" fill="#FFF" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M14 14V10H34V14" stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="24" cy="10" r="3" fill={accentHighlight} />
+          </svg>
+        );
+      case 'Mumbai': // Gateway Monument
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="16" width="28" height="22" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M18 38V22C18 19 20.5 17 24 17C27.5 17 30 19 30 22V38" fill="#FFF" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M6 38H42" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" />
+            <circle cx="24" cy="10" r="4" fill={accentHighlight} />
+            <path d="M12 16V12H36V16" stroke={strokeColor} strokeWidth="1.5" />
+          </svg>
+        );
+      case 'Goa': // Coconut & Beach bed
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="24" cy="15" r="7" fill={accentHighlight} opacity="0.8" />
+            <path d="M10 14C12 22 12 32 12 38" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M12 16C6 16 4 19 4 19" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M12 15C18 12 21 16 21 16" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M22 34H36L38 38H20L22 34Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M30 26L34 34" stroke={strokeColor} strokeWidth="1.5" />
+          </svg>
+        );
+      default:
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="24" cy="24" r="10" stroke={strokeColor} strokeWidth="1.5" fill={accentFill} />
+            <path d="M24 14V34" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M14 24H34" stroke={strokeColor} strokeWidth="1.5" />
+          </svg>
+        );
+    }
   };
-  const Icon = iconMap[config.iconName] || MapPin;
-  
+
   return (
-    <div className="relative flex items-center justify-center h-16 w-20 md:h-[74px] md:w-24">
-      {/* Background blobs exactly as requested */}
-      <svg viewBox="0 0 80 64" className="absolute inset-0 h-full w-full" fill="none" aria-hidden="true">
-        <path d="M48 7c10 7 12 20 7 34s-19 14-29 9S15 32 25 20 38 0 48 7z" fill="#F3A5AD" opacity="0.9" />
-        <path d="M56 10c9 10 7 28-2 39s-24 11-30 2 3-20 12-29S47 0 56 10z" fill="#FFD4A6" opacity="0.9" />
-      </svg>
-      
-      <Icon className="relative z-10 h-8 w-8 md:h-9 md:w-9 text-[#1F1F1F] stroke-[1.8]" aria-hidden="true" />
+    <div className="relative flex items-center justify-center h-14 w-14 md:h-16 md:w-16 rounded-full bg-slate-50 border border-gray-100 shadow-sm hover:shadow hover:scale-[1.05] transition-all duration-300">
+      {renderCustomSVG()}
     </div>
   );
 };
@@ -1605,7 +1767,7 @@ const LandingPage = () => {
               <div 
                 key={item.property_id || index} 
                 onClick={() => navigate(`/property/${item.property_id}`)}
-                className="bg-transparent cursor-pointer transition-all duration-300 min-w-[240px] md:min-w-[280px] w-[240px] md:w-[280px] snap-start flex flex-col group/card"
+                className="bg-transparent cursor-pointer transition-all duration-300 min-w-[240px] md:min-w-[280px] w-[240px] md:w-[280px] snap-start flex flex-col group/card flex-shrink-0"
               >
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-3">
                   <img 
@@ -2270,7 +2432,7 @@ const LandingPage = () => {
                     key={item.property_id || index}
                     type="button"
                     onClick={() => navigate(`/property/${item.property_id}`)}
-                    className="min-w-[260px] md:min-w-[285px] w-[260px] md:w-[285px] bg-white rounded-xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-elevated transition text-left snap-start"
+                    className="min-w-[260px] md:min-w-[285px] w-[260px] md:w-[285px] bg-white rounded-xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-elevated transition text-left snap-start flex-shrink-0"
                   >
                     <div className="relative aspect-[16/10] bg-stone overflow-hidden">
                       <img
@@ -3077,59 +3239,6 @@ const LandingPage = () => {
           
         </div>
       </div>
-
-      {/* Separate FAQ Section */}
-      <section className="relative overflow-hidden border-t border-gray-100 bg-[#fbfbfa] text-charcoal py-20 md:py-24">
-        <div className="relative z-10 w-full px-6 md:px-10 lg:px-14 xl:px-20 max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 gap-10 text-left lg:grid-cols-12 lg:gap-14">
-            <div className="lg:col-span-5">
-              <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest leading-none">FAQS</span>
-              <h3 className="mt-5 text-3xl md:text-5xl font-black text-charcoal tracking-tight leading-tight">
-                Questions people ask before they start.
-              </h3>
-              <p className="mt-5 max-w-md text-sm md:text-base font-medium leading-relaxed text-charcoal-muted">
-                Still need help? Book a 15-minute call with an advisor, no pressure and no commitment.
-              </p>
-              <button
-                onClick={() => navigate('/support')}
-                className="mt-7 inline-flex items-center gap-2 rounded-full bg-black px-8 py-3.5 text-xs font-bold uppercase tracking-widest text-white shadow-premium transition hover:bg-black/90"
-              >
-                <span>Contact Advisor</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 lg:col-span-7">
-              {faqItems.map((faq, index) => {
-                const isOpen = openFaqIndex === index;
-                return (
-                  <div
-                    key={faq.question}
-                    className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm hover:shadow-md transition-all duration-300"
-                  >
-                    <button
-                      onClick={() => setOpenFaqIndex(isOpen ? null : index)}
-                      className="flex w-full items-center justify-between px-5 py-5 text-left text-sm font-bold text-charcoal transition hover:bg-gray-50 md:px-6 md:text-base"
-                    >
-                      <span>{faq.question}</span>
-                      {isOpen ? (
-                        <ChevronUp className="ml-4 h-5 w-5 shrink-0 text-amber-500" />
-                      ) : (
-                        <ChevronDown className="ml-4 h-5 w-5 shrink-0 text-gray-400" />
-                      )}
-                    </button>
-                    {isOpen && (
-                      <div className="border-t border-gray-100 px-5 pb-6 pt-4 text-xs font-medium leading-relaxed text-charcoal-muted md:px-6 md:text-sm bg-gray-50/50">
-                        {faq.answer}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Main Footer Section */}
       <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium">
