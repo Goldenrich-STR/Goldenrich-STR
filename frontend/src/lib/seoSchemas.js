@@ -35,3 +35,18 @@ export const organizationSchema = {
   },
   ...(organizationSocialLinks.length ? { sameAs: organizationSocialLinks } : {}),
 };
+
+export const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": `${SITE_URL}/#website`,
+  url: `${SITE_URL}/`,
+  name: "X-Space360",
+  alternateName: "X Space 360",
+  description:
+    "Discover and book residential stays, workspaces and event venues with X-Space360.",
+  publisher: {
+    "@id": `${SITE_URL}/#organization`,
+  },
+  inLanguage: ["en-IN", "mr-IN", "hi-IN"],
+};

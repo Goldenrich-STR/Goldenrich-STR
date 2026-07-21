@@ -1,26 +1,10 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
-import { organizationSchema } from "../lib/seoSchemas";
+import { organizationSchema, websiteSchema } from "../lib/seoSchemas";
 
 const SITE_NAME = "X-Space360";
 const SITE_URL = "https://x-space360.in";
 const DEFAULT_IMAGE = `${SITE_URL}/images/xspace360-og-image.jpg`;
-
-const DEFAULT_WEBSITE_SCHEMA = {
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "@id": "https://x-space360.in/#website",
-  "url": "https://x-space360.in",
-  "name": "X-Space360",
-  "potentialAction": {
-    "@type": "SearchAction",
-    "target": {
-      "@type": "EntryPoint",
-      "urlTemplate": "https://x-space360.in/guest/browse?city={search_term_string}"
-    },
-    "query-input": "required name=search_term_string"
-  }
-};
 
 const DEFAULT_LOCAL_BUSINESS_SCHEMA = {
   "@context": "https://schema.org",
@@ -112,7 +96,7 @@ const SEO = ({
   if (type === "website") {
     pageSchema = [
       organizationSchema,
-      DEFAULT_WEBSITE_SCHEMA,
+      websiteSchema,
       DEFAULT_LOCAL_BUSINESS_SCHEMA
     ];
   } else if (type === "property" && data) {
