@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, subscriptionAPI, uploadAPI, getImageUrl, bookingAPI, cmsAPI, adminAPI, propertyAPI } from '../services/api';
 import { 
-  Users, Building2, Calendar, IndianRupee, CheckCircle, 
+  Users, Building2, Calendar, IndianRupee, CheckCircle, BedDouble, Home,
   X, XCircle, Clock, TrendingUp, BarChart3, LogOut, Plus, Trash, Zap,
   Edit, Eye as EyeIcon, Shield, ChevronLeft, ChevronRight, Tag,
   Check, ListTodo, Heart, FileText, Sparkles, UploadCloud,
@@ -3634,19 +3634,47 @@ const PropertyModeration = () => {
     setDateTo('');
   };
 
+  const getStatusBadgeClass = (status) => {
+    if (status === 'live') return 'bg-[#10B981] text-white';
+    if (status === 'under_review') return 'bg-[#DBEAFE] text-[#2563EB]';
+    if (status === 'pending_verification') return 'bg-[#FEF3C7] text-[#D97706]';
+    if (status === 'rejected') return 'bg-[#FEE2E2] text-[#EF4444]';
+    if (status === 'blocked') return 'bg-[#EDE9FE] text-[#7C3AED]';
+    return 'bg-[#F3F4F6] text-[#4B5563]';
+  };
+
+  const paginatedProperties = [...filteredProperties]
+    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const visibleStart = filteredProperties.length ? ((currentPage - 1) * itemsPerPage) + 1 : 0;
+  const visibleEnd = Math.min(currentPage * itemsPerPage, filteredProperties.length);
+
   return (
     <div data-testid="property-moderation">
-      <div className="dashboard-card mb-6">
-        <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5 mb-4">
-          <h3 className="text-2xl font-bold text-charcoal">Property Moderation</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-7 gap-3 flex-1">
+      <div className="bg-white border border-[#E5E7EB] rounded-[8px] shadow-sm mb-5 overflow-hidden">
+        <div className="px-5 py-4 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-charcoal leading-tight">Property Moderation</h3>
+            <p className="text-xs text-[#6B7280] mt-1">Review and moderate properties listed on the platform</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleDownloadProperties}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-[6px] bg-[#047857] text-white font-bold text-xs hover:bg-[#065F46] transition shadow-sm"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Download CSV</span>
+          </button>
+        </div>
+
+        <div className="px-5 pb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
             <div className="relative md:col-span-2 xl:col-span-2">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
               <input
                 type="search"
                 value={propertySearch}
                 onChange={(e) => setPropertySearch(e.target.value)}
-                className="input-field w-full pl-11"
+                className="w-full h-10 pl-10 pr-3 rounded-[6px] border border-[#E5E7EB] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]"
                 placeholder="Search property name, ID, city..."
                 aria-label="Search properties"
               />
@@ -3654,7 +3682,7 @@ const PropertyModeration = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="input-field"
+              className="h-10 px-3 rounded-[6px] border border-[#E5E7EB] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]"
               data-testid="status-filter"
             >
               <option value="awaiting_final_approval">Awaiting Final Approval</option>
@@ -3670,7 +3698,7 @@ const PropertyModeration = () => {
             <select
               value={propertyTypeFilter}
               onChange={(e) => setPropertyTypeFilter(e.target.value)}
-              className="input-field"
+              className="h-10 px-3 rounded-[6px] border border-[#E5E7EB] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]"
               data-testid="property-type-filter"
             >
               <option value="all">All Property Types</option>
@@ -3692,36 +3720,37 @@ const PropertyModeration = () => {
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="input-field"
+              className="h-10 px-3 rounded-[6px] border border-[#E5E7EB] bg-white text-sm uppercase focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]"
               aria-label="From date"
             />
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="input-field"
+              className="h-10 px-3 rounded-[6px] border border-[#E5E7EB] bg-white text-sm uppercase focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]"
               aria-label="To date"
             />
-            <button
-              type="button"
-              onClick={handleDownloadProperties}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#047857] text-white font-bold text-sm hover:bg-[#065F46] transition shadow-sm"
-            >
-              <Download className="w-4 h-4" />
-              <span>Download CSV</span>
-            </button>
+          </div>
+          <div className="flex justify-center pt-4">
             <button
               type="button"
               onClick={clearPropertyFilters}
-              className="px-4 py-3 rounded-xl border border-[#E5E7EB] bg-white text-[#4B5563] font-bold text-sm hover:bg-gray-50 transition"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-[6px] border border-[#E5E7EB] bg-[#F9FAFB] text-[#4B5563] font-bold text-xs hover:bg-white transition"
             >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
               Clear Filters
             </button>
           </div>
         </div>
-        <p className="text-xs font-semibold text-[#6B7280]">
-          Showing {filteredProperties.length} of {properties.length} properties for the selected status, type and date range.
-        </p>
+        <div className="border-t border-[#E5E7EB] bg-[#F8FAFC] px-5 py-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-[#D1FAE5] text-[#10B981] flex items-center justify-center">
+            <Home className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-[#374151]">Showing {filteredProperties.length} of {properties.length} properties</p>
+            <p className="text-[11px] text-[#6B7280]">For the selected status, type and date range.</p>
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -3731,23 +3760,26 @@ const PropertyModeration = () => {
       ) : filteredProperties.length > 0 ? (
         <div data-testid="properties-list">
           <div className="space-y-4">
-            {[...filteredProperties]
-              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-              .map((property) => (
-              <div key={property.property_id} className="bg-white border border-[#F3F4F6] rounded-[24px] p-5 shadow-sm hover:shadow-subtle transition-all mb-4" data-testid={`property-${property.property_id}`}>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-center space-x-5 flex-1 min-w-0">
+            {paginatedProperties.map((property) => (
+              <div key={property.property_id} className="bg-white border border-[#E5E7EB] rounded-[8px] p-4 shadow-sm hover:shadow-md transition-all" data-testid={`property-${property.property_id}`}>
+                <div className="grid grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)_minmax(300px,430px)] gap-4 lg:items-center">
+                  <div className="relative w-28 h-28 rounded-[8px] overflow-hidden bg-[#F3F4F6]">
                     <img
                       src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                       alt={property.title}
-                      className="w-20 h-20 rounded-[18px] object-cover shadow-sm flex-shrink-0"
+                      className="w-full h-full object-cover"
                     />
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-[#1F2937] text-base leading-snug truncate">{property.title}</h4>
+                    <span className={`absolute left-2 top-2 px-2 py-1 rounded-[4px] text-[9px] font-bold uppercase tracking-wide ${getStatusBadgeClass(property.status)}`}>
+                      {(property.status || 'unknown').replaceAll('_', ' ')}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                      <h4 className="font-bold text-[#111827] text-base md:text-lg leading-snug truncate">{property.title}</h4>
                       <p className="text-[10px] text-[#6B7280] font-mono mt-1 truncate" title={property.property_id}>
                         Property ID: {property.property_id}
                       </p>
-                      <p className="text-xs text-[#6B7280] mt-1 font-medium truncate">
+                      <p className="text-xs text-[#6B7280] mt-2 font-medium truncate">
+                        <MapPin className="inline w-3.5 h-3.5 mr-1 text-[#6B7280]" />
                         {property.city} | {formatDisplayLabel(property.bhk_type)} | {formatCategoryLabel(property.category)}
                       </p>
                       <div className="flex items-center mt-2.5">
@@ -3779,13 +3811,36 @@ const PropertyModeration = () => {
                         </div>
                       )}
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2.5 flex-wrap justify-start md:justify-end">
+                  <div className="flex flex-col gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="rounded-[6px] bg-[#F9FAFB] border border-[#EEF2F7] p-3 min-h-[70px] flex items-center gap-3">
+                        <Building2 className="w-5 h-5 text-[#374151]" />
+                        <div>
+                          <p className="text-[10px] text-[#6B7280] font-semibold">Property Type</p>
+                          <p className="text-xs font-bold text-[#111827]">{formatPropertyTypeLabel(property.property_type)}</p>
+                        </div>
+                      </div>
+                      <div className="rounded-[6px] bg-[#F9FAFB] border border-[#EEF2F7] p-3 min-h-[70px] flex items-center gap-3">
+                        <BedDouble className="w-5 h-5 text-[#2563EB]" />
+                        <div>
+                          <p className="text-[10px] text-[#6B7280] font-semibold">Bedrooms</p>
+                          <p className="text-xs font-bold text-[#111827]">{formatDisplayLabel(property.bhk_type)}</p>
+                        </div>
+                      </div>
+                      <div className="rounded-[6px] bg-[#F9FAFB] border border-[#EEF2F7] p-3 min-h-[70px] flex items-center gap-3">
+                        <Users className="w-5 h-5 text-[#374151]" />
+                        <div>
+                          <p className="text-[10px] text-[#6B7280] font-semibold">Max Guests</p>
+                          <p className="text-xs font-bold text-[#111827]">{property.max_guests || 0} Guests</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 flex-wrap justify-start md:justify-end">
                     {statusFilter !== 'deleted' ? (
                       <>
                         <button
                           onClick={() => navigate(`/property/${property.property_id}`)}
-                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#E5E7EB] text-[#4B5563] bg-white rounded-full font-bold text-xs hover:bg-gray-50 transition-all shadow-sm"
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#E5E7EB] text-[#4B5563] bg-white rounded-[6px] font-bold text-xs hover:bg-gray-50 transition-all shadow-sm"
                           title="View property"
                         >
                           <EyeIcon className="w-3.5 h-3.5" />
@@ -3793,7 +3848,7 @@ const PropertyModeration = () => {
                         </button>
                         <button
                           onClick={() => navigate(`/host/list-property?edit=${property.property_id}`)}
-                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#DBEAFE] text-[#2563EB] bg-[#EFF6FF] rounded-full font-bold text-xs hover:bg-[#DBEAFE]/80 transition-all shadow-sm"
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#DBEAFE] text-[#2563EB] bg-[#EFF6FF] rounded-[6px] font-bold text-xs hover:bg-[#DBEAFE]/80 transition-all shadow-sm"
                           title="Edit property"
                         >
                           <Edit className="w-3.5 h-3.5" />
@@ -3801,7 +3856,7 @@ const PropertyModeration = () => {
                         </button>
                         <button
                           onClick={() => setDeleteState({ property, reason: '', error: '' })}
-                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#FECACA] text-[#DC2626] bg-[#FEF2F2] rounded-full font-bold text-xs hover:bg-[#FEE2E2] transition-all shadow-sm"
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#FECACA] text-[#DC2626] bg-[#FEF2F2] rounded-[6px] font-bold text-xs hover:bg-[#FEE2E2] transition-all shadow-sm"
                           title="Delete property"
                         >
                           <Trash className="w-3.5 h-3.5" />
@@ -3811,7 +3866,7 @@ const PropertyModeration = () => {
                     ) : (
                       <button
                         onClick={() => setPermanentDeleteState({ property, confirmation: '', error: '' })}
-                        className="flex items-center space-x-1.5 px-4 py-2 border border-[#991B1B] text-white bg-[#B91C1C] rounded-full font-bold text-xs hover:bg-[#991B1B] transition-all shadow-sm"
+                        className="flex items-center space-x-1.5 px-4 py-2 border border-[#991B1B] text-white bg-[#B91C1C] rounded-[6px] font-bold text-xs hover:bg-[#991B1B] transition-all shadow-sm"
                         title="Permanently delete property"
                       >
                         <Trash className="w-3.5 h-3.5" />
@@ -3822,46 +3877,50 @@ const PropertyModeration = () => {
                       <>
                         <button
                           onClick={() => openVerificationDetails(property)}
-                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#BBF7D0] text-[#15803D] bg-[#DCFCE7] rounded-full font-bold text-xs hover:bg-[#BBF7D0]/80 transition-all shadow-sm"
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#BBF7D0] text-[#15803D] bg-[#DCFCE7] rounded-[6px] font-bold text-xs hover:bg-[#BBF7D0]/80 transition-all shadow-sm"
                         >
                           <CheckCircle className="w-3.5 h-3.5" />
                           <span>Verify & Approve</span>
                         </button>
                         <button
                           onClick={() => rejectProperty(property.property_id)}
-                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#FEE2E2] text-[#EF4444] bg-[#FEF2F2] rounded-full font-bold text-xs hover:bg-[#FEE2E2]/80 transition-all shadow-sm"
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#FEE2E2] text-[#EF4444] bg-[#FEF2F2] rounded-[6px] font-bold text-xs hover:bg-[#FEE2E2]/80 transition-all shadow-sm"
                         >
                           <XCircle className="w-3.5 h-3.5" />
                           <span>Reject</span>
                         </button>
                       </>
                     )}
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          {filteredProperties.length > itemsPerPage && (
-            <div className="mt-8 flex justify-center items-center space-x-4">
+          <div className="mt-4 flex items-center justify-between gap-3 text-xs text-[#6B7280]">
+            <span>
+              Showing {visibleStart} to {visibleEnd} of {filteredProperties.length} properties
+            </span>
+            <div className="flex items-center space-x-2">
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-9 h-9 rounded-[6px] border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-sm font-semibold text-charcoal">
-                Page {currentPage} of {Math.ceil(filteredProperties.length / itemsPerPage)}
+              <span className="w-9 h-9 rounded-[6px] bg-[#D4AF37] text-white flex items-center justify-center font-bold">
+                {currentPage}
               </span>
               <button 
                 onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredProperties.length / itemsPerPage), p + 1))}
                 disabled={currentPage === Math.ceil(filteredProperties.length / itemsPerPage)}
-                className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-9 h-9 rounded-[6px] border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-          )}
+          </div>
         </div>
       ) : (
         <div className="dashboard-card text-center py-12">
