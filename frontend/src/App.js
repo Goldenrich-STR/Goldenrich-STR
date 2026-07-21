@@ -1,8 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
-import { HelmetProvider } from "react-helmet-async";
 import SEO from "./components/SEO";
 
 // Pages (Code-splitted with dynamic lazy imports)
@@ -309,16 +308,12 @@ function AppRoutes() {
 function App() {
   return (
     <div className="App">
-      <HelmetProvider>
-        <BrowserRouter>
-          <AuthProvider>
-            <GlobalAlertDialog />
-            <Suspense fallback={<ScreenLoading />}>
-              <AppRoutes />
-            </Suspense>
-          </AuthProvider>
-        </BrowserRouter>
-      </HelmetProvider>
+      <AuthProvider>
+        <GlobalAlertDialog />
+        <Suspense fallback={<ScreenLoading />}>
+          <AppRoutes />
+        </Suspense>
+      </AuthProvider>
     </div>
   );
 }
