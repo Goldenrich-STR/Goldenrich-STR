@@ -1835,7 +1835,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           const SizedBox(height: 32),
 
                           // Meet your host section (Airbnb style)
-                          _buildAirbnbMeetHostSection(),
+                          _buildAirbnbMeetHostSection(prop),
                         ],
                       ),
                     ),
@@ -2650,7 +2650,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     );
   }
 
-  Widget _buildAirbnbMeetHostSection() {
+  Widget _buildAirbnbMeetHostSection(PropertyModel prop) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

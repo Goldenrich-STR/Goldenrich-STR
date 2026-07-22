@@ -29,6 +29,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  CreditCard,
   Zap,
   Users,
   Grid,
