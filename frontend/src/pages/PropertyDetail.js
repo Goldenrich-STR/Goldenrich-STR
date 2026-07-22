@@ -91,6 +91,23 @@ const AMENITY_LABELS = {
   security: 'Professional Event Security',
 };
 
+const SITE_URL = 'https://x-space360.in';
+
+const toAbsoluteSiteUrl = (value) => {
+  if (!value) return null;
+  const cleanValue = String(value).split('#')[0].trim();
+  if (!cleanValue) return null;
+  if (/^https?:\/\//i.test(cleanValue)) return cleanValue;
+  if (cleanValue.startsWith('/api/')) return `${SITE_URL}${cleanValue}`;
+  if (cleanValue.startsWith('api/')) return `${SITE_URL}/${cleanValue}`;
+  if (cleanValue.startsWith('/uploads/')) return `${SITE_URL}/api${cleanValue}`;
+  if (cleanValue.startsWith('uploads/')) return `${SITE_URL}/api/${cleanValue}`;
+  if (/\.(png|jpe?g|webp|gif|avif)$/i.test(cleanValue)) {
+    return `${SITE_URL}/api/uploads/${cleanValue.replace(/^\/+/, '')}`;
+  }
+  return `${SITE_URL}/${cleanValue.replace(/^\/+/, '')}`;
+};
+
 const getBhkTypeLabel = (category, bhkType, maxGuests) => {
   if (!bhkType) return 'N/A';
   if (category === 'commercial') {
@@ -1047,24 +1064,135 @@ const PropertyDetail = () => {
   }
 
 
-  const seoData = {
-    ...property,
-    reviews: reviews
+  const propertySlug = property.slug || property.property_slug || property.property_id;
+  const propertyPath = `/property/${propertySlug}`;
+  const propertyName = property.name || property.title || 'Property';
+  const propertyType = formatPropertyTypeLabel(property.property_type || property.propertyType || property.category || 'property');
+  const propertyCity = property.city || 'India';
+  const bedroomLabel = getBhkTypeLabel(property.category, property.bhk_type || property.bedrooms, property.max_guests);
+  const guestCapacity = Number(property.guestCapacity || property.max_guests || property.maxGuests || 0);
+  const seoImages = images
+    .map((img) => toAbsoluteSiteUrl(img))
+    .filter(Boolean);
+  const coverImage = toAbsoluteSiteUrl(property.coverImage || property.cover_image) || seoImages[0];
+  const amenitiesForSeo = Array.isArray(property.amenities) ? property.amenities : [];
+  const propertySeoDescription = `Book ${propertyName}, a ${propertyType} in ${propertyCity} with ${bedroomLabel} bedrooms, ${guestCapacity || 'flexible'} guest capacity and selected amenities.`;
+  const propertyKeywords = [
+    `${propertyType} in ${propertyCity}`,
+    `${propertyCity} property booking`,
+    propertyName,
+    ...amenitiesForSeo.slice(0, 6).map((amenity) => `${formatReadableText(amenity)} ${propertyCity}`)
+  ].filter(Boolean);
+  const propertyFaqs = [
+    {
+      question: `What type of property is ${propertyName}?`,
+      answer: `${propertyName} is a ${propertyType} listed in ${propertyCity} on X-Space360.`
+    },
+    {
+      question: `How many guests can stay at ${propertyName}?`,
+      answer: `${propertyName} can host ${guestCapacity || 'the configured number of'} guests. Guests above the included capacity may be charged as per the host pricing rules.`
+    },
+    {
+      question: `What is the starting price for ${propertyName}?`,
+      answer: `The starting price for ${propertyName} is Rs ${Number(property.price_per_night || property.price || 0).toLocaleString('en-IN')} per ${property.pricing_cycle === 'hourly' ? 'hour' : property.pricing_cycle === 'weekly' ? 'week' : property.pricing_cycle === 'monthly' ? 'month' : property.category === 'commercial' ? 'day' : 'night'}.`
+    },
+    {
+      question: `Where is ${propertyName} located?`,
+      answer: `${propertyName} is located in ${property.address ? `${property.address}, ` : ''}${propertyCity}${property.state ? `, ${property.state}` : ''}.`
+    }
+  ];
+  const propertyEntitySchema = {
+    "@type": property.category === "commercial" ? "Place" : "Accommodation",
+    "@id": `${SITE_URL}${propertyPath}#property`,
+    "name": propertyName,
+    "description": property.description || propertySeoDescription,
+    "url": `${SITE_URL}${propertyPath}`,
+    "image": seoImages.length ? seoImages : [coverImage].filter(Boolean),
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": property.address || "",
+      "addressLocality": propertyCity,
+      "addressRegion": property.state || "",
+      "postalCode": property.pin_code || "",
+      "addressCountry": "IN"
+    },
+    "geo": property.latitude && property.longitude ? {
+      "@type": "GeoCoordinates",
+      "latitude": Number(property.latitude),
+      "longitude": Number(property.longitude)
+    } : undefined,
+    "amenityFeature": amenitiesForSeo.map((amenity) => ({
+      "@type": "LocationFeatureSpecification",
+      "name": formatReadableText(amenity),
+      "value": true
+    })),
+    "maximumAttendeeCapacity": guestCapacity || undefined,
+    "numberOfRooms": property.bhk_type || property.bedrooms || undefined,
+    "offers": {
+      "@type": "Offer",
+      "price": Number(property.price_per_night || property.price || 0),
+      "priceCurrency": "INR",
+      "availability": property.status === "live" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      "url": `${SITE_URL}${propertyPath}`
+    },
+    "aggregateRating": (property.rating || reviewSummary.rating_avg) && (property.review_count || reviewSummary.rating_count) ? {
+      "@type": "AggregateRating",
+      "ratingValue": Number(property.rating || reviewSummary.rating_avg),
+      "reviewCount": Number(property.review_count || reviewSummary.rating_count),
+      "bestRating": "5",
+      "worstRating": "1"
+    } : undefined,
+    "review": reviews.slice(0, 5).map((review) => ({
+      "@type": "Review",
+      "author": {
+        "@type": "Person",
+        "name": review.guest_name || review.user_name || "Guest"
+      },
+      "datePublished": review.created_at ? String(review.created_at).substring(0, 10) : undefined,
+      "reviewBody": review.comment || "",
+      "reviewRating": {
+        "@type": "Rating",
+        "ratingValue": Number(review.rating || 5),
+        "bestRating": "5",
+        "worstRating": "1"
+      }
+    }))
+  };
+  const propertySchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      propertyEntitySchema,
+      {
+        "@type": "FAQPage",
+        "@id": `${SITE_URL}${propertyPath}#faq`,
+        "mainEntity": propertyFaqs.map((faq) => ({
+          "@type": "Question",
+          "name": faq.question,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": faq.answer
+          }
+        }))
+      }
+    ]
   };
   const seoBreadcrumbs = [
     { name: "Home", url: "/" },
     { name: property.category === "residential" ? "Residential" : property.category === "commercial" ? "Commercial" : "Event Venues", url: `/guest/browse?category=${property.category}` },
     { name: property.city, url: `/guest/browse?city=${property.city}` },
-    { name: property.title, url: `/property/${property.property_id}` }
+    { name: propertyName, url: propertyPath }
   ];
 
   return (
     <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
       <SEO
-        title={property.title}
-        description={property.description}
+        title={`${propertyName} in ${propertyCity}`}
+        description={propertySeoDescription}
+        path={propertyPath}
+        image={coverImage}
+        keywords={propertyKeywords}
         type="property"
-        data={seoData}
+        schema={propertySchema}
         breadcrumbs={seoBreadcrumbs}
         seo={property?.seo}
       />
@@ -1249,6 +1377,39 @@ const PropertyDetail = () => {
                  </div>
                ))}
             </div>
+
+            {/* AEO Quick Facts */}
+            <section className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium" aria-labelledby="property-quick-facts">
+              <h2 id="property-quick-facts" className="text-2xl font-bold tracking-tight text-charcoal mb-2">
+                Quick facts about {propertyName}
+              </h2>
+              <p className="text-sm font-medium text-charcoal-muted mb-5">
+                {propertyName} is a {propertyType} in {propertyCity} with pricing, guest capacity and booking details shown below.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { icon: MapPin, label: 'Location', value: `${propertyCity}${property.state ? `, ${property.state}` : ''}` },
+                  { icon: Building2, label: 'Property type', value: propertyType },
+                  { icon: Users, label: property.category === 'commercial' ? 'Staff capacity' : 'Guest capacity', value: guestCapacity ? `${guestCapacity} ${property.category === 'commercial' ? 'staff' : 'guests'}` : 'Flexible capacity' },
+                  { icon: CalendarIcon, label: 'Minimum stay', value: `${property.minimum_stay_days || 1} ${Number(property.minimum_stay_days || 1) === 1 ? 'night' : 'nights'}` },
+                  { icon: CreditCard, label: 'Starting price', value: `Rs ${Number(property.price_per_night || 0).toLocaleString('en-IN')}` },
+                  { icon: CheckCircle2, label: 'Amenities', value: amenitiesForSeo.length ? amenitiesForSeo.slice(0, 3).map(formatReadableText).join(', ') : 'Amenities available as listed' },
+                ].map((fact) => {
+                  const Icon = fact.icon;
+                  return (
+                    <div key={fact.label} className="flex items-start gap-4 rounded-2xl border border-gray-100 bg-gray-50/60 p-4">
+                      <div className="rounded-xl bg-white p-2.5 text-terracotta shadow-sm">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-charcoal-muted">{fact.label}</p>
+                        <p className="mt-1 text-sm font-bold text-charcoal">{fact.value}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
 
             {/* Description */}
             <div className="prose prose-sand max-w-none">
@@ -1590,6 +1751,24 @@ const PropertyDetail = () => {
                 })}
               </div>
             </div>
+
+            {/* Property FAQ Section */}
+            <section className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium" aria-labelledby="property-faq">
+              <h2 id="property-faq" className="text-2xl font-bold tracking-tight text-charcoal mb-2">
+                Frequently asked questions
+              </h2>
+              <p className="text-sm font-medium text-charcoal-muted mb-5">
+                Direct answers about {propertyName} for guests comparing properties before booking.
+              </p>
+              <div className="space-y-3">
+                {propertyFaqs.map((faq) => (
+                  <article key={faq.question} className="rounded-2xl border border-gray-100 bg-gray-50/60 p-4">
+                    <h3 className="text-sm font-bold text-charcoal mb-2">{faq.question}</h3>
+                    <p className="text-sm font-medium leading-relaxed text-charcoal-muted">{faq.answer}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
 
             {/* Nearby Famous Places Section */}
             {property.nearby_places && property.nearby_places.length > 0 && (
