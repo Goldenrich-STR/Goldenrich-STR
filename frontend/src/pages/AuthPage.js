@@ -325,7 +325,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
       />
 
       {/* StayVista style Modal Box (Fixed height to prevent page scrolling) */}
-      <div className="relative w-full max-w-[980px] bg-white rounded-3xl shadow-2xl flex overflow-hidden border border-gray-150 h-[650px] z-10">
+      <div className="relative w-full max-w-[980px] bg-white rounded-3xl shadow-2xl flex overflow-hidden border border-gray-150 h-[650px] max-h-[calc(100vh-2rem)] z-10">
         
         {/* Close Button */}
         <button

@@ -1880,7 +1880,7 @@ const LandingPage = () => {
         </div>
 
         {/* Center Menu Links (Flat Style) */}
-        <div className={`hidden md:flex items-center space-x-8 font-bold text-xs uppercase tracking-widest transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
+        <div className={`hidden lg:flex items-center space-x-8 font-bold text-xs uppercase tracking-widest transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
@@ -1914,17 +1914,8 @@ const LandingPage = () => {
         </div>
 
         {/* Right Side Options */}
-        <div className="hidden md:flex items-center space-x-4">
-          {/* Language Selector */}
-          <div className={`backdrop-blur-md px-3 py-1.5 rounded-full border transition-all duration-300 ${isNavScrolled ? 'bg-gray-50 border-gray-200' : 'bg-white/10 border-white/20'}`}>
-            <LanguageSelector
-              currentLang={lang}
-              onLanguageChange={(newLang) => {
-                setLang(newLang);
-                localStorage.setItem('preferredLanguage', newLang);
-              }}
-            />
-          </div>
+        <div className="hidden lg:flex items-center space-x-6">
+          <LanguageSelector />
 
           {/* Get in Touch Button */}
           <button 
@@ -1976,7 +1967,7 @@ const LandingPage = () => {
         </div>
 
         {/* Mobile Hamburger Icon */}
-        <div className="md:hidden flex items-center">
+        <div className="lg:hidden flex items-center">
           <button onClick={() => setIsMobileMenuOpen(true)} className={`${isNavScrolled ? 'text-charcoal' : 'text-white'} hover:text-terracotta transition p-2`}>
             <Menu className="w-8 h-8 drop-shadow-subtle" />
           </button>
@@ -1985,7 +1976,7 @@ const LandingPage = () => {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-white md:hidden">
+        <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-white lg:hidden">
           <div className="flex justify-between items-center mb-12">
             <div className="cursor-pointer" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
               <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain logo-white" />
@@ -2028,15 +2019,8 @@ const LandingPage = () => {
               <Phone className="w-5 h-5" />
               <span>Get in Touch</span>
             </button>
-            <div className="py-2 border-b border-white/10 flex items-center justify-between">
-              <span className="text-2xl font-bold">Language</span>
-              <LanguageSelector
-                currentLang={lang}
-                onLanguageChange={(newLang) => {
-                  setLang(newLang);
-                  localStorage.setItem('preferredLanguage', newLang);
-                }}
-              />
+            <div className="py-3 border-b border-white/10 flex flex-col items-start">
+              <LanguageSelector />
             </div>
 
             {user ? (
@@ -2075,7 +2059,7 @@ const LandingPage = () => {
       )}
 
       {/* ===== PREMIUM SLIDING IMAGE HERO ===== */}
-      <section className="relative w-full z-30 bg-white px-4 md:px-[10vw] pt-0 pb-0">
+      <section className="relative w-full z-30 bg-white px-0 pt-0 pb-0">
       <div className="relative h-[62vh] min-h-[560px] max-h-[640px] w-full z-30 overflow-visible bg-white shadow-premium">
         
         {/* ── Sliding/Fading Background Images ── */}
@@ -2144,7 +2128,7 @@ const LandingPage = () => {
                     )}
 
                     {/* Capsule Search Bar */}
-                    <div className="flex flex-col md:flex-row items-center bg-white rounded-3xl md:rounded-full w-full shadow-elevated border border-sand-200/80 p-2 md:p-3 relative z-50">
+                    <div className="flex flex-col lg:flex-row items-center bg-white rounded-3xl lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-2 lg:p-3 relative z-50">
                         
                         {/* Location */}
                         <div className="relative flex-1 w-full">
@@ -2154,7 +2138,7 @@ const LandingPage = () => {
                               const el = document.getElementById('landing-destination');
                               if (el) el.focus();
                             }}
-                            className="flex items-center px-4 md:px-6 py-3 w-full cursor-pointer group rounded-3xl md:rounded-full hover:bg-stone/50 transition duration-200"
+                            className="flex items-center px-4 lg:px-6 py-3 w-full cursor-pointer group rounded-3xl lg:rounded-full hover:bg-stone/50 transition duration-200"
                           >
                             <MapPin className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
@@ -2218,10 +2202,10 @@ const LandingPage = () => {
                             </div>
                           )}
                         </div>
-                        <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+                        <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
                         
                         {/* Check-in */}
-                        <div className="relative flex items-center px-4 md:px-6 py-3 w-full md:w-auto hover:bg-stone/50 rounded-full transition duration-200 group shrink-0">
+                        <div className="relative flex items-center px-4 lg:px-6 py-3 w-full lg:w-auto hover:bg-stone/50 rounded-full transition duration-200 group shrink-0">
                           <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                           <div className="w-full text-left pointer-events-none z-0">
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Check-in</p>
@@ -2242,12 +2226,12 @@ const LandingPage = () => {
                         </div>
                         
                         {/* Arrow Separator */}
-                        <div className="hidden md:flex items-center text-gray-300 mx-1 shrink-0">
+                        <div className="hidden lg:flex items-center text-gray-300 mx-1 shrink-0">
                           <ArrowRight className="w-4 h-4" />
                         </div>
                         
                         {/* Check-out */}
-                        <div className="relative flex items-center px-4 md:px-6 py-3 w-full md:w-auto hover:bg-stone/50 rounded-full transition duration-200 group shrink-0">
+                        <div className="relative flex items-center px-4 lg:px-6 py-3 w-full lg:w-auto hover:bg-stone/50 rounded-full transition duration-200 group shrink-0">
                           <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                           <div className="w-full text-left pointer-events-none z-0">
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Check-out</p>
@@ -2266,13 +2250,13 @@ const LandingPage = () => {
                             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                           />
                         </div>
-                        <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+                        <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
 
                         {/* Guests */}
                         <div className="relative flex-1 w-full">
                           <div 
                             onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                            className="flex items-center px-4 md:px-6 py-3 w-full cursor-pointer hover:bg-stone/50 rounded-full transition duration-200 group"
+                            className="flex items-center px-4 lg:px-6 py-3 w-full cursor-pointer hover:bg-stone/50 rounded-full transition duration-200 group"
                           >
                             <User className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
@@ -2339,10 +2323,10 @@ const LandingPage = () => {
                         </div>
 
                         {/* Search Button */}
-                        <div className="w-full md:w-auto p-1 shrink-0">
+                        <div className="w-full lg:w-auto p-1 shrink-0">
                           <button
                             onClick={handleSearch}
-                            className="w-full md:w-auto bg-[#1A1A1A] hover:bg-black text-white font-bold text-xs uppercase tracking-widest px-8 py-4 rounded-2xl md:rounded-full transition duration-200 shadow-md cursor-pointer"
+                            className="w-full lg:w-auto bg-[#1A1A1A] hover:bg-black text-white font-bold text-xs uppercase tracking-widest px-8 py-4 rounded-2xl lg:rounded-full transition duration-200 shadow-md cursor-pointer"
                           >
                             SEARCH
                           </button>
@@ -2378,12 +2362,12 @@ const LandingPage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-x-3 gap-y-6 md:gap-x-6 md:gap-y-8">
+            <div className="flex overflow-x-auto no-scrollbar snap-x scroll-smooth pb-4 gap-6 md:grid md:grid-cols-6 lg:grid-cols-8 md:gap-x-6 md:gap-y-8 md:overflow-visible md:pb-0">
               {DESTINATION_SHORTCUTS.map((label, index) => (
                 <button
                   key={label}
                   onClick={() => navigate(`/guest/browse?city=${encodeURIComponent(label)}`)}
-                  className="group flex flex-col items-center gap-1.5 cursor-pointer"
+                  className="group flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 snap-start min-w-[76px] md:min-w-0"
                 >
                   <div className="flex h-16 md:h-20 items-center justify-center transition-transform duration-300 group-hover:-translate-y-1">
                     <DestinationLineIcon label={label} />

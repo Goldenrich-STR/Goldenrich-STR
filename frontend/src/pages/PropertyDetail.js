@@ -1797,7 +1797,7 @@ const PropertyDetail = () => {
 
           {/* Sticky Booking Widget */}
           <div className="lg:col-span-1">
-            <div className="card-premium sticky top-28 p-8 animate-slide-up" style={{ animationDelay: '400ms' }}>
+            <div className="card-premium sticky top-28 p-8 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar animate-slide-up" style={{ animationDelay: '400ms' }}>
               <div className="flex items-baseline justify-between mb-8">
                 <div>
                   {property.category === 'event_venue' ? (

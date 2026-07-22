@@ -281,7 +281,7 @@ const SupportPage = () => {
         </div>
 
         {/* Center Pill Links */}
-        <div className="hidden md:flex h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-charcoal-muted bg-sand-50 border border-sand-200 rounded-none shadow-sm self-center">
+        <div className="hidden lg:flex h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-charcoal-muted bg-sand-50 border border-sand-200 rounded-none shadow-sm self-center">
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
@@ -344,7 +344,7 @@ const SupportPage = () => {
         </div>
 
         {/* Right — Get the app (Desktop) */}
-        <div className="hidden md:flex items-center">
+        <div className="hidden lg:flex items-center">
           <button onClick={() => navigate('/login')} className="flex items-center space-x-2 border border-sand-300 rounded-none px-5 py-2 hover:bg-sand-50 transition shadow-sm text-charcoal">
             <span className="text-[10px] font-bold uppercase tracking-widest">Get the app</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -352,7 +352,7 @@ const SupportPage = () => {
         </div>
 
         {/* Mobile Hamburger Icon */}
-        <div className="md:hidden flex items-center">
+        <div className="lg:hidden flex items-center">
           <button onClick={() => setIsMobileMenuOpen(true)} className="text-charcoal hover:text-terracotta transition p-2">
             <Menu className="w-8 h-8" />
           </button>
@@ -361,7 +361,7 @@ const SupportPage = () => {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto text-white md:hidden animate-fadeIn">
+        <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto text-white lg:hidden animate-fadeIn">
           <div className="flex justify-between items-center mb-12">
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain cursor-pointer brightness-0 invert" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }} />
             <button onClick={() => setIsMobileMenuOpen(false)} className="text-white hover:text-terracotta transition p-2 bg-white/10 rounded-none">

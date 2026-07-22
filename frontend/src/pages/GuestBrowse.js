@@ -689,7 +689,7 @@ const GuestBrowse = () => {
         <div className="w-full max-w-5xl mx-auto relative z-50">
           <form
             onSubmit={handleSearch}
-            className="flex flex-col md:flex-row items-center bg-white rounded-2xl md:rounded-full w-full shadow-elevated border border-gray-100 relative z-50 animate-fade-in"
+            className="flex flex-col lg:flex-row items-center bg-white rounded-2xl lg:rounded-full w-full shadow-elevated border border-gray-100 relative z-50 animate-fade-in"
           >
               
               {/* Location */}
@@ -700,7 +700,7 @@ const GuestBrowse = () => {
                     const el = document.getElementById('browse-destination');
                     if (el) el.focus();
                   }}
-                  className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer group rounded-t-2xl md:rounded-l-full border-b border-gray-100 md:border-none hover:bg-gray-50 transition"
+                  className="flex items-center px-4 lg:px-6 py-4 w-full cursor-pointer group rounded-t-2xl lg:rounded-l-full border-b border-gray-100 lg:border-none hover:bg-gray-50 transition"
                 >
                   <MapPin className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors" />
                   <div className="w-full text-left">
@@ -761,10 +761,10 @@ const GuestBrowse = () => {
                   </div>
                 )}
               </div>
-              <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+              <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
               
               {/* Check-in */}
-              <div className="relative flex items-center px-4 md:px-6 py-4 w-full md:w-auto border-b border-gray-100 md:border-none hover:bg-gray-50 transition group">
+              <div className="relative flex items-center px-4 lg:px-6 py-4 w-full lg:w-auto border-b border-gray-100 lg:border-none hover:bg-gray-50 transition group">
                 <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
                 <div className="w-full text-left pointer-events-none z-0">
                   <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
@@ -783,10 +783,10 @@ const GuestBrowse = () => {
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
               </div>
-              <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+              <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
               
               {/* Check-out */}
-              <div className="relative flex items-center px-4 md:px-6 py-4 w-full md:w-auto border-b border-gray-100 md:border-none hover:bg-gray-50 transition group">
+              <div className="relative flex items-center px-4 lg:px-6 py-4 w-full lg:w-auto border-b border-gray-100 lg:border-none hover:bg-gray-50 transition group">
                 <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
                 <div className="w-full text-left pointer-events-none z-0">
                   <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
@@ -805,7 +805,7 @@ const GuestBrowse = () => {
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                 />
               </div>
-              <div className="hidden md:block w-[1px] h-8 bg-gray-200" />
+              <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
 
 
               
@@ -813,7 +813,7 @@ const GuestBrowse = () => {
               <div className="relative flex-1 w-full">
                 <div 
                   onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                  className="flex items-center px-4 md:px-6 py-4 w-full cursor-pointer hover:bg-gray-50 transition rounded-b-2xl md:rounded-none"
+                  className="flex items-center px-4 lg:px-6 py-4 w-full cursor-pointer hover:bg-gray-50 transition rounded-b-2xl lg:rounded-none"
                 >
                   <User className="w-5 h-5 text-gray-400 mr-3" />
                   <div className="text-left">
@@ -880,7 +880,7 @@ const GuestBrowse = () => {
               </div>
               
               {/* Filter & Search Buttons */}
-              <div className="p-2 w-full md:w-auto flex items-center gap-2 shrink-0">
+              <div className="p-2 w-full lg:w-auto flex items-center gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowFilters((v) => !v)}
