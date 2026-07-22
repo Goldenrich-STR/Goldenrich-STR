@@ -15,6 +15,25 @@ import ScrollReveal from '../components/ui/ScrollReveal';
 
 const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
 
+const HOME_FAQS = [
+  {
+    question: "What is X-Space360 and how does it work?",
+    answer: "X-Space360 is a curated premium short-term rental network. We connect property owners and verified hosts with guests who want to book residential stays, commercial spaces and event venues."
+  },
+  {
+    question: "How can I register my property as a Host?",
+    answer: "You can register as a host from the X-Space360 portal, submit your property and verification details, complete the review process and publish your property after approval."
+  },
+  {
+    question: "What types of properties can I list?",
+    answer: "Hosts can list residential properties such as villas, farmhouses and apartments, commercial properties such as offices and workspaces, and event venues such as banquet halls, lawns and rooftops."
+  },
+  {
+    question: "How are guest bookings and payments secured?",
+    answer: "X-Space360 verifies booking details, confirms payments through the platform checkout flow and manages host payouts through the account and payout system."
+  }
+];
+
 const homeSchema = {
   "@context": "https://schema.org",
   "@graph": [
@@ -34,6 +53,18 @@ const homeSchema = {
         "@id": "https://x-space360.in/#organization",
       },
       inLanguage: "en-IN",
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://x-space360.in/#faq",
+      mainEntity: HOME_FAQS.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: faq.answer,
+        },
+      })),
     },
   ],
 };
@@ -1864,25 +1895,6 @@ const LandingPage = () => {
     );
   };
 
-  const faqItems = [
-    {
-      question: "What is X-Space360 and how does it work?",
-      answer: "X-Space360 is a curated premium short-term rental network. We connect property owners (hosts) with guests seeking high-end residential, commercial, or event spaces. All listed spaces undergo a strict coordinate geofencing and physical RM quality audit before going live."
-    },
-    {
-      question: "How can I register my property as a Host?",
-      answer: "You can register as a Host from our portal. Upload the required verification documents, our team schedules a physical inspection, and once verified your property gets a green trust badge and goes live."
-    },
-    {
-      question: "What types of properties can I list?",
-      answer: "You can list Residential spaces like villas and apartments, Commercial spaces like offices and meeting rooms, and Event Venues like banquet halls, lawns, and rooftops."
-    },
-    {
-      question: "How are guest bookings and payments secured?",
-      answer: "We use secure checkout locks and Razorpay payment verification. When a guest reserves, the calendar is temporarily locked to prevent double bookings and payouts are settled through tax-compliant invoice protocols."
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-white font-sans text-[#2A2A2A] overflow-x-hidden selection:bg-terracotta/20">
       <SEO
@@ -3194,8 +3206,6 @@ const LandingPage = () => {
           </div>
           </ScrollReveal>
 
-          {false && (
-          <>
           {/* FAQ Section */}
           <ScrollReveal duration="duration-[950ms]">
             <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8 md:mb-12 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12 text-left">
@@ -3271,8 +3281,6 @@ const LandingPage = () => {
             </div>
           </div>
           </ScrollReveal>
-          </>
-          )}
 
 
           

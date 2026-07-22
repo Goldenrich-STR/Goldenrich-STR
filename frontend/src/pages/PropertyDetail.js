@@ -1083,8 +1083,25 @@ const PropertyDetail = () => {
     propertyName,
     ...amenitiesForSeo.slice(0, 6).map((amenity) => `${formatReadableText(amenity)} ${propertyCity}`)
   ].filter(Boolean);
-  const propertySchema = {
-    "@context": "https://schema.org",
+  const propertyFaqs = [
+    {
+      question: `What type of property is ${propertyName}?`,
+      answer: `${propertyName} is a ${propertyType} listed in ${propertyCity} on X-Space360.`
+    },
+    {
+      question: `How many guests can stay at ${propertyName}?`,
+      answer: `${propertyName} can host ${guestCapacity || 'the configured number of'} guests. Guests above the included capacity may be charged as per the host pricing rules.`
+    },
+    {
+      question: `What is the starting price for ${propertyName}?`,
+      answer: `The starting price for ${propertyName} is Rs ${Number(property.price_per_night || property.price || 0).toLocaleString('en-IN')} per ${property.pricing_cycle === 'hourly' ? 'hour' : property.pricing_cycle === 'weekly' ? 'week' : property.pricing_cycle === 'monthly' ? 'month' : property.category === 'commercial' ? 'day' : 'night'}.`
+    },
+    {
+      question: `Where is ${propertyName} located?`,
+      answer: `${propertyName} is located in ${property.address ? `${property.address}, ` : ''}${propertyCity}${property.state ? `, ${property.state}` : ''}.`
+    }
+  ];
+  const propertyEntitySchema = {
     "@type": property.category === "commercial" ? "Place" : "Accommodation",
     "@id": `${SITE_URL}${propertyPath}#property`,
     "name": propertyName,
@@ -1140,6 +1157,24 @@ const PropertyDetail = () => {
         "worstRating": "1"
       }
     }))
+  };
+  const propertySchema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      propertyEntitySchema,
+      {
+        "@type": "FAQPage",
+        "@id": `${SITE_URL}${propertyPath}#faq`,
+        "mainEntity": propertyFaqs.map((faq) => ({
+          "@type": "Question",
+          "name": faq.question,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": faq.answer
+          }
+        }))
+      }
+    ]
   };
   const seoBreadcrumbs = [
     { name: "Home", url: "/" },
@@ -1342,6 +1377,39 @@ const PropertyDetail = () => {
                  </div>
                ))}
             </div>
+
+            {/* AEO Quick Facts */}
+            <section className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium" aria-labelledby="property-quick-facts">
+              <h2 id="property-quick-facts" className="text-2xl font-bold tracking-tight text-charcoal mb-2">
+                Quick facts about {propertyName}
+              </h2>
+              <p className="text-sm font-medium text-charcoal-muted mb-5">
+                {propertyName} is a {propertyType} in {propertyCity} with pricing, guest capacity and booking details shown below.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { icon: MapPin, label: 'Location', value: `${propertyCity}${property.state ? `, ${property.state}` : ''}` },
+                  { icon: Building2, label: 'Property type', value: propertyType },
+                  { icon: Users, label: property.category === 'commercial' ? 'Staff capacity' : 'Guest capacity', value: guestCapacity ? `${guestCapacity} ${property.category === 'commercial' ? 'staff' : 'guests'}` : 'Flexible capacity' },
+                  { icon: CalendarIcon, label: 'Minimum stay', value: `${property.minimum_stay_days || 1} ${Number(property.minimum_stay_days || 1) === 1 ? 'night' : 'nights'}` },
+                  { icon: CreditCard, label: 'Starting price', value: `Rs ${Number(property.price_per_night || 0).toLocaleString('en-IN')}` },
+                  { icon: CheckCircle2, label: 'Amenities', value: amenitiesForSeo.length ? amenitiesForSeo.slice(0, 3).map(formatReadableText).join(', ') : 'Amenities available as listed' },
+                ].map((fact) => {
+                  const Icon = fact.icon;
+                  return (
+                    <div key={fact.label} className="flex items-start gap-4 rounded-2xl border border-gray-100 bg-gray-50/60 p-4">
+                      <div className="rounded-xl bg-white p-2.5 text-terracotta shadow-sm">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-charcoal-muted">{fact.label}</p>
+                        <p className="mt-1 text-sm font-bold text-charcoal">{fact.value}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
 
             {/* Description */}
             <div className="prose prose-sand max-w-none">
@@ -1683,6 +1751,24 @@ const PropertyDetail = () => {
                 })}
               </div>
             </div>
+
+            {/* Property FAQ Section */}
+            <section className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium" aria-labelledby="property-faq">
+              <h2 id="property-faq" className="text-2xl font-bold tracking-tight text-charcoal mb-2">
+                Frequently asked questions
+              </h2>
+              <p className="text-sm font-medium text-charcoal-muted mb-5">
+                Direct answers about {propertyName} for guests comparing properties before booking.
+              </p>
+              <div className="space-y-3">
+                {propertyFaqs.map((faq) => (
+                  <article key={faq.question} className="rounded-2xl border border-gray-100 bg-gray-50/60 p-4">
+                    <h3 className="text-sm font-bold text-charcoal mb-2">{faq.question}</h3>
+                    <p className="text-sm font-medium leading-relaxed text-charcoal-muted">{faq.answer}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
 
             {/* Nearby Famous Places Section */}
             {property.nearby_places && property.nearby_places.length > 0 && (
