@@ -6,7 +6,7 @@ import {
 import {
   ArrowLeft, Download, IndianRupee, TrendingUp, Wallet, Users,
   RefreshCcw, CheckCircle, XCircle, AlertCircle, Clock,
-  Search, Share2, FileText, Mail, MessageSquare, Printer, Check
+  Share2, FileText, Mail, MessageSquare, Printer,
 } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -391,14 +391,32 @@ const TransactionsTab = () => {
     'NA'
   );
   const getInvoiceBreakdown = (txn) => {
+    if (txn.invoice_breakdown) {
+      return {
+        planFee: Number(txn.invoice_breakdown.plan_fee || 0),
+        gross: Number(txn.invoice_breakdown.plan_fee || txn.invoice_breakdown.taxable_before_discount || txn.invoice_breakdown.taxable_amount || 0),
+        platformFee: Number(txn.invoice_breakdown.platform_fee || 0),
+        couponCode: txn.invoice_breakdown.coupon_code || txn.subscription?.coupon_code || '',
+        discount: Number(txn.invoice_breakdown.discount_amount || 0),
+        taxableAmount: Number(txn.invoice_breakdown.taxable_amount || 0),
+        igst: Number(txn.invoice_breakdown.igst || 0),
+        cgst: Number(txn.invoice_breakdown.cgst || 0),
+        sgst: Number(txn.invoice_breakdown.sgst || 0),
+        total: Number(txn.invoice_breakdown.total_amount || 0),
+      };
+    }
     const total = (Number(txn.amount) || 0) / 100;
     const taxPercent = Number(txn.plan?.tax_percent ?? 18);
     const taxable = total / (1 + taxPercent / 100);
     const tax = Math.max(0, total - taxable);
     const platformFee = txn.plan?.platform_fee != null ? Number(txn.plan.platform_fee) : 0;
     return {
-      gross: taxable,
+      planFee: Math.max(0, taxable - platformFee),
+      gross: Math.max(0, taxable - platformFee),
       platformFee,
+      couponCode: txn.subscription?.coupon_code || '',
+      discount: Number(txn.subscription?.discount_amount || 0),
+      taxableAmount: taxable,
       igst: 0,
       cgst: tax / 2,
       sgst: tax / 2,
@@ -409,73 +427,94 @@ const TransactionsTab = () => {
   return (
     <div className="space-y-6" data-testid="transactions-tab">
       <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-5">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex-1 min-w-[280px] relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-              <Search className="h-4.5 w-4.5 text-charcoal-muted" />
-            </span>
-            <input
-              type="text"
-              placeholder="Search Customer Name / Phone / Email / Booking / Payment / UTR ID..."
-              value={filters.q}
-              onChange={(e) => handleFilterChange({ ...filters, q: e.target.value })}
-              className="input-field pl-11 w-full bg-stone/50 focus:bg-white border border-gray-200 focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 rounded-xl transition text-sm py-2.5"
-              data-testid="filter-q"
-            />
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 items-center">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search by Customer Name, Phone, Email, Booking ID, Payment ID, UTR ID..."
+                value={filters.q}
+                onChange={(e) => handleFilterChange({ ...filters, q: e.target.value })}
+                className="input-field h-14 w-full bg-stone/50 focus:bg-white border border-gray-200 focus:border-gold focus:ring-2 focus:ring-gold/10 rounded-xl transition text-sm px-5"
+                data-testid="filter-q"
+              />
+              {filters.q && (
+                <button
+                  type="button"
+                  onClick={() => handleFilterChange({ ...filters, q: '' })}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-charcoal-muted hover:text-charcoal"
+                  aria-label="Clear search"
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
           </div>
 
-          <select
-            value={filters.type}
-            onChange={(e) => handleFilterChange({ ...filters, type: e.target.value })}
-            className="input-field w-52 bg-white border border-gray-200 rounded-xl py-2.5 text-sm"
-            data-testid="filter-type"
-          >
-            <option value="">All transaction types</option>
-            <option value="booking_payment">Booking payments</option>
-            <option value="registration_fee">Registration fees</option>
-            <option value="subscription">Subscriptions</option>
-            <option value="refund">Refunds</option>
-            <option value="payout">Payouts</option>
-          </select>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[minmax(230px,1fr)_minmax(230px,1fr)_minmax(360px,1.05fr)_150px] gap-4 items-end">
+            <label className="block">
+              <span className="block text-xs font-bold text-charcoal uppercase tracking-wide mb-2">Transaction Type</span>
+              <select
+                value={filters.type}
+                onChange={(e) => handleFilterChange({ ...filters, type: e.target.value })}
+                className="input-field h-12 w-full bg-stone/50 focus:bg-white border border-gray-200 rounded-xl px-5 text-sm"
+                data-testid="filter-type"
+              >
+                <option value="">All Transaction Types</option>
+                <option value="booking_payment">Booking payments</option>
+                <option value="registration_fee">Registration fees</option>
+                <option value="subscription">Subscriptions</option>
+                <option value="refund">Refunds</option>
+                <option value="payout">Payouts</option>
+              </select>
+            </label>
 
-          <select
-            value={filters.status}
-            onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })}
-            className="input-field w-44 bg-white border border-gray-200 rounded-xl py-2.5 text-sm"
-            data-testid="filter-status"
-          >
-            <option value="">All statuses</option>
-            <option value="success">Success</option>
-            <option value="pending">Pending</option>
-            <option value="failed">Failed</option>
-          </select>
+            <label className="block">
+              <span className="block text-xs font-bold text-charcoal uppercase tracking-wide mb-2">Status</span>
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })}
+                className="input-field h-12 w-full bg-stone/50 focus:bg-white border border-gray-200 rounded-xl px-5 text-sm"
+                data-testid="filter-status"
+              >
+                <option value="">All Statuses</option>
+                <option value="success">Success</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+            </label>
 
-          <div className="flex items-center space-x-2">
-            <input
-              type="date"
-              value={filters.start}
-              onChange={(e) => handleFilterChange({ ...filters, start: e.target.value })}
-              className="input-field w-40 bg-white border border-gray-200 rounded-xl py-2 text-sm"
-              data-testid="filter-start"
-            />
-            <span className="text-charcoal-muted text-xs font-bold">to</span>
-            <input
-              type="date"
-              value={filters.end}
-              onChange={(e) => handleFilterChange({ ...filters, end: e.target.value })}
-              className="input-field w-40 bg-white border border-gray-200 rounded-xl py-2 text-sm"
-              data-testid="filter-end"
-            />
+            <label className="block">
+              <span className="block text-xs font-bold text-charcoal uppercase tracking-wide mb-2">Date Range</span>
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                <input
+                  type="date"
+                  value={filters.start}
+                  onChange={(e) => handleFilterChange({ ...filters, start: e.target.value })}
+                  className="input-field h-12 min-w-0 w-full bg-stone/50 focus:bg-white border border-gray-200 rounded-xl px-4 text-sm"
+                  data-testid="filter-start"
+                />
+                <span className="hidden sm:inline text-charcoal-muted text-xs font-bold">to</span>
+                <input
+                  type="date"
+                  value={filters.end}
+                  onChange={(e) => handleFilterChange({ ...filters, end: e.target.value })}
+                  className="input-field h-12 min-w-0 w-full bg-stone/50 focus:bg-white border border-gray-200 rounded-xl px-4 text-sm"
+                  data-testid="filter-end"
+                />
+              </div>
+            </label>
+
+            <button
+              onClick={downloadCsv}
+              className="h-12 w-full px-5 rounded-xl bg-sage hover:bg-sage-dark text-white font-bold transition flex items-center justify-center space-x-2 text-sm shadow-sm whitespace-nowrap"
+              data-testid="export-csv-btn"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export CSV</span>
+            </button>
           </div>
-
-          <button
-            onClick={downloadCsv}
-            className="px-5 py-2.5 rounded-xl bg-sage hover:bg-sage-dark text-white font-bold transition flex items-center space-x-2 text-sm shadow-sm"
-            data-testid="export-csv-btn"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export CSV</span>
-          </button>
         </div>
       </div>
 
@@ -509,6 +548,9 @@ const TransactionsTab = () => {
                     <th className="py-3 px-4">Property Type</th>
                     <th className="py-3 px-4">Gross Amount</th>
                     <th className="py-3 px-4">Platform Fee</th>
+                    <th className="py-3 px-4">Coupon</th>
+                    <th className="py-3 px-4">Discount</th>
+                    <th className="py-3 px-4">Taxable Amount</th>
                     <th className="py-3 px-4">IGST</th>
                     <th className="py-3 px-4">CGST</th>
                     <th className="py-3 px-4">SGST</th>
@@ -551,6 +593,9 @@ const TransactionsTab = () => {
                       <td className="py-4 px-4 whitespace-nowrap text-xs font-semibold">{formatPlanLabel(t)}</td>
                       <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.gross)}</td>
                       <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.platformFee)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-bold text-charcoal">{breakdown.couponCode || 'NA'}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{breakdown.discount ? `-${formatMoney(breakdown.discount)}` : 'NA'}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.taxableAmount)}</td>
                       <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{breakdown.igst ? formatMoney(breakdown.igst) : 'NA'}</td>
                       <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.cgst)}</td>
                       <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.sgst)}</td>
@@ -1572,7 +1617,11 @@ const numberToWords = (num) => {
 const InvoiceModal = ({ transaction, onClose }) => {
   const t = transaction;
   const user = t.user || {};
-  const amountINR = (t.amount || 0) / 100;
+  const property = t.property || {};
+  const propertyName = property.title || property.property_name || property.name || t.property_name || property.property_id || 'NA';
+  const propertyAddress = [property.address, property.city, property.state, property.pin_code].filter(Boolean).join(', ') || 'NA';
+  const invoiceBreakdown = t.invoice_breakdown || {};
+  const amountINR = Number(invoiceBreakdown.total_amount ?? ((t.amount || 0) / 100));
   const formatInvoiceMoney = (value) =>
     new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -1581,12 +1630,16 @@ const InvoiceModal = ({ transaction, onClose }) => {
       maximumFractionDigits: 2,
     }).format(Number(value || 0));
 
-  // 18% GST calculation (GST included in all user payments)
-  const gstRate = 0.18;
-  const baseAmount = amountINR / (1 + gstRate);
-  const totalGst = amountINR - baseAmount;
-  const cgst = totalGst / 2;
-  const sgst = totalGst / 2;
+  const baseAmount = Number(invoiceBreakdown.taxable_amount ?? (amountINR / 1.18));
+  const planFee = Number(invoiceBreakdown.plan_fee ?? Math.max(0, baseAmount - Number(t.plan?.platform_fee || 0)));
+  const platformFee = Number(invoiceBreakdown.platform_fee ?? t.plan?.platform_fee ?? 0);
+  const couponCode = invoiceBreakdown.coupon_code || t.subscription?.coupon_code || '';
+  const discountAmount = Number(invoiceBreakdown.discount_amount ?? t.subscription?.discount_amount ?? 0);
+  const discountBase = Math.max(0, planFee + platformFee);
+  const discountPercent = discountAmount > 0 && discountBase > 0 ? (discountAmount / discountBase) * 100 : 0;
+  const cgst = Number(invoiceBreakdown.cgst ?? ((amountINR - baseAmount) / 2));
+  const sgst = Number(invoiceBreakdown.sgst ?? ((amountINR - baseAmount) / 2));
+  const totalGst = cgst + sgst;
 
   const handlePrint = () => {
     const invoice = document.getElementById('printable-invoice');
@@ -1724,34 +1777,14 @@ const InvoiceModal = ({ transaction, onClose }) => {
                         </tr>
                         <tr style={{ borderBottom: '1px solid black' }}>
                           <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
-                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Delivery Note</div>
-                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
-                          </td>
-                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
                             <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Mode/Terms of Payment</div>
                             <div style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>
                               {t.upi_transaction_id ? 'UPI QR' : 'NET BANKING'}
                             </div>
                           </td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid black' }}>
-                          <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
+                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
                             <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Reference No. & Date</div>
-                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
-                          </td>
-                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
-                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Other References</div>
-                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
-                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Buyer's Order No.</div>
-                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
-                          </td>
-                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
-                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Dated</div>
-                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>{t.upi_transaction_id || t.razorpay_payment_id || t.transaction_id || 'NA'}</div>
                           </td>
                         </tr>
                       </tbody>
@@ -1767,46 +1800,18 @@ const InvoiceModal = ({ transaction, onClose }) => {
                 <tr>
                   <td className="w-1/2 p-3 align-top border-r-2 border-black" style={{ width: '50%', padding: '12px', borderRight: '2px solid black', verticalAlign: 'top' }}>
                     <div style={{ fontSize: '9px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '2px' }}>Buyer (Bill to)</div>
-                    <div className="font-bold text-xs mb-1" style={{ fontSize: '11px', fontWeight: 'bold' }}>{user.full_name || 'NA'}</div>
+                    <div className="font-bold text-xs mb-1" style={{ fontSize: '11px', fontWeight: 'bold' }}>{propertyName}</div>
                     <div style={{ fontSize: '9px', lineHeight: '1.4' }}>
-                      Address: {user.address || 'NA'}<br />
+                      Address: {propertyAddress}<br />
                       GSTIN/UIN: {user.gst_number || user.gst_no || 'NA'}<br />
                       State Name: {user.gst_number && user.gst_number.length >= 2 ? (user.gst_number.startsWith('27') ? 'Maharashtra, Code : 27' : 'Other State, Code : ' + user.gst_number.substring(0, 2)) : 'Maharashtra, Code : 27'}<br />
                       Contact Person: {user.full_name || 'NA'}<br />
+                      Mobile: {user.phone || 'NA'}<br />
                       Email: {user.email || 'NA'}
                     </div>
                   </td>
                   <td className="w-1/2 p-0 align-top" style={{ width: '50%', padding: 0, verticalAlign: 'top' }}>
-                    <table className="w-full border-collapse" style={{ borderCollapse: 'collapse', width: '100%' }}>
-                      <tbody>
-                        <tr style={{ borderBottom: '1px solid black' }}>
-                          <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
-                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Dispatch Document No.</div>
-                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
-                          </td>
-                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
-                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Delivery Note Date</div>
-                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
-                          </td>
-                        </tr>
-                        <tr style={{ borderBottom: '1px solid black' }}>
-                          <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
-                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Dispatched through</div>
-                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
-                          </td>
-                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
-                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Destination</div>
-                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td colSpan={2} className="p-2" style={{ padding: '8px' }}>
-                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Terms of Delivery</div>
-                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>NA</div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
+                    <div style={{ minHeight: '112px' }}></div>
                   </td>
                 </tr>
               </tbody>
@@ -1816,7 +1821,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
             <table className="w-full border-collapse border-b-2 border-black text-center text-[10px]" style={{ borderCollapse: 'collapse', width: '100%', fontSize: '10px', textAlign: 'center' }}>
               <thead>
                 <tr className="bg-gray-50 font-bold" style={{ backgroundColor: '#f9f9f9', fontWeight: 'bold', borderBottom: '2px solid black' }}>
-                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '5%' }}>SI No</th>
+                    <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '5%' }}>Sr.No</th>
                   <th style={{ padding: '6px 6px', borderRight: '1px solid black', width: '45%', textAlign: 'left' }}>Description of Services</th>
                   <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '10%' }}>HSN/SAC</th>
                   <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '10%' }}>Services Offer</th>
@@ -1831,20 +1836,63 @@ const InvoiceModal = ({ transaction, onClose }) => {
                 <tr style={{ borderBottom: '1px solid #ddd' }}>
                   <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>1</td>
                   <td style={{ padding: '8px 6px', borderRight: '1px solid black', textAlign: 'left', verticalAlign: 'top', fontWeight: 'bold' }}>
-                    {t.type === 'booking_payment' ? `Booking Accommodation Charges [booking_id: ${t.booking_id || 'NA'}]` :
+                    {t.type === 'subscription' ? `Property Subscription Charges [${t.subscription?.start_date ? formatDateForInvoice(t.subscription.start_date) : 'NA'} to ${t.subscription?.end_date ? formatDateForInvoice(t.subscription.end_date) : 'NA'}]` :
+                     t.type === 'booking_payment' ? `Booking Accommodation Charges [booking_id: ${t.booking_id || 'NA'}]` :
                      t.type === 'registration_fee' ? 'Host Registration Fee' :
-                     t.type === 'subscription' ? `Property Subscription Charges [${t.subscription?.start_date ? formatDateForInvoice(t.subscription.start_date) : 'NA'} to ${t.subscription?.end_date ? formatDateForInvoice(t.subscription.end_date) : 'NA'}]` :
                      t.type === 'refund' ? `Accommodation Refund [booking_id: ${t.booking_id || 'NA'}]` :
                      'Platform Service Charges'}
                   </td>
-                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontFamily: 'monospace' }}>998399</td>
-                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontWeight: 'bold' }}>01</td>
-                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>18%</td>
-                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
-                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>Nos</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontFamily: 'monospace' }}>{t.type === 'subscription' ? '' : '998399'}</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontWeight: 'bold' }}>{t.type === 'subscription' ? '' : '01'}</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>{t.type === 'subscription' ? '' : '18%'}</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontFamily: 'monospace' }}>{t.type === 'subscription' ? planFee.toFixed(2) : baseAmount.toFixed(2)}</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>{t.type === 'subscription' ? '' : 'Nos'}</td>
                   <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}></td>
-                  <td style={{ padding: '8px 6px', textAlign: 'right', verticalAlign: 'top', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                  <td style={{ padding: '8px 6px', textAlign: 'right', verticalAlign: 'top', fontFamily: 'monospace' }}>{t.type === 'subscription' ? planFee.toFixed(2) : baseAmount.toFixed(2)}</td>
                 </tr>
+                {t.type === 'subscription' && (
+                  <>
+                    <tr style={{ borderBottom: '1px solid #ddd', color: '#555' }}>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>Platform Fee</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{platformFee.toFixed(2)}</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{platformFee.toFixed(2)}</td>
+                    </tr>
+                    {discountAmount > 0 && (
+                      <tr style={{ borderBottom: '1px solid #ddd', color: '#555' }}>
+                        <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                        <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>
+                          Coupon Discount{couponCode ? ` (${couponCode})` : ''}
+                        </td>
+                        <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                        <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                        <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                        <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>-{discountAmount.toFixed(2)}</td>
+                        <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                        <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>
+                          {discountPercent ? `${discountPercent.toFixed(2)}%` : ''}
+                        </td>
+                        <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>-{discountAmount.toFixed(2)}</td>
+                      </tr>
+                    )}
+                    <tr style={{ borderBottom: '1px solid #ddd', color: '#555' }}>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>Taxable Amount</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>998399</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black', fontWeight: 'bold' }}>01</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}>18%</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}>Nos</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                    </tr>
+                  </>
+                )}
                 {/* CGST row */}
                 <tr style={{ borderBottom: '1px solid #ddd', color: '#555' }}>
                   <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
