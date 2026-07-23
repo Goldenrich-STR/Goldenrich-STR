@@ -1185,7 +1185,7 @@ const PropertyDetail = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
+    <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white pb-24 lg:pb-0">
       <SEO
         title={`${propertyName} in ${propertyCity}`}
         description={propertySeoDescription}
@@ -2700,6 +2700,56 @@ const PropertyDetail = () => {
           </div>
         </div>
       )}
+
+      {/* Mobile Sticky Booking Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-sand-200 px-6 py-4 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+        <div>
+          <div className="flex items-baseline">
+            <span className="text-xl font-bold tracking-tight text-charcoal">
+              ₹{canShowBookingAmount ? amountDueNow.toLocaleString('en-IN') : (property.price_per_night?.toLocaleString('en-IN') || 0)}
+            </span>
+            <span className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider ml-1">
+              {canShowBookingAmount ? ` / ${property.category === 'event_venue' && bookingPaymentType === 'advance' ? 'advance' : 'total'}` : (property.category === 'event_venue' ? '/ day' : '/ night')}
+            </span>
+          </div>
+          <div 
+            onClick={() => {
+              const widget = document.getElementById('cal-trigger');
+              if (widget) {
+                widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                widget.focus();
+              }
+            }} 
+            className="text-[10px] font-bold text-terracotta underline cursor-pointer mt-0.5"
+          >
+            {checkIn && checkOut ? `${new Date(checkIn).toLocaleDateString('en-IN', {month: 'short', day: 'numeric'})} - ${new Date(checkOut).toLocaleDateString('en-IN', {month: 'short', day: 'numeric'})}` : 'Select dates'}
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            if (!checkIn || !checkOut) {
+              const widget = document.getElementById('cal-trigger');
+              if (widget) {
+                widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                widget.focus();
+              }
+            } else {
+              handleBookNow(null, bookingPaymentType);
+            }
+          }}
+          disabled={booking}
+          className="btn-premium py-3 px-6 text-xs font-bold tracking-widest uppercase rounded-2xl shadow-premium"
+        >
+          {booking ? (
+             <div className="flex items-center justify-center space-x-2">
+                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>...</span>
+             </div>
+          ) : (
+             checkIn && checkOut ? (property.instant_booking ? t('reserveNow') : t('requestBooking')) : 'Select dates'
+          )}
+        </button>
+      </div>
     </div>
   );
 };

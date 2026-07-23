@@ -43,7 +43,7 @@ const CATEGORIES = [
   }
 ];
 
-const LanguageSelector = () => {
+const LanguageSelector = ({ mode = 'dropdown' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -70,6 +70,60 @@ const LanguageSelector = () => {
     setIsOpen(false);
   };
 
+  if (mode === 'inline') {
+    return (
+      <div className="w-full text-left" ref={dropdownRef}>
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex items-center justify-between py-2 text-2xl font-bold hover:text-terracotta transition-colors duration-200 cursor-pointer bg-transparent border-none p-0 text-inherit"
+        >
+          <span>Property Types</span>
+          <ChevronDown 
+            className={`w-6 h-6 transition-transform duration-300 ${
+              isOpen ? 'rotate-180' : ''
+            }`} 
+          />
+        </button>
+
+        {isOpen && (
+          <div className="mt-4 w-full space-y-6 text-gray-900 border-l border-sand-200 pl-3">
+            {CATEGORIES.map((cat) => {
+              const Icon = cat.icon;
+              return (
+                <div key={cat.key} className="flex flex-col space-y-2">
+                  {/* Category Header */}
+                  <div 
+                    onClick={() => handleCategoryClick(cat.key)}
+                    className="flex items-center space-x-2.5 p-1 rounded-xl hover:bg-stone/50 cursor-pointer group/item transition-all duration-300 text-gray-900"
+                  >
+                    <Icon className="w-4 h-4 text-terracotta shrink-0" />
+                    <h4 className="text-sm font-extrabold text-gray-900 group-hover/item:text-terracotta transition-colors">
+                      {cat.title}
+                    </h4>
+                  </div>
+
+                  {/* Subtypes List */}
+                  <div className="flex flex-col space-y-1 pl-6">
+                    {cat.subtypes.map((sub) => (
+                      <button
+                        key={sub.value}
+                        onClick={() => handleSubtypeClick(cat.key, sub.value)}
+                        className="w-full text-left py-1.5 text-xs font-bold text-gray-600 hover:text-terracotta transition-all duration-200"
+                      >
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
       <button
@@ -86,7 +140,7 @@ const LanguageSelector = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 md:left-auto md:right-0 md:-right-48 mt-3 w-[calc(100vw-3rem)] md:w-[650px] rounded-3xl bg-white border border-gray-200 shadow-elevated p-6 z-[999] origin-top-left md:origin-top-right animate-scale-up ring-1 ring-black/5 text-gray-900">
+        <div className="absolute right-[-5.5rem] md:-right-48 mt-3 w-[calc(100vw-2rem)] max-w-[95vw] md:w-[650px] max-h-[80vh] md:max-h-[none] overflow-y-auto md:overflow-y-visible rounded-3xl bg-white border border-gray-200 shadow-elevated p-6 z-[999] origin-top-right animate-scale-up ring-1 ring-black/5 text-gray-900">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {CATEGORIES.map((cat) => {
               const Icon = cat.icon;

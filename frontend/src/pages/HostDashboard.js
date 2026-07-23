@@ -722,7 +722,7 @@ const HostDashboard = () => {
     <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
       <header className="glass px-4 md:px-8 lg:px-12 py-4 sticky top-0 z-50">
         <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="w-full flex justify-between items-center">
+          <div className="w-full md:w-auto flex justify-between items-center shrink-0">
             <div 
               className="flex items-center space-x-3 cursor-pointer group" 
               onClick={() => navigate('/')}
@@ -750,7 +750,7 @@ const HostDashboard = () => {
               </button>
             </div>
           </div>
-          <div className="flex flex-row items-center gap-3 w-full md:w-auto border-t border-sand-100 md:border-none pt-2 md:pt-0 overflow-x-auto no-scrollbar">
+          <div className="flex flex-row items-center gap-3 w-full md:w-auto border-t border-sand-100 md:border-none pt-2 md:pt-0 overflow-x-auto md:overflow-visible no-scrollbar shrink-0">
             <nav className="flex items-center space-x-6 shrink-0">
                {[
                  { label: 'DASHBOARD', path: '/host/dashboard' },
@@ -772,54 +772,17 @@ const HostDashboard = () => {
                ))}
             </nav>
             <div className="h-6 w-px bg-sand-200 hidden md:block"></div>
-            <div className="hidden md:flex items-center gap-2 md:gap-4">
+            <div className="hidden md:flex items-center gap-2 md:gap-4 shrink-0">
               <NotificationBell />
               <div 
                 onClick={() => setShowProfileModal(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '6px 12px',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '9999px',
-                  boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  flexShrink: 0
-                }}
-                className="hover:border-terracotta"
+                className="w-9 h-9 rounded-full bg-[#7A9A85] hover:bg-[#6b8c76] flex items-center justify-center text-xs font-bold text-white cursor-pointer transition-colors shadow-subtle border border-slate-200 shrink-0"
               >
-                 <div 
-                   style={{
-                     width: '24px',
-                     height: '24px',
-                     borderRadius: '50%',
-                     backgroundColor: '#7A9A85',
-                     display: 'flex',
-                     alignItems: 'center',
-                     justifyContent: 'center',
-                     fontSize: '10px',
-                     fontWeight: 'bold',
-                     color: '#ffffff',
-                     flexShrink: 0
-                   }}
-                 >
-                    {user?.full_name?.[0]}
-                 </div>
-                 <span 
-                   style={{
-                     fontSize: '10px',
-                     fontWeight: 'bold',
-                     color: '#2A2A2A',
-                     textTransform: 'uppercase',
-                     letterSpacing: '0.1em',
-                     whiteSpace: 'nowrap'
-                   }}
-                 >
-                   {user?.full_name?.split(' ')[0]}
-                 </span>
+                 {user?.profile_image ? (
+                   <img src={getImageUrl(user.profile_image)} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                 ) : (
+                   user?.full_name?.[0]?.toUpperCase()
+                 )}
               </div>
               <button 
                 onClick={() => {

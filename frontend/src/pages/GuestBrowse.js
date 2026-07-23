@@ -336,6 +336,9 @@ const GuestBrowse = () => {
         updated = [...prev, propertyId];
       }
       localStorage.setItem('guest_wishlist', JSON.stringify(updated));
+      if (updated.length === 0) {
+        setShowWishlistOnly(false);
+      }
       return updated;
     });
   };
@@ -417,6 +420,7 @@ const GuestBrowse = () => {
     filters.check_in,
     filters.check_out,
     filters.amenities,
+    showWishlistOnly,
   ]);
 
   const usesCommercialSizeFilter = COMMERCIAL_SIZE_TYPES.has(filters.property_type);
@@ -432,6 +436,12 @@ const GuestBrowse = () => {
   }, [configurationOptions, filters.bhk_type]);
 
   const buildParams = () => {
+    if (showWishlistOnly) {
+      const params = { limit: 100 };
+      if (filters.check_in) params.check_in = filters.check_in;
+      if (filters.check_out) params.check_out = filters.check_out;
+      return params;
+    }
     const params = {};
     if (filters.city) params.city = filters.city;
     if (filters.category) params.category = filters.category;
@@ -559,17 +569,20 @@ const GuestBrowse = () => {
               />
             </div>
 
-            <div className="h-4 w-[1px] bg-sand-300"></div>
-
-            <button
-              onClick={() => setShowWishlistOnly(prev => !prev)}
-              className={`text-[10px] font-bold tracking-tight tracking-widest transition-colors uppercase flex items-center space-x-1 ${
-                showWishlistOnly ? 'text-red-500' : 'text-charcoal-muted hover:text-terracotta'
-              }`}
-            >
-              <Heart className={`w-3 h-3 ${showWishlistOnly ? 'fill-red-500 text-red-500' : ''}`} />
-              <span>Wishlist</span>
-            </button>
+            {wishlist.length > 0 && (
+              <>
+                <div className="h-4 w-[1px] bg-sand-300"></div>
+                <button
+                  onClick={() => setShowWishlistOnly(prev => !prev)}
+                  className={`text-[10px] font-bold tracking-tight tracking-widest transition-colors uppercase flex items-center space-x-1 ${
+                    showWishlistOnly ? 'text-red-500' : 'text-charcoal-muted hover:text-terracotta'
+                  }`}
+                >
+                  <Heart className={`w-3 h-3 ${showWishlistOnly ? 'fill-red-500 text-red-500' : ''}`} />
+                  <span>Wishlist</span>
+                </button>
+              </>
+            )}
 
             <div className="h-4 w-[1px] bg-sand-300"></div>
 
@@ -626,16 +639,18 @@ const GuestBrowse = () => {
           </div>
           
           <div className="flex flex-col space-y-6 flex-1">
-            <button
-              onClick={() => { setIsMobileMenuOpen(false); setShowWishlistOnly(prev => !prev); }}
-              className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-gray-100"
-            >
-              <span>{showWishlistOnly ? 'Show All Spaces' : 'Wishlist'}</span>
-              <Heart className={`w-6 h-6 ${showWishlistOnly ? 'text-red-500 fill-red-500' : 'text-charcoal-muted'}`} />
-            </button>
-            <div className="py-2 border-b border-gray-100 flex items-center justify-between">
-              <span className="text-2xl font-bold">Language</span>
+            {wishlist.length > 0 && (
+              <button
+                onClick={() => { setIsMobileMenuOpen(false); setShowWishlistOnly(prev => !prev); }}
+                className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-gray-100"
+              >
+                <span>{showWishlistOnly ? 'Show All Spaces' : 'Wishlist'}</span>
+                <Heart className={`w-6 h-6 ${showWishlistOnly ? 'text-red-500 fill-red-500' : 'text-charcoal-muted'}`} />
+              </button>
+            )}
+            <div className="py-2 border-b border-gray-100 flex items-center">
               <LanguageSelector
+                mode="inline"
                 currentLang={lang}
                 onLanguageChange={(newLang) => {
                   setLang(newLang);
