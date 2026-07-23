@@ -1246,7 +1246,7 @@ const PropertyDetail = () => {
              {property.title}
            </h1>
            <div className="flex items-center text-charcoal-muted font-bold text-sm flex-wrap gap-6">
-             <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{property.address}, {property.city}</span>
+             <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{property.address ? `${property.address}, ` : ''}{property.city}</span>
              <div className="flex items-center space-x-1">
                 <Star className="w-4 h-4 text-amber-500 fill-current" />
                 <span className="text-charcoal font-bold tracking-tight">{property.rating ? property.rating.toFixed(1) : 'New'}</span>
@@ -2473,7 +2473,7 @@ const PropertyDetail = () => {
                         </div>
                         <p className="text-xs font-bold text-charcoal-muted mb-4 flex items-center">
                           <MapPin className="w-3.5 h-3.5 mr-1 text-terracotta" />
-                          {prop.address}, {prop.city}
+                          {prop.address ? `${prop.address}, ` : ''}{prop.city}
                         </p>
                       </div>
                       <div className="pt-4 border-t border-sand-100 flex justify-between items-center mt-auto">
@@ -2597,7 +2597,7 @@ const PropertyDetail = () => {
                 <div>
                   <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Venue Details</p>
                   <p className="font-bold tracking-tight text-charcoal">{property.title}</p>
-                  <p className="text-xs text-charcoal-muted font-semibold mt-0.5">{property.address}, {property.city}</p>
+                  <p className="text-xs text-charcoal-muted font-semibold mt-0.5">{property.address ? `${property.address}, ` : ''}{property.city}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Guest Details</p>

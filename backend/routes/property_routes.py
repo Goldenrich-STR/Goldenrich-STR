@@ -14,6 +14,40 @@ import re
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/properties", tags=["Properties"])
 
+HOST_MANAGE_EDITABLE_STATUSES = {
+    PropertyStatus.PENDING_VERIFICATION.value,
+    PropertyStatus.UNDER_REVIEW.value,
+    PropertyStatus.LIVE.value,
+}
+
+HOST_MANAGE_EDITABLE_FIELDS = {
+    "price_per_night",
+    "pricing_display_mode",
+    "per_person_price",
+    "extra_guest_price",
+    "pricing_cycle",
+    "minimum_stay_days",
+    "house_rules",
+    "pet_friendly",
+    "smoking_allowed",
+    "instant_booking",
+    "has_cook",
+    "cook_price",
+    "has_self_cook",
+    "has_taxi",
+    "veg_price",
+    "non_veg_price",
+    "guest_size",
+    "packages",
+    "check_in_time",
+    "check_out_time",
+    "amenities",
+    "images",
+    "video_url",
+    "youtube_short_url",
+    "youtube_long_url",
+}
+
 async def get_db():
     from server import db_instance
     return db_instance
@@ -542,8 +576,26 @@ async def update_property(
                 detail="Not authorized to update this property"
             )
         
-        # Update property
+        # Hosts can manage only pricing/rules, amenities, and media after a
+        # property has entered review or gone live. Admins keep full edit access.
         update_data = property_update.model_dump(exclude_unset=True)
+        if (
+            current_user["role"] != UserRole.ADMIN.value
+            and property_dict.get("status") in HOST_MANAGE_EDITABLE_STATUSES
+        ):
+            update_data = {
+                key: value
+                for key, value in update_data.items()
+                if key in HOST_MANAGE_EDITABLE_FIELDS
+            }
+            if not update_data:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only pricing rules, amenities, and photos can be updated for submitted or live properties",
+                )
+            update_data["status"] = PropertyStatus.LIVE.value
+            update_data["is_edited"] = True
+
         update_data["updated_at"] = datetime.now(timezone.utc)
         
         await db.properties.update_one(

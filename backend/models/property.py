@@ -116,6 +116,7 @@ class Property(BaseModel):
     # Status
     status: PropertyStatus = PropertyStatus.DRAFT
     verification_remarks: Optional[str] = None
+    is_edited: Optional[bool] = False
     
     # Availability
     blocked_dates: List[str] = []  # ISO date strings
@@ -226,3 +227,4 @@ class PropertyUpdate(BaseModel):
     packages: Optional[list] = None
     subscription_id: Optional[str] = None
     blocked_dates: Optional[List[str]] = None
+    is_edited: Optional[bool] = None

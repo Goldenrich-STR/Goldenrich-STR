@@ -249,6 +249,9 @@ const STEPS = [
   { key: 'review', label: 'Review & Pay' },
 ];
 
+const HOST_MANAGE_EDITABLE_STEP_KEYS = ['pricing', 'amenities', 'photos'];
+const HOST_MANAGE_EDITABLE_STATUSES = ['pending_verification', 'under_review', 'live'];
+
 const PRICING_CYCLE_OPTIONS = [
   { value: 'hourly', label: 'Hourly' },
   { value: 'day', label: 'Per day' },
@@ -591,6 +594,7 @@ const HostListProperty = () => {
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [editingPropertyStatus, setEditingPropertyStatus] = useState('');
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [pricingSummaryPlan, setPricingSummaryPlan] = useState(null);
@@ -638,12 +642,12 @@ const HostListProperty = () => {
       propertyAPI.getProperty(editPropertyId)
         .then((res) => {
           const p = res.data;
-          if (p.status === 'live') {
-            setError('Approved properties cannot be edited.');
-            setTimeout(() => {
-              navigate('/host/dashboard');
-            }, 2000);
-            return;
+          const status = String(p.status || '').toLowerCase();
+          setEditingPropertyStatus(status);
+          if (HOST_MANAGE_EDITABLE_STATUSES.includes(status)) {
+            setStep((current) => (
+              HOST_MANAGE_EDITABLE_STEP_KEYS.includes(STEPS[current]?.key) ? current : 2
+            ));
           }
           const subscriptionStatus = String(p.subscription_status || '').toLowerCase();
           setHasActiveSubscription(subscriptionStatus === 'active' || !!(p.subscription_id && subscriptionStatus === 'active'));
@@ -737,6 +741,11 @@ const HostListProperty = () => {
   }, [form.images]);
 
   const update = (patch) => setForm((f) => ({ ...f, ...patch }));
+  const isHostManageMode = !!editPropertyId && HOST_MANAGE_EDITABLE_STATUSES.includes(editingPropertyStatus);
+  const firstManageStep = 0;
+  const lastManageStep = STEPS.length - 1;
+  const canEditCurrentStep = !isHostManageMode || HOST_MANAGE_EDITABLE_STEP_KEYS.includes(STEPS[step]?.key);
+  const isLastAllowedStep = step >= lastManageStep;
 
   const getPackageValue = (type, item) => {
     const typePkg = (form.packages || []).find((p) => p.type === type);
@@ -989,6 +998,9 @@ const HostListProperty = () => {
   const validateStep = () => {
     setError('');
     const k = STEPS[step].key;
+    if (isHostManageMode && !HOST_MANAGE_EDITABLE_STEP_KEYS.includes(k)) {
+      return '';
+    }
     if (k === 'basics') {
       if (!form.title || form.title.length < 8) return 'Title must be at least 8 characters';
       if (!form.description || form.description.length < 30) return 'Description must be at least 30 characters';
@@ -1326,6 +1338,37 @@ const HostListProperty = () => {
     };
   };
 
+  const buildHostManagePayload = () => {
+    const fullPayload = buildPropertyPayload();
+    return {
+      price_per_night: fullPayload.price_per_night,
+      pricing_display_mode: fullPayload.pricing_display_mode,
+      per_person_price: fullPayload.per_person_price,
+      extra_guest_price: fullPayload.extra_guest_price,
+      pricing_cycle: fullPayload.pricing_cycle,
+      minimum_stay_days: fullPayload.minimum_stay_days,
+      house_rules: fullPayload.house_rules,
+      pet_friendly: fullPayload.pet_friendly,
+      smoking_allowed: fullPayload.smoking_allowed,
+      instant_booking: fullPayload.instant_booking,
+      has_cook: fullPayload.has_cook,
+      cook_price: fullPayload.cook_price,
+      has_self_cook: fullPayload.has_self_cook,
+      has_taxi: fullPayload.has_taxi,
+      veg_price: fullPayload.veg_price,
+      non_veg_price: fullPayload.non_veg_price,
+      guest_size: fullPayload.guest_size,
+      packages: fullPayload.packages,
+      check_in_time: fullPayload.check_in_time,
+      check_out_time: fullPayload.check_out_time,
+      amenities: fullPayload.amenities,
+      images: fullPayload.images,
+      video_url: fullPayload.video_url,
+      youtube_short_url: fullPayload.youtube_short_url,
+      youtube_long_url: fullPayload.youtube_long_url,
+    };
+  };
+
   const collectUpiPaymentConfirmation = ({ subOrder, plan }) => (
     new Promise((resolve, reject) => {
       const amount = Number(subOrder.payable_amount || ((subOrder.amount || 0) / 100));
@@ -1471,6 +1514,15 @@ const HostListProperty = () => {
     setSubmitting(true);
     setError('');
     try {
+      if (isHostManageMode) {
+        await propertyAPI.updateProperty(editPropertyId, buildHostManagePayload());
+        localStorage.removeItem(`list_property_form_${editPropertyId}`);
+        localStorage.removeItem(`list_property_step_${editPropertyId}`);
+        alert('Property manage details saved successfully.');
+        navigate('/host/dashboard');
+        return;
+      }
+
       // 1. Create or update the property as DRAFT
       let propertyId = createdPropertyId;
       if (!propertyId) {
@@ -1567,9 +1619,10 @@ const HostListProperty = () => {
           {STEPS.map((s, idx) => {
             const done = idx < step;
             const active = idx === step;
+            const lockedInManage = isHostManageMode && !HOST_MANAGE_EDITABLE_STEP_KEYS.includes(s.key);
             return (
               <React.Fragment key={s.key}>
-                <div className="flex items-center flex-shrink-0">
+                <div className={`flex items-center flex-shrink-0 ${lockedInManage ? 'opacity-35 blur-[1px]' : ''}`}>
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                       done
@@ -1601,7 +1654,13 @@ const HostListProperty = () => {
           </div>
         )}
 
-        <div className="dashboard-card">
+        {isHostManageMode && (
+          <div className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+            Submitted/live property management is limited to pricing rules, amenities, and photos/media. Other listing fields are locked.
+          </div>
+        )}
+
+        <div className={`dashboard-card ${isHostManageMode && !canEditCurrentStep ? 'opacity-50 blur-[1px] pointer-events-none select-none' : ''}`}>
           {currentStep === 'basics' && (
             <div className="space-y-4" data-testid="step-basics-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">Tell us about your place</h2>
@@ -2733,7 +2792,7 @@ const HostListProperty = () => {
           )}
         </div>
 
-        <div className="flex justify-between mt-6">
+        <div className="flex justify-between items-center mt-6 gap-3">
           <button
             onClick={prev}
             disabled={step === 0}
@@ -2743,16 +2802,29 @@ const HostListProperty = () => {
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </button>
-          {step < STEPS.length - 1 && (
-            <button
-              onClick={next}
-              className="btn-primary flex items-center space-x-2"
-              data-testid="next-btn"
-            >
-              <span>Next</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {isHostManageMode && (
+              <button
+                onClick={submitListing}
+                disabled={submitting}
+                className="btn-secondary border-sage-dark/30 text-sage-dark hover:bg-emerald-50/50 flex items-center space-x-2 disabled:opacity-50"
+                data-testid="save-manage-changes-btn"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>{submitting ? 'Saving...' : 'Save changes'}</span>
+              </button>
+            )}
+            {step < STEPS.length - 1 && (
+              <button
+                onClick={next}
+                className="btn-primary flex items-center space-x-2"
+                data-testid="next-btn"
+              >
+                <span>Next</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

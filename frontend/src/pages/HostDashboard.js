@@ -952,7 +952,7 @@ const HostDashboard = () => {
                             isRejected(property) ? 'bg-red-600 text-white' :
                             'bg-charcoal text-white'
                           }`}>
-                            {isRejected(property) ? 'rejected' : property.status.replace('_', ' ')}
+                            {isRejected(property) ? 'rejected' : (property.status === 'live' && property.is_edited ? 'live (edited)' : property.status.replace('_', ' '))}
                           </span>
                         </div>
                         
@@ -1032,13 +1032,7 @@ const HostDashboard = () => {
                             Calendar
                           </button>
                           <button
-                            onClick={() => {
-                              if (!isLive(property)) {
-                                navigate(`/host/list-property?edit=${property.property_id}`);
-                              } else {
-                                navigate(`/property/${property.property_id}`);
-                              }
-                            }}
+                            onClick={() => navigate(`/host/list-property?edit=${property.property_id}`)}
                             className="flex-1 py-3 rounded-xl bg-charcoal text-white text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
                           >
                             Manage
