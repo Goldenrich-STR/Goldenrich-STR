@@ -20,7 +20,6 @@ import '../shared/app_logo.dart';
 import '../../models/property_model.dart';
 import '../../providers/property_provider.dart';
 
-
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -28,11 +27,12 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen> with SingleTickerProviderStateMixin {
+class _AdminDashboardScreenState extends State<AdminDashboardScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _remarksController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  
+
   // User search/filter state
   final _searchController = TextEditingController();
   String _selectedRole = 'All';
@@ -44,7 +44,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   // Booking search/filter state
   final _bookingSearchController = TextEditingController();
   String _selectedBookingFilter = 'all';
-  
+  String _selectedSupportFilter = 'all';
+
   // Local state for inner tab in AI Voice Calls (0: Call Logs, 1: Voice Agents)
   int _aiInnerTab = 0;
 
@@ -93,17 +94,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 10, vsync: this);
+    _tabController = TabController(length: 11, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
   }
 
   void _loadData() {
-    final verificationProv = Provider.of<VerificationProvider>(context, listen: false);
+    final verificationProv =
+        Provider.of<VerificationProvider>(context, listen: false);
     final accountProv = Provider.of<AccountProvider>(context, listen: false);
     final adminProv = Provider.of<AdminProvider>(context, listen: false);
-    
+
     setState(() {
       _cmsStepsList = null;
       _cmsTestimonialsList = null;
@@ -120,7 +122,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     accountProv.getTopHosts();
     adminProv.getDashboardStats();
     adminProv.getUsers(role: _selectedRole, search: _searchController.text);
-    
+
     // Fetch remaining admin dashboard data
     adminProv.getBookings(statusFilter: _selectedBookingFilter);
     adminProv.getSubscriptionPlans();
@@ -129,6 +131,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     adminProv.getSearchLogs();
     adminProv.getAICalls();
     adminProv.getAIAgents();
+    adminProv.getSupportTickets(statusFilter: _selectedSupportFilter);
   }
 
   @override
@@ -192,7 +195,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         children: [
                           const Text(
                             'Create New Subscription Plan',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                            style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.charcoal),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close),
@@ -208,7 +214,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           hintText: 'e.g. Starter Studio Plan',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) => value == null || value.trim().isEmpty ? 'Please enter plan name' : null,
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                                ? 'Please enter plan name'
+                                : null,
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
@@ -218,14 +227,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           border: OutlineInputBorder(),
                         ),
                         items: const [
-                          DropdownMenuItem(value: 'studio', child: Text('Studio Apartment')),
+                          DropdownMenuItem(
+                              value: 'studio', child: Text('Studio Apartment')),
                           DropdownMenuItem(value: '1bhk', child: Text('1 BHK')),
                           DropdownMenuItem(value: '2bhk', child: Text('2 BHK')),
                           DropdownMenuItem(value: '3bhk', child: Text('3 BHK')),
                           DropdownMenuItem(value: '4bhk', child: Text('4 BHK')),
-                          DropdownMenuItem(value: '4bhk_plus', child: Text('4 BHK+')),
-                          DropdownMenuItem(value: 'commercial', child: Text('Commercial Space')),
-                          DropdownMenuItem(value: 'banquet', child: Text('Banquet Hall')),
+                          DropdownMenuItem(
+                              value: '4bhk_plus', child: Text('4 BHK+')),
+                          DropdownMenuItem(
+                              value: 'commercial',
+                              child: Text('Commercial Space')),
+                          DropdownMenuItem(
+                              value: 'banquet', child: Text('Banquet Hall')),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -250,15 +264,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           Expanded(
                             child: TextFormField(
                               controller: monthlyPriceCtrl,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                               decoration: const InputDecoration(
                                 labelText: 'Monthly Price (₹)',
                                 hintText: 'e.g. 999',
                                 border: OutlineInputBorder(),
                               ),
                               validator: (value) {
-                                if (value == null || value.trim().isEmpty) return 'Required';
-                                if (double.tryParse(value) == null) return 'Invalid number';
+                                if (value == null || value.trim().isEmpty)
+                                  return 'Required';
+                                if (double.tryParse(value) == null)
+                                  return 'Invalid number';
                                 return null;
                               },
                             ),
@@ -267,15 +285,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           Expanded(
                             child: TextFormField(
                               controller: annualPriceCtrl,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
                               decoration: const InputDecoration(
                                 labelText: 'Annual Price (₹)',
                                 hintText: 'e.g. 9999',
                                 border: OutlineInputBorder(),
                               ),
                               validator: (value) {
-                                if (value == null || value.trim().isEmpty) return 'Required';
-                                if (double.tryParse(value) == null) return 'Invalid number';
+                                if (value == null || value.trim().isEmpty)
+                                  return 'Required';
+                                if (double.tryParse(value) == null)
+                                  return 'Invalid number';
                                 return null;
                               },
                             ),
@@ -288,10 +310,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         maxLines: 3,
                         decoration: const InputDecoration(
                           labelText: 'Description',
-                          hintText: 'Describe features (e.g. 3 Months Free Trial, featured listings)',
+                          hintText:
+                              'Describe features (e.g. 3 Months Free Trial, featured listings)',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (value) => value == null || value.trim().isEmpty ? 'Please enter description' : null,
+                        validator: (value) =>
+                            value == null || value.trim().isEmpty
+                                ? 'Please enter description'
+                                : null,
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton(
@@ -300,24 +326,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             final payload = {
                               'plan_name': nameCtrl.text.trim(),
                               'plan_type': selectedPlanType,
-                              'price_monthly': double.parse(monthlyPriceCtrl.text.trim()),
-                              'price_annual': double.parse(annualPriceCtrl.text.trim()),
+                              'price_monthly':
+                                  double.parse(monthlyPriceCtrl.text.trim()),
+                              'price_annual':
+                                  double.parse(annualPriceCtrl.text.trim()),
                               'description': descCtrl.text.trim(),
-                              'sqft_range': sqftRangeCtrl.text.trim().isEmpty ? null : sqftRangeCtrl.text.trim(),
+                              'sqft_range': sqftRangeCtrl.text.trim().isEmpty
+                                  ? null
+                                  : sqftRangeCtrl.text.trim(),
                             };
-                            
-                            final success = await Provider.of<AdminProvider>(context, listen: false)
+
+                            final success = await Provider.of<AdminProvider>(
+                                    context,
+                                    listen: false)
                                 .createSubscriptionPlan(payload);
-                                
+
                             if (context.mounted) {
                               if (success) {
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Subscription plan created successfully!'), backgroundColor: Colors.green),
+                                  const SnackBar(
+                                      content: Text(
+                                          'Subscription plan created successfully!'),
+                                      backgroundColor: Colors.green),
                                 );
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Failed to create subscription plan.'), backgroundColor: Colors.red),
+                                  const SnackBar(
+                                      content: Text(
+                                          'Failed to create subscription plan.'),
+                                      backgroundColor: Colors.red),
                                 );
                               }
                             }
@@ -326,9 +364,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primary,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const Text('Create Plan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                        child: const Text('Create Plan',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white)),
                       ),
                     ],
                   ),
@@ -344,7 +387,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   Future<void> _pickAndUploadImageForCms(Function(String) onUrlUploaded) async {
     final picker = ImagePicker();
     try {
-      final XFile? file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+      final XFile? file =
+          await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
       if (file != null) {
         setState(() {
           _cmsUploadingImage = true;
@@ -353,20 +397,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         final formData = FormData.fromMap({
           'file': await MultipartFile.fromFile(file.path, filename: file.name),
         });
-        final response = await apiService.dio.post('/upload/image', data: formData);
+        final response =
+            await apiService.dio.post('/upload/image', data: formData);
         if (response.statusCode == 200 || response.statusCode == 201) {
           final url = response.data['url'] ?? '';
           if (url.isNotEmpty) {
             onUrlUploaded(url);
           }
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('CMS image uploaded successfully!'), backgroundColor: Colors.green),
+            const SnackBar(
+                content: Text('CMS image uploaded successfully!'),
+                backgroundColor: Colors.green),
           );
         }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Upload failed: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Upload failed: $e'), backgroundColor: Colors.red),
       );
     } finally {
       setState(() {
@@ -397,11 +445,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Hero Configuration saved successfully!'), backgroundColor: Colors.green),
+        const SnackBar(
+            content: Text('Hero Configuration saved successfully!'),
+            backgroundColor: Colors.green),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save Hero Configuration.'), backgroundColor: Colors.red),
+        const SnackBar(
+            content: Text('Failed to save Hero Configuration.'),
+            backgroundColor: Colors.red),
       );
     }
   }
@@ -416,11 +468,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('How It Works Steps saved successfully!'), backgroundColor: Colors.green),
+        const SnackBar(
+            content: Text('How It Works Steps saved successfully!'),
+            backgroundColor: Colors.green),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save Steps Configuration.'), backgroundColor: Colors.red),
+        const SnackBar(
+            content: Text('Failed to save Steps Configuration.'),
+            backgroundColor: Colors.red),
       );
     }
   }
@@ -436,11 +492,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Testimonials saved successfully!'), backgroundColor: Colors.green),
+        const SnackBar(
+            content: Text('Testimonials saved successfully!'),
+            backgroundColor: Colors.green),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save Testimonials Configuration.'), backgroundColor: Colors.red),
+        const SnackBar(
+            content: Text('Failed to save Testimonials Configuration.'),
+            backgroundColor: Colors.red),
       );
     }
   }
@@ -455,11 +515,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Blog Posts saved successfully!'), backgroundColor: Colors.green),
+        const SnackBar(
+            content: Text('Blog Posts saved successfully!'),
+            backgroundColor: Colors.green),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save Blog Posts Configuration.'), backgroundColor: Colors.red),
+        const SnackBar(
+            content: Text('Failed to save Blog Posts Configuration.'),
+            backgroundColor: Colors.red),
       );
     }
   }
@@ -484,11 +548,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Footer Configuration saved successfully!'), backgroundColor: Colors.green),
+        const SnackBar(
+            content: Text('Footer Configuration saved successfully!'),
+            backgroundColor: Colors.green),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save Footer Configuration.'), backgroundColor: Colors.red),
+        const SnackBar(
+            content: Text('Failed to save Footer Configuration.'),
+            backgroundColor: Colors.red),
       );
     }
   }
@@ -543,7 +611,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       (c) => c['section'] == 'offer',
       orElse: () => null,
     );
-    
+
     if (offerCms == null) {
       return Card(
         shape: RoundedRectangleBorder(
@@ -564,9 +632,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   final payload = {
                     'is_enabled': true,
                     'title': 'Save 10% on a summertime trip',
-                    'description': 'Book within 7 days and save up to \$100 on your next stay. Terms apply.',
+                    'description':
+                        'Book within 7 days and save up to \$100 on your next stay. Terms apply.',
                     'button_text': 'Log in to claim offer',
-                    'image_url': 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=600',
+                    'image_url':
+                        'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=600',
                   };
                   try {
                     await ApiService().dio.post('/cms/admin/content', data: {
@@ -577,16 +647,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     });
                     await adminProvider.getCMSContent();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Offer initialized successfully!'), backgroundColor: Colors.green),
+                      const SnackBar(
+                          content: Text('Offer initialized successfully!'),
+                          backgroundColor: Colors.green),
                     );
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to initialize offer: $e'), backgroundColor: Colors.red),
+                      SnackBar(
+                          content: Text('Failed to initialize offer: $e'),
+                          backgroundColor: Colors.red),
                     );
                   }
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
-                child: const Text('Initialize Offer CMS', style: TextStyle(color: Colors.white)),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+                child: const Text('Initialize Offer CMS',
+                    style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
@@ -598,9 +674,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
     if (!_cmsOfferControllersInitialized) {
       final data = offerCms['content_data'] ?? {};
-      _cmsOfferTitleController.text = data['title'] ?? 'Save 10% on a summertime trip';
-      _cmsOfferDescController.text = data['description'] ?? 'Book within 7 days and save up to \$100 on your next stay. Terms apply.';
-      _cmsOfferButtonTextController.text = data['button_text'] ?? 'Log in to claim offer';
+      _cmsOfferTitleController.text =
+          data['title'] ?? 'Save 10% on a summertime trip';
+      _cmsOfferDescController.text = data['description'] ??
+          'Book within 7 days and save up to \$100 on your next stay. Terms apply.';
+      _cmsOfferButtonTextController.text =
+          data['button_text'] ?? 'Log in to claim offer';
       _cmsOfferImageController.text = data['image_url'] ?? '';
       _cmsOfferIsEnabled = data['is_enabled'] ?? true;
       _cmsOfferControllersInitialized = true;
@@ -624,7 +703,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     color: AppTheme.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.local_offer_outlined, color: AppTheme.primary, size: 20),
+                  child: const Icon(Icons.local_offer_outlined,
+                      color: AppTheme.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
@@ -633,12 +713,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     children: [
                       Text(
                         'Promotional Offer Popup Config',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppTheme.charcoal),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Configure the popup offer shown on the landing page.',
-                        style: TextStyle(fontSize: 10, color: AppTheme.charcoalMuted),
+                        style: TextStyle(
+                            fontSize: 10, color: AppTheme.charcoalMuted),
                       ),
                     ],
                   ),
@@ -646,14 +730,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               ],
             ),
             const Divider(height: 24),
-            
+
             // Enable / Disable Switch
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'ENABLE OFFER POPUP',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.charcoalMuted),
                 ),
                 Switch(
                   value: _cmsOfferIsEnabled,
@@ -669,20 +756,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             const SizedBox(height: 16),
 
             // Title
-            const Text('OFFER TITLE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const Text('OFFER TITLE',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoalMuted)),
             const SizedBox(height: 6),
             TextField(
               controller: _cmsOfferTitleController,
               decoration: const InputDecoration(
                 hintText: 'e.g. Save 10% on a summertime trip',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
             const SizedBox(height: 16),
 
             // Description
-            const Text('OFFER DESCRIPTION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const Text('OFFER DESCRIPTION',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoalMuted)),
             const SizedBox(height: 6),
             TextField(
               controller: _cmsOfferDescController,
@@ -696,20 +792,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             const SizedBox(height: 16),
 
             // Button Text
-            const Text('BUTTON TEXT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const Text('BUTTON TEXT',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoalMuted)),
             const SizedBox(height: 6),
             TextField(
               controller: _cmsOfferButtonTextController,
               decoration: const InputDecoration(
                 hintText: 'e.g. Log in to claim offer',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
             const SizedBox(height: 16),
 
             // Offer Image URL
-            const Text('OFFER IMAGE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const Text('OFFER IMAGE',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoalMuted)),
             const SizedBox(height: 6),
             Row(
               children: [
@@ -719,7 +824,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     decoration: const InputDecoration(
                       hintText: 'Image URL',
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),
                   ),
                 ),
@@ -735,13 +841,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           });
                         },
                   icon: _cmsUploadingImage
-                      ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      ? const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.upload, size: 14, color: Colors.white),
-                  label: const Text('Upload', style: TextStyle(color: Colors.white, fontSize: 11)),
+                  label: const Text('Upload',
+                      style: TextStyle(color: Colors.white, fontSize: 11)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
                     minimumSize: const Size(80, 40),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ],
@@ -758,25 +870,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   'button_text': _cmsOfferButtonTextController.text,
                   'image_url': _cmsOfferImageController.text,
                 };
-                final success = await Provider.of<AdminProvider>(context, listen: false)
-                    .updateCMSContent(contentId, payload);
+                final success =
+                    await Provider.of<AdminProvider>(context, listen: false)
+                        .updateCMSContent(contentId, payload);
 
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Offer saved successfully!'), backgroundColor: Colors.green),
+                    const SnackBar(
+                        content: Text('Offer saved successfully!'),
+                        backgroundColor: Colors.green),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Failed to save Offer.'), backgroundColor: Colors.red),
+                    const SnackBar(
+                        content: Text('Failed to save Offer.'),
+                        backgroundColor: Colors.red),
                   );
                 }
               },
               icon: const Icon(Icons.check, size: 16, color: Colors.white),
-              label: const Text('Save Offer Configuration', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              label: const Text('Save Offer Configuration',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ],
@@ -786,9 +906,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   }
 
   Widget _buildCmsHeroDetailsForm(AdminProvider adminProvider) {
-    final heroCms = adminProvider.cmsContent.firstWhere((c) => c['section'] == 'hero', orElse: () => null);
+    final heroCms = adminProvider.cmsContent
+        .firstWhere((c) => c['section'] == 'hero', orElse: () => null);
     if (heroCms == null) {
-      return const Center(child: Text('Hero section configuration not found in CMS data.'));
+      return const Center(
+          child: Text('Hero section configuration not found in CMS data.'));
     }
 
     final contentId = heroCms['content_id'];
@@ -822,7 +944,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     color: AppTheme.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.settings_input_component, color: AppTheme.primary, size: 20),
+                  child: const Icon(Icons.settings_input_component,
+                      color: AppTheme.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
@@ -831,12 +954,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     children: [
                       Text(
                         'Hero Section Configuration',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppTheme.charcoal),
                       ),
                       SizedBox(height: 2),
                       Text(
                         'Configure the main above-the-fold content of your homepage.',
-                        style: TextStyle(fontSize: 10, color: AppTheme.charcoalMuted),
+                        style: TextStyle(
+                            fontSize: 10, color: AppTheme.charcoalMuted),
                       ),
                     ],
                   ),
@@ -844,48 +971,67 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               ],
             ),
             const Divider(height: 24),
-            
+
             // Sub Tag
-            const Text('SUB TAG', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const Text('SUB TAG',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoalMuted)),
             const SizedBox(height: 6),
             TextField(
               controller: _cmsSubTagController,
               decoration: const InputDecoration(
                 hintText: 'e.g. Luxury Rentals India',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
             const SizedBox(height: 16),
 
             // Rating Display Text
-            const Text('RATING DISPLAY TEXT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const Text('RATING DISPLAY TEXT',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoalMuted)),
             const SizedBox(height: 6),
             TextField(
               controller: _cmsRatingController,
               decoration: const InputDecoration(
                 hintText: 'e.g. 4.9/5 Rating',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
             const SizedBox(height: 16),
 
             // Heading Title (HTML Supported)
-            const Text('HEADING TITLE (HTML SUPPORTED)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const Text('HEADING TITLE (HTML SUPPORTED)',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoalMuted)),
             const SizedBox(height: 6),
             TextField(
               controller: _cmsTitleController,
               decoration: const InputDecoration(
                 hintText: 'e.g. Elevate Your Living',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
             const SizedBox(height: 16),
 
             // Subtitle / Paragraph Description
-            const Text('SUBTITLE / PARAGRAPH DESCRIPTION', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const Text('SUBTITLE / PARAGRAPH DESCRIPTION',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoalMuted)),
             const SizedBox(height: 6),
             TextField(
               controller: _cmsSubtitleController,
@@ -899,20 +1045,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             const SizedBox(height: 16),
 
             // Trusted By Text
-            const Text('TRUSTED BY TEXT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const Text('TRUSTED BY TEXT',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoalMuted)),
             const SizedBox(height: 6),
             TextField(
               controller: _cmsTrustedController,
               decoration: const InputDecoration(
                 hintText: 'e.g. Trusted by 10,000+ happy families across India',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
             const SizedBox(height: 16),
 
             // Hero Background Image
-            const Text('HERO BACKGROUND IMAGE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted)),
+            const Text('HERO BACKGROUND IMAGE',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoalMuted)),
             const SizedBox(height: 6),
             Row(
               children: [
@@ -922,7 +1077,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     decoration: const InputDecoration(
                       hintText: 'Image URL',
                       border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),
                   ),
                 ),
@@ -930,13 +1086,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 ElevatedButton.icon(
                   onPressed: _cmsUploadingImage ? null : _pickAndUploadCMSImage,
                   icon: _cmsUploadingImage
-                      ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      ? const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.upload, size: 14, color: Colors.white),
-                  label: const Text('Upload Image', style: TextStyle(color: Colors.white, fontSize: 11)),
+                  label: const Text('Upload Image',
+                      style: TextStyle(color: Colors.white, fontSize: 11)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
                     minimumSize: const Size(100, 40),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ],
@@ -947,11 +1109,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             ElevatedButton.icon(
               onPressed: () => _saveHeroConfiguration(contentId),
               icon: const Icon(Icons.check, size: 16, color: Colors.white),
-              label: const Text('Save Hero Configuration', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+              label: const Text('Save Hero Configuration',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ],
@@ -989,7 +1154,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             filled: true,
             fillColor: Colors.white,
             suffixIcon: suffixIcon,
@@ -1033,7 +1199,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             filled: true,
             fillColor: Colors.white,
             enabledBorder: OutlineInputBorder(
@@ -1051,7 +1218,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   }
 
   Widget _buildCmsHowItWorksList(AdminProvider adminProvider) {
-    final howCms = adminProvider.cmsContent.firstWhere((c) => c['section'] == 'how_it_works', orElse: () => null);
+    final howCms = adminProvider.cmsContent
+        .firstWhere((c) => c['section'] == 'how_it_works', orElse: () => null);
     if (howCms == null) {
       return const Center(child: Text('How It Works configuration not found.'));
     }
@@ -1082,7 +1250,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     color: AppTheme.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.format_list_numbered, color: AppTheme.primary, size: 20),
+                  child: const Icon(Icons.format_list_numbered,
+                      color: AppTheme.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1091,12 +1260,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     children: [
                       const Text(
                         'How It Works Steps',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.charcoal),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: AppTheme.charcoal),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Configure onboarding steps and bullet points displayed on the landing page.',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+                        style: TextStyle(
+                            color: Colors.grey.shade600, fontSize: 11),
                       ),
                     ],
                   ),
@@ -1114,7 +1287,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             backgroundColor: AppTheme.primary,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         const SizedBox(height: 16),
@@ -1137,7 +1311,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   children: [
                     Text(
                       'Step $stepId',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primary,
+                          fontSize: 13),
                     ),
                     const SizedBox(height: 12),
                     _buildCmsField(
@@ -1186,15 +1363,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   }
 
   Widget _buildCmsTestimonialsList(AdminProvider adminProvider) {
-    final testimonialsCms = adminProvider.cmsContent.firstWhere((c) => c['section'] == 'testimonials', orElse: () => null);
+    final testimonialsCms = adminProvider.cmsContent
+        .firstWhere((c) => c['section'] == 'testimonials', orElse: () => null);
     if (testimonialsCms == null) {
       return const Center(child: Text('Testimonials configuration not found.'));
     }
 
-    final contentId = testimonialsCms['content_id'] ?? 'cms_testimonials_default';
+    final contentId =
+        testimonialsCms['content_id'] ?? 'cms_testimonials_default';
 
     if (_cmsTestimonialsList == null) {
-      _cmsTestimonialsList = List.from(testimonialsCms['content_data']?['testimonials'] ?? testimonialsCms['content_data']?['items'] ?? []);
+      _cmsTestimonialsList = List.from(testimonialsCms['content_data']
+              ?['testimonials'] ??
+          testimonialsCms['content_data']?['items'] ??
+          []);
     }
 
     return Column(
@@ -1217,7 +1399,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     color: AppTheme.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.favorite_border, color: AppTheme.primary, size: 20),
+                  child: const Icon(Icons.favorite_border,
+                      color: AppTheme.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1226,12 +1409,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     children: [
                       const Text(
                         'Guest Testimonials',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.charcoal),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: AppTheme.charcoal),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Manage testimonials and reviews from your hosts and guests.',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+                        style: TextStyle(
+                            color: Colors.grey.shade600, fontSize: 11),
                       ),
                     ],
                   ),
@@ -1245,17 +1432,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         'role': '',
                         'rating': 5,
                         'comment': '',
-                        'avatar_url': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+                        'avatar_url':
+                            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
                       });
                     });
                   },
                   icon: const Icon(Icons.add, size: 12),
-                  label: const Text('Add Testimonial', style: TextStyle(fontSize: 10)),
+                  label: const Text('Add Testimonial',
+                      style: TextStyle(fontSize: 10)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ],
@@ -1271,7 +1462,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             backgroundColor: AppTheme.primary,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         const SizedBox(height: 16),
@@ -1296,10 +1488,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       children: [
                         Text(
                           'Testimonial #${index + 1}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primary,
+                              fontSize: 13),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                          icon: const Icon(Icons.delete_outline,
+                              color: Colors.red, size: 20),
                           onPressed: () {
                             setState(() {
                               _cmsTestimonialsList!.removeAt(index);
@@ -1321,7 +1517,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     _buildCmsField(
                       label: 'ROLE / LOCATION',
                       hint: 'e.g. Remote Worker or Mumbai',
-                      initialValue: testimonial['role'] ?? testimonial['location'] ?? '',
+                      initialValue:
+                          testimonial['role'] ?? testimonial['location'] ?? '',
                       onChanged: (val) {
                         _cmsTestimonialsList![index]['role'] = val;
                         _cmsTestimonialsList![index]['location'] = val;
@@ -1333,7 +1530,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       hint: 'e.g. 5',
                       initialValue: (testimonial['rating'] ?? 5).toString(),
                       onChanged: (val) {
-                        _cmsTestimonialsList![index]['rating'] = int.tryParse(val) ?? 5;
+                        _cmsTestimonialsList![index]['rating'] =
+                            int.tryParse(val) ?? 5;
                       },
                     ),
                     const SizedBox(height: 12),
@@ -1341,7 +1539,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       label: 'COMMENT / QUOTE',
                       hint: 'Describe their experience...',
                       maxLines: 3,
-                      initialValue: testimonial['comment'] ?? testimonial['quote'] ?? '',
+                      initialValue:
+                          testimonial['comment'] ?? testimonial['quote'] ?? '',
                       onChanged: (val) {
                         _cmsTestimonialsList![index]['comment'] = val;
                         _cmsTestimonialsList![index]['quote'] = val;
@@ -1357,7 +1556,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   }
 
   Widget _buildCmsBlogPostsList(AdminProvider adminProvider) {
-    final blogCms = adminProvider.cmsContent.firstWhere((c) => c['section'] == 'blog', orElse: () => null);
+    final blogCms = adminProvider.cmsContent
+        .firstWhere((c) => c['section'] == 'blog', orElse: () => null);
     if (blogCms == null) {
       return const Center(child: Text('Blog configuration not found.'));
     }
@@ -1388,7 +1588,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     color: AppTheme.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.article_outlined, color: AppTheme.primary, size: 20),
+                  child: const Icon(Icons.article_outlined,
+                      color: AppTheme.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1397,12 +1598,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     children: [
                       const Text(
                         'Journal Blog Posts',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.charcoal),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: AppTheme.charcoal),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Manage property insights, local guide articles, and platform updates.',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+                        style: TextStyle(
+                            color: Colors.grey.shade600, fontSize: 11),
                       ),
                     ],
                   ),
@@ -1414,7 +1619,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         'id': 'p${DateTime.now().millisecondsSinceEpoch}',
                         'title': '',
                         'excerpt': '',
-                        'image_url': 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600',
+                        'image_url':
+                            'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600',
                         'author': 'STR Insights Desk',
                         'date': 'June 13, 2026',
                         'read_time': '5 min read',
@@ -1422,12 +1628,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     });
                   },
                   icon: const Icon(Icons.add, size: 12),
-                  label: const Text('Add Blog Post', style: TextStyle(fontSize: 10)),
+                  label: const Text('Add Blog Post',
+                      style: TextStyle(fontSize: 10)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
               ],
@@ -1443,7 +1652,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             backgroundColor: AppTheme.primary,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         const SizedBox(height: 16),
@@ -1468,10 +1678,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       children: [
                         Text(
                           'Blog Post #${index + 1}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary, fontSize: 13),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primary,
+                              fontSize: 13),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                          icon: const Icon(Icons.delete_outline,
+                              color: Colors.red, size: 20),
                           onPressed: () {
                             setState(() {
                               _cmsBlogsList!.removeAt(index);
@@ -1520,17 +1734,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             onPressed: () {
                               _pickAndUploadImageForCms((url) {
                                 setState(() {
-                                    _cmsBlogsList![index]['image_url'] = url;
+                                  _cmsBlogsList![index]['image_url'] = url;
                                 });
                               });
                             },
                             icon: const Icon(Icons.upload_file, size: 14),
-                            label: const Text('Upload', style: TextStyle(fontSize: 11)),
+                            label: const Text('Upload',
+                                style: TextStyle(fontSize: 11)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppTheme.stone,
                               foregroundColor: AppTheme.charcoal,
                               elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8)),
                             ),
                           ),
                         ),
@@ -1581,7 +1797,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   }
 
   Widget _buildCmsFooterConfig(AdminProvider adminProvider) {
-    final footerCms = adminProvider.cmsContent.firstWhere((c) => c['section'] == 'footer', orElse: () => null);
+    final footerCms = adminProvider.cmsContent
+        .firstWhere((c) => c['section'] == 'footer', orElse: () => null);
     if (footerCms == null) {
       return const Center(child: Text('Footer configuration not found.'));
     }
@@ -1599,9 +1816,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       _footerOfficerEmailCtrl.text = data['grievance_email'] ?? '';
       _footerOfficerPhoneCtrl.text = data['grievance_phone'] ?? '';
       _footerResolutionTextCtrl.text = data['resolution_text'] ?? '';
-      _footerTermsCtrl.text = data['terms_text'] ?? 'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.';
-      _footerPrivacyCtrl.text = data['privacy_text'] ?? 'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.';
-      _footerCheckinCtrl.text = data['checkin_text'] ?? 'Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival. Quiet hours are from 10:00 PM to 7:00 AM.';
+      _footerTermsCtrl.text = data['terms_text'] ??
+          'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.';
+      _footerPrivacyCtrl.text = data['privacy_text'] ??
+          'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.';
+      _footerCheckinCtrl.text = data['checkin_text'] ??
+          'Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival. Quiet hours are from 10:00 PM to 7:00 AM.';
       _footerInitialized = true;
     }
 
@@ -1625,7 +1845,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     color: AppTheme.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.contact_support_outlined, color: AppTheme.primary, size: 20),
+                  child: const Icon(Icons.contact_support_outlined,
+                      color: AppTheme.primary, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1634,12 +1855,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     children: [
                       const Text(
                         'Footer Contact & Grievance',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.charcoal),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: AppTheme.charcoal),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Edit public footer contact details and escalation information.',
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
+                        style: TextStyle(
+                            color: Colors.grey.shade600, fontSize: 11),
                       ),
                     ],
                   ),
@@ -1657,7 +1882,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             backgroundColor: AppTheme.primary,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
         const SizedBox(height: 16),
@@ -1808,38 +2034,49 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  approve ? 'Confirm Final Live Approval' : 'Reject Property Listing',
+                  approve
+                      ? 'Confirm Final Live Approval'
+                      : 'Reject Property Listing',
                   style: Theme.of(context).textTheme.displayMedium,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _remarksController,
                   decoration: InputDecoration(
-                    labelText: approve ? 'Final Remarks' : 'Reason for rejection',
+                    labelText:
+                        approve ? 'Final Remarks' : 'Reason for rejection',
                   ),
                   maxLines: 2,
-                  validator: (v) => v == null || v.isEmpty ? 'Remarks required' : null,
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Remarks required' : null,
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () async {
                     if (!_formKey.currentState!.validate()) return;
                     final success = approve
-                        ? await Provider.of<VerificationProvider>(context, listen: false)
-                            .adminApprove(propertyId, {'remarks': _remarksController.text})
-                        : await Provider.of<VerificationProvider>(context, listen: false)
+                        ? await Provider.of<VerificationProvider>(context,
+                                listen: false)
+                            .adminApprove(propertyId,
+                                {'remarks': _remarksController.text})
+                        : await Provider.of<VerificationProvider>(context,
+                                listen: false)
                             .adminReject(propertyId, _remarksController.text);
-                            
+
                     if (success && context.mounted) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(approve ? 'Property is now LIVE!' : 'Property listing rejected.')),
+                        SnackBar(
+                            content: Text(approve
+                                ? 'Property is now LIVE!'
+                                : 'Property listing rejected.')),
                       );
                       _loadData();
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: approve ? Colors.green.shade700 : AppTheme.primary,
+                    backgroundColor:
+                        approve ? Colors.green.shade700 : AppTheme.primary,
                   ),
                   child: Text(approve ? 'Publish Live' : 'Reject'),
                 ),
@@ -1855,15 +2092,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   // --- ADD / EDIT USER DIALOG (HIGH FIDELITY REDESIGN) ---
   void _showUserFormDialog({Map<String, dynamic>? existingUser}) {
     final isEdit = existingUser != null;
-    final nameCtrl = TextEditingController(text: existingUser?['full_name'] ?? '');
+    final nameCtrl =
+        TextEditingController(text: existingUser?['full_name'] ?? '');
     final emailCtrl = TextEditingController(text: existingUser?['email'] ?? '');
     final phoneCtrl = TextEditingController(text: existingUser?['phone'] ?? '');
     final passwordCtrl = TextEditingController();
     final cityCtrl = TextEditingController(text: existingUser?['city'] ?? '');
     final stateCtrl = TextEditingController(text: existingUser?['state'] ?? '');
-    final birthdateCtrl = TextEditingController(text: existingUser?['birthdate'] ?? '');
+    final birthdateCtrl =
+        TextEditingController(text: existingUser?['birthdate'] ?? '');
     String roleVal = existingUser?['role'] ?? 'guest';
-    
+
     // Picked file local state
     dynamic pickedFile; // will store XFile
     bool isUploadingImage = false;
@@ -1903,7 +2142,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             Future<void> pickAndUploadImage() async {
               try {
                 final picker = ImagePicker();
-                final file = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+                final file = await picker.pickImage(
+                    source: ImageSource.gallery, imageQuality: 70);
                 if (file != null) {
                   setModalState(() {
                     pickedFile = file;
@@ -1913,10 +2153,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   // Upload to server using ApiService
                   final apiService = ApiService();
                   final formData = dio_pkg.FormData.fromMap({
-                    'file': await dio_pkg.MultipartFile.fromFile(file.path, filename: file.name),
+                    'file': await dio_pkg.MultipartFile.fromFile(file.path,
+                        filename: file.name),
                   });
-                  final response = await apiService.dio.post('/upload/image', data: formData);
-                  if (response.statusCode == 200 || response.statusCode == 201) {
+                  final response = await apiService.dio
+                      .post('/upload/image', data: formData);
+                  if (response.statusCode == 200 ||
+                      response.statusCode == 201) {
                     setModalState(() {
                       uploadedImageUrl = response.data['url'];
                     });
@@ -1934,7 +2177,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             Future<void> selectBirthdate() async {
               final DateTime? picked = await showDatePicker(
                 context: context,
-                initialDate: DateTime.now().subtract(const Duration(days: 365 * 18)),
+                initialDate:
+                    DateTime.now().subtract(const Duration(days: 365 * 18)),
                 firstDate: DateTime(1900),
                 lastDate: DateTime.now(),
                 builder: (context, child) {
@@ -1980,8 +2224,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  isEdit ? 'Edit User Details' : 'Create New User',
-                                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                                  isEdit
+                                      ? 'Edit User Details'
+                                      : 'Create New User',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .displayMedium
+                                      ?.copyWith(
                                         fontSize: 22,
                                         fontWeight: FontWeight.bold,
                                         color: AppTheme.charcoal,
@@ -2047,7 +2296,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                     backgroundColor: const Color(0xFFFDE8E8),
                                     foregroundColor: AppTheme.primary,
                                     elevation: 0,
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 10),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(20),
                                     ),
@@ -2058,7 +2308,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                           height: 14,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
-                                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                    AppTheme.primary),
                                           ),
                                         )
                                       : const Text(
@@ -2074,7 +2326,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   child: Text(
                                     pickedFile != null
                                         ? pickedFile.name
-                                        : (uploadedImageUrl != null ? 'Image attached' : 'No file chosen'),
+                                        : (uploadedImageUrl != null
+                                            ? 'Image attached'
+                                            : 'No file chosen'),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
@@ -2113,7 +2367,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         decoration: const InputDecoration(
                           hintText: 'John Doe',
                         ),
-                        validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Required' : null,
                       ),
                       const SizedBox(height: 16),
 
@@ -2139,7 +2394,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   decoration: const InputDecoration(
                                     hintText: 'admin@goldenrichstay.com',
                                   ),
-                                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                                  validator: (v) => v == null || v.isEmpty
+                                      ? 'Required'
+                                      : null,
                                 ),
                               ],
                             ),
@@ -2164,7 +2421,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   decoration: const InputDecoration(
                                     hintText: '+91...',
                                   ),
-                                  validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                                  validator: (v) => v == null || v.isEmpty
+                                      ? 'Required'
+                                      : null,
                                 ),
                               ],
                             ),
@@ -2190,7 +2449,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           decoration: const InputDecoration(
                             hintText: '.........',
                           ),
-                          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                          validator: (v) =>
+                              v == null || v.isEmpty ? 'Required' : null,
                         ),
                         const SizedBox(height: 16),
                       ],
@@ -2214,11 +2474,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                 DropdownButtonFormField<String>(
                                   value: roleVal,
                                   items: const [
-                                    DropdownMenuItem(value: 'guest', child: Text('GUEST')),
-                                    DropdownMenuItem(value: 'host', child: Text('HOST')),
-                                    DropdownMenuItem(value: 'admin', child: Text('ADMIN')),
-                                    DropdownMenuItem(value: 'broker', child: Text('BROKER')),
-                                    DropdownMenuItem(value: 'employee', child: Text('EMPLOYEE')),
+                                    DropdownMenuItem(
+                                        value: 'guest', child: Text('GUEST')),
+                                    DropdownMenuItem(
+                                        value: 'host', child: Text('HOST')),
+                                    DropdownMenuItem(
+                                        value: 'admin', child: Text('ADMIN')),
+                                    DropdownMenuItem(
+                                        value: 'broker', child: Text('BROKER')),
+                                    DropdownMenuItem(
+                                        value: 'employee',
+                                        child: Text('EMPLOYEE')),
                                   ],
                                   onChanged: (val) {
                                     if (val != null) {
@@ -2303,7 +2569,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   onTap: selectBirthdate,
                                   decoration: const InputDecoration(
                                     hintText: 'Select Date',
-                                    suffixIcon: Icon(Icons.calendar_today_outlined, size: 16),
+                                    suffixIcon: Icon(
+                                        Icons.calendar_today_outlined,
+                                        size: 16),
                                   ),
                                 ),
                               ],
@@ -2315,7 +2583,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
                       // SYSTEM GENERATED UID BANNER
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFAF6F2),
                           borderRadius: BorderRadius.circular(12),
@@ -2362,7 +2631,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFE2EBE5),
                                 borderRadius: BorderRadius.circular(6),
@@ -2400,8 +2670,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           ElevatedButton(
                             onPressed: () async {
                               if (!userFormKey.currentState!.validate()) return;
-                              final adminProv = Provider.of<AdminProvider>(context, listen: false);
-                              
+                              final adminProv = Provider.of<AdminProvider>(
+                                  context,
+                                  listen: false);
+
                               bool success;
                               if (isEdit) {
                                 final updatePayload = {
@@ -2411,10 +2683,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   'role': roleVal,
                                   'city': cityCtrl.text,
                                   'state': stateCtrl.text,
-                                  'birthdate': birthdateCtrl.text.isEmpty ? null : birthdateCtrl.text,
+                                  'birthdate': birthdateCtrl.text.isEmpty
+                                      ? null
+                                      : birthdateCtrl.text,
                                   'profile_image': uploadedImageUrl,
                                 };
-                                success = await adminProv.updateUser(existingUser['user_id'], updatePayload);
+                                success = await adminProv.updateUser(
+                                    existingUser['user_id'], updatePayload);
                               } else {
                                 final createPayload = {
                                   'full_name': nameCtrl.text,
@@ -2424,17 +2699,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   'role': roleVal,
                                   'city': cityCtrl.text,
                                   'state': stateCtrl.text,
-                                  'birthdate': birthdateCtrl.text.isEmpty ? null : birthdateCtrl.text,
+                                  'birthdate': birthdateCtrl.text.isEmpty
+                                      ? null
+                                      : birthdateCtrl.text,
                                   'profile_image': uploadedImageUrl,
                                   'terms_accepted': true,
                                 };
-                                success = await adminProv.createUser(createPayload);
+                                success =
+                                    await adminProv.createUser(createPayload);
                               }
-                              
+
                               if (success && context.mounted) {
                                 Navigator.pop(context);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(isEdit ? 'User updated successfully!' : 'User created successfully!')),
+                                  SnackBar(
+                                      content: Text(isEdit
+                                          ? 'User updated successfully!'
+                                          : 'User created successfully!')),
                                 );
                                 _loadData();
                               }
@@ -2443,7 +2724,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                               backgroundColor: AppTheme.primary,
                               foregroundColor: Colors.white,
                               elevation: 0,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 24, vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -2474,7 +2756,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   void _showUserDetailsDialog(Map<String, dynamic> user) {
     String currentKyc = user['kyc_status'] ?? 'unverified';
     final remarksCtrl = TextEditingController(text: user['kyc_remarks'] ?? '');
-    
+
     List<dynamic> brokers = [];
     bool isLoadingBrokers = true;
     bool brokersFetched = false;
@@ -2490,7 +2772,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               brokersFetched = true;
               Future.microtask(() async {
                 try {
-                  final response = await ApiService().dio.get('/admin/users', queryParameters: {'role': 'broker'});
+                  final response = await ApiService()
+                      .dio
+                      .get('/admin/users', queryParameters: {'role': 'broker'});
                   if (response.statusCode == 200) {
                     setModalState(() {
                       brokers = response.data['users'] ?? [];
@@ -2523,7 +2807,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               return 'pending';
             }
 
-            Future<void> updateDocStatus(String docType, String status, {String? reason}) async {
+            Future<void> updateDocStatus(String docType, String status,
+                {String? reason}) async {
               final apiService = ApiService();
               try {
                 final response = await apiService.dio.patch(
@@ -2536,9 +2821,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 );
                 if (response.statusCode == 200) {
                   final updatedDocs = List<Map<String, dynamic>>.from(
-                    (user['kyc_documents'] as List? ?? []).map((e) => Map<String, dynamic>.from(e))
-                  );
-                  final docIdx = updatedDocs.indexWhere((d) => d['document_type'] == docType);
+                      (user['kyc_documents'] as List? ?? [])
+                          .map((e) => Map<String, dynamic>.from(e)));
+                  final docIdx = updatedDocs
+                      .indexWhere((d) => d['document_type'] == docType);
                   if (docIdx != -1) {
                     updatedDocs[docIdx]['status'] = status;
                     updatedDocs[docIdx]['rejection_reason'] = reason;
@@ -2553,12 +2839,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     user['kyc_documents'] = updatedDocs;
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Document status updated to $status!'), backgroundColor: Colors.green),
+                    SnackBar(
+                        content: Text('Document status updated to $status!'),
+                        backgroundColor: Colors.green),
                   );
                 }
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Failed to update document status.'), backgroundColor: Colors.red),
+                  const SnackBar(
+                      content: Text('Failed to update document status.'),
+                      backgroundColor: Colors.red),
                 );
               }
             }
@@ -2584,9 +2874,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     ElevatedButton(
                       onPressed: () {
                         Navigator.pop(context);
-                        updateDocStatus(docType, 'rejected', reason: reasonCtrl.text.trim());
+                        updateDocStatus(docType, 'rejected',
+                            reason: reasonCtrl.text.trim());
                       },
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      style:
+                          ElevatedButton.styleFrom(backgroundColor: Colors.red),
                       child: const Text('REJECT'),
                     ),
                   ],
@@ -2598,7 +2890,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               final docsList = user['kyc_documents'] as List? ?? [];
               final url = getDocUrl(docsList, docType);
               final status = getDocStatus(docsList, docType);
-              
+
               Color statusColor = Colors.orange;
               Color bgTint = Colors.orange.shade50;
               if (status == 'approved') {
@@ -2608,7 +2900,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 statusColor = Colors.red;
                 bgTint = Colors.red.shade50;
               }
-              
+
               return Card(
                 margin: const EdgeInsets.only(bottom: 16),
                 shape: RoundedRectangleBorder(
@@ -2625,10 +2917,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         children: [
                           Text(
                             title,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: AppTheme.charcoal),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
                               color: bgTint,
                               borderRadius: BorderRadius.circular(4),
@@ -2664,17 +2960,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         children: [
                           Expanded(
                             child: TextButton.icon(
-                              onPressed: () => updateDocStatus(docType, 'approved'),
-                              icon: const Icon(Icons.check, size: 14, color: Colors.green),
-                              label: const Text('APPROVE', style: TextStyle(color: Colors.green, fontSize: 11, fontWeight: FontWeight.bold)),
+                              onPressed: () =>
+                                  updateDocStatus(docType, 'approved'),
+                              icon: const Icon(Icons.check,
+                                  size: 14, color: Colors.green),
+                              label: const Text('APPROVE',
+                                  style: TextStyle(
+                                      color: Colors.green,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold)),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: TextButton.icon(
-                              onPressed: () => promptDocRejection(docType, title),
-                              icon: const Icon(Icons.close, size: 14, color: Colors.red),
-                              label: const Text('REJECT', style: TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold)),
+                              onPressed: () =>
+                                  promptDocRejection(docType, title),
+                              icon: const Icon(Icons.close,
+                                  size: 14, color: Colors.red),
+                              label: const Text('REJECT',
+                                  style: TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
@@ -2685,7 +2993,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               );
             }
 
-            Widget buildInfoTile(String label, String value, {Widget? trailing}) {
+            Widget buildInfoTile(String label, String value,
+                {Widget? trailing}) {
               return Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -2706,14 +3015,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       ),
                     ),
                     const SizedBox(height: 4),
-                    trailing ?? Text(
-                      value,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.charcoal,
-                      ),
-                    ),
+                    trailing ??
+                        Text(
+                          value,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.charcoal,
+                          ),
+                        ),
                   ],
                 ),
               );
@@ -2742,7 +3052,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     padding: const EdgeInsets.all(16),
                     decoration: const BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(20)),
                       border: Border(bottom: BorderSide(color: AppTheme.stone)),
                     ),
                     child: Row(
@@ -2750,13 +3061,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         CircleAvatar(
                           radius: 24,
                           backgroundColor: AppTheme.stone,
-                          backgroundImage: user['profile_image'] != null && user['profile_image'].toString().isNotEmpty
-                              ? NetworkImage(_getFullImageUrl(user['profile_image'].toString()))
+                          backgroundImage: user['profile_image'] != null &&
+                                  user['profile_image'].toString().isNotEmpty
+                              ? NetworkImage(_getFullImageUrl(
+                                  user['profile_image'].toString()))
                               : null,
-                          child: user['profile_image'] == null || user['profile_image'].toString().isEmpty
+                          child: user['profile_image'] == null ||
+                                  user['profile_image'].toString().isEmpty
                               ? Text(
-                                  (user['full_name'] ?? 'U')[0].toString().toUpperCase(),
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.charcoal),
+                                  (user['full_name'] ?? 'U')[0]
+                                      .toString()
+                                      .toUpperCase(),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: AppTheme.charcoal),
                                 )
                               : null,
                         ),
@@ -2767,23 +3086,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             children: [
                               Text(
                                 user['full_name'] ?? 'Host KYC Review',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                                style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.charcoal),
                               ),
                               const Text(
                                 'HOST KYC REVIEW DASHBOARD',
-                                style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: AppTheme.charcoalMuted, letterSpacing: 0.5),
+                                style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppTheme.charcoalMuted,
+                                    letterSpacing: 0.5),
                               ),
                             ],
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: mainKycBg,
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            currentKyc == 'unverified' ? 'PENDING REVIEW' : currentKyc.toUpperCase(),
+                            currentKyc == 'unverified'
+                                ? 'PENDING REVIEW'
+                                : currentKyc.toUpperCase(),
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
@@ -2793,7 +3122,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: const Icon(Icons.close, color: AppTheme.charcoalLight),
+                          icon: const Icon(Icons.close,
+                              color: AppTheme.charcoalLight),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
@@ -2820,25 +3150,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              Expanded(child: buildInfoTile('Email Address', user['email'] ?? 'N/A')),
+                              Expanded(
+                                  child: buildInfoTile(
+                                      'Email Address', user['email'] ?? 'N/A')),
                               const SizedBox(width: 8),
-                              Expanded(child: buildInfoTile('Phone Number', user['phone'] ?? 'N/A')),
+                              Expanded(
+                                  child: buildInfoTile(
+                                      'Phone Number', user['phone'] ?? 'N/A')),
                             ],
                           ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              Expanded(child: buildInfoTile('Location', '${user['city'] ?? ''}, ${user['state'] ?? ''}')),
+                              Expanded(
+                                  child: buildInfoTile('Location',
+                                      '${user['city'] ?? ''}, ${user['state'] ?? ''}')),
                               const SizedBox(width: 8),
-                              Expanded(child: buildInfoTile('Status', user['is_active'] == true ? 'Active Account' : 'Inactive Account')),
+                              Expanded(
+                                  child: buildInfoTile(
+                                      'Status',
+                                      user['is_active'] == true
+                                          ? 'Active Account'
+                                          : 'Inactive Account')),
                             ],
                           ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              Expanded(child: buildInfoTile('Host User ID', user['user_id'] ?? 'N/A')),
+                              Expanded(
+                                  child: buildInfoTile('Host User ID',
+                                      user['user_id'] ?? 'N/A')),
                               const SizedBox(width: 8),
-                              Expanded(child: buildInfoTile('Joined On', _formatDate(user['created_at']))),
+                              Expanded(
+                                  child: buildInfoTile('Joined On',
+                                      _formatDate(user['created_at']))),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -2849,32 +3194,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                 ? const SizedBox(
                                     height: 20,
                                     width: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppTheme.primary),
                                   )
                                 : DropdownButtonHideUnderline(
                                     child: DropdownButton<String?>(
                                       value: user['broker_id'],
-                                      hint: const Text('- Assign a Broker -', style: TextStyle(fontSize: 13, color: AppTheme.charcoalMuted)),
+                                      hint: const Text('- Assign a Broker -',
+                                          style: TextStyle(
+                                              fontSize: 13,
+                                              color: AppTheme.charcoalMuted)),
                                       isDense: true,
                                       isExpanded: true,
-                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                                      style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.charcoal),
                                       items: [
                                         const DropdownMenuItem<String?>(
                                           value: null,
-                                          child: Text('- None / Assign -', style: TextStyle(color: AppTheme.charcoalMuted, fontWeight: FontWeight.normal)),
+                                          child: Text('- None / Assign -',
+                                              style: TextStyle(
+                                                  color: AppTheme.charcoalMuted,
+                                                  fontWeight:
+                                                      FontWeight.normal)),
                                         ),
-                                        ...brokers.map((b) => DropdownMenuItem<String?>(
-                                          value: b['user_id'],
-                                          child: Text(
-                                            '${b['full_name']} (${b['lg_code'] ?? ''})',
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        )),
+                                        ...brokers.map((b) =>
+                                            DropdownMenuItem<String?>(
+                                              value: b['user_id'],
+                                              child: Text(
+                                                '${b['full_name']} (${b['lg_code'] ?? ''})',
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            )),
                                       ],
                                       onChanged: (val) async {
                                         final apiService = ApiService();
                                         try {
-                                          final response = await apiService.dio.patch(
+                                          final response =
+                                              await apiService.dio.patch(
                                             '/admin/users/${user['user_id']}',
                                             data: {'broker_id': val},
                                           );
@@ -2882,13 +3241,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                             setModalState(() {
                                               user['broker_id'] = val;
                                             });
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Broker assigned successfully!'), backgroundColor: Colors.green),
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                  content: Text(
+                                                      'Broker assigned successfully!'),
+                                                  backgroundColor:
+                                                      Colors.green),
                                             );
                                           }
                                         } catch (e) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Failed to assign broker.'), backgroundColor: Colors.red),
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text(
+                                                    'Failed to assign broker.'),
+                                                backgroundColor: Colors.red),
                                           );
                                         }
                                       },
@@ -2909,7 +3277,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           TextFormField(
                             controller: remarksCtrl,
                             decoration: const InputDecoration(
-                              hintText: 'Enter review remarks, approval feedback or rejection reasons...',
+                              hintText:
+                                  'Enter review remarks, approval feedback or rejection reasons...',
                               filled: true,
                               fillColor: Colors.white,
                             ),
@@ -2929,13 +3298,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           ),
                           const SizedBox(height: 12),
                           buildDocCard('Aadhar Card', 'aadhar_card'),
-                          buildDocCard('Property Ownership Proof', 'property_proof'),
+                          buildDocCard(
+                              'Property Ownership Proof', 'property_proof'),
                           buildDocCard('Cancelled Cheque', 'cancelled_cheque'),
-                          
+
                           // Check if GST is uploaded
-                          if (getDocUrl(user['kyc_documents'] as List? ?? [], 'gst_certificate') != null)
+                          if (getDocUrl(user['kyc_documents'] as List? ?? [],
+                                  'gst_certificate') !=
+                              null)
                             buildDocCard('GST Certificate', 'gst_certificate'),
-                            
+
                           const SizedBox(height: 24),
 
                           // Section 3: X-Space360 GRP & Owner (Host) Agreement
@@ -2954,30 +3326,44 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             decoration: BoxDecoration(
                               color: const Color(0xFFFAF6F2),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFEFE8E0)),
+                              border:
+                                  Border.all(color: const Color(0xFFEFE8E0)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     const Text(
                                       'X-Space360 GRP & Owner (Host) Agreement.',
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: AppTheme.charcoal),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: user['agreement_signed_at'] != null ? Colors.green.shade50 : Colors.grey.shade100,
+                                        color:
+                                            user['agreement_signed_at'] != null
+                                                ? Colors.green.shade50
+                                                : Colors.grey.shade100,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
-                                        user['agreement_signed_at'] != null ? 'SIGNED' : 'UNSIGNED',
+                                        user['agreement_signed_at'] != null
+                                            ? 'SIGNED'
+                                            : 'UNSIGNED',
                                         style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
-                                          color: user['agreement_signed_at'] != null ? Colors.green.shade700 : Colors.grey.shade600,
+                                          color: user['agreement_signed_at'] !=
+                                                  null
+                                              ? Colors.green.shade700
+                                              : Colors.grey.shade600,
                                         ),
                                       ),
                                     ),
@@ -2988,34 +3374,50 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   children: [
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           const Text(
                                             'OWNER NAME',
-                                            style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppTheme.charcoalMuted),
+                                            style: TextStyle(
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w800,
+                                                color: AppTheme.charcoalMuted),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            user['agreement_owner_name'] ?? 'N/A',
-                                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                                            user['agreement_owner_name'] ??
+                                                'N/A',
+                                            style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppTheme.charcoal),
                                           ),
                                         ],
                                       ),
                                     ),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           const Text(
                                             'SIGNED ON',
-                                            style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppTheme.charcoalMuted),
+                                            style: TextStyle(
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w800,
+                                                color: AppTheme.charcoalMuted),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
                                             user['agreement_signed_at'] != null
-                                                ? _formatDate(user['agreement_signed_at'])
+                                                ? _formatDate(
+                                                    user['agreement_signed_at'])
                                                 : 'N/A',
-                                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                                            style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppTheme.charcoal),
                                           ),
                                         ],
                                       ),
@@ -3025,7 +3427,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                 const SizedBox(height: 16),
                                 const Text(
                                   'AGREEMENT SIGNATURE',
-                                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: AppTheme.charcoalMuted, letterSpacing: 0.5),
+                                  style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.charcoalMuted,
+                                      letterSpacing: 0.5),
                                 ),
                                 const SizedBox(height: 6),
                                 Container(
@@ -3034,10 +3440,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   decoration: BoxDecoration(
                                     color: Colors.white,
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: const Color(0xFFE5E5DF)),
+                                    border: Border.all(
+                                        color: const Color(0xFFE5E5DF)),
                                   ),
                                   alignment: Alignment.center,
-                                  child: user['agreement_signature'] != null && user['agreement_signature'].toString().isNotEmpty
+                                  child: user['agreement_signature'] != null &&
+                                          user['agreement_signature']
+                                              .toString()
+                                              .isNotEmpty
                                       ? Text(
                                           user['agreement_signature'],
                                           style: const TextStyle(
@@ -3045,12 +3455,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                             fontSize: 24,
                                             fontWeight: FontWeight.w500,
                                             fontStyle: FontStyle.italic,
-                                            color: Color(0xFF1E3A8A), // Deep navy
+                                            color:
+                                                Color(0xFF1E3A8A), // Deep navy
                                           ),
                                         )
                                       : const Text(
                                           'No signature captured',
-                                          style: TextStyle(color: AppTheme.charcoalMuted, fontSize: 12, fontStyle: FontStyle.italic),
+                                          style: TextStyle(
+                                              color: AppTheme.charcoalMuted,
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic),
                                         ),
                                 ),
                               ],
@@ -3073,7 +3487,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       children: [
                         // Verification Guideline Warning
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFF9F2),
                             borderRadius: BorderRadius.circular(12),
@@ -3081,7 +3496,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800, size: 20),
+                              Icon(Icons.warning_amber_rounded,
+                                  color: Colors.orange.shade800, size: 20),
                               const SizedBox(width: 12),
                               const Expanded(
                                 child: Text(
@@ -3111,23 +3527,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                         'remarks': remarksCtrl.text,
                                       },
                                     );
-                                    if (response.statusCode == 200 && context.mounted) {
+                                    if (response.statusCode == 200 &&
+                                        context.mounted) {
                                       Navigator.pop(context);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('KYC Rejected.'), backgroundColor: Colors.red),
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text('KYC Rejected.'),
+                                            backgroundColor: Colors.red),
                                       );
                                       _loadData();
                                     }
                                   } catch (e) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Failed to reject KYC.')),
+                                      const SnackBar(
+                                          content:
+                                              Text('Failed to reject KYC.')),
                                     );
                                   }
                                 },
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: Colors.red,
                                   side: const BorderSide(color: Colors.red),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
                                 ),
                                 child: const Text('REJECT KYC'),
                               ),
@@ -3145,23 +3568,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                         'remarks': remarksCtrl.text,
                                       },
                                     );
-                                    if (response.statusCode == 200 && context.mounted) {
+                                    if (response.statusCode == 200 &&
+                                        context.mounted) {
                                       Navigator.pop(context);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('KYC Approved & Host Live!'), backgroundColor: Colors.green),
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'KYC Approved & Host Live!'),
+                                            backgroundColor: Colors.green),
                                       );
                                       _loadData();
                                     }
                                   } catch (e) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Failed to approve KYC.')),
+                                      const SnackBar(
+                                          content:
+                                              Text('Failed to approve KYC.')),
                                     );
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green.shade700,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
                                 ),
                                 child: const Text('APPROVE KYC & GO LIVE'),
                               ),
@@ -3193,9 +3624,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       );
       return;
     }
-    
+
     final fullUrl = _getFullImageUrl(url);
-    
+
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -3205,7 +3636,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           children: [
             AppBar(
               backgroundColor: Colors.black,
-              title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16)),
+              title: Text(title,
+                  style: const TextStyle(color: Colors.white, fontSize: 16)),
               leading: IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
                 onPressed: () => Navigator.pop(context),
@@ -3221,7 +3653,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   if (loadingProgress == null) return child;
                   return const SizedBox(
                     height: 200,
-                    child: Center(child: CircularProgressIndicator(color: AppTheme.primary)),
+                    child: Center(
+                        child:
+                            CircularProgressIndicator(color: AppTheme.primary)),
                   );
                 },
                 errorBuilder: (context, error, stackTrace) {
@@ -3229,7 +3663,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     height: 200,
                     color: Colors.grey.shade100,
                     child: const Center(
-                      child: Icon(Icons.broken_image, size: 48, color: Colors.grey),
+                      child: Icon(Icons.broken_image,
+                          size: 48, color: Colors.grey),
                     ),
                   );
                 },
@@ -3277,21 +3712,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Create Promo Coupon', style: Theme.of(context).textTheme.displayMedium),
+                      Text('Create Promo Coupon',
+                          style: Theme.of(context).textTheme.displayMedium),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: codeCtrl,
-                        decoration: const InputDecoration(labelText: 'Coupon Code (e.g. SAVE50)'),
+                        decoration: const InputDecoration(
+                            labelText: 'Coupon Code (e.g. SAVE50)'),
                         textCapitalization: TextCapitalization.characters,
-                        validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Required' : null,
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         value: discountType,
-                        decoration: const InputDecoration(labelText: 'Discount Type'),
+                        decoration:
+                            const InputDecoration(labelText: 'Discount Type'),
                         items: const [
-                          DropdownMenuItem(value: 'percentage', child: Text('Percentage (%)')),
-                          DropdownMenuItem(value: 'fixed', child: Text('Flat Discount (₹)')),
+                          DropdownMenuItem(
+                              value: 'percentage',
+                              child: Text('Percentage (%)')),
+                          DropdownMenuItem(
+                              value: 'fixed', child: Text('Flat Discount (₹)')),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -3304,17 +3746,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: valCtrl,
-                        decoration: const InputDecoration(labelText: 'Discount Value'),
+                        decoration:
+                            const InputDecoration(labelText: 'Discount Value'),
                         keyboardType: TextInputType.number,
-                        validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Required' : null,
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         value: couponType,
-                        decoration: const InputDecoration(labelText: 'Coupon Applicability'),
+                        decoration: const InputDecoration(
+                            labelText: 'Coupon Applicability'),
                         items: const [
-                          DropdownMenuItem(value: 'booking', child: Text('Guest Booking')),
-                          DropdownMenuItem(value: 'subscription', child: Text('Host Subscription')),
+                          DropdownMenuItem(
+                              value: 'booking', child: Text('Guest Booking')),
+                          DropdownMenuItem(
+                              value: 'subscription',
+                              child: Text('Host Subscription')),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -3328,37 +3776,56 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       if (couponType == 'booking') ...[
                         TextFormField(
                           controller: propCtrl,
-                          decoration: const InputDecoration(labelText: 'Specific Property ID (Optional)'),
+                          decoration: const InputDecoration(
+                              labelText: 'Specific Property ID (Optional)'),
                         ),
                         const SizedBox(height: 12),
                       ],
                       if (couponType == 'subscription') ...[
                         DropdownButtonFormField<String>(
                           value: couponPlanType,
-                          decoration: const InputDecoration(labelText: 'Plan Type (Optional)'),
+                          decoration: const InputDecoration(
+                              labelText: 'Plan Type (Optional)'),
                           items: const [
-                            DropdownMenuItem(value: '', child: Text('Any Plan')),
-                            DropdownMenuItem(value: 'studio', child: Text('Studio')),
-                            DropdownMenuItem(value: '1bhk', child: Text('1 BHK')),
-                            DropdownMenuItem(value: '2bhk', child: Text('2 BHK')),
-                            DropdownMenuItem(value: '3bhk', child: Text('3 BHK')),
-                            DropdownMenuItem(value: '4bhk_plus', child: Text('4 BHK+')),
-                            DropdownMenuItem(value: 'commercial', child: Text('Commercial')),
-                            DropdownMenuItem(value: 'banquet', child: Text('Event/Banquet')),
+                            DropdownMenuItem(
+                                value: '', child: Text('Any Plan')),
+                            DropdownMenuItem(
+                                value: 'studio', child: Text('Studio')),
+                            DropdownMenuItem(
+                                value: '1bhk', child: Text('1 BHK')),
+                            DropdownMenuItem(
+                                value: '2bhk', child: Text('2 BHK')),
+                            DropdownMenuItem(
+                                value: '3bhk', child: Text('3 BHK')),
+                            DropdownMenuItem(
+                                value: '4bhk_plus', child: Text('4 BHK+')),
+                            DropdownMenuItem(
+                                value: 'commercial', child: Text('Commercial')),
+                            DropdownMenuItem(
+                                value: 'banquet', child: Text('Event/Banquet')),
                           ],
-                          onChanged: (val) => setModalState(() => couponPlanType = val ?? ''),
+                          onChanged: (val) =>
+                              setModalState(() => couponPlanType = val ?? ''),
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
                           value: couponPropertyCategory,
-                          decoration: const InputDecoration(labelText: 'Property Category (Optional)'),
+                          decoration: const InputDecoration(
+                              labelText: 'Property Category (Optional)'),
                           items: const [
-                            DropdownMenuItem(value: '', child: Text('Any Category')),
-                            DropdownMenuItem(value: 'residential', child: Text('Residential')),
-                            DropdownMenuItem(value: 'commercial', child: Text('Commercial')),
-                            DropdownMenuItem(value: 'event_venue', child: Text('Event Venue')),
+                            DropdownMenuItem(
+                                value: '', child: Text('Any Category')),
+                            DropdownMenuItem(
+                                value: 'residential',
+                                child: Text('Residential')),
+                            DropdownMenuItem(
+                                value: 'commercial', child: Text('Commercial')),
+                            DropdownMenuItem(
+                                value: 'event_venue',
+                                child: Text('Event Venue')),
                           ],
-                          onChanged: (val) => setModalState(() => couponPropertyCategory = val ?? ''),
+                          onChanged: (val) => setModalState(
+                              () => couponPropertyCategory = val ?? ''),
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
@@ -3382,27 +3849,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       ElevatedButton(
                         onPressed: () async {
                           if (!couponFormKey.currentState!.validate()) return;
-                          
-                          final adminProv = Provider.of<AdminProvider>(context, listen: false);
+
+                          final adminProv = Provider.of<AdminProvider>(context,
+                              listen: false);
                           final numVal = double.tryParse(valCtrl.text) ?? 0.0;
-                          
+
                           final payload = {
                             'code': codeCtrl.text.toUpperCase().trim(),
                             'discount_type': discountType,
                             'discount_value': numVal,
                             'coupon_type': couponType,
-                            'property_id': propCtrl.text.isEmpty ? null : propCtrl.text.trim(),
-                            'plan_type': couponPlanType.isEmpty ? null : couponPlanType,
-                            'property_category': couponPropertyCategory.isEmpty ? null : couponPropertyCategory,
-                            'bhk_type': couponBhkCtrl.text.trim().isEmpty ? null : couponBhkCtrl.text.trim(),
-                            'sqft_range': couponSqftRangeCtrl.text.trim().isEmpty ? null : couponSqftRangeCtrl.text.trim(),
+                            'property_id': propCtrl.text.isEmpty
+                                ? null
+                                : propCtrl.text.trim(),
+                            'plan_type':
+                                couponPlanType.isEmpty ? null : couponPlanType,
+                            'property_category': couponPropertyCategory.isEmpty
+                                ? null
+                                : couponPropertyCategory,
+                            'bhk_type': couponBhkCtrl.text.trim().isEmpty
+                                ? null
+                                : couponBhkCtrl.text.trim(),
+                            'sqft_range':
+                                couponSqftRangeCtrl.text.trim().isEmpty
+                                    ? null
+                                    : couponSqftRangeCtrl.text.trim(),
                           };
-                          
+
                           final success = await adminProv.createCoupon(payload);
                           if (success && context.mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Coupon created successfully!')),
+                              const SnackBar(
+                                  content:
+                                      Text('Coupon created successfully!')),
                             );
                             _loadData();
                           }
@@ -3453,20 +3933,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text('Configure AI Call Agent', style: Theme.of(context).textTheme.displayMedium),
+                      Text('Configure AI Call Agent',
+                          style: Theme.of(context).textTheme.displayMedium),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: nameCtrl,
-                        decoration: const InputDecoration(labelText: 'Agent Name'),
-                        validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                        decoration:
+                            const InputDecoration(labelText: 'Agent Name'),
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Required' : null,
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         value: voiceType,
-                        decoration: const InputDecoration(labelText: 'Gender / Voice Type'),
+                        decoration: const InputDecoration(
+                            labelText: 'Gender / Voice Type'),
                         items: const [
-                          DropdownMenuItem(value: 'female', child: Text('Female voice')),
-                          DropdownMenuItem(value: 'male', child: Text('Male voice')),
+                          DropdownMenuItem(
+                              value: 'female', child: Text('Female voice')),
+                          DropdownMenuItem(
+                              value: 'male', child: Text('Male voice')),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -3479,11 +3965,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
                         value: language,
-                        decoration: const InputDecoration(labelText: 'Primary Language'),
+                        decoration: const InputDecoration(
+                            labelText: 'Primary Language'),
                         items: const [
-                          DropdownMenuItem(value: 'english', child: Text('English')),
-                          DropdownMenuItem(value: 'hindi', child: Text('Hindi')),
-                          DropdownMenuItem(value: 'marathi', child: Text('Marathi')),
+                          DropdownMenuItem(
+                              value: 'english', child: Text('English')),
+                          DropdownMenuItem(
+                              value: 'hindi', child: Text('Hindi')),
+                          DropdownMenuItem(
+                              value: 'marathi', child: Text('Marathi')),
                         ],
                         onChanged: (val) {
                           if (val != null) {
@@ -3496,23 +3986,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: greetingCtrl,
-                        decoration: const InputDecoration(labelText: 'Initial Greeting Message'),
+                        decoration: const InputDecoration(
+                            labelText: 'Initial Greeting Message'),
                         maxLines: 2,
-                        validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Required' : null,
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: voiceNameCtrl,
-                        decoration: const InputDecoration(labelText: 'Google Cloud TTS Voice Name'),
-                        validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                        decoration: const InputDecoration(
+                            labelText: 'Google Cloud TTS Voice Name'),
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Required' : null,
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton(
                         onPressed: () async {
                           if (!agentFormKey.currentState!.validate()) return;
-                          
-                          final adminProv = Provider.of<AdminProvider>(context, listen: false);
-                          
+
+                          final adminProv = Provider.of<AdminProvider>(context,
+                              listen: false);
+
                           final payload = {
                             'agent_name': nameCtrl.text.trim(),
                             'voice_type': voiceType,
@@ -3520,12 +4015,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             'greeting_message': greetingCtrl.text.trim(),
                             'external_voice_name': voiceNameCtrl.text.trim(),
                           };
-                          
-                          final success = await adminProv.createAIAgent(payload);
+
+                          final success =
+                              await adminProv.createAIAgent(payload);
                           if (success && context.mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('AI Calling Agent created!')),
+                              const SnackBar(
+                                  content: Text('AI Calling Agent created!')),
                             );
                             _loadData();
                           }
@@ -3562,7 +4059,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             const SizedBox(width: 10),
             Text(
               'Dashboard Overview',
-              style: textTheme.displayMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: textTheme.displayMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -3572,7 +4070,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             child: Center(
               child: Text(
                 user?.fullName.split(' ').first ?? 'Admin',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+                style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoalMuted),
               ),
             ),
           ),
@@ -3609,6 +4110,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             Tab(text: 'Coupons'),
             Tab(text: 'Search Logs'),
             Tab(text: 'AI Voice Calls'),
+            Tab(text: 'Support'),
           ],
         ),
       ),
@@ -3619,13 +4121,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           RefreshIndicator(
             onRefresh: () async => _loadData(),
             child: ListView(
-              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+              padding: const EdgeInsets.only(
+                  left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
               children: [
                 _buildWebOverviewStats(adminProvider.dashboardStats),
               ],
             ),
           ),
-          
+
           // TAB 2: USER MANAGEMENT (CRUD, SEARCH, AND FILTER FUNCTIONALITIES)
           RefreshIndicator(
             onRefresh: () async => _loadData(),
@@ -3634,12 +4137,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 _buildUserFiltersSection(),
                 Expanded(
                   child: adminProvider.isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                              color: AppTheme.primary))
                       : adminProvider.usersList.isEmpty
-                          ? const Center(child: Text('No users match criteria.'))
+                          ? const Center(
+                              child: Text('No users match criteria.'))
                           : ListView.builder(
                               itemCount: adminProvider.usersList.length,
-                              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0, bottom: 100.0),
+                              padding: const EdgeInsets.only(
+                                  left: 16.0,
+                                  right: 16.0,
+                                  top: 8.0,
+                                  bottom: 100.0),
                               itemBuilder: (context, index) {
                                 final user = adminProvider.usersList[index];
                                 return _buildUserCard(user);
@@ -3667,7 +4177,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         onChanged: (val) => setState(() {}),
                         decoration: InputDecoration(
                           hintText: 'Search properties...',
-                          prefixIcon: const Icon(Icons.search, color: AppTheme.charcoalMuted),
+                          prefixIcon: const Icon(Icons.search,
+                              color: AppTheme.charcoalMuted),
                           filled: true,
                           fillColor: Colors.grey.shade50,
                           border: OutlineInputBorder(
@@ -3680,7 +4191,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppTheme.primary),
+                            borderSide:
+                                const BorderSide(color: AppTheme.primary),
                           ),
                         ),
                       ),
@@ -3691,10 +4203,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         children: [
                           const Text(
                             'Property Moderation',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.charcoal),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppTheme.charcoal),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.grey.shade50,
                               borderRadius: BorderRadius.circular(8),
@@ -3703,24 +4219,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
                                 value: _selectedPropertyFilter,
-                                style: const TextStyle(color: AppTheme.charcoal, fontSize: 12, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    color: AppTheme.charcoal,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold),
                                 onChanged: (value) {
                                   if (value != null) {
                                     setState(() {
                                       _selectedPropertyFilter = value;
                                     });
-                                    Provider.of<VerificationProvider>(context, listen: false)
-                                        .getAwaitingFinalApprovals(filter: value);
+                                    Provider.of<VerificationProvider>(context,
+                                            listen: false)
+                                        .getAwaitingFinalApprovals(
+                                            filter: value);
                                   }
                                 },
                                 items: const [
                                   DropdownMenuItem(
                                     value: 'awaiting_approval',
-                                    child: Text('Awaiting Final Approval (RM-approved)'),
+                                    child: Text(
+                                        'Awaiting Final Approval (RM-approved)'),
                                   ),
                                   DropdownMenuItem(
                                     value: 'pending_verification',
-                                    child: Text('Pending Verification (Under Review)'),
+                                    child: Text(
+                                        'Pending Verification (Under Review)'),
                                   ),
                                   DropdownMenuItem(
                                     value: 'all',
@@ -3737,15 +4260,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 ),
                 Expanded(
                   child: verificationProvider.isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                              color: AppTheme.primary))
                       : () {
                           // Filter local list based on search query
-                          final query = _propertySearchController.text.toLowerCase();
-                          final filteredList = verificationProvider.awaitingFinalApprovals.where((item) {
-                            final title = (item['title'] ?? '').toString().toLowerCase();
-                            final city = (item['city'] ?? '').toString().toLowerCase();
-                            final state = (item['state'] ?? '').toString().toLowerCase();
-                            final hostName = (item['host_name'] ?? item['owner_id'] ?? '').toString().toLowerCase();
+                          final query =
+                              _propertySearchController.text.toLowerCase();
+                          final filteredList = verificationProvider
+                              .awaitingFinalApprovals
+                              .where((item) {
+                            final title =
+                                (item['title'] ?? '').toString().toLowerCase();
+                            final city =
+                                (item['city'] ?? '').toString().toLowerCase();
+                            final state =
+                                (item['state'] ?? '').toString().toLowerCase();
+                            final hostName =
+                                (item['host_name'] ?? item['owner_id'] ?? '')
+                                    .toString()
+                                    .toLowerCase();
                             return title.contains(query) ||
                                 city.contains(query) ||
                                 state.contains(query) ||
@@ -3753,20 +4287,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           }).toList();
 
                           if (filteredList.isEmpty) {
-                            return const Center(child: Text('No properties match search criteria.'));
+                            return const Center(
+                                child: Text(
+                                    'No properties match search criteria.'));
                           }
 
                           return ListView.builder(
                             itemCount: filteredList.length,
-                            padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+                            padding: const EdgeInsets.only(
+                                left: 16.0,
+                                right: 16.0,
+                                top: 16.0,
+                                bottom: 100.0),
                             itemBuilder: (context, index) {
                               final item = filteredList[index];
                               final String propertyId = item['property_id'];
-                              final status = (item['status'] ?? 'under_review').toString().toLowerCase();
-                              
+                              final status = (item['status'] ?? 'under_review')
+                                  .toString()
+                                  .toLowerCase();
+
                               Color statusColor = Colors.orange;
-                              if (status == 'active') statusColor = Colors.green;
-                              if (status == 'rejected') statusColor = Colors.red;
+                              if (status == 'active')
+                                statusColor = Colors.green;
+                              if (status == 'rejected')
+                                statusColor = Colors.red;
 
                               return Card(
                                 margin: const EdgeInsets.only(bottom: 16.0),
@@ -3777,22 +4321,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                 child: Padding(
                                   padding: const EdgeInsets.all(16.0),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Expanded(
                                             child: Text(
-                                              item['title'] ?? 'Listing Approval',
-                                              style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+                                              item['title'] ??
+                                                  'Listing Approval',
+                                              style: textTheme.bodyLarge
+                                                  ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold),
                                             ),
                                           ),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: statusColor.withOpacity(0.1),
-                                              borderRadius: BorderRadius.circular(4),
+                                              color:
+                                                  statusColor.withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
                                             child: Text(
                                               status.toUpperCase(),
@@ -3806,14 +4359,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                         ],
                                       ),
                                       const SizedBox(height: 8),
-                                      Text('Host: ${item['host_name'] ?? item['owner_id'] ?? 'N/A'}', style: textTheme.bodyMedium),
+                                      Text(
+                                          'Host: ${item['host_name'] ?? item['owner_id'] ?? 'N/A'}',
+                                          style: textTheme.bodyMedium),
                                       const SizedBox(height: 4),
-                                      Text('Location: ${item['city'] ?? ''}, ${item['state'] ?? ''}', style: textTheme.bodyMedium),
+                                      Text(
+                                          'Location: ${item['city'] ?? ''}, ${item['state'] ?? ''}',
+                                          style: textTheme.bodyMedium),
                                       if (item['rm_remarks'] != null) ...[
                                         const SizedBox(height: 8),
                                         Text(
                                           'RM Remarks: ${item['rm_remarks']}',
-                                          style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppTheme.charcoalMuted),
+                                          style: const TextStyle(
+                                              fontSize: 11,
+                                              fontStyle: FontStyle.italic,
+                                              color: AppTheme.charcoalMuted),
                                         ),
                                       ],
                                       const SizedBox(height: 12),
@@ -3821,22 +4381,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                         children: [
                                           Expanded(
                                             child: OutlinedButton.icon(
-                                              icon: const Icon(Icons.visibility_outlined, size: 16),
+                                              icon: const Icon(
+                                                  Icons.visibility_outlined,
+                                                  size: 16),
                                               label: const Text('View'),
                                               onPressed: () {
                                                 Navigator.push(
                                                   context,
                                                   MaterialPageRoute(
-                                                    builder: (context) => PropertyDetailScreen(propertyId: propertyId),
+                                                    builder: (context) =>
+                                                        PropertyDetailScreen(
+                                                            propertyId:
+                                                                propertyId),
                                                   ),
                                                 );
                                               },
                                               style: OutlinedButton.styleFrom(
-                                                foregroundColor: AppTheme.charcoal,
-                                                side: const BorderSide(color: AppTheme.stone),
-                                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                                foregroundColor:
+                                                    AppTheme.charcoal,
+                                                side: const BorderSide(
+                                                    color: AppTheme.stone),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8),
                                                 shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(8),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
                                                 ),
                                               ),
                                             ),
@@ -3844,24 +4414,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: OutlinedButton.icon(
-                                              icon: const Icon(Icons.edit_outlined, size: 16),
+                                              icon: const Icon(
+                                                  Icons.edit_outlined,
+                                                  size: 16),
                                               label: const Text('Edit'),
                                               onPressed: () {
                                                 Navigator.push(
                                                   context,
                                                   MaterialPageRoute(
-                                                    builder: (context) => HostListPropertyScreen(
-                                                      property: PropertyModel.fromJson(Map<String, dynamic>.from(item)),
+                                                    builder: (context) =>
+                                                        HostListPropertyScreen(
+                                                      property: PropertyModel
+                                                          .fromJson(Map<String,
+                                                                  dynamic>.from(
+                                                              item)),
                                                     ),
                                                   ),
                                                 ).then((_) => _loadData());
                                               },
                                               style: OutlinedButton.styleFrom(
-                                                foregroundColor: AppTheme.primary,
-                                                side: const BorderSide(color: AppTheme.primary),
-                                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                                foregroundColor:
+                                                    AppTheme.primary,
+                                                side: const BorderSide(
+                                                    color: AppTheme.primary),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8),
                                                 shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(8),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
                                                 ),
                                               ),
                                             ),
@@ -3874,15 +4455,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                           children: [
                                             Expanded(
                                               child: OutlinedButton.icon(
-                                                icon: const Icon(Icons.close, size: 16),
+                                                icon: const Icon(Icons.close,
+                                                    size: 16),
                                                 label: const Text('Reject'),
-                                                onPressed: () => _showApproveDialog(propertyId, false),
+                                                onPressed: () =>
+                                                    _showApproveDialog(
+                                                        propertyId, false),
                                                 style: OutlinedButton.styleFrom(
-                                                  foregroundColor: Colors.red.shade700,
-                                                  side: BorderSide(color: Colors.red.shade700),
-                                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                                  foregroundColor:
+                                                      Colors.red.shade700,
+                                                  side: BorderSide(
+                                                      color:
+                                                          Colors.red.shade700),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(vertical: 8),
                                                   shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(8),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
                                                   ),
                                                 ),
                                               ),
@@ -3890,25 +4480,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                             const SizedBox(width: 12),
                                             Expanded(
                                               child: ElevatedButton.icon(
-                                                icon: const Icon(Icons.check_circle_outline, size: 16),
-                                                label: const Text('Verify & Approve'),
+                                                icon: const Icon(
+                                                    Icons.check_circle_outline,
+                                                    size: 16),
+                                                label: const Text(
+                                                    'Verify & Approve'),
                                                 onPressed: () {
-                                                  final Map<String, dynamic> reviewData = {
-                                                    'verification_id': item['verification_id'] ?? '',
-                                                    'property_id': item['property_id'],
-                                                    'owner_id': item['owner_id'],
-                                                    'checklist': item['checklist'],
-                                                    'geo_tagged_photos': item['geo_tagged_photos'],
+                                                  final Map<String, dynamic>
+                                                      reviewData = {
+                                                    'verification_id': item[
+                                                            'verification_id'] ??
+                                                        '',
+                                                    'property_id':
+                                                        item['property_id'],
+                                                    'owner_id':
+                                                        item['owner_id'],
+                                                    'checklist':
+                                                        item['checklist'],
+                                                    'geo_tagged_photos': item[
+                                                        'geo_tagged_photos'],
                                                     'property_details': item,
                                                     'broker_details': {
-                                                      'full_name': item['broker_id'] ?? 'Assigned Broker',
-                                                      'user_id': item['broker_id'] ?? '',
+                                                      'full_name':
+                                                          item['broker_id'] ??
+                                                              'Assigned Broker',
+                                                      'user_id':
+                                                          item['broker_id'] ??
+                                                              '',
                                                     },
                                                   };
                                                   Navigator.push(
                                                     context,
                                                     MaterialPageRoute(
-                                                      builder: (context) => VerificationReportScreen(
+                                                      builder: (context) =>
+                                                          VerificationReportScreen(
                                                         reviewData: reviewData,
                                                         isAdmin: true,
                                                       ),
@@ -3916,11 +4521,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                                   ).then((_) => _loadData());
                                                 },
                                                 style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.green.shade700,
+                                                  backgroundColor:
+                                                      Colors.green.shade700,
                                                   foregroundColor: Colors.white,
-                                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(vertical: 8),
                                                   shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(8),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
                                                   ),
                                                 ),
                                               ),
@@ -3957,7 +4566,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         onChanged: (val) => setState(() {}),
                         decoration: InputDecoration(
                           hintText: 'Search bookings...',
-                          prefixIcon: const Icon(Icons.search, color: AppTheme.charcoalMuted),
+                          prefixIcon: const Icon(Icons.search,
+                              color: AppTheme.charcoalMuted),
                           filled: true,
                           fillColor: Colors.grey.shade50,
                           border: OutlineInputBorder(
@@ -3970,7 +4580,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppTheme.primary),
+                            borderSide:
+                                const BorderSide(color: AppTheme.primary),
                           ),
                         ),
                       ),
@@ -3981,10 +4592,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         children: [
                           const Text(
                             'Booking Management',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.charcoal),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppTheme.charcoal),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.grey.shade50,
                               borderRadius: BorderRadius.circular(8),
@@ -3993,13 +4608,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
                                 value: _selectedBookingFilter,
-                                style: const TextStyle(color: AppTheme.charcoal, fontSize: 12, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    color: AppTheme.charcoal,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold),
                                 onChanged: (value) {
                                   if (value != null) {
                                     setState(() {
                                       _selectedBookingFilter = value;
                                     });
-                                    Provider.of<AdminProvider>(context, listen: false)
+                                    Provider.of<AdminProvider>(context,
+                                            listen: false)
                                         .getBookings(statusFilter: value);
                                   }
                                 },
@@ -4031,32 +4650,57 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 ),
                 Expanded(
                   child: adminProvider.isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                              color: AppTheme.primary))
                       : () {
                           // Filter locally by search query
-                          final query = _bookingSearchController.text.toLowerCase();
-                          final filteredList = adminProvider.bookingsList.where((bk) {
-                            final bookingId = (bk['booking_id'] ?? '').toString().toLowerCase();
-                            final guestName = (bk['guest']?['full_name'] ?? bk['guest_name'] ?? '').toString().toLowerCase();
-                            final propTitle = (bk['property']?['title'] ?? bk['property_title'] ?? '').toString().toLowerCase();
+                          final query =
+                              _bookingSearchController.text.toLowerCase();
+                          final filteredList =
+                              adminProvider.bookingsList.where((bk) {
+                            final bookingId = (bk['booking_id'] ?? '')
+                                .toString()
+                                .toLowerCase();
+                            final guestName = (bk['guest']?['full_name'] ??
+                                    bk['guest_name'] ??
+                                    '')
+                                .toString()
+                                .toLowerCase();
+                            final propTitle = (bk['property']?['title'] ??
+                                    bk['property_title'] ??
+                                    '')
+                                .toString()
+                                .toLowerCase();
                             return bookingId.contains(query) ||
                                 guestName.contains(query) ||
                                 propTitle.contains(query);
                           }).toList();
 
                           if (filteredList.isEmpty) {
-                            return const Center(child: Text('No bookings match criteria.'));
+                            return const Center(
+                                child: Text('No bookings match criteria.'));
                           }
 
                           return ListView.builder(
                             itemCount: filteredList.length,
-                            padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+                            padding: const EdgeInsets.only(
+                                left: 16.0,
+                                right: 16.0,
+                                top: 16.0,
+                                bottom: 100.0),
                             itemBuilder: (context, index) {
                               final bk = filteredList[index];
-                              final status = (bk['booking_status'] ?? bk['status'] ?? 'pending').toString().toLowerCase();
+                              final status = (bk['booking_status'] ??
+                                      bk['status'] ??
+                                      'pending')
+                                  .toString()
+                                  .toLowerCase();
                               Color statusColor = Colors.orange;
-                              if (status == 'confirmed') statusColor = Colors.green;
-                              if (status == 'cancelled') statusColor = Colors.red;
+                              if (status == 'confirmed')
+                                statusColor = Colors.green;
+                              if (status == 'cancelled')
+                                statusColor = Colors.red;
 
                               return Card(
                                 margin: const EdgeInsets.only(bottom: 12),
@@ -4067,54 +4711,83 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                 child: Padding(
                                   padding: const EdgeInsets.all(16),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
                                             'ID: ${bk['booking_id']}',
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13),
                                           ),
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 8, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: statusColor.withOpacity(0.1),
-                                              borderRadius: BorderRadius.circular(4),
+                                              color:
+                                                  statusColor.withOpacity(0.1),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
                                             child: Text(
                                               status.toUpperCase(),
-                                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
+                                              style: TextStyle(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: statusColor),
                                             ),
                                           )
                                         ],
                                       ),
                                       const Divider(height: 16),
                                       Text(
-                                        bk['property']?['title'] ?? bk['property_title'] ?? 'Room Stay',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.charcoal),
+                                        bk['property']?['title'] ??
+                                            bk['property_title'] ??
+                                            'Room Stay',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                            color: AppTheme.charcoal),
                                       ),
                                       const SizedBox(height: 4),
-                                      Text('Guest: ${bk['guest']?['full_name'] ?? bk['guest_name'] ?? 'Guest'}', style: textTheme.bodyMedium),
+                                      Text(
+                                          'Guest: ${bk['guest']?['full_name'] ?? bk['guest_name'] ?? 'Guest'}',
+                                          style: textTheme.bodyMedium),
                                       const SizedBox(height: 4),
                                       Row(
                                         children: [
-                                          const Icon(Icons.date_range, size: 14, color: AppTheme.charcoalMuted),
+                                          const Icon(Icons.date_range,
+                                              size: 14,
+                                              color: AppTheme.charcoalMuted),
                                           const SizedBox(width: 4),
                                           Text(
                                             '${bk['check_in']} to ${bk['check_out']}',
-                                            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
+                                            style: TextStyle(
+                                                color: Colors.grey.shade700,
+                                                fontSize: 12),
                                           ),
                                         ],
                                       ),
                                       const SizedBox(height: 8),
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
-                                          const Text('Total Paid:', style: TextStyle(fontSize: 12, color: AppTheme.charcoalMuted)),
+                                          const Text('Total Paid:',
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  color:
+                                                      AppTheme.charcoalMuted)),
                                           Text(
                                             '₹${bk['total_price']}',
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.secondary),
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                                color: AppTheme.secondary),
                                           ),
                                         ],
                                       ),
@@ -4136,7 +4809,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             children: [
               // Sub-tabs chips
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 12.0),
                 color: Colors.white,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -4174,16 +4848,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     children: [
                       const Text(
                         'Subscription Management',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.charcoal),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: AppTheme.charcoal),
                       ),
                       ElevatedButton.icon(
                         onPressed: _showCreatePlanDialog,
-                        icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                        label: const Text('Create Plan', style: TextStyle(color: Colors.white)),
+                        icon: const Icon(Icons.add,
+                            size: 16, color: Colors.white),
+                        label: const Text('Create Plan',
+                            style: TextStyle(color: Colors.white)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.primary,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                           elevation: 0,
                         ),
                       ),
@@ -4192,14 +4873,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 ),
                 Expanded(
                   child: adminProvider.isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                              color: AppTheme.primary))
                       : adminProvider.subscriptionPlans.isEmpty
-                          ? const Center(child: Text('No subscription plans found.'))
+                          ? const Center(
+                              child: Text('No subscription plans found.'))
                           : ListView.builder(
                               itemCount: adminProvider.subscriptionPlans.length,
-                              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+                              padding: const EdgeInsets.only(
+                                  left: 16.0,
+                                  right: 16.0,
+                                  top: 16.0,
+                                  bottom: 100.0),
                               itemBuilder: (context, index) {
-                                final plan = adminProvider.subscriptionPlans[index];
+                                final plan =
+                                    adminProvider.subscriptionPlans[index];
                                 final isActive = plan['is_active'] == true;
                                 final planId = plan['plan_id'] ?? '';
 
@@ -4207,28 +4896,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   margin: const EdgeInsets.only(bottom: 12),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    side: const BorderSide(color: AppTheme.stone),
+                                    side:
+                                        const BorderSide(color: AppTheme.stone),
                                   ),
                                   child: ListTile(
                                     leading: Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: AppTheme.primary.withOpacity(0.1),
+                                        color:
+                                            AppTheme.primary.withOpacity(0.1),
                                         shape: BoxShape.circle,
                                       ),
-                                      child: const Icon(Icons.card_membership, color: AppTheme.primary),
+                                      child: const Icon(Icons.card_membership,
+                                          color: AppTheme.primary),
                                     ),
-                                    title: Text(plan['plan_name'] ?? plan['name'] ?? 'Premium Plan', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    title: Text(
+                                        plan['plan_name'] ??
+                                            plan['name'] ??
+                                            'Premium Plan',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
                                     subtitle: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         const SizedBox(height: 2),
-                                        Text('Monthly: ₹${plan['price_monthly']} | Annual: ₹${plan['price_annual']}'),
+                                        Text(
+                                            'Monthly: ₹${plan['price_monthly']} | Annual: ₹${plan['price_annual']}'),
                                         if (plan['description'] != null) ...[
                                           const SizedBox(height: 4),
                                           Text(
                                             plan['description'],
-                                            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                            style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey.shade600),
                                             maxLines: 2,
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -4239,45 +4940,71 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: isActive ? Colors.green.shade50 : Colors.red.shade50,
-                                            borderRadius: BorderRadius.circular(4),
+                                            color: isActive
+                                                ? Colors.green.shade50
+                                                : Colors.red.shade50,
+                                            borderRadius:
+                                                BorderRadius.circular(4),
                                           ),
                                           child: Text(
                                             isActive ? 'ACTIVE' : 'INACTIVE',
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.bold,
-                                              color: isActive ? Colors.green.shade700 : Colors.red.shade700,
+                                              color: isActive
+                                                  ? Colors.green.shade700
+                                                  : Colors.red.shade700,
                                             ),
                                           ),
                                         ),
                                         if (isActive) ...[
                                           const SizedBox(width: 8),
                                           IconButton(
-                                            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                                            icon: const Icon(
+                                                Icons.delete_outline,
+                                                color: Colors.red,
+                                                size: 20),
                                             onPressed: () async {
-                                              final confirm = await showDialog<bool>(
+                                              final confirm =
+                                                  await showDialog<bool>(
                                                 context: context,
-                                                builder: (context) => AlertDialog(
-                                                  title: const Text('Deactivate Plan'),
-                                                  content: const Text('Are you sure you want to deactivate this subscription plan?'),
+                                                builder: (context) =>
+                                                    AlertDialog(
+                                                  title: const Text(
+                                                      'Deactivate Plan'),
+                                                  content: const Text(
+                                                      'Are you sure you want to deactivate this subscription plan?'),
                                                   actions: [
                                                     TextButton(
-                                                      onPressed: () => Navigator.pop(context, false),
-                                                      child: const Text('Cancel'),
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                              context, false),
+                                                      child:
+                                                          const Text('Cancel'),
                                                     ),
                                                     TextButton(
-                                                      onPressed: () => Navigator.pop(context, true),
-                                                      child: const Text('Deactivate', style: TextStyle(color: Colors.red)),
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                              context, true),
+                                                      child: const Text(
+                                                          'Deactivate',
+                                                          style: TextStyle(
+                                                              color:
+                                                                  Colors.red)),
                                                     ),
                                                   ],
                                                 ),
                                               );
                                               if (confirm == true) {
-                                                await Provider.of<AdminProvider>(context, listen: false)
-                                                    .deleteSubscriptionPlan(planId);
+                                                await Provider.of<
+                                                            AdminProvider>(
+                                                        context,
+                                                        listen: false)
+                                                    .deleteSubscriptionPlan(
+                                                        planId);
                                               }
                                             },
                                           ),
@@ -4297,7 +5024,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           RefreshIndicator(
             onRefresh: () async => _loadData(),
             child: adminProvider.isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primary))
                 : Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
@@ -4310,12 +5038,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           children: [
                             const Text(
                               'Landing Page CMS Settings',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.charcoal),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               'Manage Hero section, Blog posts, Guest testimonials, and onboarding steps data.',
-                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                              style: TextStyle(
+                                  fontSize: 11, color: Colors.grey.shade600),
                             ),
                             const SizedBox(height: 16),
                             SingleChildScrollView(
@@ -4341,7 +5073,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       ),
                       Expanded(
                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+                          padding: const EdgeInsets.only(
+                              left: 16.0,
+                              right: 16.0,
+                              top: 16.0,
+                              bottom: 100.0),
                           child: _buildCmsSubTabContent(adminProvider),
                         ),
                       ),
@@ -4360,24 +5096,34 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Promotional Coupons', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const Text('Promotional Coupons',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
                       ElevatedButton.icon(
                         onPressed: _showCouponFormDialog,
-                        icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                        icon: const Icon(Icons.add,
+                            size: 16, color: Colors.white),
                         label: const Text('Add Coupon'),
-                        style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary),
                       ),
                     ],
                   ),
                 ),
                 Expanded(
                   child: adminProvider.isLoading
-                      ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                              color: AppTheme.primary))
                       : adminProvider.couponsList.isEmpty
                           ? const Center(child: Text('No promo coupons found.'))
                           : ListView.builder(
                               itemCount: adminProvider.couponsList.length,
-                              padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+                              padding: const EdgeInsets.only(
+                                  left: 16.0,
+                                  right: 16.0,
+                                  top: 16.0,
+                                  bottom: 100.0),
                               itemBuilder: (context, index) {
                                 final coupon = adminProvider.couponsList[index];
                                 final isActive = coupon['is_active'] == true;
@@ -4386,29 +5132,39 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   margin: const EdgeInsets.only(bottom: 12),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    side: const BorderSide(color: AppTheme.stone),
+                                    side:
+                                        const BorderSide(color: AppTheme.stone),
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.all(16),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Row(
                                               children: [
-                                                const Icon(Icons.local_offer, size: 16, color: AppTheme.primary),
+                                                const Icon(Icons.local_offer,
+                                                    size: 16,
+                                                    color: AppTheme.primary),
                                                 const SizedBox(width: 6),
                                                 Text(
                                                   coupon['code'] ?? '',
-                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.charcoal),
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 16,
+                                                      color: AppTheme.charcoal),
                                                 ),
                                               ],
                                             ),
                                             const SizedBox(height: 6),
                                             Text(
-                                              coupon['discount_type'] == 'percentage'
+                                              coupon['discount_type'] ==
+                                                      'percentage'
                                                   ? 'Discount: ${coupon['discount_value']}% Off'
                                                   : 'Discount: ₹${coupon['discount_value']} Flat Off',
                                               style: textTheme.bodyMedium,
@@ -4416,32 +5172,55 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                             const SizedBox(height: 2),
                                             Text(
                                               'Applicable to: ${(coupon['coupon_type'] ?? 'booking').toString().toUpperCase()}',
-                                              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                              style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.grey.shade600),
                                             ),
-                                            if (coupon['plan_type'] != null || coupon['property_category'] != null || coupon['sqft_range'] != null)
+                                            if (coupon['plan_type'] != null ||
+                                                coupon['property_category'] !=
+                                                    null ||
+                                                coupon['sqft_range'] != null)
                                               Text(
                                                 [
-                                                  if (coupon['plan_type'] != null) 'Plan: ${coupon['plan_type']}',
-                                                  if (coupon['property_category'] != null) 'Category: ${coupon['property_category']}',
-                                                  if (coupon['bhk_type'] != null) 'Size: ${coupon['bhk_type']}',
-                                                  if (coupon['sqft_range'] != null) 'Sqft: ${coupon['sqft_range']}',
+                                                  if (coupon['plan_type'] !=
+                                                      null)
+                                                    'Plan: ${coupon['plan_type']}',
+                                                  if (coupon[
+                                                          'property_category'] !=
+                                                      null)
+                                                    'Category: ${coupon['property_category']}',
+                                                  if (coupon['bhk_type'] !=
+                                                      null)
+                                                    'Size: ${coupon['bhk_type']}',
+                                                  if (coupon['sqft_range'] !=
+                                                      null)
+                                                    'Sqft: ${coupon['sqft_range']}',
                                                 ].join('  |  '),
-                                                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                                                style: TextStyle(
+                                                    fontSize: 11,
+                                                    color:
+                                                        Colors.grey.shade600),
                                               ),
                                           ],
                                         ),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 2),
                                           decoration: BoxDecoration(
-                                            color: isActive ? Colors.green.shade50 : Colors.red.shade50,
-                                            borderRadius: BorderRadius.circular(4),
+                                            color: isActive
+                                                ? Colors.green.shade50
+                                                : Colors.red.shade50,
+                                            borderRadius:
+                                                BorderRadius.circular(4),
                                           ),
                                           child: Text(
                                             isActive ? 'ACTIVE' : 'INACTIVE',
                                             style: TextStyle(
                                               fontSize: 10,
                                               fontWeight: FontWeight.bold,
-                                              color: isActive ? Colors.green.shade700 : Colors.red.shade700,
+                                              color: isActive
+                                                  ? Colors.green.shade700
+                                                  : Colors.red.shade700,
                                             ),
                                           ),
                                         ),
@@ -4460,12 +5239,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           RefreshIndicator(
             onRefresh: () async => _loadData(),
             child: adminProvider.isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppTheme.primary))
                 : adminProvider.searchLogsList.isEmpty
                     ? const Center(child: Text('No search logs available.'))
                     : ListView.builder(
                         itemCount: adminProvider.searchLogsList.length,
-                        padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+                        padding: const EdgeInsets.only(
+                            left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
                         itemBuilder: (context, index) {
                           final log = adminProvider.searchLogsList[index];
                           return Card(
@@ -4481,13 +5262,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                   color: Colors.blue.shade50,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(Icons.search, color: Colors.blue.shade700),
+                                child: Icon(Icons.search,
+                                    color: Colors.blue.shade700),
                               ),
-                              title: Text(log['city'] ?? 'Unknown location', style: const TextStyle(fontWeight: FontWeight.bold)),
-                              subtitle: Text('Results returned: ${log['results_count'] ?? 0}'),
+                              title: Text(log['city'] ?? 'Unknown location',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
+                              subtitle: Text(
+                                  'Results returned: ${log['results_count'] ?? 0}'),
                               trailing: Text(
                                 _formatDate(log['timestamp']),
-                                style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                style: const TextStyle(
+                                    fontSize: 10, color: Colors.grey),
                               ),
                             ),
                           );
@@ -4514,7 +5300,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             decoration: BoxDecoration(
                               border: Border(
                                 bottom: BorderSide(
-                                  color: _aiInnerTab == 0 ? AppTheme.primary : Colors.transparent,
+                                  color: _aiInnerTab == 0
+                                      ? AppTheme.primary
+                                      : Colors.transparent,
                                   width: 2,
                                 ),
                               ),
@@ -4523,7 +5311,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                               'Call Logs',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: _aiInnerTab == 0 ? AppTheme.primary : AppTheme.charcoalMuted,
+                                color: _aiInnerTab == 0
+                                    ? AppTheme.primary
+                                    : AppTheme.charcoalMuted,
                               ),
                             ),
                           ),
@@ -4538,7 +5328,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             decoration: BoxDecoration(
                               border: Border(
                                 bottom: BorderSide(
-                                  color: _aiInnerTab == 1 ? AppTheme.primary : Colors.transparent,
+                                  color: _aiInnerTab == 1
+                                      ? AppTheme.primary
+                                      : Colors.transparent,
                                   width: 2,
                                 ),
                               ),
@@ -4547,7 +5339,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                               'Voice Agents',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: _aiInnerTab == 1 ? AppTheme.primary : AppTheme.charcoalMuted,
+                                color: _aiInnerTab == 1
+                                    ? AppTheme.primary
+                                    : AppTheme.charcoalMuted,
                               ),
                             ),
                           ),
@@ -4564,15 +5358,245 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               ],
             ),
           ),
+
+          // TAB 11: SUPPORT TICKETS
+          RefreshIndicator(
+            onRefresh: () async {
+              await adminProvider.getSupportTickets(
+                  statusFilter: _selectedSupportFilter);
+            },
+            child: Column(
+              children: [
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'Support Tickets',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      ),
+                      DropdownButton<String>(
+                        value: _selectedSupportFilter,
+                        underline: const SizedBox.shrink(),
+                        items: const [
+                          DropdownMenuItem(value: 'all', child: Text('All')),
+                          DropdownMenuItem(value: 'open', child: Text('Open')),
+                          DropdownMenuItem(
+                              value: 'in_progress', child: Text('In Progress')),
+                          DropdownMenuItem(
+                              value: 'resolved', child: Text('Resolved')),
+                          DropdownMenuItem(
+                              value: 'closed', child: Text('Closed')),
+                        ],
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() => _selectedSupportFilter = value);
+                          adminProvider.getSupportTickets(statusFilter: value);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(child: _buildSupportTicketsList(adminProvider)),
+              ],
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Color _supportStatusColor(String status) {
+    switch (status) {
+      case 'resolved':
+      case 'closed':
+        return Colors.green.shade700;
+      case 'in_progress':
+        return Colors.blue.shade700;
+      default:
+        return AppTheme.primary;
+    }
+  }
+
+  Widget _buildSupportTicketsList(AdminProvider adminProvider) {
+    if (adminProvider.isLoading) {
+      return const Center(
+          child: CircularProgressIndicator(color: AppTheme.primary));
+    }
+    if (adminProvider.supportTicketsList.isEmpty) {
+      return const Center(child: Text('No support tickets found.'));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+      itemCount: adminProvider.supportTicketsList.length,
+      itemBuilder: (context, index) {
+        final ticket = adminProvider.supportTicketsList[index];
+        final status = (ticket['status'] ?? 'open').toString();
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppTheme.stone),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        ticket['subject'] ?? 'Support ticket',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color:
+                            _supportStatusColor(status).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        status.replaceAll('_', ' ').toUpperCase(),
+                        style: TextStyle(
+                          color: _supportStatusColor(status),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '${ticket['user_name'] ?? 'User'} • ${ticket['user_role'] ?? ''} • ${ticket['user_email'] ?? ''}',
+                  style: const TextStyle(
+                      fontSize: 12, color: AppTheme.charcoalMuted),
+                ),
+                const SizedBox(height: 10),
+                Text(ticket['message'] ?? '',
+                    style: const TextStyle(color: AppTheme.charcoalLight)),
+                if ((ticket['admin_response'] ?? '').toString().isNotEmpty) ...[
+                  const Divider(height: 24),
+                  Text('Response: ${ticket['admin_response']}',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                ],
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text(_formatDate(ticket['created_at']),
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.grey)),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () => _showSupportTicketDialog(ticket),
+                      icon: const Icon(Icons.reply_outlined, size: 18),
+                      label: const Text('Respond'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSupportTicketDialog(Map<String, dynamic> ticket) {
+    final responseCtrl =
+        TextEditingController(text: ticket['admin_response'] ?? '');
+    String selectedStatus = (ticket['status'] ?? 'in_progress').toString();
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(ticket['subject'] ?? 'Support Ticket'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(ticket['message'] ?? ''),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedStatus,
+                      decoration: const InputDecoration(labelText: 'Status'),
+                      items: const [
+                        DropdownMenuItem(value: 'open', child: Text('Open')),
+                        DropdownMenuItem(
+                            value: 'in_progress', child: Text('In Progress')),
+                        DropdownMenuItem(
+                            value: 'resolved', child: Text('Resolved')),
+                        DropdownMenuItem(
+                            value: 'closed', child: Text('Closed')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setDialogState(() => selectedStatus = value);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: responseCtrl,
+                      maxLines: 4,
+                      decoration:
+                          const InputDecoration(labelText: 'Admin response'),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('Cancel')),
+                ElevatedButton(
+                  onPressed: () async {
+                    final ok =
+                        await Provider.of<AdminProvider>(context, listen: false)
+                            .updateSupportTicket(
+                      ticket['ticket_id'],
+                      {
+                        'status': selectedStatus,
+                        'admin_response': responseCtrl.text.trim(),
+                      },
+                    );
+                    if (!context.mounted) return;
+                    Navigator.pop(dialogContext);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content: Text(ok
+                              ? 'Ticket updated.'
+                              : 'Unable to update ticket.')),
+                    );
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
   // AI INNER TAB 0: CALL LOGS
   Widget _buildAICallLogsList(AdminProvider adminProvider) {
     if (adminProvider.isLoading) {
-      return const Center(child: CircularProgressIndicator(color: AppTheme.primary));
+      return const Center(
+          child: CircularProgressIndicator(color: AppTheme.primary));
     }
     if (adminProvider.aiCallsList.isEmpty) {
       return const Center(child: Text('No AI voice call logs.'));
@@ -4580,7 +5604,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
     return ListView.builder(
       itemCount: adminProvider.aiCallsList.length,
-      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+      padding: const EdgeInsets.only(
+          left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
       itemBuilder: (context, index) {
         final call = adminProvider.aiCallsList[index];
         final duration = call['duration'] ?? 0;
@@ -4600,11 +5625,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Caller: ${call['phone'] ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text('Caller: ${call['phone'] ?? 'N/A'}',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: status == 'completed' ? Colors.green.shade50 : Colors.amber.shade50,
+                        color: status == 'completed'
+                            ? Colors.green.shade50
+                            : Colors.amber.shade50,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -4612,7 +5641,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: status == 'completed' ? Colors.green.shade700 : Colors.amber.shade700,
+                          color: status == 'completed'
+                              ? Colors.green.shade700
+                              : Colors.amber.shade700,
                         ),
                       ),
                     )
@@ -4621,18 +5652,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 const Divider(height: 16),
                 Row(
                   children: [
-                    const Icon(Icons.timer_outlined, size: 14, color: Colors.grey),
+                    const Icon(Icons.timer_outlined,
+                        size: 14, color: Colors.grey),
                     const SizedBox(width: 4),
-                    Text('Duration: $duration sec', style: const TextStyle(fontSize: 12, color: AppTheme.charcoal)),
+                    Text('Duration: $duration sec',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.charcoal)),
                     const Spacer(),
-                    Text(_formatDate(call['created_at']), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                    Text(_formatDate(call['created_at']),
+                        style:
+                            const TextStyle(fontSize: 11, color: Colors.grey)),
                   ],
                 ),
-                if (call['transcription'] != null && call['transcription'].toString().isNotEmpty) ...[
+                if (call['transcription'] != null &&
+                    call['transcription'].toString().isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(
                     'Transcription: "${call['transcription']}"',
-                    style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppTheme.charcoalMuted),
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                        color: AppTheme.charcoalMuted),
                   ),
                 ],
               ],
@@ -4653,24 +5693,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Voice Bots Config', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              const Text('Voice Bots Config',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               ElevatedButton.icon(
                 onPressed: _showAIAgentDialog,
                 icon: const Icon(Icons.add, size: 16, color: Colors.white),
                 label: const Text('Add Agent'),
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
               ),
             ],
           ),
         ),
         Expanded(
           child: adminProvider.isLoading
-              ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+              ? const Center(
+                  child: CircularProgressIndicator(color: AppTheme.primary))
               : adminProvider.aiAgentsList.isEmpty
                   ? const Center(child: Text('No AI voice agents configured.'))
                   : ListView.builder(
                       itemCount: adminProvider.aiAgentsList.length,
-                      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+                      padding: const EdgeInsets.only(
+                          left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
                       itemBuilder: (context, index) {
                         final agent = adminProvider.aiAgentsList[index];
                         final isActive = agent['is_active'] == true;
@@ -4687,16 +5731,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       agent['agent_name'] ?? 'Assistant',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16),
                                     ),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: isActive ? Colors.green.shade50 : Colors.grey.shade100,
+                                        color: isActive
+                                            ? Colors.green.shade50
+                                            : Colors.grey.shade100,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
@@ -4704,18 +5754,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                         style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
-                                          color: isActive ? Colors.green.shade700 : Colors.grey.shade600,
+                                          color: isActive
+                                              ? Colors.green.shade700
+                                              : Colors.grey.shade600,
                                         ),
                                       ),
                                     )
                                   ],
                                 ),
                                 const Divider(height: 16),
-                                Text('Voice: ${agent['voice_type']} (${agent['language']})', style: const TextStyle(fontSize: 13)),
+                                Text(
+                                    'Voice: ${agent['voice_type']} (${agent['language']})',
+                                    style: const TextStyle(fontSize: 13)),
                                 const SizedBox(height: 4),
                                 Text(
                                   'Greeting: "${agent['greeting_message']}"',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontStyle: FontStyle.italic),
+                                  style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade700,
+                                      fontStyle: FontStyle.italic),
                                 ),
                                 const SizedBox(height: 12),
                                 Row(
@@ -4724,16 +5781,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                     if (!isActive) ...[
                                       TextButton.icon(
                                         onPressed: () async {
-                                          final success = await adminProvider.activateAIAgent(agent['agent_id']);
+                                          final success = await adminProvider
+                                              .activateAIAgent(
+                                                  agent['agent_id']);
                                           if (success && context.mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(content: Text('Agent ${agent['agent_name']} activated!')),
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                  content: Text(
+                                                      'Agent ${agent['agent_name']} activated!')),
                                             );
                                             _loadData();
                                           }
                                         },
-                                        icon: const Icon(Icons.check_circle_outline, size: 18, color: Colors.green),
-                                        label: const Text('Set Active', style: TextStyle(color: Colors.green)),
+                                        icon: const Icon(
+                                            Icons.check_circle_outline,
+                                            size: 18,
+                                            color: Colors.green),
+                                        label: const Text('Set Active',
+                                            style:
+                                                TextStyle(color: Colors.green)),
                                       ),
                                       const SizedBox(width: 8),
                                     ],
@@ -4743,33 +5810,46 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                           context: context,
                                           builder: (context) => AlertDialog(
                                             title: const Text('Delete Agent?'),
-                                            content: Text('Delete AI call agent ${agent['agent_name']}?'),
+                                            content: Text(
+                                                'Delete AI call agent ${agent['agent_name']}?'),
                                             actions: [
                                               TextButton(
-                                                onPressed: () => Navigator.pop(context),
+                                                onPressed: () =>
+                                                    Navigator.pop(context),
                                                 child: const Text('Cancel'),
                                               ),
                                               TextButton(
                                                 onPressed: () async {
-                                                  final success = await adminProvider.deleteAIAgent(agent['agent_id']);
+                                                  final success =
+                                                      await adminProvider
+                                                          .deleteAIAgent(agent[
+                                                              'agent_id']);
                                                   if (context.mounted) {
                                                     Navigator.pop(context);
                                                     if (success) {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                        const SnackBar(content: Text('AI Call Agent deleted.')),
+                                                      ScaffoldMessenger.of(
+                                                              context)
+                                                          .showSnackBar(
+                                                        const SnackBar(
+                                                            content: Text(
+                                                                'AI Call Agent deleted.')),
                                                       );
                                                       _loadData();
                                                     }
                                                   }
                                                 },
-                                                child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                                child: const Text('Delete',
+                                                    style: TextStyle(
+                                                        color: Colors.red)),
                                               ),
                                             ],
                                           ),
                                         );
                                       },
-                                      icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                                      label: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                      icon: const Icon(Icons.delete_outline,
+                                          size: 18, color: Colors.red),
+                                      label: const Text('Delete',
+                                          style: TextStyle(color: Colors.red)),
                                     ),
                                   ],
                                 ),
@@ -4816,7 +5896,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               iconColor: AppTheme.primary,
               value: '${users['total'] ?? 0}',
               label: 'Total Users',
-              subtext: '${users['hosts'] ?? 0} Hosts, ${users['guests'] ?? 0} Guests',
+              subtext:
+                  '${users['hosts'] ?? 0} Hosts, ${users['guests'] ?? 0} Guests',
             ),
             _buildWebCard(
               icon: Icons.apartment_outlined,
@@ -4868,7 +5949,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               _selectedRole = 'Host';
               _tabController.index = 1; // Switch to Users tab
             });
-            Provider.of<AdminProvider>(context, listen: false).getUsers(role: 'Host', search: _searchController.text);
+            Provider.of<AdminProvider>(context, listen: false)
+                .getUsers(role: 'Host', search: _searchController.text);
           },
         ),
         const SizedBox(height: 20),
@@ -4876,7 +5958,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         // Quick Actions Section
         const Text(
           'Quick Actions',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+          style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.charcoal),
         ),
         const SizedBox(height: 12),
         Row(
@@ -4944,18 +6029,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Icon(icon, color: iconColor, size: 24),
-              const Icon(Icons.arrow_forward_ios_outlined, color: AppTheme.stone, size: 10),
+              const Icon(Icons.arrow_forward_ios_outlined,
+                  color: AppTheme.stone, size: 10),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+            style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoal),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoalMuted),
           ),
           const SizedBox(height: 2),
           Text(
@@ -4994,7 +6086,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.charcoal),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -5013,10 +6108,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
               elevation: 0,
             ),
-            child: const Text('Review', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+            child: const Text('Review',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -5046,7 +6143,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             Text(
               label,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+              style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.charcoal),
             ),
           ],
         ),
@@ -5070,7 +6170,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               Expanded(
                 child: Text(
                   'User Management',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 18),
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
               ),
               ElevatedButton.icon(
@@ -5079,8 +6182,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 label: const Text('Add User'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  textStyle: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -5098,7 +6203,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     contentPadding: EdgeInsets.symmetric(vertical: 8.0),
                   ),
                   onChanged: (val) {
-                    Provider.of<AdminProvider>(context, listen: false).getUsers(role: _selectedRole, search: val);
+                    Provider.of<AdminProvider>(context, listen: false)
+                        .getUsers(role: _selectedRole, search: val);
                   },
                 ),
               ),
@@ -5108,7 +6214,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 child: DropdownButtonFormField<String>(
                   value: _selectedRole,
                   decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   ),
                   items: const [
                     DropdownMenuItem(value: 'All', child: Text('All Roles')),
@@ -5116,14 +6223,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     DropdownMenuItem(value: 'Host', child: Text('Host')),
                     DropdownMenuItem(value: 'Guest', child: Text('Guest')),
                     DropdownMenuItem(value: 'Broker', child: Text('Broker')),
-                    DropdownMenuItem(value: 'Employee', child: Text('Employee')),
+                    DropdownMenuItem(
+                        value: 'Employee', child: Text('Employee')),
                   ],
                   onChanged: (val) {
                     if (val != null) {
                       setState(() {
                         _selectedRole = val;
                       });
-                      Provider.of<AdminProvider>(context, listen: false).getUsers(role: val, search: _searchController.text);
+                      Provider.of<AdminProvider>(context, listen: false)
+                          .getUsers(role: val, search: _searchController.text);
                     }
                   },
                 ),
@@ -5196,15 +6305,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                       backgroundColor: AppTheme.stone,
                       backgroundImage: user['profile_image'] != null
                           ? NetworkImage(
-                              user['profile_image'].toString().startsWith('http')
+                              user['profile_image']
+                                      .toString()
+                                      .startsWith('http')
                                   ? user['profile_image'].toString()
                                   : '${AppConfig.activeBaseUrl}${user['profile_image']}',
                             )
                           : null,
                       child: user['profile_image'] == null
                           ? Text(
-                              (user['full_name'] ?? 'U')[0].toString().toUpperCase(),
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.charcoal, fontSize: 16),
+                              (user['full_name'] ?? 'U')[0]
+                                  .toString()
+                                  .toUpperCase(),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.charcoal,
+                                  fontSize: 16),
                             )
                           : null,
                     ),
@@ -5230,12 +6346,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     children: [
                       Text(
                         user['full_name'] ?? 'N/A',
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.charcoal),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${user['email'] ?? ''} | ${user['phone'] ?? ''}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600),
                       ),
                     ],
                   ),
@@ -5249,31 +6369,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               children: [
                 // Role Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: roleBg,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     role,
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: roleText),
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: roleText),
                   ),
                 ),
                 // KYC Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: kycBg,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     'KYC: $kyc',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: kycText),
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: kycText),
                   ),
                 ),
                 // UID
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppTheme.stone,
                     borderRadius: BorderRadius.circular(4),
@@ -5285,7 +6414,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 ),
                 // City
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppTheme.stone,
                     borderRadius: BorderRadius.circular(4),
@@ -5316,13 +6446,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               children: [
                 // View button
                 IconButton(
-                  icon: const Icon(Icons.visibility_outlined, size: 20, color: AppTheme.secondary),
+                  icon: const Icon(Icons.visibility_outlined,
+                      size: 20, color: AppTheme.secondary),
                   onPressed: () => _showUserDetailsDialog(user),
                   tooltip: 'View Details & KYC',
                 ),
                 // Edit button
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blue),
+                  icon: const Icon(Icons.edit_outlined,
+                      size: 20, color: Colors.blue),
                   onPressed: () => _showUserFormDialog(existingUser: user),
                   tooltip: 'Edit User',
                 ),
@@ -5330,35 +6462,48 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 // Deactivate/Activate toggle
                 OutlinedButton(
                   onPressed: () async {
-                    final adminProv = Provider.of<AdminProvider>(context, listen: false);
-                    final success = await adminProv.toggleUserStatus(user['user_id'], !isOnline);
+                    final adminProv =
+                        Provider.of<AdminProvider>(context, listen: false);
+                    final success = await adminProv.toggleUserStatus(
+                        user['user_id'], !isOnline);
                     if (success && mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(isOnline ? 'User deactivated!' : 'User activated!')),
+                        SnackBar(
+                            content: Text(isOnline
+                                ? 'User deactivated!'
+                                : 'User activated!')),
                       );
                     }
                   },
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: isOnline ? Colors.red.shade700 : Colors.green.shade700,
-                    side: BorderSide(color: isOnline ? Colors.red.shade200 : Colors.green.shade200),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    foregroundColor:
+                        isOnline ? Colors.red.shade700 : Colors.green.shade700,
+                    side: BorderSide(
+                        color: isOnline
+                            ? Colors.red.shade200
+                            : Colors.green.shade200),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     minimumSize: const Size(60, 30),
                   ),
                   child: Text(
                     isOnline ? 'Deactivate' : 'Activate',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(width: 8),
                 // Delete button
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 20, color: Colors.red),
+                  icon: const Icon(Icons.delete_outline,
+                      size: 20, color: Colors.red),
                   onPressed: () {
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
                         title: const Text('Delete User?'),
-                        content: Text('Are you sure you want to permanently delete ${user['full_name']}? This action is irreversible.'),
+                        content: Text(
+                            'Are you sure you want to permanently delete ${user['full_name']}? This action is irreversible.'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
@@ -5366,18 +6511,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           ),
                           TextButton(
                             onPressed: () async {
-                              final adminProv = Provider.of<AdminProvider>(context, listen: false);
-                              final success = await adminProv.deleteUser(user['user_id']);
+                              final adminProv = Provider.of<AdminProvider>(
+                                  context,
+                                  listen: false);
+                              final success =
+                                  await adminProv.deleteUser(user['user_id']);
                               if (context.mounted) {
                                 Navigator.pop(context);
                                 if (success) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('User deleted successfully.')),
+                                    const SnackBar(
+                                        content:
+                                            Text('User deleted successfully.')),
                                   );
                                 }
                               }
                             },
-                            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                            child: const Text('Delete',
+                                style: TextStyle(color: Colors.red)),
                           ),
                         ],
                       ),
@@ -5415,7 +6566,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     );
   }
 
-  Widget _buildAccountSubTabContent(BuildContext context, AccountProvider accountProv) {
+  Widget _buildAccountSubTabContent(
+      BuildContext context, AccountProvider accountProv) {
     switch (_accountSubTab) {
       case 0:
         return _buildAccountFinancialsView(accountProv);
@@ -5450,7 +6602,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     final double pendingAmt = (pending['amount_paise'] ?? 0) / 100.0;
     final int pendingCount = pending['count'] ?? 0;
 
-    final currencyFmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+    final currencyFmt =
+        NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
 
     return ListView(
       padding: const EdgeInsets.all(16.0),
@@ -5522,7 +6675,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   }
 
   Widget _buildPendingStatus(double pendingAmt) {
-    final currencyFmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+    final currencyFmt =
+        NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -5653,13 +6807,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     }
 
     final double maxVal = chartData.fold<double>(10000.0, (prev, element) {
-      final double inflow = (element['inflow_paise'] ?? 0) / 100.0;
-      final double refunds = (element['refund_paise'] ?? 0) / 100.0;
-      final double net = (element['net_paise'] ?? 0) / 100.0;
-      double currentMax = inflow > refunds ? inflow : refunds;
-      if (net > currentMax) currentMax = net;
-      return currentMax > prev ? currentMax : prev;
-    }) * 1.15; // 15% padding
+          final double inflow = (element['inflow_paise'] ?? 0) / 100.0;
+          final double refunds = (element['refund_paise'] ?? 0) / 100.0;
+          final double net = (element['net_paise'] ?? 0) / 100.0;
+          double currentMax = inflow > refunds ? inflow : refunds;
+          if (net > currentMax) currentMax = net;
+          return currentMax > prev ? currentMax : prev;
+        }) *
+        1.15; // 15% padding
 
     List<FlSpot> inflowSpots = [];
     List<FlSpot> refundSpots = [];
@@ -5687,7 +6842,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         children: [
           const Text(
             'Revenue trend (last 6 months)',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoal),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -5701,8 +6859,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 ),
                 titlesData: FlTitlesData(
                   show: true,
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
@@ -5716,7 +6876,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             axisSide: meta.axisSide,
                             child: Text(
                               label,
-                              style: TextStyle(color: Colors.grey.shade600, fontSize: 8),
+                              style: TextStyle(
+                                  color: Colors.grey.shade600, fontSize: 8),
                             ),
                           );
                         }
@@ -5733,7 +6894,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                           axisSide: meta.axisSide,
                           child: Text(
                             '₹${(value / 1000).toStringAsFixed(0)}k',
-                            style: TextStyle(color: Colors.grey.shade600, fontSize: 8),
+                            style: TextStyle(
+                                color: Colors.grey.shade600, fontSize: 8),
                           ),
                         );
                       },
@@ -5815,7 +6977,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+          style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.charcoalMuted),
         ),
       ],
     );
@@ -5830,11 +6995,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
     return ListView.builder(
       itemCount: txns.length,
-      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+      padding: const EdgeInsets.only(
+          left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
       itemBuilder: (context, index) {
         final txn = txns[index];
         final id = txn['transaction_id'] ?? '';
-        final type = (txn['type'] ?? 'payment').toString().replaceAll('_', ' ').toUpperCase();
+        final type = (txn['type'] ?? 'payment')
+            .toString()
+            .replaceAll('_', ' ')
+            .toUpperCase();
         final status = (txn['status'] ?? 'pending').toString().toUpperCase();
         final amount = (txn['amount'] ?? 0) / 100.0;
         final dateStr = _formatDate(txn['created_at']);
@@ -5845,8 +7014,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
         if (status == 'FAILED') statusColor = Colors.red;
 
         final isOutflow = txn['type'] == 'refund' || txn['type'] == 'payout';
-        final amtText = '${isOutflow ? "-" : "+"} ₹${amount.toStringAsFixed(2)}';
-        final amtColor = isOutflow ? Colors.red.shade700 : Colors.green.shade700;
+        final amtText =
+            '${isOutflow ? "-" : "+"} ₹${amount.toStringAsFixed(2)}';
+        final amtColor =
+            isOutflow ? Colors.red.shade700 : Colors.green.shade700;
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -5865,20 +7036,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     Expanded(
                       child: Text(
                         'TXN: $id',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.charcoalMuted),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: AppTheme.charcoalMuted),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         status,
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: statusColor),
                       ),
                     ),
                   ],
@@ -5890,14 +7068,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(type, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.charcoal)),
+                        Text(type,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppTheme.charcoal)),
                         const SizedBox(height: 4),
-                        Text(dateStr, style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+                        Text(dateStr,
+                            style: TextStyle(
+                                color: Colors.grey.shade500, fontSize: 11)),
                       ],
                     ),
                     Text(
                       amtText,
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: amtColor),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: amtColor),
                     ),
                   ],
                 ),
@@ -5911,12 +7098,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.person_outline, size: 14, color: AppTheme.charcoalMuted),
+                        const Icon(Icons.person_outline,
+                            size: 14, color: AppTheme.charcoalMuted),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             'User: ${user['full_name'] ?? ''} (${user['email'] ?? ''})',
-                            style: const TextStyle(fontSize: 11, color: AppTheme.charcoal),
+                            style: const TextStyle(
+                                fontSize: 11, color: AppTheme.charcoal),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -5932,7 +7121,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     TextButton.icon(
                       onPressed: () => _showShareInvoiceDialog(id),
                       icon: const Icon(Icons.share, size: 14),
-                      label: const Text('Share Invoice', style: TextStyle(fontSize: 11)),
+                      label: const Text('Share Invoice',
+                          style: TextStyle(fontSize: 11)),
                     ),
                   ],
                 ),
@@ -5961,7 +7151,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
             children: [
               const Text(
                 'Host Payout Requests',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: AppTheme.charcoal),
               ),
               Row(
                 children: [
@@ -5970,7 +7163,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     label: const Text('Sweep', style: TextStyle(fontSize: 11)),
                     onPressed: _triggerPayoutSweep,
                     style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
@@ -5978,11 +7172,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                   const SizedBox(width: 8),
                   ElevatedButton.icon(
                     icon: const Icon(Icons.play_arrow, size: 14),
-                    label: const Text('Process All', style: TextStyle(fontSize: 11)),
+                    label: const Text('Process All',
+                        style: TextStyle(fontSize: 11)),
                     onPressed: _processAllEligiblePayouts,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
@@ -5997,16 +7193,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               ? const Center(child: Text('No payout records found.'))
               : ListView.builder(
                   itemCount: payouts.length,
-                  padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+                  padding: const EdgeInsets.only(
+                      left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
                   itemBuilder: (context, index) {
                     final payout = payouts[index];
                     final pid = payout['payout_id'] ?? '';
-                    final hostName = payout['host']?['full_name'] ?? payout['host_id'] ?? 'Host';
+                    final hostName = payout['host']?['full_name'] ??
+                        payout['host_id'] ??
+                        'Host';
                     final hostEmail = payout['host']?['email'] ?? '';
                     final pref = payout['host']?['payout_preference'] ?? {};
-                    final propTitle = payout['property']?['title'] ?? 'Listing Payout';
-                    final netAmount = (payout['net_amount'] ?? payout['amount'] ?? 0) / 100.0;
-                    final status = (payout['status'] ?? 'eligible').toString().toUpperCase();
+                    final propTitle =
+                        payout['property']?['title'] ?? 'Listing Payout';
+                    final netAmount =
+                        (payout['net_amount'] ?? payout['amount'] ?? 0) / 100.0;
+                    final status = (payout['status'] ?? 'eligible')
+                        .toString()
+                        .toUpperCase();
                     final eligibleDate = _formatDate(payout['eligible_at']);
 
                     Color statusColor = Colors.orange;
@@ -6027,34 +7230,47 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('PAYOUT ID: $pid', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.charcoalMuted)),
+                                Text('PAYOUT ID: $pid',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                        color: AppTheme.charcoalMuted)),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
                                     color: statusColor.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
                                     status,
-                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: statusColor),
                                   ),
                                 )
                               ],
                             ),
                             const Divider(height: 16),
-                            Text(propTitle, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                            Text(propTitle,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 14)),
                             const SizedBox(height: 4),
-                            Text('Host: $hostName ($hostEmail)', style: const TextStyle(fontSize: 12)),
+                            Text('Host: $hostName ($hostEmail)',
+                                style: const TextStyle(fontSize: 12)),
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                                const Icon(Icons.calendar_today,
+                                    size: 12, color: Colors.grey),
                                 const SizedBox(width: 4),
-                                Text('Eligible: $eligibleDate', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                Text('Eligible: $eligibleDate',
+                                    style: const TextStyle(
+                                        fontSize: 11, color: Colors.grey)),
                               ],
                             ),
                             const SizedBox(height: 8),
-
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(10),
@@ -6067,22 +7283,41 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                 children: [
                                   const Text(
                                     'PAYMENT DETAILS',
-                                    style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: AppTheme.charcoalMuted),
+                                    style: TextStyle(
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.8,
+                                        color: AppTheme.charcoalMuted),
                                   ),
                                   const SizedBox(height: 4),
-                                  if (pref['upi_id'] != null && pref['upi_id'].toString().isNotEmpty) ...[
-                                    Text('UPI ID: ${pref['upi_id']}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                  ] else if (pref['bank_account_number'] != null) ...[
-                                    Text('Holder: ${pref['bank_account_holder'] ?? '—'}', style: const TextStyle(fontSize: 11)),
-                                    Text('A/C: ${pref['bank_account_number']}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                    Text('Bank: ${pref['bank_name'] ?? '—'} | IFSC: ${pref['bank_ifsc'] ?? '—'}', style: const TextStyle(fontSize: 11)),
+                                  if (pref['upi_id'] != null &&
+                                      pref['upi_id'].toString().isNotEmpty) ...[
+                                    Text('UPI ID: ${pref['upi_id']}',
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold)),
+                                  ] else if (pref['bank_account_number'] !=
+                                      null) ...[
+                                    Text(
+                                        'Holder: ${pref['bank_account_holder'] ?? '—'}',
+                                        style: const TextStyle(fontSize: 11)),
+                                    Text('A/C: ${pref['bank_account_number']}',
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold)),
+                                    Text(
+                                        'Bank: ${pref['bank_name'] ?? '—'} | IFSC: ${pref['bank_ifsc'] ?? '—'}',
+                                        style: const TextStyle(fontSize: 11)),
                                   ] else ...[
-                                    const Text('No payout preference specified', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.red)),
+                                    const Text('No payout preference specified',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            fontStyle: FontStyle.italic,
+                                            color: Colors.red)),
                                   ],
                                 ],
                               ),
                             ),
-
                             const SizedBox(height: 12),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -6090,10 +7325,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('Net Payout Amount', style: TextStyle(fontSize: 10, color: AppTheme.charcoalMuted)),
+                                    const Text('Net Payout Amount',
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: AppTheme.charcoalMuted)),
                                     Text(
                                       '₹${netAmount.toStringAsFixed(2)}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.secondary),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: AppTheme.secondary),
                                     ),
                                   ],
                                 ),
@@ -6104,29 +7345,42 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                                         context: context,
                                         builder: (context) => AlertDialog(
                                           title: const Text('Process Payout?'),
-                                          content: Text('Are you sure you want to process the payout of ₹${netAmount.toStringAsFixed(2)} to $hostName?'),
+                                          content: Text(
+                                              'Are you sure you want to process the payout of ₹${netAmount.toStringAsFixed(2)} to $hostName?'),
                                           actions: [
                                             TextButton(
-                                              onPressed: () => Navigator.pop(context, false),
+                                              onPressed: () =>
+                                                  Navigator.pop(context, false),
                                               child: const Text('Cancel'),
                                             ),
                                             TextButton(
-                                              onPressed: () => Navigator.pop(context, true),
+                                              onPressed: () =>
+                                                  Navigator.pop(context, true),
                                               child: const Text('Process'),
                                             ),
                                           ],
                                         ),
                                       );
                                       if (confirm == true) {
-                                        final success = await accountProv.processPayout(pid);
+                                        final success = await accountProv
+                                            .processPayout(pid);
                                         if (context.mounted) {
                                           if (success) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Payout processed successfully!'), backgroundColor: Colors.green),
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                  content: Text(
+                                                      'Payout processed successfully!'),
+                                                  backgroundColor:
+                                                      Colors.green),
                                             );
                                           } else {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(content: Text('Failed to process payout.'), backgroundColor: Colors.red),
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                  content: Text(
+                                                      'Failed to process payout.'),
+                                                  backgroundColor: Colors.red),
                                             );
                                           }
                                         }
@@ -6154,12 +7408,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
   Future<void> _triggerPayoutSweep() async {
     try {
-      final response = await ApiService().dio.post('/admin/account/payouts/sweep-eligibility');
+      final response = await ApiService()
+          .dio
+          .post('/admin/account/payouts/sweep-eligibility');
       if (response.statusCode == 200) {
         final count = response.data['count'] ?? 0;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Sweep completed. Marked $count bookings as eligible.'), backgroundColor: Colors.green),
+            SnackBar(
+                content: Text(
+                    'Sweep completed. Marked $count bookings as eligible.'),
+                backgroundColor: Colors.green),
           );
         }
         _loadData();
@@ -6167,7 +7426,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Sweep failed: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Sweep failed: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -6175,13 +7435,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
   Future<void> _processAllEligiblePayouts() async {
     try {
-      final response = await ApiService().dio.post('/admin/account/payouts/process-eligible');
+      final response = await ApiService()
+          .dio
+          .post('/admin/account/payouts/process-eligible');
       if (response.statusCode == 200) {
         final processed = response.data['processed'] ?? 0;
         final failed = response.data['failed'] ?? 0;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Batch processing done. Processed: $processed, Failed: $failed'), backgroundColor: Colors.green),
+            SnackBar(
+                content: Text(
+                    'Batch processing done. Processed: $processed, Failed: $failed'),
+                backgroundColor: Colors.green),
           );
         }
         _loadData();
@@ -6189,7 +7454,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Processing failed: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Processing failed: $e'),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -6200,7 +7467,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Share Invoice'),
-        content: const Text('Choose a channel to share the invoice with the user:'),
+        content:
+            const Text('Choose a channel to share the invoice with the user:'),
         actions: [
           TextButton.icon(
             icon: const Icon(Icons.email_outlined),
@@ -6210,7 +7478,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               final success = await _shareInvoice(transactionId, 'email');
               if (success && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Invoice shared successfully via Email.'), backgroundColor: Colors.green),
+                  const SnackBar(
+                      content: Text('Invoice shared successfully via Email.'),
+                      backgroundColor: Colors.green),
                 );
               }
             },
@@ -6223,7 +7493,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
               final success = await _shareInvoice(transactionId, 'whatsapp');
               if (success && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Invoice shared successfully via WhatsApp.'), backgroundColor: Colors.green),
+                  const SnackBar(
+                      content:
+                          Text('Invoice shared successfully via WhatsApp.'),
+                      backgroundColor: Colors.green),
                 );
               }
             },
@@ -6247,7 +7520,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share invoice: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Failed to share invoice: $e'),
+              backgroundColor: Colors.red),
         );
       }
       return false;
@@ -6255,7 +7530,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
   }
 
   Widget _buildAccountRefundsView(AccountProvider accountProv) {
-    final txns = accountProv.transactions.where((t) => t['type'] == 'refund').toList();
+    final txns =
+        accountProv.transactions.where((t) => t['type'] == 'refund').toList();
 
     if (txns.isEmpty) {
       return const Center(child: Text('No refund records found.'));
@@ -6263,7 +7539,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
 
     return ListView.builder(
       itemCount: txns.length,
-      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+      padding: const EdgeInsets.only(
+          left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
       itemBuilder: (context, index) {
         final txn = txns[index];
         final id = txn['transaction_id'] ?? '';
@@ -6293,20 +7570,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     Expanded(
                       child: Text(
                         'REFUND ID: $id',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.charcoalMuted),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            color: AppTheme.charcoalMuted),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                         color: statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         status,
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: statusColor),
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: statusColor),
                       ),
                     ),
                   ],
@@ -6318,14 +7602,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('REFUND ISSUED', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.charcoal)),
+                        const Text('REFUND ISSUED',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: AppTheme.charcoal)),
                         const SizedBox(height: 4),
-                        Text(dateStr, style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+                        Text(dateStr,
+                            style: TextStyle(
+                                color: Colors.grey.shade500, fontSize: 11)),
                       ],
                     ),
                     Text(
                       '- ₹${amount.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.red),
                     ),
                   ],
                 ),
@@ -6339,12 +7632,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.person_outline, size: 14, color: AppTheme.charcoalMuted),
+                        const Icon(Icons.person_outline,
+                            size: 14, color: AppTheme.charcoalMuted),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             'Refunded To: ${user['full_name'] ?? ''} (${user['email'] ?? ''})',
-                            style: const TextStyle(fontSize: 11, color: AppTheme.charcoal),
+                            style: const TextStyle(
+                                fontSize: 11, color: AppTheme.charcoal),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -6368,11 +7663,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
       return const Center(child: Text('No host earnings data found.'));
     }
 
-    final currencyFmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+    final currencyFmt =
+        NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
 
     return ListView.builder(
       itemCount: hosts.length,
-      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+      padding: const EdgeInsets.only(
+          left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
       itemBuilder: (context, index) {
         final host = hosts[index];
         final name = host['full_name'] ?? 'Host';
@@ -6395,7 +7692,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
           ),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: rank <= 3 ? medalColor.withOpacity(0.2) : Colors.grey.shade100,
+              backgroundColor: rank <= 3
+                  ? medalColor.withOpacity(0.2)
+                  : Colors.grey.shade100,
               child: Text(
                 '#$rank',
                 style: TextStyle(
@@ -6404,11 +7703,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Single
                 ),
               ),
             ),
-            title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            subtitle: Text('$email • $city\n$bookingsCount bookings processed', style: const TextStyle(fontSize: 11)),
+            title: Text(name,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            subtitle: Text('$email • $city\n$bookingsCount bookings processed',
+                style: const TextStyle(fontSize: 11)),
             trailing: Text(
               currencyFmt.format(gross),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.green),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Colors.green),
             ),
             isThreeLine: true,
           ),

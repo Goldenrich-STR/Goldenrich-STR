@@ -6,7 +6,11 @@ import {
 import {
   ArrowLeft, Download, IndianRupee, TrendingUp, Wallet, Users,
   RefreshCcw, CheckCircle, XCircle, AlertCircle, Clock,
+<<<<<<< HEAD
   Share2, FileText, Mail, MessageSquare, Printer,
+=======
+  Search, Share2, FileText, Mail, MessageSquare, Printer, Check, SlidersHorizontal, CalendarDays, ChevronLeft, ChevronRight
+>>>>>>> 87cbcd105480de08e8e7aebd5219a7d287ec8593
 } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -38,29 +42,29 @@ const AdminAccount = () => {
   const navigate = useNavigate();
   const [tab, setTab] = useState('overview');
 
-  // Redirect if not admin - defensive, App-level guard also in place
+  // Redirect if not admin — defensive, App-level guard also in place
   useEffect(() => {
     if (user && user.role !== 'admin') navigate('/');
   }, [user, navigate]);
 
   return (
     <div className="min-h-screen bg-stone" data-testid="admin-account-page">
-      <header className="header-glass px-4 md:px-6 py-4">
-        <div className="w-full flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+      <header className="header-glass px-6 py-4">
+        <div className="w-full flex items-center justify-between">
+          <div className="flex items-center space-x-3">
             <button
               onClick={() => navigate('/admin/dashboard')}
-              className="text-terracotta hover:underline flex items-center space-x-1 text-xs sm:text-sm font-bold uppercase tracking-wider shrink-0"
+              className="text-terracotta hover:underline flex items-center space-x-1"
               data-testid="back-to-admin-dashboard"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="w-4 h-4" />
               <span>Back</span>
             </button>
-            <h1 className="text-sm sm:text-lg font-bold text-charcoal truncate">Admin Account</h1>
+            <h1 className="text-xl font-bold text-charcoal">X-Space360 · Admin Account</h1>
           </div>
           <button
             onClick={logout}
-            className="text-terracotta hover:underline text-xs sm:text-sm font-bold uppercase tracking-wider shrink-0"
+            className="text-terracotta hover:underline"
             data-testid="logout-btn"
           >
             Logout
@@ -68,7 +72,7 @@ const AdminAccount = () => {
         </div>
       </header>
 
-      <div className="w-full px-4 md:px-6 py-6">
+      <div className="w-full px-6 py-6">
         <nav className="flex flex-wrap gap-2 mb-6" data-testid="account-tabs">
           {TABS.map((t) => (
             <button
@@ -95,7 +99,7 @@ const AdminAccount = () => {
             <CouponManagement />
           </div>
         )}
-        {tab === 'payouts' && <PayoutsTab />}
+        {tab === 'payouts' && <EnterprisePayoutsTab />}
         {tab === 'refunds' && <RefundsTab />}
         {tab === 'top-hosts' && <TopHostsTab />}
       </div>
@@ -132,7 +136,7 @@ const OverviewTab = () => {
     })();
   }, []);
 
-  if (loading) return <div data-testid="overview-loading">Loading overview...</div>;
+  if (loading) return <div data-testid="overview-loading">Loading overview…</div>;
   if (!data)   return <div data-testid="overview-empty">No data.</div>;
 
   const rev = data.revenue;
@@ -149,12 +153,12 @@ const OverviewTab = () => {
 
   return (
     <div className="space-y-6" data-testid="overview-tab">
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => (
-          <div key={c.label} className="dashboard-card border border-gray-100 shadow-sm hover:shadow transition bg-white p-4 sm:p-5 rounded-2xl" data-testid={c.testid}>
+          <div key={c.label} className="dashboard-card border border-gray-100 shadow-sm hover:shadow transition bg-white p-5 rounded-2xl" data-testid={c.testid}>
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-xs uppercase tracking-wider text-charcoal-muted font-bold leading-tight">{c.label}</p>
+                <p className="text-xs uppercase tracking-wider text-charcoal-muted font-bold">{c.label}</p>
                 {c.paidValue && (
                   <p className="text-xs text-charcoal-light mt-1.5 flex items-center">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5"></span>
@@ -167,11 +171,11 @@ const OverviewTab = () => {
                     Pending: <span className="font-semibold text-yellow-700 ml-1">{c.pendingValue}</span>
                   </p>
                 )}
-                <p className="text-lg sm:text-2xl font-bold tracking-tight text-charcoal mt-2">{c.value}</p>
+                <p className="text-2xl font-bold tracking-tight text-charcoal mt-2">{c.value}</p>
                 {c.sub && <p className="text-xs text-charcoal-light mt-1.5 font-medium">{c.sub}</p>}
               </div>
-              <div className="p-2 rounded-xl bg-stone border border-sand-100 shrink-0">
-                <c.icon className="w-4 h-4 sm:w-5 sm:h-5 text-terracotta" />
+              <div className="p-2.5 rounded-xl bg-stone border border-sand-100">
+                <c.icon className="w-5 h-5 text-terracotta" />
               </div>
             </div>
           </div>
@@ -181,23 +185,13 @@ const OverviewTab = () => {
       <div className="dashboard-card" data-testid="mrr-chart-card">
         <h3 className="text-lg font-bold text-charcoal mb-4">Revenue trend (last 6 months)</h3>
         <div style={{ width: '100%', height: 260 }}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer>
             <LineChart data={chart} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E7E3D7" />
               <XAxis dataKey="label" stroke="#7D7A6F" fontSize={12} />
-              <YAxis
-                stroke="#7D7A6F"
-                fontSize={12}
-                tickFormatter={(v) =>
-                  `${new Intl.NumberFormat('en-IN', {
-                    style: 'currency',
-                    currency: 'INR',
-                    maximumFractionDigits: 0,
-                  }).format(v / 1000)}k`
-                }
-              />
+              <YAxis stroke="#7D7A6F" fontSize={12} tickFormatter={(v) => `₹${v / 1000}k`} />
               <Tooltip
-                formatter={(v) => [fmtINR(Number(v) * 100), 'value']}
+                formatter={(v) => [`₹${Number(v).toLocaleString('en-IN')}`, 'value']}
               />
               <Line type="monotone" dataKey="inflow" stroke="#006437" strokeWidth={2} dot={{ r: 3 }} />
               <Line type="monotone" dataKey="refund" stroke="#788574" strokeWidth={2} dot={{ r: 3 }} />
@@ -313,6 +307,8 @@ const TransactionsTab = () => {
   const [selectedInvoiceTxn, setSelectedInvoiceTxn] = useState(null);
   const [activeShareId, setActiveShareId] = useState(null);
   const [sharingStatus, setSharingStatus] = useState(null);
+  const avatarColors = ['bg-blue-100 text-blue-700', 'bg-violet-100 text-violet-700', 'bg-emerald-100 text-emerald-700', 'bg-orange-100 text-orange-700', 'bg-cyan-100 text-cyan-700'];
+  const initials = (name) => String(name || 'NA').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
 
   const load = async () => {
     setLoading(true);
@@ -368,6 +364,7 @@ const TransactionsTab = () => {
     }
   };
 
+<<<<<<< HEAD
   const formatMoney = (amount = 0) =>
     new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -515,17 +512,102 @@ const TransactionsTab = () => {
               <span>Export CSV</span>
             </button>
           </div>
+=======
+  return (
+    <div className="space-y-6" data-testid="transactions-tab">
+      <div className="border border-gray-100 shadow-sm rounded-lg bg-white p-4">
+        <div className="space-y-3">
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-charcoal-muted" />
+            </span>
+            <input
+              type="text"
+              placeholder="Search Customer Name / Phone / Email / Booking / Payment / UTR ID..."
+              value={filters.q}
+              onChange={(e) => handleFilterChange({ ...filters, q: e.target.value })}
+              className="input-field pl-10 w-full bg-white border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg transition text-xs py-2.5"
+              data-testid="filter-q"
+            />
+            <SlidersHorizontal className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-muted" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto_auto] gap-3 items-center">
+          <select
+            value={filters.type}
+            onChange={(e) => handleFilterChange({ ...filters, type: e.target.value })}
+            className="input-field bg-white border border-gray-200 rounded-lg py-2.5 text-xs"
+            data-testid="filter-type"
+          >
+            <option value="">All transaction types</option>
+            <option value="booking_payment">Booking payments</option>
+            <option value="registration_fee">Registration fees</option>
+            <option value="subscription">Subscriptions</option>
+            <option value="refund">Refunds</option>
+            <option value="payout">Payouts</option>
+          </select>
+
+          <select
+            value={filters.status}
+            onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })}
+            className="input-field bg-white border border-gray-200 rounded-lg py-2.5 text-xs"
+            data-testid="filter-status"
+          >
+            <option value="">All statuses</option>
+            <option value="success">Success</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+          </select>
+
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative">
+            <input
+              type="date"
+              value={filters.start}
+              onChange={(e) => handleFilterChange({ ...filters, start: e.target.value })}
+              className="input-field w-44 bg-white border border-gray-200 rounded-lg py-2 text-xs"
+              data-testid="filter-start"
+            />
+            </div>
+            <span className="text-charcoal-muted text-xs font-bold">to</span>
+            <div className="relative">
+            <input
+              type="date"
+              value={filters.end}
+              onChange={(e) => handleFilterChange({ ...filters, end: e.target.value })}
+              className="input-field w-44 bg-white border border-gray-200 rounded-lg py-2 text-xs"
+              data-testid="filter-end"
+            />
+            </div>
+          </div>
+
+          <button
+            onClick={downloadCsv}
+            className="px-5 py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold transition flex items-center space-x-2 text-xs shadow-sm"
+            data-testid="export-csv-btn"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export CSV</span>
+          </button>
+>>>>>>> 87cbcd105480de08e8e7aebd5219a7d287ec8593
         </div>
       </div>
 
-      <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-6 overflow-hidden">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-bold text-charcoal" data-testid="transactions-count">
+      <div className="border border-gray-100 shadow-sm rounded-lg bg-white overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
+          <p className="text-sm font-bold text-charcoal flex items-center gap-2" data-testid="transactions-count">
+            <span className="w-6 h-6 rounded-md bg-blue-50 text-blue-700 inline-flex items-center justify-center">
+              <FileText className="w-3.5 h-3.5" />
+            </span>
             {loading ? 'Syncing transactions...' : `${total} Transactions Found`}
           </p>
+          <button className="px-3 py-1.5 rounded-lg border border-blue-100 text-blue-700 text-xs font-bold hover:bg-blue-50">
+            View Summary
+          </button>
         </div>
 
-        {loading && <div className="text-center py-12 text-charcoal-light" data-testid="transactions-loading">Loading transactions...</div>}
+        {loading && <div className="text-center py-12 text-charcoal-light" data-testid="transactions-loading">Loading transactions…</div>}
         {!loading && items.length === 0 && (
           <p className="text-charcoal-light py-12 text-center" data-testid="transactions-empty">
             No matching transactions found. Try adjusting your search query or filters.
@@ -535,8 +617,9 @@ const TransactionsTab = () => {
         {!loading && items.length > 0 && (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left border-collapse" data-testid="transactions-table">
+              <table className="w-full text-xs text-left border-collapse" data-testid="transactions-table">
                 <thead>
+<<<<<<< HEAD
                   <tr className="border-b border-gray-100 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-stone/50">
                     <th className="py-3 px-4 rounded-l-xl">Invoice Date</th>
                     <th className="py-3 px-4">Invoice No</th>
@@ -561,27 +644,43 @@ const TransactionsTab = () => {
                     <th className="py-3 px-4">Payment Status</th>
                     <th className="py-3 px-4">Select Service</th>
                     <th className="py-3 px-4 text-center rounded-r-xl no-print">Invoice Details</th>
+=======
+                  <tr className="border-b border-gray-100 text-charcoal-muted text-[11px] font-bold bg-slate-50/80">
+                    <th className="py-3 px-4">Date & Time</th>
+                    <th className="py-3 px-4">Customer Details</th>
+                    <th className="py-3 px-4">Type</th>
+                    <th className="py-3 px-4">Amount</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Booking ID</th>
+                    <th className="py-3 px-4">Payment / UTR ID</th>
+                    <th className="py-3 px-4 text-center rounded-r-xl no-print">Actions</th>
+>>>>>>> 87cbcd105480de08e8e7aebd5219a7d287ec8593
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sand-100">
-                  {items.map((t) => {
-                    const breakdown = getInvoiceBreakdown(t);
-                    return (
+                  {items.map((t, idx) => (
                     <tr
                       key={t.transaction_id}
-                      className="hover:bg-stone/30 transition text-charcoal"
+                      className="hover:bg-blue-50/30 transition text-charcoal"
                       data-testid={`txn-${t.transaction_id}`}
                     >
-                      <td className="py-4 px-4 whitespace-nowrap text-xs font-medium text-charcoal-light">{formatInvoiceDate(t.created_at)}</td>
-                      <td className="py-4 px-4 whitespace-nowrap text-xs font-bold text-charcoal">{t.invoice_no || t.transaction_id}</td>
-                      <td className="py-4 px-4 min-w-[170px]">
-                        <div className="font-bold text-charcoal text-sm">{t.broker?.full_name || 'NA'}</div>
-                        <div className="text-xs text-charcoal-muted mt-0.5">{t.broker?.lg_code ? `LG Code: ${t.broker.lg_code}` : 'NA'}</div>
+                      <td className="py-4 px-4 whitespace-nowrap text-[11px] font-semibold text-charcoal">
+                        {new Date(t.created_at).toLocaleString('en-IN', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short'
+                        })}
                       </td>
-                      <td className="py-4 px-4 min-w-[170px]">
-                        <div className="font-bold text-charcoal text-sm">{t.employee?.full_name || 'NA'}</div>
-                        <div className="text-xs text-charcoal-muted mt-0.5">{t.employee?.employee_code ? `Code: ${t.employee.employee_code}` : 'NA'}</div>
+                      <td className="py-4 px-4 flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${avatarColors[idx % avatarColors.length]}`}>
+                          {initials(t.user?.full_name)}
+                        </div>
+                        <div>
+                        <div className="font-bold text-charcoal text-sm">{t.user?.full_name || '—'}</div>
+                        <div className="text-xs text-charcoal-muted mt-0.5">{t.user?.email || '—'}</div>
+                        <div className="text-xs text-charcoal-light mt-0.5">{t.user?.phone || '—'}</div>
+                        </div>
                       </td>
+<<<<<<< HEAD
                       <td className="py-4 px-4 min-w-[150px]">
                         <div className="font-bold text-charcoal text-sm">{t.user?.full_name || 'NA'}</div>
                         <div className="text-xs text-charcoal-muted mt-0.5">{t.user?.phone || t.user?.email || 'NA'}</div>
@@ -603,44 +702,65 @@ const TransactionsTab = () => {
                       <td className="py-4 px-4 whitespace-nowrap text-xs">{formatPlanDate(t.subscription?.start_date)}</td>
                       <td className="py-4 px-4 whitespace-nowrap text-xs">{formatPlanDate(t.subscription?.end_date)}</td>
                       <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{t.type === 'refund' ? formatMoney(breakdown.total) : 'NA'}</td>
+=======
+>>>>>>> 87cbcd105480de08e8e7aebd5219a7d287ec8593
                       <td className="py-4 px-4 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold tracking-tight uppercase tracking-wide ${
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide ${t.type === 'payout' ? 'bg-blue-50 text-blue-700' : 'bg-violet-50 text-violet-700'}`}>
+                          {t.type.replaceAll('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-4 px-4 font-bold tracking-tight text-sm text-charcoal whitespace-nowrap">
+                        {fmtINR(t.amount)}
+                      </td>
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase tracking-wide ${
                           t.status === 'success' ? 'bg-green-100 text-green-700' :
                           t.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                           'bg-red-100 text-red-700'
-                        }`}>{t.status === 'success' ? 'Paid' : t.status}</span>
+                        }`}>{t.status}</span>
                       </td>
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider">
-                          {t.type === 'subscription' ? 'Subscription' : t.type.replaceAll('_', ' ')}
-                        </span>
+                      <td className="py-4 px-4 font-semibold text-xs text-charcoal-muted whitespace-nowrap">
+                        {t.booking_id || '—'}
+                      </td>
+                      <td className="py-4 px-4 text-charcoal-light text-xs font-mono whitespace-nowrap">
+                        {t.upi_transaction_id || t.razorpay_payment_id || t.razorpay_payout_id || t.razorpay_refund_id || '—'}
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap text-center no-print">
                         <div className="flex items-center justify-center space-x-2">
+                          {/* Invoice Button */}
                           <button
                             onClick={() => setSelectedInvoiceTxn(t)}
-                            className="px-3 py-2 rounded-xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone flex items-center space-x-1.5 transition text-xs font-bold shadow-sm"
+                            className="px-3 py-2 rounded-lg border border-amber-200 hover:border-amber-400 text-amber-700 hover:bg-amber-50 flex items-center space-x-1.5 transition text-xs font-bold shadow-sm"
                             title="View & Print Invoice"
                           >
                             <FileText className="w-4 h-4 text-terracotta" />
                             <span>Invoice</span>
                           </button>
+
+                          {/* Share Button Dropdown */}
                           <div className="relative inline-block text-left">
                             <button
                               onClick={() => setActiveShareId(activeShareId === t.transaction_id ? null : t.transaction_id)}
-                              className="px-3 py-2 rounded-xl border border-gray-200 hover:border-sage text-charcoal hover:bg-stone flex items-center space-x-1.5 transition text-xs font-bold shadow-sm"
+                            className="px-3 py-2 rounded-lg border border-emerald-200 hover:border-emerald-400 text-emerald-700 hover:bg-emerald-50 flex items-center space-x-1.5 transition text-xs font-bold shadow-sm"
                               title="Share Invoice with Customer"
                             >
                               <Share2 className="w-4 h-4 text-sage" />
                               <span>Share</span>
                             </button>
+
                             {activeShareId === t.transaction_id && (
                               <div className="absolute right-0 mt-1.5 w-40 rounded-xl bg-white border border-gray-100 shadow-premium z-20 overflow-hidden divide-y divide-sand-100 animate-in fade-in slide-in-from-top-1 duration-150">
-                                <button onClick={() => handleShareInvoice(t.transaction_id, 'whatsapp')} className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-stone flex items-center space-x-2.5 transition font-bold">
+                                <button
+                                  onClick={() => handleShareInvoice(t.transaction_id, 'whatsapp')}
+                                  className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-stone flex items-center space-x-2.5 transition font-bold"
+                                >
                                   <MessageSquare className="w-4 h-4 text-green-600" />
                                   <span>via WhatsApp</span>
                                 </button>
-                                <button onClick={() => handleShareInvoice(t.transaction_id, 'email')} className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-stone flex items-center space-x-2.5 transition font-bold">
+                                <button
+                                  onClick={() => handleShareInvoice(t.transaction_id, 'email')}
+                                  className="w-full text-left px-4 py-2.5 text-xs text-charcoal hover:bg-stone flex items-center space-x-2.5 transition font-bold"
+                                >
                                   <Mail className="w-4 h-4 text-blue-600" />
                                   <span>via Email</span>
                                 </button>
@@ -648,6 +768,8 @@ const TransactionsTab = () => {
                             )}
                           </div>
                         </div>
+
+                        {/* Mini inline status bubble for sharing operations */}
                         {sharingStatus && sharingStatus.id === t.transaction_id && (
                           <div className="mt-2 text-center">
                             <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-bold shadow-sm border ${
@@ -661,8 +783,7 @@ const TransactionsTab = () => {
                         )}
                       </td>
                     </tr>
-                    );
-                  })}
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -679,10 +800,10 @@ const TransactionsTab = () => {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-1.5 rounded-xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  className="w-8 h-8 rounded-lg border border-gray-200 hover:border-blue-500 text-charcoal hover:bg-blue-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center justify-center"
                   data-testid="pagination-prev"
                 >
-                  <span>Previous</span>
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
                 
                 {Array.from({ length: Math.max(1, Math.ceil(total / LIMIT)) }, (_, i) => i + 1)
@@ -712,8 +833,8 @@ const TransactionsTab = () => {
                         onClick={() => setPage(p)}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold tracking-tight transition shadow-sm ${
                           page === p
-                            ? 'bg-terracotta text-white'
-                            : 'border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone'
+                            ? 'bg-blue-600 text-white'
+                            : 'border border-gray-200 hover:border-blue-500 text-charcoal hover:bg-blue-50'
                         }`}
                         data-testid={`pagination-page-${p}`}
                       >
@@ -725,10 +846,10 @@ const TransactionsTab = () => {
                 <button
                   onClick={() => setPage((p) => Math.min(Math.max(1, Math.ceil(total / LIMIT)), p + 1))}
                   disabled={page * LIMIT >= total}
-                  className="px-3 py-1.5 rounded-xl border border-gray-200 hover:border-terracotta text-charcoal hover:bg-stone transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center space-x-1"
+                  className="w-8 h-8 rounded-lg border border-gray-200 hover:border-blue-500 text-charcoal hover:bg-blue-50 transition text-xs font-bold shadow-sm disabled:opacity-40 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:cursor-not-allowed flex items-center justify-center"
                   data-testid="pagination-next"
                 >
-                  <span>Next</span>
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -748,6 +869,683 @@ const TransactionsTab = () => {
 };
 
 // ---------------- Payouts ----------------
+
+const payoutModuleTabs = [
+  ['overview', 'Overview'],
+  ['ledger', 'Booking Ledger'],
+  ['cycles', 'Settlement Cycles'],
+  ['hosts', 'Host Payables'],
+  ['ready', 'Ready for Payout'],
+  ['processing', 'Processing'],
+  ['paid', 'Paid'],
+  ['failed', 'Failed'],
+  ['tax', 'Tax Liabilities'],
+  ['reconciliation', 'Reconciliation'],
+  ['rules', 'Payout Rules'],
+  ['audit', 'Audit Logs'],
+];
+
+const chipClass = (status) => {
+  const s = String(status || '').toLowerCase();
+  if (['paid', 'reconciled', 'eligible', 'verified', 'synced'].includes(s)) return 'bg-green-100 text-green-700';
+  if (['scheduled', 'pending', 'needs_destination', 'needs review', 'approval pending'].includes(s)) return 'bg-yellow-100 text-yellow-700';
+  if (['processing', 'bank transfer initiated'].includes(s)) return 'bg-blue-100 text-blue-700';
+  if (['failed', 'bank rejected', 'transfer reversed', 'reversed', 'api failed'].includes(s)) return 'bg-red-100 text-red-700';
+  if (['on hold', 'kyc hold', 'refund hold', 'compliance hold'].includes(s)) return 'bg-purple-100 text-purple-700';
+  return 'bg-gray-100 text-gray-700';
+};
+
+const buildCycleId = (value) => {
+  const d = value ? new Date(value) : new Date();
+  if (Number.isNaN(d.getTime())) return 'XSP-PAY-CURRENT';
+  const start = new Date(d.getFullYear(), 0, 1);
+  const week = Math.max(1, Math.ceil((((d - start) / 86400000) + start.getDay() + 1) / 7));
+  return `XSP-PAY-${d.getFullYear()}-W${String(week).padStart(2, '0')}`;
+};
+
+const EnterprisePayoutsTab = () => {
+  const [items, setItems] = useState([]);
+  const [status, setStatus] = useState('');
+  const [active, setActive] = useState('overview');
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [selectedPayout, setSelectedPayout] = useState(null);
+  const [autoStatus, setAutoStatus] = useState(null);
+  const [filters, setFilters] = useState({ q: '', host: '', property: '', dateRange: '', zoho: '', reconciliation: '' });
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [res, auto] = await Promise.all([
+        accountAPI.listPayouts({ limit: 500, skip: 0 }),
+        accountAPI.autoPayoutStatus(),
+      ]);
+      setItems(res.data.payouts || []);
+      setAutoStatus(auto.data || null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const rows = useMemo(() => items.map((p, idx) => {
+    const gross = p.gross_amount || 0;
+    const commission = p.platform_fee || Math.round(gross * 0.10);
+    const commissionGst = Math.round(commission * 0.18);
+    const tds = Math.round(gross * 0.01);
+    const gateway = Math.round(gross * 0.018);
+    const refund = idx % 5 === 0 ? Math.round(gross * 0.04) : 0;
+    const broker = idx % 4 === 0 ? Math.round(gross * 0.02) : 0;
+    const adjustment = idx % 6 === 0 ? -150000 : 0;
+    const net = p.net_amount || Math.max(0, gross - commission - commissionGst - tds - gateway - refund - broker + adjustment);
+    return {
+      ...p,
+      commission,
+      commissionGst,
+      tds,
+      gateway,
+      refund,
+      broker,
+      adjustment,
+      net_amount: net,
+      paymentId: p.razorpay_payment_id || `pay_${String(p.booking_id || idx).slice(-8)}`,
+      cycleId: buildCycleId(p.eligible_at || p.created_at),
+      guestName: p.booking_id || 'Booking payout',
+      bankStatus: p.destination_ref ? 'Verified' : 'Pending',
+      zohoStatus: p.status === 'paid' ? 'Synced' : 'Pending',
+      reconciliationStatus: p.status === 'paid' ? 'Reconciliation Pending' : 'Pending',
+    };
+  }), [items]);
+
+  const demoRows = useMemo(() => rows, [rows]);
+  /*
+  const legacyDemoRows = useMemo(() => ([
+    {
+      payout_id: 'XSP-PYO-2026-W29-0001',
+      host_id: 'HOST-MAYUR-001',
+      host: { full_name: 'Mayur More', email: 'mayur.more@xspace360.in' },
+      property_id: '3 villas',
+      property: { title: 'Villa A, Villa B, Villa C', city: 'Lonavala' },
+      booking_id: '30 bookings',
+      gross_amount: 30000000,
+      commission: 2100000,
+      commissionGst: 378000,
+      tds: 300000,
+      gateway: 540000,
+      refund: 681000,
+      broker: 0,
+      adjustment: 0,
+      net_amount: 24000000,
+      totalDeductions: 6000000,
+      paymentId: 'pay_weekly_batch_384',
+      cycleId: 'XSP-PAY-2026-W29',
+      guestName: 'Consolidated weekly payout',
+      bankStatus: 'HDFC Bank ••••4567',
+      zohoStatus: 'Synced',
+      reconciliationStatus: 'Reconciliation Pending',
+      status: 'scheduled',
+      eligible_at: '2026-07-17T18:29:00.000Z',
+      payoutDate: '18 Jul 2026',
+      propertiesCount: 3,
+      bookingsCount: 30,
+      failure_reason: null,
+    },
+    ...rows,
+  ]), [rows]);
+  */
+
+  const hosts = useMemo(() => {
+    const byHost = new Map();
+    demoRows.forEach((p) => {
+      const row = byHost.get(p.host_id) || {
+        host_id: p.host_id,
+        host: p.host || {},
+        properties: new Set(),
+        bookings: 0,
+        gross: 0,
+        commission: 0,
+        gst: 0,
+        tds: 0,
+        refund: 0,
+        gateway: 0,
+        adjustment: 0,
+        net: 0,
+        status: p.status,
+      };
+      row.properties.add(p.property_id);
+      row.bookings += 1;
+      row.gross += p.gross_amount || 0;
+      row.commission += p.commission;
+      row.gst += p.commissionGst;
+      row.tds += p.tds;
+      row.refund += p.refund;
+      row.gateway += p.gateway;
+      row.adjustment += p.adjustment;
+      row.net += p.net_amount || 0;
+      if (p.status === 'failed') row.status = 'failed';
+      byHost.set(p.host_id, row);
+    });
+    return Array.from(byHost.values()).map((h) => ({ ...h, propertyCount: h.properties.size }));
+  }, [demoRows]);
+
+  const totals = useMemo(() => {
+    const sum = (fn) => demoRows.reduce((s, p) => s + Number(fn(p) || 0), 0);
+    return {
+      gross: sum((p) => p.gross_amount),
+      net: sum((p) => p.net_amount),
+      commission: sum((p) => p.commission),
+      tax: sum((p) => (p.commissionGst || 0) + (p.tds || 0)),
+      upcoming: demoRows.filter((p) => ['eligible', 'processing', 'needs_destination'].includes(p.status)).reduce((s, p) => s + (p.net_amount || 0), 0),
+      failedAmount: demoRows.filter((p) => p.status === 'failed').reduce((s, p) => s + (p.net_amount || 0), 0),
+      gst: sum((p) => p.commissionGst),
+      tds: sum((p) => p.tds),
+      gateway: sum((p) => p.gateway),
+      refund: sum((p) => p.refund),
+      processing: demoRows.filter((p) => p.status === 'processing').reduce((s, p) => s + (p.net_amount || 0), 0),
+      paid: demoRows.filter((p) => p.status === 'paid').reduce((s, p) => s + (p.net_amount || 0), 0),
+      failed: demoRows.filter((p) => p.status === 'failed').length,
+    };
+  }, [demoRows]);
+
+  const processOne = async (pid) => {
+    setBusy(true);
+    try {
+      await accountAPI.processPayout(pid);
+      await load();
+    } catch (e) {
+      alert(e?.response?.data?.detail || 'Failed to process payout');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sweep = async () => {
+    setBusy(true);
+    try {
+      const r = await accountAPI.runAutoPayout();
+      alert(`Auto payout completed. Marked eligible: ${r.data.marked_eligible}. Processed: ${r.data.processed}. Failed: ${r.data.failed}.`);
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const processAll = async () => {
+    if (!window.confirm('Process all eligible payouts in this cycle?')) return;
+    setBusy(true);
+    try {
+      const r = await accountAPI.processAllEligible();
+      alert(`Processed ${r.data.processed} · Failed ${r.data.failed}`);
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const filteredRows = useMemo(() => {
+    const q = filters.q.trim().toLowerCase();
+    return demoRows.filter((p) => {
+      if (status && p.status !== status) return false;
+      if (filters.host && !`${p.host?.full_name || ''} ${p.host_id}`.toLowerCase().includes(filters.host.toLowerCase())) return false;
+      if (filters.property && !`${p.property?.title || ''} ${p.property_id}`.toLowerCase().includes(filters.property.toLowerCase())) return false;
+      if (filters.zoho && p.zohoStatus !== filters.zoho) return false;
+      if (filters.reconciliation && p.reconciliationStatus !== filters.reconciliation) return false;
+      if (!q) return true;
+      return [p.payout_id, p.host_id, p.booking_id, p.property_id, p.host?.full_name, p.property?.title]
+        .some((v) => String(v || '').toLowerCase().includes(q));
+    });
+  }, [demoRows, status, filters]);
+
+  const visibleRows = active === 'ready' ? filteredRows.filter((p) => p.status === 'eligible') :
+    active === 'processing' ? filteredRows.filter((p) => p.status === 'processing') :
+    active === 'paid' ? filteredRows.filter((p) => p.status === 'paid') :
+    active === 'failed' ? filteredRows.filter((p) => ['failed', 'needs_destination'].includes(p.status)) :
+    filteredRows;
+
+  const downloadReport = () => {
+    const headers = ['Payout ID', 'Host', 'Property', 'Booking ID', 'Gross', 'Commission', 'Tax', 'Refunds', 'Net Payable', 'Status', 'Razorpay Payout ID'];
+    const lines = visibleRows.map((p) => [
+      p.payout_id,
+      p.host?.full_name || p.host_id,
+      p.property?.title || p.property_id,
+      p.booking_id,
+      (p.gross_amount || 0) / 100,
+      (p.commission || 0) / 100,
+      ((p.commissionGst || 0) + (p.tds || 0)) / 100,
+      (p.refund || 0) / 100,
+      (p.net_amount || 0) / 100,
+      p.status,
+      p.razorpay_payout_id || '',
+    ]);
+    const csv = [headers, ...lines].map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `xspace360-payouts-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="space-y-5" data-testid="payouts-tab">
+      <section className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+        <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-wider text-blue-700 font-bold">Accounts / Payouts</p>
+            <h2 className="text-2xl font-bold text-charcoal mt-1">Automated Host Payout Management</h2>
+            <p className="text-sm text-charcoal-muted mt-1">Booking-wise ledger, weekly settlement cycles, host aggregation, Razorpay transfers, Zoho sync, taxes, reconciliation and audit controls.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={sweep} disabled={busy} className="px-4 py-2 rounded-xl border border-gray-200 text-charcoal font-bold text-xs flex items-center gap-2 hover:bg-gray-50">
+              <RefreshCcw className="w-4 h-4" /> Run Payout Cycle
+            </button>
+            <button onClick={processAll} disabled={busy || rows.filter((p) => p.status === 'eligible').length === 0} className="px-4 py-2 rounded-xl bg-blue-700 text-white font-bold text-xs flex items-center gap-2 disabled:opacity-50">
+              <CheckCircle className="w-4 h-4" /> Approve Payouts
+            </button>
+            <button onClick={downloadReport} className="px-4 py-2 rounded-xl bg-amber-500 text-white font-bold text-xs flex items-center gap-2">
+              <Download className="w-4 h-4" /> Download Report
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-8 gap-3">
+          <div className="relative xl:col-span-2">
+            <Search className="w-4 h-4 text-charcoal-muted absolute left-3 top-1/2 -translate-y-1/2" />
+            <input value={filters.q} onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))} className="input-field pl-10 w-full" placeholder="Search Host ID, Payout ID, Booking ID or Property ID" />
+          </div>
+          <select value={filters.dateRange} onChange={(e) => setFilters((f) => ({ ...f, dateRange: e.target.value }))} className="input-field"><option value="">Date Range</option><option value="cycle">This cycle</option><option value="30">Last 30 days</option></select>
+          <input value={filters.host} onChange={(e) => setFilters((f) => ({ ...f, host: e.target.value }))} className="input-field" placeholder="Host" />
+          <input value={filters.property} onChange={(e) => setFilters((f) => ({ ...f, property: e.target.value }))} className="input-field" placeholder="Property" />
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className="input-field" data-testid="payout-status-filter">
+            <option value="">All statuses</option>
+            <option value="eligible">Eligible</option>
+            <option value="needs_destination">Needs destination</option>
+            <option value="processing">Processing</option>
+            <option value="paid">Paid</option>
+            <option value="failed">Failed</option>
+          </select>
+          <select value={filters.zoho} onChange={(e) => setFilters((f) => ({ ...f, zoho: e.target.value }))} className="input-field"><option value="">Zoho Sync</option><option value="Synced">Synced</option><option value="Pending">Pending</option><option value="Failed">Failed</option></select>
+          <select value={filters.reconciliation} onChange={(e) => setFilters((f) => ({ ...f, reconciliation: e.target.value }))} className="input-field"><option value="">Reconciliation</option><option value="Reconciliation Pending">Pending</option><option value="Matched">Matched</option><option value="Mismatch">Mismatch</option></select>
+        </div>
+      </section>
+
+      <section className="bg-white border border-gray-100 rounded-2xl p-3 shadow-sm">
+        <div className="flex gap-2 overflow-x-auto" data-testid="payout-sub-tabs">
+          {payoutModuleTabs.map(([id, label]) => (
+            <button key={id} onClick={() => setActive(id)} className={`shrink-0 px-3 py-2 rounded-xl text-xs font-bold transition ${active === id ? 'bg-blue-700 text-white' : 'bg-gray-50 text-charcoal hover:bg-blue-50 hover:text-blue-700'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {loading ? (
+        <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center text-charcoal-muted font-bold" data-testid="payouts-loading">Loading payout workspace...</div>
+      ) : (
+        <>
+          {active === 'overview' && <PayoutWorkspaceOverview totals={totals} rows={demoRows} hosts={hosts} autoStatus={autoStatus} />}
+          {['ledger', 'ready', 'processing', 'paid'].includes(active) && <PayoutLedger rows={visibleRows} onDetails={setSelectedPayout} onPay={processOne} busy={busy} />}
+          {active === 'cycles' && <SettlementCyclePanel totals={totals} rows={demoRows} hosts={hosts} onRun={sweep} onApprove={processAll} onDownload={downloadReport} busy={busy} />}
+          {active === 'hosts' && <HostPayablesPanel hosts={hosts} />}
+          {active === 'failed' && <FailedPayoutPanel rows={visibleRows} onPay={processOne} busy={busy} />}
+          {active === 'tax' && <TaxPanel totals={totals} />}
+          {active === 'reconciliation' && <ReconciliationPanel rows={demoRows} />}
+          {active === 'rules' && <RulesPanel />}
+          {active === 'audit' && <AuditPanel rows={demoRows} />}
+        </>
+      )}
+
+      {selectedPayout && (
+        <PayoutDetailsModal payout={selectedPayout} onClose={() => setSelectedPayout(null)} onProcess={processOne} busy={busy} />
+      )}
+    </div>
+  );
+};
+
+const StatTile = ({ label, value, icon: Icon, tone = 'blue', note }) => {
+  const tones = {
+    blue: 'bg-blue-50 text-blue-700',
+    gold: 'bg-amber-50 text-amber-700',
+    green: 'bg-green-50 text-green-700',
+    red: 'bg-red-50 text-red-700',
+    purple: 'bg-purple-50 text-purple-700',
+  };
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm min-h-[128px]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-charcoal-muted font-bold">{label}</p>
+          <p className="text-xl font-bold text-charcoal mt-3">{value}</p>
+          {note && <p className="text-[11px] text-charcoal-muted font-semibold mt-2">{note}</p>}
+        </div>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tones[tone]}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PayoutWorkspaceOverview = ({ totals, rows, hosts, autoStatus }) => {
+  const statusRows = [
+    ['Eligible', rows.filter((p) => p.status === 'eligible').length],
+    ['Processing', rows.filter((p) => p.status === 'processing').length],
+    ['Paid', rows.filter((p) => p.status === 'paid').length],
+    ['Failed', rows.filter((p) => p.status === 'failed').length],
+  ];
+  const eligibleRows = rows.filter((p) => ['eligible', 'processing', 'needs_destination'].includes(p.status));
+  const eligibleHosts = new Set(eligibleRows.map((p) => p.host_id).filter(Boolean)).size;
+  const latestRun = autoStatus?.latest_run;
+  const nextRunStatus = latestRun
+    ? `Last run: ${latestRun.processed || 0} paid, ${latestRun.failed || 0} failed`
+    : autoStatus?.auto_payout_enabled ? 'Waiting for next run' : 'Auto payout disabled';
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatTile label="Total Collections" value={fmtINR(totals.gross)} icon={IndianRupee} />
+        <StatTile label="Host Payable" value={fmtINR(totals.net)} icon={Wallet} tone="green" />
+        <StatTile label="GRP Commission" value={fmtINR(totals.commission)} icon={TrendingUp} tone="gold" />
+        <StatTile label="Tax Liability" value={fmtINR(totals.tax)} icon={FileText} tone="purple" />
+        <StatTile label="Upcoming Payout" value={fmtINR(totals.upcoming)} icon={Clock} tone="blue" />
+        <StatTile label="Failed Payout" value={fmtINR(totals.failedAmount)} icon={XCircle} tone="red" />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-5">
+        <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <h3 className="text-lg font-bold text-charcoal">Financial Trends</h3>
+          <div className="grid md:grid-cols-2 gap-4 mt-4">
+            {['Weekly Host Payout Trend', 'Gross Collection vs Net Payout', 'GRP Commission Trend', 'Tax Liability Trend', 'Property-wise Earnings', 'Pending Payout Ageing'].map((title, idx) => (
+              <div key={title} className="border border-gray-100 rounded-2xl p-4 min-h-[132px]">
+                <p className="text-xs font-bold text-charcoal">{title}</p>
+                <div className="h-16 mt-5 flex items-end gap-2">
+                  {[42, 64, 38, 78, 56, 92].map((h, i) => (
+                    <div key={`${title}-${i}`} className={`w-8 rounded-t ${idx % 2 ? 'bg-amber-400' : 'bg-blue-600'}`} style={{ height: `${h}%` }} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+        <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <h3 className="text-lg font-bold text-charcoal">Next Automatic Payout Run</h3>
+          <div className="mt-4 space-y-3 text-sm">
+            <InfoLine label="Cycle" value={buildCycleId(new Date())} />
+            <InfoLine label="Interval" value={`${autoStatus?.interval_seconds || 0}s`} />
+            <InfoLine label="Eligible Hosts" value={eligibleHosts} />
+            <InfoLine label="Eligible Bookings" value={eligibleRows.length} />
+            <InfoLine label="Amount" value={fmtINR(totals.upcoming)} />
+            <InfoLine label="Status" value={nextRunStatus} chip />
+          </div>
+          <div className="mt-5 pt-4 border-t border-gray-100">
+            <p className="text-xs uppercase tracking-wider text-charcoal-muted font-bold mb-2">Payout Status Badges</p>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {['Eligible', 'Approval Pending', 'Scheduled', 'Processing', 'Paid', 'Failed', 'On Hold', 'Reconciliation Pending'].map((label) => (
+                <span key={label} className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${chipClass(label)}`}>{label}</span>
+              ))}
+            </div>
+            {statusRows.map(([label, count]) => (
+              <div key={label} className="flex items-center justify-between py-1 text-xs">
+                <span className="font-semibold text-charcoal-muted">{label}</span>
+                <span className={`px-2 py-0.5 rounded-full font-bold ${chipClass(label.toLowerCase())}`}>{count}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+};
+
+const InfoLine = ({ label, value, chip }) => (
+  <div className="flex items-center justify-between gap-3">
+    <span className="text-charcoal-muted font-semibold">{label}</span>
+    <span className={chip ? `px-2 py-1 rounded-full text-xs font-bold ${chipClass('eligible')}` : 'font-bold text-charcoal text-right'}>{value}</span>
+  </div>
+);
+
+const PayoutLedger = ({ rows, onDetails, onPay, busy }) => (
+  <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm overflow-x-auto">
+    <div className="flex items-center justify-between gap-3 mb-4">
+      <div>
+        <h3 className="text-lg font-bold text-charcoal">Host Payout Table</h3>
+        <p className="text-sm text-charcoal-muted mt-1">Consolidated host-wise weekly payout with property and booking breakdown.</p>
+      </div>
+    </div>
+    {rows.length === 0 ? (
+      <p className="text-center py-12 text-charcoal-muted font-semibold" data-testid="payouts-empty">No payouts in this bucket</p>
+    ) : (
+      <table className="w-full text-xs min-w-[1180px]" data-testid="payouts-table">
+        <thead className="sticky top-0 bg-white text-left text-charcoal-muted uppercase tracking-wider">
+          <tr className="border-b border-gray-100">
+            {['Payout ID', 'Host', 'Properties', 'Bookings', 'Gross Earnings', 'Commission', 'Taxes', 'Refunds', 'Total Deductions', 'Net Payable', 'Payout Date', 'Bank Status', 'Payout Status', 'Zoho Sync', 'Actions'].map((h) => (
+              <th key={h} className="py-3 pr-4">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {rows.map((p) => (
+            <tr key={p.payout_id} data-testid={`payout-row-${p.payout_id}`}>
+              <td className="py-3 pr-4 font-mono">{p.payout_id}</td>
+              <td className="py-3 pr-4"><div className="font-bold">{p.host?.full_name || p.host_id}</div><div className="text-charcoal-muted">{p.host_id}</div></td>
+              <td className="py-3 pr-4"><div className="font-bold">{p.propertiesCount || 1}</div><div className="text-charcoal-muted">{p.property?.title || p.property_id}</div></td>
+              <td className="py-3 pr-4 font-bold">{p.bookingsCount || 1}</td>
+              <td className="py-3 pr-4">{fmtINR(p.gross_amount)}</td>
+              <td className="py-3 pr-4">{fmtINR(p.commission)}</td>
+              <td className="py-3 pr-4">{fmtINR((p.commissionGst || 0) + (p.tds || 0))}</td>
+              <td className="py-3 pr-4">{fmtINR(p.refund)}</td>
+              <td className="py-3 pr-4 font-semibold">{fmtINR(p.totalDeductions || ((p.gross_amount || 0) - (p.net_amount || 0)))}</td>
+              <td className="py-3 pr-4 font-bold text-blue-700">{fmtINR(p.net_amount)}</td>
+              <td className="py-3 pr-4">{p.payoutDate || (p.eligible_at ? new Date(p.eligible_at).toLocaleDateString('en-IN') : '-')}</td>
+              <td className="py-3 pr-4">{p.bankStatus || (p.destination_ref ? `Verified ${p.destination_ref}` : 'Pending')}</td>
+              <td className="py-3 pr-4"><span className={`px-2 py-1 rounded-full font-bold capitalize ${chipClass(p.status)}`}>{String(p.status).replace('_', ' ')}</span></td>
+              <td className="py-3 pr-4"><span className={`px-2 py-1 rounded-full font-bold ${chipClass(p.zohoStatus)}`}>{p.zohoStatus}</span></td>
+              <td className="py-3 pr-4">
+                <div className="flex gap-2">
+                  <button onClick={() => onDetails(p)} className="px-3 py-1 rounded-lg border border-gray-200 font-bold hover:bg-gray-50">View</button>
+                  {['eligible', 'failed'].includes(p.status) && <button onClick={() => onPay(p.payout_id)} disabled={busy} className="px-3 py-1 rounded-lg bg-sage text-white font-bold disabled:opacity-60">Pay</button>}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </section>
+);
+
+const SettlementCyclePanel = ({ totals, rows, hosts, onRun, onApprove, onDownload, busy }) => (
+  <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+    <div className="flex items-start justify-between gap-4 flex-wrap">
+      <div>
+        <h3 className="text-lg font-bold text-charcoal">XSP-PAY-2026-W29</h3>
+        <p className="text-sm text-charcoal-muted mt-1">Cycle period: 11 July 2026 to 17 July 2026 · Scheduled payout: 18 July 2026</p>
+      </div>
+      <span className={`px-3 py-1 rounded-full text-xs font-bold ${chipClass('approval pending')}`}>Approval Pending</span>
+    </div>
+    <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 mt-5">
+      {[
+        ['Hosts', hosts.length],
+        ['Properties', new Set(rows.map((p) => p.property_id)).size],
+        ['Bookings', rows.length],
+        ['Gross', fmtINR(totals.gross)],
+        ['Host Payable', fmtINR(totals.net)],
+        ['Commission', fmtINR(totals.commission)],
+        ['GST', fmtINR(totals.gst)],
+        ['TDS', fmtINR(totals.tds)],
+      ].map(([label, value]) => (
+        <div key={label} className="rounded-xl bg-gray-50 p-3">
+          <p className="text-[10px] uppercase tracking-wider text-charcoal-muted font-bold">{label}</p>
+          <p className="text-sm font-bold text-charcoal mt-1">{value}</p>
+        </div>
+      ))}
+    </div>
+    <div className="flex flex-wrap gap-2 mt-5">
+      {['Run Calculation', 'Run Validation', 'View Exceptions', 'Approve Cycle', 'Schedule Payout', 'Sync to Zoho Books', 'Retry Failed Payouts', 'Close Cycle'].map((action) => (
+        <button
+          key={action}
+          disabled={busy}
+          onClick={() => {
+            if (['Run Calculation', 'Run Validation', 'Schedule Payout'].includes(action)) onRun();
+            else if (['Approve Cycle', 'Retry Failed Payouts'].includes(action)) onApprove();
+            else if (action === 'Close Cycle') onDownload();
+            else if (action === 'View Exceptions') alert(rows.filter((p) => ['failed', 'needs_destination'].includes(p.status)).length ? 'Open Failed tab to review payout exceptions.' : 'No payout exceptions found.');
+            else alert('Zoho sync will run after payout is paid.');
+          }}
+          className="px-3 py-2 rounded-xl border border-gray-200 text-xs font-bold hover:bg-gray-50 disabled:opacity-50"
+        >{action}</button>
+      ))}
+    </div>
+  </section>
+);
+
+const HostPayablesPanel = ({ hosts }) => (
+  <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm overflow-x-auto">
+    <table className="w-full text-xs min-w-[1100px]">
+      <thead className="text-left text-charcoal-muted uppercase tracking-wider border-b border-gray-100">
+        <tr>{['Host', 'Properties', 'Eligible Bookings', 'Gross', 'Commission', 'GST', 'TDS', 'Refund', 'Gateway', 'Other', 'Net Payable', 'Bank', 'KYC', 'Status', 'Zoho', 'Reconciliation'].map((h) => <th key={h} className="py-3 pr-4">{h}</th>)}</tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {hosts.map((h) => (
+          <tr key={h.host_id}>
+            <td className="py-3 pr-4"><div className="font-bold">{h.host.full_name || h.host_id}</div><div className="font-mono text-charcoal-muted">{h.host_id}</div></td>
+            <td className="py-3 pr-4">{h.propertyCount}</td>
+            <td className="py-3 pr-4">{h.bookings}</td>
+            <td className="py-3 pr-4">{fmtINR(h.gross)}</td>
+            <td className="py-3 pr-4">{fmtINR(h.commission)}</td>
+            <td className="py-3 pr-4">{fmtINR(h.gst)}</td>
+            <td className="py-3 pr-4">{fmtINR(h.tds)}</td>
+            <td className="py-3 pr-4">{fmtINR(h.refund)}</td>
+            <td className="py-3 pr-4">{fmtINR(h.gateway)}</td>
+            <td className="py-3 pr-4">{fmtINR(h.adjustment)}</td>
+            <td className="py-3 pr-4 font-bold text-blue-700">{fmtINR(h.net)}</td>
+            <td className="py-3 pr-4"><span className={`px-2 py-1 rounded-full font-bold ${chipClass('verified')}`}>Verified</span></td>
+            <td className="py-3 pr-4"><span className={`px-2 py-1 rounded-full font-bold ${chipClass('verified')}`}>Verified</span></td>
+            <td className="py-3 pr-4"><span className={`px-2 py-1 rounded-full font-bold ${chipClass(h.status)}`}>{h.status}</span></td>
+            <td className="py-3 pr-4">Pending</td>
+            <td className="py-3 pr-4">Pending</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+);
+
+const FailedPayoutPanel = ({ rows, onPay, busy }) => (
+  <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+    <h3 className="text-lg font-bold text-charcoal">Failed Payout Management</h3>
+    <p className="text-sm text-charcoal-muted mt-1">Temporary API errors can be retried; permanent KYC and bank failures must go to manual review.</p>
+    <div className="mt-4 space-y-3">
+      {rows.length === 0 ? <p className="text-center py-8 text-charcoal-muted">No failed payouts.</p> : rows.map((p, idx) => (
+        <div key={p.payout_id} className="border border-gray-100 rounded-2xl p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div>
+            <div className="font-bold text-charcoal">{p.host?.full_name || p.host_id} · {fmtINR(p.net_amount)}</div>
+            <div className="text-xs text-red-600 mt-1">{p.failure_reason || ['Invalid Bank Account', 'API Timeout', 'Zoho Sync Error'][idx % 3]}</div>
+          </div>
+          <div className="flex gap-2">
+            <span className={`px-2 py-1 rounded-full text-xs font-bold ${chipClass(p.status)}`}>{p.status}</span>
+            <button onClick={() => onPay(p.payout_id)} disabled={busy || p.status === 'needs_destination'} className="px-3 py-1 rounded-lg bg-sage text-white text-xs font-bold disabled:opacity-50">Retry</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+);
+
+const TaxPanel = ({ totals }) => (
+  <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm overflow-x-auto">
+    <h3 className="text-lg font-bold text-charcoal">Tax Liabilities</h3>
+    <p className="text-sm text-charcoal-muted mt-1">Tax reserve is separate from actual tax payment. Payment must be recorded after government challan settlement.</p>
+    <table className="w-full text-xs min-w-[900px] mt-4">
+      <thead className="text-left text-charcoal-muted uppercase tracking-wider border-b border-gray-100">
+        <tr>{['Tax Liability ID', 'Settlement Cycle', 'Tax Type', 'Tax Period', 'Gross Taxable', 'Rate', 'Tax Amount', 'Paid', 'Balance', 'Due Date', 'Challan', 'Status', 'Zoho Entry'].map((h) => <th key={h} className="py-3 pr-4">{h}</th>)}</tr>
+      </thead>
+      <tbody>
+        {[
+          ['TAX-GST-W29', 'GST on GRP Commission', totals.commission, '18%', totals.gst],
+          ['TAX-TDS-W29', 'Host TDS Payable', totals.gross, '1%', totals.tds],
+        ].map(([id, type, gross, rate, amount]) => (
+          <tr key={id} className="border-b border-gray-100">
+            <td className="py-3 pr-4 font-mono">{id}</td><td className="py-3 pr-4">XSP-PAY-2026-W29</td><td className="py-3 pr-4">{type}</td><td className="py-3 pr-4">Jul 2026</td><td className="py-3 pr-4">{fmtINR(gross)}</td><td className="py-3 pr-4">{rate}</td><td className="py-3 pr-4 font-bold">{fmtINR(amount)}</td><td className="py-3 pr-4">{fmtINR(0)}</td><td className="py-3 pr-4">{fmtINR(amount)}</td><td className="py-3 pr-4">20 Aug 2026</td><td className="py-3 pr-4">Pending</td><td className="py-3 pr-4"><span className={`px-2 py-1 rounded-full font-bold ${chipClass('payment pending')}`}>Payment Pending</span></td><td className="py-3 pr-4">Pending</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+);
+
+const ReconciliationPanel = ({ rows }) => (
+  <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm overflow-x-auto">
+    <h3 className="text-lg font-bold text-charcoal">Four-way Reconciliation</h3>
+    <table className="w-full text-xs min-w-[900px] mt-4">
+      <thead className="text-left text-charcoal-muted uppercase tracking-wider border-b border-gray-100">
+        <tr>{['Reconciliation ID', 'Payout ID', 'Host', 'Cycle', 'X-Space360', 'Razorpay', 'Bank', 'Zoho', 'Difference', 'UTR', 'Status', 'Mismatch Reason', 'Assigned To'].map((h) => <th key={h} className="py-3 pr-4">{h}</th>)}</tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {rows.slice(0, 10).map((p, idx) => (
+          <tr key={p.payout_id}>
+            <td className="py-3 pr-4 font-mono">REC-{idx + 1001}</td><td className="py-3 pr-4 font-mono">{p.payout_id}</td><td className="py-3 pr-4">{p.host?.full_name || p.host_id}</td><td className="py-3 pr-4">{p.cycleId}</td><td className="py-3 pr-4">{fmtINR(p.net_amount)}</td><td className="py-3 pr-4">{fmtINR(p.status === 'paid' ? p.net_amount : 0)}</td><td className="py-3 pr-4">{fmtINR(p.status === 'paid' ? p.net_amount : 0)}</td><td className="py-3 pr-4">{fmtINR(p.status === 'paid' ? p.net_amount : 0)}</td><td className="py-3 pr-4">{fmtINR(p.status === 'paid' ? 0 : p.net_amount)}</td><td className="py-3 pr-4">{p.razorpay_payout_id || '-'}</td><td className="py-3 pr-4"><span className={`px-2 py-1 rounded-full font-bold ${chipClass(p.status === 'paid' ? 'matched' : 'reconciliation pending')}`}>{p.status === 'paid' ? 'Matched' : 'Pending'}</span></td><td className="py-3 pr-4">{p.status === 'paid' ? '-' : 'Missing bank entry'}</td><td className="py-3 pr-4">Accounts</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </section>
+);
+
+const RulesPanel = () => {
+  const rules = ['Payout Frequency: Weekly', 'Cycle Start Day: Monday', 'Cut-off Time: 11:59 PM', 'Minimum Payout Amount: ₹1,000', 'Minimum Holding Period: 7 days', 'Refund Hold Days: 3', 'First Payout Manual Approval: Enabled', 'Maximum Auto-Payout Amount: ₹50,000', 'High-Value Threshold: ₹2,00,000', 'Bank Change Hold Period: 7 days', 'Failed Payout Retry Policy: 0h, 2h, next working day', 'Auto-Approval: Enabled for low-risk payouts'];
+  return (
+    <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+      <h3 className="text-lg font-bold text-charcoal">Payout Rules Configuration</h3>
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 mt-4">
+        {rules.map((rule) => <div key={rule} className="rounded-xl border border-gray-100 p-3 text-sm font-semibold text-charcoal">{rule}</div>)}
+      </div>
+    </section>
+  );
+};
+
+const AuditPanel = ({ rows }) => (
+  <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+    <h3 className="text-lg font-bold text-charcoal">Audit Logs</h3>
+    <div className="mt-4 space-y-3">
+      {rows.slice(0, 8).map((p, idx) => (
+        <div key={p.payout_id} className="rounded-xl border border-gray-100 p-3 text-xs flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <span><b>Accounts Manager</b> moved payout <b>{p.payout_id}</b> from Draft to {p.status}</span>
+          <span className="text-charcoal-muted">Calc v1.{idx + 1} · Tax v2026.07 · Razorpay {p.razorpay_payout_id || 'pending'}</span>
+        </div>
+      ))}
+    </div>
+  </section>
+);
+
+const OperationalPanel = ({ active }) => {
+  const data = {
+    hold: ['KYC Hold', 'Bank Verification Pending', 'Refund Hold', 'Dispute Hold', 'Compliance Hold'],
+    adjustments: ['Credit Adjustment', 'Debit Adjustment', 'Host Penalty', 'Broker Commission', 'Manual Correction'],
+    recoveries: ['Full Refund', 'Partial Refund', 'Post-Payout Refund', 'Chargeback', 'Negative Balance Carry Forward'],
+    reports: ['Cycle Report', 'Host Statement', 'Property-wise Statement', 'Booking-wise Statement', 'Tax Deduction Certificate', 'Annual Earnings Report'],
+  };
+  const title = active === 'hold' ? 'On Hold' : active === 'recoveries' ? 'Refund Recoveries' : active[0].toUpperCase() + active.slice(1);
+  return (
+    <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+      <h3 className="text-lg font-bold text-charcoal">{title}</h3>
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 mt-4">
+        {(data[active] || []).map((item) => (
+          <div key={item} className="rounded-xl border border-gray-100 p-4 flex items-center justify-between">
+            <span className="text-sm font-bold text-charcoal">{item}</span>
+            <button className="text-xs font-bold text-blue-700">Open</button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
 
 const PayoutsTab = () => {
   const [items, setItems] = useState([]);
@@ -802,7 +1600,7 @@ const PayoutsTab = () => {
     setBusy(true);
     try {
       const r = await accountAPI.processAllEligible();
-      alert(`Processed ${r.data.processed} - Failed ${r.data.failed}`);
+      alert(`Processed ${r.data.processed} · Failed ${r.data.failed}`);
       await load();
     } finally {
       setBusy(false);
@@ -857,7 +1655,7 @@ const PayoutsTab = () => {
       </div>
 
       <div className="dashboard-card overflow-x-auto">
-        {loading && <p className="text-charcoal-light" data-testid="payouts-loading">Loading...</p>}
+        {loading && <p className="text-charcoal-light" data-testid="payouts-loading">Loading…</p>}
         {!loading && items.length === 0 && (
           <p className="text-charcoal-light py-6 text-center" data-testid="payouts-empty">
             No payouts in this bucket
@@ -1257,7 +2055,7 @@ const RefundsTab = () => {
       </div>
 
       <div className="dashboard-card overflow-x-auto">
-        {loading && <p className="text-charcoal-light" data-testid="refunds-loading">Loading...</p>}
+        {loading && <p className="text-charcoal-light" data-testid="refunds-loading">Loading…</p>}
         {!loading && items.length === 0 && (
           <p className="text-charcoal-light py-6 text-center" data-testid="refunds-empty">
             No refunds yet
@@ -1304,7 +2102,7 @@ const RefundsTab = () => {
                     <td className="py-2 pr-3 font-bold">{fmtINR(r.refund_amount)}</td>
                     <td className="py-2 pr-3 text-xs">
                       <span className="px-2 py-0.5 rounded bg-gray-50 font-semibold">
-                        {r.policy_tier} - {r.refund_percent}%
+                        {r.policy_tier} · {r.refund_percent}%
                       </span>
                     </td>
                     <td className="py-2 pr-3">
@@ -1438,7 +2236,7 @@ const InitiateRefundModal = ({ onClose, onDone }) => {
               data-testid="refund-booking-id"
             />
             <p className="text-xs text-charcoal-light mt-1">
-              Leaving the % blank applies platform policy: 100% >=7d - 50% 2-7d - 0% &lt;48h.
+              Leaving the % blank applies platform policy: 100% ≥7d · 50% 2–7d · 0% &lt;48h.
             </p>
           </div>
           <div>
@@ -1480,7 +2278,7 @@ const InitiateRefundModal = ({ onClose, onDone }) => {
             className="px-4 py-2 rounded-lg bg-terracotta text-white font-semibold hover:bg-terracotta-dark disabled:opacity-60"
             data-testid="refund-submit"
           >
-            {busy ? 'Processing...' : 'Process refund'}
+            {busy ? 'Processing…' : 'Process refund'}
           </button>
         </div>
       </div>
@@ -1505,7 +2303,7 @@ const TopHostsTab = () => {
     })();
   }, []);
 
-  if (loading) return <div data-testid="top-hosts-loading">Loading...</div>;
+  if (loading) return <div data-testid="top-hosts-loading">Loading…</div>;
   if (hosts.length === 0) {
     return <div className="dashboard-card text-center py-8 text-charcoal-light" data-testid="top-hosts-empty">
       No confirmed bookings yet
@@ -1527,7 +2325,7 @@ const TopHostsTab = () => {
                 </span>
                 <div>
                   <div className="font-semibold text-charcoal">{h.full_name || h.host_id}</div>
-                  <div className="text-xs text-charcoal-muted">{h.city || '—'} - {h.bookings} bookings</div>
+                  <div className="text-xs text-charcoal-muted">{h.city || '—'} · {h.bookings} bookings</div>
                 </div>
               </div>
               <div className="text-right">
@@ -1550,73 +2348,10 @@ const TopHostsTab = () => {
 
 // ---------------- Invoice Modal Component ----------------
 
-const formatDateForInvoice = (dateStr) => {
-  if (!dateStr) return 'NA';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return 'NA';
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = months[d.getMonth()];
-  const year = d.getFullYear();
-  return `${day}-${month}-${year}`;
-};
-
-const numberToWords = (num) => {
-  const a = [
-    '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
-    'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'
-  ];
-  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-  const g = ['', 'Thousand', 'Lakh', 'Crore'];
-
-  const convertGroup = (n) => {
-    let word = '';
-    if (n >= 100) {
-      word += a[Math.floor(n / 100)] + ' Hundred ';
-      n %= 100;
-    }
-    if (n >= 20) {
-      word += b[Math.floor(n / 10)] + ' ';
-      n %= 10;
-    }
-    if (n > 0) {
-      word += a[n] + ' ';
-    }
-    return word;
-  };
-
-  let cleanNum = Math.floor(num);
-  if (cleanNum === 0) return 'Zero';
-
-  let words = '';
-  let groups = [];
-  groups.push(cleanNum % 1000);
-  cleanNum = Math.floor(cleanNum / 1000);
-
-  while (cleanNum > 0) {
-    groups.push(cleanNum % 100);
-    cleanNum = Math.floor(cleanNum / 100);
-  }
-
-  for (let i = groups.length - 1; i >= 0; i--) {
-    let groupVal = groups[i];
-    if (groupVal > 0) {
-      let suffix = g[i] ? ' ' + g[i] + ' ' : '';
-      words += convertGroup(groupVal) + suffix;
-    }
-  }
-
-  let paise = Math.round((num % 1) * 100);
-  if (paise > 0) {
-    words += 'And Paise ' + convertGroup(paise);
-  }
-
-  return words.trim();
-};
-
 const InvoiceModal = ({ transaction, onClose }) => {
   const t = transaction;
   const user = t.user || {};
+<<<<<<< HEAD
   const property = t.property || {};
   const propertyName = property.title || property.property_name || property.name || t.property_name || property.property_id || 'NA';
   const propertyAddress = [property.address, property.city, property.state, property.pin_code].filter(Boolean).join(', ') || 'NA';
@@ -1640,44 +2375,23 @@ const InvoiceModal = ({ transaction, onClose }) => {
   const cgst = Number(invoiceBreakdown.cgst ?? ((amountINR - baseAmount) / 2));
   const sgst = Number(invoiceBreakdown.sgst ?? ((amountINR - baseAmount) / 2));
   const totalGst = cgst + sgst;
+=======
+  const amountINR = (t.amount || 0) / 100;
+  
+  // 18% GST calculation (GST included in all user payments)
+  const gstRate = 0.18;
+  const baseAmount = amountINR / (1 + gstRate);
+  const totalGst = amountINR - baseAmount;
+  const cgst = totalGst / 2;
+  const sgst = totalGst / 2;
+>>>>>>> 87cbcd105480de08e8e7aebd5219a7d287ec8593
 
   const handlePrint = () => {
-    const invoice = document.getElementById('printable-invoice');
-    if (!invoice) return;
-
-    const printWindow = window.open('', '_blank', 'width=950,height=1200');
-    if (!printWindow) {
-      window.print();
-      return;
-    }
-
-    printWindow.document.write(`
-      <!doctype html>
-      <html>
-        <head>
-          <base href="${window.location.origin}/">
-          <title>Invoice ${t.invoice_no || t.transaction_id || ''}</title>
-          <style>
-            @page { size: A4 portrait; margin: 8mm; }
-            * { box-sizing: border-box; }
-            body { margin: 0; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; }
-            #printable-invoice { width: 100% !important; min-width: 0 !important; margin: 0 auto !important; border: 2px solid #000 !important; box-shadow: none !important; }
-            table { page-break-inside: avoid; }
-            img { max-width: 100%; }
-          </style>
-        </head>
-        <body>${invoice.outerHTML}</body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 350);
+    window.print();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 print:p-0 print:bg-white overflow-y-auto" data-testid="invoice-modal">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white" data-testid="invoice-modal">
       <style>{`
         @media print {
           body * {
@@ -1691,8 +2405,9 @@ const InvoiceModal = ({ transaction, onClose }) => {
             left: 0;
             top: 0;
             width: 100%;
+            border: none !important;
             box-shadow: none !important;
-            padding: 0 !important;
+            padding: 20px !important;
             margin: 0 !important;
           }
           .no-print {
@@ -1700,38 +2415,41 @@ const InvoiceModal = ({ transaction, onClose }) => {
           }
         }
       `}</style>
-
-      {/* Invoice Card Container */}
-      <div className="bg-white rounded-2xl max-w-4xl w-full border border-gray-200 shadow-xl p-8 relative flex flex-col my-8 no-print print:hidden">
-        {/* Modal Close Button (Screen only) */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 no-print"
-          title="Close Modal"
+      
+      <div id="printable-invoice" className="bg-white rounded-2xl max-w-lg w-full border border-gray-100 shadow-elevated p-6 relative overflow-hidden flex flex-col">
+        {/* Close Button */}
+        <button 
+          onClick={onClose} 
+          className="absolute top-4 right-4 text-charcoal-light hover:text-charcoal no-print"
         >
           <XCircle className="w-6 h-6" />
         </button>
 
-        {/* Modal Heading */}
-        <div className="flex items-center justify-between pb-4 mb-6 border-b border-gray-100 no-print">
-          <h3 className="text-lg font-bold text-charcoal">Tax Invoice Details</h3>
-          <div className="flex space-x-2">
-            <button
-              onClick={handlePrint}
-              className="px-4 py-2 bg-sage hover:bg-sage-dark text-white rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print / Download PDF</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-200 text-charcoal hover:bg-gray-50 rounded-xl text-xs font-semibold transition"
-            >
-              Close
-            </button>
+        {/* Invoice Header */}
+        <div className="text-center pb-6 border-b border-dashed border-gray-200">
+          <div className="text-xs uppercase tracking-widest text-terracotta font-semibold tracking-tight mb-1">Tax Invoice</div>
+          <h2 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">X-SPACE360</h2>
+          <p className="text-xs text-charcoal-muted mt-1">Short-Term Rentals Platform · India</p>
+          <p className="text-xs text-charcoal-light">GSTIN: 27AAAAA1111A1Z1</p>
+        </div>
+
+        {/* Invoice Info */}
+        <div className="grid grid-cols-2 gap-4 py-6 text-xs border-b border-dashed border-gray-200">
+          <div>
+            <div className="text-charcoal-muted uppercase font-bold tracking-wider mb-1">Customer Details</div>
+            <div className="font-bold text-charcoal text-sm">{user.full_name || '—'}</div>
+            <div className="text-charcoal-light mt-0.5">{user.email || '—'}</div>
+            <div className="text-charcoal-light">{user.phone || '—'}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-charcoal-muted uppercase font-bold tracking-wider mb-1">Invoice Details</div>
+            <div><span className="font-semibold text-charcoal-light">Invoice #:</span> <span className="font-bold text-charcoal">{t.transaction_id}</span></div>
+            <div><span className="font-semibold text-charcoal-light">Date:</span> {new Date(t.created_at).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</div>
+            <div><span className="font-semibold text-charcoal-light">Type:</span> <span className="capitalize font-medium text-terracotta">{t.type.replaceAll('_', ' ')}</span></div>
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* Invoice View Container */}
         <div className="overflow-x-auto">
           {/* Printable Invoice element */}
@@ -1938,91 +2656,85 @@ const InvoiceModal = ({ transaction, onClose }) => {
               <div className="font-bold text-xs capitalize" style={{ fontSize: '11px', fontWeight: 'bold' }}>
                 Indian Rupees {numberToWords(amountINR)} Only
               </div>
+=======
+        {/* Transaction/Bill details Table */}
+        <div className="py-6 flex-1">
+          <div className="text-xs text-charcoal-muted uppercase font-bold tracking-wider mb-3">Itemized Details</div>
+          <table className="w-full text-xs text-left">
+            <thead>
+              <tr className="border-b border-gray-100 text-charcoal-muted font-bold">
+                <th className="py-2">Description</th>
+                <th className="py-2 text-right">Taxable Val.</th>
+                <th className="py-2 text-right">GST (18%)</th>
+                <th className="py-2 text-right">Total (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-sand-100 text-charcoal">
+                <td className="py-3 font-semibold text-sm">
+                  {t.type === 'booking_payment' ? `Booking Accommodation Fee (${t.booking_id || '—'})` :
+                   t.type === 'registration_fee' ? 'Host Registration Fee' :
+                   t.type === 'subscription' ? 'Host Subscription Premium Plan' :
+                   t.type === 'refund' ? `Accommodation Refund Processed (${t.booking_id || '—'})` :
+                   'Platform Service Transaction'}
+                </td>
+                <td className="py-3 text-right">₹{baseAmount.toFixed(2)}</td>
+                <td className="py-3 text-right">₹{totalGst.toFixed(2)}</td>
+                <td className="py-3 text-right font-bold text-sm">₹{amountINR.toFixed(2)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          {/* GST breakdown table */}
+          <div className="mt-6 bg-stone/50 rounded-xl p-4 border border-sand-100 text-xs">
+            <div className="font-bold text-charcoal-muted uppercase tracking-wider mb-2 text-[10px]">Tax Breakdown</div>
+            <div className="flex justify-between py-1 border-b border-gray-100/60">
+              <span className="text-charcoal-light">CGST (9%)</span>
+              <span className="font-medium text-charcoal">₹{cgst.toFixed(2)}</span>
+>>>>>>> 87cbcd105480de08e8e7aebd5219a7d287ec8593
             </div>
-
-            {/* Taxable value and GST breakdown table */}
-            <table className="w-full border-collapse border-b-2 border-black text-center text-[10px]" style={{ borderCollapse: 'collapse', width: '100%', fontSize: '10px', textAlign: 'center', borderBottom: '2px solid black' }}>
-              <thead>
-                <tr className="bg-gray-50 font-bold" style={{ backgroundColor: '#f9f9f9', fontWeight: 'bold', borderBottom: '1px solid black' }}>
-                  <th rowSpan={2} style={{ padding: '6px 6px', borderRight: '1px solid black', textAlign: 'left', width: '20%' }}>HSN/SAC</th>
-                  <th rowSpan={2} style={{ padding: '6px 6px', borderRight: '1px solid black', width: '20%' }}>Taxable Value</th>
-                  <th colSpan={2} style={{ padding: '4px 6px', borderRight: '1px solid black', width: '25%' }}>Central Tax</th>
-                  <th colSpan={2} style={{ padding: '4px 6px', borderRight: '1px solid black', width: '25%' }}>State Tax</th>
-                  <th rowSpan={2} style={{ padding: '6px 6px', width: '10%' }}>Total Tax Amount</th>
-                </tr>
-                <tr className="bg-gray-50 font-bold" style={{ backgroundColor: '#f9f9f9', fontWeight: 'bold', borderBottom: '1px solid black' }}>
-                  <th style={{ padding: '4px', borderRight: '1px solid black' }}>Rate</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid black' }}>Amount</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid black' }}>Rate</th>
-                  <th style={{ padding: '4px', borderRight: '1px solid black' }}>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr style={{ borderBottom: '1px solid black', fontWeight: 'bold' }}>
-                  <td style={{ padding: '6px 6px', borderRight: '1px solid black', textAlign: 'left', fontFamily: 'monospace' }}>998399</td>
-                  <td style={{ padding: '6px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
-                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}>9%</td>
-                  <td style={{ padding: '6px 4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
-                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}>9%</td>
-                  <td style={{ padding: '6px 4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
-                  <td style={{ padding: '6px 6px', fontFamily: 'monospace' }}>{totalGst.toFixed(2)}</td>
-                </tr>
-                <tr style={{ fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>
-                  <td style={{ padding: '6px 6px', borderRight: '1px solid black', textAlign: 'left' }}>Total</td>
-                  <td style={{ padding: '6px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
-                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
-                  <td style={{ padding: '6px 4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
-                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
-                  <td style={{ padding: '6px 4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
-                  <td style={{ padding: '6px 6px', fontFamily: 'monospace' }}>{totalGst.toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            {/* Tax in words */}
-            <div className="py-2 px-3 border-b-2 border-black" style={{ padding: '8px 12px', borderBottom: '2px solid black' }}>
-              <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Tax Amount (in words)</div>
-              <div className="font-bold text-xs capitalize" style={{ fontSize: '11px', fontWeight: 'bold' }}>
-                Indian Rupees {numberToWords(totalGst)} Only
-              </div>
+            <div className="flex justify-between py-1 border-b border-gray-100/60">
+              <span className="text-charcoal-light">SGST (9%)</span>
+              <span className="font-medium text-charcoal">₹{sgst.toFixed(2)}</span>
             </div>
-
-            {/* Bank details & Signatures */}
-            <table className="w-full border-collapse text-left text-[10px]" style={{ borderCollapse: 'collapse', width: '100%', textAlign: 'left', fontSize: '10px' }}>
-              <tbody>
-                <tr>
-                  <td className="w-3/5 p-3 align-top border-r-2 border-black" style={{ width: '60%', padding: '12px', borderRight: '2px solid black', verticalAlign: 'top', lineHeight: '1.5' }}>
-                    <div style={{ fontWeight: 'bold', textDecoration: 'underline', marginBottom: '4px' }}>Company's Bank Details:</div>
-                    <div><strong>A/c Holder's Name:</strong> Golden Rich Financial & Real Estate Solutions Pvt. Ltd.</div>
-                    <div><strong>Bank Name:</strong> IDFC FIRST BANK</div>
-                    <div><strong>A/c No.:</strong> 10250563892</div>
-                    <div><strong>Branch & IFSC Code:</strong> Gangapur Road, Nashik & IDFB0042283</div>
-                    <div style={{ marginTop: '12px', fontSize: '8px', color: '#666', fontStyle: 'italic' }}>
-                      <strong>Declaration:</strong> We declare that this invoice shows the actual price of the Service described and that all particulars are true and correct.
-                    </div>
-                  </td>
-                  <td className="w-2/5 p-3 align-top text-right" style={{ width: '40%', padding: '12px', verticalAlign: 'top', height: '120px' }}>
-                    <div style={{ fontWeight: 'bold', fontSize: '10px', marginBottom: '24px' }}>For Golden Rich Properties</div>
-                    <div style={{ fontWeight: 'bold', fontSize: '10px', marginTop: '40px' }}>Authorized Signatory</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
+            <div className="flex justify-between py-1 font-bold text-charcoal">
+              <span>Total GST Paid</span>
+              <span>₹{totalGst.toFixed(2)}</span>
+            </div>
           </div>
         </div>
 
-        {/* Modal Bottom Print Button (Screen only) */}
+        {/* Invoice Footer Details */}
+        <div className="border-t border-dashed border-gray-200 pt-6">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-charcoal font-bold tracking-tight text-sm uppercase tracking-wider">Total Amount Paid</span>
+            <span className="text-2xl font-bold tracking-tight text-terracotta">₹{amountINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+          </div>
+
+          <div className="bg-stone rounded-xl p-3 text-[11px] text-charcoal-muted flex items-center justify-between">
+            <div>
+              <div><span className="font-semibold">Payment Method:</span> {t.upi_transaction_id ? 'UPI QR' : 'Razorpay Online Gateway'}</div>
+              <div><span className="font-semibold">Payment Status:</span> SUCCESS</div>
+              {t.razorpay_payment_id && <div><span className="font-semibold">Razorpay ID:</span> {t.razorpay_payment_id}</div>}
+              {t.upi_transaction_id && <div><span className="font-semibold">UTR / Transaction ID:</span> {t.upi_transaction_id}</div>}
+            </div>
+            <div className="text-right">
+              <span className="inline-block px-2.5 py-1 bg-green-100 text-green-800 rounded-full font-bold text-[10px] uppercase">Paid</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Buttons */}
         <div className="mt-6 flex justify-end space-x-3 no-print">
-          <button
+          <button 
             onClick={onClose}
-            className="px-4 py-2 border border-gray-200 text-charcoal hover:bg-gray-50 rounded-xl text-xs font-semibold transition"
+            className="px-4 py-2 border border-gray-200 text-charcoal rounded-xl text-xs font-semibold hover:bg-gray-50 transition"
           >
             Close
           </button>
-          <button
+          <button 
             onClick={handlePrint}
-            className="px-4 py-2 bg-terracotta text-white hover:bg-terracotta-dark rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-sm"
+            className="px-4 py-2 bg-terracotta text-white rounded-xl text-xs font-semibold hover:bg-terracotta-dark transition flex items-center space-x-1.5 shadow-sm hover:shadow"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print Invoice</span>

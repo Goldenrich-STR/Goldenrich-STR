@@ -722,7 +722,7 @@ const HostDashboard = () => {
     <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
       <header className="glass px-4 md:px-8 lg:px-12 py-4 sticky top-0 z-50">
         <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="w-full flex justify-between items-center">
+          <div className="w-full md:w-auto flex justify-between items-center shrink-0">
             <div 
               className="flex items-center space-x-3 cursor-pointer group" 
               onClick={() => navigate('/')}
@@ -750,7 +750,7 @@ const HostDashboard = () => {
               </button>
             </div>
           </div>
-          <div className="flex flex-row items-center gap-3 w-full md:w-auto border-t border-sand-100 md:border-none pt-2 md:pt-0 overflow-x-auto no-scrollbar">
+          <div className="flex flex-row items-center gap-3 w-full md:w-auto border-t border-sand-100 md:border-none pt-2 md:pt-0 overflow-x-auto md:overflow-visible no-scrollbar shrink-0">
             <nav className="flex items-center space-x-6 shrink-0">
                {[
                  { label: 'DASHBOARD', path: '/host/dashboard' },
@@ -772,16 +772,17 @@ const HostDashboard = () => {
                ))}
             </nav>
             <div className="h-6 w-px bg-sand-200 hidden md:block"></div>
-            <div className="hidden md:flex items-center gap-2 md:gap-4">
+            <div className="hidden md:flex items-center gap-2 md:gap-4 shrink-0">
               <NotificationBell />
               <div 
                 onClick={() => setShowProfileModal(true)}
-                className="flex items-center space-x-2 px-2 md:px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
+                className="w-9 h-9 rounded-full bg-[#7A9A85] hover:bg-[#6b8c76] flex items-center justify-center text-xs font-bold text-white cursor-pointer transition-colors shadow-subtle border border-slate-200 shrink-0"
               >
-                 <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
-                    {user?.full_name?.[0]}
-                 </div>
-                 <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">{user?.full_name?.split(' ')[0]}</span>
+                 {user?.profile_image ? (
+                   <img src={getImageUrl(user.profile_image)} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                 ) : (
+                   user?.full_name?.[0]?.toUpperCase()
+                 )}
               </div>
               <button 
                 onClick={() => {
@@ -951,7 +952,7 @@ const HostDashboard = () => {
                             isRejected(property) ? 'bg-red-600 text-white' :
                             'bg-charcoal text-white'
                           }`}>
-                            {isRejected(property) ? 'rejected' : property.status.replace('_', ' ')}
+                            {isRejected(property) ? 'rejected' : (property.status === 'live' && property.is_edited ? 'live (edited)' : property.status.replace('_', ' '))}
                           </span>
                         </div>
                         
@@ -1031,13 +1032,7 @@ const HostDashboard = () => {
                             Calendar
                           </button>
                           <button
-                            onClick={() => {
-                              if (!isLive(property)) {
-                                navigate(`/host/list-property?edit=${property.property_id}`);
-                              } else {
-                                navigate(`/property/${property.property_id}`);
-                              }
-                            }}
+                            onClick={() => navigate(`/host/list-property?edit=${property.property_id}`)}
                             className="flex-1 py-3 rounded-xl bg-charcoal text-white text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
                           >
                             Manage

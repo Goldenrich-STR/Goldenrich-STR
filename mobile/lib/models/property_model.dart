@@ -33,10 +33,15 @@ class PropertyModel {
   final String? houseRules;
   final String? subscriptionId;
   final String? subscriptionStatus;
+  final String? subscriptionPlanName;
+  final String? subscriptionPurchaseDate;
+  final String? subscriptionRenewalDate;
   final bool hasCook;
   final double? cookPrice;
   final bool hasSelfCook;
   final bool hasTaxi;
+  final double? rating;
+  final int? reviewCount;
 
   PropertyModel({
     required this.propertyId,
@@ -71,10 +76,15 @@ class PropertyModel {
     this.houseRules,
     this.subscriptionId,
     this.subscriptionStatus,
+    this.subscriptionPlanName,
+    this.subscriptionPurchaseDate,
+    this.subscriptionRenewalDate,
     required this.hasCook,
     this.cookPrice,
     required this.hasSelfCook,
     required this.hasTaxi,
+    this.rating,
+    this.reviewCount,
   });
 
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
@@ -109,13 +119,21 @@ class PropertyModel {
       vegPrice: (json['veg_price'] as num?)?.toDouble(),
       nonVegPrice: (json['non_veg_price'] as num?)?.toDouble(),
       guestSize: json['guest_size'] as int?,
-      createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'])
+          : null,
       houseRules: json['house_rules'],
+      subscriptionId: json['subscription_id'],
       subscriptionStatus: json['subscription_status'],
+      subscriptionPlanName: json['subscription_plan_name'],
+      subscriptionPurchaseDate: json['subscription_purchase_date']?.toString(),
+      subscriptionRenewalDate: json['subscription_renewal_date']?.toString(),
       hasCook: json['has_cook'] ?? false,
       cookPrice: (json['cook_price'] as num?)?.toDouble(),
       hasSelfCook: json['has_self_cook'] ?? false,
       hasTaxi: json['has_taxi'] ?? false,
+      rating: (json['rating'] as num?)?.toDouble() ?? (json['rating_avg'] as num?)?.toDouble(),
+      reviewCount: (json['review_count'] as num?)?.toInt() ?? (json['rating_count'] as num?)?.toInt(),
     );
   }
 
@@ -153,10 +171,15 @@ class PropertyModel {
       'house_rules': houseRules,
       'subscription_id': subscriptionId,
       'subscription_status': subscriptionStatus,
+      'subscription_plan_name': subscriptionPlanName,
+      'subscription_purchase_date': subscriptionPurchaseDate,
+      'subscription_renewal_date': subscriptionRenewalDate,
       'has_cook': hasCook,
       'cook_price': cookPrice,
       'has_self_cook': hasSelfCook,
       'has_taxi': hasTaxi,
+      'rating': rating,
+      'review_count': reviewCount,
     };
   }
 }

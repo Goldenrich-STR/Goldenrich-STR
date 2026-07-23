@@ -8,6 +8,7 @@ import apiClient, { getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
+import { organizationSchema } from '../lib/seoSchemas';
 
 const TRANSLATIONS = {
   en: {
@@ -64,6 +65,28 @@ const TRANSLATIONS = {
     valueSeamlessText: '१०-मिनिटांच्या कॅलेंडर लॉकपासून ते झटपट पेआउट आणि स्मार्ट सपोर्टपर्यंत, आमचे तंत्रज्ञान भाड्याने देणे सुलभ करते.',
     footerSub: 'क्युरेशन, तंत्रज्ञान आणि उत्कृष्ट सेवेद्वारे भारतातील शॉर्ट-टर्म रेंटल पुन्हा परिभाषित करणे.'
   }
+};
+
+const aboutSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    organizationSchema,
+    {
+      "@type": "AboutPage",
+      "@id": "https://x-space360.in/about-us#webpage",
+      url: "https://x-space360.in/about-us",
+      name: "About X-Space360",
+      description:
+        "Learn about X-Space360, its property booking ecosystem, mission, services and commitment to hosts and guests.",
+      isPartOf: {
+        "@id": "https://x-space360.in/#website",
+      },
+      about: {
+        "@id": "https://x-space360.in/#organization",
+      },
+      inLanguage: "en-IN",
+    },
+  ],
 };
 
 const DEFAULT_FOOTER_DATA = {
@@ -201,7 +224,17 @@ const AboutUs = () => {
 
   return (
     <div className="min-h-screen bg-sand-50 font-sans text-charcoal">
-      <SEO title={`About Us | X-Space360`} description={t('aboutSubtitle')} />
+      <SEO
+        title="About X-Space360"
+        description="Learn about X-Space360, our mission and our smart property discovery platform for stays, workspaces and event venues."
+        path="/about-us"
+        keywords={[
+          "about X-Space360",
+          "property booking platform India",
+          "smart booking platform",
+        ]}
+        schema={aboutSchema}
+      />
 
       {/* Header / Navbar */}
       <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-charcoal px-6 md:px-12 lg:px-20 h-20 bg-white/80 backdrop-blur-md border-b border-stone">
@@ -307,9 +340,9 @@ const AboutUs = () => {
             >
               Support
             </button>
-            <div className="py-2 border-b border-stone flex items-center justify-between">
-              <span className="text-2xl font-bold">Language</span>
+            <div className="py-2 border-b border-stone flex items-center">
               <LanguageSelector
+                mode="inline"
                 currentLang={lang}
                 onLanguageChange={(newLang) => {
                   setLang(newLang);

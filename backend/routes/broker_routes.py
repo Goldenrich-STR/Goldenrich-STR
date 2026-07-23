@@ -330,6 +330,17 @@ async def submit_verification(
                 detail="Property not found"
             )
         
+        # Resolve RM ID for this verification to keep it private/assigned to the correct employee
+        owner_rm_id = None
+        if property_data and property_data.get("owner_id"):
+            owner = await db.users.find_one({"user_id": property_data["owner_id"]})
+            if owner:
+                owner_rm_id = owner.get("rm_id")
+        if not owner_rm_id:
+            broker_user = await db.users.find_one({"user_id": broker_id})
+            if broker_user:
+                owner_rm_id = broker_user.get("rm_id")
+
         # Check if verification already exists
         existing = await db.property_verifications.find_one({
             "property_id": property_id,
@@ -349,7 +360,7 @@ async def submit_verification(
                     "rm_reviewed": False,
                     "rm_approved": None,
                     "rm_remarks": None,
-                    "rm_id": None,
+                    "rm_id": owner_rm_id,
                     "reviewed_at": None,
                     "admin_reviewed": False,
                     "admin_approved": False,
@@ -371,7 +382,8 @@ async def submit_verification(
                 geo_tagged_photos=verification_data.geo_tagged_photos,
                 video_url=verification_data.video_url,
                 broker_remarks=verification_data.broker_remarks,
-                status=VerificationStatus.COMPLETED
+                status=VerificationStatus.COMPLETED,
+                rm_id=owner_rm_id
             )
             
             verification_dict = verification.model_dump()

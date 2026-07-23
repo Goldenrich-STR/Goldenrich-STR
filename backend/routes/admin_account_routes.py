@@ -25,6 +25,7 @@ from models.transaction import (
 )
 from models.user import UserRole
 from services.account_service import (
+    process_auto_eligible_payouts,
     initiate_refund,
     process_payout,
     sweep_payout_eligibility,
@@ -1025,6 +1026,57 @@ async def process_eligible(
             logger.exception(f"process_payout failed for {p.get('payout_id')}")
             failed += 1
     return {"processed": processed, "failed": failed, "total": len(payouts)}
+
+
+@router.post("/payouts/run-auto")
+async def run_auto_payout_now(
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Run the same automatic payout engine immediately: sweep + process eligible."""
+    marked = await sweep_payout_eligibility(db)
+    summary = await process_auto_eligible_payouts(
+        db,
+        admin_id=current_user["user_id"],
+        limit=int(os.environ.get("AUTO_PAYOUT_BATCH_LIMIT", "100")),
+    )
+    try:
+        await db.payout_job_runs.insert_one({
+            "job": "auto_payout_manual_run",
+            "marked_eligible": marked,
+            "auto_payout_enabled": True,
+            "processed": summary.get("processed", 0),
+            "failed": summary.get("failed", 0),
+            "skipped": summary.get("skipped", 0),
+            "total": summary.get("total", 0),
+            "ran_at": datetime.utcnow(),
+            "ran_by": current_user["user_id"],
+        })
+    except Exception:
+        logger.warning("failed to write manual payout job run log")
+    return {"marked_eligible": marked, **summary}
+
+
+@router.get("/payouts/auto-status")
+async def auto_payout_status(
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Show whether automatic payout is enabled and the latest run result."""
+    latest = await db.payout_job_runs.find_one({}, {"_id": 0}, sort=[("ran_at", -1)])
+    pending_eligible = await db.payouts.count_documents({"status": PayoutStatus.ELIGIBLE.value})
+    processing = await db.payouts.count_documents({"status": PayoutStatus.PROCESSING.value})
+    failed = await db.payouts.count_documents({"status": PayoutStatus.FAILED.value})
+    return {
+        "auto_payout_enabled": os.environ.get("AUTO_PAYOUT_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"},
+        "interval_seconds": int(os.environ.get("PAYOUT_SWEEP_INTERVAL", "3600")),
+        "batch_limit": int(os.environ.get("AUTO_PAYOUT_BATCH_LIMIT", "100")),
+        "payouts_are_mock": os.environ.get("RAZORPAYX_DEMO_MODE", "true").strip().lower() in {"1", "true", "yes", "on"},
+        "pending_eligible": pending_eligible,
+        "processing": processing,
+        "failed": failed,
+        "latest_run": latest,
+    }
 
 
 # --------------- Refunds ----------------

@@ -4,12 +4,12 @@ import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, subscriptionAPI, uploadAPI, getImageUrl, bookingAPI, cmsAPI, adminAPI, propertyAPI } from '../services/api';
 import { 
-  Users, Building2, Calendar, IndianRupee, CheckCircle, 
+  Users, Building2, Calendar, IndianRupee, CheckCircle, BedDouble, Home,
   X, XCircle, Clock, TrendingUp, BarChart3, LogOut, Plus, Trash, Zap,
   Edit, Eye as EyeIcon, Shield, ChevronLeft, ChevronRight, Tag,
   Check, ListTodo, Heart, FileText, Sparkles, UploadCloud,
   Mail, EyeOff, Lock, User, MapPin, Eye, Camera, Info, ArrowLeft,
-  Search, ChevronDown, ChevronUp
+  Search, ChevronDown, ChevronUp, Crop, SlidersHorizontal
 } from 'lucide-react';
 import SearchLogsManagement from '../components/admin/SearchLogsManagement';
 import AICallsManagement from '../components/admin/AICallsManagement';
@@ -322,12 +322,13 @@ const AdminDashboard = () => {
           <div className="flex items-center gap-2 md:gap-6">
             <div 
               onClick={() => setShowProfileModal(true)}
-              className="flex items-center space-x-2 md:space-x-3 px-2 md:px-3 py-1.5 bg-white border border-gray-100 rounded-full shadow-sm cursor-pointer hover:border-terracotta transition-all"
+              className="w-9 h-9 rounded-full bg-[#7A9A85] hover:bg-[#6b8c76] flex items-center justify-center text-xs font-bold text-white cursor-pointer transition-colors shadow-subtle border border-slate-200 shrink-0"
             >
-               <div className="w-6 h-6 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold tracking-tight text-white">
-                  {user?.full_name?.[0]}
-               </div>
-               <span className="hidden sm:block text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">Admin: {user?.full_name?.split(' ')[0]}</span>
+               {user?.profile_image ? (
+                 <img src={getImageUrl(user.profile_image)} alt="Profile" className="w-full h-full rounded-full object-cover" />
+               ) : (
+                 user?.full_name?.[0]?.toUpperCase()
+               )}
             </div>
             <button
               onClick={() => navigate('/admin/account')}
@@ -385,6 +386,7 @@ const AdminDashboard = () => {
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             { id: 'users', label: 'Users', icon: Users },
+            { id: 'control-management', label: 'Control Management', icon: Shield },
             { id: 'properties', label: 'Properties', icon: Building2 },
             { id: 'cms', label: 'CMS', icon: TrendingUp },
             { id: 'search-logs', label: 'Search Logs', icon: FileText },
@@ -520,6 +522,10 @@ const AdminDashboard = () => {
         {/* Users Tab */}
         {activeTab === 'users' && (
           <UserManagement roleFilter={roleFilter} setRoleFilter={setRoleFilter} />
+        )}
+
+        {activeTab === 'control-management' && (
+          <ControlManagement />
         )}
 
         {/* Properties Tab */}
@@ -986,7 +992,282 @@ const SupportMessagesManagement = () => {
   );
 };
 
+const ControlManagement = () => {
+  const [admins, setAdmins] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadControls = async () => {
+    setLoading(true);
+    try {
+      const [adminRes, employeeRes] = await Promise.all([
+        apiClient.get('/admin/users', { params: { role: 'admin', limit: 200 } }),
+        apiClient.get('/admin/users', { params: { role: 'employee', limit: 200 } }),
+      ]);
+      setAdmins(adminRes.data.users || []);
+      setEmployees(employeeRes.data.users || []);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadControls();
+  }, []);
+
+  const updateControl = async (user, patch) => {
+    await apiClient.patch(`/admin/users/${user.user_id}`, patch);
+    await loadControls();
+  };
+
+  const accessLabels = {
+    users: 'Users',
+    properties: 'Properties',
+    bookings: 'Bookings',
+    accounts: 'Accounts',
+    payouts: 'Payouts',
+    cms: 'CMS',
+    support: 'Support',
+    reports: 'Reports',
+    audit: 'Audit Logs',
+  };
+
+  const renderControlRow = (user) => (
+    <tr key={user.user_id} className="border-b border-gray-100">
+      <td className="py-3 pr-4">
+        <div className="font-bold text-charcoal">{user.full_name}</div>
+        <div className="text-xs text-charcoal-muted">{user.email}</div>
+      </td>
+      <td className="py-3 pr-4 capitalize">{user.role}</td>
+      <td className="py-3 pr-4">
+        <select
+          value={user.department || ''}
+          onChange={(e) => updateControl(user, { department: e.target.value })}
+          className="input-field text-xs"
+        >
+          <option value="">Department</option>
+          <option value="accounts">Accounts</option>
+          <option value="operations">Operations</option>
+          <option value="sales">Sales</option>
+          <option value="support">Support</option>
+          <option value="verification">Verification</option>
+          <option value="finance">Finance</option>
+        </select>
+      </td>
+      <td className="py-3 pr-4">
+        <select
+          value={user.admin_scope || 'department'}
+          onChange={(e) => updateControl(user, { admin_scope: e.target.value })}
+          className="input-field text-xs"
+        >
+          <option value="global">Global</option>
+          <option value="franchise">Franchise</option>
+          <option value="branch">Branch</option>
+          <option value="department">Department</option>
+        </select>
+      </td>
+      <td className="py-3 pr-4">{user.franchise || '-'}</td>
+      <td className="py-3 pr-4">{user.branch || '-'}</td>
+      <td className="py-3 pr-4">
+        <div className="flex flex-wrap gap-1 max-w-md">
+          {Object.entries(accessLabels).map(([value, label]) => {
+            const selected = (user.access_controls || []).includes(value);
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  const current = user.access_controls || [];
+                  const next = selected ? current.filter((x) => x !== value) : [...current, value];
+                  updateControl(user, { access_controls: next });
+                }}
+                className={`px-2 py-1 rounded-lg text-[10px] font-bold ${selected ? 'bg-terracotta text-white' : 'bg-gray-100 text-charcoal-muted'}`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </td>
+      <td className="py-3 pr-4">
+        {user.role === 'admin' ? (
+          <button
+            type="button"
+            onClick={() => updateControl(user, { admin_delete_protected: !user.admin_delete_protected })}
+            className={`px-3 py-1 rounded-full text-xs font-bold ${user.admin_delete_protected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}
+          >
+            {user.admin_delete_protected ? 'Protected' : 'Deletable'}
+          </button>
+        ) : '-'}
+      </td>
+    </tr>
+  );
+
+  return (
+    <div className="space-y-6" data-testid="control-management-section">
+      <div className="dashboard-card">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-2xl font-bold text-charcoal">Control Management</h3>
+            <p className="text-sm text-charcoal-muted mt-1">
+              Assign employee controls by department, franchise, branch and specific admin modules.
+            </p>
+          </div>
+          <button onClick={loadControls} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold hover:bg-gray-50">
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {[
+          ['Admins', admins.length, Shield],
+          ['Employees', employees.length, Users],
+          ['Departments', new Set([...admins, ...employees].map((u) => u.department).filter(Boolean)).size, Building2],
+          ['Scoped Controls', [...admins, ...employees].filter((u) => (u.access_controls || []).length).length, ListTodo],
+        ].map(([label, value, Icon]) => (
+          <div key={label} className="dashboard-card">
+            <Icon className="w-6 h-6 text-terracotta mb-3" />
+            <p className="text-2xl font-bold text-charcoal">{value}</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-charcoal-muted mt-1">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="dashboard-card overflow-x-auto">
+        {loading ? (
+          <p className="text-center py-10 text-charcoal-muted">Loading controls...</p>
+        ) : (
+          <table className="w-full text-sm min-w-[1150px]">
+            <thead className="text-left text-charcoal-muted uppercase text-xs tracking-wider">
+              <tr className="border-b border-gray-100">
+                <th className="py-3 pr-4">User</th>
+                <th className="py-3 pr-4">Role</th>
+                <th className="py-3 pr-4">Department</th>
+                <th className="py-3 pr-4">Scope</th>
+                <th className="py-3 pr-4">Franchise</th>
+                <th className="py-3 pr-4">Branch</th>
+                <th className="py-3 pr-4">Specific Controls</th>
+                <th className="py-3 pr-4">Admin Delete</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...admins, ...employees].map(renderControlRow)}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // User Management Component
+const ImageCropModal = ({ file, onCancel, onCrop }) => {
+  const [imageUrl, setImageUrl] = useState('');
+  const [zoom, setZoom] = useState(1);
+  const imgRef = useRef(null);
+
+  useEffect(() => {
+    if (!file) return undefined;
+    const url = URL.createObjectURL(file);
+    setImageUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  const cropImage = () => {
+    const image = imgRef.current;
+    if (!image) return;
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const naturalW = image.naturalWidth;
+    const naturalH = image.naturalHeight;
+    const sourceSize = Math.min(naturalW, naturalH) / zoom;
+    const sx = Math.max(0, (naturalW - sourceSize) / 2);
+    const sy = Math.max(0, (naturalH - sourceSize) / 2);
+
+    ctx.clearRect(0, 0, size, size);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(image, sx, sy, sourceSize, sourceSize, 0, 0, size, size);
+    ctx.restore();
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const cropped = new File([blob], file.name.replace(/\.[^.]+$/, '-cropped.jpg'), {
+        type: 'image/jpeg',
+        lastModified: Date.now(),
+      });
+      onCrop(cropped);
+    }, 'image/jpeg', 0.9);
+  };
+
+  if (!file) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[140] flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-elevated">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-terracotta/10 text-terracotta flex items-center justify-center">
+              <Crop className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-charcoal">Crop Profile Image</h3>
+              <p className="text-xs text-charcoal-muted font-semibold">Adjust zoom and save a square avatar.</p>
+            </div>
+          </div>
+          <button type="button" onClick={onCancel} className="text-charcoal-muted hover:text-charcoal">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="mx-auto w-72 h-72 rounded-full overflow-hidden bg-stone border-4 border-sand-100 shadow-inner">
+          {imageUrl && (
+            <img
+              ref={imgRef}
+              src={imageUrl}
+              alt="Crop preview"
+              className="w-full h-full object-cover"
+              style={{ transform: `scale(${zoom})` }}
+            />
+          )}
+        </div>
+
+        <div className="mt-5">
+          <label className="text-xs font-bold uppercase tracking-widest text-charcoal-muted flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4" /> Zoom
+          </label>
+          <input
+            type="range"
+            min="1"
+            max="2.5"
+            step="0.05"
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="w-full mt-3 accent-terracotta"
+          />
+        </div>
+
+        <div className="flex justify-end gap-3 mt-6">
+          <button type="button" onClick={onCancel} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-bold text-charcoal">
+            Cancel
+          </button>
+          <button type="button" onClick={cropImage} className="px-5 py-2 rounded-xl bg-terracotta text-white text-sm font-bold">
+            Crop & Upload
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const UserManagement = ({ roleFilter, setRoleFilter }) => {
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1016,9 +1297,14 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
     uid: '',
     profile_image: '',
     lg_code: '',
-    employee_code: ''
+    employee_code: '',
+    admin_delete_protected: true,
+    admin_scope: 'global',
+    department: '',
+    access_controls: []
   });
   const [uploading, setUploading] = useState(false);
+  const [cropState, setCropState] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -1060,35 +1346,34 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+    setCropState({ file, target: 'new' });
+    e.target.value = '';
+  };
+
+  const uploadCroppedImage = async (file, target) => {
     setUploading(true);
     try {
       const res = await uploadAPI.uploadImage(file);
-      setNewUser(prev => ({ ...prev, profile_image: res.url }));
+      if (target === 'edit') {
+        setEditUser(prev => ({ ...prev, profile_image: res.url }));
+      } else {
+        setNewUser(prev => ({ ...prev, profile_image: res.url }));
+      }
       alert('Profile image uploaded successfully');
     } catch (error) {
       console.error('Image upload error:', error);
       alert(formatError(error, 'Failed to upload image'));
     } finally {
       setUploading(false);
+      setCropState(null);
     }
   };
 
   const handleEditImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
-    setUploading(true);
-    try {
-      const res = await uploadAPI.uploadImage(file);
-      setEditUser(prev => ({ ...prev, profile_image: res.url }));
-      alert('Profile image uploaded successfully');
-    } catch (error) {
-      console.error('Image upload error:', error);
-      alert(formatError(error, 'Failed to upload image'));
-    } finally {
-      setUploading(false);
-    }
+    setCropState({ file, target: 'edit' });
+    e.target.value = '';
   };
 
   useEffect(() => {
@@ -1249,7 +1534,11 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         uid: '',
         profile_image: '',
         lg_code: '',
-        employee_code: ''
+        employee_code: '',
+        admin_delete_protected: true,
+        admin_scope: 'global',
+        department: '',
+        access_controls: []
       });
       fetchUsers();
       fetchBrokersAndEmployees();
@@ -1277,6 +1566,10 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
         profile_image: editUser.profile_image,
         lg_code: editUser.lg_code,
         employee_code: editUser.employee_code,
+        admin_delete_protected: editUser.admin_delete_protected,
+        admin_scope: editUser.admin_scope,
+        department: editUser.department,
+        access_controls: editUser.access_controls || [],
         is_active: editUser.is_active
       };
       
@@ -1485,6 +1778,19 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
   return (
     <div data-testid="user-management">
+      <style>{`
+        input.password-no-native-eye::-ms-reveal,
+        input.password-no-native-eye::-ms-clear {
+          display: none;
+        }
+      `}</style>
+      {cropState && (
+        <ImageCropModal
+          file={cropState.file}
+          onCancel={() => setCropState(null)}
+          onCrop={(croppedFile) => uploadCroppedImage(croppedFile, cropState.target)}
+        />
+      )}
       <div className="dashboard-card mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h3 className="text-2xl font-bold text-charcoal">User Management</h3>
@@ -1681,13 +1987,20 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   >
                     {user.is_active ? 'Deactivate' : 'Activate'}
                   </button>
+                  {(() => {
+                    const isDefaultAdmin = String(user.email || '').toLowerCase() === 'admin@goldenrichstay.com';
+                    const isProtectedAdmin = user.role === 'admin' && user.admin_delete_protected && !isDefaultAdmin;
+                    return (
                   <button
                     onClick={() => deleteUser(user.user_id)}
-                    className="p-2 text-charcoal-light hover:text-red-600 transition"
-                    title="Delete Permanently"
+                    disabled={isProtectedAdmin}
+                    className="p-2 text-charcoal-light hover:text-red-600 transition disabled:opacity-40 disabled:hover:text-charcoal-light disabled:cursor-not-allowed"
+                    title={isProtectedAdmin ? 'Protected admin cannot be deleted' : 'Delete Permanently'}
                   >
                     <Trash className="w-5 h-5" />
                   </button>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -1892,9 +2205,13 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                     <Lock className="w-5 h-5" />
                   </div>
                   <input 
-                    type={showAddPassword ? "text" : "password"} required
+                    type="text"
+                    style={showAddPassword ? {} : { WebkitTextSecurity: 'disc' }}
+                    autoComplete="new-password"
+                    inputMode="text"
+                    required
                     placeholder="••••••••••••"
-                    className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm pr-12"
+                    className="password-no-native-eye flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm pr-12"
                     value={newUser.password}
                     onChange={e => setNewUser({...newUser, password: e.target.value})}
                   />
@@ -1931,43 +2248,107 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 </div>
               </div>
 
-              {(newUser.role === 'broker' || newUser.role === 'employee') && (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up">
+              {(newUser.role === 'admin' || newUser.role === 'employee') && (
+                <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 space-y-4 animate-slide-up">
+                  <div>
+                    <h4 className="text-sm font-bold text-charcoal">Control Management</h4>
+                    <p className="text-xs text-charcoal-muted font-semibold mt-1">
+                      Set admin deletion protection, department, franchise/branch scope and employee permissions.
+                    </p>
+                  </div>
+
+                  {newUser.role === 'admin' && (
+                    <label className="flex items-start gap-3 p-3 rounded-xl bg-white border border-blue-100 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newUser.admin_delete_protected}
+                        onChange={(e) => setNewUser({ ...newUser, admin_delete_protected: e.target.checked })}
+                        className="mt-1 accent-terracotta"
+                      />
+                      <span>
+                        <span className="block text-sm font-bold text-charcoal">Protected Admin</span>
+                        <span className="block text-xs text-charcoal-muted font-semibold">
+                          Enabled admins cannot be deleted by other admins. Disable this only for removable branch/franchise admins.
+                        </span>
+                      </span>
+                    </label>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Franchise</label>
-                      <div className={`relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all ${isCodeLocked ? 'opacity-50 bg-gray-50/50' : ''}`}>
-                        <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
-                          <Building2 className="w-5 h-5" />
-                        </div>
-                        <input 
-                          required={!isCodeLocked}
-                          disabled={isCodeLocked}
-                          placeholder="e.g. Golden"
-                          className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm disabled:cursor-not-allowed"
-                          value={newUser.franchise}
-                          onChange={e => setNewUser({...newUser, franchise: e.target.value})}
-                        />
-                      </div>
+                      <label className="text-xs font-bold tracking-widest text-charcoal-muted uppercase block mb-1.5">Department</label>
+                      <select
+                        value={newUser.department}
+                        onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
+                        className="input-field text-sm"
+                      >
+                        <option value="">Select department</option>
+                        <option value="accounts">Accounts</option>
+                        <option value="operations">Operations</option>
+                        <option value="sales">Sales</option>
+                        <option value="support">Support</option>
+                        <option value="verification">Verification</option>
+                        <option value="finance">Finance</option>
+                      </select>
                     </div>
                     <div>
-                      <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Branch</label>
-                      <div className={`relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all ${isCodeLocked ? 'opacity-50 bg-gray-50/50' : ''}`}>
-                        <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
-                          <MapPin className="w-5 h-5" />
-                        </div>
-                        <input 
-                          required={!isCodeLocked}
-                          disabled={isCodeLocked}
-                          placeholder="e.g. Bandra"
-                          className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm disabled:cursor-not-allowed"
-                          value={newUser.branch}
-                          onChange={e => setNewUser({...newUser, branch: e.target.value})}
-                        />
+                      <label className="text-xs font-bold tracking-widest text-charcoal-muted uppercase block mb-1.5">Access Scope</label>
+                      <select
+                        value={newUser.admin_scope}
+                        onChange={(e) => setNewUser({ ...newUser, admin_scope: e.target.value })}
+                        className="input-field text-sm"
+                      >
+                        <option value="global">Global Admin</option>
+                        <option value="franchise">Franchise Admin</option>
+                        <option value="branch">Branch Admin</option>
+                        <option value="department">Department Only</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold tracking-widest text-charcoal-muted uppercase block mb-1.5">Delete Policy</label>
+                      <div className={`px-4 py-3 rounded-xl text-xs font-bold ${newUser.role === 'admin' && newUser.admin_delete_protected ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                        {newUser.role === 'admin' && newUser.admin_delete_protected ? 'Cannot be deleted' : 'Can be deleted'}
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 mt-4 animate-slide-up">
+
+                  <div>
+                    <label className="text-xs font-bold tracking-widest text-charcoal-muted uppercase block mb-2">Specific Controls</label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {[
+                        ['users', 'Users'],
+                        ['properties', 'Properties'],
+                        ['bookings', 'Bookings'],
+                        ['accounts', 'Accounts'],
+                        ['payouts', 'Payouts'],
+                        ['cms', 'CMS'],
+                        ['support', 'Support'],
+                        ['reports', 'Reports'],
+                        ['audit', 'Audit Logs'],
+                      ].map(([value, label]) => (
+                        <label key={value} className="flex items-center gap-2 rounded-xl bg-white border border-blue-100 px-3 py-2 text-xs font-bold text-charcoal cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={newUser.access_controls.includes(value)}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...newUser.access_controls, value]
+                                : newUser.access_controls.filter((item) => item !== value);
+                              setNewUser({ ...newUser, access_controls: next });
+                            }}
+                            className="accent-terracotta"
+                          />
+                          {label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(newUser.role === 'broker' || newUser.role === 'employee') && (
+                <>
+                  <div className="grid grid-cols-1 gap-4 animate-slide-up">
                     {newUser.role === 'broker' ? (
                       <div>
                         <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Broker Code</label>
@@ -2196,9 +2577,12 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                       <Lock className="w-5 h-5" />
                     </div>
                     <input 
-                      type={showPassword ? "text" : "password"}
+                      type="text"
+                      style={showPassword ? {} : { WebkitTextSecurity: 'disc' }}
+                      autoComplete="new-password"
+                      inputMode="text"
                       placeholder="••••••••"
-                      className="flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm pr-12"
+                      className="password-no-native-eye flex-1 px-4 py-3 outline-none text-charcoal font-semibold placeholder:font-normal placeholder:text-gray-300 bg-transparent w-full text-sm pr-12"
                       value={editUser.password || ''}
                       onChange={e => setEditUser({...editUser, password: e.target.value})}
                     />
@@ -2933,7 +3317,11 @@ const PropertyModeration = () => {
   const navigate = useNavigate();
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('awaiting_final_approval');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [propertySearch, setPropertySearch] = useState('');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   
@@ -2970,6 +3358,10 @@ const PropertyModeration = () => {
       fetchAllProperties();
     }
   }, [statusFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [propertySearch, propertyTypeFilter, dateFrom, dateTo]);
 
   const refresh = () => {
     if (statusFilter === 'awaiting_final_approval') fetchAwaitingFinalApproval();
@@ -3136,24 +3528,229 @@ const PropertyModeration = () => {
     return statusFilter === 'awaiting_final_approval';
   };
 
+  const getPropertyDate = (property) => {
+    const rawDate = statusFilter === 'deleted'
+      ? (property.deleted_at || property.updated_at || property.created_at)
+      : (property.created_at || property.updated_at || property.deleted_at);
+    if (!rawDate) return null;
+    const parsed = new Date(rawDate);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const filteredProperties = properties.filter((property) => {
+    const search = propertySearch.trim().toLowerCase();
+    if (search) {
+      const searchableText = [
+        property.title,
+        property.property_id,
+        property.city,
+        property.state,
+        property.category,
+        property.property_type,
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!searchableText.includes(search)) return false;
+    }
+
+    if (propertyTypeFilter !== 'all' && property.property_type !== propertyTypeFilter) {
+      return false;
+    }
+
+    const propertyDate = getPropertyDate(property);
+    if (dateFrom) {
+      const from = new Date(`${dateFrom}T00:00:00`);
+      if (!propertyDate || propertyDate < from) return false;
+    }
+    if (dateTo) {
+      const to = new Date(`${dateTo}T23:59:59`);
+      if (!propertyDate || propertyDate > to) return false;
+    }
+
+    return true;
+  });
+
+  const escapeCsv = (value) => {
+    const text = value === null || value === undefined ? '' : String(value);
+    return `"${text.replaceAll('"', '""')}"`;
+  };
+
+  const handleDownloadProperties = () => {
+    if (!filteredProperties.length) {
+      alert('No properties found for selected filters');
+      return;
+    }
+
+    const headers = [
+      'Property ID',
+      'Title',
+      'City',
+      'State',
+      'Category',
+      'Property Type',
+      'Status',
+      'Price Per Night',
+      'Created At',
+      'Updated At',
+      'Deleted At'
+    ];
+    const rows = filteredProperties.map((property) => [
+      property.property_id,
+      property.title,
+      property.city,
+      property.state,
+      formatCategoryLabel(property.category),
+      formatPropertyTypeLabel(property.property_type),
+      formatReadableText(property.status || 'unknown'),
+      property.price_per_night || 0,
+      property.created_at ? new Date(property.created_at).toLocaleString() : '',
+      property.updated_at ? new Date(property.updated_at).toLocaleString() : '',
+      property.deleted_at ? new Date(property.deleted_at).toLocaleString() : ''
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map(escapeCsv).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const parts = [
+      'properties',
+      statusFilter,
+      propertySearch.trim() ? propertySearch.trim().replace(/\s+/g, '-') : null,
+      propertyTypeFilter !== 'all' ? propertyTypeFilter : null,
+      dateFrom || null,
+      dateTo || null
+    ].filter(Boolean);
+    link.href = url;
+    link.setAttribute('download', `${parts.join('_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const clearPropertyFilters = () => {
+    setPropertySearch('');
+    setPropertyTypeFilter('all');
+    setDateFrom('');
+    setDateTo('');
+  };
+
+  const getStatusBadgeClass = (status) => {
+    if (status === 'live') return 'bg-[#10B981] text-white';
+    if (status === 'under_review') return 'bg-[#DBEAFE] text-[#2563EB]';
+    if (status === 'pending_verification') return 'bg-[#FEF3C7] text-[#D97706]';
+    if (status === 'rejected') return 'bg-[#FEE2E2] text-[#EF4444]';
+    if (status === 'blocked') return 'bg-[#EDE9FE] text-[#7C3AED]';
+    return 'bg-[#F3F4F6] text-[#4B5563]';
+  };
+
+  const paginatedProperties = [...filteredProperties]
+    .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const visibleStart = filteredProperties.length ? ((currentPage - 1) * itemsPerPage) + 1 : 0;
+  const visibleEnd = Math.min(currentPage * itemsPerPage, filteredProperties.length);
+
   return (
     <div data-testid="property-moderation">
-      <div className="dashboard-card mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-2xl font-bold text-charcoal">Property Moderation</h3>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="input-field w-64"
-            data-testid="status-filter"
+      <div className="bg-white border border-[#E5E7EB] rounded-[8px] shadow-sm mb-5 overflow-hidden">
+        <div className="px-5 py-4 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div>
+            <h3 className="text-lg font-bold text-charcoal leading-tight">Property Moderation</h3>
+            <p className="text-xs text-[#6B7280] mt-1">Review and moderate properties listed on the platform</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleDownloadProperties}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-[6px] bg-[#047857] text-white font-bold text-xs hover:bg-[#065F46] transition shadow-sm"
           >
-            <option value="awaiting_final_approval">Awaiting Final Approval (RM-approved)</option>
-            <option value="pending_verification">Pending Verification (broker queue)</option>
-            <option value="all">All Properties</option>
-            <option value="live">Live</option>
-            <option value="rejected">Rejected</option>
-            <option value="deleted">Deleted Properties</option>
-          </select>
+            <Download className="w-3.5 h-3.5" />
+            <span>Download CSV</span>
+          </button>
+        </div>
+
+        <div className="px-5 pb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+            <div className="relative md:col-span-2 xl:col-span-2">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF]" />
+              <input
+                type="search"
+                value={propertySearch}
+                onChange={(e) => setPropertySearch(e.target.value)}
+                className="w-full h-10 pl-10 pr-3 rounded-[6px] border border-[#E5E7EB] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]"
+                placeholder="Search property name, ID, city..."
+                aria-label="Search properties"
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-10 px-3 rounded-[6px] border border-[#E5E7EB] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]"
+              data-testid="status-filter"
+            >
+              <option value="awaiting_final_approval">Awaiting Final Approval</option>
+              <option value="pending_verification">Pending Verification</option>
+              <option value="all">All Statuses</option>
+              <option value="draft">Draft</option>
+              <option value="under_review">Under Review</option>
+              <option value="live">Live</option>
+              <option value="rejected">Rejected</option>
+              <option value="blocked">Blocked</option>
+              <option value="deleted">Deleted Properties</option>
+            </select>
+            <select
+              value={propertyTypeFilter}
+              onChange={(e) => setPropertyTypeFilter(e.target.value)}
+              className="h-10 px-3 rounded-[6px] border border-[#E5E7EB] bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]"
+              data-testid="property-type-filter"
+            >
+              <option value="all">All Property Types</option>
+              <option value="apartment">Apartment</option>
+              <option value="villa">Villa</option>
+              <option value="studio">Studio</option>
+              <option value="independent_house">Independent House</option>
+              <option value="co_living">Co-living</option>
+              <option value="private_office">Private Office</option>
+              <option value="co_working">Co-working</option>
+              <option value="meeting_room">Meeting Room</option>
+              <option value="banquet_hall">Banquet Hall</option>
+              <option value="farmhouse">Farmhouse</option>
+              <option value="rooftop">Rooftop</option>
+              <option value="hotel_ballroom">Hotel Ballroom</option>
+              <option value="resort">Resort</option>
+            </select>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="h-10 px-3 rounded-[6px] border border-[#E5E7EB] bg-white text-sm uppercase focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]"
+              aria-label="From date"
+            />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="h-10 px-3 rounded-[6px] border border-[#E5E7EB] bg-white text-sm uppercase focus:outline-none focus:ring-2 focus:ring-[#D4AF37]/20 focus:border-[#D4AF37]"
+              aria-label="To date"
+            />
+          </div>
+          <div className="flex justify-center pt-4">
+            <button
+              type="button"
+              onClick={clearPropertyFilters}
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-[6px] border border-[#E5E7EB] bg-[#F9FAFB] text-[#4B5563] font-bold text-xs hover:bg-white transition"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Clear Filters
+            </button>
+          </div>
+        </div>
+        <div className="border-t border-[#E5E7EB] bg-[#F8FAFC] px-5 py-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-[#D1FAE5] text-[#10B981] flex items-center justify-center">
+            <Home className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-[#374151]">Showing {filteredProperties.length} of {properties.length} properties</p>
+            <p className="text-[11px] text-[#6B7280]">For the selected status, type and date range.</p>
+          </div>
         </div>
       </div>
 
@@ -3161,26 +3758,29 @@ const PropertyModeration = () => {
         <div className="text-center py-12">
           <p className="text-charcoal-light">Loading properties...</p>
         </div>
-      ) : properties.length > 0 ? (
+      ) : filteredProperties.length > 0 ? (
         <div data-testid="properties-list">
           <div className="space-y-4">
-            {[...properties]
-              .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-              .map((property) => (
-              <div key={property.property_id} className="bg-white border border-[#F3F4F6] rounded-[24px] p-5 shadow-sm hover:shadow-subtle transition-all mb-4" data-testid={`property-${property.property_id}`}>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-center space-x-5 flex-1 min-w-0">
+            {paginatedProperties.map((property) => (
+              <div key={property.property_id} className="bg-white border border-[#E5E7EB] rounded-[8px] p-4 shadow-sm hover:shadow-md transition-all" data-testid={`property-${property.property_id}`}>
+                <div className="grid grid-cols-1 lg:grid-cols-[auto_minmax(0,1fr)_minmax(300px,430px)] gap-4 lg:items-center">
+                  <div className="relative w-28 h-28 rounded-[8px] overflow-hidden bg-[#F3F4F6]">
                     <img
                       src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                       alt={property.title}
-                      className="w-20 h-20 rounded-[18px] object-cover shadow-sm flex-shrink-0"
+                      className="w-full h-full object-cover"
                     />
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-[#1F2937] text-base leading-snug truncate">{property.title}</h4>
+                    <span className={`absolute left-2 top-2 px-2 py-1 rounded-[4px] text-[9px] font-bold uppercase tracking-wide ${getStatusBadgeClass(property.status)}`}>
+                      {(property.status || 'unknown').replaceAll('_', ' ')}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                      <h4 className="font-bold text-[#111827] text-base md:text-lg leading-snug truncate">{property.title}</h4>
                       <p className="text-[10px] text-[#6B7280] font-mono mt-1 truncate" title={property.property_id}>
                         Property ID: {property.property_id}
                       </p>
-                      <p className="text-xs text-[#6B7280] mt-1 font-medium truncate">
+                      <p className="text-xs text-[#6B7280] mt-2 font-medium truncate">
+                        <MapPin className="inline w-3.5 h-3.5 mr-1 text-[#6B7280]" />
                         {property.city} | {formatDisplayLabel(property.bhk_type)} | {formatCategoryLabel(property.category)}
                       </p>
                       <div className="flex items-center mt-2.5">
@@ -3212,13 +3812,36 @@ const PropertyModeration = () => {
                         </div>
                       )}
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2.5 flex-wrap justify-start md:justify-end">
+                  <div className="flex flex-col gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="rounded-[6px] bg-[#F9FAFB] border border-[#EEF2F7] p-3 min-h-[70px] flex items-center gap-3">
+                        <Building2 className="w-5 h-5 text-[#374151]" />
+                        <div>
+                          <p className="text-[10px] text-[#6B7280] font-semibold">Property Type</p>
+                          <p className="text-xs font-bold text-[#111827]">{formatPropertyTypeLabel(property.property_type)}</p>
+                        </div>
+                      </div>
+                      <div className="rounded-[6px] bg-[#F9FAFB] border border-[#EEF2F7] p-3 min-h-[70px] flex items-center gap-3">
+                        <BedDouble className="w-5 h-5 text-[#2563EB]" />
+                        <div>
+                          <p className="text-[10px] text-[#6B7280] font-semibold">Bedrooms</p>
+                          <p className="text-xs font-bold text-[#111827]">{formatDisplayLabel(property.bhk_type)}</p>
+                        </div>
+                      </div>
+                      <div className="rounded-[6px] bg-[#F9FAFB] border border-[#EEF2F7] p-3 min-h-[70px] flex items-center gap-3">
+                        <Users className="w-5 h-5 text-[#374151]" />
+                        <div>
+                          <p className="text-[10px] text-[#6B7280] font-semibold">Max Guests</p>
+                          <p className="text-xs font-bold text-[#111827]">{property.max_guests || 0} Guests</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 flex-wrap justify-start md:justify-end">
                     {statusFilter !== 'deleted' ? (
                       <>
                         <button
                           onClick={() => navigate(`/property/${property.property_id}`)}
-                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#E5E7EB] text-[#4B5563] bg-white rounded-full font-bold text-xs hover:bg-gray-50 transition-all shadow-sm"
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#E5E7EB] text-[#4B5563] bg-white rounded-[6px] font-bold text-xs hover:bg-gray-50 transition-all shadow-sm"
                           title="View property"
                         >
                           <EyeIcon className="w-3.5 h-3.5" />
@@ -3226,7 +3849,7 @@ const PropertyModeration = () => {
                         </button>
                         <button
                           onClick={() => navigate(`/host/list-property?edit=${property.property_id}`)}
-                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#DBEAFE] text-[#2563EB] bg-[#EFF6FF] rounded-full font-bold text-xs hover:bg-[#DBEAFE]/80 transition-all shadow-sm"
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#DBEAFE] text-[#2563EB] bg-[#EFF6FF] rounded-[6px] font-bold text-xs hover:bg-[#DBEAFE]/80 transition-all shadow-sm"
                           title="Edit property"
                         >
                           <Edit className="w-3.5 h-3.5" />
@@ -3234,7 +3857,7 @@ const PropertyModeration = () => {
                         </button>
                         <button
                           onClick={() => setDeleteState({ property, reason: '', error: '' })}
-                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#FECACA] text-[#DC2626] bg-[#FEF2F2] rounded-full font-bold text-xs hover:bg-[#FEE2E2] transition-all shadow-sm"
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#FECACA] text-[#DC2626] bg-[#FEF2F2] rounded-[6px] font-bold text-xs hover:bg-[#FEE2E2] transition-all shadow-sm"
                           title="Delete property"
                         >
                           <Trash className="w-3.5 h-3.5" />
@@ -3244,7 +3867,7 @@ const PropertyModeration = () => {
                     ) : (
                       <button
                         onClick={() => setPermanentDeleteState({ property, confirmation: '', error: '' })}
-                        className="flex items-center space-x-1.5 px-4 py-2 border border-[#991B1B] text-white bg-[#B91C1C] rounded-full font-bold text-xs hover:bg-[#991B1B] transition-all shadow-sm"
+                        className="flex items-center space-x-1.5 px-4 py-2 border border-[#991B1B] text-white bg-[#B91C1C] rounded-[6px] font-bold text-xs hover:bg-[#991B1B] transition-all shadow-sm"
                         title="Permanently delete property"
                       >
                         <Trash className="w-3.5 h-3.5" />
@@ -3255,51 +3878,75 @@ const PropertyModeration = () => {
                       <>
                         <button
                           onClick={() => openVerificationDetails(property)}
-                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#BBF7D0] text-[#15803D] bg-[#DCFCE7] rounded-full font-bold text-xs hover:bg-[#BBF7D0]/80 transition-all shadow-sm"
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#BBF7D0] text-[#15803D] bg-[#DCFCE7] rounded-[6px] font-bold text-xs hover:bg-[#BBF7D0]/80 transition-all shadow-sm"
                         >
                           <CheckCircle className="w-3.5 h-3.5" />
                           <span>Verify & Approve</span>
                         </button>
                         <button
                           onClick={() => rejectProperty(property.property_id)}
-                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#FEE2E2] text-[#EF4444] bg-[#FEF2F2] rounded-full font-bold text-xs hover:bg-[#FEE2E2]/80 transition-all shadow-sm"
+                          className="flex items-center space-x-1.5 px-4 py-2 border border-[#FEE2E2] text-[#EF4444] bg-[#FEF2F2] rounded-[6px] font-bold text-xs hover:bg-[#FEE2E2]/80 transition-all shadow-sm"
                         >
                           <XCircle className="w-3.5 h-3.5" />
                           <span>Reject</span>
                         </button>
                       </>
                     )}
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          {properties.length > itemsPerPage && (
-            <div className="mt-8 flex justify-center items-center space-x-4">
+          <div className="mt-4 flex items-center justify-between gap-3 text-xs text-[#6B7280]">
+            <span>
+              Showing {visibleStart} to {visibleEnd} of {filteredProperties.length} properties
+            </span>
+            <div className="flex items-center space-x-2">
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-9 h-9 rounded-[6px] border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="text-sm font-semibold text-charcoal">
-                Page {currentPage} of {Math.ceil(properties.length / itemsPerPage)}
+              <span className="w-9 h-9 rounded-[6px] bg-[#D4AF37] text-white flex items-center justify-center font-bold">
+                {currentPage}
               </span>
               <button 
-                onClick={() => setCurrentPage(p => Math.min(Math.ceil(properties.length / itemsPerPage), p + 1))}
-                disabled={currentPage === Math.ceil(properties.length / itemsPerPage)}
-                className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredProperties.length / itemsPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(filteredProperties.length / itemsPerPage)}
+                className="w-9 h-9 rounded-[6px] border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-          )}
+          </div>
         </div>
       ) : (
         <div className="dashboard-card text-center py-12">
           <Building2 className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
-          <p className="text-charcoal-light">No properties in this queue</p>
+          <p className="text-charcoal-light">
+            {statusFilter === 'awaiting_final_approval'
+              ? 'No RM-approved properties are awaiting final approval right now. Check Pending Verification or All Properties.'
+              : 'No properties in this queue'}
+          </p>
+          {statusFilter === 'awaiting_final_approval' && (
+            <div className="mt-5 flex items-center justify-center gap-3 flex-wrap">
+              <button
+                onClick={() => setStatusFilter('pending_verification')}
+                className="px-4 py-2 rounded-full bg-terracotta text-white text-xs font-bold hover:bg-terracotta-dark transition"
+              >
+                View Pending Verification
+              </button>
+              <button
+                onClick={() => setStatusFilter('all')}
+                className="px-4 py-2 rounded-full border border-gray-200 text-charcoal text-xs font-bold hover:bg-gray-50 transition"
+              >
+                View All Properties
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -3907,6 +4554,43 @@ export const BookingManagement = () => {
                       Property details unavailable (ID: {booking.property_id})
                     </p>
                   )}
+
+                  <div className="rounded-xl border border-sand-100 bg-stone/70 p-3">
+                    <div className="flex items-start space-x-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-terracotta/10 flex items-center justify-center text-terracotta shrink-0">
+                        <UserPlus className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">
+                          Assigned Broker
+                        </p>
+                        {booking.broker ? (
+                          <>
+                            <p className="text-sm font-bold text-charcoal truncate">
+                              {booking.broker.full_name || 'Assigned Broker'}
+                            </p>
+                            <p className="text-xs text-charcoal-light truncate">
+                              {booking.broker.email || booking.broker.phone || booking.broker.user_id}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                              {booking.broker.lg_code && (
+                                <span className="inline-block px-1.5 py-0.5 bg-white text-charcoal-muted text-[9px] font-bold tracking-tight uppercase rounded border border-gray-100">
+                                  LG: {booking.broker.lg_code}
+                                </span>
+                              )}
+                              <span className="inline-block px-1.5 py-0.5 bg-white text-charcoal-muted text-[9px] font-bold tracking-tight uppercase rounded border border-gray-100">
+                                ID: {booking.broker.user_id}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <p className="text-xs text-charcoal-muted italic">
+                            No broker assigned to this property
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Section 2: Owner & Guest Details */}
@@ -4064,6 +4748,30 @@ export const BookingManagement = () => {
                     {selectedBooking.payment_status}
                   </span>
                 </div>
+              </div>
+
+              <div className="bg-stone p-4 rounded-2xl border border-gray-100">
+                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">
+                  Assigned Broker
+                </p>
+                {selectedBooking.broker ? (
+                  <div>
+                    <p className="text-sm font-bold text-charcoal">
+                      {selectedBooking.broker.full_name || 'Assigned Broker'}
+                    </p>
+                    <p className="text-xs text-charcoal-light">
+                      {[selectedBooking.broker.email, selectedBooking.broker.phone].filter(Boolean).join(' | ')}
+                    </p>
+                    <p className="text-[10px] text-charcoal-muted font-mono mt-1 break-all">
+                      {selectedBooking.broker.lg_code ? `LG: ${selectedBooking.broker.lg_code} | ` : ''}
+                      ID: {selectedBooking.broker.user_id}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-charcoal-muted italic">
+                    No broker assigned to this booking property.
+                  </p>
+                )}
               </div>
 
               {/* Dates & Guest */}

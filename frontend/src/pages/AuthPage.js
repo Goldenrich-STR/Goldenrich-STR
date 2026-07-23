@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star, Eye, EyeOff } from 'lucide-react';
+import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star, Eye, EyeOff, X } from 'lucide-react';
 import { authAPI, apiClient } from '../services/api';
 import LegalLinks from '../components/LegalLinks';
 import SEO from '../components/SEO';
@@ -318,499 +318,466 @@ const AuthPage = ({ isAdminLogin = false }) => {
   };
 
   return (
-    <div className="min-h-screen lg:h-screen bg-stone flex flex-col lg:flex-row lg:overflow-hidden selection:bg-terracotta selection:text-white">
+    <div className="w-full h-full flex items-center justify-center p-4 select-none selection:bg-terracotta selection:text-white">
       <SEO
         title={isAdminLogin ? "Admin Sign In" : (isLogin ? "Sign In" : "Register")}
         robots="noindex,nofollow"
       />
-      {/* Left Panel: Visual/Branding (Desktop Only) */}
-      <div className="hidden lg:flex lg:w-5/12 relative bg-charcoal overflow-hidden border-r border-gray-100 h-full">
-        <div className="absolute inset-0 z-0">
-          <img
-            src="/videos/login%20image/pexels-veer-patel-2161481449-37547129.jpg"
-            alt="Login Background"
-            className="w-full h-full object-cover opacity-50 scale-105"
-          />
-          <div className="absolute inset-0 bg-gradient-to-tr from-charcoal via-charcoal/30 to-transparent"></div>
+
+      {/* StayVista style Modal Box (Fixed height to prevent page scrolling) */}
+      <div className="relative w-full max-w-[980px] bg-white rounded-3xl shadow-2xl flex overflow-hidden border border-gray-150 h-[750px] max-h-[92vh] z-10">
+        
+        {/* Close Button */}
+        <button
+          onClick={() => navigate('/')}
+          className="absolute top-4 right-4 text-gray-400 hover:text-charcoal p-2 bg-gray-50 rounded-full hover:bg-gray-100 transition z-50 cursor-pointer"
+          aria-label="Close"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Left Side: Visual Card Overlay (45% Width, Hidden on Mobile) */}
+        <div className="hidden md:block md:w-[42%] p-3 h-full">
+          <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-sm">
+            <img
+              src="https://images.unsplash.com/photo-1675657144361-98ae33e6b6f9?auto=format&fit=crop&q=80&w=800"
+              alt="X-Space360 Villa"
+              className="absolute inset-0 w-full h-full object-cover blur-[2.5px] scale-105"
+            />
+            {/* Linear overlay */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/15 to-black/60 z-10" />
+            
+            {/* Overlay Text Content */}
+            <div className="relative z-20 h-full p-6 flex flex-col justify-between text-white text-center">
+              {/* Top White Logo */}
+              <div className="flex justify-center">
+                <img src="/logo.png" alt="Logo" className="h-8 w-auto object-contain logo-white" />
+              </div>
+
+              {/* Middle Text and Pill Badge */}
+              <div className="mb-6 flex flex-col items-center">
+                <h4 className="text-white text-2xl md:text-3xl font-extrabold leading-tight mb-2 tracking-tight drop-shadow-sm">
+                  Book a Room.<br />Enjoy A Villa Getaway
+                </h4>
+                <p className="text-white text-xs font-semibold max-w-[220px] mb-4 drop-shadow-sm">
+                  Enjoy the luxuries & privacy of a villa with
+                </p>
+                <div className="border border-dashed border-white/80 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-1.5 text-xs font-bold tracking-wide text-white drop-shadow-sm">
+                  Rooms Starting at ₹5,000*
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="relative z-10 w-full p-16 flex flex-col justify-between">
-            <div 
-               className="flex items-center space-x-3 cursor-pointer group w-fit" 
-               onClick={() => navigate('/')}
-            >
-               <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain logo-white" />
+        {/* Right Side: Auth Form Content (58% Width) */}
+        <div className="w-full md:w-[58%] p-8 flex flex-col justify-between h-full relative overflow-y-auto no-scrollbar">
+          
+          {/* Top Header Section */}
+          <div className="w-full">
+            {/* Mini Logo */}
+            <div className="mb-4 flex items-center justify-between pr-10">
+              <img src="/logo.png" alt="X-Space360" className="h-8 w-auto object-contain" />
             </div>
 
-           <div className="animate-slide-up">
-              <div className="flex items-center space-x-2 text-terracotta mb-6">
-                 {[1,2,3,4,5].map(i => <Star key={i} className="w-4 h-4 fill-current" />)}
-                 <span className="text-[10px] font-bold tracking-tight tracking-[0.3em] text-white/60 ml-2 uppercase">Elite Network</span>
-              </div>
-              <h2 className="text-6xl font-bold tracking-tight text-white tracking-tighter leading-none mb-8">
-                 Enter the world of <br />
-                 <span className="text-terracotta italic font-serif lowercase pr-4">premium</span> hospitality.
-              </h2>
-              <p className="text-white/60 font-bold text-sm max-w-md leading-relaxed uppercase tracking-widest">
-                 Join India's most exclusive network of short-term rental properties and verified hosts.
-              </p>
-           </div>
-
-           <div className="flex items-center space-x-12">
-              <div className="flex flex-col">
-                 <span className="text-3xl font-bold tracking-tight text-white tracking-tighter">500+</span>
-                 <span className="text-[10px] font-bold tracking-tight text-white/40 uppercase tracking-widest">Properties</span>
-              </div>
-              <div className="flex flex-col">
-                 <span className="text-3xl font-bold tracking-tight text-white tracking-tighter">12K+</span>
-                 <span className="text-[10px] font-bold tracking-tight text-white/40 uppercase tracking-widest">Guests</span>
-              </div>
-              <div className="flex flex-col">
-                 <span className="text-3xl font-bold tracking-tight text-white tracking-tighter">98%</span>
-                 <span className="text-[10px] font-bold tracking-tight text-white/40 uppercase tracking-widest">Satisfaction</span>
-              </div>
-           </div>
-        </div>
-      </div>
-
-      {/* Right Panel: Auth Form */}
-      <div className="w-full lg:w-7/12 flex items-center justify-center p-6 md:p-14 lg:overflow-y-auto min-h-screen lg:h-full bg-white/50 backdrop-blur-xl">
-        <div className="w-full max-w-xl animate-fade-in">
-           {/* Logo (Mobile Only) */}
-           <div className="lg:hidden text-center mb-10 flex justify-center">
-              <img src="/logo.png" alt="X-Space360 Logo" className="h-12 w-auto object-contain hover:opacity-90 transition cursor-pointer" onClick={() => navigate('/')} />
-           </div>
-
-           <div className="mb-5 text-center">
-              <h3 className="text-2xl md:text-4xl font-bold tracking-tight text-charcoal tracking-tighter mb-2 leading-none">
-                 {isAdminLogin ? 'Admin Console' : (isLogin ? 'Welcome Back' : 'Create Account')}
+            {/* Title / Subtext */}
+            <div className="mb-6">
+              <span className="text-sm font-semibold text-gray-500 block mb-1">
+                {isAdminLogin ? "Admin Console" : "Login/Signup"}
+              </span>
+              <h3 className="font-sans font-semibold text-2xl md:text-[28px] text-gray-900 tracking-tight leading-snug">
+                {isAdminLogin ? "Admin Sign In" : "Welcome to X-Space360"}
               </h3>
-              <p className="text-charcoal-muted font-bold text-[10px] uppercase tracking-[0.25em]">
-                 {isAdminLogin ? 'Access your administrative command center' : (isLogin ? 'Access your elite dashboard' : 'Join our premium hospitality network')}
-              </p>
-           </div>
+            </div>
 
-           {/* Auth Card Content */}
-           <div className="space-y-5">
-              {/* Toggle Switch */}
-              {!isAdminLogin && (
-                 <div className="flex bg-sand-200 p-1.5 rounded-2xl border border-gray-200 shadow-inner max-w-sm mx-auto">
+            {/* Error/Success Alert Box */}
+            {error && (
+              <div className="bg-red-50 border-l-3 border-terracotta p-2.5 rounded-lg mb-4 text-xs font-semibold text-charcoal leading-tight animate-shake flex items-center justify-between">
+                <span>{error}</span>
+                <button onClick={() => setError('')} className="text-terracotta hover:scale-110 ml-2 font-bold">×</button>
+              </div>
+            )}
+            {success && (
+              <div className="bg-sage/10 border-l-3 border-sage-dark p-2.5 rounded-lg mb-4 text-xs font-semibold text-charcoal leading-tight flex items-center justify-between">
+                <span>{success}</span>
+                <button onClick={() => setSuccess('')} className="text-sage-dark hover:scale-110 ml-2 font-bold">×</button>
+              </div>
+            )}
+
+            {/* Toggle switch for login vs register */}
+            {isLogin ? (
+              // SIGN IN FORM
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="block text-[9px] font-bold text-charcoal-muted uppercase tracking-wider ml-0.5">Email Address</label>
+                  <input
+                    id="login-email"
+                    name="email"
+                    type="email"
+                    value={loginData.email}
+                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                    className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-lg px-4 py-2.5 text-sm transition-all outline-none font-medium"
+                    placeholder="email@example.com"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center px-0.5">
+                    <label className="block text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Password</label>
                     <button
-                       onClick={() => { setIsLogin(true); setError(''); setSuccess(''); resetOtpFlow(); }}
-                       className={`flex-1 py-4 rounded-xl font-bold tracking-tight text-[10px] tracking-[0.15em] uppercase transition-all duration-500 ${
-                          isLogin ? 'bg-white text-terracotta shadow-premium scale-100' : 'text-charcoal-muted hover:text-charcoal scale-95 opacity-60'
-                       }`}
+                      type="button"
+                      onClick={() => navigate(`/forgot-password?login=${encodeURIComponent(isAdminLogin ? '/admin/login' : '/login')}`)}
+                      className="text-[9px] font-bold text-blue-600 uppercase hover:underline"
                     >
-                       Sign In
+                      Forgot?
                     </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="login-password"
+                      name="password"
+                      type={showLoginPassword ? 'text' : 'password'}
+                      value={loginData.password}
+                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                      className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-lg pl-4 pr-10 py-2.5 text-sm transition-all outline-none font-medium"
+                      placeholder="••••••••"
+                      required
+                    />
                     <button
-                       onClick={() => { setIsLogin(false); setError(''); setSuccess(''); resetOtpFlow(); }}
-                       className={`flex-1 py-4 rounded-xl font-bold tracking-tight text-[10px] tracking-[0.15em] uppercase transition-all duration-500 ${
-                          !isLogin ? 'bg-white text-terracotta shadow-premium scale-100' : 'text-charcoal-muted hover:text-charcoal scale-95 opacity-60'
-                       }`}
+                      type="button"
+                      onClick={() => setShowLoginPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-charcoal"
                     >
-                       Register
+                      {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
-                 </div>
-              )}
+                  </div>
+                </div>
 
-              {/* Status Messages */}
-              {error && (
-                 <div className="bg-red-50 border-l-4 border-terracotta p-6 rounded-2xl animate-shake shadow-sm">
-                    <p className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest mb-1">Security Alert</p>
-                    <p className="text-sm font-bold text-charcoal leading-relaxed">{error}</p>
-                 </div>
-              )}
-              {success && (
-                 <div className="bg-sage/10 border-l-4 border-sage-dark p-6 rounded-2xl shadow-sm">
-                    <p className="text-[10px] font-bold tracking-tight text-sage-dark uppercase tracking-widest mb-1">System Notification</p>
-                    <p className="text-sm font-bold text-charcoal leading-relaxed">{success}</p>
-                 </div>
-              )}
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-[#1b1924] hover:bg-[#272433] text-white text-sm font-semibold py-3 rounded-lg w-full transition-colors cursor-pointer text-center tracking-wide mt-2"
+                >
+                  {loading ? 'Continuing...' : 'Continue'}
+                </button>
 
-              {/* Forms */}
-              {isLogin ? (
-                 <form onSubmit={handleLogin} className="space-y-8 animate-slide-up">
-                    <div className="space-y-3">
-                       <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Email Address</label>
-                       <div className="relative group">
-                          <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-sand-400 group-focus-within:text-terracotta transition-all z-10" />
-                          <input
-                             id="login-email"
-                             name="email"
-                             type="email"
-                             autoComplete="email"
-                             value={loginData.email}
-                             onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                             className="w-full pl-16 pr-8 py-5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm placeholder:text-sand-300 placeholder:font-semibold"
-                             placeholder="email@example.com"
-                             required
-                          />
-                       </div>
+                {!isAdminLogin && (
+                  <>
+                    <div className="flex items-center gap-3 my-2">
+                      <div className="h-px flex-1 bg-gray-150" />
+                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">or</span>
+                      <div className="h-px flex-1 bg-gray-150" />
                     </div>
-                    
-                    <div className="space-y-3">
-                       <div className="flex justify-between items-center px-1">
-                          <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase">Password</label>
-                          <button
-                             type="button"
-                             onClick={() => navigate(`/forgot-password?login=${encodeURIComponent(isAdminLogin ? '/admin/login' : '/login')}`)}
-                             className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-wider hover:underline underline-offset-4"
-                          >
-                             Forgot Password?
-                          </button>
-                       </div>
-                       <div className="relative group">
-                          <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-sand-400 group-focus-within:text-terracotta transition-all z-10" />
-                          <input
-                             id="login-password"
-                             name="password"
-                             type={showLoginPassword ? 'text' : 'password'}
-                             autoComplete="current-password"
-                             value={loginData.password}
-                             onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                             className="w-full pl-16 pr-16 py-5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm placeholder:text-sand-300 placeholder:font-semibold"
-                             placeholder="••••••••"
-                             required
-                          />
-                          <button
-                             type="button"
-                             onClick={() => setShowLoginPassword(value => !value)}
-                             className="absolute right-5 top-1/2 -translate-y-1/2 p-2 text-sand-400 hover:text-terracotta transition-colors z-10"
-                             title={showLoginPassword ? 'Hide password' : 'Show password'}
-                             aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
-                          >
-                             {showLoginPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                          </button>
-                       </div>
-                    </div>
-                    
+
                     <button
-                       type="submit"
-                       disabled={loading}
-                       className="btn-premium w-full py-5 text-base tracking-widest shadow-elevated rounded-2xl"
+                      type="button"
+                      onClick={handleGoldenRichSso}
+                      className="w-full py-2.5 rounded-lg border border-gray-200 bg-white text-charcoal font-bold uppercase tracking-wider text-[10px] hover:border-charcoal hover:bg-gray-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
-                       {loading ? 'SIGNING IN...' : 'SIGN IN'}
+                      <ShieldCheck className="w-4 h-4" />
+                      Login with GRP
                     </button>
 
-                    {!isAdminLogin && (
-                       <>
-                          <div className="flex items-center gap-4">
-                             <div className="h-px flex-1 bg-sand-200" />
-                             <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-charcoal-muted">or</span>
-                             <div className="h-px flex-1 bg-sand-200" />
-                          </div>
-                          <button
-                             type="button"
-                             onClick={handleGoldenRichSso}
-                             disabled={loading}
-                             className="w-full py-5 rounded-2xl border-2 border-sand-200 bg-white text-charcoal font-black uppercase tracking-[0.16em] text-xs hover:border-terracotta hover:text-terracotta transition-all shadow-sm flex items-center justify-center gap-3 disabled:opacity-60 disabled:cursor-not-allowed"
-                          >
-                             <ShieldCheck className="w-5 h-5" />
-                             Login with GRP
-                          </button>
-                       </>
-                    )}
-
-                 </form>
-              ) : (
-                 <div className="space-y-4 animate-slide-up">
-                    {!showOTPVerification ? (
-                       <div className="space-y-4">
-                          <div className="space-y-3 pt-1 text-center">
-                             <label className="block text-[11px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Select Role</label>
-                             <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
-                                {['guest', 'host'].map(role => (
-                                   <button
-                                      key={role}
-                                      type="button"
-                                      onClick={() => {
-                                         setRegisterData({ ...registerData, role });
-                                      }}
-                                      className={`py-3 rounded-2xl border-2 font-bold tracking-tight text-[11px] uppercase tracking-widest transition-all duration-500 ${
-                                         registerData.role === role 
-                                         ? 'border-terracotta bg-terracotta text-white shadow-elevated scale-[1.02]' 
-                                         : 'border-gray-100 bg-white text-charcoal-muted hover:border-terracotta'
-                                      }`}
-                                   >
-                                      {role === 'guest' ? 'Guest' : 'Host'}
-                                   </button>
-                                ))}
-                             </div>
-                          </div>
-
-                          <div className="space-y-2">
-                             <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Full Name</label>
-                             <input
-                                id="register-full-name"
-                                name="full_name"
-                                type="text"
-                                autoComplete="name"
-                                value={registerData.full_name}
-                                onChange={(e) => setRegisterData({ ...registerData, full_name: e.target.value })}
-                                className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
-                                placeholder="Your full name"
-                                required
-                             />
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                             <div className="space-y-2">
-                                <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Email Address</label>
-                                <input
-                                   id="register-email"
-                                   name="email"
-                                   type="email"
-                                   autoComplete="email"
-                                   value={registerData.email}
-                                   onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                                   className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
-                                   placeholder="email@example.com"
-                                   required
-                                />
-                             </div>
-                             <div className="space-y-2">
-                                <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Phone Number</label>
-                                <input
-                                   id="register-phone"
-                                   name="phone"
-                                   type="tel"
-                                   autoComplete="tel"
-                                   value={registerData.phone}
-                                   onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
-                                   className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
-                                   placeholder="+91..."
-                                   required
-                                />
-                             </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                             <div className="space-y-2">
-                                <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Password</label>
-                                <div className="relative">
-                                <input
-                                   id="register-password"
-                                   name="password"
-                                   type={showRegisterPassword ? 'text' : 'password'}
-                                   autoComplete="new-password"
-                                   value={registerData.password}
-                                   onChange={(e) => setRegisterData({
-                                      ...registerData,
-                                      password: e.target.value.replace(/\s/g, '').slice(0, 32)
-                                   })}
-                                   className="w-full px-6 py-3.5 pr-14 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
-                                   placeholder="••••••••"
-                                   maxLength={32}
-                                   required
-                                />
-                                <button
-                                   type="button"
-                                   onClick={() => setShowRegisterPassword((visible) => !visible)}
-                                   className="absolute right-4 top-1/2 -translate-y-1/2 text-charcoal-muted hover:text-terracotta transition-colors"
-                                   title={showRegisterPassword ? 'Hide password' : 'Show password'}
-                                   aria-label={showRegisterPassword ? 'Hide password' : 'Show password'}
-                                >
-                                   {showRegisterPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                </button>
-                                </div>
-                                {registerData.password && getPasswordError(registerData.password) && (
-                                   <p className="px-1 text-xs font-bold text-red-600">
-                                      {getPasswordError(registerData.password)}
-                                   </p>
-                                )}
-                             </div>
-                             <div
-                                ref={cityFieldRef}
-                                 className="space-y-2 relative z-50"
-                                onMouseEnter={() => setCityDropdownOpen(true)}
-                             >
-                                <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">City</label>
-                                <input
-                                   id="register-city"
-                                   name="city"
-                                   type="text"
-                                   autoComplete="address-level2"
-                                   value={registerData.city}
-                                   onFocus={() => setCityDropdownOpen(true)}
-                                   onClick={() => setCityDropdownOpen(true)}
-                                   onKeyDown={(e) => {
-                                      if (e.key === 'Escape') setCityDropdownOpen(false);
-                                   }}
-                                   onChange={(e) => {
-                                      setRegisterData({ ...registerData, city: e.target.value });
-                                      setCityDropdownOpen(true);
-                                   }}
-                                   className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
-                                   placeholder="Search or select city"
-                                   required
-                                />
-                                {cityDropdownOpen && (
-                                    <div className="absolute left-0 right-0 top-full mt-2 z-[9999] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-elevated">
-                                      <div className="max-h-64 overflow-y-auto py-2">
-                                         {filteredCities.length > 0 ? (
-                                            filteredCities.map((city) => (
-                                               <button
-                                                  key={city}
-                                                  type="button"
-                                                  onMouseDown={(e) => e.preventDefault()}
-                                                  onClick={() => {
-                                                     setRegisterData({ ...registerData, city });
-                                                     setCityDropdownOpen(false);
-                                                  }}
-                                                  className={`w-full px-5 py-3 text-left text-sm font-bold transition hover:bg-terracotta/10 hover:text-terracotta ${
-                                                     registerData.city === city ? 'bg-terracotta/10 text-terracotta' : 'text-charcoal'
-                                                  }`}
-                                               >
-                                                  {city}
-                                               </button>
-                                            ))
-                                         ) : (
-                                            <div className="px-5 py-4 text-sm font-semibold text-charcoal-muted">
-                                               No city found
-                                            </div>
-                                         )}
-                                      </div>
-                                   </div>
-                                )}
-                           </div>
-                        </div>
-
-                          {registerData.role === 'host' && (
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-fade-in">
-                                <div className="space-y-2">
-                                   <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Broker Code</label>
-                                   <select
-                                      value={registerData.lg_code}
-                                      onChange={(e) => setRegisterData({ ...registerData, lg_code: e.target.value })}
-                                      className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
-                                   >
-                                      <option value="">-- Select Broker Code --</option>
-                                      {availableBrokers.map(b => (
-                                         <option key={b.user_id} value={b.lg_code}>
-                                            {b.full_name} ({b.lg_code})
-                                         </option>
-                                      ))}
-                                   </select>
-                                </div>
-                                <div className="space-y-2">
-                                   <label className="block text-[11px] font-bold tracking-tight text-charcoal tracking-[0.15em] uppercase ml-1">Employee Code</label>
-                                   <select
-                                      value={registerData.employee_code}
-                                      onChange={(e) => setRegisterData({ ...registerData, employee_code: e.target.value })}
-                                      className="w-full px-6 py-3.5 bg-white border-2 border-gray-100 rounded-2xl focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal font-bold text-base shadow-sm"
-                                   >
-                                      <option value="">-- Select Employee Code --</option>
-                                      {availableEmployees.map(emp => (
-                                         <option key={emp.user_id} value={emp.employee_code}>
-                                            {emp.full_name} ({emp.employee_code})
-                                         </option>
-                                      ))}
-                                   </select>
-                                </div>
-                             </div>
-                          )}
-                          
-                          <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-2xl border border-gray-100 group cursor-pointer">
-                             <input
-                                id="register-terms"
-                                name="terms_accepted"
-                                type="checkbox"
-                                checked={registerData.terms_accepted}
-                                onChange={(e) => setRegisterData({ ...registerData, terms_accepted: e.target.checked })}
-                                className="mt-1 w-5 h-5 text-terracotta rounded-lg border-gray-200 focus:ring-terracotta cursor-pointer flex-shrink-0"
-                                required
-                             />
-                             <label className="text-xs text-charcoal-muted font-semibold leading-relaxed cursor-pointer">
-                                I accept the <LegalLinks className="inline" context={registerData.role === 'host' ? 'host_registration' : 'guest_registration'} />.
-                             </label>
-                          </div>
-                          
-                          <button
-                             type="button"
-                             onClick={sendOTP}
-                             disabled={loading}
-                             className="btn-premium w-full py-3.5 text-base tracking-widest shadow-elevated rounded-2xl"
-                          >
-                             {loading ? 'VALIDATING...' : 'CONTINUE'}
-                          </button>
-                       </div>
-                    ) : (
-                       <div className="space-y-9 text-center animate-fade-in">
-                          <div className="flex flex-col items-center">
-                             <div className="w-22 h-22 bg-terracotta/10 rounded-2xl flex items-center justify-center mb-6 border-4 border-terracotta/20 shadow-premium">
-                                <ShieldCheck className="w-11 h-11 text-terracotta" />
-                             </div>
-                             <h3 className="text-4xl font-bold tracking-tight text-charcoal tracking-tighter">Verification</h3>
-                          </div>
-
-                          <div className="space-y-4">
-                             <div className="flex justify-center gap-1.5 sm:gap-3">
-                                {Array.from({ length: 6 }).map((_, index) => (
-                                  <input
-                                    key={index}
-                                    ref={(element) => { otpInputRefs.current[index] = element; }}
-                                    type="text"
-                                    inputMode="numeric"
-                                    autoComplete={index === 0 ? 'one-time-code' : 'off'}
-                                    value={otpDigits[index] || ''}
-                                    onChange={(e) => handleOtpBoxChange(index, e.target.value)}
-                                    onKeyDown={(e) => handleOtpBoxKeyDown(index, e)}
-                                    onFocus={(e) => e.target.select()}
-                                    className="w-8 h-11 xs:w-10 xs:h-13 sm:w-14 sm:h-16 text-center text-lg sm:text-2xl font-black bg-white rounded-xl sm:rounded-2xl border-2 border-gray-100 focus:border-terracotta focus:ring-8 focus:ring-terracotta/5 transition-all outline-none text-charcoal shadow-inner"
-                                    maxLength={6}
-                                  />
-                                ))}
-                             </div>
-                             {otpSecondsRemaining > 0 ? (
-                               <p className="text-xs font-bold text-charcoal-muted uppercase tracking-[0.24em]">
-                                  OTP valid for {otpTimerLabel}
-                               </p>
-                             ) : (
-                               <button
-                                 type="button"
-                                 onClick={sendOTP}
-                                 disabled={loading}
-                                 className="text-[10px] font-bold text-terracotta uppercase tracking-[0.3em] hover:text-terracotta-dark transition-colors underline-offset-4 hover:underline"
-                               >
-                                  RESEND OTP
-                               </button>
-                             )}
-                          </div>
-                          
-                          <div className="space-y-6 pt-4">
-                             <button
-                                onClick={verifyOTP}
-                                disabled={loading}
-                                className="btn-premium w-full py-5 text-base tracking-widest shadow-elevated rounded-2xl"
-                             >
-                                {loading ? 'AUTHENTICATING...' : 'SUBMIT'}
-                             </button>
-                             
+                    <div className="mt-4 text-center text-xs font-semibold text-gray-500">
+                      Don't have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsLogin(false);
+                          setError('');
+                          setSuccess('');
+                          resetOtpFlow();
+                        }}
+                        className="text-blue-600 hover:underline font-extrabold cursor-pointer ml-1 text-xs"
+                      >
+                        Sign Up
+                      </button>
+                    </div>
+                  </>
+                )}
+              </form>
+            ) : (
+              // REGISTER / SIGN UP FORM
+              <div className="space-y-5">
+                {!showOTPVerification ? (
+                  <div className="space-y-4">
+                    {/* Role selector Guest/Host pills */}
+                    <div className="flex justify-between items-center bg-gray-50 p-1.5 rounded-xl border border-gray-150 max-w-[240px] mx-auto mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setRegisterData({ ...registerData, role: 'guest' })}
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
+                          registerData.role === 'guest' ? 'bg-[#1b1924] text-white shadow-sm' : 'text-gray-400'
+                        }`}
+                      >
+                        Guest
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRegisterData({ ...registerData, role: 'host' })}
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
+                          registerData.role === 'host' ? 'bg-[#1b1924] text-white shadow-sm' : 'text-gray-400'
+                        }`}
+                      >
+                        Host
+                      </button>
+                    </div>
+ 
+                    {/* Spacious Responsive Grid Layout */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                      <div className="space-y-1">
+                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Full Name</label>
+                        <input
+                          id="register-full-name"
+                          type="text"
+                          value={registerData.full_name}
+                          onChange={(e) => setRegisterData({ ...registerData, full_name: e.target.value })}
+                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                          placeholder="Full Name"
+                          required
+                          autoComplete="name"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Phone Number</label>
+                        <input
+                          id="register-phone"
+                          type="tel"
+                          value={registerData.phone}
+                          onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
+                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                          placeholder="Phone"
+                          required
+                          autoComplete="tel"
+                        />
+                      </div>
+ 
+                      <div className="space-y-1">
+                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Email</label>
+                        <input
+                          id="register-email"
+                          type="email"
+                          value={registerData.email}
+                          onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                          placeholder="Email"
+                          required
+                          autoComplete="email"
+                        />
+                      </div>
+ 
+                      <div className="space-y-1 relative" ref={cityFieldRef}>
+                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">City</label>
+                        <input
+                          id="register-city"
+                          type="text"
+                          value={registerData.city}
+                          onFocus={() => setCityDropdownOpen(true)}
+                          onChange={(e) => {
+                            setRegisterData({ ...registerData, city: e.target.value });
+                            setCityDropdownOpen(true);
+                          }}
+                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                          placeholder="Search city"
+                          required
+                          autoComplete="address-level2"
+                        />
+                        {cityDropdownOpen && (
+                          <div className="absolute left-0 right-0 top-full mt-1 z-[9999] max-h-32 overflow-y-auto bg-white border border-gray-150 rounded-xl shadow-lg">
+                            {filteredCities.map(city => (
                               <button
-                                onClick={resetOtpFlow}
-                                disabled={loading}
-                                className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.3em] hover:text-terracotta transition-colors block mx-auto underline-offset-4 hover:underline"
+                                key={city}
+                                type="button"
+                                onClick={() => {
+                                  setRegisterData({ ...registerData, city });
+                                  setCityDropdownOpen(false);
+                                }}
+                                className="w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-gray-55"
                               >
-                                CHANGE PHONE NUMBER
+                                {city}
                               </button>
+                            ))}
                           </div>
-                       </div>
-                    )}
-                 </div>
-              )}
-           </div>
+                        )}
+                      </div>
 
-           <div className="text-center mt-6 pt-5 border-t border-gray-100">
-              <button
-                 onClick={() => navigate('/')}
-                 className="group inline-flex items-center space-x-4 text-charcoal-muted hover:text-terracotta transition-colors font-bold tracking-tight text-[10px] uppercase tracking-[0.4em]"
-              >
-                 <ArrowLeft className="w-5 h-5 group-hover:-translate-x-2 transition-transform duration-500" />
-                 <span>Back to Home</span>
-              </button>
-           </div>
+                      <div className="space-y-1 text-left md:col-span-2">
+                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Password</label>
+                        <div className="relative">
+                          <input
+                            id="register-password"
+                            type={showRegisterPassword ? 'text' : 'password'}
+                            value={registerData.password}
+                            onChange={(e) => setRegisterData({
+                              ...registerData,
+                              password: e.target.value.replace(/\s/g, '').slice(0, 32)
+                            })}
+                            className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl pl-4 pr-10 py-3 text-sm font-medium outline-none"
+                            placeholder="Password"
+                            required
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowRegisterPassword(v => !v)}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                          >
+                            {showRegisterPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+ 
+                    {/* Broker/Employee dropdowns for Host role */}
+                    {registerData.role === 'host' && (
+                      <div className="grid grid-cols-2 gap-3 text-left animate-fade-in">
+                        <div className="space-y-1">
+                          <label className="block text-xs font-semibold text-gray-600 ml-0.5">Broker</label>
+                          <select
+                            value={registerData.lg_code}
+                            onChange={(e) => setRegisterData({ ...registerData, lg_code: e.target.value })}
+                            className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-3 py-3 text-sm font-medium outline-none bg-white"
+                          >
+                            <option value="">Select Broker</option>
+                            {availableBrokers.map(b => (
+                              <option key={b.user_id} value={b.lg_code}>{b.full_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-0.5">Employee</label>
+                          <select
+                            value={registerData.employee_code}
+                            onChange={(e) => setRegisterData({ ...registerData, employee_code: e.target.value })}
+                            className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-3 py-3 text-sm font-medium outline-none bg-white"
+                          >
+                            <option value="">Select Employee</option>
+                            {availableEmployees.map(emp => (
+                              <option key={emp.user_id} value={emp.employee_code}>{emp.full_name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+ 
+                    {/* Legal Checkbox */}
+                    <div className="flex items-start space-x-2.5 pt-1.5">
+                      <input
+                        id="register-terms"
+                        type="checkbox"
+                        checked={registerData.terms_accepted}
+                        onChange={(e) => setRegisterData({ ...registerData, terms_accepted: e.target.checked })}
+                        className="mt-0.5 w-4 h-4 text-terracotta border-gray-200 focus:ring-0 cursor-pointer rounded"
+                        required
+                      />
+                      <label className="text-xs text-charcoal-muted font-semibold leading-tight cursor-pointer">
+                        I accept the <LegalLinks className="inline text-terracotta" context={registerData.role === 'host' ? 'host_registration' : 'guest_registration'} />.
+                      </label>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={sendOTP}
+                      disabled={loading}
+                      className="bg-[#1b1924] hover:bg-[#272433] text-white text-xs font-semibold py-2.5 rounded-lg w-full transition-colors cursor-pointer tracking-wider mt-2"
+                    >
+                      {loading ? 'Continuing...' : 'Continue'}
+                    </button>
+
+                    <div className="mt-4 text-center text-xs font-semibold text-gray-500">
+                      Already have an account?{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsLogin(true);
+                          setError('');
+                          setSuccess('');
+                          resetOtpFlow();
+                        }}
+                        className="text-blue-600 hover:underline font-extrabold cursor-pointer ml-1 text-xs"
+                      >
+                        Log In
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // OTP VERIFICATION STEP
+                  <div className="space-y-4 text-center animate-fade-in pt-4">
+                    <div className="flex flex-col items-center">
+                      <div className="w-12 h-12 bg-terracotta/10 rounded-xl flex items-center justify-center mb-2 border border-terracotta/20">
+                        <ShieldCheck className="w-6 h-6 text-terracotta" />
+                      </div>
+                      <h4 className="text-lg font-bold tracking-tight text-charcoal">Enter OTP</h4>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex justify-center gap-1.5">
+                        {Array.from({ length: 6 }).map((_, index) => (
+                          <input
+                            key={index}
+                            ref={(element) => { otpInputRefs.current[index] = element; }}
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete={index === 0 ? 'one-time-code' : 'off'}
+                            value={otpDigits[index] || ''}
+                            onChange={(e) => handleOtpBoxChange(index, e.target.value)}
+                            onKeyDown={(e) => handleOtpBoxKeyDown(index, e)}
+                            onFocus={(e) => e.target.select()}
+                            className="w-8 h-10 text-center text-base font-black bg-white rounded-lg border border-gray-200 focus:border-charcoal focus:ring-0 outline-none text-charcoal"
+                            maxLength={6}
+                          />
+                        ))}
+                      </div>
+                      {otpSecondsRemaining > 0 ? (
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                          OTP valid for {otpTimerLabel}
+                        </p>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={sendOTP}
+                          disabled={loading}
+                          className="text-[9px] font-bold text-terracotta uppercase tracking-wider hover:underline"
+                        >
+                          Resend OTP
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2.5 pt-2">
+                      <button
+                        onClick={verifyOTP}
+                        disabled={loading}
+                        className="bg-[#1b1924] hover:bg-[#272433] text-white text-xs font-semibold py-2.5 rounded-lg w-full transition-colors cursor-pointer tracking-wider"
+                      >
+                        {loading ? 'Verifying...' : 'Submit'}
+                      </button>
+
+                      <button
+                        onClick={resetOtpFlow}
+                        disabled={loading}
+                        className="text-[9px] font-bold text-charcoal-muted uppercase hover:text-terracotta block mx-auto underline"
+                      >
+                        Change Phone
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Footer Notice */}
+          <div className="w-full pt-4 border-t border-gray-100 text-center">
+            <p className="text-[10px] text-gray-400 font-semibold leading-relaxed">
+              By signing up, you agree to our <br className="md:hidden" />
+              <a href="/terms" className="text-blue-500 hover:underline">Terms & Conditions</a> and <a href="/privacy" className="text-blue-500 hover:underline">Privacy Policy</a>
+            </p>
+          </div>
+
         </div>
+
       </div>
     </div>
   );

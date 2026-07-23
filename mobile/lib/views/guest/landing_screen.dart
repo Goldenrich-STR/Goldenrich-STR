@@ -1072,32 +1072,33 @@ class _LandingScreenState extends State<LandingScreen> {
                                     ),
                                   ),
                                   // Rating Badge Top Left
-                                  Positioned(
-                                    top: 10,
-                                    left: 10,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.9),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(Icons.star, color: Color(0xFFD4AF37), size: 12),
-                                          const SizedBox(width: 2),
-                                          Text(
-                                            '4.8',
-                                            style: GoogleFonts.manrope(
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.w800,
-                                              color: AppTheme.charcoal,
+                                  if (prop.rating != null && prop.rating! > 0)
+                                    Positioned(
+                                      top: 10,
+                                      left: 10,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.9),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.star, color: Color(0xFFD4AF37), size: 12),
+                                            const SizedBox(width: 2),
+                                            Text(
+                                              prop.rating!.toStringAsFixed(1),
+                                              style: GoogleFonts.manrope(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w800,
+                                                color: AppTheme.charcoal,
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  ),
                                   // Action Buttons Top Right
                                   Positioned(
                                     top: 10,

@@ -96,6 +96,24 @@ const DEFAULT_FAQS = [
   }
 ];
 
+const SUPPORT_SEO_FAQS = [
+  {
+    question: "How do I book a property on X-Space360?",
+    answer:
+      "Search for your preferred destination, select a property, check availability, review the pricing and policies, and complete the booking using the available payment options.",
+  },
+  {
+    question: "How can I contact X-Space360 support?",
+    answer:
+      "You can contact X-Space360 through the support form, customer support email or phone number displayed on the Support page.",
+  },
+  {
+    question: "How can I cancel a booking?",
+    answer:
+      "Open your booking details, select the cancellation option and review the applicable refund amount under the cancellation policy before confirming.",
+  },
+];
+
 const SupportPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -103,6 +121,13 @@ const SupportPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [supportData, setSupportData] = useState(DEFAULT_SUPPORT_DATA);
   const [faqs, setFaqs] = useState(DEFAULT_FAQS);
+  const [wishlist] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('guest_wishlist')) || [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [loading, setLoading] = useState(true);
 
   // FAQ section ref
@@ -134,10 +159,20 @@ const SupportPage = () => {
       setLoading(true);
       const res = await cmsAPI.getSupportPage();
       if (res.data?.support_content) {
+        const cmsFaqs = Array.isArray(res.data.support_content.faq_items)
+          ? res.data.support_content.faq_items.filter(item => item?.question)
+          : [];
         setSupportData({
           ...DEFAULT_SUPPORT_DATA,
           ...res.data.support_content
         });
+        if (cmsFaqs.length > 0) {
+          setFaqs(cmsFaqs.map((item, index) => ({
+            id: item.id || `cms-support-faq-${index}`,
+            question: item.question || '',
+            answer: item.answer || ''
+          })));
+        }
       }
     } catch (err) {
       console.error('Failed to load support page dynamic content:', err);
@@ -235,6 +270,20 @@ const SupportPage = () => {
     faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
     faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  const schemaFaqs = faqs.length ? faqs : SUPPORT_SEO_FAQS;
+  const faqSchema = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": "https://x-space360.in/support#faq",
+    mainEntity: schemaFaqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
+  };
 
   // Auto-expand single result
   useEffect(() => {
@@ -261,7 +310,18 @@ const SupportPage = () => {
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] font-sans text-charcoal overflow-x-hidden selection:bg-terracotta/20">
-      <SEO title="Need Help? Contact Support - X-Space360" description="Contact X-Space360 support for help with booking, listings, subscription plans, and property verifications." />
+      <SEO
+        title="Help and Support Center"
+        description="Get help with X-Space360 bookings, cancellations, refunds, payments, host accounts and property listings."
+        path="/support"
+        keywords={[
+          "X-Space360 support",
+          "booking help",
+          "refund support",
+          "host support",
+        ]}
+        schema={faqSchema}
+      />
       
       {/* Navbar - Solid background for support page */}
       <nav className="sticky top-0 z-50 flex justify-between items-center text-charcoal bg-white/95 backdrop-blur-md px-6 md:px-12 lg:px-20 h-20 border-b border-sand-200 shadow-sm">
@@ -271,7 +331,7 @@ const SupportPage = () => {
         </div>
 
         {/* Center Pill Links */}
-        <div className="hidden md:flex h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-charcoal-muted bg-sand-50 border border-sand-200 rounded-none shadow-sm self-center">
+        <div className="hidden lg:flex h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-charcoal-muted bg-sand-50 border border-sand-200 rounded-none shadow-sm self-center">
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
@@ -279,14 +339,16 @@ const SupportPage = () => {
           >
             Discover
           </a>
-          <a
-            href="#"
-            onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
-            className="hover:text-terracotta transition flex items-center space-x-1"
-          >
-            <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
-            <span>Wishlist</span>
-          </a>
+          {wishlist.length > 0 && (
+            <a
+              href="#"
+              onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
+              className="hover:text-terracotta transition flex items-center space-x-1"
+            >
+              <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
+              <span>Wishlist</span>
+            </a>
+          )}
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); navigate('/'); }}
@@ -334,7 +396,7 @@ const SupportPage = () => {
         </div>
 
         {/* Right — Get the app (Desktop) */}
-        <div className="hidden md:flex items-center">
+        <div className="hidden lg:flex items-center">
           <button onClick={() => navigate('/login')} className="flex items-center space-x-2 border border-sand-300 rounded-none px-5 py-2 hover:bg-sand-50 transition shadow-sm text-charcoal">
             <span className="text-[10px] font-bold uppercase tracking-widest">Get the app</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -342,7 +404,7 @@ const SupportPage = () => {
         </div>
 
         {/* Mobile Hamburger Icon */}
-        <div className="md:hidden flex items-center">
+        <div className="lg:hidden flex items-center">
           <button onClick={() => setIsMobileMenuOpen(true)} className="text-charcoal hover:text-terracotta transition p-2">
             <Menu className="w-8 h-8" />
           </button>
@@ -351,7 +413,7 @@ const SupportPage = () => {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto text-white md:hidden animate-fadeIn">
+        <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto text-white lg:hidden animate-fadeIn">
           <div className="flex justify-between items-center mb-12">
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain cursor-pointer brightness-0 invert" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }} />
             <button onClick={() => setIsMobileMenuOpen(false)} className="text-white hover:text-terracotta transition p-2 bg-white/10 rounded-none">
@@ -360,7 +422,9 @@ const SupportPage = () => {
           </div>
           <div className="flex flex-col space-y-6 text-lg font-bold tracking-wide">
             <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/guest/browse'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Discover</a>
-            <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Wishlist</a>
+            {wishlist.length > 0 && (
+              <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Wishlist</a>
+            )}
             <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Home</a>
             {user ? (
               <>

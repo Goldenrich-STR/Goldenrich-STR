@@ -13,12 +13,8 @@ async def setup_db():
     parsed = urlparse(target_url)
     db_name = parsed.path.lstrip('/')
     
-    # Try to connect to system 'postgres' db first to create our db
-    sys_url = f"postgresql://{parsed.username}:{parsed.password}@{parsed.hostname}:{parsed.port or 5432}/postgres"
-    
-    print(f"Connecting to system database to ensure '{db_name}' exists...")
-    try:
-        conn = await asyncpg.connect(sys_url)
+
+
         # Check if db exists
         exists = await conn.fetchval("SELECT 1 FROM pg_database WHERE datname = $1", db_name)
         if not exists:

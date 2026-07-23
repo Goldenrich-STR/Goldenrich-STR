@@ -495,6 +495,23 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
 async def _ensure_seeded_support_content(db: AsyncIOMotorDatabase):
     cursor = db.cms_content.find({"page": "support"})
     content = await cursor.to_list(length=100)
+    default_faq_items = [
+        {
+            "id": "faq-add-property",
+            "question": "How to add a new property?",
+            "answer": "Open your host dashboard, choose List New, complete the property details, upload photos and documents, then submit it for admin review."
+        },
+        {
+            "id": "faq-kyc-docs",
+            "question": "What documents are required for KYC?",
+            "answer": "Hosts generally need identity proof, address proof, property ownership or authorization documents, and any business license requested during verification."
+        },
+        {
+            "id": "faq-billing",
+            "question": "How does subscription billing work?",
+            "answer": "Your selected subscription plan shows the purchase date, renewal date, and current status on your property card."
+        }
+    ]
     if not content:
         now = datetime.now(timezone.utc)
         default_content = [
@@ -545,6 +562,7 @@ async def _ensure_seeded_support_content(db: AsyncIOMotorDatabase):
                         {"label": "Subscription & Billing", "link": "/faq#billing"},
                         {"label": "Account & Profile Settings", "link": "/faq#profile"}
                     ],
+                    "faq_items": default_faq_items,
                     "support_hours": [
                         {"days": "Monday - Saturday", "hours": "9:00 AM - 7:00 PM"},
                         {"days": "Sunday", "hours": "10:00 AM - 4:00 PM"}
@@ -561,6 +579,21 @@ async def _ensure_seeded_support_content(db: AsyncIOMotorDatabase):
         ]
         for item in default_content:
             await db.cms_content.insert_one(item)
+    else:
+        support_doc = await db.cms_content.find_one(
+            {"page": "support", "section": "support_content"}
+        )
+        support_data = (support_doc or {}).get("content_data") or {}
+        if support_doc and "faq_items" not in support_data:
+            await db.cms_content.update_one(
+                {"content_id": support_doc["content_id"]},
+                {
+                    "$set": {
+                        "content_data.faq_items": default_faq_items,
+                        "updated_at": datetime.now(timezone.utc)
+                    }
+                }
+            )
     return content
 
 # ========== PUBLIC CMS ENDPOINTS ==========

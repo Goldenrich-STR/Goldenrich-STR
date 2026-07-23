@@ -113,6 +113,7 @@ class Payout(BaseModel):
 
     gross_amount: int           # total paid by guest (paise) — excludes tax/service since those are platform revenue
     platform_fee: int           # platform take (paise)
+    tds_amount: int = 0         # TDS deducted from host payout (paise)
     net_amount: int             # what host actually receives (paise)
 
     destination_type: PayoutDestinationType

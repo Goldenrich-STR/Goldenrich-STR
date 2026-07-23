@@ -47,29 +47,21 @@ async def get_employee_dashboard_stats(
 ):
     """Get employee dashboard statistics."""
     try:
-        # Get brokers in this RM's region (for now, show all brokers)
-        total_brokers = await db.users.count_documents({"role": "broker"})
+        # Get brokers in this RM's region
+        total_brokers = await db.users.count_documents({"role": "broker", "rm_id": current_user["user_id"]})
         
-        # Pending verifications (all verifications waiting for RM review)
+        # Pending verifications (all verifications waiting for this RM's review)
         pending_verifications = await db.property_verifications.count_documents({
             "status": VerificationStatus.COMPLETED.value,
             "rm_reviewed": False,
-            "$or": [
-                {"rm_id": current_user["user_id"]},
-                {"rm_id": None},
-                {"rm_id": {"$exists": False}}
-            ]
+            "rm_id": current_user["user_id"]
         })
         
-        # Total properties under review (pending RM review)
+        # Total properties under review (pending this RM's review)
         pending_reviews = await db.property_verifications.find({
             "status": VerificationStatus.COMPLETED.value,
             "rm_reviewed": False,
-            "$or": [
-                {"rm_id": current_user["user_id"]},
-                {"rm_id": None},
-                {"rm_id": {"$exists": False}}
-            ]
+            "rm_id": current_user["user_id"]
         }).to_list()
         
         pending_property_ids = list(set([v["property_id"] for v in pending_reviews if "property_id" in v]))
@@ -79,14 +71,21 @@ async def get_employee_dashboard_stats(
             "property_id": {"$in": pending_property_ids}
         })
         
-        # Subscription alerts
+        # Subscription alerts under hosts assigned to this RM
         from datetime import date
         today = date.today()
         expiring_soon_date = (today + timedelta(days=5)).isoformat()
         
+        my_hosts = await db.users.find(
+            {"role": "host", "rm_id": current_user["user_id"]},
+            {"user_id": 1}
+        ).to_list(length=1000)
+        my_host_ids = [h["user_id"] for h in my_hosts]
+        
         expiring_subscriptions = await db.subscriptions.count_documents({
             "status": {"$in": ["trial", "active"]},
-            "end_date": {"$lte": expiring_soon_date}
+            "end_date": {"$lte": expiring_soon_date},
+            "user_id": {"$in": my_host_ids}
         })
         
         return {
@@ -123,11 +122,7 @@ async def get_pending_verifications(
             {
                 "status": VerificationStatus.COMPLETED.value,
                 "rm_reviewed": False,
-                "$or": [
-                    {"rm_id": current_user["user_id"]},
-                    {"rm_id": None},
-                    {"rm_id": {"$exists": False}}
-                ]
+                "rm_id": current_user["user_id"]
             },
             {"_id": 0}
         ).sort("completed_at", -1)
@@ -171,14 +166,10 @@ async def get_verification_history(
 ):
     """Get all verifications reviewed by this RM or rejected by admin."""
     try:
-        # Get all verifications where this RM reviewed it, or where status is rejected
+        # Get all verifications where this RM reviewed it or is assigned to it
         cursor = db.property_verifications.find(
             {
-                "$or": [
-                    {"rm_id": current_user["user_id"]},
-                    {"status": "rejected"},
-                    {"status": "approved"}
-                ]
+                "rm_id": current_user["user_id"]
             },
             {"_id": 0}
         ).sort("updated_at", -1)
@@ -230,6 +221,12 @@ async def get_verification_details(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Verification not found"
+            )
+        
+        if verification.get("rm_id") != current_user["user_id"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to view this verification report"
             )
         
         # Get full property details
@@ -288,6 +285,12 @@ async def export_verification_report_xlsx(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Verification not found"
+            )
+
+        if current_user["role"] == UserRole.EMPLOYEE.value and verification.get("rm_id") != current_user["user_id"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to export this verification report"
             )
         
         # Enrich with property, broker and owner
@@ -467,6 +470,12 @@ async def approve_verification(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Verification not found"
             )
+            
+        if verification.get("rm_id") != current_user["user_id"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to approve this verification"
+            )
         
         # Update verification with RM approval
         await db.property_verifications.update_one(
@@ -527,6 +536,12 @@ async def reject_verification(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Verification not found"
             )
+            
+        if verification.get("rm_id") != current_user["user_id"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You are not authorized to reject this verification"
+            )
         
         # Update verification with RM rejection
         await db.property_verifications.update_one(
@@ -586,9 +601,9 @@ async def get_all_brokers(
 ):
     """Get all brokers under this RM."""
     try:
-        # For now, show all brokers (in production, filter by region)
+        # Get brokers assigned to this RM
         cursor = db.users.find(
-            {"role": "broker"},
+            {"role": "broker", "rm_id": current_user["user_id"]},
             {"_id": 0, "password_hash": 0}
         )
         brokers = await cursor.to_list(length=200)
@@ -654,6 +669,12 @@ async def get_broker_portfolio(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Broker not found"
             )
+            
+        if broker.get("rm_id") != current_user["user_id"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This broker is not assigned to you"
+            )
         
         # Get all properties
         property_cursor = db.properties.find({"broker_id": broker_id}, {"_id": 0})
@@ -693,12 +714,36 @@ async def get_properties_not_booked_report(
 ):
     """Get report of active properties with zero bookings."""
     try:
+        # Get my brokers
+        my_brokers = await db.users.find(
+            {"role": "broker", "rm_id": current_user["user_id"]},
+            {"user_id": 1}
+        ).to_list(length=500)
+        my_broker_ids = [b["user_id"] for b in my_brokers]
+
+        # Get my hosts
+        my_hosts = await db.users.find(
+            {"role": "host", "rm_id": current_user["user_id"]},
+            {"user_id": 1}
+        ).to_list(length=1000)
+        my_host_ids = [h["user_id"] for h in my_hosts]
+
         # Build property query
         property_query = {"status": "live"}
         if broker_id:
+            if broker_id not in my_broker_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Broker is not assigned to you"
+                )
             property_query["broker_id"] = broker_id
+        else:
+            property_query["$or"] = [
+                {"broker_id": {"$in": my_broker_ids}},
+                {"owner_id": {"$in": my_host_ids}}
+            ]
         
-        # Get all live properties
+        # Get all matching live properties
         property_cursor = db.properties.find(property_query, {"_id": 0})
         properties = await property_cursor.to_list(length=500)
         
@@ -750,10 +795,34 @@ async def export_properties_not_booked_csv(
 ):
     """Export properties not booked report as CSV."""
     try:
+        # Get my brokers
+        my_brokers = await db.users.find(
+            {"role": "broker", "rm_id": current_user["user_id"]},
+            {"user_id": 1}
+        ).to_list(length=500)
+        my_broker_ids = [b["user_id"] for b in my_brokers]
+
+        # Get my hosts
+        my_hosts = await db.users.find(
+            {"role": "host", "rm_id": current_user["user_id"]},
+            {"user_id": 1}
+        ).to_list(length=1000)
+        my_host_ids = [h["user_id"] for h in my_hosts]
+
         # Get report data
         property_query = {"status": "live"}
         if broker_id:
+            if broker_id not in my_broker_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Broker is not assigned to you"
+                )
             property_query["broker_id"] = broker_id
+        else:
+            property_query["$or"] = [
+                {"broker_id": {"$in": my_broker_ids}},
+                {"owner_id": {"$in": my_host_ids}}
+            ]
         
         property_cursor = db.properties.find(property_query, {"_id": 0})
         properties = await property_cursor.to_list(length=500)
@@ -822,7 +891,7 @@ async def get_broker_portfolio_summary(
 ):
     """Get summary report of all brokers' portfolios."""
     try:
-        broker_cursor = db.users.find({"role": "broker"}, {"_id": 0})
+        broker_cursor = db.users.find({"role": "broker", "rm_id": current_user["user_id"]}, {"_id": 0})
         brokers = await broker_cursor.to_list(length=200)
         
         summary = []

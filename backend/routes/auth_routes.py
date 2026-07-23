@@ -883,19 +883,28 @@ async def login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends(get_d
 
 @router.post("/admin-login", response_model=TokenResponse)
 async def admin_login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends(get_db)):
-    """Login admin using ADMIN_EMAIL and ADMIN_PASSWORD from environment."""
+    """Login any active admin.
+
+    Admins created from the Admin Dashboard authenticate against their stored
+    password hash. The ADMIN_EMAIL/ADMIN_PASSWORD env pair remains as a
+    bootstrap fallback for the default setup admin.
+    """
     try:
         admin_email = _env("ADMIN_EMAIL").lower()
         admin_password = _env("ADMIN_PASSWORD")
         email = credentials.email.strip().lower()
 
-        if not admin_email or not admin_password:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Admin login is not configured",
-            )
+        db_admin = await db.users.find_one({"email": email, "role": UserRole.ADMIN.value}, {"_id": 0})
+        if db_admin:
+            if not db_admin.get("is_active", True):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Admin account is deactivated",
+                )
+            if verify_password(credentials.password, db_admin.get("password_hash", "")):
+                return _user_token_response(db_admin)
 
-        if email != admin_email or not secrets.compare_digest(credentials.password, admin_password):
+        if not admin_email or not admin_password or email != admin_email or not secrets.compare_digest(credentials.password, admin_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid admin email or password",

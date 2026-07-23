@@ -1,20 +1,18 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart' as dio;
 import '../../config.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/verification_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
 import '../../models/property_model.dart';
-import '../auth/login_screen.dart';
 import '../shared/app_logo.dart';
 
 class BrokerDashboardScreen extends StatefulWidget {
-  const BrokerDashboardScreen({super.key});
+  final String initialTab;
+
+  const BrokerDashboardScreen({super.key, this.initialTab = 'overview'});
 
   @override
   State<BrokerDashboardScreen> createState() => _BrokerDashboardScreenState();
@@ -22,7 +20,7 @@ class BrokerDashboardScreen extends StatefulWidget {
 
 class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
   final ApiService _apiService = ApiService();
-  String _activeTab = 'overview';
+  late String _activeTab;
   bool _isLoading = false;
 
   // Data states
@@ -52,6 +50,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _activeTab = widget.initialTab;
     _refreshData();
   }
 
@@ -134,14 +133,22 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
       final payload = {
         'full_name': _leadNameController.text.trim(),
         'phone': _leadPhoneController.text.trim(),
-        'email': _leadEmailController.text.trim().isEmpty ? null : _leadEmailController.text.trim(),
+        'email': _leadEmailController.text.trim().isEmpty
+            ? null
+            : _leadEmailController.text.trim(),
         'city': _leadCityController.text.trim(),
         'property_type': _leadPropertyType,
-        'from_date': _leadFromDate != null ? DateFormat('yyyy-MM-dd').format(_leadFromDate!) : null,
-        'to_date': _leadToDate != null ? DateFormat('yyyy-MM-dd').format(_leadToDate!) : null,
+        'from_date': _leadFromDate != null
+            ? DateFormat('yyyy-MM-dd').format(_leadFromDate!)
+            : null,
+        'to_date': _leadToDate != null
+            ? DateFormat('yyyy-MM-dd').format(_leadToDate!)
+            : null,
         'property_id': _leadSelectedPropertyId,
         'property_title': _leadSelectedPropertyTitle,
-        'notes': _leadNotesController.text.trim().isEmpty ? null : _leadNotesController.text.trim(),
+        'notes': _leadNotesController.text.trim().isEmpty
+            ? null
+            : _leadNotesController.text.trim(),
       };
 
       final res = await _apiService.dio.post('/broker/leads', data: payload);
@@ -199,52 +206,17 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final authProvider = Provider.of<AuthProvider>(context);
-    final user = authProvider.currentUser;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: Row(
+        title: const Row(
           children: [
-            const AppLogo(height: 24, tintColor: Colors.black, framed: false),
-            const SizedBox(width: 10),
-            Text(
-              'Broker Portal',
-              style: textTheme.displayMedium?.copyWith(
-                color: AppTheme.charcoal,
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
+            AppLogo(height: 24, tintColor: Colors.black, framed: false),
           ],
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          Center(
-            child: Text(
-              user?.fullName.split(' ').first ?? 'Broker',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications_none_outlined, color: AppTheme.charcoal),
-            onPressed: () {},
-          ),
-          IconButton(
-            tooltip: 'Sign Out',
-            icon: const Icon(Icons.logout, color: AppTheme.primary, size: 20),
-            onPressed: () {
-              authProvider.logout();
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            },
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: _refreshData,
@@ -253,35 +225,27 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Operational Command',
+                    'Broker Dashboard',
                     style: textTheme.displayMedium?.copyWith(
                       fontSize: 28,
                       fontWeight: FontWeight.w900,
                       color: AppTheme.charcoal,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'GLOBAL OVERVIEW OF YOUR OWNER NETWORK AND PROPERTIES',
-                    style: textTheme.labelLarge?.copyWith(
-                      color: AppTheme.charcoalMuted,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
                 ],
               ),
             ),
             const SizedBox(height: 8),
-            _buildTabBar(),
             Expanded(
               child: _isLoading
-                  ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppTheme.primary))
                   : SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(16.0),
@@ -290,69 +254,6 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTabBar() {
-    final tabs = [
-      {'id': 'overview', 'label': 'OVERVIEW', 'icon': Icons.dashboard_outlined},
-      {'id': 'owners', 'label': 'MY OWNERS', 'icon': Icons.people_outline},
-      {'id': 'properties', 'label': 'PROPERTIES', 'icon': Icons.business_outlined},
-      {'id': 'verifications', 'label': 'VERIFICATIONS', 'icon': Icons.verified_user_outlined},
-      {'id': 'leads', 'label': 'LEADS', 'icon': Icons.track_changes_outlined},
-      {'id': 'commissions', 'label': 'COMMISSIONS', 'icon': Icons.monetization_on_outlined},
-    ];
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        children: tabs.map((tab) {
-          final isSelected = _activeTab == tab['id'];
-          return Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: ChoiceChip(
-              label: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    tab['icon'] as IconData,
-                    size: 14,
-                    color: isSelected ? Colors.white : AppTheme.charcoalMuted,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    tab['label'] as String,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
-                      color: isSelected ? Colors.white : AppTheme.charcoalLight,
-                    ),
-                  ),
-                ],
-              ),
-              selected: isSelected,
-              selectedColor: AppTheme.charcoal,
-              backgroundColor: AppTheme.white,
-              side: BorderSide(
-                color: isSelected ? Colors.transparent : AppTheme.border,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              onSelected: (selected) {
-                if (selected) {
-                  setState(() {
-                    _activeTab = tab['id'] as String;
-                  });
-                  _refreshData();
-                }
-              },
-            ),
-          );
-        }).toList(),
       ),
     );
   }
@@ -388,19 +289,17 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Stats scroll
-        SizedBox(
-          height: 140,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _buildStatCard('My Owners', ownersCount.toString(), null),
-              _buildStatCard('Total Properties', propCount.toString(), '$liveProp Live'),
-              _buildStatCard('Pending Verifications', pendingVerify.toString(), null),
-              _buildStatCard('Total Commission', '₹${(totalComm / 100).toStringAsFixed(0)}', '₹${(paidComm / 100).toStringAsFixed(0)} Paid'),
-            ],
-          ),
-        ),
+        _buildStatsGrid([
+          _buildStatCard('My Hosts', ownersCount.toString(), null),
+          _buildStatCard(
+              'Total Properties', propCount.toString(), '$liveProp Live'),
+          _buildStatCard(
+              'Pending Verifications', pendingVerify.toString(), null),
+          _buildStatCard(
+              'Total Commission',
+              '₹${(totalComm / 100).toStringAsFixed(0)}',
+              '₹${(paidComm / 100).toStringAsFixed(0)} Paid'),
+        ]),
         const SizedBox(height: 24),
         // System Shortcuts
         Container(
@@ -465,11 +364,30 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
     );
   }
 
+  Widget _buildStatsGrid(List<Widget> cards) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 12.0;
+        final crossAxisCount = constraints.maxWidth >= 600 ? 4 : 2;
+        final cardWidth =
+            (constraints.maxWidth - spacing * (crossAxisCount - 1)) /
+                crossAxisCount;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: cards
+              .map((card) => SizedBox(width: cardWidth, child: card))
+              .toList(),
+        );
+      },
+    );
+  }
+
   Widget _buildStatCard(String label, String value, String? subtext) {
     return Container(
-      width: 150,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(16),
+      height: 120,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -485,24 +403,40 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
               color: AppTheme.stone,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.bar_chart, color: AppTheme.primary, size: 20),
+            child:
+                const Icon(Icons.bar_chart, color: AppTheme.primary, size: 18),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 value,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.charcoal),
+                style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.charcoal),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               Text(
                 label,
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+                style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.charcoalMuted),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               if (subtext != null) ...[
                 const SizedBox(height: 4),
                 Text(
                   subtext,
-                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: AppTheme.secondary),
+                  style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.secondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ],
@@ -512,7 +446,8 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
     );
   }
 
-  Widget _buildShortcutButton(String label, IconData icon, Color iconColor, VoidCallback onTap) {
+  Widget _buildShortcutButton(
+      String label, IconData icon, Color iconColor, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
       child: Container(
@@ -547,18 +482,22 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
     );
   }
 
-  // 2. MY OWNERS
+  // 2. MY HOSTS
   Widget _buildOwnersContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Owner Network',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.charcoal),
+          'Host Network',
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal),
         ),
         const SizedBox(height: 16),
         _owners.isEmpty
-            ? _buildEmptyState(Icons.people_outline, 'No Owners Assigned', 'You haven\'t been assigned any owners yet.')
+            ? _buildEmptyState(Icons.people_outline, 'No Hosts Assigned',
+                'You haven\'t been assigned any hosts yet.')
             : ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -584,107 +523,150 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            CircleAvatar(
-                              radius: 28,
-                              backgroundImage: NetworkImage(owner['profile_image'] ??
-                                  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e'),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        owner['full_name'] ?? 'Owner',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: isKycApproved ? AppTheme.secondary.withOpacity(0.1) : Colors.amber.withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(12),
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              CircleAvatar(
+                                radius: 28,
+                                backgroundImage: NetworkImage(owner[
+                                        'profile_image'] ??
+                                    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e'),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          owner['full_name'] ?? 'Host',
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 16),
                                         ),
-                                        child: Text(
-                                          'KYC: ${owner['kyc_status']?.toString().toUpperCase()}',
-                                          style: TextStyle(
-                                            color: isKycApproved ? AppTheme.secondary : Colors.amber[800],
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w900,
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: isKycApproved
+                                                ? AppTheme.secondary
+                                                    .withOpacity(0.1)
+                                                : Colors.amber.withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            'KYC: ${owner['kyc_status']?.toString().toUpperCase()}',
+                                            style: TextStyle(
+                                              color: isKycApproved
+                                                  ? AppTheme.secondary
+                                                  : Colors.amber[800],
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.w900,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(owner['email'] ?? '', style: const TextStyle(fontSize: 12, color: AppTheme.charcoalMuted)),
-                                  Text(owner['phone'] ?? '', style: const TextStyle(fontSize: 12, color: AppTheme.charcoalMuted)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(owner['email'] ?? '',
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppTheme.charcoalMuted)),
+                                    Text(owner['phone'] ?? '',
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppTheme.charcoalMuted)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12.0),
+                            child: Divider(color: AppTheme.stone, height: 1),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('City / Location',
+                                      style: TextStyle(
+                                          fontSize: 9,
+                                          color: AppTheme.charcoalMuted,
+                                          fontWeight: FontWeight.bold)),
+                                  Text(owner['city'] ?? 'Not Specified',
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold)),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12.0),
-                          child: Divider(color: AppTheme.stone, height: 1),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('City / Location', style: TextStyle(fontSize: 9, color: AppTheme.charcoalMuted, fontWeight: FontWeight.bold)),
-                                Text(owner['city'] ?? 'Not Specified', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                const Text('Registration Payment', style: TextStyle(fontSize: 9, color: AppTheme.charcoalMuted, fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 2),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: isPaid ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(4),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  const Text('Registration Payment',
+                                      style: TextStyle(
+                                          fontSize: 9,
+                                          color: AppTheme.charcoalMuted,
+                                          fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 2),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: isPaid
+                                          ? Colors.green.withOpacity(0.1)
+                                          : Colors.red.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      isPaid ? 'PAID' : 'UNPAID',
+                                      style: TextStyle(
+                                          color: isPaid
+                                              ? Colors.green
+                                              : Colors.red,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold),
+                                    ),
                                   ),
-                                  child: Text(
-                                    isPaid ? 'PAID' : 'UNPAID',
-                                    style: TextStyle(color: isPaid ? Colors.green : Colors.red, fontSize: 9, fontWeight: FontWeight.bold),
-                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.stone,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: AppTheme.border),
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: AppTheme.stone,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: AppTheme.border),
+                                child: Text(
+                                  '${owner['property_count'] ?? 0} Assets',
+                                  style: const TextStyle(
+                                      color: AppTheme.primary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900),
+                                ),
                               ),
-                              child: Text(
-                                '${owner['property_count'] ?? 0} Assets',
-                                style: const TextStyle(color: AppTheme.primary, fontSize: 10, fontWeight: FontWeight.w900),
-                              ),
-                            ),
-                            if (formattedDate.isNotEmpty)
-                              Text('Registered: $formattedDate', style: const TextStyle(fontSize: 10, color: AppTheme.charcoalMuted)),
-                          ],
-                        ),
-                      ],
-                    ),
+                              if (formattedDate.isNotEmpty)
+                                Text('Registered: $formattedDate',
+                                    style: const TextStyle(
+                                        fontSize: 10,
+                                        color: AppTheme.charcoalMuted)),
+                            ],
+                          ),
+                        ],
                       ),
+                    ),
                   );
                 },
               ),
@@ -699,11 +681,15 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
       children: [
         const Text(
           'Property Inventory',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.charcoal),
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal),
         ),
         const SizedBox(height: 16),
         _properties.isEmpty
-            ? _buildEmptyState(Icons.business_outlined, 'No Properties', 'No properties are registered under your portfolio.')
+            ? _buildEmptyState(Icons.business_outlined, 'No Properties',
+                'No properties are registered under your portfolio.')
             : ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -719,75 +705,100 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            _getImageUrl(prop['images'] != null && prop['images'].isNotEmpty ? prop['images'][0] : null),
-                            width: 80,
-                            height: 80,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, _, __) => Container(
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              _getImageUrl(prop['images'] != null &&
+                                      prop['images'].isNotEmpty
+                                  ? prop['images'][0]
+                                  : null),
                               width: 80,
                               height: 80,
-                              color: AppTheme.stone,
-                              child: const Icon(Icons.image_not_supported, color: AppTheme.charcoalMuted),
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, _, __) => Container(
+                                width: 80,
+                                height: 80,
+                                color: AppTheme.stone,
+                                child: const Icon(Icons.image_not_supported,
+                                    color: AppTheme.charcoalMuted),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                prop['title'] ?? '',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(Icons.location_on_outlined, size: 10, color: AppTheme.charcoalMuted),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    '${prop['city']} · ${prop['category']}',
-                                    style: const TextStyle(fontSize: 10, color: AppTheme.charcoalMuted, fontWeight: FontWeight.bold),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    '₹${(prop['price_per_night'] as num?)?.toStringAsFixed(0)} /night',
-                                    style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 13),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: isLive ? AppTheme.secondary.withOpacity(0.1) : Colors.amber.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  prop['title'] ?? '',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.location_on_outlined,
+                                        size: 10,
+                                        color: AppTheme.charcoalMuted),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      '${prop['city']} · ${prop['category']}',
+                                      style: const TextStyle(
+                                          fontSize: 10,
+                                          color: AppTheme.charcoalMuted,
+                                          fontWeight: FontWeight.bold),
                                     ),
-                                    child: Text(
-                                      prop['status']?.toString().toUpperCase().replaceAll('_', ' ') ?? '',
-                                      style: TextStyle(
-                                        color: isLive ? AppTheme.secondary : Colors.amber[800],
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.w900,
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      '₹${(prop['price_per_night'] as num?)?.toStringAsFixed(0)} /night',
+                                      style: const TextStyle(
+                                          color: AppTheme.primary,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isLive
+                                            ? AppTheme.secondary
+                                                .withOpacity(0.1)
+                                            : Colors.amber.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        prop['status']
+                                                ?.toString()
+                                                .toUpperCase()
+                                                .replaceAll('_', ' ') ??
+                                            '',
+                                        style: TextStyle(
+                                          color: isLive
+                                              ? AppTheme.secondary
+                                              : Colors.amber[800],
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w900,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                );
+                  );
                 },
               ),
       ],
@@ -801,7 +812,10 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
       children: [
         const Text(
           'Inspection Queue',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.charcoal),
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal),
         ),
         const SizedBox(height: 16),
         _verifications.isEmpty
@@ -818,7 +832,8 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                   final task = _verifications[idx];
                   final pd = task['property_details'] ?? {};
                   final status = task['status'] ?? 'pending';
-                  final isPending = status.toLowerCase() == 'pending' || status.toLowerCase() == 'in_progress';
+                  final isPending = status.toLowerCase() == 'pending' ||
+                      status.toLowerCase() == 'in_progress';
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 16),
@@ -827,74 +842,100 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.network(
-                                _getImageUrl(pd['images'] != null && pd['images'].isNotEmpty ? pd['images'][0] : null),
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, _, __) => Container(
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  _getImageUrl(pd['images'] != null &&
+                                          pd['images'].isNotEmpty
+                                      ? pd['images'][0]
+                                      : null),
                                   width: 80,
                                   height: 80,
-                                  color: AppTheme.stone,
-                                  child: const Icon(Icons.image_not_supported, color: AppTheme.charcoalMuted),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, _, __) => Container(
+                                    width: 80,
+                                    height: 80,
+                                    color: AppTheme.stone,
+                                    child: const Icon(Icons.image_not_supported,
+                                        color: AppTheme.charcoalMuted),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    pd['title'] ?? 'Property Verification',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text('City: ${pd['city'] ?? 'N/A'}', style: const TextStyle(fontSize: 11, color: AppTheme.charcoalLight)),
-                                  Text('Address: ${pd['address'] ?? 'N/A'}', style: const TextStyle(fontSize: 11, color: AppTheme.charcoalMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: isPending ? Colors.amber.withOpacity(0.1) : AppTheme.secondary.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      pd['title'] ?? 'Property Verification',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
-                                    child: Text(
-                                      status.toUpperCase().replaceAll('_', ' '),
-                                      style: TextStyle(
-                                        color: isPending ? Colors.amber[800] : AppTheme.secondary,
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.w900,
+                                    const SizedBox(height: 4),
+                                    Text('City: ${pd['city'] ?? 'N/A'}',
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: AppTheme.charcoalLight)),
+                                    Text('Address: ${pd['address'] ?? 'N/A'}',
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            color: AppTheme.charcoalMuted),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: isPending
+                                            ? Colors.amber.withOpacity(0.1)
+                                            : AppTheme.secondary
+                                                .withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        status
+                                            .toUpperCase()
+                                            .replaceAll('_', ' '),
+                                        style: TextStyle(
+                                          color: isPending
+                                              ? Colors.amber[800]
+                                              : AppTheme.secondary,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w900,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (isPending) ...[
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () =>
+                                    _openVerificationSubmissionSheet(
+                                        task['property_id']),
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppTheme.primary),
+                                icon: const Icon(Icons.camera_alt_outlined,
+                                    size: 18),
+                                label: const Text('SUBMIT VISIT REPORT'),
                               ),
                             ),
-                          ],
-                        ),
-                        if (isPending) ...[
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () => _openVerificationSubmissionSheet(task['property_id']),
-                              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
-                              icon: const Icon(Icons.camera_alt_outlined, size: 18),
-                              label: const Text('SUBMIT VISIT REPORT'),
-                            ),
-                          ),
-                        ]
-                      ],
-                    ),
+                          ]
+                        ],
                       ),
+                    ),
                   );
                 },
               ),
@@ -932,7 +973,10 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
           children: [
             const Text(
               'Lead Pipeline',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.charcoal),
+              style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: AppTheme.charcoal),
             ),
             OutlinedButton.icon(
               onPressed: () {
@@ -949,7 +993,8 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
         if (_showAddLeadForm) _buildAddLeadForm(),
         const SizedBox(height: 16),
         _leads.isEmpty
-            ? _buildEmptyState(Icons.track_changes, 'No Active Leads', 'Start your outreach to populate your pipeline.')
+            ? _buildEmptyState(Icons.track_changes, 'No Active Leads',
+                'Start your outreach to populate your pipeline.')
             : ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -965,100 +1010,128 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              lead['full_name'] ?? 'Ramesh Kumar',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            PopupMenuButton<String>(
-                              onSelected: (val) => _updateLeadStatus(lead['lead_id'], val),
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(value: 'new', child: Text('New')),
-                                const PopupMenuItem(value: 'contacted', child: Text('Contacted')),
-                                const PopupMenuItem(value: 'converted', child: Text('Converted')),
-                                const PopupMenuItem(value: 'lost', child: Text('Lost')),
-                              ],
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: status == 'converted'
-                                      ? Colors.green.withOpacity(0.1)
-                                      : status == 'lost'
-                                          ? Colors.red.withOpacity(0.1)
-                                          : Colors.blue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      status.toUpperCase(),
-                                      style: TextStyle(
-                                        color: status == 'converted'
-                                            ? Colors.green
-                                            : status == 'lost'
-                                                ? Colors.red
-                                                : Colors.blue,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                lead['full_name'] ?? 'Ramesh Kumar',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                              PopupMenuButton<String>(
+                                onSelected: (val) =>
+                                    _updateLeadStatus(lead['lead_id'], val),
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                      value: 'new', child: Text('New')),
+                                  const PopupMenuItem(
+                                      value: 'contacted',
+                                      child: Text('Contacted')),
+                                  const PopupMenuItem(
+                                      value: 'converted',
+                                      child: Text('Converted')),
+                                  const PopupMenuItem(
+                                      value: 'lost', child: Text('Lost')),
+                                ],
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: status == 'converted'
+                                        ? Colors.green.withOpacity(0.1)
+                                        : status == 'lost'
+                                            ? Colors.red.withOpacity(0.1)
+                                            : Colors.blue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        status.toUpperCase(),
+                                        style: TextStyle(
+                                          color: status == 'converted'
+                                              ? Colors.green
+                                              : status == 'lost'
+                                                  ? Colors.red
+                                                  : Colors.blue,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Icon(Icons.arrow_drop_down, size: 12, color: AppTheme.charcoalLight),
-                                  ],
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.arrow_drop_down,
+                                          size: 12,
+                                          color: AppTheme.charcoalLight),
+                                    ],
+                                  ),
                                 ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text('Phone: ${lead['phone'] ?? ''}',
+                              style: const TextStyle(
+                                  fontSize: 12, color: AppTheme.charcoalLight)),
+                          if (lead['email'] != null)
+                            Text('Email: ${lead['email']}',
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.charcoalLight)),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on_outlined,
+                                  size: 12, color: AppTheme.charcoalMuted),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${lead['city']} · ${lead['property_type']?.toString().toUpperCase()}',
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.charcoalLight),
+                              ),
+                            ],
+                          ),
+                          if (lead['property_title'] != null) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.stone,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.home_outlined,
+                                      size: 12, color: AppTheme.primary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    lead['property_title'],
+                                    style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.primary),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text('Phone: ${lead['phone'] ?? ''}', style: const TextStyle(fontSize: 12, color: AppTheme.charcoalLight)),
-                        if (lead['email'] != null)
-                          Text('Email: ${lead['email']}', style: const TextStyle(fontSize: 12, color: AppTheme.charcoalLight)),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.charcoalMuted),
-                            const SizedBox(width: 4),
+                          if (lead['notes'] != null) ...[
+                            const SizedBox(height: 8),
                             Text(
-                              '${lead['city']} · ${lead['property_type']?.toString().toUpperCase()}',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.charcoalLight),
+                              '"${lead['notes']}"',
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontStyle: FontStyle.italic,
+                                  color: AppTheme.charcoalMuted),
                             ),
                           ],
-                        ),
-                        if (lead['property_title'] != null) ...[
-                          const SizedBox(height: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppTheme.stone,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.home_outlined, size: 12, color: AppTheme.primary),
-                                const SizedBox(width: 4),
-                                Text(
-                                  lead['property_title'],
-                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primary),
-                                ),
-                              ],
-                            ),
-                          ),
                         ],
-                        if (lead['notes'] != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            '"${lead['notes']}"',
-                            style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppTheme.charcoalMuted),
-                          ),
-                        ],
-                      ],
-                    ),
                       ),
+                    ),
                   );
                 },
               ),
@@ -1079,19 +1152,22 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('Add New Lead', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text('Add New Lead',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
             TextFormField(
               controller: _leadNameController,
               decoration: const InputDecoration(labelText: 'Full Name *'),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Name required' : null,
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'Name required' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _leadPhoneController,
               decoration: const InputDecoration(labelText: 'Phone Number *'),
               keyboardType: TextInputType.phone,
-              validator: (v) => v == null || v.trim().isEmpty ? 'Phone required' : null,
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'Phone required' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -1103,16 +1179,20 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
             TextFormField(
               controller: _leadCityController,
               decoration: const InputDecoration(labelText: 'City *'),
-              validator: (v) => v == null || v.trim().isEmpty ? 'City required' : null,
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'City required' : null,
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               value: _leadPropertyType,
               decoration: const InputDecoration(labelText: 'Property Type *'),
               items: const [
-                DropdownMenuItem(value: 'residential', child: Text('Residential')),
-                DropdownMenuItem(value: 'commercial', child: Text('Commercial')),
-                DropdownMenuItem(value: 'event_venue', child: Text('Event Venue')),
+                DropdownMenuItem(
+                    value: 'residential', child: Text('Residential')),
+                DropdownMenuItem(
+                    value: 'commercial', child: Text('Commercial')),
+                DropdownMenuItem(
+                    value: 'event_venue', child: Text('Event Venue')),
               ],
               onChanged: (val) {
                 if (val != null) {
@@ -1132,7 +1212,8 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                       final dt = await showDatePicker(
                         context: context,
                         initialDate: DateTime.now(),
-                        firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                        firstDate:
+                            DateTime.now().subtract(const Duration(days: 30)),
                         lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
                       if (dt != null) {
@@ -1174,7 +1255,9 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
               value: _leadSelectedPropertyId,
               decoration: const InputDecoration(labelText: 'Selected Property'),
               items: [
-                const DropdownMenuItem(value: null, child: Text('No Specific Property / General Lead')),
+                const DropdownMenuItem(
+                    value: null,
+                    child: Text('No Specific Property / General Lead')),
                 ..._properties.map((p) => DropdownMenuItem(
                       value: p['property_id'],
                       child: Text(p['title'] ?? ''),
@@ -1184,7 +1267,8 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                 setState(() {
                   _leadSelectedPropertyId = val;
                   if (val != null) {
-                    final p = _properties.firstWhere((p) => p['property_id'] == val);
+                    final p =
+                        _properties.firstWhere((p) => p['property_id'] == val);
                     _leadSelectedPropertyTitle = p['title'];
                   } else {
                     _leadSelectedPropertyTitle = null;
@@ -1220,21 +1304,33 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
       children: [
         const Text(
           'Financial Performance',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: AppTheme.charcoal),
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal),
         ),
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _buildFinanceCard('Total Revenue', '₹${(totalEarned / 100).toStringAsFixed(0)}', Colors.green)),
+            Expanded(
+                child: _buildFinanceCard(
+                    'Total Revenue',
+                    '₹${(totalEarned / 100).toStringAsFixed(0)}',
+                    Colors.green)),
             const SizedBox(width: 8),
-            Expanded(child: _buildFinanceCard('Settled', '₹${(paid / 100).toStringAsFixed(0)}', Colors.blue)),
+            Expanded(
+                child: _buildFinanceCard('Settled',
+                    '₹${(paid / 100).toStringAsFixed(0)}', Colors.blue)),
             const SizedBox(width: 8),
-            Expanded(child: _buildFinanceCard('Pending', '₹${(pending / 100).toStringAsFixed(0)}', Colors.amber)),
+            Expanded(
+                child: _buildFinanceCard('Pending',
+                    '₹${(pending / 100).toStringAsFixed(0)}', Colors.amber)),
           ],
         ),
         const SizedBox(height: 24),
         _commissions.isEmpty
-            ? _buildEmptyState(Icons.monetization_on_outlined, 'No Commissions', 'No commission logs available.')
+            ? _buildEmptyState(Icons.monetization_on_outlined, 'No Commissions',
+                'No commission logs available.')
             : ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -1250,41 +1346,48 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Booking ID: ${item['booking_id']}',
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Source: ${item['booking_source']}',
-                              style: const TextStyle(fontSize: 10, color: AppTheme.charcoalMuted),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              '₹${((item['commission_amount'] ?? 0) / 100).toStringAsFixed(0)}',
-                              style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold, fontSize: 14),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              isPaid ? 'Paid' : 'Pending',
-                              style: TextStyle(
-                                color: isPaid ? Colors.green : Colors.amber[800],
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Booking ID: ${item['booking_id']}',
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 13),
                               ),
-                            ),
-                          ],
-                        )
-                      ],
-                    ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Source: ${item['booking_source']}',
+                                style: const TextStyle(
+                                    fontSize: 10,
+                                    color: AppTheme.charcoalMuted),
+                              ),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '₹${((item['commission_amount'] ?? 0) / 100).toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                    color: AppTheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                isPaid ? 'Paid' : 'Pending',
+                                style: TextStyle(
+                                  color:
+                                      isPaid ? Colors.green : Colors.amber[800],
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          )
+                        ],
                       ),
+                    ),
                   );
                 },
               )
@@ -1303,11 +1406,16 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.charcoalMuted, fontWeight: FontWeight.bold)),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 10,
+                  color: AppTheme.charcoalMuted,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(
             value,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
+            style: TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),
@@ -1324,13 +1432,17 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.charcoal),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 12, color: AppTheme.charcoalMuted),
+              style:
+                  const TextStyle(fontSize: 12, color: AppTheme.charcoalMuted),
             ),
           ],
         ),
@@ -1351,10 +1463,12 @@ class VerificationSubmissionSheet extends StatefulWidget {
   });
 
   @override
-  State<VerificationSubmissionSheet> createState() => _VerificationSubmissionSheetState();
+  State<VerificationSubmissionSheet> createState() =>
+      _VerificationSubmissionSheetState();
 }
 
-class _VerificationSubmissionSheetState extends State<VerificationSubmissionSheet> {
+class _VerificationSubmissionSheetState
+    extends State<VerificationSubmissionSheet> {
   final ApiService _apiService = ApiService();
   bool _isLoading = false;
   bool _isLoadingProperty = true;
@@ -1437,7 +1551,8 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
 
   Future<void> _pickImageAndUpload(ImageSource source) async {
     final picker = ImagePicker();
-    final XFile? file = await picker.pickImage(source: source, imageQuality: 80);
+    final XFile? file =
+        await picker.pickImage(source: source, imageQuality: 80);
     if (file == null) return;
 
     setState(() {
@@ -1476,7 +1591,8 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
         });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Photo uploaded and added to visit report!')),
+            const SnackBar(
+                content: Text('Photo uploaded and added to visit report!')),
           );
         }
       }
@@ -1498,7 +1614,8 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
   Future<void> _submitVerification() async {
     if (_uploadedPhotos.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please upload at least one geo-tagged photo.')),
+        const SnackBar(
+            content: Text('Please upload at least one geo-tagged photo.')),
       );
       return;
     }
@@ -1520,13 +1637,16 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
       String compiledRemarks = _remarksController.text.trim();
       if (reasonParts.isNotEmpty) {
         if (compiledRemarks.isNotEmpty) compiledRemarks += "\n\n";
-        compiledRemarks += "CHECKLIST DISCREPANCIES / REASONS:\n${reasonParts.join("\n")}";
+        compiledRemarks +=
+            "CHECKLIST DISCREPANCIES / REASONS:\n${reasonParts.join("\n")}";
       }
 
       final payload = {
         'checklist': _checklist,
         'geo_tagged_photos': _uploadedPhotos,
-        'video_url': _videoUrlController.text.trim().isEmpty ? null : _videoUrlController.text.trim(),
+        'video_url': _videoUrlController.text.trim().isEmpty
+            ? null
+            : _videoUrlController.text.trim(),
         'broker_remarks': compiledRemarks.isEmpty ? null : compiledRemarks,
       };
 
@@ -1538,7 +1658,8 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Verification submitted successfully!')),
+            const SnackBar(
+                content: Text('Verification submitted successfully!')),
           );
           widget.onSubmitted();
         }
@@ -1558,13 +1679,18 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
     }
   }
 
-  Widget _buildDetailColumn(String label, String value, {bool isPrice = false}) {
+  Widget _buildDetailColumn(String label, String value,
+      {bool isPrice = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label.toUpperCase(),
-          style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppTheme.charcoalMuted, letterSpacing: 0.5),
+          style: const TextStyle(
+              fontSize: 8,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.charcoalMuted,
+              letterSpacing: 0.5),
         ),
         const SizedBox(height: 4),
         Text(
@@ -1584,7 +1710,8 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
   Widget _buildChecklistCard(String key, String title) {
     bool isChecked = _checklist[key] ?? false;
     Color cardBg = isChecked ? Colors.white : const Color(0xFFFAF2F2);
-    Color borderColor = isChecked ? const Color(0xFFE5E5E5) : const Color(0xFFF0C2C2);
+    Color borderColor =
+        isChecked ? const Color(0xFFE5E5E5) : const Color(0xFFF0C2C2);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1615,7 +1742,10 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.charcoal),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      color: AppTheme.charcoal),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1628,7 +1758,10 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
             decoration: BoxDecoration(
               color: isChecked ? Colors.grey.shade50 : Colors.white,
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: isChecked ? Colors.grey.shade200 : const Color(0xFFF2D1D1)),
+              border: Border.all(
+                  color: isChecked
+                      ? Colors.grey.shade200
+                      : const Color(0xFFF2D1D1)),
             ),
             child: TextFormField(
               controller: _reasonControllers[key],
@@ -1637,7 +1770,8 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
               decoration: const InputDecoration(
                 hintText: 'Reason for not checking...',
                 hintStyle: TextStyle(color: Colors.grey, fontSize: 10),
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 border: InputBorder.none,
                 focusedBorder: InputBorder.none,
                 enabledBorder: InputBorder.none,
@@ -1656,7 +1790,10 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
       children: [
         const Text(
           'ADDED PHOTOS',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10, color: AppTheme.charcoalMuted),
+          style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 10,
+              color: AppTheme.charcoalMuted),
         ),
         const SizedBox(height: 8),
         SizedBox(
@@ -1692,7 +1829,10 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                             padding: const EdgeInsets.all(4),
                             child: Text(
                               "Lat: ${photo['latitude']}\nLng: ${photo['longitude']}",
-                              style: const TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  fontSize: 8,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
@@ -1711,7 +1851,8 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                                 shape: BoxShape.circle,
                               ),
                               padding: const EdgeInsets.all(4),
-                              child: const Icon(Icons.close, size: 12, color: Colors.white),
+                              child: const Icon(Icons.close,
+                                  size: 12, color: Colors.white),
                             ),
                           ),
                         ),
@@ -1726,8 +1867,6 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
       ],
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -1772,20 +1911,25 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                     children: [
                       Text(
                         'Submit Visit – $propTitle',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.charcoal),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Property ID: $propId',
-                        style: const TextStyle(fontSize: 11, color: AppTheme.charcoalMuted),
+                        style: const TextStyle(
+                            fontSize: 11, color: AppTheme.charcoalMuted),
                       ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.cancel_outlined, color: AppTheme.charcoalLight, size: 24),
+                  icon: const Icon(Icons.cancel_outlined,
+                      color: AppTheme.charcoalLight, size: 24),
                   onPressed: () => Navigator.pop(context),
                 )
               ],
@@ -1812,14 +1956,21 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                       children: [
                         const Text(
                           'Property Details',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.charcoal),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: AppTheme.charcoal),
                         ),
                         const SizedBox(height: 12),
-                        
+
                         // Images row
                         const Text(
                           'PROPERTY IMAGES',
-                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppTheme.charcoalMuted, letterSpacing: 0.5),
+                          style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.charcoalMuted,
+                              letterSpacing: 0.5),
                         ),
                         const SizedBox(height: 6),
                         p != null && p.images.isNotEmpty
@@ -1830,7 +1981,8 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                                   itemCount: p.images.length,
                                   itemBuilder: (context, idx) {
                                     return Padding(
-                                      padding: const EdgeInsets.only(right: 8.0),
+                                      padding:
+                                          const EdgeInsets.only(right: 8.0),
                                       child: ClipRRect(
                                         borderRadius: BorderRadius.circular(8),
                                         child: Image.network(
@@ -1842,7 +1994,10 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                                             width: 110,
                                             height: 80,
                                             color: AppTheme.stone,
-                                            child: const Icon(Icons.broken_image, size: 20, color: AppTheme.charcoalMuted),
+                                            child: const Icon(
+                                                Icons.broken_image,
+                                                size: 20,
+                                                color: AppTheme.charcoalMuted),
                                           ),
                                         ),
                                       ),
@@ -1857,58 +2012,86 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Center(
-                                  child: Icon(Icons.image_not_supported, color: AppTheme.charcoalMuted),
+                                  child: Icon(Icons.image_not_supported,
+                                      color: AppTheme.charcoalMuted),
                                 ),
                               ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Info Grid
                         Row(
                           children: [
-                            Expanded(child: _buildDetailColumn('Category', p?.category ?? 'N/A')),
-                            Expanded(child: _buildDetailColumn('BHK Type', p?.bhkType ?? 'N/A')),
-                            Expanded(child: _buildDetailColumn('Price Per Night', '₹${p?.pricePerNight.toStringAsFixed(0) ?? 'N/A'}', isPrice: true)),
-                            Expanded(child: _buildDetailColumn('Location', p?.city ?? 'N/A')),
+                            Expanded(
+                                child: _buildDetailColumn(
+                                    'Category', p?.category ?? 'N/A')),
+                            Expanded(
+                                child: _buildDetailColumn(
+                                    'BHK Type', p?.bhkType ?? 'N/A')),
+                            Expanded(
+                                child: _buildDetailColumn('Price Per Night',
+                                    '₹${p?.pricePerNight.toStringAsFixed(0) ?? 'N/A'}',
+                                    isPrice: true)),
+                            Expanded(
+                                child: _buildDetailColumn(
+                                    'Location', p?.city ?? 'N/A')),
                           ],
                         ),
-                        
+
                         const SizedBox(height: 12),
                         const Divider(color: Color(0xFFEEEEEE)),
                         const SizedBox(height: 8),
-                        
+
                         // Full Address
                         const Text(
                           'FULL ADDRESS',
-                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppTheme.charcoalMuted, letterSpacing: 0.5),
+                          style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.charcoalMuted,
+                              letterSpacing: 0.5),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           p?.address ?? 'N/A',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                          style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.charcoal),
                         ),
-                        
+
                         const SizedBox(height: 12),
-                        
+
                         // Description
                         const Text(
                           'DESCRIPTION',
-                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppTheme.charcoalMuted, letterSpacing: 0.5),
+                          style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.charcoalMuted,
+                              letterSpacing: 0.5),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           p?.description ?? 'N/A',
-                          style: const TextStyle(fontSize: 11, color: AppTheme.charcoalLight, height: 1.4),
+                          style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.charcoalLight,
+                              height: 1.4),
                           maxLines: 4,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        
+
                         const SizedBox(height: 16),
-                        
+
                         // Amenities Wrap
                         const Text(
                           'AMENITIES',
-                          style: TextStyle(fontSize: 8, fontWeight: FontWeight.w800, color: AppTheme.charcoalMuted, letterSpacing: 0.5),
+                          style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.charcoalMuted,
+                              letterSpacing: 0.5),
                         ),
                         const SizedBox(height: 8),
                         p != null && p.amenities.isNotEmpty
@@ -1917,20 +2100,29 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                                 runSpacing: 6,
                                 children: p.amenities.map((amenity) {
                                   return Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFF9F9F9),
                                       borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(color: const Color(0xFFEEEEEE)),
+                                      border: Border.all(
+                                          color: const Color(0xFFEEEEEE)),
                                     ),
                                     child: Text(
-                                      amenity.replaceAll('_', ' ').toUpperCase(),
-                                      style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                                      amenity
+                                          .replaceAll('_', ' ')
+                                          .toUpperCase(),
+                                      style: const TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.charcoal),
                                     ),
                                   );
                                 }).toList(),
                               )
-                            : const Text('No Amenities listed', style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic)),
+                            : const Text('No Amenities listed',
+                                style: TextStyle(
+                                    fontSize: 11, fontStyle: FontStyle.italic)),
                       ],
                     ),
                   ),
@@ -1940,10 +2132,13 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                   // --- Inspection Checklist Section ---
                   const Text(
                     'Inspection Checklist',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: AppTheme.charcoal),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   // Grid of Checklist
                   GridView.count(
                     crossAxisCount: 2,
@@ -1953,16 +2148,26 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                     crossAxisSpacing: 8,
                     childAspectRatio: 1.2,
                     children: [
-                      _buildChecklistCard('property_owner_verification', 'Property Owner Verification'),
-                      _buildChecklistCard('ownership_verification', 'Ownership Verification'),
-                      _buildChecklistCard('property_location_verification', 'Property Location Verification'),
-                      _buildChecklistCard('amenities_verification', 'Amenities Verification'),
-                      _buildChecklistCard('safety_security_verification', 'Safety & Security Verification'),
-                      _buildChecklistCard('property_photos_verification', 'Property Photos Verification'),
-                      _buildChecklistCard('pricing_verification', 'Pricing Verification'),
-                      _buildChecklistCard('guest_capacity_rules', 'Guest Capacity & Rules'),
-                      _buildChecklistCard('legal_compliance_verification', 'Legal & Compliance Verification'),
-                      _buildChecklistCard('employee_verification_declaration', 'Employee Verification Declaration'),
+                      _buildChecklistCard('property_owner_verification',
+                          'Property Owner Verification'),
+                      _buildChecklistCard(
+                          'ownership_verification', 'Ownership Verification'),
+                      _buildChecklistCard('property_location_verification',
+                          'Property Location Verification'),
+                      _buildChecklistCard(
+                          'amenities_verification', 'Amenities Verification'),
+                      _buildChecklistCard('safety_security_verification',
+                          'Safety & Security Verification'),
+                      _buildChecklistCard('property_photos_verification',
+                          'Property Photos Verification'),
+                      _buildChecklistCard(
+                          'pricing_verification', 'Pricing Verification'),
+                      _buildChecklistCard(
+                          'guest_capacity_rules', 'Guest Capacity & Rules'),
+                      _buildChecklistCard('legal_compliance_verification',
+                          'Legal & Compliance Verification'),
+                      _buildChecklistCard('employee_verification_declaration',
+                          'Employee Verification Declaration'),
                     ],
                   ),
 
@@ -1971,48 +2176,64 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                   // --- Geo-tagged Photos Section ---
                   const Text(
                     'Geo-tagged Photos',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: AppTheme.charcoal),
                   ),
                   const SizedBox(height: 6),
                   const Text(
                     'Photo (Add high-res geotagged photos)',
-                    style: TextStyle(fontSize: 10, color: AppTheme.charcoalMuted),
+                    style:
+                        TextStyle(fontSize: 10, color: AppTheme.charcoalMuted),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   // Buttons Choose File & Open Camera
                   Row(
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed: _isUploadingPhoto ? null : () => _pickImageAndUpload(ImageSource.gallery),
+                          onPressed: _isUploadingPhoto
+                              ? null
+                              : () => _pickImageAndUpload(ImageSource.gallery),
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: AppTheme.stone),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
-                          child: const Text('Choose File', style: TextStyle(color: AppTheme.charcoal, fontWeight: FontWeight.bold)),
+                          child: const Text('Choose File',
+                              style: TextStyle(
+                                  color: AppTheme.charcoal,
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: _isUploadingPhoto ? null : () => _pickImageAndUpload(ImageSource.camera),
-                          icon: const Icon(Icons.camera_alt_outlined, size: 16, color: Colors.white),
-                          label: const Text('Open Camera', style: TextStyle(fontWeight: FontWeight.bold)),
+                          onPressed: _isUploadingPhoto
+                              ? null
+                              : () => _pickImageAndUpload(ImageSource.camera),
+                          icon: const Icon(Icons.camera_alt_outlined,
+                              size: 16, color: Colors.white),
+                          label: const Text('Open Camera',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFC26D5C), // Brownish red
+                            backgroundColor:
+                                const Color(0xFFC26D5C), // Brownish red
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                           ),
                         ),
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  
+
                   // Latitude & Longitude Inputs
                   Row(
                     children: [
@@ -2024,8 +2245,11 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                             labelText: 'Latitude',
                             filled: true,
                             fillColor: const Color(0xFFF5F5F5),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none),
                           ),
                           keyboardType: TextInputType.number,
                         ),
@@ -2039,23 +2263,27 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                             labelText: 'Longitude',
                             filled: true,
                             fillColor: const Color(0xFFF5F5F5),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide.none),
                           ),
                           keyboardType: TextInputType.number,
                         ),
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 8),
                   const Text(
                     'Tip: allow location access when prompted – we auto-fill coordinates from your device GPS.',
-                    style: TextStyle(fontSize: 9, color: AppTheme.charcoalMuted),
+                    style:
+                        TextStyle(fontSize: 9, color: AppTheme.charcoalMuted),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   if (_isUploadingPhoto) ...[
                     const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -2063,18 +2291,22 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                         SizedBox(
                           height: 16,
                           width: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppTheme.primary),
                         ),
                         SizedBox(width: 8),
                         Text(
                           'Uploading and geotagging photo...',
-                          style: TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.primary,
+                              fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
                   ],
-                  
+
                   // Uploaded photos list
                   if (_uploadedPhotos.isNotEmpty) ...[
                     _buildUploadedPhotosList(),
@@ -2087,7 +2319,10 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                   // --- Video walkthrough URL ---
                   const Text(
                     'Video walkthrough URL (If Applicable)',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.charcoal),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                        color: AppTheme.charcoal),
                   ),
                   const SizedBox(height: 6),
                   TextFormField(
@@ -2097,8 +2332,11 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                       hintText: 'e.g. YouTube or Drive URL',
                       filled: true,
                       fillColor: const Color(0xFFF5F5F5),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none),
                     ),
                   ),
 
@@ -2107,7 +2345,10 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                   // --- Broker Remarks ---
                   const Text(
                     'Broker remarks (If Applicable)',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.charcoal),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                        color: AppTheme.charcoal),
                   ),
                   const SizedBox(height: 6),
                   TextFormField(
@@ -2118,8 +2359,11 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                       hintText: 'Enter site observations...',
                       filled: true,
                       fillColor: const Color(0xFFF5F5F5),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none),
                     ),
                   ),
 
@@ -2133,29 +2377,37 @@ class _VerificationSubmissionSheetState extends State<VerificationSubmissionShee
                         onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: AppTheme.stone),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 14),
                         ),
                         child: const Text(
                           'Cancel',
-                          style: TextStyle(color: AppTheme.charcoalLight, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              color: AppTheme.charcoalLight,
+                              fontWeight: FontWeight.bold),
                         ),
                       ),
                       const SizedBox(width: 12),
                       ElevatedButton(
                         onPressed: _isLoading ? null : _submitVerification,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFC26D5C), // Brownish red
+                          backgroundColor:
+                              const Color(0xFFC26D5C), // Brownish red
                           foregroundColor: Colors.white,
                           elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 14),
                         ),
                         child: _isLoading
                             ? const SizedBox(
                                 height: 16,
                                 width: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
                               )
                             : const Text(
                                 'Submit Verification',

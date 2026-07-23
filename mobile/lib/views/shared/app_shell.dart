@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/property_provider.dart';
 import '../../models/property_model.dart';
 import '../../services/localization_service.dart';
@@ -12,7 +13,13 @@ import '../guest/guest_bookings_screen.dart';
 import '../guest/landing_screen.dart';
 import '../guest/property_detail_screen.dart';
 import '../guest/ai_chat_screen.dart';
+import '../host/host_bookings_screen.dart';
 import '../host/host_dashboard_screen.dart';
+import '../host/host_my_properties_screen.dart';
+import '../host/host_payouts_screen.dart';
+import 'app_logo.dart';
+import 'notifications_screen.dart';
+import 'support_tickets_screen.dart';
 import '../broker/broker_dashboard_screen.dart';
 import '../employee/employee_dashboard_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
@@ -37,6 +44,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   late int _selectedIndex;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -58,6 +66,11 @@ class _AppShellState extends State<AppShell> {
         );
       });
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<NotificationProvider>(context, listen: false)
+          .loadUnreadCount();
+    });
   }
 
   void _onItemTapped(int index) {
@@ -66,9 +79,14 @@ class _AppShellState extends State<AppShell> {
     });
   }
 
+  void _openHostMenu() {
+    _scaffoldKey.currentState?.openDrawer();
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
+    final notificationProvider = Provider.of<NotificationProvider>(context);
     final user = auth.currentUser;
 
     // Screens based on roles
@@ -90,11 +108,16 @@ class _AppShellState extends State<AppShell> {
         ),
       ];
       navItems = const [
-        BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'Explore'),
-        BottomNavigationBarItem(icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
-        BottomNavigationBarItem(icon: Icon(Icons.luggage_outlined), label: 'Trips'),
-        BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline_rounded), label: 'Log In'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.search_rounded), label: 'Explore'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.luggage_outlined), label: 'Trips'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
+        BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline_rounded), label: 'Log In'),
       ];
     } else {
       final String role = user.role;
@@ -107,11 +130,17 @@ class _AppShellState extends State<AppShell> {
           _ProfileTab(user: user, auth: auth),
         ];
         navItems = [
-          const BottomNavigationBarItem(icon: Icon(Icons.search_rounded), label: 'Explore'),
-          const BottomNavigationBarItem(icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
-          const BottomNavigationBarItem(icon: Icon(Icons.luggage_outlined), label: 'Trips'),
-          const BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
-          BottomNavigationBarItem(icon: const Icon(Icons.person_outline_rounded), label: user.fullName.split(' ')[0]),
+          const BottomNavigationBarItem(
+              icon: Icon(Icons.search_rounded), label: 'Explore'),
+          const BottomNavigationBarItem(
+              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+          const BottomNavigationBarItem(
+              icon: Icon(Icons.luggage_outlined), label: 'Trips'),
+          const BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
+          BottomNavigationBarItem(
+              icon: const Icon(Icons.person_outline_rounded),
+              label: user.fullName.split(' ')[0]),
         ];
       } else if (role == 'host') {
         screens = [
@@ -119,8 +148,10 @@ class _AppShellState extends State<AppShell> {
           _ProfileTab(user: user, auth: auth),
         ];
         navItems = const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'broker') {
         screens = [
@@ -128,8 +159,10 @@ class _AppShellState extends State<AppShell> {
           _ProfileTab(user: user, auth: auth),
         ];
         navItems = const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'employee') {
         screens = [
@@ -137,8 +170,10 @@ class _AppShellState extends State<AppShell> {
           _ProfileTab(user: user, auth: auth),
         ];
         navItems = const [
-          BottomNavigationBarItem(icon: Icon(Icons.rate_review_outlined), label: 'Reviews'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.rate_review_outlined), label: 'Reviews'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'admin') {
         screens = [
@@ -146,8 +181,10 @@ class _AppShellState extends State<AppShell> {
           _ProfileTab(user: user, auth: auth),
         ];
         navItems = const [
-          BottomNavigationBarItem(icon: Icon(Icons.admin_panel_settings_outlined), label: 'Admin'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.admin_panel_settings_outlined), label: 'Admin'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else {
         screens = [
@@ -155,8 +192,10 @@ class _AppShellState extends State<AppShell> {
           _ProfileTab(user: user, auth: auth),
         ];
         navItems = const [
-          BottomNavigationBarItem(icon: Icon(Icons.error_outline), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.error_outline), label: 'Home'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       }
     }
@@ -166,7 +205,32 @@ class _AppShellState extends State<AppShell> {
       _selectedIndex = 0;
     }
 
+    final bool isHost = user?.role == 'host';
+    final bool isBroker = user?.role == 'broker';
+
     return Scaffold(
+      key: _scaffoldKey,
+      drawer: isHost
+          ? _HostProfileDrawer(
+              user: user!,
+              auth: auth,
+              unreadCount: notificationProvider.unreadCount,
+              onDashboard: () {
+                Navigator.pop(context);
+                setState(() => _selectedIndex = 0);
+              },
+            )
+          : isBroker
+              ? _BrokerProfileDrawer(
+                  user: user!,
+                  auth: auth,
+                  unreadCount: notificationProvider.unreadCount,
+                  onDashboard: () {
+                    Navigator.pop(context);
+                    setState(() => _selectedIndex = 0);
+                  },
+                )
+              : null,
       body: screens[_selectedIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -176,7 +240,13 @@ class _AppShellState extends State<AppShell> {
         ),
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
+          onTap: (index) {
+            if ((isHost || isBroker) && index == 1) {
+              _openHostMenu();
+              return;
+            }
+            _onItemTapped(index);
+          },
           selectedItemColor: AppTheme.primary,
           unselectedItemColor: AppTheme.charcoalMuted,
           backgroundColor: AppTheme.white,
@@ -191,6 +261,503 @@ class _AppShellState extends State<AppShell> {
             fontWeight: FontWeight.w500,
           ),
           items: navItems,
+        ),
+      ),
+    );
+  }
+}
+
+class _HostProfileDrawer extends StatelessWidget {
+  final dynamic user;
+  final AuthProvider auth;
+  final int unreadCount;
+  final VoidCallback onDashboard;
+
+  const _HostProfileDrawer({
+    required this.user,
+    required this.auth,
+    required this.unreadCount,
+    required this.onDashboard,
+  });
+
+  String get _initials {
+    final parts = user.fullName
+        .toString()
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return 'HM';
+    if (parts.length == 1) {
+      return parts.first.substring(0, 1).toUpperCase();
+    }
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+  }
+
+  void _push(BuildContext context, Widget screen) {
+    Navigator.pop(context);
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    Navigator.pop(context);
+    await auth.logout();
+    if (!context.mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final drawerWidth = screenWidth < 420 ? screenWidth * 0.82 : 360.0;
+
+    return Drawer(
+      width: drawerWidth,
+      backgroundColor: AppTheme.white,
+      elevation: 18,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.horizontal(right: Radius.circular(30)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 22, 18, 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const AppLogo(
+                    height: 28,
+                    tintColor: Colors.black,
+                    framed: false,
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: AppTheme.primaryHover,
+                    iconSize: 30,
+                    tooltip: 'Close',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 42),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 31,
+                    backgroundColor: AppTheme.primary,
+                    child: Text(
+                      _initials,
+                      style: GoogleFonts.manrope(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.fullName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            color: AppTheme.charcoal,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          user.email,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            color: AppTheme.charcoalMuted,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 34),
+              const Divider(height: 1, color: AppTheme.border),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _HostDrawerItem(
+                      icon: Icons.dashboard_outlined,
+                      label: 'Dashboard',
+                      selected: true,
+                      onTap: onDashboard,
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.home_outlined,
+                      label: 'My Properties',
+                      onTap: () => _push(
+                        context,
+                        const HostMyPropertiesScreen(),
+                      ),
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.calendar_month_outlined,
+                      label: 'Bookings',
+                      onTap: () => _push(context, const HostBookingsScreen()),
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.account_balance_wallet_outlined,
+                      label: 'Payouts',
+                      onTap: () => _push(context, const HostPayoutsScreen()),
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.notifications_none_rounded,
+                      label: 'Notifications',
+                      badge: unreadCount > 0 ? unreadCount.toString() : null,
+                      onTap: () => _push(context, const NotificationsScreen()),
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      label: 'Support',
+                      onTap: () => _push(context, const SupportTicketsScreen()),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      child: Divider(height: 1, color: AppTheme.border),
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.person_outline_rounded,
+                      label: 'Profile',
+                      onTap: () =>
+                          _push(context, _ProfileTab(user: user, auth: auth)),
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.logout_rounded,
+                      label: 'Logout',
+                      destructive: true,
+                      onTap: () => _logout(context),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BrokerProfileDrawer extends StatelessWidget {
+  final dynamic user;
+  final AuthProvider auth;
+  final int unreadCount;
+  final VoidCallback onDashboard;
+
+  const _BrokerProfileDrawer({
+    required this.user,
+    required this.auth,
+    required this.unreadCount,
+    required this.onDashboard,
+  });
+
+  List<Map<String, dynamic>> get _sections => const [
+        {
+          'tab': 'owners',
+          'label': 'My Hosts',
+          'icon': Icons.people_outline,
+        },
+        {
+          'tab': 'properties',
+          'label': 'Properties',
+          'icon': Icons.business_outlined,
+        },
+        {
+          'tab': 'verifications',
+          'label': 'Verifications',
+          'icon': Icons.verified_user_outlined,
+        },
+        {
+          'tab': 'leads',
+          'label': 'Leads',
+          'icon': Icons.track_changes_outlined,
+        },
+        {
+          'tab': 'commissions',
+          'label': 'Commissions',
+          'icon': Icons.monetization_on_outlined,
+        },
+      ];
+
+  String get _initials {
+    final parts = user.fullName
+        .toString()
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (parts.isEmpty) return 'BR';
+    if (parts.length == 1) {
+      return parts.first.substring(0, 1).toUpperCase();
+    }
+    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+  }
+
+  void _push(BuildContext context, Widget screen) {
+    Navigator.pop(context);
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    Navigator.pop(context);
+    await auth.logout();
+    if (!context.mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final drawerWidth = screenWidth < 420 ? screenWidth * 0.82 : 360.0;
+
+    return Drawer(
+      width: drawerWidth,
+      backgroundColor: AppTheme.white,
+      elevation: 18,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.horizontal(right: Radius.circular(30)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 22, 18, 18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const AppLogo(
+                    height: 28,
+                    tintColor: Colors.black,
+                    framed: false,
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                    color: AppTheme.primaryHover,
+                    iconSize: 30,
+                    tooltip: 'Close',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 42),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 31,
+                    backgroundColor: AppTheme.primary,
+                    child: Text(
+                      _initials,
+                      style: GoogleFonts.manrope(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.fullName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            color: AppTheme.charcoal,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          user.email,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            color: AppTheme.charcoalMuted,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 34),
+              const Divider(height: 1, color: AppTheme.border),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView(
+                  padding: EdgeInsets.zero,
+                  children: [
+                    _HostDrawerItem(
+                      icon: Icons.dashboard_outlined,
+                      label: 'Dashboard',
+                      selected: true,
+                      onTap: onDashboard,
+                    ),
+                    ..._sections.map(
+                      (section) => _HostDrawerItem(
+                        icon: section['icon'] as IconData,
+                        label: section['label'] as String,
+                        onTap: () => _push(
+                          context,
+                          BrokerDashboardScreen(
+                            initialTab: section['tab'] as String,
+                          ),
+                        ),
+                      ),
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.notifications_none_rounded,
+                      label: 'Notifications',
+                      badge: unreadCount > 0 ? unreadCount.toString() : null,
+                      onTap: () => _push(context, const NotificationsScreen()),
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      label: 'Support',
+                      onTap: () => _push(context, const SupportTicketsScreen()),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      child: Divider(height: 1, color: AppTheme.border),
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.person_outline_rounded,
+                      label: 'Profile',
+                      onTap: () =>
+                          _push(context, _ProfileTab(user: user, auth: auth)),
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.logout_rounded,
+                      label: 'Logout',
+                      destructive: true,
+                      onTap: () => _logout(context),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HostDrawerItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final bool destructive;
+  final String? badge;
+  final VoidCallback onTap;
+
+  const _HostDrawerItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.selected = false,
+    this.destructive = false,
+    this.badge,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = destructive
+        ? Colors.redAccent
+        : selected
+            ? AppTheme.primary
+            : AppTheme.charcoal;
+    final iconColor = destructive
+        ? Colors.redAccent
+        : selected
+            ? AppTheme.primary
+            : AppTheme.charcoalLight;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Material(
+        color: selected
+            ? AppTheme.primary.withValues(alpha: 0.10)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: SizedBox(
+            height: 54,
+            child: Row(
+              children: [
+                const SizedBox(width: 18),
+                Icon(icon, color: iconColor, size: 25),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      color: foreground,
+                      fontSize: 17,
+                      fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (badge != null)
+                  Container(
+                    height: 32,
+                    constraints: const BoxConstraints(minWidth: 32),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withValues(alpha: 0.28),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      badge!,
+                      style: GoogleFonts.manrope(
+                        color: Colors.redAccent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                const SizedBox(width: 18),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -276,7 +843,8 @@ class _ProfileTab extends StatelessWidget {
             ),
             const Spacer(),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.secondary),
+              style:
+                  ElevatedButton.styleFrom(backgroundColor: AppTheme.secondary),
               onPressed: () {
                 auth.logout();
                 Navigator.pushAndRemoveUntil(
@@ -298,7 +866,8 @@ class _UnauthenticatedPlaceholder extends StatelessWidget {
   final String title;
   final String message;
 
-  const _UnauthenticatedPlaceholder({required this.title, required this.message});
+  const _UnauthenticatedPlaceholder(
+      {required this.title, required this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -463,7 +1032,8 @@ class _WishlistsTab extends StatelessWidget {
               ),
             )
           : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
               itemCount: wishlist.length,
               itemBuilder: (context, index) {
                 final PropertyModel prop = wishlist[index];
@@ -475,7 +1045,8 @@ class _WishlistsTab extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => PropertyDetailScreen(propertyId: prop.propertyId),
+                          builder: (context) =>
+                              PropertyDetailScreen(propertyId: prop.propertyId),
                         ),
                       );
                     },
@@ -498,7 +1069,8 @@ class _WishlistsTab extends StatelessWidget {
                                   height: 200,
                                   width: double.infinity,
                                   color: AppTheme.stone,
-                                  child: const Icon(Icons.home, size: 40, color: AppTheme.secondary),
+                                  child: const Icon(Icons.home,
+                                      size: 40, color: AppTheme.secondary),
                                 ),
                               ),
                             ),
@@ -507,7 +1079,8 @@ class _WishlistsTab extends StatelessWidget {
                               right: 12,
                               child: GestureDetector(
                                 onTap: () {
-                                  propertyProvider.toggleWishlist(prop.propertyId);
+                                  propertyProvider
+                                      .toggleWishlist(prop.propertyId);
                                 },
                                 child: Container(
                                   padding: const EdgeInsets.all(6),
@@ -543,7 +1116,8 @@ class _WishlistsTab extends StatelessWidget {
                             ),
                             Row(
                               children: [
-                                const Icon(Icons.star_rounded, size: 18, color: Colors.black87),
+                                const Icon(Icons.star_rounded,
+                                    size: 18, color: Colors.black87),
                                 const SizedBox(width: 2),
                                 Text(
                                   rating.toStringAsFixed(2),
@@ -584,6 +1158,7 @@ class _WishlistsTab extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _MessagesTab extends StatelessWidget {
   final bool isAuthenticated;
   const _MessagesTab({required this.isAuthenticated});

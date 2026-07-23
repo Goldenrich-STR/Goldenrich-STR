@@ -84,8 +84,11 @@ class Property(BaseModel):
     # Pricing
     price_per_night: Optional[float] = None
     pricing_cycle: Optional[str] = "day"
+    pricing_display_mode: Optional[str] = "per_night"
     price_per_week: Optional[float] = None
     price_per_month: Optional[float] = None
+    per_person_price: Optional[float] = None
+    extra_guest_price: Optional[float] = None
     minimum_stay_days: int = 1
     
     # Amenities
@@ -113,6 +116,7 @@ class Property(BaseModel):
     # Status
     status: PropertyStatus = PropertyStatus.DRAFT
     verification_remarks: Optional[str] = None
+    is_edited: Optional[bool] = False
     
     # Availability
     blocked_dates: List[str] = []  # ISO date strings
@@ -155,8 +159,11 @@ class PropertyCreate(BaseModel):
     max_guests: int = 6
     price_per_night: Optional[float] = None
     pricing_cycle: Optional[str] = "day"
+    pricing_display_mode: Optional[str] = "per_night"
     price_per_week: Optional[float] = None
     price_per_month: Optional[float] = None
+    per_person_price: Optional[float] = None
+    extra_guest_price: Optional[float] = None
     minimum_stay_days: int = 1
     amenities: List[str] = []
     images: List[str] = []
@@ -195,8 +202,11 @@ class PropertyUpdate(BaseModel):
     max_guests: Optional[int] = None
     price_per_night: Optional[float] = None
     pricing_cycle: Optional[str] = None
+    pricing_display_mode: Optional[str] = None
     price_per_week: Optional[float] = None
     price_per_month: Optional[float] = None
+    per_person_price: Optional[float] = None
+    extra_guest_price: Optional[float] = None
     minimum_stay_days: Optional[int] = None
     amenities: Optional[List[str]] = None
     images: Optional[List[str]] = None
@@ -217,3 +227,4 @@ class PropertyUpdate(BaseModel):
     packages: Optional[list] = None
     subscription_id: Optional[str] = None
     blocked_dates: Optional[List[str]] = None
+    is_edited: Optional[bool] = None

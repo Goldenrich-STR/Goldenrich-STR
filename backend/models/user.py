@@ -39,6 +39,10 @@ class User(BaseModel):
     birthdate: Optional[str] = None
     uid: Optional[str] = None
     profile_image: Optional[str] = None
+    admin_delete_protected: bool = False
+    admin_scope: Optional[str] = None
+    department: Optional[str] = None
+    access_controls: List[str] = []
     
     # Host-specific fields
     lg_code: Optional[str] = None  # Broker LG Code
@@ -84,6 +88,10 @@ class UserCreate(BaseModel):
     lg_code: Optional[str] = None
     employee_code: Optional[str] = None
     profile_image: Optional[str] = None
+    admin_delete_protected: bool = False
+    admin_scope: Optional[str] = None
+    department: Optional[str] = None
+    access_controls: List[str] = []
     terms_accepted: bool = False
 
 class UserUpdate(BaseModel):
@@ -102,6 +110,10 @@ class UserUpdate(BaseModel):
     broker_id: Optional[str] = None
     rm_id: Optional[str] = None
     profile_image: Optional[str] = None
+    admin_delete_protected: Optional[bool] = None
+    admin_scope: Optional[str] = None
+    department: Optional[str] = None
+    access_controls: Optional[List[str]] = None
     is_active: Optional[bool] = None
 
 class UserLogin(BaseModel):

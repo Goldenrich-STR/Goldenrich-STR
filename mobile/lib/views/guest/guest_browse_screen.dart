@@ -423,8 +423,7 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
         itemCount: properties.length,
         itemBuilder: (context, index) {
           final prop = properties[index];
-          // Mock a beautiful rating (e.g. between 4.70 and 5.00) based on title hash
-          final double rating = 4.7 + (prop.title.hashCode % 31) * 0.01;
+          final hasRating = prop.rating != null && prop.rating! > 0;
           
           return Container(
             width: 230,
@@ -463,7 +462,7 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
                         ),
                       ),
                       // "Guest favourite" badge (white rounded chip)
-                      if (rating >= 4.8)
+                      if (hasRating && prop.rating! >= 4.8)
                         Positioned(
                           top: 12,
                           left: 12,
@@ -563,20 +562,21 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
                           ],
                         ],
                       ),
-                      Row(
-                        children: [
-                          const Icon(Icons.star_rounded, size: 16, color: Colors.black87),
-                          const SizedBox(width: 2),
-                          Text(
-                            rating.toStringAsFixed(2),
-                            style: GoogleFonts.manrope(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                      if (hasRating)
+                        Row(
+                          children: [
+                            const Icon(Icons.star_rounded, size: 16, color: Colors.black87),
+                            const SizedBox(width: 2),
+                            Text(
+                              prop.rating!.toStringAsFixed(1),
+                              style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
                     ],
                   ),
                 ],

@@ -473,6 +473,10 @@ export const accountAPI = {
     apiClient.post('/admin/account/payouts/process-eligible'),
   sweepEligibility: () =>
     apiClient.post('/admin/account/payouts/sweep-eligibility'),
+  runAutoPayout: () =>
+    apiClient.post('/admin/account/payouts/run-auto'),
+  autoPayoutStatus: () =>
+    apiClient.get('/admin/account/payouts/auto-status'),
   listRefunds: (params = {}) =>
     apiClient.get('/admin/account/refunds', { params }),
   initiateRefund: (bookingId, payload) =>
@@ -543,6 +547,11 @@ export const cmsAPI = {
   deleteContent: (contentId) => apiClient.delete(`/cms/admin/content/${contentId}`),
   getContactMessages: (params) => apiClient.get('/cms/admin/contact-messages', { params }),
   updateContactMessage: (id, payload) => apiClient.patch(`/cms/admin/contact-messages/${id}`, payload),
+};
+
+export const supportTicketAPI = {
+  getAdminTickets: (params = {}) => apiClient.get('/support-tickets/admin', { params }),
+  updateTicket: (ticketId, payload) => apiClient.patch(`/support-tickets/admin/${ticketId}`, payload),
 };
 
 // Coupon API

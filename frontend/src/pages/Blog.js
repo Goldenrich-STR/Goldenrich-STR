@@ -10,6 +10,35 @@ import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
 
+const blogSchema = {
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "@id": "https://x-space360.in/blog#blog",
+  url: "https://x-space360.in/blog",
+  name: "X-Space360 Travel and Property Blog",
+  description:
+    "Read travel guides, property booking tips, host resources, workspace insights and event venue ideas.",
+  publisher: {
+    "@id": "https://x-space360.in/#organization",
+  },
+  inLanguage: "en-IN",
+};
+
+const SITE_URL = "https://x-space360.in";
+const DEFAULT_BLOG_KEYWORDS = [
+  "travel blog India",
+  "villa booking guide",
+  "host tips",
+  "workspace guide",
+  "event venue guide",
+];
+
+const toAbsoluteUrl = (url) => {
+  if (!url) return `${SITE_URL}/images/xspace360-og-image.jpg`;
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${SITE_URL}/${String(url).replace(/^\/+/, "")}`;
+};
+
 const DEFAULT_BLOG_POSTS = [
   {
     id: 'p1',
@@ -92,6 +121,13 @@ const Blog = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cmsContent, setCmsContent] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
+  const [wishlist] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('guest_wishlist')) || [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [footerPopup, setFooterPopup] = useState(null);
 
   useEffect(() => {
@@ -189,13 +225,57 @@ const Blog = () => {
         content: post.content || '',
         date: post.date || 'June 2026',
         author: post.author || 'Editorial Desk',
+        authorName: post.authorName || post.author || 'Editorial Desk',
+        category: post.category || 'Travel and Property',
         image_url: post.image_url || post.img || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+        featuredImage: post.featuredImage || post.image_url || post.img || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+        metaTitle: post.metaTitle || post.seo?.title || post.title || 'X-Space360 Blog',
+        metaDescription: post.metaDescription || post.seo?.description || post.excerpt || 'Read travel guides, property booking tips, host resources, workspace insights and event venue ideas.',
+        keywords: Array.isArray(post.keywords) ? post.keywords : (Array.isArray(post.seo?.keywords) ? post.seo.keywords : DEFAULT_BLOG_KEYWORDS),
+        publishedAt: post.publishedAt || post.date || new Date().toISOString(),
+        updatedAt: post.updatedAt || post.updated_at || post.publishedAt || post.date,
+        slug: post.slug,
         read_time: post.read_time || '5 min read'
       }))
       : DEFAULT_BLOG_POSTS;
   }, [cmsContent]);
 
   const getPostSlug = (post) => post?.slug || slugify(post?.title) || post?.id;
+  const getPostKeywords = (post) => {
+    if (Array.isArray(post?.keywords) && post.keywords.length) return post.keywords;
+    if (typeof post?.keywords === 'string' && post.keywords.trim()) {
+      return post.keywords.split(',').map(keyword => keyword.trim()).filter(Boolean);
+    }
+    return DEFAULT_BLOG_KEYWORDS;
+  };
+
+  const selectedPostCanonicalPath = selectedPost ? `/blog/${getPostSlug(selectedPost)}` : '/blog';
+  const selectedPostImage = selectedPost ? toAbsoluteUrl(selectedPost.featuredImage || selectedPost.image_url) : null;
+  const selectedPostKeywords = selectedPost ? getPostKeywords(selectedPost) : DEFAULT_BLOG_KEYWORDS;
+  const blogPostingSchema = selectedPost ? {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "@id": `${SITE_URL}${selectedPostCanonicalPath}#article`,
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `${SITE_URL}${selectedPostCanonicalPath}`,
+    },
+    headline: selectedPost.title,
+    description: selectedPost.metaDescription || selectedPost.excerpt,
+    image: [selectedPostImage],
+    datePublished: selectedPost.publishedAt || selectedPost.date,
+    dateModified: selectedPost.updatedAt || selectedPost.publishedAt || selectedPost.date,
+    author: {
+      "@type": "Person",
+      name: selectedPost.authorName || selectedPost.author || "X-Space360 Editor",
+    },
+    publisher: {
+      "@id": "https://x-space360.in/#organization",
+    },
+    articleSection: selectedPost.category || "Travel and Property",
+    keywords: selectedPostKeywords.join(", "),
+    inLanguage: "en-IN",
+  } : null;
 
   useEffect(() => {
     if (!postSlug) {
@@ -228,7 +308,17 @@ const Blog = () => {
 
   return (
     <div className="min-h-screen bg-sand-50 font-sans text-charcoal">
-      <SEO title={`The Journal | X-Space360 Blog`} description="Discover curated perspectives, design tips, and weekend getaway guides." />
+      <SEO
+        title={selectedPost ? (selectedPost.metaTitle || selectedPost.title) : "Travel, Property and Host Guides"}
+        description={selectedPost
+          ? (selectedPost.metaDescription || selectedPost.excerpt || "Read X-Space360 travel, property and host insights.")
+          : "Explore travel guides, villa booking tips, host resources, workspace insights and event venue ideas from X-Space360."}
+        path={selectedPost ? selectedPostCanonicalPath : "/blog"}
+        image={selectedPost ? selectedPostImage : undefined}
+        type={selectedPost ? "article" : "website"}
+        keywords={selectedPost ? selectedPostKeywords : DEFAULT_BLOG_KEYWORDS}
+        schema={selectedPost ? blogPostingSchema : blogSchema}
+      />
 
       {/* Header / Navbar */}
       <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-charcoal px-6 md:px-12 lg:px-20 h-20 bg-white/80 backdrop-blur-md border-b border-stone">
@@ -334,9 +424,9 @@ const Blog = () => {
             >
               Support
             </button>
-            <div className="py-2 border-b border-stone flex items-center justify-between">
-              <span className="text-2xl font-bold">Language</span>
+            <div className="py-2 border-b border-stone flex items-center">
               <LanguageSelector
+                mode="inline"
                 currentLang={lang}
                 onLanguageChange={(newLang) => {
                   setLang(newLang);

@@ -9,10 +9,45 @@ from middleware.auth_middleware import get_current_user, require_role
 from datetime import datetime, timezone
 import asyncio
 import logging
+import math
 import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/properties", tags=["Properties"])
+
+HOST_MANAGE_EDITABLE_STATUSES = {
+    PropertyStatus.PENDING_VERIFICATION.value,
+    PropertyStatus.UNDER_REVIEW.value,
+    PropertyStatus.LIVE.value,
+}
+
+HOST_MANAGE_EDITABLE_FIELDS = {
+    "price_per_night",
+    "pricing_display_mode",
+    "per_person_price",
+    "extra_guest_price",
+    "pricing_cycle",
+    "minimum_stay_days",
+    "house_rules",
+    "pet_friendly",
+    "smoking_allowed",
+    "instant_booking",
+    "has_cook",
+    "cook_price",
+    "has_self_cook",
+    "has_taxi",
+    "veg_price",
+    "non_veg_price",
+    "guest_size",
+    "packages",
+    "check_in_time",
+    "check_out_time",
+    "amenities",
+    "images",
+    "video_url",
+    "youtube_short_url",
+    "youtube_long_url",
+}
 
 async def get_db():
     from server import db_instance
@@ -81,6 +116,9 @@ async def search_properties(
     check_in: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
     check_out: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
     bbox: Optional[str] = Query(None, description="min_lat,min_lng,max_lat,max_lng for map viewport"),
+    latitude: Optional[float] = Query(None, description="Center latitude for radius search"),
+    longitude: Optional[float] = Query(None, description="Center longitude for radius search"),
+    radius_km: Optional[float] = Query(None, gt=0, le=100, description="Radius in kilometers for coordinate search"),
     sort: Optional[str] = Query("recommended", description="recommended | price_asc | price_desc | newest"),
     limit: int = 50,
     skip: int = 0,
@@ -96,14 +134,20 @@ async def search_properties(
         if category:
             query["category"] = category.value
 
-        if city:
-            keyword = re.escape(city.strip())
-            query["$or"] = [
+        radius_search = latitude is not None and longitude is not None and radius_km is not None
+
+        def city_match_conditions(location: str) -> list:
+            keyword = re.escape(location.strip())
+            return [
                 {"city": {"$regex": keyword, "$options": "i"}},
                 {"state": {"$regex": keyword, "$options": "i"}},
                 {"title": {"$regex": keyword, "$options": "i"}},
                 {"address": {"$regex": keyword, "$options": "i"}},
+                {"nearby_places": {"$regex": keyword, "$options": "i"}},
             ]
+
+        if city and not radius_search:
+            query["$or"] = city_match_conditions(city)
 
         if property_type:
             query["property_type"] = property_type
@@ -137,6 +181,12 @@ async def search_properties(
                     query["longitude"] = {"$gte": min_lng, "$lte": max_lng}
             except ValueError:
                 pass
+
+        if radius_search:
+            lat_delta = radius_km / 111.0
+            lng_delta = radius_km / (111.0 * max(math.cos(math.radians(latitude)), 0.01))
+            query["latitude"] = {"$gte": latitude - lat_delta, "$lte": latitude + lat_delta}
+            query["longitude"] = {"$gte": longitude - lng_delta, "$lte": longitude + lng_delta}
 
         # Date availability filter — exclude properties with overlapping confirmed/soft-locked bookings or blocked dates
         if check_in and check_out:
@@ -212,6 +262,56 @@ async def search_properties(
             raw_properties = [p for p in raw_properties if numeric_price(p) >= min_price]
         if max_price is not None:
             raw_properties = [p for p in raw_properties if numeric_price(p) <= max_price]
+
+        if radius_search:
+            def distance_from_center(prop: dict) -> float:
+                try:
+                    prop_lat = float(prop.get("latitude"))
+                    prop_lng = float(prop.get("longitude"))
+                except (TypeError, ValueError):
+                    return float("inf")
+                d_lat = math.radians(prop_lat - latitude)
+                d_lng = math.radians(prop_lng - longitude)
+                lat1 = math.radians(latitude)
+                lat2 = math.radians(prop_lat)
+                a = (
+                    math.sin(d_lat / 2) ** 2
+                    + math.cos(lat1) * math.cos(lat2) * math.sin(d_lng / 2) ** 2
+                )
+                return 6371 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+            raw_properties = [
+                {**p, "distance_km": round(distance_from_center(p), 2)}
+                for p in raw_properties
+                if distance_from_center(p) <= radius_km
+            ]
+
+            if not raw_properties and city:
+                fallback_query = {
+                    key: value
+                    for key, value in query.items()
+                    if key not in ("latitude", "longitude")
+                }
+                fallback_query["$or"] = city_match_conditions(city)
+                raw_properties = await db.properties.find(fallback_query, projection).to_list(length=1000)
+
+                fallback_sub_ids = [p["subscription_id"] for p in raw_properties if p.get("subscription_id")]
+                if fallback_sub_ids:
+                    from datetime import date
+                    today_str = date.today().isoformat()
+                    cursor = db.subscriptions.find({
+                        "subscription_id": {"$in": fallback_sub_ids},
+                        "end_date": {"$lte": today_str}
+                    }, {"subscription_id": 1})
+                    expired_subs = await cursor.to_list(length=len(fallback_sub_ids))
+                    expired_sub_ids = {s["subscription_id"] for s in expired_subs}
+                    if expired_sub_ids:
+                        raw_properties = [p for p in raw_properties if p.get("subscription_id") not in expired_sub_ids]
+
+                if min_price is not None:
+                    raw_properties = [p for p in raw_properties if numeric_price(p) >= min_price]
+                if max_price is not None:
+                    raw_properties = [p for p in raw_properties if numeric_price(p) <= max_price]
 
         if sort == "price_asc":
             raw_properties.sort(key=numeric_price)
@@ -481,6 +581,30 @@ async def get_host_properties(
     try:
         cursor = db.properties.find({"owner_id": current_user["user_id"]}, {"_id": 0}).sort("created_at", -1)
         properties = await cursor.to_list(length=100)
+        sub_ids = [p.get("subscription_id") for p in properties if p.get("subscription_id")]
+        subscriptions = {}
+        plans = {}
+        if sub_ids:
+            sub_rows = await db.subscriptions.find(
+                {"subscription_id": {"$in": sub_ids}},
+                {"_id": 0},
+            ).to_list(length=len(sub_ids))
+            subscriptions = {s.get("subscription_id"): s for s in sub_rows}
+            plan_ids = [s.get("plan_id") for s in sub_rows if s.get("plan_id")]
+            if plan_ids:
+                plan_rows = await db.subscription_plans.find(
+                    {"plan_id": {"$in": plan_ids}},
+                    {"_id": 0},
+                ).to_list(length=len(plan_ids))
+                plans = {p.get("plan_id"): p for p in plan_rows}
+
+        for prop in properties:
+            sub = subscriptions.get(prop.get("subscription_id")) or {}
+            plan = plans.get(sub.get("plan_id")) or {}
+            prop["subscription_plan_name"] = plan.get("plan_name") or sub.get("plan_type") or "Trial"
+            prop["subscription_purchase_date"] = sub.get("start_date") or sub.get("created_at")
+            prop["subscription_renewal_date"] = sub.get("end_date") or sub.get("trial_end_date")
+            prop["subscription_status"] = sub.get("status") or prop.get("subscription_status") or "trial"
         
         return {
             "properties": properties,
@@ -518,8 +642,26 @@ async def update_property(
                 detail="Not authorized to update this property"
             )
         
-        # Update property
+        # Hosts can manage only pricing/rules, amenities, and media after a
+        # property has entered review or gone live. Admins keep full edit access.
         update_data = property_update.model_dump(exclude_unset=True)
+        if (
+            current_user["role"] != UserRole.ADMIN.value
+            and property_dict.get("status") in HOST_MANAGE_EDITABLE_STATUSES
+        ):
+            update_data = {
+                key: value
+                for key, value in update_data.items()
+                if key in HOST_MANAGE_EDITABLE_FIELDS
+            }
+            if not update_data:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Only pricing rules, amenities, and photos can be updated for submitted or live properties",
+                )
+            update_data["status"] = PropertyStatus.LIVE.value
+            update_data["is_edited"] = True
+
         update_data["updated_at"] = datetime.now(timezone.utc)
         
         await db.properties.update_one(

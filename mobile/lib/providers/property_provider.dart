@@ -18,9 +18,12 @@ class PropertyProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.get('/properties/search', queryParameters: params);
+      final response = await _apiService.dio
+          .get('/properties/search', queryParameters: params);
       if (response.statusCode == 200) {
-        final List<dynamic> list = response.data['properties'] ?? response.data['results'] ?? (response.data is List ? response.data : []);
+        final List<dynamic> list = response.data['properties'] ??
+            response.data['results'] ??
+            (response.data is List ? response.data : []);
         _properties = list.map((item) => PropertyModel.fromJson(item)).toList();
       }
     } catch (e) {
@@ -53,12 +56,14 @@ class PropertyProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.get('/properties/host/my-properties');
+      final response =
+          await _apiService.dio.get('/properties/host/my-properties');
       if (response.statusCode == 200) {
-        final List<dynamic> list = response.data is Map 
-            ? (response.data['properties'] ?? []) 
+        final List<dynamic> list = response.data is Map
+            ? (response.data['properties'] ?? [])
             : (response.data ?? []);
-        _hostProperties = list.map((item) => PropertyModel.fromJson(item)).toList();
+        _hostProperties =
+            list.map((item) => PropertyModel.fromJson(item)).toList();
       }
     } catch (e) {
       _hostProperties = [];
@@ -75,7 +80,9 @@ class PropertyProvider with ChangeNotifier {
       final response = await _apiService.dio.post('/properties/', data: data);
       if (response.statusCode == 200 || response.statusCode == 201) {
         await getHostProperties();
-        return response.data['property_id'] ?? response.data['id']?.toString() ?? 'success';
+        return response.data['property_id'] ??
+            response.data['id']?.toString() ??
+            'success';
       }
       return null;
     } catch (e) {
@@ -90,7 +97,8 @@ class PropertyProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/properties/generate-description', data: data);
+      final response = await _apiService.dio
+          .post('/properties/generate-description', data: data);
       if (response.statusCode == 200) {
         return response.data['description'];
       }
@@ -103,11 +111,13 @@ class PropertyProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> updateProperty(String propertyId, Map<String, dynamic> data) async {
+  Future<bool> updateProperty(
+      String propertyId, Map<String, dynamic> data) async {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.patch('/properties/$propertyId', data: data);
+      final response =
+          await _apiService.dio.patch('/properties/$propertyId', data: data);
       if (response.statusCode == 200) {
         await getHostProperties();
         return true;
@@ -125,7 +135,8 @@ class PropertyProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/properties/$propertyId/submit-verification');
+      final response = await _apiService.dio
+          .post('/properties/$propertyId/submit-verification');
       if (response.statusCode == 200) {
         await getHostProperties();
         return true;
@@ -144,7 +155,8 @@ class PropertyProvider with ChangeNotifier {
 
   Future<List<Map<String, dynamic>>> getBlockedDates(String propertyId) async {
     try {
-      final response = await _apiService.dio.get('/calendar/properties/$propertyId/blocked-dates');
+      final response = await _apiService.dio
+          .get('/calendar/properties/$propertyId/blocked-dates');
       if (response.statusCode == 200) {
         final List<dynamic> list = response.data['blocked_dates'] ?? [];
         _blockedDates = List<Map<String, dynamic>>.from(list);
@@ -158,14 +170,17 @@ class PropertyProvider with ChangeNotifier {
   }
 
   Map<String, dynamic>? _currentPropertyReviewsSummary;
-  Map<String, dynamic>? get currentPropertyReviewsSummary => _currentPropertyReviewsSummary;
+  Map<String, dynamic>? get currentPropertyReviewsSummary =>
+      _currentPropertyReviewsSummary;
 
   List<Map<String, dynamic>> _currentPropertyReviews = [];
-  List<Map<String, dynamic>> get currentPropertyReviews => _currentPropertyReviews;
+  List<Map<String, dynamic>> get currentPropertyReviews =>
+      _currentPropertyReviews;
 
   Future<Map<String, dynamic>?> getPropertyReviews(String propertyId) async {
     try {
-      final response = await _apiService.dio.get('/properties/$propertyId/reviews');
+      final response =
+          await _apiService.dio.get('/properties/$propertyId/reviews');
       if (response.statusCode == 200) {
         final List<dynamic> list = response.data['reviews'] ?? [];
         _currentPropertyReviews = List<Map<String, dynamic>>.from(list);
@@ -182,6 +197,7 @@ class PropertyProvider with ChangeNotifier {
   Future<List<dynamic>> getSubscriptionPlans({
     String? planType,
     String? propertyCategory,
+    String? propertyType,
     String? bhkType,
     double? areaSqft,
   }) async {
@@ -190,7 +206,10 @@ class PropertyProvider with ChangeNotifier {
         '/subscriptions/plans',
         queryParameters: {
           if (planType != null && planType.isNotEmpty) 'plan_type': planType,
-          if (propertyCategory != null && propertyCategory.isNotEmpty) 'property_category': propertyCategory,
+          if (propertyCategory != null && propertyCategory.isNotEmpty)
+            'property_category': propertyCategory,
+          if (propertyType != null && propertyType.isNotEmpty)
+            'property_type': propertyType,
           if (bhkType != null && bhkType.isNotEmpty) 'bhk_type': bhkType,
           if (areaSqft != null) 'area_sqft': areaSqft,
         },
@@ -204,7 +223,9 @@ class PropertyProvider with ChangeNotifier {
     }
   }
 
-  Future<Map<String, dynamic>?> subscribeToPlan(String planId, String propertyId, {String? couponCode}) async {
+  Future<Map<String, dynamic>?> subscribeToPlan(
+      String planId, String propertyId,
+      {String? couponCode}) async {
     try {
       final Map<String, dynamic> data = {
         'plan_id': planId,
@@ -214,7 +235,8 @@ class PropertyProvider with ChangeNotifier {
       if (couponCode != null && couponCode.isNotEmpty) {
         data['coupon_code'] = couponCode;
       }
-      final response = await _apiService.dio.post('/subscriptions/subscribe', data: data);
+      final response =
+          await _apiService.dio.post('/subscriptions/subscribe', data: data);
       if (response.statusCode == 200 || response.statusCode == 201) {
         return response.data;
       }
@@ -235,7 +257,8 @@ class PropertyProvider with ChangeNotifier {
         '/coupons/subscription',
         queryParameters: {
           if (planType != null && planType.isNotEmpty) 'plan_type': planType,
-          if (propertyCategory != null && propertyCategory.isNotEmpty) 'property_category': propertyCategory,
+          if (propertyCategory != null && propertyCategory.isNotEmpty)
+            'property_category': propertyCategory,
           if (bhkType != null && bhkType.isNotEmpty) 'bhk_type': bhkType,
           if (areaSqft != null) 'area_sqft': areaSqft,
         },
@@ -253,15 +276,20 @@ class PropertyProvider with ChangeNotifier {
     String code,
     String planId, {
     String? propertyCategory,
+    String? propertyType,
     String? bhkType,
     double? areaSqft,
   }) async {
     try {
-      final response = await _apiService.dio.post('/subscriptions/validate-coupon', data: {
+      final response =
+          await _apiService.dio.post('/subscriptions/validate-coupon', data: {
         'code': code,
         'plan_id': planId,
         'billing_cycle': 'monthly',
-        if (propertyCategory != null && propertyCategory.isNotEmpty) 'property_category': propertyCategory,
+        if (propertyCategory != null && propertyCategory.isNotEmpty)
+          'property_category': propertyCategory,
+        if (propertyType != null && propertyType.isNotEmpty)
+          'property_type': propertyType,
         if (bhkType != null && bhkType.isNotEmpty) 'bhk_type': bhkType,
         if (areaSqft != null) 'area_sqft': areaSqft,
       });
@@ -274,9 +302,11 @@ class PropertyProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> mockPaySubscription(String subscriptionId, String razorpayOrderId) async {
+  Future<bool> mockPaySubscription(
+      String subscriptionId, String razorpayOrderId) async {
     try {
-      final response = await _apiService.dio.post('/subscriptions/subscribe/mock-pay', queryParameters: {
+      final response = await _apiService.dio
+          .post('/subscriptions/subscribe/mock-pay', queryParameters: {
         'subscription_id': subscriptionId,
         'razorpay_order_id': razorpayOrderId,
       });
@@ -292,7 +322,8 @@ class PropertyProvider with ChangeNotifier {
   List<dynamic> _externalCalendars = [];
   List<dynamic> get externalCalendars => _externalCalendars;
 
-  Future<Map<String, dynamic>?> getUnifiedCalendar(String propertyId, int month, int year) async {
+  Future<Map<String, dynamic>?> getUnifiedCalendar(
+      String propertyId, int month, int year) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -314,7 +345,8 @@ class PropertyProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> blockDates(String propertyId, String startDate, String endDate, String reason) async {
+  Future<bool> blockDates(String propertyId, String startDate, String endDate,
+      String reason) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -339,7 +371,8 @@ class PropertyProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.delete('/calendar/blocked-dates/$blockedDateId');
+      final response = await _apiService.dio
+          .delete('/calendar/blocked-dates/$blockedDateId');
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -353,7 +386,8 @@ class PropertyProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.get('/calendar/properties/$propertyId/external-calendars');
+      final response = await _apiService.dio
+          .get('/calendar/properties/$propertyId/external-calendars');
       if (response.statusCode == 200) {
         _externalCalendars = response.data['calendars'] ?? [];
       }
@@ -365,7 +399,8 @@ class PropertyProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> addExternalCalendar(String propertyId, String name, String icalUrl, String color) async {
+  Future<bool> addExternalCalendar(
+      String propertyId, String name, String icalUrl, String color) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -390,7 +425,8 @@ class PropertyProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.delete('/calendar/external-calendars/$calendarId');
+      final response = await _apiService.dio
+          .delete('/calendar/external-calendars/$calendarId');
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -402,7 +438,8 @@ class PropertyProvider with ChangeNotifier {
 
   Future<String?> getIcalFeedUrl(String propertyId) async {
     try {
-      final response = await _apiService.dio.get('/calendar/properties/$propertyId/ical-feed-url');
+      final response = await _apiService.dio
+          .get('/calendar/properties/$propertyId/ical-feed-url');
       if (response.statusCode == 200) {
         return response.data['feed_url'];
       }
@@ -412,7 +449,8 @@ class PropertyProvider with ChangeNotifier {
 
   Future<String?> rotateIcalFeedUrl(String propertyId) async {
     try {
-      final response = await _apiService.dio.post('/calendar/properties/$propertyId/ical-feed-url/rotate');
+      final response = await _apiService.dio
+          .post('/calendar/properties/$propertyId/ical-feed-url/rotate');
       if (response.statusCode == 200) {
         return response.data['feed_url'];
       }
@@ -438,6 +476,8 @@ class PropertyProvider with ChangeNotifier {
   }
 
   List<PropertyModel> get wishlistProperties {
-    return _properties.where((p) => _wishlistIds.contains(p.propertyId)).toList();
+    return _properties
+        .where((p) => _wishlistIds.contains(p.propertyId))
+        .toList();
   }
 }

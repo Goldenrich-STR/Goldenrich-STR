@@ -8,6 +8,8 @@ import 'providers/verification_provider.dart';
 import 'providers/account_provider.dart';
 import 'providers/ai_call_provider.dart';
 import 'providers/admin_provider.dart';
+import 'providers/notification_provider.dart';
+import 'providers/support_ticket_provider.dart';
 import 'services/localization_service.dart';
 import 'services/api_service.dart';
 import 'views/auth/welcome_screen.dart';
@@ -26,13 +28,13 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AccountProvider()),
         ChangeNotifierProvider(create: (_) => AICallProvider()),
         ChangeNotifierProvider(create: (_) => AdminProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+        ChangeNotifierProvider(create: (_) => SupportTicketProvider()),
       ],
       child: const MyApp(),
     ),
   );
 }
-
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
