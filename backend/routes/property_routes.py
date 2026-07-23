@@ -9,6 +9,7 @@ from middleware.auth_middleware import get_current_user, require_role
 from datetime import datetime, timezone
 import asyncio
 import logging
+import math
 import re
 
 logger = logging.getLogger(__name__)
@@ -81,6 +82,9 @@ async def search_properties(
     check_in: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
     check_out: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
     bbox: Optional[str] = Query(None, description="min_lat,min_lng,max_lat,max_lng for map viewport"),
+    latitude: Optional[float] = Query(None, description="Center latitude for radius search"),
+    longitude: Optional[float] = Query(None, description="Center longitude for radius search"),
+    radius_km: Optional[float] = Query(None, gt=0, le=100, description="Radius in kilometers for coordinate search"),
     sort: Optional[str] = Query("recommended", description="recommended | price_asc | price_desc | newest"),
     limit: int = 50,
     skip: int = 0,
@@ -96,14 +100,20 @@ async def search_properties(
         if category:
             query["category"] = category.value
 
-        if city:
-            keyword = re.escape(city.strip())
-            query["$or"] = [
+        radius_search = latitude is not None and longitude is not None and radius_km is not None
+
+        def city_match_conditions(location: str) -> list:
+            keyword = re.escape(location.strip())
+            return [
                 {"city": {"$regex": keyword, "$options": "i"}},
                 {"state": {"$regex": keyword, "$options": "i"}},
                 {"title": {"$regex": keyword, "$options": "i"}},
                 {"address": {"$regex": keyword, "$options": "i"}},
+                {"nearby_places": {"$regex": keyword, "$options": "i"}},
             ]
+
+        if city and not radius_search:
+            query["$or"] = city_match_conditions(city)
 
         if property_type:
             query["property_type"] = property_type
@@ -137,6 +147,12 @@ async def search_properties(
                     query["longitude"] = {"$gte": min_lng, "$lte": max_lng}
             except ValueError:
                 pass
+
+        if radius_search:
+            lat_delta = radius_km / 111.0
+            lng_delta = radius_km / (111.0 * max(math.cos(math.radians(latitude)), 0.01))
+            query["latitude"] = {"$gte": latitude - lat_delta, "$lte": latitude + lat_delta}
+            query["longitude"] = {"$gte": longitude - lng_delta, "$lte": longitude + lng_delta}
 
         # Date availability filter — exclude properties with overlapping confirmed/soft-locked bookings or blocked dates
         if check_in and check_out:
@@ -212,6 +228,56 @@ async def search_properties(
             raw_properties = [p for p in raw_properties if numeric_price(p) >= min_price]
         if max_price is not None:
             raw_properties = [p for p in raw_properties if numeric_price(p) <= max_price]
+
+        if radius_search:
+            def distance_from_center(prop: dict) -> float:
+                try:
+                    prop_lat = float(prop.get("latitude"))
+                    prop_lng = float(prop.get("longitude"))
+                except (TypeError, ValueError):
+                    return float("inf")
+                d_lat = math.radians(prop_lat - latitude)
+                d_lng = math.radians(prop_lng - longitude)
+                lat1 = math.radians(latitude)
+                lat2 = math.radians(prop_lat)
+                a = (
+                    math.sin(d_lat / 2) ** 2
+                    + math.cos(lat1) * math.cos(lat2) * math.sin(d_lng / 2) ** 2
+                )
+                return 6371 * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+            raw_properties = [
+                {**p, "distance_km": round(distance_from_center(p), 2)}
+                for p in raw_properties
+                if distance_from_center(p) <= radius_km
+            ]
+
+            if not raw_properties and city:
+                fallback_query = {
+                    key: value
+                    for key, value in query.items()
+                    if key not in ("latitude", "longitude")
+                }
+                fallback_query["$or"] = city_match_conditions(city)
+                raw_properties = await db.properties.find(fallback_query, projection).to_list(length=1000)
+
+                fallback_sub_ids = [p["subscription_id"] for p in raw_properties if p.get("subscription_id")]
+                if fallback_sub_ids:
+                    from datetime import date
+                    today_str = date.today().isoformat()
+                    cursor = db.subscriptions.find({
+                        "subscription_id": {"$in": fallback_sub_ids},
+                        "end_date": {"$lte": today_str}
+                    }, {"subscription_id": 1})
+                    expired_subs = await cursor.to_list(length=len(fallback_sub_ids))
+                    expired_sub_ids = {s["subscription_id"] for s in expired_subs}
+                    if expired_sub_ids:
+                        raw_properties = [p for p in raw_properties if p.get("subscription_id") not in expired_sub_ids]
+
+                if min_price is not None:
+                    raw_properties = [p for p in raw_properties if numeric_price(p) >= min_price]
+                if max_price is not None:
+                    raw_properties = [p for p in raw_properties if numeric_price(p) <= max_price]
 
         if sort == "price_asc":
             raw_properties.sort(key=numeric_price)

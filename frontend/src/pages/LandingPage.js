@@ -15,25 +15,6 @@ import ScrollReveal from '../components/ui/ScrollReveal';
 
 const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
 
-const HOME_FAQS = [
-  {
-    question: "What is X-Space360 and how does it work?",
-    answer: "X-Space360 is a curated premium short-term rental network. We connect property owners and verified hosts with guests who want to book residential stays, commercial spaces and event venues."
-  },
-  {
-    question: "How can I register my property as a Host?",
-    answer: "You can register as a host from the X-Space360 portal, submit your property and verification details, complete the review process and publish your property after approval."
-  },
-  {
-    question: "What types of properties can I list?",
-    answer: "Hosts can list residential properties such as villas, farmhouses and apartments, commercial properties such as offices and workspaces, and event venues such as banquet halls, lawns and rooftops."
-  },
-  {
-    question: "How are guest bookings and payments secured?",
-    answer: "X-Space360 verifies booking details, confirms payments through the platform checkout flow and manages host payouts through the account and payout system."
-  }
-];
-
 const homeSchema = {
   "@context": "https://schema.org",
   "@graph": [
@@ -53,18 +34,6 @@ const homeSchema = {
         "@id": "https://x-space360.in/#organization",
       },
       inLanguage: "en-IN",
-    },
-    {
-      "@type": "FAQPage",
-      "@id": "https://x-space360.in/#faq",
-      mainEntity: HOME_FAQS.map((faq) => ({
-        "@type": "Question",
-        name: faq.question,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: faq.answer,
-        },
-      })),
     },
   ],
 };
@@ -996,6 +965,184 @@ const DESTINATION_SHORTCUTS = [
   'Goa'
 ];
 
+const NEARBY_DESTINATION_GROUPS = {
+  Nashik: [
+    'Nashik',
+    'Sula Vineyards',
+    'Trimbakeshwar',
+    'Igatpuri',
+    'Bhandardara',
+    'Vaitarna',
+    'Saputara',
+    'Shirdi',
+    'Gangapur Dam',
+    'Anjaneri',
+    'Harihar Fort',
+    'Pandav Leni',
+    'Jawhar',
+    'Wada',
+    'Lonavala',
+    'Pune'
+  ],
+  Mumbai: [
+    'Mumbai',
+    'Lonavala',
+    'Alibaug',
+    'Karjat',
+    'Wada',
+    'Igatpuri',
+    'Pune',
+    'Nashik',
+    'Matheran',
+    'Khandala',
+    'Vaitarna',
+    'Jawhar',
+    'Mahabaleshwar',
+    'Panchgani',
+    'Goa',
+    'Bhandardara'
+  ],
+  Pune: [
+    'Pune',
+    'Lonavala',
+    'Khandala',
+    'Panchgani',
+    'Mahabaleshwar',
+    'Karjat',
+    'Alibaug',
+    'Mumbai',
+    'Nashik',
+    'Igatpuri',
+    'Bhandardara',
+    'Goa',
+    'Saputara',
+    'Trimbakeshwar',
+    'Vaitarna',
+    'Wada'
+  ],
+  Goa: [
+    'Goa',
+    'North Goa',
+    'South Goa',
+    'Panjim',
+    'Calangute',
+    'Baga',
+    'Anjuna',
+    'Vagator',
+    'Candolim',
+    'Morjim',
+    'Assagao',
+    'Arambol',
+    'Colva',
+    'Palolem',
+    'Mumbai',
+    'Pune'
+  ]
+};
+
+const DESTINATION_SPOT_CATALOG = [
+  { name: 'Pune', hub: 'Pune', latitude: 18.5204, longitude: 73.8567, type: 'city' },
+  { name: 'Shaniwar Wada', hub: 'Pune', latitude: 18.5195, longitude: 73.8553, type: 'historical' },
+  { name: 'Dagdusheth Ganpati', hub: 'Pune', latitude: 18.5164, longitude: 73.8561, type: 'spiritual' },
+  { name: 'Aga Khan Palace', hub: 'Pune', latitude: 18.5525, longitude: 73.9015, type: 'historical' },
+  { name: 'Pataleshwar Caves', hub: 'Pune', latitude: 18.5267, longitude: 73.8495, type: 'spiritual' },
+  { name: 'Parvati Hill', hub: 'Pune', latitude: 18.5018, longitude: 73.8493, type: 'spiritual' },
+  { name: 'Sinhagad Fort', hub: 'Pune', latitude: 18.3663, longitude: 73.7559, type: 'historical' },
+  { name: 'Khadakwasla Dam', hub: 'Pune', latitude: 18.4392, longitude: 73.7680, type: 'tourist' },
+  { name: 'Alandi', hub: 'Pune', latitude: 18.6777, longitude: 73.8987, type: 'spiritual' },
+  { name: 'Dehu', hub: 'Pune', latitude: 18.7185, longitude: 73.7663, type: 'spiritual' },
+  { name: 'Jejuri', hub: 'Pune', latitude: 18.2766, longitude: 74.1600, type: 'spiritual' },
+  { name: 'Purandar Fort', hub: 'Pune', latitude: 18.2793, longitude: 73.9793, type: 'historical' },
+  { name: 'Prati Balaji', hub: 'Pune', latitude: 18.4543, longitude: 73.8535, type: 'spiritual' },
+  { name: 'Baneshwar Temple', hub: 'Pune', latitude: 18.3298, longitude: 73.8567, type: 'spiritual' },
+  { name: 'Mulshi Dam', hub: 'Pune', latitude: 18.5258, longitude: 73.5130, type: 'tourist' },
+  { name: 'Rajmachi Fort', hub: 'Pune', latitude: 18.8266, longitude: 73.3947, type: 'historical' },
+  { name: 'Lonavala', hub: 'Pune', latitude: 18.7546, longitude: 73.4062, type: 'tourist' },
+
+  { name: 'Nashik', hub: 'Nashik', latitude: 19.9975, longitude: 73.7898, type: 'city' },
+  { name: 'Sula Vineyards', hub: 'Nashik', latitude: 20.0059, longitude: 73.6889, type: 'tourist' },
+  { name: 'Trimbakeshwar', hub: 'Nashik', latitude: 19.9323, longitude: 73.5305, type: 'spiritual' },
+  { name: 'Pandav Leni', hub: 'Nashik', latitude: 19.9460, longitude: 73.7486, type: 'historical' },
+  { name: 'Gangapur Dam', hub: 'Nashik', latitude: 20.0081, longitude: 73.6846, type: 'tourist' },
+  { name: 'Anjaneri', hub: 'Nashik', latitude: 19.9176, longitude: 73.5790, type: 'spiritual' },
+  { name: 'Igatpuri', hub: 'Nashik', latitude: 19.6952, longitude: 73.5626, type: 'tourist' },
+  { name: 'Vaitarna', hub: 'Nashik', latitude: 19.7800, longitude: 73.4720, type: 'tourist' },
+
+  { name: 'Mumbai', hub: 'Mumbai', latitude: 19.0760, longitude: 72.8777, type: 'city' },
+  { name: 'Gateway of India', hub: 'Mumbai', latitude: 18.9220, longitude: 72.8347, type: 'historical' },
+  { name: 'Siddhivinayak Temple', hub: 'Mumbai', latitude: 19.0169, longitude: 72.8302, type: 'spiritual' },
+  { name: 'Elephanta Caves', hub: 'Mumbai', latitude: 18.9633, longitude: 72.9315, type: 'historical' },
+  { name: 'Kanheri Caves', hub: 'Mumbai', latitude: 19.2090, longitude: 72.9068, type: 'historical' },
+  { name: 'Juhu Beach', hub: 'Mumbai', latitude: 19.0988, longitude: 72.8267, type: 'tourist' },
+
+  { name: 'Goa', hub: 'Goa', latitude: 15.2993, longitude: 74.1240, type: 'city' },
+  { name: 'Panjim', hub: 'Goa', latitude: 15.4909, longitude: 73.8278, type: 'tourist' },
+  { name: 'Basilica of Bom Jesus', hub: 'Goa', latitude: 15.5009, longitude: 73.9116, type: 'spiritual' },
+  { name: 'Fort Aguada', hub: 'Goa', latitude: 15.4922, longitude: 73.7730, type: 'historical' },
+  { name: 'Calangute', hub: 'Goa', latitude: 15.5439, longitude: 73.7553, type: 'tourist' },
+  { name: 'Baga', hub: 'Goa', latitude: 15.5553, longitude: 73.7517, type: 'tourist' }
+];
+
+const NEARBY_LOCATION_CENTERS = [
+  { city: 'Nashik', latitude: 19.9975, longitude: 73.7898 },
+  { city: 'Mumbai', latitude: 19.0760, longitude: 72.8777 },
+  { city: 'Pune', latitude: 18.5204, longitude: 73.8567 },
+  { city: 'Goa', latitude: 15.2993, longitude: 74.1240 }
+];
+
+const toRadians = (value) => (value * Math.PI) / 180;
+
+const getDistanceKm = (from, to) => {
+  const earthRadiusKm = 6371;
+  const dLat = toRadians(to.latitude - from.latitude);
+  const dLng = toRadians(to.longitude - from.longitude);
+  const lat1 = toRadians(from.latitude);
+  const lat2 = toRadians(to.latitude);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return earthRadiusKm * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+const findNearestDestinationHub = (coords) => {
+  return NEARBY_LOCATION_CENTERS.reduce((nearest, candidate) => {
+    const distance = getDistanceKm(coords, candidate);
+    return !nearest || distance < nearest.distance ? { ...candidate, distance } : nearest;
+  }, null);
+};
+
+const normalizeDestinationText = (value = '') => value.trim().toLowerCase();
+
+const findDestinationHubForQuery = (query) => {
+  const normalizedQuery = normalizeDestinationText(query);
+  if (!normalizedQuery) return null;
+
+  const exactHub = Object.keys(NEARBY_DESTINATION_GROUPS).find(
+    (hub) => normalizeDestinationText(hub) === normalizedQuery
+  );
+  if (exactHub) return exactHub;
+
+  return Object.entries(NEARBY_DESTINATION_GROUPS).find(([, destinations]) =>
+    destinations.some((destination) => normalizeDestinationText(destination) === normalizedQuery)
+  )?.[0] || null;
+};
+
+const getDestinationSpotsForHub = (hub, radiusKm = 50) => {
+  const center = NEARBY_LOCATION_CENTERS.find((item) => item.city === hub);
+  if (!center) return (NEARBY_DESTINATION_GROUPS[hub] || DESTINATION_SHORTCUTS).map((name) => ({ name }));
+
+  const spots = DESTINATION_SPOT_CATALOG
+    .filter((spot) => spot.hub === hub)
+    .map((spot) => ({
+      ...spot,
+      distanceKm: getDistanceKm(center, spot),
+    }))
+    .filter((spot) => spot.distanceKm <= radiusKm)
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+
+  return spots.length ? spots : (NEARBY_DESTINATION_GROUPS[hub] || DESTINATION_SHORTCUTS).map((name) => ({ name }));
+};
+
 const DestinationLineIcon = ({ label }) => {
   // Define custom hand-drawn outline SVGs with subtle theme accent fills for each destination
   const renderCustomSVG = () => {
@@ -1388,6 +1535,8 @@ const LandingPage = () => {
   };
   const [locationQuery, setLocationQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState('residential');
+  const [nearbyHub, setNearbyHub] = useState('Nashik');
+  const [isDetectingNearby, setIsDetectingNearby] = useState(false);
 
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [guestCounts, setGuestCounts] = useState({ adults: 2, children: 0, infants: 0 });
@@ -1505,7 +1654,6 @@ const LandingPage = () => {
   }, [currentHeroSlide, loadedHeroSlides, heroSlides]);
 
   const [lang, setLang] = useState(localStorage.getItem('preferredLanguage') || 'en');
-  const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [currentPromoSlide, setCurrentPromoSlide] = useState(0);
 
   React.useEffect(() => {
@@ -1764,6 +1912,58 @@ const LandingPage = () => {
     if (dates.checkOut) params.set('checkOut', dates.checkOut);
     if (searchCategory && searchCategory !== 'all') params.set('category', searchCategory);
     navigate(`/guest/browse?${params.toString()}`);
+  };
+
+  const nearbyDestinations = React.useMemo(() => {
+    return getDestinationSpotsForHub(nearbyHub, 50);
+  }, [nearbyHub]);
+
+  const openDestinationProperties = (destination) => {
+    const destinationName = typeof destination === 'string' ? destination : destination.name;
+    const params = new URLSearchParams();
+    params.set('city', destinationName);
+    if (destination?.latitude && destination?.longitude) {
+      params.set('latitude', String(destination.latitude));
+      params.set('longitude', String(destination.longitude));
+      params.set('radius_km', '3');
+    }
+    if (searchCategory && searchCategory !== 'all') params.set('category', searchCategory);
+    navigate(`/guest/browse?${params.toString()}`);
+  };
+
+  const handleShowNearbyLocations = () => {
+    const typedHub = findDestinationHubForQuery(locationQuery);
+    if (typedHub) {
+      setNearbyHub(typedHub);
+      setLocationQuery(typedHub);
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      setNearbyHub('Nashik');
+      setLocationQuery('Nashik');
+      return;
+    }
+
+    setIsDetectingNearby(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const nearest = findNearestDestinationHub({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        });
+        const hub = nearest?.city || 'Nashik';
+        setNearbyHub(hub);
+        setLocationQuery(hub);
+        setIsDetectingNearby(false);
+      },
+      () => {
+        setNearbyHub('Nashik');
+        setLocationQuery('Nashik');
+        setIsDetectingNearby(false);
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
   };
 
   const LOCATIONS = [
@@ -2400,11 +2600,12 @@ const LandingPage = () => {
                 <h2 className="font-serif text-2xl md:text-3xl font-bold text-charcoal tracking-tight">Pick a Destination</h2>
                 <button
                   type="button"
-                  onClick={() => setLocationQuery('Nashik')}
+                  onClick={handleShowNearbyLocations}
+                  disabled={isDetectingNearby}
                   className="inline-flex items-center gap-1 text-xs md:text-sm font-semibold text-charcoal-muted hover:text-terracotta transition"
                 >
                   <MapPin className="w-3.5 h-3.5" />
-                  Show nearby locations
+                  {isDetectingNearby ? 'Finding nearby locations...' : 'Show nearby locations'}
                 </button>
               </div>
               <div className="hidden md:flex items-center gap-3 text-charcoal">
@@ -2414,10 +2615,12 @@ const LandingPage = () => {
             </div>
 
             <div className="flex overflow-x-auto no-scrollbar snap-x scroll-smooth pb-4 gap-6 md:grid md:grid-cols-6 lg:grid-cols-8 md:gap-x-6 md:gap-y-8 md:overflow-visible md:pb-0">
-              {DESTINATION_SHORTCUTS.map((label, index) => (
+              {nearbyDestinations.map((destination) => {
+                const label = typeof destination === 'string' ? destination : destination.name;
+                return (
                 <button
                   key={label}
-                  onClick={() => navigate(`/guest/browse?city=${encodeURIComponent(label)}`)}
+                  onClick={() => openDestinationProperties(destination)}
                   className="group flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 snap-start min-w-[76px] md:min-w-0"
                 >
                   <div className="flex h-16 md:h-20 items-center justify-center transition-transform duration-300 group-hover:-translate-y-1">
@@ -2425,7 +2628,8 @@ const LandingPage = () => {
                   </div>
                   <p className="text-charcoal font-semibold text-[11px] md:text-xs tracking-tight leading-snug text-center">{label}</p>
                 </button>
-              ))}
+              );
+              })}
             </div>
 
             {recentlyVisitedProperties.length > 0 && (
@@ -2524,45 +2728,6 @@ const LandingPage = () => {
         {/* ===== Discover Our Collections — Full Width ===== */}
         <CollectionsSection navigate={navigate} />
 
-        <section className="w-full bg-stone py-8 md:py-12 border-y border-gray-100">
-          <div className="w-full px-4 md:px-[10vw] text-center">
-            <h3 className="font-serif text-lg md:text-xl font-bold text-charcoal mb-6 tracking-tight">
-              Compare stays across your favourite brands
-            </h3>
-            <div className="flex flex-wrap items-center justify-center gap-8 md:gap-14">
-              <img
-                src="/images/logos/booking.svg"
-                alt="Booking.com"
-                className="h-7 md:h-10 object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
-              />
-              <img
-                src="https://www.skyscanner.co.in/images/websites/h_mq.png"
-                alt="MakeMyTrip"
-                className="h-7 md:h-10 object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
-              />
-              <img
-                src="https://www.skyscanner.co.in/images/websites/d_ct.png"
-                alt="Trip.com"
-                className="h-7 md:h-10 object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
-              />
-              <img
-                src="https://www.skyscanner.co.in/images/websites/h_xp.png"
-                alt="Expedia"
-                className="h-7 md:h-10 object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
-              />
-              <img
-                src="https://www.skyscanner.co.in/images/websites/h_hc.png"
-                alt="Hotels.com"
-                className="h-7 md:h-10 object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
-              />
-              <img
-                src="/images/logos/airbnb.svg"
-                alt="Airbnb"
-                className="h-7 md:h-10 object-contain opacity-85 hover:opacity-100 transition-opacity duration-300 cursor-pointer"
-              />
-            </div>
-          </div>
-        </section>
         {/* Property Sliders — also full-width, padded inline */}
         <div className="pb-4 md:pb-16 pt-2 md:pt-4">
           {/* Residential Collection Slider */}
@@ -3190,7 +3355,7 @@ const LandingPage = () => {
           </div>
           </ScrollReveal>
 
-          {/* FAQ Section */}
+          {false && (
           <ScrollReveal duration="duration-[950ms]">
             <div className="max-w-7xl mx-auto px-4 md:px-8 mb-8 md:mb-12 mt-12 grid grid-cols-1 lg:grid-cols-12 gap-12 text-left">
               {/* Left Info Panel */}
@@ -3265,6 +3430,7 @@ const LandingPage = () => {
             </div>
           </div>
           </ScrollReveal>
+          )}
 
 
           

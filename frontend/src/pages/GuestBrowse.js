@@ -361,6 +361,9 @@ const GuestBrowse = () => {
       pet_friendly: false,
       check_in: params.get('checkIn') || '',
       check_out: params.get('checkOut') || '',
+      latitude: params.get('latitude') || '',
+      longitude: params.get('longitude') || '',
+      radius_km: params.get('radius_km') || '',
       sort: 'recommended',
       amenities: [],
     };
@@ -374,6 +377,9 @@ const GuestBrowse = () => {
     const checkIn = params.get('checkIn');
     const checkOut = params.get('checkOut');
     const guests = params.get('guests');
+    const latitude = params.get('latitude');
+    const longitude = params.get('longitude');
+    const radiusKm = params.get('radius_km');
     const isWishlist = params.get('wishlist') === 'true';
     
     if (isWishlist) {
@@ -387,7 +393,7 @@ const GuestBrowse = () => {
         min_price: '50000'
       }));
     }
-    if (city || category || propertyType || checkIn || checkOut || guests) {
+    if (city || category || propertyType || checkIn || checkOut || guests || latitude || longitude || radiusKm) {
       setFilters(prev => ({
         ...prev,
         city: city || prev.city,
@@ -395,7 +401,10 @@ const GuestBrowse = () => {
         property_type: propertyType || prev.property_type,
         check_in: checkIn || prev.check_in,
         check_out: checkOut || prev.check_out,
-        guests: guests || prev.guests
+        guests: guests || prev.guests,
+        latitude: latitude || prev.latitude,
+        longitude: longitude || prev.longitude,
+        radius_km: radiusKm || prev.radius_km
       }));
     }
   }, []);
@@ -416,6 +425,9 @@ const GuestBrowse = () => {
     filters.pet_friendly,
     filters.check_in,
     filters.check_out,
+    filters.latitude,
+    filters.longitude,
+    filters.radius_km,
     filters.amenities,
   ]);
 
@@ -443,6 +455,9 @@ const GuestBrowse = () => {
     if (filters.pet_friendly) params.pet_friendly = true;
     if (filters.check_in) params.check_in = filters.check_in;
     if (filters.check_out) params.check_out = filters.check_out;
+    if (filters.latitude) params.latitude = Number(filters.latitude);
+    if (filters.longitude) params.longitude = Number(filters.longitude);
+    if (filters.radius_km) params.radius_km = Number(filters.radius_km);
     if (filters.amenities.length) params.amenities = filters.amenities.join(',');
     if (filters.sort) params.sort = filters.sort;
     return params;
@@ -483,6 +498,9 @@ const GuestBrowse = () => {
       pet_friendly: false,
       check_in: '',
       check_out: '',
+      latitude: '',
+      longitude: '',
+      radius_km: '',
       sort: 'recommended',
       amenities: [],
     });
@@ -713,7 +731,7 @@ const GuestBrowse = () => {
                       value={filters.city}
                       onFocus={() => setActiveDropdown('location')}
                       onChange={(e) => {
-                        setFilters({ ...filters, city: e.target.value });
+                        setFilters({ ...filters, city: e.target.value, latitude: '', longitude: '', radius_km: '' });
                         setActiveDropdown('location');
                       }}
                       placeholder="Location"
@@ -736,7 +754,7 @@ const GuestBrowse = () => {
                           key={i}
                           type="button"
                           onClick={() => {
-                            setFilters({ ...filters, city: dest.city });
+                            setFilters({ ...filters, city: dest.city, latitude: '', longitude: '', radius_km: '' });
                             setActiveDropdown(null);
                           }}
                           className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-stone transition text-left"
