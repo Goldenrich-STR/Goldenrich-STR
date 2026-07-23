@@ -325,7 +325,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
       />
 
       {/* StayVista style Modal Box (Fixed height to prevent page scrolling) */}
-      <div className="relative w-full max-w-[980px] bg-white rounded-3xl shadow-2xl flex overflow-hidden border border-gray-150 h-[650px] max-h-[calc(100vh-2rem)] z-10">
+      <div className="relative w-full max-w-[980px] bg-white rounded-3xl shadow-2xl flex overflow-hidden border border-gray-150 h-[750px] max-h-[92vh] z-10">
         
         {/* Close Button */}
         <button
@@ -356,7 +356,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
 
               {/* Middle Text and Pill Badge */}
               <div className="mb-6 flex flex-col items-center">
-                <h4 className="font-lufga text-white text-2xl md:text-3xl font-extrabold leading-tight mb-2 tracking-tight drop-shadow-sm">
+                <h4 className="text-white text-2xl md:text-3xl font-extrabold leading-tight mb-2 tracking-tight drop-shadow-sm">
                   Book a Room.<br />Enjoy A Villa Getaway
                 </h4>
                 <p className="text-white text-xs font-semibold max-w-[220px] mb-4 drop-shadow-sm">
@@ -381,11 +381,11 @@ const AuthPage = ({ isAdminLogin = false }) => {
             </div>
 
             {/* Title / Subtext */}
-            <div className="mb-4">
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-charcoal-muted">
+            <div className="mb-6">
+              <span className="text-sm font-semibold text-gray-500 block mb-1">
                 {isAdminLogin ? "Admin Console" : "Login/Signup"}
               </span>
-              <h3 className="font-lufga text-2xl font-bold tracking-tight text-charcoal leading-tight">
+              <h3 className="font-sans font-semibold text-2xl md:text-[28px] text-gray-900 tracking-tight leading-snug">
                 {isAdminLogin ? "Admin Sign In" : "Welcome to X-Space360"}
               </h3>
             </div>
@@ -499,15 +499,15 @@ const AuthPage = ({ isAdminLogin = false }) => {
               </form>
             ) : (
               // REGISTER / SIGN UP FORM
-              <div className="space-y-3">
+              <div className="space-y-5">
                 {!showOTPVerification ? (
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {/* Role selector Guest/Host pills */}
-                    <div className="flex justify-between items-center bg-gray-50 p-1 rounded-xl border border-gray-100 max-w-[200px] mx-auto mb-2">
+                    <div className="flex justify-between items-center bg-gray-50 p-1.5 rounded-xl border border-gray-150 max-w-[240px] mx-auto mb-4">
                       <button
                         type="button"
                         onClick={() => setRegisterData({ ...registerData, role: 'guest' })}
-                        className={`flex-1 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition ${
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
                           registerData.role === 'guest' ? 'bg-[#1b1924] text-white shadow-sm' : 'text-gray-400'
                         }`}
                       >
@@ -516,56 +516,59 @@ const AuthPage = ({ isAdminLogin = false }) => {
                       <button
                         type="button"
                         onClick={() => setRegisterData({ ...registerData, role: 'host' })}
-                        className={`flex-1 py-1 rounded-lg text-[9px] font-extrabold uppercase tracking-wider transition ${
+                        className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
                           registerData.role === 'host' ? 'bg-[#1b1924] text-white shadow-sm' : 'text-gray-400'
                         }`}
                       >
                         Host
                       </button>
                     </div>
-
-                    {/* Compact Input Grid */}
-                    <div className="grid grid-cols-2 gap-2 text-left">
-                      <div className="space-y-0.5">
-                        <label className="text-[9px] font-bold text-charcoal-muted uppercase">Full Name</label>
+ 
+                    {/* Spacious Responsive Grid Layout */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                      <div className="space-y-1">
+                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Full Name</label>
                         <input
                           id="register-full-name"
                           type="text"
                           value={registerData.full_name}
                           onChange={(e) => setRegisterData({ ...registerData, full_name: e.target.value })}
-                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-lg px-3 py-1.5 text-xs font-semibold outline-none"
+                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium outline-none"
                           placeholder="Full Name"
                           required
+                          autoComplete="name"
                         />
                       </div>
-                      <div className="space-y-0.5">
-                        <label className="text-[9px] font-bold text-charcoal-muted uppercase">Phone Number</label>
+                      <div className="space-y-1">
+                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Phone Number</label>
                         <input
                           id="register-phone"
                           type="tel"
                           value={registerData.phone}
                           onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
-                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-lg px-3 py-1.5 text-xs font-semibold outline-none"
+                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium outline-none"
                           placeholder="Phone"
                           required
+                          autoComplete="tel"
                         />
                       </div>
-
-                      <div className="space-y-0.5">
-                        <label className="text-[9px] font-bold text-charcoal-muted uppercase">Email</label>
+ 
+                      <div className="space-y-1">
+                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Email</label>
                         <input
                           id="register-email"
                           type="email"
                           value={registerData.email}
                           onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-lg px-3 py-1.5 text-xs font-semibold outline-none"
+                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium outline-none"
                           placeholder="Email"
                           required
+                          autoComplete="email"
                         />
                       </div>
-
-                      <div className="space-y-0.5 relative" ref={cityFieldRef}>
-                        <label className="text-[9px] font-bold text-charcoal-muted uppercase">City</label>
+ 
+                      <div className="space-y-1 relative" ref={cityFieldRef}>
+                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">City</label>
                         <input
                           id="register-city"
                           type="text"
@@ -575,12 +578,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
                             setRegisterData({ ...registerData, city: e.target.value });
                             setCityDropdownOpen(true);
                           }}
-                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-lg px-3 py-1.5 text-xs font-semibold outline-none"
+                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium outline-none"
                           placeholder="Search city"
                           required
+                          autoComplete="address-level2"
                         />
                         {cityDropdownOpen && (
-                          <div className="absolute left-0 right-0 top-full mt-1 z-[9999] max-h-24 overflow-y-auto bg-white border border-gray-100 rounded-lg shadow-lg">
+                          <div className="absolute left-0 right-0 top-full mt-1 z-[9999] max-h-32 overflow-y-auto bg-white border border-gray-150 rounded-xl shadow-lg">
                             {filteredCities.map(city => (
                               <button
                                 key={city}
@@ -589,7 +593,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                                   setRegisterData({ ...registerData, city });
                                   setCityDropdownOpen(false);
                                 }}
-                                className="w-full text-left px-3 py-1.5 text-[10px] font-bold hover:bg-gray-55"
+                                className="w-full text-left px-4 py-2.5 text-xs font-bold hover:bg-gray-55"
                               >
                                 {city}
                               </button>
@@ -597,42 +601,43 @@ const AuthPage = ({ isAdminLogin = false }) => {
                           </div>
                         )}
                       </div>
-                    </div>
 
-                    <div className="space-y-0.5 text-left">
-                      <label className="text-[9px] font-bold text-charcoal-muted uppercase">Password</label>
-                      <div className="relative">
-                        <input
-                          id="register-password"
-                          type={showRegisterPassword ? 'text' : 'password'}
-                          value={registerData.password}
-                          onChange={(e) => setRegisterData({
-                            ...registerData,
-                            password: e.target.value.replace(/\s/g, '').slice(0, 32)
-                          })}
-                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-lg pl-3 pr-8 py-1.5 text-xs font-semibold outline-none"
-                          placeholder="Password"
-                          required
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowRegisterPassword(v => !v)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400"
-                        >
-                          {showRegisterPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
+                      <div className="space-y-1 text-left md:col-span-2">
+                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Password</label>
+                        <div className="relative">
+                          <input
+                            id="register-password"
+                            type={showRegisterPassword ? 'text' : 'password'}
+                            value={registerData.password}
+                            onChange={(e) => setRegisterData({
+                              ...registerData,
+                              password: e.target.value.replace(/\s/g, '').slice(0, 32)
+                            })}
+                            className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl pl-4 pr-10 py-3 text-sm font-medium outline-none"
+                            placeholder="Password"
+                            required
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowRegisterPassword(v => !v)}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+                          >
+                            {showRegisterPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
-
+ 
                     {/* Broker/Employee dropdowns for Host role */}
                     {registerData.role === 'host' && (
-                      <div className="grid grid-cols-2 gap-2 text-left animate-fade-in">
-                        <div className="space-y-0.5">
-                          <label className="text-[9px] font-bold text-charcoal-muted uppercase">Broker</label>
+                      <div className="grid grid-cols-2 gap-3 text-left animate-fade-in">
+                        <div className="space-y-1">
+                          <label className="block text-xs font-semibold text-gray-600 ml-0.5">Broker</label>
                           <select
                             value={registerData.lg_code}
                             onChange={(e) => setRegisterData({ ...registerData, lg_code: e.target.value })}
-                            className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none"
+                            className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-3 py-3 text-sm font-medium outline-none bg-white"
                           >
                             <option value="">Select Broker</option>
                             {availableBrokers.map(b => (
@@ -640,12 +645,12 @@ const AuthPage = ({ isAdminLogin = false }) => {
                             ))}
                           </select>
                         </div>
-                        <div className="space-y-0.5">
-                          <label className="text-[9px] font-bold text-charcoal-muted uppercase">Employee</label>
+                        <div className="space-y-1">
+                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-0.5">Employee</label>
                           <select
                             value={registerData.employee_code}
                             onChange={(e) => setRegisterData({ ...registerData, employee_code: e.target.value })}
-                            className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-lg px-2 py-1.5 text-[10px] font-bold outline-none"
+                            className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-3 py-3 text-sm font-medium outline-none bg-white"
                           >
                             <option value="">Select Employee</option>
                             {availableEmployees.map(emp => (
@@ -655,18 +660,18 @@ const AuthPage = ({ isAdminLogin = false }) => {
                         </div>
                       </div>
                     )}
-
+ 
                     {/* Legal Checkbox */}
-                    <div className="flex items-start space-x-2 pt-1">
+                    <div className="flex items-start space-x-2.5 pt-1.5">
                       <input
                         id="register-terms"
                         type="checkbox"
                         checked={registerData.terms_accepted}
                         onChange={(e) => setRegisterData({ ...registerData, terms_accepted: e.target.checked })}
-                        className="mt-0.5 w-3.5 h-3.5 text-terracotta border-gray-200 focus:ring-0 cursor-pointer"
+                        className="mt-0.5 w-4 h-4 text-terracotta border-gray-200 focus:ring-0 cursor-pointer rounded"
                         required
                       />
-                      <label className="text-[9px] text-charcoal-muted font-bold leading-tight cursor-pointer">
+                      <label className="text-xs text-charcoal-muted font-semibold leading-tight cursor-pointer">
                         I accept the <LegalLinks className="inline text-terracotta" context={registerData.role === 'host' ? 'host_registration' : 'guest_registration'} />.
                       </label>
                     </div>

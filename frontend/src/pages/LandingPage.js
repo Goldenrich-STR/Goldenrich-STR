@@ -2139,7 +2139,7 @@ const LandingPage = () => {
           >
             Discover
           </a>
-          {user && (
+          {wishlist.length > 0 && (
             <a
               href="#"
               onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
@@ -2244,13 +2244,15 @@ const LandingPage = () => {
             >
               Discover
             </button>
-            <button
-              onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }}
-              className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-white/10"
-            >
-              <span>Wishlist</span>
-              <Heart className="w-6 h-6 text-red-500 fill-red-500" />
-            </button>
+            {wishlist.length > 0 && (
+              <button
+                onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }}
+                className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-white/10"
+              >
+                <span>Wishlist</span>
+                <Heart className="w-6 h-6 text-red-500 fill-red-500" />
+              </button>
+            )}
             <button
               onClick={() => { setIsMobileMenuOpen(false); setShowHowItWorksModal(true); }}
               className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-white/10"
@@ -2271,7 +2273,7 @@ const LandingPage = () => {
               <span>Get in Touch</span>
             </button>
             <div className="py-3 border-b border-white/10 flex flex-col items-start">
-              <LanguageSelector />
+              <LanguageSelector mode="inline" />
             </div>
 
             {user ? (
@@ -2760,13 +2762,11 @@ const LandingPage = () => {
             const StandardSlider = () => {
               const slides = [
                 'https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?auto=format&fit=crop&q=80&w=1600', // Gourmet chef plating / food
-                'https://images.unsplash.com/photo-1536122985607-4fe00b283652?auto=format&fit=crop&q=80&w=1600', // Active Billiards/Snooker play
-                'https://images.unsplash.com/photo-1609220136736-443140cffec6?auto=format&fit=crop&q=80&w=1600', // Indian family vacation
-                'https://images.unsplash.com/photo-1729605411999-5a1c8972a169?auto=format&fit=crop&q=80&w=1600'  // Private pool
               ];
               const [currentIndex, setCurrentIndex] = useState(0);
 
               useEffect(() => {
+                if (slides.length <= 1) return;
                 const interval = setInterval(() => {
                   setCurrentIndex((prev) => (prev + 1) % slides.length);
                 }, 5000);
@@ -2795,20 +2795,22 @@ const LandingPage = () => {
                   <div className="absolute inset-0 bg-black/45 z-10" />
 
                   {/* Slider Dots indicators */}
-                  <div className="absolute bottom-6 left-8 md:left-12 z-30 flex items-center space-x-2">
-                    {slides.map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setCurrentIndex(idx)}
-                        className={`h-1.5 rounded-full transition-all duration-300 ${
-                          idx === currentIndex 
-                            ? 'w-6 bg-white' 
-                            : 'w-1.5 bg-white/40 hover:bg-white/80'
-                        }`}
-                        aria-label={`Go to slide ${idx + 1}`}
-                      />
-                    ))}
-                  </div>
+                  {slides.length > 1 && (
+                    <div className="absolute bottom-6 left-8 md:left-12 z-30 flex items-center space-x-2">
+                      {slides.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentIndex(idx)}
+                          className={`h-1.5 rounded-full transition-all duration-300 ${
+                            idx === currentIndex 
+                              ? 'w-6 bg-white' 
+                              : 'w-1.5 bg-white/40 hover:bg-white/80'
+                          }`}
+                          aria-label={`Go to slide ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
 
                   {/* Floating Overlay Card on the right */}
                   <div className="absolute inset-y-0 right-0 w-full md:w-[480px] lg:w-[550px] bg-black/65 backdrop-blur-md flex flex-col justify-center px-8 md:px-12 text-left text-white border-l border-white/10 z-20">

@@ -340,9 +340,9 @@ const AboutUs = () => {
             >
               Support
             </button>
-            <div className="py-2 border-b border-stone flex items-center justify-between">
-              <span className="text-2xl font-bold">Language</span>
+            <div className="py-2 border-b border-stone flex items-center">
               <LanguageSelector
+                mode="inline"
                 currentLang={lang}
                 onLanguageChange={(newLang) => {
                   setLang(newLang);

@@ -121,6 +121,13 @@ const Blog = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cmsContent, setCmsContent] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
+  const [wishlist] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('guest_wishlist')) || [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [footerPopup, setFooterPopup] = useState(null);
 
   useEffect(() => {
@@ -417,9 +424,9 @@ const Blog = () => {
             >
               Support
             </button>
-            <div className="py-2 border-b border-stone flex items-center justify-between">
-              <span className="text-2xl font-bold">Language</span>
+            <div className="py-2 border-b border-stone flex items-center">
               <LanguageSelector
+                mode="inline"
                 currentLang={lang}
                 onLanguageChange={(newLang) => {
                   setLang(newLang);

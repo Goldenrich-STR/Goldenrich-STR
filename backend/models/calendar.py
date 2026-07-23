@@ -20,7 +20,7 @@ class BlockedDate(BaseModel):
     # Source
     source: BlockedDateSource = BlockedDateSource.MANUAL
     source_id: Optional[str] = None  # booking_id or external_calendar_id
-    
+        
     # Details
     reason: Optional[str] = None
     

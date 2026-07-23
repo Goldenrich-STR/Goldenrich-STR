@@ -1185,7 +1185,7 @@ const PropertyDetail = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
+    <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white pb-24 lg:pb-0">
       <SEO
         title={`${propertyName} in ${propertyCity}`}
         description={propertySeoDescription}
@@ -1246,7 +1246,7 @@ const PropertyDetail = () => {
              {property.title}
            </h1>
            <div className="flex items-center text-charcoal-muted font-bold text-sm flex-wrap gap-6">
-             <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{property.address}, {property.city}</span>
+             <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{property.address ? `${property.address}, ` : ''}{property.city}</span>
              <div className="flex items-center space-x-1">
                 <Star className="w-4 h-4 text-amber-500 fill-current" />
                 <span className="text-charcoal font-bold tracking-tight">{property.rating ? property.rating.toFixed(1) : 'New'}</span>
@@ -2473,7 +2473,7 @@ const PropertyDetail = () => {
                         </div>
                         <p className="text-xs font-bold text-charcoal-muted mb-4 flex items-center">
                           <MapPin className="w-3.5 h-3.5 mr-1 text-terracotta" />
-                          {prop.address}, {prop.city}
+                          {prop.address ? `${prop.address}, ` : ''}{prop.city}
                         </p>
                       </div>
                       <div className="pt-4 border-t border-sand-100 flex justify-between items-center mt-auto">
@@ -2597,7 +2597,7 @@ const PropertyDetail = () => {
                 <div>
                   <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Venue Details</p>
                   <p className="font-bold tracking-tight text-charcoal">{property.title}</p>
-                  <p className="text-xs text-charcoal-muted font-semibold mt-0.5">{property.address}, {property.city}</p>
+                  <p className="text-xs text-charcoal-muted font-semibold mt-0.5">{property.address ? `${property.address}, ` : ''}{property.city}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Guest Details</p>
@@ -2700,6 +2700,56 @@ const PropertyDetail = () => {
           </div>
         </div>
       )}
+
+      {/* Mobile Sticky Booking Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-sand-200 px-6 py-4 flex items-center justify-between shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+        <div>
+          <div className="flex items-baseline">
+            <span className="text-xl font-bold tracking-tight text-charcoal">
+              ₹{canShowBookingAmount ? amountDueNow.toLocaleString('en-IN') : (property.price_per_night?.toLocaleString('en-IN') || 0)}
+            </span>
+            <span className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider ml-1">
+              {canShowBookingAmount ? ` / ${property.category === 'event_venue' && bookingPaymentType === 'advance' ? 'advance' : 'total'}` : (property.category === 'event_venue' ? '/ day' : '/ night')}
+            </span>
+          </div>
+          <div 
+            onClick={() => {
+              const widget = document.getElementById('cal-trigger');
+              if (widget) {
+                widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                widget.focus();
+              }
+            }} 
+            className="text-[10px] font-bold text-terracotta underline cursor-pointer mt-0.5"
+          >
+            {checkIn && checkOut ? `${new Date(checkIn).toLocaleDateString('en-IN', {month: 'short', day: 'numeric'})} - ${new Date(checkOut).toLocaleDateString('en-IN', {month: 'short', day: 'numeric'})}` : 'Select dates'}
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            if (!checkIn || !checkOut) {
+              const widget = document.getElementById('cal-trigger');
+              if (widget) {
+                widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                widget.focus();
+              }
+            } else {
+              handleBookNow(null, bookingPaymentType);
+            }
+          }}
+          disabled={booking}
+          className="btn-premium py-3 px-6 text-xs font-bold tracking-widest uppercase rounded-2xl shadow-premium"
+        >
+          {booking ? (
+             <div className="flex items-center justify-center space-x-2">
+                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <span>...</span>
+             </div>
+          ) : (
+             checkIn && checkOut ? (property.instant_booking ? t('reserveNow') : t('requestBooking')) : 'Select dates'
+          )}
+        </button>
+      </div>
     </div>
   );
 };
