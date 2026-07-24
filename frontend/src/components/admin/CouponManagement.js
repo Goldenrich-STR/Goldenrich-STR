@@ -206,7 +206,7 @@ const CouponManagement = () => {
                   type="number" 
                   required
                   min="1"
-                  step="0.01"
+                  step="0.00001"
                   value={formData.discount_value}
                   onChange={e => setFormData({...formData, discount_value: e.target.value})}
                   className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
