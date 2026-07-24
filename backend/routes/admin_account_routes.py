@@ -91,6 +91,39 @@ def _property_display_name(property_info: Optional[dict]) -> str:
     )
 
 
+def _subscription_invoice_breakdown(transaction: dict) -> dict:
+    total = round((transaction.get("amount") or 0) / 100, 2)
+    subscription = transaction.get("subscription") or {}
+    plan = transaction.get("plan") or {}
+    tax_percent = float(plan.get("tax_percent") or 18)
+    tax_amount = round(total - (total / (1 + tax_percent / 100)), 2) if tax_percent else 0
+    taxable_after_discount = round(total - tax_amount, 2)
+
+    plan_fee = plan.get("price_monthly")
+    if subscription.get("billing_cycle") == "annual":
+        plan_fee = plan.get("price_annual", plan_fee)
+    plan_fee = round(float(plan_fee or 0), 2)
+    platform_fee = round(float(plan.get("platform_fee") or 0), 2)
+    taxable_before_discount = round(plan_fee + platform_fee, 2)
+    discount_amount = round(float(subscription.get("discount_amount") or 0), 2)
+    if discount_amount <= 0 and taxable_before_discount > taxable_after_discount:
+        discount_amount = round(taxable_before_discount - taxable_after_discount, 2)
+
+    return {
+        "plan_fee": plan_fee,
+        "platform_fee": platform_fee,
+        "tax_percent": tax_percent,
+        "taxable_before_discount": taxable_before_discount,
+        "discount_amount": discount_amount,
+        "taxable_amount": taxable_after_discount,
+        "cgst": round(tax_amount / 2, 2),
+        "sgst": round(tax_amount / 2, 2),
+        "igst": 0,
+        "total_amount": total,
+        "coupon_code": subscription.get("coupon_code") or transaction.get("coupon_code"),
+    }
+
+
 # --------------- Overview ----------------
 
 @router.get("/overview")
@@ -449,9 +482,11 @@ async def list_transactions(
                             "platform_fee": 1,
                             "tax_percent": 1,
                             "price_monthly": 1,
+                            "price_annual": 1,
                             "sqft_range": 1,
                         },
                     )
+                    t["invoice_breakdown"] = _subscription_invoice_breakdown(t)
 
             property_info = None
             property_id = t.get("property_id") or (subscription or {}).get("property_id")
@@ -467,6 +502,10 @@ async def list_transactions(
                         "owner_id": 1,
                         "broker_id": 1,
                         "rm_id": 1,
+                        "address": 1,
+                        "city": 1,
+                        "state": 1,
+                        "pin_code": 1,
                     },
                 )
             t["property"] = property_info
@@ -587,9 +626,12 @@ async def export_transactions_csv(
                     "bhk_type": 1,
                     "platform_fee": 1,
                     "tax_percent": 1,
+                    "price_monthly": 1,
+                    "price_annual": 1,
                 },
             )
         t["plan"] = plan
+        t["invoice_breakdown"] = _subscription_invoice_breakdown(t) if subscription else None
 
         property_info = None
         property_id = t.get("property_id") or (subscription or {}).get("property_id")
@@ -605,6 +647,10 @@ async def export_transactions_csv(
                     "owner_id": 1,
                     "broker_id": 1,
                     "rm_id": 1,
+                    "address": 1,
+                    "city": 1,
+                    "state": 1,
+                    "pin_code": 1,
                 },
             )
         t["property"] = property_info
@@ -700,8 +746,12 @@ async def export_transactions_csv(
         "host_email",
         "gst_no",
         "property_type",
+        "plan_fee",
         "gross_amount",
         "platform_fee",
+        "coupon_code",
+        "coupon_discount",
+        "taxable_amount_after_discount",
         "igst",
         "cgst",
         "sgst",
@@ -724,15 +774,13 @@ async def export_transactions_csv(
     writer = csv.DictWriter(buf, fieldnames=fields)
     writer.writeheader()
     for t in items:
-        total = round((t.get("amount") or 0) / 100, 2)
         plan = t.get("plan") or {}
-        tax_percent = float(plan.get("tax_percent") or 18)
-        taxable = round(total / (1 + tax_percent / 100), 2) if tax_percent else total
-        tax = round(max(0, total - taxable), 2)
-        platform_fee = round(float(plan.get("platform_fee") or 0), 2)
-        gross = taxable
-        cgst = round(tax / 2, 2)
-        sgst = round(tax / 2, 2)
+        breakdown = t.get("invoice_breakdown") or _subscription_invoice_breakdown(t)
+        total = breakdown["total_amount"]
+        gross = breakdown["plan_fee"] or breakdown["taxable_before_discount"] or breakdown["taxable_amount"]
+        platform_fee = breakdown["platform_fee"]
+        cgst = breakdown["cgst"]
+        sgst = breakdown["sgst"]
         user = t.get("user") or {}
         broker = t.get("broker") or {}
         employee = t.get("employee") or {}
@@ -754,9 +802,13 @@ async def export_transactions_csv(
             "host_email": user.get("email") or "NA",
             "gst_no": user.get("gst_number") or user.get("gst_no") or "NA",
             "property_type": plan.get("bhk_type") or plan.get("plan_type") or subscription.get("plan_type") or t.get("type"),
+            "plan_fee": breakdown["plan_fee"],
             "gross_amount": gross,
             "platform_fee": platform_fee,
-            "igst": 0,
+            "coupon_code": breakdown.get("coupon_code") or "NA",
+            "coupon_discount": breakdown["discount_amount"],
+            "taxable_amount_after_discount": breakdown["taxable_amount"],
+            "igst": breakdown["igst"],
             "cgst": cgst,
             "sgst": sgst,
             "total_amount": total,
