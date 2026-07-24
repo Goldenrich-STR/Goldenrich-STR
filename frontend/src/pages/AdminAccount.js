@@ -6,11 +6,7 @@ import {
 import {
   ArrowLeft, Download, IndianRupee, TrendingUp, Wallet, Users,
   RefreshCcw, CheckCircle, XCircle, AlertCircle, Clock,
-<<<<<<< HEAD
-  Share2, FileText, Mail, MessageSquare, Printer,
-=======
-  Search, Share2, FileText, Mail, MessageSquare, Printer, Check, SlidersHorizontal, CalendarDays, ChevronLeft, ChevronRight
->>>>>>> 87cbcd105480de08e8e7aebd5219a7d287ec8593
+  Share2, FileText, Mail, MessageSquare, Printer, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -364,7 +360,6 @@ const TransactionsTab = () => {
     }
   };
 
-<<<<<<< HEAD
   const formatMoney = (amount = 0) =>
     new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -512,99 +507,14 @@ const TransactionsTab = () => {
               <span>Export CSV</span>
             </button>
           </div>
-=======
-  return (
-    <div className="space-y-6" data-testid="transactions-tab">
-      <div className="border border-gray-100 shadow-sm rounded-lg bg-white p-4">
-        <div className="space-y-3">
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-              <Search className="h-4 w-4 text-charcoal-muted" />
-            </span>
-            <input
-              type="text"
-              placeholder="Search Customer Name / Phone / Email / Booking / Payment / UTR ID..."
-              value={filters.q}
-              onChange={(e) => handleFilterChange({ ...filters, q: e.target.value })}
-              className="input-field pl-10 w-full bg-white border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg transition text-xs py-2.5"
-              data-testid="filter-q"
-            />
-            <SlidersHorizontal className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-muted" />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto_auto] gap-3 items-center">
-          <select
-            value={filters.type}
-            onChange={(e) => handleFilterChange({ ...filters, type: e.target.value })}
-            className="input-field bg-white border border-gray-200 rounded-lg py-2.5 text-xs"
-            data-testid="filter-type"
-          >
-            <option value="">All transaction types</option>
-            <option value="booking_payment">Booking payments</option>
-            <option value="registration_fee">Registration fees</option>
-            <option value="subscription">Subscriptions</option>
-            <option value="refund">Refunds</option>
-            <option value="payout">Payouts</option>
-          </select>
-
-          <select
-            value={filters.status}
-            onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })}
-            className="input-field bg-white border border-gray-200 rounded-lg py-2.5 text-xs"
-            data-testid="filter-status"
-          >
-            <option value="">All statuses</option>
-            <option value="success">Success</option>
-            <option value="pending">Pending</option>
-            <option value="failed">Failed</option>
-          </select>
-
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative">
-            <input
-              type="date"
-              value={filters.start}
-              onChange={(e) => handleFilterChange({ ...filters, start: e.target.value })}
-              className="input-field w-44 bg-white border border-gray-200 rounded-lg py-2 text-xs"
-              data-testid="filter-start"
-            />
-            </div>
-            <span className="text-charcoal-muted text-xs font-bold">to</span>
-            <div className="relative">
-            <input
-              type="date"
-              value={filters.end}
-              onChange={(e) => handleFilterChange({ ...filters, end: e.target.value })}
-              className="input-field w-44 bg-white border border-gray-200 rounded-lg py-2 text-xs"
-              data-testid="filter-end"
-            />
-            </div>
-          </div>
-
-          <button
-            onClick={downloadCsv}
-            className="px-5 py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold transition flex items-center space-x-2 text-xs shadow-sm"
-            data-testid="export-csv-btn"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export CSV</span>
-          </button>
->>>>>>> 87cbcd105480de08e8e7aebd5219a7d287ec8593
         </div>
       </div>
 
-      <div className="border border-gray-100 shadow-sm rounded-lg bg-white overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
-          <p className="text-sm font-bold text-charcoal flex items-center gap-2" data-testid="transactions-count">
-            <span className="w-6 h-6 rounded-md bg-blue-50 text-blue-700 inline-flex items-center justify-center">
-              <FileText className="w-3.5 h-3.5" />
-            </span>
+      <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-6 overflow-hidden">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-bold text-charcoal" data-testid="transactions-count">
             {loading ? 'Syncing transactions...' : `${total} Transactions Found`}
           </p>
-          <button className="px-3 py-1.5 rounded-lg border border-blue-100 text-blue-700 text-xs font-bold hover:bg-blue-50">
-            View Summary
-          </button>
         </div>
 
         {loading && <div className="text-center py-12 text-charcoal-light" data-testid="transactions-loading">Loading transactions…</div>}
@@ -619,7 +529,6 @@ const TransactionsTab = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left border-collapse" data-testid="transactions-table">
                 <thead>
-<<<<<<< HEAD
                   <tr className="border-b border-gray-100 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-stone/50">
                     <th className="py-3 px-4 rounded-l-xl">Invoice Date</th>
                     <th className="py-3 px-4">Invoice No</th>
@@ -644,43 +553,27 @@ const TransactionsTab = () => {
                     <th className="py-3 px-4">Payment Status</th>
                     <th className="py-3 px-4">Select Service</th>
                     <th className="py-3 px-4 text-center rounded-r-xl no-print">Invoice Details</th>
-=======
-                  <tr className="border-b border-gray-100 text-charcoal-muted text-[11px] font-bold bg-slate-50/80">
-                    <th className="py-3 px-4">Date & Time</th>
-                    <th className="py-3 px-4">Customer Details</th>
-                    <th className="py-3 px-4">Type</th>
-                    <th className="py-3 px-4">Amount</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4">Booking ID</th>
-                    <th className="py-3 px-4">Payment / UTR ID</th>
-                    <th className="py-3 px-4 text-center rounded-r-xl no-print">Actions</th>
->>>>>>> 87cbcd105480de08e8e7aebd5219a7d287ec8593
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sand-100">
-                  {items.map((t, idx) => (
+                  {items.map((t) => {
+                    const breakdown = getInvoiceBreakdown(t);
+                    return (
                     <tr
                       key={t.transaction_id}
-                      className="hover:bg-blue-50/30 transition text-charcoal"
+                      className="hover:bg-stone/40 transition text-charcoal"
                       data-testid={`txn-${t.transaction_id}`}
                     >
-                      <td className="py-4 px-4 whitespace-nowrap text-[11px] font-semibold text-charcoal">
-                        {new Date(t.created_at).toLocaleString('en-IN', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short'
-                        })}
+                      <td className="py-4 px-4 whitespace-nowrap text-xs">{formatInvoiceDate(t.created_at)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-bold">{t.invoice_no || 'NA'}</td>
+                      <td className="py-4 px-4 min-w-[150px]">
+                        <div className="font-bold text-charcoal text-sm">{t.broker?.full_name || t.broker_name || 'NA'}</div>
+                        <div className="text-xs text-charcoal-muted mt-0.5">LG Code: {t.broker?.lg_code || t.broker_lg_code || 'NA'}</div>
                       </td>
-                      <td className="py-4 px-4 flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${avatarColors[idx % avatarColors.length]}`}>
-                          {initials(t.user?.full_name)}
-                        </div>
-                        <div>
-                        <div className="font-bold text-charcoal text-sm">{t.user?.full_name || '—'}</div>
-                        <div className="text-xs text-charcoal-muted mt-0.5">{t.user?.email || '—'}</div>
-                        <div className="text-xs text-charcoal-light mt-0.5">{t.user?.phone || '—'}</div>
-                        </div>
+                      <td className="py-4 px-4 min-w-[150px]">
+                        <div className="font-bold text-charcoal text-sm">{t.employee?.full_name || t.employee_name || 'NA'}</div>
+                        <div className="text-xs text-charcoal-muted mt-0.5">{t.employee?.employee_code || t.employee_code || 'NA'}</div>
                       </td>
-<<<<<<< HEAD
                       <td className="py-4 px-4 min-w-[150px]">
                         <div className="font-bold text-charcoal text-sm">{t.user?.full_name || 'NA'}</div>
                         <div className="text-xs text-charcoal-muted mt-0.5">{t.user?.phone || t.user?.email || 'NA'}</div>
@@ -702,28 +595,17 @@ const TransactionsTab = () => {
                       <td className="py-4 px-4 whitespace-nowrap text-xs">{formatPlanDate(t.subscription?.start_date)}</td>
                       <td className="py-4 px-4 whitespace-nowrap text-xs">{formatPlanDate(t.subscription?.end_date)}</td>
                       <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{t.type === 'refund' ? formatMoney(breakdown.total) : 'NA'}</td>
-=======
->>>>>>> 87cbcd105480de08e8e7aebd5219a7d287ec8593
                       <td className="py-4 px-4 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide ${t.type === 'payout' ? 'bg-blue-50 text-blue-700' : 'bg-violet-50 text-violet-700'}`}>
-                          {t.type.replaceAll('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 font-bold tracking-tight text-sm text-charcoal whitespace-nowrap">
-                        {fmtINR(t.amount)}
-                      </td>
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase tracking-wide ${
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
                           t.status === 'success' ? 'bg-green-100 text-green-700' :
                           t.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                           'bg-red-100 text-red-700'
                         }`}>{t.status}</span>
                       </td>
-                      <td className="py-4 px-4 font-semibold text-xs text-charcoal-muted whitespace-nowrap">
-                        {t.booking_id || '—'}
-                      </td>
-                      <td className="py-4 px-4 text-charcoal-light text-xs font-mono whitespace-nowrap">
-                        {t.upi_transaction_id || t.razorpay_payment_id || t.razorpay_payout_id || t.razorpay_refund_id || '—'}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide bg-blue-50 text-blue-700">
+                          {t.type.replaceAll('_', ' ')}
+                        </span>
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap text-center no-print">
                         <div className="flex items-center justify-center space-x-2">
@@ -783,7 +665,8 @@ const TransactionsTab = () => {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -2351,7 +2234,6 @@ const TopHostsTab = () => {
 const InvoiceModal = ({ transaction, onClose }) => {
   const t = transaction;
   const user = t.user || {};
-<<<<<<< HEAD
   const property = t.property || {};
   const propertyName = property.title || property.property_name || property.name || t.property_name || property.property_id || 'NA';
   const propertyAddress = [property.address, property.city, property.state, property.pin_code].filter(Boolean).join(', ') || 'NA';
@@ -2375,16 +2257,6 @@ const InvoiceModal = ({ transaction, onClose }) => {
   const cgst = Number(invoiceBreakdown.cgst ?? ((amountINR - baseAmount) / 2));
   const sgst = Number(invoiceBreakdown.sgst ?? ((amountINR - baseAmount) / 2));
   const totalGst = cgst + sgst;
-=======
-  const amountINR = (t.amount || 0) / 100;
-  
-  // 18% GST calculation (GST included in all user payments)
-  const gstRate = 0.18;
-  const baseAmount = amountINR / (1 + gstRate);
-  const totalGst = amountINR - baseAmount;
-  const cgst = totalGst / 2;
-  const sgst = totalGst / 2;
->>>>>>> 87cbcd105480de08e8e7aebd5219a7d287ec8593
 
   const handlePrint = () => {
     window.print();
@@ -2449,7 +2321,6 @@ const InvoiceModal = ({ transaction, onClose }) => {
           </div>
         </div>
 
-<<<<<<< HEAD
         {/* Invoice View Container */}
         <div className="overflow-x-auto">
           {/* Printable Invoice element */}
@@ -2656,42 +2527,6 @@ const InvoiceModal = ({ transaction, onClose }) => {
               <div className="font-bold text-xs capitalize" style={{ fontSize: '11px', fontWeight: 'bold' }}>
                 Indian Rupees {numberToWords(amountINR)} Only
               </div>
-=======
-        {/* Transaction/Bill details Table */}
-        <div className="py-6 flex-1">
-          <div className="text-xs text-charcoal-muted uppercase font-bold tracking-wider mb-3">Itemized Details</div>
-          <table className="w-full text-xs text-left">
-            <thead>
-              <tr className="border-b border-gray-100 text-charcoal-muted font-bold">
-                <th className="py-2">Description</th>
-                <th className="py-2 text-right">Taxable Val.</th>
-                <th className="py-2 text-right">GST (18%)</th>
-                <th className="py-2 text-right">Total (INR)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-sand-100 text-charcoal">
-                <td className="py-3 font-semibold text-sm">
-                  {t.type === 'booking_payment' ? `Booking Accommodation Fee (${t.booking_id || '—'})` :
-                   t.type === 'registration_fee' ? 'Host Registration Fee' :
-                   t.type === 'subscription' ? 'Host Subscription Premium Plan' :
-                   t.type === 'refund' ? `Accommodation Refund Processed (${t.booking_id || '—'})` :
-                   'Platform Service Transaction'}
-                </td>
-                <td className="py-3 text-right">₹{baseAmount.toFixed(2)}</td>
-                <td className="py-3 text-right">₹{totalGst.toFixed(2)}</td>
-                <td className="py-3 text-right font-bold text-sm">₹{amountINR.toFixed(2)}</td>
-              </tr>
-            </tbody>
-          </table>
-
-          {/* GST breakdown table */}
-          <div className="mt-6 bg-stone/50 rounded-xl p-4 border border-sand-100 text-xs">
-            <div className="font-bold text-charcoal-muted uppercase tracking-wider mb-2 text-[10px]">Tax Breakdown</div>
-            <div className="flex justify-between py-1 border-b border-gray-100/60">
-              <span className="text-charcoal-light">CGST (9%)</span>
-              <span className="font-medium text-charcoal">₹{cgst.toFixed(2)}</span>
->>>>>>> 87cbcd105480de08e8e7aebd5219a7d287ec8593
             </div>
             <div className="flex justify-between py-1 border-b border-gray-100/60">
               <span className="text-charcoal-light">SGST (9%)</span>
