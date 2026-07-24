@@ -919,12 +919,15 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
 };
 
 const SUGGESTED_DESTINATIONS = [
-  { city: "Pune", state: "Maharashtra", desc: "A hidden gem", icon: Hotel },
-  { city: "Lonavala", state: "Maharashtra", desc: "For sights like Karla Caves", icon: Trees },
-  { city: "Mumbai", state: "Maharashtra", desc: "For its top-notch dining", icon: Building2 },
-  { city: "North Goa", state: "Goa", desc: "Popular beach destination", icon: Waves },
-  { city: "Nashik", state: "Maharashtra", desc: "Near you", icon: Compass },
-  { city: "Karjat", state: "Maharashtra", desc: "A hidden gem", icon: Home }
+  { city: "Pune", state: "Maharashtra", desc: "Oxford of the East & Heritage Forts", icon: Hotel },
+  { city: "Lonavala", state: "Maharashtra", desc: "Karla Caves & Scenic Valleys", icon: Trees },
+  { city: "Mumbai", state: "Maharashtra", desc: "The Financial Hub & Gateway of India", icon: Building2 },
+  { city: "North Goa", state: "Goa", desc: "Sandy Beaches & Vibrant Nightlife", icon: Waves },
+  { city: "Nashik", state: "Maharashtra", desc: "Wine Capital of India & Temples", icon: Compass },
+  { city: "Karjat", state: "Maharashtra", desc: "Waterfalls & Trekking Trails", icon: Home },
+  { city: "Mahabaleshwar", state: "Maharashtra", desc: "Strawberry Capital & Hill Station", icon: Sunset },
+  { city: "Alibaug", state: "Maharashtra", desc: "Pristine Beaches & Sea Forts", icon: Waves },
+  { city: "Igatpuri", state: "Maharashtra", desc: "Foggy Peaks & Waterfalls", icon: Compass }
 ];
 
 const DESTINATION_CONFIGS = {
@@ -1153,6 +1156,9 @@ const DestinationLineIcon = ({ label }) => {
     // Fuzzy matching key
     const getMatchKey = (lbl) => {
       const l = lbl.toLowerCase();
+      if (l.includes('pandav') || l.includes('leni')) return 'Pandav Leni';
+      if (l.includes('anjaneri')) return 'Anjaneri';
+      if (l.includes('sula') || l.includes('vineyard')) return 'Sula Vineyards';
       if (l.includes('basilica') || l.includes('church') || l.includes('jesus')) return 'Basilica of Born Jesus';
       if (l.includes('aguada') || l.includes('fort')) return 'Fort Aguada';
       if (l.includes('baga')) return 'Baga';
@@ -1178,7 +1184,22 @@ const DestinationLineIcon = ({ label }) => {
     };
 
     switch (getMatchKey(label)) {
-      case 'Nashik': // Wine & Vineyards
+      case 'Nashik': // Grape Bunch
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24 10C24 10 27 6 30 8" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="24" cy="16" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="20" cy="22" r="4" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="28" cy="22" r="4" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="16" cy="28" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" opacity="0.8" />
+            <circle cx="24" cy="28" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" opacity="0.8" />
+            <circle cx="32" cy="28" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" opacity="0.8" />
+            <circle cx="20" cy="34" r="4" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="28" cy="34" r="4" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="24" cy="40" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" />
+          </svg>
+        );
+      case 'Sula Vineyards': // Wine bottle and glass
         return (
           <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="25" y="8" width="12" height="18" rx="2" stroke={strokeColor} strokeWidth="1.5" />
@@ -1190,6 +1211,24 @@ const DestinationLineIcon = ({ label }) => {
             <path d="M17 38H25" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
             <circle cx="15" cy="22" r="2" fill={strokeColor} />
             <circle cx="19" cy="19" r="2" fill={strokeColor} />
+          </svg>
+        );
+      case 'Pandav Leni': // Mountain Caves
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 38L18 14L30 28L38 18L44 38H6Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M14 38C14 32 18 30 22 30C26 30 30 32 30 38" fill="#FFF" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M32 38C32 34 35 32 38 32C41 32 44 34 44 38" fill="#FFF" stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="28" cy="10" r="3.5" fill={accentHighlight} />
+          </svg>
+        );
+      case 'Anjaneri': // Mountain Peak/Fort
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="34" cy="14" r="6" fill={accentHighlight} opacity="0.8" />
+            <path d="M4 38L18 16L32 32L38 24L44 38H4Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M12 28L18 22L24 28" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M30 38H18" stroke={strokeColor} strokeWidth="1.5" />
           </svg>
         );
       case 'Igatpuri': // Waterfall & Lake

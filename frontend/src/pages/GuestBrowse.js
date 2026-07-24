@@ -273,12 +273,15 @@ const TRANSLATIONS = {
 };
 
 const SUGGESTED_DESTINATIONS = [
-  { city: "Pune", state: "Maharashtra", desc: "A hidden gem", icon: Hotel },
-  { city: "Lonavala", state: "Maharashtra", desc: "For sights like Karla Caves", icon: Trees },
-  { city: "Mumbai", state: "Maharashtra", desc: "For its top-notch dining", icon: Building2 },
-  { city: "North Goa", state: "Goa", desc: "Popular beach destination", icon: Waves },
-  { city: "Nashik", state: "Maharashtra", desc: "Near you", icon: Compass },
-  { city: "Karjat", state: "Maharashtra", desc: "A hidden gem", icon: Home }
+  { city: "Pune", state: "Maharashtra", desc: "Oxford of the East & Heritage Forts", icon: Hotel },
+  { city: "Lonavala", state: "Maharashtra", desc: "Karla Caves & Scenic Valleys", icon: Trees },
+  { city: "Mumbai", state: "Maharashtra", desc: "The Financial Hub & Gateway of India", icon: Building2 },
+  { city: "North Goa", state: "Goa", desc: "Sandy Beaches & Vibrant Nightlife", icon: Waves },
+  { city: "Nashik", state: "Maharashtra", desc: "Wine Capital of India & Temples", icon: Compass },
+  { city: "Karjat", state: "Maharashtra", desc: "Waterfalls & Trekking Trails", icon: Home },
+  { city: "Mahabaleshwar", state: "Maharashtra", desc: "Strawberry Capital & Hill Station", icon: Sunset },
+  { city: "Alibaug", state: "Maharashtra", desc: "Pristine Beaches & Sea Forts", icon: Waves },
+  { city: "Igatpuri", state: "Maharashtra", desc: "Foggy Peaks & Waterfalls", icon: Compass }
 ];
 
 const GuestBrowse = () => {
