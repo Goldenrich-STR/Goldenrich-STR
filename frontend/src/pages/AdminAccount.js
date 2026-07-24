@@ -6,7 +6,7 @@ import {
 import {
   ArrowLeft, Download, IndianRupee, TrendingUp, Wallet, Users,
   RefreshCcw, CheckCircle, XCircle, AlertCircle, Clock,
-  Share2, FileText, Mail, MessageSquare, Printer, ChevronLeft, ChevronRight,
+  Search, Share2, FileText, Mail, MessageSquare, Printer, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +21,48 @@ const fmtINR = (paise) =>
     minimumFractionDigits: Math.abs(Number(paise || 0)) % 100 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   }).format((paise || 0) / 100);
+
+const formatDateForInvoice = (value) => {
+  if (!value) return 'NA';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'NA';
+  return date
+    .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    .replace(/ /g, '-');
+};
+
+const numberToWordsInteger = (num) => {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const belowHundred = (n) => (n < 20 ? ones[n] : `${tens[Math.floor(n / 10)]}${n % 10 ? ` ${ones[n % 10]}` : ''}`);
+  const belowThousand = (n) => {
+    const hundred = Math.floor(n / 100);
+    const rest = n % 100;
+    return `${hundred ? `${ones[hundred]} Hundred${rest ? ' ' : ''}` : ''}${rest ? belowHundred(rest) : ''}`;
+  };
+
+  let n = Math.floor(Math.abs(Number(num) || 0));
+  if (n === 0) return 'Zero';
+  const parts = [];
+  const crore = Math.floor(n / 10000000);
+  n %= 10000000;
+  const lakh = Math.floor(n / 100000);
+  n %= 100000;
+  const thousand = Math.floor(n / 1000);
+  n %= 1000;
+  if (crore) parts.push(`${belowThousand(crore)} Crore`);
+  if (lakh) parts.push(`${belowThousand(lakh)} Lakh`);
+  if (thousand) parts.push(`${belowThousand(thousand)} Thousand`);
+  if (n) parts.push(belowThousand(n));
+  return parts.join(' ');
+};
+
+const numberToWords = (amount) => {
+  const safeAmount = Math.max(0, Number(amount) || 0);
+  const rupees = Math.floor(safeAmount);
+  const paise = Math.round((safeAmount - rupees) * 100);
+  return `${numberToWordsInteger(rupees)}${paise ? ` And Paise ${numberToWordsInteger(paise)}` : ''}`;
+};
 
 const TABS = [
   { id: 'overview',     label: 'Overview' },
@@ -2263,7 +2305,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white" data-testid="invoice-modal">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto print:p-0 print:bg-white" data-testid="invoice-modal">
       <style>{`
         @media print {
           body * {
@@ -2279,7 +2321,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
             width: 100%;
             border: none !important;
             box-shadow: none !important;
-            padding: 20px !important;
+            padding: 0 !important;
             margin: 0 !important;
           }
           .no-print {
@@ -2288,43 +2330,29 @@ const InvoiceModal = ({ transaction, onClose }) => {
         }
       `}</style>
       
-      <div id="printable-invoice" className="bg-white rounded-2xl max-w-lg w-full border border-gray-100 shadow-elevated p-6 relative overflow-hidden flex flex-col">
-        {/* Close Button */}
-        <button 
-          onClick={onClose} 
-          className="absolute top-4 right-4 text-charcoal-light hover:text-charcoal no-print"
-        >
-          <XCircle className="w-6 h-6" />
-        </button>
-
-        {/* Invoice Header */}
-        <div className="text-center pb-6 border-b border-dashed border-gray-200">
-          <div className="text-xs uppercase tracking-widest text-terracotta font-semibold tracking-tight mb-1">Tax Invoice</div>
-          <h2 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">X-SPACE360</h2>
-          <p className="text-xs text-charcoal-muted mt-1">Short-Term Rentals Platform · India</p>
-          <p className="text-xs text-charcoal-light">GSTIN: 27AAAAA1111A1Z1</p>
-        </div>
-
-        {/* Invoice Info */}
-        <div className="grid grid-cols-2 gap-4 py-6 text-xs border-b border-dashed border-gray-200">
-          <div>
-            <div className="text-charcoal-muted uppercase font-bold tracking-wider mb-1">Customer Details</div>
-            <div className="font-bold text-charcoal text-sm">{user.full_name || '—'}</div>
-            <div className="text-charcoal-light mt-0.5">{user.email || '—'}</div>
-            <div className="text-charcoal-light">{user.phone || '—'}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-charcoal-muted uppercase font-bold tracking-wider mb-1">Invoice Details</div>
-            <div><span className="font-semibold text-charcoal-light">Invoice #:</span> <span className="font-bold text-charcoal">{t.transaction_id}</span></div>
-            <div><span className="font-semibold text-charcoal-light">Date:</span> {new Date(t.created_at).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</div>
-            <div><span className="font-semibold text-charcoal-light">Type:</span> <span className="capitalize font-medium text-terracotta">{t.type.replaceAll('_', ' ')}</span></div>
+      <div className="bg-white rounded-xl w-full max-w-5xl border border-gray-100 shadow-elevated p-5 relative">
+        <div className="no-print flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-100">
+          <h2 className="text-lg font-bold text-charcoal">Tax Invoice Details</h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 transition flex items-center gap-2"
+            >
+              <Printer className="w-4 h-4" />
+              Print / Download PDF
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-200 text-charcoal rounded-lg text-sm font-semibold hover:bg-gray-50 transition"
+            >
+              Close
+            </button>
           </div>
         </div>
 
-        {/* Invoice View Container */}
         <div className="overflow-x-auto">
           {/* Printable Invoice element */}
-          <div id="printable-invoice" className="bg-white text-black font-sans border-2 border-black w-full min-w-[700px] mx-auto text-xs relative" style={{ boxSizing: 'border-box', padding: '2px' }}>
+          <div id="printable-invoice" className="bg-white text-black font-sans border-2 border-black w-full min-w-[900px] mx-auto text-xs relative" style={{ boxSizing: 'border-box', padding: '2px' }}>
             
             {/* Header: Company details and Invoice details */}
             <table className="w-full border-collapse border-b-2 border-black" style={{ borderCollapse: 'collapse', width: '100%' }}>
@@ -2528,53 +2556,80 @@ const InvoiceModal = ({ transaction, onClose }) => {
                 Indian Rupees {numberToWords(amountINR)} Only
               </div>
             </div>
-            <div className="flex justify-between py-1 border-b border-gray-100/60">
-              <span className="text-charcoal-light">SGST (9%)</span>
-              <span className="font-medium text-charcoal">₹{sgst.toFixed(2)}</span>
+
+            {/* GST summary */}
+            <table className="w-full border-collapse border-b-2 border-black text-center" style={{ borderCollapse: 'collapse', width: '100%', fontSize: '10px', textAlign: 'center' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f9f9f9', fontWeight: 'bold', borderBottom: '1px solid black' }}>
+                  <th rowSpan="2" style={{ padding: '7px 6px', borderRight: '1px solid black', width: '18%', textAlign: 'left' }}>HSN/SAC</th>
+                  <th rowSpan="2" style={{ padding: '7px 6px', borderRight: '1px solid black', width: '18%' }}>Taxable Value</th>
+                  <th colSpan="2" style={{ padding: '5px 6px', borderRight: '1px solid black' }}>Central Tax</th>
+                  <th colSpan="2" style={{ padding: '5px 6px', borderRight: '1px solid black' }}>State Tax</th>
+                  <th rowSpan="2" style={{ padding: '7px 6px', width: '12%' }}>Total Tax Amount</th>
+                </tr>
+                <tr style={{ backgroundColor: '#f9f9f9', fontWeight: 'bold', borderBottom: '1px solid black' }}>
+                  <th style={{ padding: '5px 6px', borderRight: '1px solid black' }}>Rate</th>
+                  <th style={{ padding: '5px 6px', borderRight: '1px solid black' }}>Amount</th>
+                  <th style={{ padding: '5px 6px', borderRight: '1px solid black' }}>Rate</th>
+                  <th style={{ padding: '5px 6px', borderRight: '1px solid black' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid black', fontWeight: 'bold' }}>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', textAlign: 'left', fontFamily: 'monospace' }}>998399</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
+                  <td style={{ padding: '7px 6px', fontFamily: 'monospace' }}>{totalGst.toFixed(2)}</td>
+                </tr>
+                <tr style={{ fontWeight: 'bold' }}>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', textAlign: 'left' }}>Total</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
+                  <td style={{ padding: '7px 6px', fontFamily: 'monospace' }}>{totalGst.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="py-2 px-3 border-b-2 border-black" style={{ padding: '8px 12px', borderBottom: '2px solid black' }}>
+              <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Tax Amount (in words)</div>
+              <div className="font-bold text-xs capitalize" style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                Indian Rupees {numberToWords(totalGst)} Only
+              </div>
             </div>
-            <div className="flex justify-between py-1 font-bold text-charcoal">
-              <span>Total GST Paid</span>
-              <span>₹{totalGst.toFixed(2)}</span>
-            </div>
+
+            {/* Bank details and signature */}
+            <table className="w-full border-collapse" style={{ borderCollapse: 'collapse', width: '100%', minHeight: '120px' }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: '58%', padding: '12px', borderRight: '2px solid black', verticalAlign: 'top' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 'bold', textDecoration: 'underline', marginBottom: '6px' }}>Company's Bank Details:</div>
+                    <div style={{ fontSize: '10px', lineHeight: '1.45' }}>
+                      <strong>A/c Holder's Name:</strong> Golden Rich Financial & Real Estate Solutions Pvt. Ltd.<br />
+                      <strong>Bank Name:</strong> IDFC FIRST BANK<br />
+                      <strong>A/c No.:</strong> 10250563892<br />
+                      <strong>Branch & IFSC Code:</strong> Gangapur Road, Nashik & IDFB0042283
+                    </div>
+                    <div style={{ fontSize: '8px', color: '#666', fontStyle: 'italic', lineHeight: '1.4', marginTop: '14px' }}>
+                      Declaration: We declare that this invoice shows the actual price of the Service described and that all particulars are true and correct.
+                    </div>
+                  </td>
+                  <td style={{ width: '42%', padding: '12px', textAlign: 'right', verticalAlign: 'top' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 'bold' }}>For Golden Rich Properties</div>
+                    <div style={{ height: '70px' }}></div>
+                    <div style={{ fontSize: '11px', fontWeight: 'bold' }}>Authorized Signatory</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* Invoice Footer Details */}
-        <div className="border-t border-dashed border-gray-200 pt-6">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-charcoal font-bold tracking-tight text-sm uppercase tracking-wider">Total Amount Paid</span>
-            <span className="text-2xl font-bold tracking-tight text-terracotta">₹{amountINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-          </div>
-
-          <div className="bg-stone rounded-xl p-3 text-[11px] text-charcoal-muted flex items-center justify-between">
-            <div>
-              <div><span className="font-semibold">Payment Method:</span> {t.upi_transaction_id ? 'UPI QR' : 'Razorpay Online Gateway'}</div>
-              <div><span className="font-semibold">Payment Status:</span> SUCCESS</div>
-              {t.razorpay_payment_id && <div><span className="font-semibold">Razorpay ID:</span> {t.razorpay_payment_id}</div>}
-              {t.upi_transaction_id && <div><span className="font-semibold">UTR / Transaction ID:</span> {t.upi_transaction_id}</div>}
-            </div>
-            <div className="text-right">
-              <span className="inline-block px-2.5 py-1 bg-green-100 text-green-800 rounded-full font-bold text-[10px] uppercase">Paid</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Buttons */}
-        <div className="mt-6 flex justify-end space-x-3 no-print">
-          <button 
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-200 text-charcoal rounded-xl text-xs font-semibold hover:bg-gray-50 transition"
-          >
-            Close
-          </button>
-          <button 
-            onClick={handlePrint}
-            className="px-4 py-2 bg-terracotta text-white rounded-xl text-xs font-semibold hover:bg-terracotta-dark transition flex items-center space-x-1.5 shadow-sm hover:shadow"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print Invoice</span>
-          </button>
-        </div>
       </div>
     </div>
   );
