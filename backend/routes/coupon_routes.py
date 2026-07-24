@@ -87,6 +87,11 @@ async def create_coupon(
             )
             
         code = coupon_data.code.strip().upper()
+        if coupon_data.discount_type == "target_taxable" and coupon_data.coupon_type != "subscription":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Final taxable amount coupons are only supported for subscriptions"
+            )
         
         # Check if code already exists
         existing = await db.coupons.find_one({"code": code})
