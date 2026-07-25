@@ -6,6 +6,7 @@ from enum import Enum
 class DiscountType(str, Enum):
     FIXED = "fixed"
     PERCENTAGE = "percentage"
+    TARGET_TAXABLE = "target_taxable"
 
 class CouponType(str, Enum):
     BOOKING = "booking"

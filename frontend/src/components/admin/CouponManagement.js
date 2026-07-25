@@ -175,6 +175,9 @@ const CouponManagement = () => {
                   onChange={e => setFormData({
                     ...formData,
                     coupon_type: e.target.value,
+                    discount_type: e.target.value === 'booking' && formData.discount_type === 'target_taxable'
+                      ? 'percentage'
+                      : formData.discount_type,
                     property_id: '',
                     plan_type: '',
                     property_category: '',
@@ -197,6 +200,9 @@ const CouponManagement = () => {
                 >
                   <option value="percentage">Percentage (%)</option>
                   <option value="fixed">Fixed Amount (₹)</option>
+                  {formData.coupon_type === 'subscription' && (
+                    <option value="target_taxable">Final Taxable Amount</option>
+                  )}
                 </select>
               </div>
 
@@ -210,8 +216,19 @@ const CouponManagement = () => {
                   value={formData.discount_value}
                   onChange={e => setFormData({...formData, discount_value: e.target.value})}
                   className="w-full border-2 border-gray-100 rounded-xl px-4 py-2 focus:border-terracotta outline-none transition"
-                  placeholder={formData.discount_type === 'percentage' ? "e.g. 10" : "e.g. 500"}
+                  placeholder={
+                    formData.discount_type === 'percentage'
+                      ? "e.g. 10"
+                      : formData.discount_type === 'target_taxable'
+                        ? "e.g. 10"
+                        : "e.g. 500"
+                  }
                 />
+                {formData.discount_type === 'target_taxable' && (
+                  <p className="text-[10px] text-charcoal-muted mt-1 uppercase tracking-wider">
+                    Subscription total will be this taxable amount plus GST.
+                  </p>
+                )}
               </div>
 
               {formData.coupon_type === 'booking' && (
@@ -385,6 +402,8 @@ const CouponManagement = () => {
                     <td className="px-6 py-4 font-bold text-charcoal">
                       {coupon.discount_type === 'percentage' ? (
                         <span className="flex items-center"><Percent className="w-3 h-3 mr-1" />{coupon.discount_value}%</span>
+                      ) : coupon.discount_type === 'target_taxable' ? (
+                        <span>Taxable Rs {coupon.discount_value}</span>
                       ) : (
                         <span>₹{coupon.discount_value}</span>
                       )}

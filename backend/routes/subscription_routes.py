@@ -60,8 +60,6 @@ async def _send_subscription_email(db: AsyncIOMotorDatabase, user_id: str, templ
 
 REGISTRATION_FEE_AMOUNT = int(os.getenv("REGISTRATION_FEE_AMOUNT", "50000"))  # ₹500 in paise
 
-COUPON_MIN_TAXABLE_AMOUNT = 10.0
-
 def _subscription_amount_breakdown(plan: dict, billing_cycle: str = "monthly") -> dict:
     plan_fee = float(plan.get("price_monthly") if billing_cycle == "monthly" else plan.get("price_annual") or 0)
     platform_fee = float(plan.get("platform_fee") or 0)
@@ -88,9 +86,13 @@ def _coupon_discount_amount(coupon: dict, amount: float) -> float:
 def _subscription_coupon_breakdown(plan: dict, coupon: Optional[dict], billing_cycle: str = "monthly") -> dict:
     amount_breakdown = _subscription_amount_breakdown(plan, billing_cycle)
     taxable_amount = round(amount_breakdown["plan_fee"] + amount_breakdown["platform_fee"], 2)
-    if coupon:
-        discounted_taxable_amount = round(min(taxable_amount, COUPON_MIN_TAXABLE_AMOUNT), 2)
+    if coupon and coupon.get("discount_type") == "target_taxable":
+        target_taxable_amount = max(0.0, float(coupon.get("discount_value") or 0))
+        discounted_taxable_amount = round(min(taxable_amount, target_taxable_amount), 2)
         discount_amount = round(max(0.0, taxable_amount - discounted_taxable_amount), 2)
+    elif coupon:
+        discount_amount = round(min(taxable_amount, _coupon_discount_amount(coupon, taxable_amount)), 2)
+        discounted_taxable_amount = round(max(0.0, taxable_amount - discount_amount), 2)
     else:
         discount_amount = 0.0
         discounted_taxable_amount = taxable_amount
