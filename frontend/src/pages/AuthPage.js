@@ -207,6 +207,21 @@ const AuthPage = ({ isAdminLogin = false }) => {
     
     if (result.success) {
       const userRole = result.user.role;
+      if (userRole === 'guest') {
+        const pendingProp = sessionStorage.getItem('pending_wishlist_property');
+        if (pendingProp) {
+          try {
+            const currentWishlist = JSON.parse(localStorage.getItem('guest_wishlist')) || [];
+            if (!currentWishlist.includes(pendingProp)) {
+              currentWishlist.push(pendingProp);
+              localStorage.setItem('guest_wishlist', JSON.stringify(currentWishlist));
+            }
+          } catch (e) {
+            console.error('Failed to restore pending wishlist', e);
+          }
+          sessionStorage.removeItem('pending_wishlist_property');
+        }
+      }
       if (isAdminLogin && userRole !== 'admin') {
         logout();
         setError('Access denied. Only administrators are allowed.');
@@ -303,6 +318,21 @@ const AuthPage = ({ isAdminLogin = false }) => {
     
     if (result.success) {
       const userRole = result.user.role;
+      if (userRole === 'guest') {
+        const pendingProp = sessionStorage.getItem('pending_wishlist_property');
+        if (pendingProp) {
+          try {
+            const currentWishlist = JSON.parse(localStorage.getItem('guest_wishlist')) || [];
+            if (!currentWishlist.includes(pendingProp)) {
+              currentWishlist.push(pendingProp);
+              localStorage.setItem('guest_wishlist', JSON.stringify(currentWishlist));
+            }
+          } catch (e) {
+            console.error('Failed to restore pending wishlist', e);
+          }
+          sessionStorage.removeItem('pending_wishlist_property');
+        }
+      }
       if (userRole === 'host') {
         navigate(requestedNext.startsWith('/host/') ? requestedNext : '/host/dashboard');
       } else if (userRole === 'broker') {

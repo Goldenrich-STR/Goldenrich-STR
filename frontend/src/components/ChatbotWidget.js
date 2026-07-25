@@ -90,7 +90,7 @@ const FLOWS = {
     ]
   },
   guest_workspace_discounts: {
-    message: "### **Workspace Long-term Discounts**\n* **Weekly Desks**: Save **10-15%** on booking co-working desks or cabins for 7+ consecutive days.\n* **Monthly Rates**: Save up to **30%** on bookings of 30+ days.\n* **Corporate Rates**: Contact [support@x-space360.com](mailto:support@x-space360.com) for special bulk discounts for teams.",
+    message: "### **Workspace Long-term Discounts**\n* **Weekly Desks**: Save **10-15%** on booking co-working desks or cabins for 7+ consecutive days.\n* **Monthly Rates**: Save up to **30%** on bookings of 30+ days.\n* **Corporate Rates**: Contact [customer.support@x-space360.com](mailto:customer.support@x-space360.com) for special bulk discounts for teams.",
     options: [
       { label: "Rules for Events & Shoots", next: "guest_event_rules", icon: "scale" },
       { label: "Back to Guest Menu", next: "guest_main", icon: "arrowLeft" }
@@ -221,7 +221,7 @@ const FLOWS = {
 
   // ==================== SUPPORT FLOW ====================
   support: {
-    message: "### **Contact X-Space360 Helpdesk**\nIf you have any specific query or need direct escalation, contact our team:\n\n* **Helpline**: [+91 8484826247](tel:+918484826247) (9 AM - 7 PM)\n* **Email Support**: [support@x-space360.com](mailto:support@x-space360.com)\n* **Grievance Desk**: Escalations to Nodal Officer Amit Sharma at [nodal@x-space360.com](mailto:nodal@x-space360.com)",
+    message: "### **Contact X-Space360 Helpdesk**\nIf you have any specific query or need direct escalation, contact our team:\n\n* **Helpline**: [+91 8484826247](tel:+918484826247) (9 AM - 7 PM)\n* **Email Support**: [customer.support@x-space360.com](mailto:customer.support@x-space360.com)\n* **Grievance Desk**: Escalations to [customer.support@x-space360.com](mailto:customer.support@x-space360.com)",
     options: [
       { label: "Main Menu", next: "main", icon: "home" }
     ]

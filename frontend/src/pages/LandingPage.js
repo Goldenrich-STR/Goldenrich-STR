@@ -1788,6 +1788,14 @@ const LandingPage = () => {
   });
 
   const handleWishlistToggle = (propertyId) => {
+    if (!user) {
+      sessionStorage.setItem('pending_wishlist_property', propertyId);
+      navigate('/login');
+      return;
+    }
+    if (user.role !== 'guest') {
+      return;
+    }
     setWishlist(prev => {
       let updated;
       if (prev.includes(propertyId)) {
@@ -2154,14 +2162,16 @@ const LandingPage = () => {
                   />
                   
                   {/* Right Actions (Wishlist like Airbnb) */}
-                  <div className="absolute top-3 right-3 z-20">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                      className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.05] transition cursor-pointer"
-                    >
-                      <Heart className={`w-4 h-4 ${wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-gray-700'}`} />
-                    </button>
-                  </div>
+                  {(!user || user.role === 'guest') && (
+                    <div className="absolute top-3 right-3 z-20">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
+                        className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.05] transition cursor-pointer"
+                      >
+                        <Heart className={`w-4 h-4 ${wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-gray-700'}`} />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex-1 flex flex-col px-0.5">
@@ -2255,7 +2265,7 @@ const LandingPage = () => {
           >
             Discover
           </a>
-          {wishlist.length > 0 && (
+          {user && user.role === 'guest' && wishlist.length > 0 && (
             <a
               href="#"
               onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
@@ -2360,7 +2370,7 @@ const LandingPage = () => {
             >
               Discover
             </button>
-            {wishlist.length > 0 && (
+            {user && user.role === 'guest' && wishlist.length > 0 && (
               <button
                 onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }}
                 className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-white/10"
@@ -2809,14 +2819,16 @@ const LandingPage = () => {
                           <Star className="w-3 h-3 text-[#E0A51B] fill-current" />
                         </div>
                       )}
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                        className="absolute top-3 right-3 text-white"
-                        aria-label="Toggle wishlist"
-                      >
-                        <Heart className={`w-5 h-5 drop-shadow-md ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-                      </button>
+                      {(!user || user.role === 'guest') && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
+                          className="absolute top-3 right-3 text-white"
+                          aria-label="Toggle wishlist"
+                        >
+                          <Heart className={`w-5 h-5 drop-shadow-md ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                        </button>
+                      )}
                     </div>
                     <div className="p-4">
                       <h3 className="font-bold text-charcoal text-sm md:text-base line-clamp-1">{item.title}</h3>
@@ -3287,14 +3299,16 @@ const LandingPage = () => {
                                 </span>
                               </div>
                               {/* Favorite Icon */}
-                              <div className="absolute top-3 right-3 p-2 bg-white/90 rounded-full hover:bg-white shadow-sm transition-all duration-300 z-10">
-                                <Heart 
-                                  className={`w-4 h-4 transition-colors ${
-                                    wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'
-                                  }`} 
-                                  onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                                />
-                              </div>
+                              {(!user || user.role === 'guest') && (
+                                <div className="absolute top-3 right-3 p-2 bg-white/90 rounded-full hover:bg-white shadow-sm transition-all duration-300 z-10">
+                                  <Heart 
+                                    className={`w-4 h-4 transition-colors ${
+                                      wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'
+                                    }`} 
+                                    onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
+                                  />
+                                </div>
+                              )}
                             </div>
                             <div className="p-5 text-left">
                               <h4 className="font-bold text-sm text-charcoal truncate mb-1 group-hover:text-amber-600 transition-colors">

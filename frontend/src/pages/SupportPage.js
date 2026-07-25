@@ -339,7 +339,7 @@ const SupportPage = () => {
           >
             Discover
           </a>
-          {wishlist.length > 0 && (
+          {user && user.role === 'guest' && wishlist.length > 0 && (
             <a
               href="#"
               onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
@@ -422,7 +422,7 @@ const SupportPage = () => {
           </div>
           <div className="flex flex-col space-y-6 text-lg font-bold tracking-wide">
             <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/guest/browse'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Discover</a>
-            {wishlist.length > 0 && (
+            {user && user.role === 'guest' && wishlist.length > 0 && (
               <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Wishlist</a>
             )}
             <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Home</a>

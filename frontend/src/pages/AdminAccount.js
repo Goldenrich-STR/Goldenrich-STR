@@ -7,10 +7,11 @@ import {
   ArrowLeft, Download, IndianRupee, TrendingUp, Wallet, Users,
   RefreshCcw, CheckCircle, XCircle, AlertCircle, Clock,
   Search, Share2, FileText, Mail, MessageSquare, Printer, ChevronLeft, ChevronRight,
+  Plus, Trash, SlidersHorizontal, Eye
 } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
-import { accountAPI, bookingAPI } from '../services/api';
+import { accountAPI, bookingAPI, pricingAPI } from '../services/api';
 import CouponManagement from '../components/admin/CouponManagement';
 import { BookingManagement, SubscriptionManagement } from './AdminDashboard';
 
@@ -66,6 +67,7 @@ const numberToWords = (amount) => {
 
 const TABS = [
   { id: 'overview',     label: 'Overview' },
+  { id: 'pricing',      label: 'Pricing Engine' },
   { id: 'transactions', label: 'Transactions' },
   { id: 'bookings',     label: 'Bookings' },
   { id: 'subscriptions', label: 'Subscriptions' },
@@ -129,6 +131,7 @@ const AdminAccount = () => {
         </nav>
 
         {tab === 'overview' && <OverviewTab />}
+        {tab === 'pricing' && <PricingEngineTab />}
         {tab === 'transactions' && <TransactionsTab />}
         {tab === 'bookings' && <BookingManagement />}
         {tab === 'subscriptions' && <SubscriptionManagement />}
@@ -327,6 +330,1156 @@ const BookingFeeSettings = () => {
         </form>
       </div>
       {message && <p className="text-xs font-semibold text-charcoal-muted mt-3">{message}</p>}
+    </div>
+  );
+};
+
+// ---------------- Dynamic Pricing Engine Tab ----------------
+
+const PricingEngineTab = () => {
+  const [properties, setProperties] = useState([]);
+  const [rules, setRules] = useState({
+    calculation_mode: 'highest',
+    weekend: { is_enabled: false, saturday_pct: 0, sunday_pct: 0 },
+    festival: { is_enabled: false, festivals: [] },
+    seasonal: { is_enabled: false, summer_pct: 0, winter_pct: 0, monsoon_pct: 0 },
+    occupancy: { is_enabled: false, bracket_0_30: 0, bracket_31_60: 0, bracket_61_80: 0, bracket_81_100: 0 },
+    promotional: { is_enabled: false, campaign_name: '', pct_change: 0 }
+  });
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [savingRules, setSavingRules] = useState(false);
+  const [applying, setApplying] = useState(false);
+  
+  const [selectedProps, setSelectedProps] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [subTab, setSubTab] = useState('rules'); // 'rules' or 'history'
+  const [tableTab, setTableTab] = useState('all'); // 'all', 'running', 'stopped'
+  
+  // Property type filters for applying rules
+  const [targetTypes, setTargetTypes] = useState([]);
+
+  // Modal states
+  const [overrideProperty, setOverrideProperty] = useState(null);
+  const [overridePrice, setOverridePrice] = useState('');
+  const [showConfirmAll, setShowConfirmAll] = useState(false);
+  const [viewRulesProperty, setViewRulesProperty] = useState(null);
+
+  // New Festival form inputs
+  const [newFestName, setNewFestName] = useState('');
+  const [newFestStart, setNewFestStart] = useState('');
+  const [newFestEnd, setNewFestEnd] = useState('');
+  const [newFestPct, setNewFestPct] = useState('');
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [propsRes, rulesRes, histRes] = await Promise.all([
+        pricingAPI.getProperties(),
+        pricingAPI.getRules(),
+        pricingAPI.getHistory()
+      ]);
+      setProperties(propsRes.data || []);
+      setRules(rulesRes.data || rules);
+      setHistory(histRes.data || []);
+    } catch (err) {
+      console.error("Failed to load pricing data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleSaveRules = async () => {
+    setSavingRules(true);
+    try {
+      await pricingAPI.saveRules(rules);
+      alert("Pricing rules saved successfully!");
+      await loadData();
+    } catch (err) {
+      alert("Failed to save pricing rules.");
+    } finally {
+      setSavingRules(false);
+    }
+  };
+
+  const handlePreview = async () => {
+    if (selectedProps.length === 0) {
+      alert("Please select at least one property first.");
+      return;
+    }
+    try {
+      setLoading(true);
+      await pricingAPI.saveRules(rules);
+      const res = await pricingAPI.previewPricing(selectedProps, rules, targetTypes.length > 0 ? targetTypes : null);
+      
+      const previewMap = {};
+      res.data.forEach(item => {
+        previewMap[item.property_id] = item.new_price;
+      });
+      
+      setProperties(prev => prev.map(p => ({
+        ...p,
+        new_price: previewMap[p.property_id] !== undefined ? previewMap[p.property_id] : p.new_price
+      })));
+      alert("Price previews generated in the table below!");
+    } catch (err) {
+      alert("Failed to generate price preview.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApply = async () => {
+    if (selectedProps.length === 0) {
+      alert("Please select at least one property first.");
+      return;
+    }
+    setApplying(true);
+    try {
+      await pricingAPI.saveRules(rules);
+      const res = await pricingAPI.applyPricing(selectedProps, rules, targetTypes.length > 0 ? targetTypes : null);
+      alert(res.data.message || "Pricing rules applied and activated successfully!");
+      setSelectedProps([]);
+      setTargetTypes([]);
+      await loadData();
+    } catch (err) {
+      alert("Failed to apply pricing.");
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const handleToggleStatus = async (propertyId, status) => {
+    try {
+      setLoading(true);
+      const res = await pricingAPI.toggleRulesStatus(propertyId, status);
+      alert(res.data.message || `Rules status updated to ${status}`);
+      await loadData();
+    } catch (err) {
+      alert("Failed to update status.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBatchToggleStatus = async (status) => {
+    try {
+      setLoading(true);
+      const res = await pricingAPI.toggleRulesStatusBatch(selectedProps, status);
+      alert(res.data.message || `Successfully batch updated status to ${status}`);
+      setSelectedProps([]);
+      await loadData();
+    } catch (err) {
+      alert("Failed to batch update status.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManualOverride = async () => {
+    if (!overrideProperty || !overridePrice) return;
+    try {
+      setLoading(true);
+      await pricingAPI.manualOverride(overrideProperty.property_id, Number(overridePrice));
+      alert("Manual override applied successfully (Pricing Rules Stopped)!");
+      setOverrideProperty(null);
+      setOverridePrice('');
+      await loadData();
+    } catch (err) {
+      alert("Failed to apply manual override.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddFestival = () => {
+    if (!newFestName || !newFestStart || !newFestEnd || !newFestPct) {
+      alert("Please fill in all festival fields.");
+      return;
+    }
+    const newFest = {
+      name: newFestName,
+      start_date: newFestStart,
+      end_date: newFestEnd,
+      increase_pct: Number(newFestPct)
+    };
+    setRules(prev => ({
+      ...prev,
+      festival: {
+        ...prev.festival,
+        festivals: [...prev.festival.festivals, newFest]
+      }
+    }));
+    setNewFestName('');
+    setNewFestStart('');
+    setNewFestEnd('');
+    setNewFestPct('');
+  };
+
+  const handleRemoveFestival = (idx) => {
+    setRules(prev => ({
+      ...prev,
+      festival: {
+        ...prev.festival,
+        festivals: prev.festival.festivals.filter((_, i) => i !== idx)
+      }
+    }));
+  };
+
+  const toggleSelectProperty = (id) => {
+    setSelectedProps(prev =>
+      prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedProps(filteredProperties.map(p => p.property_id));
+    } else {
+      setSelectedProps([]);
+    }
+  };
+
+  const handleTargetTypeChange = (type) => {
+    setTargetTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
+
+  const filteredProperties = properties.filter(p => 
+    p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.city.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const activeRulesProperties = properties.filter(p => p.rules_status === 'active');
+  const stoppedRulesProperties = properties.filter(p => p.rules_status === 'stopped' || !p.rules_status);
+
+  // Switch display array based on selected tableTab filter
+  const displayProperties = filteredProperties.filter(p => {
+    if (tableTab === 'running') return p.rules_status === 'active';
+    if (tableTab === 'stopped') return p.rules_status === 'stopped' || !p.rules_status;
+    return true;
+  });
+
+  const totalProperties = properties.length;
+  const activeRulesCount = activeRulesProperties.length;
+  const stoppedRulesCount = stoppedRulesProperties.length;
+  const pendingUpdatesCount = properties.filter(p => p.new_price !== undefined && p.new_price !== p.price_per_night).length;
+
+  const COMMON_PROPERTY_TYPES = [
+    { value: 'villa', label: 'Villa' },
+    { value: 'banquet_hall', label: 'Banquet Hall' },
+    { value: 'apartment', label: 'Apartment' },
+    { value: 'farmhouse', label: 'Farmhouse' },
+    { value: 'rooftop', label: 'Rooftop' },
+    { value: 'resort', label: 'Resort' },
+    { value: 'co_working', label: 'Co-working' }
+  ];
+
+  const isRulesPanelEnabled = selectedProps.length > 0;
+
+  return (
+    <div className="space-y-6" data-testid="pricing-engine-tab">
+      
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Live Properties', value: totalProperties, color: 'text-charcoal' },
+          { label: 'Active Rules Properties', value: activeRulesCount, color: 'text-green-600' },
+          { label: 'Stopped Rules Properties', value: stoppedRulesCount, color: 'text-amber-600' },
+          { label: 'Pending Updates', value: pendingUpdatesCount, color: 'text-red-500' }
+        ].map(card => (
+          <div key={card.label} className="dashboard-card border border-gray-100 shadow-sm bg-white p-5 rounded-2xl">
+            <p className="text-xs uppercase tracking-wider text-charcoal-muted font-bold">{card.label}</p>
+            <p className={`text-3xl font-bold tracking-tight mt-2 ${card.color}`}>{loading ? '...' : card.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Subtab Navigation */}
+      <div className="flex border-b border-sand-100">
+        <button
+          onClick={() => setSubTab('rules')}
+          className={`px-4 py-2.5 font-bold text-sm tracking-wide transition-all border-b-2 ${
+            subTab === 'rules' ? 'border-terracotta text-terracotta' : 'border-transparent text-charcoal-muted hover:text-charcoal'
+          }`}
+        >
+          Rules Configuration
+        </button>
+        <button
+          onClick={() => setSubTab('history')}
+          className={`px-4 py-2.5 font-bold text-sm tracking-wide transition-all border-b-2 ${
+            subTab === 'history' ? 'border-terracotta text-terracotta' : 'border-transparent text-charcoal-muted hover:text-charcoal'
+          }`}
+        >
+          Price Change History
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-charcoal-light">Syncing pricing details...</div>
+      ) : subTab === 'history' ? (
+        /* History logs */
+        <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-6 overflow-hidden">
+          <h3 className="text-lg font-bold text-charcoal mb-4">Price Change History Log</h3>
+          {history.length === 0 ? (
+            <p className="text-charcoal-light text-center py-10">No price changes recorded yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-100 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-stone/50">
+                    <th className="py-3 px-4 rounded-l-xl">Date & Time</th>
+                    <th className="py-3 px-4">Property</th>
+                    <th className="py-3 px-4">Old Price</th>
+                    <th className="py-3 px-4">New Price</th>
+                    <th className="py-3 px-4">Updated By</th>
+                    <th className="py-3 px-4 rounded-r-xl">Reason</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-sand-100">
+                  {history.map(item => (
+                    <tr key={item.history_id} className="hover:bg-stone/40 transition text-charcoal">
+                      <td className="py-3 px-4 whitespace-nowrap">{new Date(item.created_at).toLocaleString('en-IN')}</td>
+                      <td className="py-3 px-4 font-bold">{item.property_title}</td>
+                      <td className="py-3 px-4 font-mono">₹{item.old_price.toLocaleString('en-IN')}</td>
+                      <td className="py-3 px-4 font-mono text-terracotta font-bold">₹{item.new_price.toLocaleString('en-IN')}</td>
+                      <td className="py-3 px-4">{item.updated_by}</td>
+                      <td className="py-3 px-4 font-semibold text-charcoal-light">{item.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Pricing engine controls and property table */
+        <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-6 items-start">
+          
+          {/* Rules settings side panel */}
+          <div className="relative">
+            {!isRulesPanelEnabled && (
+              <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center p-6 text-center transition-all duration-300 rounded-2xl border border-gray-100/50">
+                <SlidersHorizontal className="w-10 h-10 text-charcoal-muted mb-3 animate-pulse" />
+                <h4 className="text-sm font-bold text-charcoal">Pricing Rules Locked</h4>
+                <p className="text-xs text-charcoal-muted mt-1 max-w-[240px]">
+                  Please select one or more properties in the table to unlock pricing rule options.
+                </p>
+              </div>
+            )}
+            
+            <div className={`dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-6 space-y-6 ${!isRulesPanelEnabled ? 'opacity-40 select-none pointer-events-none' : ''}`}>
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <h3 className="text-lg font-bold text-charcoal flex items-center gap-2">
+                  <SlidersHorizontal className="w-5 h-5 text-terracotta" />
+                  <span>Configure Rules</span>
+                </h3>
+                <button
+                  onClick={handleSaveRules}
+                  className="btn-premium px-3 py-1.5 text-[10px]"
+                >
+                  Save Rules
+                </button>
+              </div>
+
+              {/* Target Property Types filter */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-charcoal-light uppercase tracking-widest block">Apply For (Property Types)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {COMMON_PROPERTY_TYPES.map(type => (
+                    <label key={type.value} className="flex items-center space-x-2 text-xs font-bold text-charcoal cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={targetTypes.includes(type.value)}
+                        onChange={() => handleTargetTypeChange(type.value)}
+                        className="w-3.5 h-3.5 rounded text-terracotta focus:ring-terracotta border-gray-300"
+                      />
+                      <span>{type.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[10px] text-charcoal-muted mt-1">If none selected, rules apply to all checked properties.</p>
+              </div>
+
+              {/* Rules Toggles & Settings */}
+              <div className="space-y-4 pt-2">
+                
+                {/* Weekend Pricing */}
+                <div className="p-4 bg-stone/40 border border-sand-100/50 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-charcoal uppercase tracking-wide">Weekend Adjustments</span>
+                    <input
+                      type="checkbox"
+                      checked={rules.weekend.is_enabled}
+                      onChange={e => setRules(prev => ({
+                        ...prev,
+                        weekend: { ...prev.weekend, is_enabled: e.target.checked }
+                      }))}
+                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                    />
+                  </div>
+                  {rules.weekend.is_enabled && (
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Saturday Increase %</span>
+                        <input
+                          type="number"
+                          value={rules.weekend.saturday_pct === 0 ? "" : rules.weekend.saturday_pct}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            weekend: { ...prev.weekend, saturday_pct: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Sunday Increase %</span>
+                        <input
+                          type="number"
+                          value={rules.weekend.sunday_pct === 0 ? "" : rules.weekend.sunday_pct}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            weekend: { ...prev.weekend, sunday_pct: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Seasonal Pricing */}
+                <div className="p-4 bg-stone/40 border border-sand-100/50 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-charcoal uppercase tracking-wide">Seasonal Pricing</span>
+                    <input
+                      type="checkbox"
+                      checked={rules.seasonal.is_enabled}
+                      onChange={e => setRules(prev => ({
+                        ...prev,
+                        seasonal: { ...prev.seasonal, is_enabled: e.target.checked }
+                      }))}
+                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                    />
+                  </div>
+                  {rules.seasonal.is_enabled && (
+                    <div className="grid grid-cols-3 gap-2 pt-2">
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Summer %</span>
+                        <input
+                          type="number"
+                          value={rules.seasonal.summer_pct === 0 ? "" : rules.seasonal.summer_pct}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            seasonal: { ...prev.seasonal, summer_pct: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Winter %</span>
+                        <input
+                          type="number"
+                          value={rules.seasonal.winter_pct === 0 ? "" : rules.seasonal.winter_pct}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            seasonal: { ...prev.seasonal, winter_pct: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Monsoon %</span>
+                        <input
+                          type="number"
+                          value={rules.seasonal.monsoon_pct === 0 ? "" : rules.seasonal.monsoon_pct}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            seasonal: { ...prev.seasonal, monsoon_pct: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Occupancy Pricing */}
+                <div className="p-4 bg-stone/40 border border-sand-100/50 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-charcoal uppercase tracking-wide">Occupancy Pricing</span>
+                    <input
+                      type="checkbox"
+                      checked={rules.occupancy.is_enabled}
+                      onChange={e => setRules(prev => ({
+                        ...prev,
+                        occupancy: { ...prev.occupancy, is_enabled: e.target.checked }
+                      }))}
+                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                    />
+                  </div>
+                  {rules.occupancy.is_enabled && (
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">0–30% occupancy</span>
+                        <input
+                          type="number"
+                          value={rules.occupancy.bracket_0_30 === 0 ? "" : rules.occupancy.bracket_0_30}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            occupancy: { ...prev.occupancy, bracket_0_30: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">31–60% occupancy</span>
+                        <input
+                          type="number"
+                          value={rules.occupancy.bracket_31_60 === 0 ? "" : rules.occupancy.bracket_31_60}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            occupancy: { ...prev.occupancy, bracket_31_60: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">61–80% occupancy</span>
+                        <input
+                          type="number"
+                          value={rules.occupancy.bracket_61_80 === 0 ? "" : rules.occupancy.bracket_61_80}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            occupancy: { ...prev.occupancy, bracket_61_80: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">81–100% occupancy</span>
+                        <input
+                          type="number"
+                          value={rules.occupancy.bracket_81_100 === 0 ? "" : rules.occupancy.bracket_81_100}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            occupancy: { ...prev.occupancy, bracket_81_100: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Promotional Campaign */}
+                <div className="p-4 bg-stone/40 border border-sand-100/50 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-charcoal uppercase tracking-wide">Promo Campaign</span>
+                    <input
+                      type="checkbox"
+                      checked={rules.promotional.is_enabled}
+                      onChange={e => setRules(prev => ({
+                        ...prev,
+                        promotional: { ...prev.promotional, is_enabled: e.target.checked }
+                      }))}
+                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                    />
+                  </div>
+                  {rules.promotional.is_enabled && (
+                    <div className="space-y-3 pt-2">
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Campaign Name</span>
+                        <input
+                          type="text"
+                          value={rules.promotional.campaign_name}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            promotional: { ...prev.promotional, campaign_name: e.target.value }
+                          }))}
+                          placeholder="e.g. Monsoon Sale"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Price change % (use - for discount)</span>
+                        <input
+                          type="number"
+                          value={rules.promotional.pct_change === 0 ? "" : rules.promotional.pct_change}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            promotional: { ...prev.promotional, pct_change: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Festival Pricing */}
+                <div className="p-4 bg-stone/40 border border-sand-100/50 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-charcoal uppercase tracking-wide">Festival Adjustments</span>
+                    <input
+                      type="checkbox"
+                      checked={rules.festival.is_enabled}
+                      onChange={e => setRules(prev => ({
+                        ...prev,
+                        festival: { ...prev.festival, is_enabled: e.target.checked }
+                      }))}
+                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                    />
+                  </div>
+                  {rules.festival.is_enabled && (
+                    <div className="space-y-3 pt-2">
+                      <div className="p-3 bg-white border border-sand-200 rounded-xl space-y-2">
+                        <span className="text-[9px] font-bold text-charcoal uppercase block">Create Festival Range</span>
+                        <input
+                          type="text"
+                          placeholder="Festival Name"
+                          value={newFestName}
+                          onChange={e => setNewFestName(e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-terracotta"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="date"
+                            value={newFestStart}
+                            onChange={e => setNewFestStart(e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-terracotta"
+                          />
+                          <input
+                            type="date"
+                            value={newFestEnd}
+                            onChange={e => setNewFestEnd(e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-terracotta"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            placeholder="Increase %"
+                            value={newFestPct}
+                            onChange={e => setNewFestPct(e.target.value)}
+                            className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-terracotta"
+                          />
+                          <button
+                            onClick={handleAddFestival}
+                            className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white font-bold text-xs rounded-lg transition"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        {rules.festival.festivals.map((fest, idx) => (
+                          <div key={idx} className="flex justify-between items-center bg-white border border-gray-150 rounded-xl p-2.5 text-[11px]">
+                            <div>
+                              <span className="font-bold text-charcoal block">{fest.name}</span>
+                              <span className="text-charcoal-muted">{fest.start_date} to {fest.end_date}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-terracotta font-bold">+{fest.increase_pct}%</span>
+                              <button
+                                onClick={() => handleRemoveFestival(idx)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Trash className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          {/* Right side property table and action triggers */}
+          <div className="space-y-6">
+            
+            {/* Global Actions */}
+            <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-5 flex flex-wrap gap-4 items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-charcoal font-serif">Global Pricing Actions</h3>
+                <p className="text-xs text-charcoal-muted mt-1">
+                  Preview pricing updates or apply rules immediately.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {selectedProps.length > 0 && (
+                  <>
+                    <button
+                      onClick={() => handleBatchToggleStatus('stopped')}
+                      className="px-4 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-xs transition"
+                    >
+                      Stop Selected
+                    </button>
+                    <button
+                      onClick={() => handleBatchToggleStatus('active')}
+                      className="px-4 py-2.5 rounded-xl bg-green-50 hover:bg-green-100 text-green-600 border border-green-200 font-bold text-xs transition"
+                    >
+                      Continue Selected
+                    </button>
+                  </>
+                )}
+                <button
+                  disabled={selectedProps.length === 0}
+                  onClick={handlePreview}
+                  className="px-5 py-2.5 rounded-xl border border-terracotta hover:bg-terracotta/5 text-terracotta font-bold text-sm transition disabled:opacity-40"
+                >
+                  Preview Changes
+                </button>
+                <button
+                  disabled={selectedProps.length === 0 || applying}
+                  onClick={handleApply}
+                  className="px-5 py-2.5 rounded-xl bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm transition disabled:opacity-40"
+                >
+                  {applying ? "Applying..." : "Apply Rules"}
+                </button>
+              </div>
+            </div>
+
+            {/* View Switcher Tabs right above Table */}
+            <div className="flex border-b border-sand-100 bg-white p-1 rounded-t-2xl border-t border-x border-gray-100">
+              {[
+                { id: 'all', label: `All Properties (${totalProperties})` },
+                { id: 'running', label: `Running Rules (${activeRulesCount})` },
+                { id: 'stopped', label: `Stopped Properties (${stoppedRulesCount})` }
+              ].map(tabOpt => (
+                <button
+                  key={tabOpt.id}
+                  onClick={() => setTableTab(tabOpt.id)}
+                  className={`px-5 py-3 font-bold text-xs tracking-wider uppercase rounded-xl transition ${
+                    tableTab === tabOpt.id
+                      ? 'bg-terracotta text-white shadow-sm'
+                      : 'text-charcoal-muted hover:text-charcoal hover:bg-stone/50'
+                  }`}
+                >
+                  {tabOpt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Properties Table Card */}
+            <div className="dashboard-card border border-gray-100 shadow-sm rounded-b-2xl rounded-tr-none bg-white p-6 overflow-hidden mt-0">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                <h3 className="text-base font-bold text-charcoal">
+                  {tableTab === 'all' && 'All Enterprise Properties'}
+                  {tableTab === 'running' && 'Properties Currently Running Dynamic Rules'}
+                  {tableTab === 'stopped' && 'Stopped Properties (Running Original Rates)'}
+                </h3>
+                <div className="relative max-w-xs w-full">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-muted">
+                    <Search className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search property or city..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-2 text-xs font-semibold outline-none focus:border-terracotta"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-stone/50">
+                      <th className="py-3 px-4 rounded-l-xl w-10 text-center">
+                        <input
+                          type="checkbox"
+                          onChange={toggleSelectAll}
+                          checked={displayProperties.length > 0 && selectedProps.length === displayProperties.length}
+                          className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                        />
+                      </th>
+                      <th className="py-3 px-4">Property Name</th>
+                      <th className="py-3 px-4">City</th>
+                      <th className="py-3 px-4 text-right">Original Base Price</th>
+                      <th className="py-3 px-4 text-right">Calculated/Dyn. Rate</th>
+                      <th className="py-3 px-4 text-center">Rules Status</th>
+                      <th className="py-3 px-4">Last Updated</th>
+                      <th className="py-3 px-4 text-center">Status Action</th>
+                      <th className="py-3 px-4 text-center rounded-r-xl">Override</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sand-100">
+                    {displayProperties.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-8 text-center text-charcoal-light">No properties found in this view.</td>
+                      </tr>
+                    ) : (
+                      displayProperties.map(p => {
+                        const hasChange = p.new_price !== undefined && p.new_price !== p.price_per_night;
+                        const isRulesActive = p.rules_status === 'active';
+                        return (
+                          <tr key={p.property_id} className="hover:bg-stone/40 transition text-charcoal">
+                            <td className="py-3 px-4 text-center">
+                              <input
+                                type="checkbox"
+                                checked={selectedProps.includes(p.property_id)}
+                                onChange={() => toggleSelectProperty(p.property_id)}
+                                className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                              />
+                            </td>
+                            <td className="py-3 px-4 font-bold">
+                              <div className="flex items-center gap-2">
+                                <span>{p.title}</span>
+                                {p.pricing_rules && (
+                                  <button
+                                    onClick={() => setViewRulesProperty(p)}
+                                    className="p-1 hover:bg-stone rounded-lg text-terracotta transition"
+                                    title="View Configured Rules"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 font-semibold">{p.city}</td>
+                            <td className="py-3 px-4 text-right font-mono">₹{p.base_price?.toLocaleString('en-IN') || p.price_per_night.toLocaleString('en-IN')}</td>
+                            <td className="py-3 px-4 text-right font-mono font-bold text-terracotta">
+                              ₹{p.price_per_night.toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-3 px-4 text-center whitespace-nowrap">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                                isRulesActive ? 'bg-green-100 text-green-800 animate-pulse' : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                {isRulesActive ? 'running' : 'stopped'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-charcoal-muted">
+                              {p.updated_at ? new Date(p.updated_at).toLocaleDateString('en-IN') : 'N/A'}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {isRulesActive ? (
+                                <button
+                                  onClick={() => handleToggleStatus(p.property_id, 'stopped')}
+                                  className="px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-lg transition"
+                                >
+                                  Stop Rules
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleToggleStatus(p.property_id, 'active')}
+                                  className="px-3 py-1 bg-green-50 hover:bg-green-100 text-green-600 font-bold text-xs rounded-lg transition"
+                                >
+                                  Continue
+                                </button>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <button
+                                onClick={() => {
+                                  setOverrideProperty(p);
+                                  setOverridePrice(p.base_price || p.price_per_night);
+                                }}
+                                className="px-2.5 py-1 rounded-lg border border-amber-200 hover:bg-amber-50 text-amber-700 text-xs font-bold transition"
+                              >
+                                Override
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* Manual Override Modal */}
+      {overrideProperty && (
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-premium animate-slide-up">
+            <h3 className="text-xl font-bold tracking-tight text-charcoal mb-2">Manual Price Override</h3>
+            <p className="text-xs text-charcoal-muted mb-4">
+              Manually set the Base Price for <span className="font-bold text-charcoal">{overrideProperty.title}</span>. This property's pricing mode will be locked to <span className="font-semibold text-amber-700">manual</span> and active rules will be stopped.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">New Base Price (₹)</label>
+                <input
+                  type="number"
+                  value={overridePrice}
+                  onChange={e => setOverridePrice(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-terracotta font-semibold text-charcoal text-sm"
+                />
+              </div>
+              <div className="flex gap-3 pt-3">
+                <button
+                  onClick={() => setOverrideProperty(null)}
+                  className="flex-1 py-3 font-bold text-charcoal-muted text-sm hover:underline"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleManualOverride}
+                  className="flex-1 btn-premium py-3 text-sm"
+                >
+                  Save Override
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Rules Modal */}
+      {viewRulesProperty && (() => {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const weekday = today.getDay(); // 0 Sunday, 6 Saturday
+        const month = today.getMonth() + 1; // 1-12
+        const basePrice = viewRulesProperty.base_price || viewRulesProperty.price_per_night || 0;
+        const livePrice = viewRulesProperty.price_per_night || 0;
+        const rules = viewRulesProperty.pricing_rules || {};
+
+        // Weekend Active status
+        let weekendActive = false;
+        let weekendLabel = "Inactive Today";
+        let weekendPct = 0;
+        if (rules.weekend?.is_enabled) {
+          if (weekday === 6) {
+            weekendActive = true;
+            weekendPct = rules.weekend.saturday_pct || 0;
+            weekendLabel = `Active Today (Saturday: +${weekendPct}%)`;
+          } else if (weekday === 0) {
+            weekendActive = true;
+            weekendPct = rules.weekend.sunday_pct || 0;
+            weekendLabel = `Active Today (Sunday: +${weekendPct}%)`;
+          } else {
+            weekendLabel = `Scheduled/Active on Weekends (Saturdays: +${rules.weekend.saturday_pct}%, Sundays: +${rules.weekend.sunday_pct}%)`;
+          }
+        }
+
+        // Seasonal Active status
+        let seasonalActive = false;
+        let seasonalLabel = "Inactive Today";
+        let seasonalPct = 0;
+        if (rules.seasonal?.is_enabled) {
+          let seasonName = "Monsoon";
+          seasonalPct = rules.seasonal.monsoon_pct || 0;
+          if ([3,4,5].includes(month)) {
+            seasonName = "Summer";
+            seasonalPct = rules.seasonal.summer_pct || 0;
+          } else if ([10,11,12,1,2].includes(month)) {
+            seasonName = "Winter";
+            seasonalPct = rules.seasonal.winter_pct || 0;
+          }
+          
+          if (seasonalPct !== 0) {
+            seasonalActive = true;
+            seasonalLabel = `Active Today (${seasonName}: +${seasonalPct}%)`;
+          } else {
+            seasonalLabel = `Inactive Today (${seasonName} season has +0% increase configured)`;
+          }
+        }
+
+        // Promotional Active status
+        let promoActive = false;
+        let promoLabel = "Inactive Today";
+        let promoPct = 0;
+        if (rules.promotional?.is_enabled) {
+          promoActive = true;
+          promoPct = rules.promotional.pct_change || 0;
+          promoLabel = `Active Today (${rules.promotional.campaign_name || 'Promo'}: ${promoPct}%)`;
+        }
+
+        return (
+          <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-premium animate-slide-up space-y-4">
+              <h3 className="text-xl font-bold tracking-tight text-charcoal flex items-center gap-2">
+                <Eye className="w-5 h-5 text-terracotta" />
+                <span>Configured Rules: {viewRulesProperty.title}</span>
+              </h3>
+
+              {/* Price Summary Row */}
+              <div className="grid grid-cols-2 gap-4 bg-stone/50 p-4 rounded-2xl border border-sand-100">
+                <div>
+                  <span className="text-[10px] font-bold text-charcoal-muted uppercase block">Original Base Price</span>
+                  <span className="text-lg font-bold font-mono text-charcoal">₹{basePrice.toLocaleString('en-IN')}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-charcoal-muted uppercase block">Current Calculated Rate</span>
+                  <span className="text-lg font-bold font-mono text-terracotta">₹{livePrice.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 divide-y divide-gray-100">
+                
+                {/* Weekend */}
+                <div className="pt-2.5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">Weekend Adjustments</h4>
+                    {rules.weekend?.is_enabled ? (
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                        weekendActive ? 'bg-green-100 text-green-800' : 'bg-blue-50 text-blue-700'
+                      }`}>
+                        {weekendActive ? 'Active Today' : 'Scheduled'}
+                      </span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Disabled</span>
+                    )}
+                  </div>
+                  {rules.weekend?.is_enabled && (
+                    <div className="text-xs text-charcoal-light mt-1 space-y-1">
+                      <p className="font-semibold text-charcoal-muted">{weekendLabel}</p>
+                      {weekendActive && (
+                        <p className="text-[11px] text-green-600 font-bold">
+                          Increase: +₹{((basePrice * weekendPct) / 100).toLocaleString('en-IN')} ({weekendPct}%)
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Seasonal */}
+                <div className="pt-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">Seasonal Pricing</h4>
+                    {rules.seasonal?.is_enabled ? (
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                        seasonalActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {seasonalActive ? 'Active Today' : 'Inactive Today'}
+                      </span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Disabled</span>
+                    )}
+                  </div>
+                  {rules.seasonal?.is_enabled && (
+                    <div className="text-xs text-charcoal-light mt-1 space-y-1">
+                      <p className="font-semibold text-charcoal-muted">{seasonalLabel}</p>
+                      {seasonalActive && (
+                        <p className="text-[11px] text-green-600 font-bold">
+                          Increase: +₹{((basePrice * seasonalPct) / 100).toLocaleString('en-IN')} ({seasonalPct}%)
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Occupancy */}
+                <div className="pt-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">Occupancy Brackets</h4>
+                    {rules.occupancy?.is_enabled ? (
+                      <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Active</span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Disabled</span>
+                    )}
+                  </div>
+                  {rules.occupancy?.is_enabled && (
+                    <div className="text-xs text-charcoal-light mt-1 space-y-1.5">
+                      <p className="font-semibold text-charcoal-muted">Active (Adjusts dynamically as occupancy changes):</p>
+                      <ul className="text-[11px] space-y-0.5 list-disc pl-4 text-charcoal-muted">
+                        <li>0–30% occupancy: +{rules.occupancy.bracket_0_30}%</li>
+                        <li>31–60% occupancy: +{rules.occupancy.bracket_31_60}%</li>
+                        <li>61–80% occupancy: +{rules.occupancy.bracket_61_80}%</li>
+                        <li>81–100% occupancy: +{rules.occupancy.bracket_81_100}%</li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Promo */}
+                <div className="pt-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">Promotional Campaign</h4>
+                    {rules.promotional?.is_enabled ? (
+                      <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Active Today</span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Disabled</span>
+                    )}
+                  </div>
+                  {rules.promotional?.is_enabled && (
+                    <div className="text-xs text-charcoal-light mt-1 space-y-1">
+                      <p className="font-semibold text-charcoal-muted">{promoLabel}</p>
+                      <p className="text-[11px] text-green-600 font-bold">
+                        Adjustment: {promoPct > 0 ? '+' : ''}₹{((basePrice * promoPct) / 100).toLocaleString('en-IN')} ({promoPct}%)
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Festival */}
+                <div className="pt-3 pb-2">
+                  <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider mb-2">Festival Adjustments</h4>
+                  {rules.festival?.is_enabled && rules.festival.festivals?.length > 0 ? (
+                    <div className="space-y-2 mt-1">
+                      {rules.festival.festivals.map((fest, idx) => {
+                        let festStatus = 'Expired';
+                        let badgeColor = 'bg-gray-100 text-gray-500';
+                        try {
+                          const start = new Date(fest.start_date);
+                          start.setHours(0,0,0,0);
+                          const end = new Date(fest.end_date);
+                          end.setHours(23,59,59,999);
+                          
+                          if (today >= start && today <= end) {
+                            festStatus = 'Active Today';
+                            badgeColor = 'bg-green-100 text-green-800 border-green-200';
+                          } else if (today < start) {
+                            festStatus = 'Scheduled (Future)';
+                            badgeColor = 'bg-blue-50 text-blue-700 border-blue-100';
+                          }
+                        } catch (e) {}
+
+                        return (
+                          <div key={idx} className="flex justify-between items-center bg-stone/40 border border-sand-100 p-2.5 rounded-xl text-xs">
+                            <div>
+                              <span className="font-bold text-charcoal block">{fest.name}</span>
+                              <span className="text-[10px] text-charcoal-muted">{fest.start_date} to {fest.end_date}</span>
+                            </div>
+                            <div className="text-right space-y-1">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase block text-center ${badgeColor}`}>
+                                {festStatus}
+                              </span>
+                              <span className="font-mono text-terracotta font-bold text-[11px] block">
+                                +₹{((basePrice * (fest.increase_pct || 0)) / 100).toLocaleString('en-IN')} (+{fest.increase_pct}%)
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-charcoal-muted">Disabled / No festivals added</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-3">
+                <button
+                  onClick={() => setViewRulesProperty(null)}
+                  className="px-6 py-2.5 bg-charcoal text-white font-bold text-xs rounded-xl shadow-premium hover:bg-black transition uppercase tracking-wider"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
     </div>
   );
 };
