@@ -87,7 +87,7 @@ const LanguageSelector = ({ mode = 'dropdown' }) => {
         </button>
 
         {isOpen && (
-          <div className="mt-4 w-full space-y-6 text-gray-900 border-l border-sand-200 pl-3">
+          <div className="mt-4 w-full space-y-6 text-white border-l border-white/20 pl-3">
             {CATEGORIES.map((cat) => {
               const Icon = cat.icon;
               return (
@@ -95,10 +95,10 @@ const LanguageSelector = ({ mode = 'dropdown' }) => {
                   {/* Category Header */}
                   <div 
                     onClick={() => handleCategoryClick(cat.key)}
-                    className="flex items-center space-x-2.5 p-1 rounded-xl hover:bg-stone/50 cursor-pointer group/item transition-all duration-300 text-gray-900"
+                    className="flex items-center space-x-2.5 p-1 rounded-xl hover:bg-white/10 cursor-pointer group/item transition-all duration-300 text-white"
                   >
                     <Icon className="w-4 h-4 text-terracotta shrink-0" />
-                    <h4 className="text-sm font-extrabold text-gray-900 group-hover/item:text-terracotta transition-colors">
+                    <h4 className="text-sm font-extrabold text-white group-hover/item:text-terracotta transition-colors">
                       {cat.title}
                     </h4>
                   </div>
@@ -109,7 +109,7 @@ const LanguageSelector = ({ mode = 'dropdown' }) => {
                       <button
                         key={sub.value}
                         onClick={() => handleSubtypeClick(cat.key, sub.value)}
-                        className="w-full text-left py-1.5 text-xs font-bold text-gray-600 hover:text-terracotta transition-all duration-200"
+                        className="w-full text-left py-1.5 text-xs font-bold text-gray-300 hover:text-terracotta transition-all duration-200"
                       >
                         {sub.label}
                       </button>

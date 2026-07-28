@@ -41,6 +41,7 @@ const BrokerDashboard = lazy(() => import("./pages/BrokerDashboard"));
 const EmployeeDashboard = lazy(() => import("./pages/EmployeeDashboard"));
 const HostPayouts = lazy(() => import("./pages/HostPayouts"));
 const HostBookings = lazy(() => import("./pages/HostBookings"));
+const HostPerformance = lazy(() => import("./pages/HostPerformance"));
 const SsoCallback = lazy(() => import("./pages/SsoCallback"));
 const SupportPage = lazy(() => import("./pages/SupportPage"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
@@ -247,6 +248,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={["host"]}>
               <HostPayouts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/host/performance"
+          element={
+            <ProtectedRoute allowedRoles={["host"]}>
+              <HostPerformance />
             </ProtectedRoute>
           }
         />

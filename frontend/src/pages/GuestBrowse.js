@@ -273,12 +273,15 @@ const TRANSLATIONS = {
 };
 
 const SUGGESTED_DESTINATIONS = [
-  { city: "Pune", state: "Maharashtra", desc: "A hidden gem", icon: Hotel },
-  { city: "Lonavala", state: "Maharashtra", desc: "For sights like Karla Caves", icon: Trees },
-  { city: "Mumbai", state: "Maharashtra", desc: "For its top-notch dining", icon: Building2 },
-  { city: "North Goa", state: "Goa", desc: "Popular beach destination", icon: Waves },
-  { city: "Nashik", state: "Maharashtra", desc: "Near you", icon: Compass },
-  { city: "Karjat", state: "Maharashtra", desc: "A hidden gem", icon: Home }
+  { city: "Pune", state: "Maharashtra", desc: "Oxford of the East & Heritage Forts", icon: Hotel },
+  { city: "Lonavala", state: "Maharashtra", desc: "Karla Caves & Scenic Valleys", icon: Trees },
+  { city: "Mumbai", state: "Maharashtra", desc: "The Financial Hub & Gateway of India", icon: Building2 },
+  { city: "North Goa", state: "Goa", desc: "Sandy Beaches & Vibrant Nightlife", icon: Waves },
+  { city: "Nashik", state: "Maharashtra", desc: "Wine Capital of India & Temples", icon: Compass },
+  { city: "Karjat", state: "Maharashtra", desc: "Waterfalls & Trekking Trails", icon: Home },
+  { city: "Mahabaleshwar", state: "Maharashtra", desc: "Strawberry Capital & Hill Station", icon: Sunset },
+  { city: "Alibaug", state: "Maharashtra", desc: "Pristine Beaches & Sea Forts", icon: Waves },
+  { city: "Igatpuri", state: "Maharashtra", desc: "Foggy Peaks & Waterfalls", icon: Compass }
 ];
 
 const GuestBrowse = () => {
@@ -328,6 +331,14 @@ const GuestBrowse = () => {
   const [showWishlistOnly, setShowWishlistOnly] = useState(false);
 
   const handleWishlistToggle = (propertyId) => {
+    if (!user) {
+      sessionStorage.setItem('pending_wishlist_property', propertyId);
+      navigate('/login');
+      return;
+    }
+    if (user.role !== 'guest') {
+      return;
+    }
     setWishlist(prev => {
       let updated;
       if (prev.includes(propertyId)) {
@@ -587,7 +598,7 @@ const GuestBrowse = () => {
               />
             </div>
 
-            {wishlist.length > 0 && (
+            {user && user.role === 'guest' && wishlist.length > 0 && (
               <>
                 <div className="h-4 w-[1px] bg-sand-300"></div>
                 <button
@@ -657,7 +668,7 @@ const GuestBrowse = () => {
           </div>
           
           <div className="flex flex-col space-y-6 flex-1">
-            {wishlist.length > 0 && (
+            {user && user.role === 'guest' && wishlist.length > 0 && (
               <button
                 onClick={() => { setIsMobileMenuOpen(false); setShowWishlistOnly(prev => !prev); }}
                 className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-gray-100"
@@ -1182,6 +1193,7 @@ const GuestBrowse = () => {
                     isWishlisted={wishlist.includes(p.property_id)}
                     onWishlistToggle={handleWishlistToggle}
                     onShare={handleShareWhatsApp}
+                    user={user}
                   />
                 ))}
               </div>
@@ -1257,7 +1269,7 @@ const GuestBrowse = () => {
   );
 };
 
-const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlisted, onWishlistToggle, onShare }) => (
+const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlisted, onWishlistToggle, onShare, user }) => (
   <div
     className={`card-premium group cursor-pointer shrink-0 snap-start ${compact ? 'w-full sm:w-auto flex flex-col sm:flex-row min-h-[240px]' : 'w-[280px] sm:w-auto flex flex-col'} transition-all duration-500`}
     onClick={onClick}
@@ -1302,16 +1314,18 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
          >
             <Share2 className="w-3.5 h-3.5 text-charcoal hover:text-green-600" />
          </button>
-         <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onWishlistToggle(property.property_id);
-            }}
-            className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-subtle hover:bg-white hover:scale-[1.03] transition cursor-pointer"
-            title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
-          >
-            <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'}`} />
-         </button>
+         {(!user || user.role === 'guest') && (
+           <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onWishlistToggle(property.property_id);
+              }}
+              className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-subtle hover:bg-white hover:scale-[1.03] transition cursor-pointer"
+              title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+            >
+              <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'}`} />
+           </button>
+         )}
       </div>
 
       <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">

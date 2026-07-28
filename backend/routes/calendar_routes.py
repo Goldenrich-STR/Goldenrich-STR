@@ -25,7 +25,6 @@ async def get_db():
     return db_instance
 
 
-
 class ExternalCalendarRequest(BaseModel):
     name: str
     ical_url: str

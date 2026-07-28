@@ -982,17 +982,31 @@ const HostListProperty = () => {
     const couponCode = subscriptionCouponCode.trim().toUpperCase();
     const coupon = couponCode ? subscriptionCoupons.find((c) => c.code === couponCode) : null;
     const taxableAmount = planFee + platformFee;
-    const taxes = Number((taxableAmount * (taxPercent / 100)).toFixed(2));
-    const grossTotal = taxableAmount + taxes;
     const rawDiscount = coupon
-      ? coupon.discount_type === 'percentage'
-        ? grossTotal * ((Number(coupon.discount_value) || 0) / 100)
-        : Number(coupon.discount_value) || 0
+      ? coupon.discount_type === 'target_taxable'
+        ? taxableAmount - Math.min(taxableAmount, Math.max(0, Number(coupon.discount_value) || 0))
+        : coupon.discount_type === 'percentage'
+          ? taxableAmount * ((Number(coupon.discount_value) || 0) / 100)
+          : Number(coupon.discount_value) || 0
       : 0;
-    const discount = Math.min(grossTotal, Math.max(0, Number(rawDiscount.toFixed(2))));
-    const subtotal = grossTotal;
-    const total = Math.max(0, grossTotal - discount);
-    return { planFee, platformFee, taxPercent, taxes, subtotal, coupon, discount, discountedPlanFee: planFee, total };
+    const discount = Math.min(taxableAmount, Math.max(0, Number(rawDiscount.toFixed(2))));
+    const discountedTaxableAmount = Number(Math.max(0, taxableAmount - discount).toFixed(2));
+    const taxes = Number((discountedTaxableAmount * (taxPercent / 100)).toFixed(2));
+    const subtotal = Number((taxableAmount + (taxableAmount * (taxPercent / 100))).toFixed(2));
+    const total = Number((discountedTaxableAmount + taxes).toFixed(2));
+    return {
+      planFee,
+      platformFee,
+      taxPercent,
+      taxableAmount,
+      discountedTaxableAmount,
+      taxes,
+      subtotal,
+      coupon,
+      discount,
+      discountedPlanFee: discountedTaxableAmount,
+      total
+    };
   };
 
   const validateStep = () => {
@@ -2956,7 +2970,13 @@ const HostListProperty = () => {
                             : 'border-gray-200 bg-stone text-charcoal hover:border-terracotta'
                         }`}
                       >
-                        {coupon.code} · {coupon.discount_type === 'percentage' ? `${coupon.discount_value}% OFF` : `₹${coupon.discount_value} OFF`}
+                        {coupon.code} · {
+                          coupon.discount_type === 'target_taxable'
+                            ? `Taxable Rs ${coupon.discount_value}`
+                            : coupon.discount_type === 'percentage'
+                              ? `${coupon.discount_value}% OFF`
+                              : `Rs ${coupon.discount_value} OFF`
+                        }
                       </button>
                     ))}
                   </div>

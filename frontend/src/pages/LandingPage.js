@@ -919,12 +919,15 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
 };
 
 const SUGGESTED_DESTINATIONS = [
-  { city: "Pune", state: "Maharashtra", desc: "A hidden gem", icon: Hotel },
-  { city: "Lonavala", state: "Maharashtra", desc: "For sights like Karla Caves", icon: Trees },
-  { city: "Mumbai", state: "Maharashtra", desc: "For its top-notch dining", icon: Building2 },
-  { city: "North Goa", state: "Goa", desc: "Popular beach destination", icon: Waves },
-  { city: "Nashik", state: "Maharashtra", desc: "Near you", icon: Compass },
-  { city: "Karjat", state: "Maharashtra", desc: "A hidden gem", icon: Home }
+  { city: "Pune", state: "Maharashtra", desc: "Oxford of the East & Heritage Forts", icon: Hotel },
+  { city: "Lonavala", state: "Maharashtra", desc: "Karla Caves & Scenic Valleys", icon: Trees },
+  { city: "Mumbai", state: "Maharashtra", desc: "The Financial Hub & Gateway of India", icon: Building2 },
+  { city: "North Goa", state: "Goa", desc: "Sandy Beaches & Vibrant Nightlife", icon: Waves },
+  { city: "Nashik", state: "Maharashtra", desc: "Wine Capital of India & Temples", icon: Compass },
+  { city: "Karjat", state: "Maharashtra", desc: "Waterfalls & Trekking Trails", icon: Home },
+  { city: "Mahabaleshwar", state: "Maharashtra", desc: "Strawberry Capital & Hill Station", icon: Sunset },
+  { city: "Alibaug", state: "Maharashtra", desc: "Pristine Beaches & Sea Forts", icon: Waves },
+  { city: "Igatpuri", state: "Maharashtra", desc: "Foggy Peaks & Waterfalls", icon: Compass }
 ];
 
 const DESTINATION_CONFIGS = {
@@ -1150,8 +1153,53 @@ const DestinationLineIcon = ({ label }) => {
     const accentFill = "#E8D8C8"; // Light sand accent
     const accentHighlight = "#E0A96D"; // Golden terracotta accent
 
-    switch (label) {
-      case 'Nashik': // Wine & Vineyards
+    // Fuzzy matching key
+    const getMatchKey = (lbl) => {
+      const l = lbl.toLowerCase();
+      if (l.includes('pandav') || l.includes('leni')) return 'Pandav Leni';
+      if (l.includes('anjaneri')) return 'Anjaneri';
+      if (l.includes('sula') || l.includes('vineyard')) return 'Sula Vineyards';
+      if (l.includes('basilica') || l.includes('church') || l.includes('jesus')) return 'Basilica of Born Jesus';
+      if (l.includes('aguada') || l.includes('fort')) return 'Fort Aguada';
+      if (l.includes('baga')) return 'Baga';
+      if (l.includes('calangute') || l.includes('beach') || l.includes('sea') || l.includes('coast') || l.includes('ocean')) return 'Calangute';
+      if (l.includes('panjim')) return 'Panjim';
+      if (l.includes('goa')) return 'Goa';
+      if (l.includes('alibaug')) return 'Alibaug';
+      if (l.includes('pune')) return 'Pune';
+      if (l.includes('mumbai') || l.includes('bombay')) return 'Mumbai';
+      if (l.includes('nashik') || l.includes('nasik')) return 'Nashik';
+      if (l.includes('igatpuri')) return 'Igatpuri';
+      if (l.includes('trimbakeshwar') || l.includes('temple')) return 'Trimbakeshwar';
+      if (l.includes('bhandardara')) return 'Bhandardara';
+      if (l.includes('saputara')) return 'Saputara';
+      if (l.includes('vaitarna') || l.includes('lake') || l.includes('river') || l.includes('dam') || l.includes('waterfall')) return 'Vaitarna';
+      if (l.includes('jawhar') || l.includes('palace') || l.includes('wada') || l.includes('shaniwar')) return 'Jawhar';
+      if (l.includes('wada')) return 'Wada';
+      if (l.includes('lonavala') || l.includes('khandala') || l.includes('cave')) return 'Lonavala';
+      if (l.includes('mahabaleshwar')) return 'Mahabaleshwar';
+      if (l.includes('panchgani')) return 'Panchgani';
+      if (l.includes('karjat')) return 'Karjat';
+      return lbl;
+    };
+
+    switch (getMatchKey(label)) {
+      case 'Nashik': // Grape Bunch
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24 10C24 10 27 6 30 8" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="24" cy="16" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="20" cy="22" r="4" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="28" cy="22" r="4" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="16" cy="28" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" opacity="0.8" />
+            <circle cx="24" cy="28" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" opacity="0.8" />
+            <circle cx="32" cy="28" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" opacity="0.8" />
+            <circle cx="20" cy="34" r="4" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="28" cy="34" r="4" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="24" cy="40" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" />
+          </svg>
+        );
+      case 'Sula Vineyards': // Wine bottle and glass
         return (
           <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="25" y="8" width="12" height="18" rx="2" stroke={strokeColor} strokeWidth="1.5" />
@@ -1163,6 +1211,24 @@ const DestinationLineIcon = ({ label }) => {
             <path d="M17 38H25" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
             <circle cx="15" cy="22" r="2" fill={strokeColor} />
             <circle cx="19" cy="19" r="2" fill={strokeColor} />
+          </svg>
+        );
+      case 'Pandav Leni': // Mountain Caves
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 38L18 14L30 28L38 18L44 38H6Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M14 38C14 32 18 30 22 30C26 30 30 32 30 38" fill="#FFF" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M32 38C32 34 35 32 38 32C41 32 44 34 44 38" fill="#FFF" stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="28" cy="10" r="3.5" fill={accentHighlight} />
+          </svg>
+        );
+      case 'Anjaneri': // Mountain Peak/Fort
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="34" cy="14" r="6" fill={accentHighlight} opacity="0.8" />
+            <path d="M4 38L18 16L32 32L38 24L44 38H4Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M12 28L18 22L24 28" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M30 38H18" stroke={strokeColor} strokeWidth="1.5" />
           </svg>
         );
       case 'Igatpuri': // Waterfall & Lake
@@ -1320,12 +1386,62 @@ const DestinationLineIcon = ({ label }) => {
             <path d="M30 26L34 34" stroke={strokeColor} strokeWidth="1.5" />
           </svg>
         );
+      case 'Basilica of Born Jesus': // Church style
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24 6V14" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M20 10H28" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M12 22V38H36V22L24 14L12 22Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <rect x="20" y="26" width="8" height="12" rx="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="24" cy="20" r="2.5" fill={strokeColor} />
+          </svg>
+        );
+      case 'Fort Aguada': // Lighthouse & Bastion style
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="18" y="16" width="12" height="22" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M14 38H34" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" />
+            <path d="M16 16H32" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M24 6L18 12H30L24 6Z" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <line x1="24" y1="12" x2="24" y2="16" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M20 22H28" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M20 28H28" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        );
+      case 'Calangute': // Beach Umbrella & Sun
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24 10V38" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" />
+            <path d="M10 24C10 16 16 12 24 12C32 12 38 16 38 24H10Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M17 24C17 20 20 18 24 18" stroke={strokeColor} strokeWidth="1.2" />
+            <path d="M31 24C31 20 28 18 24 18" stroke={strokeColor} strokeWidth="1.2" />
+            <circle cx="34" cy="12" r="4" fill={accentHighlight} />
+            <path d="M6 38H42" stroke={strokeColor} strokeWidth="1.5" />
+          </svg>
+        );
+      case 'Baga': // Surfboard & Wave
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 8C16 8 26 12 26 24C26 36 16 40 16 40C16 40 18 30 18 24C18 18 16 8 16 8Z" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M21 16C22 20 22 28 21 32" stroke={strokeColor} strokeWidth="1.2" strokeLinecap="round" />
+            <path d="M6 34C12 30 18 36 24 32C30 28 36 34 42 32" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" fill={accentFill} opacity="0.6" />
+            <path d="M10 38C16 36 22 40 28 38C34 36 40 38 42 38" stroke={strokeColor} strokeWidth="1" strokeLinecap="round" />
+          </svg>
+        );
+      case 'Panjim': // Sailboat / Cruise Boat
+        return (
+          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 30L36 30L32 36H16L12 30Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M24 30V10" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M24 12L34 22H24V12Z" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M6 38C12 36 18 40 24 38C30 36 36 40 42 38" stroke={strokeColor} strokeWidth="1" strokeLinecap="round" />
+          </svg>
+        );
       default:
         return (
           <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="24" cy="24" r="10" stroke={strokeColor} strokeWidth="1.5" fill={accentFill} />
-            <path d="M24 14V34" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M14 24H34" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M24 4C15.7 4 9 10.7 9 19c0 10.2 13 23 14 24a1.4 1.4 0 0 0 2 0c1-1 14-13.8 14-24 0-8.3-6.7-15-15-15z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <circle cx="24" cy="18" r="4.5" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" />
           </svg>
         );
     }
@@ -1672,6 +1788,14 @@ const LandingPage = () => {
   });
 
   const handleWishlistToggle = (propertyId) => {
+    if (!user) {
+      sessionStorage.setItem('pending_wishlist_property', propertyId);
+      navigate('/login');
+      return;
+    }
+    if (user.role !== 'guest') {
+      return;
+    }
     setWishlist(prev => {
       let updated;
       if (prev.includes(propertyId)) {
@@ -2038,14 +2162,16 @@ const LandingPage = () => {
                   />
                   
                   {/* Right Actions (Wishlist like Airbnb) */}
-                  <div className="absolute top-3 right-3 z-20">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                      className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.05] transition cursor-pointer"
-                    >
-                      <Heart className={`w-4 h-4 ${wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-gray-700'}`} />
-                    </button>
-                  </div>
+                  {(!user || user.role === 'guest') && (
+                    <div className="absolute top-3 right-3 z-20">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
+                        className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.05] transition cursor-pointer"
+                      >
+                        <Heart className={`w-4 h-4 ${wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-gray-700'}`} />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex-1 flex flex-col px-0.5">
@@ -2139,7 +2265,7 @@ const LandingPage = () => {
           >
             Discover
           </a>
-          {wishlist.length > 0 && (
+          {user && user.role === 'guest' && wishlist.length > 0 && (
             <a
               href="#"
               onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
@@ -2244,7 +2370,7 @@ const LandingPage = () => {
             >
               Discover
             </button>
-            {wishlist.length > 0 && (
+            {user && user.role === 'guest' && wishlist.length > 0 && (
               <button
                 onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }}
                 className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-white/10"
@@ -2693,14 +2819,16 @@ const LandingPage = () => {
                           <Star className="w-3 h-3 text-[#E0A51B] fill-current" />
                         </div>
                       )}
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                        className="absolute top-3 right-3 text-white"
-                        aria-label="Toggle wishlist"
-                      >
-                        <Heart className={`w-5 h-5 drop-shadow-md ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-                      </button>
+                      {(!user || user.role === 'guest') && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
+                          className="absolute top-3 right-3 text-white"
+                          aria-label="Toggle wishlist"
+                        >
+                          <Heart className={`w-5 h-5 drop-shadow-md ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                        </button>
+                      )}
                     </div>
                     <div className="p-4">
                       <h3 className="font-bold text-charcoal text-sm md:text-base line-clamp-1">{item.title}</h3>
@@ -3171,14 +3299,16 @@ const LandingPage = () => {
                                 </span>
                               </div>
                               {/* Favorite Icon */}
-                              <div className="absolute top-3 right-3 p-2 bg-white/90 rounded-full hover:bg-white shadow-sm transition-all duration-300 z-10">
-                                <Heart 
-                                  className={`w-4 h-4 transition-colors ${
-                                    wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'
-                                  }`} 
-                                  onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                                />
-                              </div>
+                              {(!user || user.role === 'guest') && (
+                                <div className="absolute top-3 right-3 p-2 bg-white/90 rounded-full hover:bg-white shadow-sm transition-all duration-300 z-10">
+                                  <Heart 
+                                    className={`w-4 h-4 transition-colors ${
+                                      wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'
+                                    }`} 
+                                    onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
+                                  />
+                                </div>
+                              )}
                             </div>
                             <div className="p-5 text-left">
                               <h4 className="font-bold text-sm text-charcoal truncate mb-1 group-hover:text-amber-600 transition-colors">

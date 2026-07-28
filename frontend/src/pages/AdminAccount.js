@@ -6,11 +6,12 @@ import {
 import {
   ArrowLeft, Download, IndianRupee, TrendingUp, Wallet, Users,
   RefreshCcw, CheckCircle, XCircle, AlertCircle, Clock,
-  Search, Share2, FileText, Mail, MessageSquare, Printer, Check, SlidersHorizontal, CalendarDays, ChevronLeft, ChevronRight
+  Search, Share2, FileText, Mail, MessageSquare, Printer, ChevronLeft, ChevronRight,
+  Plus, Trash, SlidersHorizontal, Eye
 } from 'lucide-react';
 
 import { useAuth } from '../contexts/AuthContext';
-import { accountAPI, bookingAPI } from '../services/api';
+import { accountAPI, bookingAPI, pricingAPI } from '../services/api';
 import CouponManagement from '../components/admin/CouponManagement';
 import { BookingManagement, SubscriptionManagement } from './AdminDashboard';
 
@@ -22,8 +23,51 @@ const fmtINR = (paise) =>
     maximumFractionDigits: 2,
   }).format((paise || 0) / 100);
 
+const formatDateForInvoice = (value) => {
+  if (!value) return 'NA';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'NA';
+  return date
+    .toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    .replace(/ /g, '-');
+};
+
+const numberToWordsInteger = (num) => {
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const belowHundred = (n) => (n < 20 ? ones[n] : `${tens[Math.floor(n / 10)]}${n % 10 ? ` ${ones[n % 10]}` : ''}`);
+  const belowThousand = (n) => {
+    const hundred = Math.floor(n / 100);
+    const rest = n % 100;
+    return `${hundred ? `${ones[hundred]} Hundred${rest ? ' ' : ''}` : ''}${rest ? belowHundred(rest) : ''}`;
+  };
+
+  let n = Math.floor(Math.abs(Number(num) || 0));
+  if (n === 0) return 'Zero';
+  const parts = [];
+  const crore = Math.floor(n / 10000000);
+  n %= 10000000;
+  const lakh = Math.floor(n / 100000);
+  n %= 100000;
+  const thousand = Math.floor(n / 1000);
+  n %= 1000;
+  if (crore) parts.push(`${belowThousand(crore)} Crore`);
+  if (lakh) parts.push(`${belowThousand(lakh)} Lakh`);
+  if (thousand) parts.push(`${belowThousand(thousand)} Thousand`);
+  if (n) parts.push(belowThousand(n));
+  return parts.join(' ');
+};
+
+const numberToWords = (amount) => {
+  const safeAmount = Math.max(0, Number(amount) || 0);
+  const rupees = Math.floor(safeAmount);
+  const paise = Math.round((safeAmount - rupees) * 100);
+  return `${numberToWordsInteger(rupees)}${paise ? ` And Paise ${numberToWordsInteger(paise)}` : ''}`;
+};
+
 const TABS = [
   { id: 'overview',     label: 'Overview' },
+  { id: 'pricing',      label: 'Pricing Engine' },
   { id: 'transactions', label: 'Transactions' },
   { id: 'bookings',     label: 'Bookings' },
   { id: 'subscriptions', label: 'Subscriptions' },
@@ -87,6 +131,7 @@ const AdminAccount = () => {
         </nav>
 
         {tab === 'overview' && <OverviewTab />}
+        {tab === 'pricing' && <PricingEngineTab />}
         {tab === 'transactions' && <TransactionsTab />}
         {tab === 'bookings' && <BookingManagement />}
         {tab === 'subscriptions' && <SubscriptionManagement />}
@@ -289,6 +334,1156 @@ const BookingFeeSettings = () => {
   );
 };
 
+// ---------------- Dynamic Pricing Engine Tab ----------------
+
+const PricingEngineTab = () => {
+  const [properties, setProperties] = useState([]);
+  const [rules, setRules] = useState({
+    calculation_mode: 'highest',
+    weekend: { is_enabled: false, saturday_pct: 0, sunday_pct: 0 },
+    festival: { is_enabled: false, festivals: [] },
+    seasonal: { is_enabled: false, summer_pct: 0, winter_pct: 0, monsoon_pct: 0 },
+    occupancy: { is_enabled: false, bracket_0_30: 0, bracket_31_60: 0, bracket_61_80: 0, bracket_81_100: 0 },
+    promotional: { is_enabled: false, campaign_name: '', pct_change: 0 }
+  });
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [savingRules, setSavingRules] = useState(false);
+  const [applying, setApplying] = useState(false);
+  
+  const [selectedProps, setSelectedProps] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [subTab, setSubTab] = useState('rules'); // 'rules' or 'history'
+  const [tableTab, setTableTab] = useState('all'); // 'all', 'running', 'stopped'
+  
+  // Property type filters for applying rules
+  const [targetTypes, setTargetTypes] = useState([]);
+
+  // Modal states
+  const [overrideProperty, setOverrideProperty] = useState(null);
+  const [overridePrice, setOverridePrice] = useState('');
+  const [showConfirmAll, setShowConfirmAll] = useState(false);
+  const [viewRulesProperty, setViewRulesProperty] = useState(null);
+
+  // New Festival form inputs
+  const [newFestName, setNewFestName] = useState('');
+  const [newFestStart, setNewFestStart] = useState('');
+  const [newFestEnd, setNewFestEnd] = useState('');
+  const [newFestPct, setNewFestPct] = useState('');
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [propsRes, rulesRes, histRes] = await Promise.all([
+        pricingAPI.getProperties(),
+        pricingAPI.getRules(),
+        pricingAPI.getHistory()
+      ]);
+      setProperties(propsRes.data || []);
+      setRules(rulesRes.data || rules);
+      setHistory(histRes.data || []);
+    } catch (err) {
+      console.error("Failed to load pricing data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleSaveRules = async () => {
+    setSavingRules(true);
+    try {
+      await pricingAPI.saveRules(rules);
+      alert("Pricing rules saved successfully!");
+      await loadData();
+    } catch (err) {
+      alert("Failed to save pricing rules.");
+    } finally {
+      setSavingRules(false);
+    }
+  };
+
+  const handlePreview = async () => {
+    if (selectedProps.length === 0) {
+      alert("Please select at least one property first.");
+      return;
+    }
+    try {
+      setLoading(true);
+      await pricingAPI.saveRules(rules);
+      const res = await pricingAPI.previewPricing(selectedProps, rules, targetTypes.length > 0 ? targetTypes : null);
+      
+      const previewMap = {};
+      res.data.forEach(item => {
+        previewMap[item.property_id] = item.new_price;
+      });
+      
+      setProperties(prev => prev.map(p => ({
+        ...p,
+        new_price: previewMap[p.property_id] !== undefined ? previewMap[p.property_id] : p.new_price
+      })));
+      alert("Price previews generated in the table below!");
+    } catch (err) {
+      alert("Failed to generate price preview.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApply = async () => {
+    if (selectedProps.length === 0) {
+      alert("Please select at least one property first.");
+      return;
+    }
+    setApplying(true);
+    try {
+      await pricingAPI.saveRules(rules);
+      const res = await pricingAPI.applyPricing(selectedProps, rules, targetTypes.length > 0 ? targetTypes : null);
+      alert(res.data.message || "Pricing rules applied and activated successfully!");
+      setSelectedProps([]);
+      setTargetTypes([]);
+      await loadData();
+    } catch (err) {
+      alert("Failed to apply pricing.");
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const handleToggleStatus = async (propertyId, status) => {
+    try {
+      setLoading(true);
+      const res = await pricingAPI.toggleRulesStatus(propertyId, status);
+      alert(res.data.message || `Rules status updated to ${status}`);
+      await loadData();
+    } catch (err) {
+      alert("Failed to update status.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBatchToggleStatus = async (status) => {
+    try {
+      setLoading(true);
+      const res = await pricingAPI.toggleRulesStatusBatch(selectedProps, status);
+      alert(res.data.message || `Successfully batch updated status to ${status}`);
+      setSelectedProps([]);
+      await loadData();
+    } catch (err) {
+      alert("Failed to batch update status.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleManualOverride = async () => {
+    if (!overrideProperty || !overridePrice) return;
+    try {
+      setLoading(true);
+      await pricingAPI.manualOverride(overrideProperty.property_id, Number(overridePrice));
+      alert("Manual override applied successfully (Pricing Rules Stopped)!");
+      setOverrideProperty(null);
+      setOverridePrice('');
+      await loadData();
+    } catch (err) {
+      alert("Failed to apply manual override.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddFestival = () => {
+    if (!newFestName || !newFestStart || !newFestEnd || !newFestPct) {
+      alert("Please fill in all festival fields.");
+      return;
+    }
+    const newFest = {
+      name: newFestName,
+      start_date: newFestStart,
+      end_date: newFestEnd,
+      increase_pct: Number(newFestPct)
+    };
+    setRules(prev => ({
+      ...prev,
+      festival: {
+        ...prev.festival,
+        festivals: [...prev.festival.festivals, newFest]
+      }
+    }));
+    setNewFestName('');
+    setNewFestStart('');
+    setNewFestEnd('');
+    setNewFestPct('');
+  };
+
+  const handleRemoveFestival = (idx) => {
+    setRules(prev => ({
+      ...prev,
+      festival: {
+        ...prev.festival,
+        festivals: prev.festival.festivals.filter((_, i) => i !== idx)
+      }
+    }));
+  };
+
+  const toggleSelectProperty = (id) => {
+    setSelectedProps(prev =>
+      prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedProps(filteredProperties.map(p => p.property_id));
+    } else {
+      setSelectedProps([]);
+    }
+  };
+
+  const handleTargetTypeChange = (type) => {
+    setTargetTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
+
+  const filteredProperties = properties.filter(p => 
+    p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.city.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const activeRulesProperties = properties.filter(p => p.rules_status === 'active');
+  const stoppedRulesProperties = properties.filter(p => p.rules_status === 'stopped' || !p.rules_status);
+
+  // Switch display array based on selected tableTab filter
+  const displayProperties = filteredProperties.filter(p => {
+    if (tableTab === 'running') return p.rules_status === 'active';
+    if (tableTab === 'stopped') return p.rules_status === 'stopped' || !p.rules_status;
+    return true;
+  });
+
+  const totalProperties = properties.length;
+  const activeRulesCount = activeRulesProperties.length;
+  const stoppedRulesCount = stoppedRulesProperties.length;
+  const pendingUpdatesCount = properties.filter(p => p.new_price !== undefined && p.new_price !== p.price_per_night).length;
+
+  const COMMON_PROPERTY_TYPES = [
+    { value: 'villa', label: 'Villa' },
+    { value: 'banquet_hall', label: 'Banquet Hall' },
+    { value: 'apartment', label: 'Apartment' },
+    { value: 'farmhouse', label: 'Farmhouse' },
+    { value: 'rooftop', label: 'Rooftop' },
+    { value: 'resort', label: 'Resort' },
+    { value: 'co_working', label: 'Co-working' }
+  ];
+
+  const isRulesPanelEnabled = selectedProps.length > 0;
+
+  return (
+    <div className="space-y-6" data-testid="pricing-engine-tab">
+      
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Live Properties', value: totalProperties, color: 'text-charcoal' },
+          { label: 'Active Rules Properties', value: activeRulesCount, color: 'text-green-600' },
+          { label: 'Stopped Rules Properties', value: stoppedRulesCount, color: 'text-amber-600' },
+          { label: 'Pending Updates', value: pendingUpdatesCount, color: 'text-red-500' }
+        ].map(card => (
+          <div key={card.label} className="dashboard-card border border-gray-100 shadow-sm bg-white p-5 rounded-2xl">
+            <p className="text-xs uppercase tracking-wider text-charcoal-muted font-bold">{card.label}</p>
+            <p className={`text-3xl font-bold tracking-tight mt-2 ${card.color}`}>{loading ? '...' : card.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Subtab Navigation */}
+      <div className="flex border-b border-sand-100">
+        <button
+          onClick={() => setSubTab('rules')}
+          className={`px-4 py-2.5 font-bold text-sm tracking-wide transition-all border-b-2 ${
+            subTab === 'rules' ? 'border-terracotta text-terracotta' : 'border-transparent text-charcoal-muted hover:text-charcoal'
+          }`}
+        >
+          Rules Configuration
+        </button>
+        <button
+          onClick={() => setSubTab('history')}
+          className={`px-4 py-2.5 font-bold text-sm tracking-wide transition-all border-b-2 ${
+            subTab === 'history' ? 'border-terracotta text-terracotta' : 'border-transparent text-charcoal-muted hover:text-charcoal'
+          }`}
+        >
+          Price Change History
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12 text-charcoal-light">Syncing pricing details...</div>
+      ) : subTab === 'history' ? (
+        /* History logs */
+        <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-6 overflow-hidden">
+          <h3 className="text-lg font-bold text-charcoal mb-4">Price Change History Log</h3>
+          {history.length === 0 ? (
+            <p className="text-charcoal-light text-center py-10">No price changes recorded yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-100 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-stone/50">
+                    <th className="py-3 px-4 rounded-l-xl">Date & Time</th>
+                    <th className="py-3 px-4">Property</th>
+                    <th className="py-3 px-4">Old Price</th>
+                    <th className="py-3 px-4">New Price</th>
+                    <th className="py-3 px-4">Updated By</th>
+                    <th className="py-3 px-4 rounded-r-xl">Reason</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-sand-100">
+                  {history.map(item => (
+                    <tr key={item.history_id} className="hover:bg-stone/40 transition text-charcoal">
+                      <td className="py-3 px-4 whitespace-nowrap">{new Date(item.created_at).toLocaleString('en-IN')}</td>
+                      <td className="py-3 px-4 font-bold">{item.property_title}</td>
+                      <td className="py-3 px-4 font-mono">₹{item.old_price.toLocaleString('en-IN')}</td>
+                      <td className="py-3 px-4 font-mono text-terracotta font-bold">₹{item.new_price.toLocaleString('en-IN')}</td>
+                      <td className="py-3 px-4">{item.updated_by}</td>
+                      <td className="py-3 px-4 font-semibold text-charcoal-light">{item.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Pricing engine controls and property table */
+        <div className="grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-6 items-start">
+          
+          {/* Rules settings side panel */}
+          <div className="relative">
+            {!isRulesPanelEnabled && (
+              <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] z-10 flex flex-col items-center justify-center p-6 text-center transition-all duration-300 rounded-2xl border border-gray-100/50">
+                <SlidersHorizontal className="w-10 h-10 text-charcoal-muted mb-3 animate-pulse" />
+                <h4 className="text-sm font-bold text-charcoal">Pricing Rules Locked</h4>
+                <p className="text-xs text-charcoal-muted mt-1 max-w-[240px]">
+                  Please select one or more properties in the table to unlock pricing rule options.
+                </p>
+              </div>
+            )}
+            
+            <div className={`dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-6 space-y-6 ${!isRulesPanelEnabled ? 'opacity-40 select-none pointer-events-none' : ''}`}>
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <h3 className="text-lg font-bold text-charcoal flex items-center gap-2">
+                  <SlidersHorizontal className="w-5 h-5 text-terracotta" />
+                  <span>Configure Rules</span>
+                </h3>
+                <button
+                  onClick={handleSaveRules}
+                  className="btn-premium px-3 py-1.5 text-[10px]"
+                >
+                  Save Rules
+                </button>
+              </div>
+
+              {/* Target Property Types filter */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-charcoal-light uppercase tracking-widest block">Apply For (Property Types)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {COMMON_PROPERTY_TYPES.map(type => (
+                    <label key={type.value} className="flex items-center space-x-2 text-xs font-bold text-charcoal cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={targetTypes.includes(type.value)}
+                        onChange={() => handleTargetTypeChange(type.value)}
+                        className="w-3.5 h-3.5 rounded text-terracotta focus:ring-terracotta border-gray-300"
+                      />
+                      <span>{type.label}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[10px] text-charcoal-muted mt-1">If none selected, rules apply to all checked properties.</p>
+              </div>
+
+              {/* Rules Toggles & Settings */}
+              <div className="space-y-4 pt-2">
+                
+                {/* Weekend Pricing */}
+                <div className="p-4 bg-stone/40 border border-sand-100/50 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-charcoal uppercase tracking-wide">Weekend Adjustments</span>
+                    <input
+                      type="checkbox"
+                      checked={rules.weekend.is_enabled}
+                      onChange={e => setRules(prev => ({
+                        ...prev,
+                        weekend: { ...prev.weekend, is_enabled: e.target.checked }
+                      }))}
+                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                    />
+                  </div>
+                  {rules.weekend.is_enabled && (
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Saturday Increase %</span>
+                        <input
+                          type="number"
+                          value={rules.weekend.saturday_pct === 0 ? "" : rules.weekend.saturday_pct}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            weekend: { ...prev.weekend, saturday_pct: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Sunday Increase %</span>
+                        <input
+                          type="number"
+                          value={rules.weekend.sunday_pct === 0 ? "" : rules.weekend.sunday_pct}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            weekend: { ...prev.weekend, sunday_pct: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Seasonal Pricing */}
+                <div className="p-4 bg-stone/40 border border-sand-100/50 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-charcoal uppercase tracking-wide">Seasonal Pricing</span>
+                    <input
+                      type="checkbox"
+                      checked={rules.seasonal.is_enabled}
+                      onChange={e => setRules(prev => ({
+                        ...prev,
+                        seasonal: { ...prev.seasonal, is_enabled: e.target.checked }
+                      }))}
+                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                    />
+                  </div>
+                  {rules.seasonal.is_enabled && (
+                    <div className="grid grid-cols-3 gap-2 pt-2">
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Summer %</span>
+                        <input
+                          type="number"
+                          value={rules.seasonal.summer_pct === 0 ? "" : rules.seasonal.summer_pct}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            seasonal: { ...prev.seasonal, summer_pct: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Winter %</span>
+                        <input
+                          type="number"
+                          value={rules.seasonal.winter_pct === 0 ? "" : rules.seasonal.winter_pct}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            seasonal: { ...prev.seasonal, winter_pct: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Monsoon %</span>
+                        <input
+                          type="number"
+                          value={rules.seasonal.monsoon_pct === 0 ? "" : rules.seasonal.monsoon_pct}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            seasonal: { ...prev.seasonal, monsoon_pct: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Occupancy Pricing */}
+                <div className="p-4 bg-stone/40 border border-sand-100/50 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-charcoal uppercase tracking-wide">Occupancy Pricing</span>
+                    <input
+                      type="checkbox"
+                      checked={rules.occupancy.is_enabled}
+                      onChange={e => setRules(prev => ({
+                        ...prev,
+                        occupancy: { ...prev.occupancy, is_enabled: e.target.checked }
+                      }))}
+                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                    />
+                  </div>
+                  {rules.occupancy.is_enabled && (
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">0–30% occupancy</span>
+                        <input
+                          type="number"
+                          value={rules.occupancy.bracket_0_30 === 0 ? "" : rules.occupancy.bracket_0_30}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            occupancy: { ...prev.occupancy, bracket_0_30: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">31–60% occupancy</span>
+                        <input
+                          type="number"
+                          value={rules.occupancy.bracket_31_60 === 0 ? "" : rules.occupancy.bracket_31_60}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            occupancy: { ...prev.occupancy, bracket_31_60: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">61–80% occupancy</span>
+                        <input
+                          type="number"
+                          value={rules.occupancy.bracket_61_80 === 0 ? "" : rules.occupancy.bracket_61_80}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            occupancy: { ...prev.occupancy, bracket_61_80: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">81–100% occupancy</span>
+                        <input
+                          type="number"
+                          value={rules.occupancy.bracket_81_100 === 0 ? "" : rules.occupancy.bracket_81_100}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            occupancy: { ...prev.occupancy, bracket_81_100: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Promotional Campaign */}
+                <div className="p-4 bg-stone/40 border border-sand-100/50 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-charcoal uppercase tracking-wide">Promo Campaign</span>
+                    <input
+                      type="checkbox"
+                      checked={rules.promotional.is_enabled}
+                      onChange={e => setRules(prev => ({
+                        ...prev,
+                        promotional: { ...prev.promotional, is_enabled: e.target.checked }
+                      }))}
+                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                    />
+                  </div>
+                  {rules.promotional.is_enabled && (
+                    <div className="space-y-3 pt-2">
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Campaign Name</span>
+                        <input
+                          type="text"
+                          value={rules.promotional.campaign_name}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            promotional: { ...prev.promotional, campaign_name: e.target.value }
+                          }))}
+                          placeholder="e.g. Monsoon Sale"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-1">Price change % (use - for discount)</span>
+                        <input
+                          type="number"
+                          value={rules.promotional.pct_change === 0 ? "" : rules.promotional.pct_change}
+                          onChange={e => setRules(prev => ({
+                            ...prev,
+                            promotional: { ...prev.promotional, pct_change: e.target.value === "" ? 0 : Number(e.target.value) }
+                          }))}
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Festival Pricing */}
+                <div className="p-4 bg-stone/40 border border-sand-100/50 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-charcoal uppercase tracking-wide">Festival Adjustments</span>
+                    <input
+                      type="checkbox"
+                      checked={rules.festival.is_enabled}
+                      onChange={e => setRules(prev => ({
+                        ...prev,
+                        festival: { ...prev.festival, is_enabled: e.target.checked }
+                      }))}
+                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                    />
+                  </div>
+                  {rules.festival.is_enabled && (
+                    <div className="space-y-3 pt-2">
+                      <div className="p-3 bg-white border border-sand-200 rounded-xl space-y-2">
+                        <span className="text-[9px] font-bold text-charcoal uppercase block">Create Festival Range</span>
+                        <input
+                          type="text"
+                          placeholder="Festival Name"
+                          value={newFestName}
+                          onChange={e => setNewFestName(e.target.value)}
+                          className="w-full border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-terracotta"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="date"
+                            value={newFestStart}
+                            onChange={e => setNewFestStart(e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-terracotta"
+                          />
+                          <input
+                            type="date"
+                            value={newFestEnd}
+                            onChange={e => setNewFestEnd(e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-terracotta"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="number"
+                            placeholder="Increase %"
+                            value={newFestPct}
+                            onChange={e => setNewFestPct(e.target.value)}
+                            className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-terracotta"
+                          />
+                          <button
+                            onClick={handleAddFestival}
+                            className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white font-bold text-xs rounded-lg transition"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        {rules.festival.festivals.map((fest, idx) => (
+                          <div key={idx} className="flex justify-between items-center bg-white border border-gray-150 rounded-xl p-2.5 text-[11px]">
+                            <div>
+                              <span className="font-bold text-charcoal block">{fest.name}</span>
+                              <span className="text-charcoal-muted">{fest.start_date} to {fest.end_date}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-terracotta font-bold">+{fest.increase_pct}%</span>
+                              <button
+                                onClick={() => handleRemoveFestival(idx)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Trash className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          {/* Right side property table and action triggers */}
+          <div className="space-y-6">
+            
+            {/* Global Actions */}
+            <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-5 flex flex-wrap gap-4 items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-charcoal font-serif">Global Pricing Actions</h3>
+                <p className="text-xs text-charcoal-muted mt-1">
+                  Preview pricing updates or apply rules immediately.
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {selectedProps.length > 0 && (
+                  <>
+                    <button
+                      onClick={() => handleBatchToggleStatus('stopped')}
+                      className="px-4 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-bold text-xs transition"
+                    >
+                      Stop Selected
+                    </button>
+                    <button
+                      onClick={() => handleBatchToggleStatus('active')}
+                      className="px-4 py-2.5 rounded-xl bg-green-50 hover:bg-green-100 text-green-600 border border-green-200 font-bold text-xs transition"
+                    >
+                      Continue Selected
+                    </button>
+                  </>
+                )}
+                <button
+                  disabled={selectedProps.length === 0}
+                  onClick={handlePreview}
+                  className="px-5 py-2.5 rounded-xl border border-terracotta hover:bg-terracotta/5 text-terracotta font-bold text-sm transition disabled:opacity-40"
+                >
+                  Preview Changes
+                </button>
+                <button
+                  disabled={selectedProps.length === 0 || applying}
+                  onClick={handleApply}
+                  className="px-5 py-2.5 rounded-xl bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm transition disabled:opacity-40"
+                >
+                  {applying ? "Applying..." : "Apply Rules"}
+                </button>
+              </div>
+            </div>
+
+            {/* View Switcher Tabs right above Table */}
+            <div className="flex border-b border-sand-100 bg-white p-1 rounded-t-2xl border-t border-x border-gray-100">
+              {[
+                { id: 'all', label: `All Properties (${totalProperties})` },
+                { id: 'running', label: `Running Rules (${activeRulesCount})` },
+                { id: 'stopped', label: `Stopped Properties (${stoppedRulesCount})` }
+              ].map(tabOpt => (
+                <button
+                  key={tabOpt.id}
+                  onClick={() => setTableTab(tabOpt.id)}
+                  className={`px-5 py-3 font-bold text-xs tracking-wider uppercase rounded-xl transition ${
+                    tableTab === tabOpt.id
+                      ? 'bg-terracotta text-white shadow-sm'
+                      : 'text-charcoal-muted hover:text-charcoal hover:bg-stone/50'
+                  }`}
+                >
+                  {tabOpt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Properties Table Card */}
+            <div className="dashboard-card border border-gray-100 shadow-sm rounded-b-2xl rounded-tr-none bg-white p-6 overflow-hidden mt-0">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                <h3 className="text-base font-bold text-charcoal">
+                  {tableTab === 'all' && 'All Enterprise Properties'}
+                  {tableTab === 'running' && 'Properties Currently Running Dynamic Rules'}
+                  {tableTab === 'stopped' && 'Stopped Properties (Running Original Rates)'}
+                </h3>
+                <div className="relative max-w-xs w-full">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-muted">
+                    <Search className="w-4 h-4" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search property or city..."
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-2 text-xs font-semibold outline-none focus:border-terracotta"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-stone/50">
+                      <th className="py-3 px-4 rounded-l-xl w-10 text-center">
+                        <input
+                          type="checkbox"
+                          onChange={toggleSelectAll}
+                          checked={displayProperties.length > 0 && selectedProps.length === displayProperties.length}
+                          className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                        />
+                      </th>
+                      <th className="py-3 px-4">Property Name</th>
+                      <th className="py-3 px-4">City</th>
+                      <th className="py-3 px-4 text-right">Original Base Price</th>
+                      <th className="py-3 px-4 text-right">Calculated/Dyn. Rate</th>
+                      <th className="py-3 px-4 text-center">Rules Status</th>
+                      <th className="py-3 px-4">Last Updated</th>
+                      <th className="py-3 px-4 text-center">Status Action</th>
+                      <th className="py-3 px-4 text-center rounded-r-xl">Override</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-sand-100">
+                    {displayProperties.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-8 text-center text-charcoal-light">No properties found in this view.</td>
+                      </tr>
+                    ) : (
+                      displayProperties.map(p => {
+                        const hasChange = p.new_price !== undefined && p.new_price !== p.price_per_night;
+                        const isRulesActive = p.rules_status === 'active';
+                        return (
+                          <tr key={p.property_id} className="hover:bg-stone/40 transition text-charcoal">
+                            <td className="py-3 px-4 text-center">
+                              <input
+                                type="checkbox"
+                                checked={selectedProps.includes(p.property_id)}
+                                onChange={() => toggleSelectProperty(p.property_id)}
+                                className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                              />
+                            </td>
+                            <td className="py-3 px-4 font-bold">
+                              <div className="flex items-center gap-2">
+                                <span>{p.title}</span>
+                                {p.pricing_rules && (
+                                  <button
+                                    onClick={() => setViewRulesProperty(p)}
+                                    className="p-1 hover:bg-stone rounded-lg text-terracotta transition"
+                                    title="View Configured Rules"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 font-semibold">{p.city}</td>
+                            <td className="py-3 px-4 text-right font-mono">₹{p.base_price?.toLocaleString('en-IN') || p.price_per_night.toLocaleString('en-IN')}</td>
+                            <td className="py-3 px-4 text-right font-mono font-bold text-terracotta">
+                              ₹{p.price_per_night.toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-3 px-4 text-center whitespace-nowrap">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                                isRulesActive ? 'bg-green-100 text-green-800 animate-pulse' : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                {isRulesActive ? 'running' : 'stopped'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-charcoal-muted">
+                              {p.updated_at ? new Date(p.updated_at).toLocaleDateString('en-IN') : 'N/A'}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {isRulesActive ? (
+                                <button
+                                  onClick={() => handleToggleStatus(p.property_id, 'stopped')}
+                                  className="px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-lg transition"
+                                >
+                                  Stop Rules
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleToggleStatus(p.property_id, 'active')}
+                                  className="px-3 py-1 bg-green-50 hover:bg-green-100 text-green-600 font-bold text-xs rounded-lg transition"
+                                >
+                                  Continue
+                                </button>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <button
+                                onClick={() => {
+                                  setOverrideProperty(p);
+                                  setOverridePrice(p.base_price || p.price_per_night);
+                                }}
+                                className="px-2.5 py-1 rounded-lg border border-amber-200 hover:bg-amber-50 text-amber-700 text-xs font-bold transition"
+                              >
+                                Override
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* Manual Override Modal */}
+      {overrideProperty && (
+        <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-premium animate-slide-up">
+            <h3 className="text-xl font-bold tracking-tight text-charcoal mb-2">Manual Price Override</h3>
+            <p className="text-xs text-charcoal-muted mb-4">
+              Manually set the Base Price for <span className="font-bold text-charcoal">{overrideProperty.title}</span>. This property's pricing mode will be locked to <span className="font-semibold text-amber-700">manual</span> and active rules will be stopped.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">New Base Price (₹)</label>
+                <input
+                  type="number"
+                  value={overridePrice}
+                  onChange={e => setOverridePrice(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-terracotta font-semibold text-charcoal text-sm"
+                />
+              </div>
+              <div className="flex gap-3 pt-3">
+                <button
+                  onClick={() => setOverrideProperty(null)}
+                  className="flex-1 py-3 font-bold text-charcoal-muted text-sm hover:underline"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleManualOverride}
+                  className="flex-1 btn-premium py-3 text-sm"
+                >
+                  Save Override
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Rules Modal */}
+      {viewRulesProperty && (() => {
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const weekday = today.getDay(); // 0 Sunday, 6 Saturday
+        const month = today.getMonth() + 1; // 1-12
+        const basePrice = viewRulesProperty.base_price || viewRulesProperty.price_per_night || 0;
+        const livePrice = viewRulesProperty.price_per_night || 0;
+        const rules = viewRulesProperty.pricing_rules || {};
+
+        // Weekend Active status
+        let weekendActive = false;
+        let weekendLabel = "Inactive Today";
+        let weekendPct = 0;
+        if (rules.weekend?.is_enabled) {
+          if (weekday === 6) {
+            weekendActive = true;
+            weekendPct = rules.weekend.saturday_pct || 0;
+            weekendLabel = `Active Today (Saturday: +${weekendPct}%)`;
+          } else if (weekday === 0) {
+            weekendActive = true;
+            weekendPct = rules.weekend.sunday_pct || 0;
+            weekendLabel = `Active Today (Sunday: +${weekendPct}%)`;
+          } else {
+            weekendLabel = `Scheduled/Active on Weekends (Saturdays: +${rules.weekend.saturday_pct}%, Sundays: +${rules.weekend.sunday_pct}%)`;
+          }
+        }
+
+        // Seasonal Active status
+        let seasonalActive = false;
+        let seasonalLabel = "Inactive Today";
+        let seasonalPct = 0;
+        if (rules.seasonal?.is_enabled) {
+          let seasonName = "Monsoon";
+          seasonalPct = rules.seasonal.monsoon_pct || 0;
+          if ([3,4,5].includes(month)) {
+            seasonName = "Summer";
+            seasonalPct = rules.seasonal.summer_pct || 0;
+          } else if ([10,11,12,1,2].includes(month)) {
+            seasonName = "Winter";
+            seasonalPct = rules.seasonal.winter_pct || 0;
+          }
+          
+          if (seasonalPct !== 0) {
+            seasonalActive = true;
+            seasonalLabel = `Active Today (${seasonName}: +${seasonalPct}%)`;
+          } else {
+            seasonalLabel = `Inactive Today (${seasonName} season has +0% increase configured)`;
+          }
+        }
+
+        // Promotional Active status
+        let promoActive = false;
+        let promoLabel = "Inactive Today";
+        let promoPct = 0;
+        if (rules.promotional?.is_enabled) {
+          promoActive = true;
+          promoPct = rules.promotional.pct_change || 0;
+          promoLabel = `Active Today (${rules.promotional.campaign_name || 'Promo'}: ${promoPct}%)`;
+        }
+
+        return (
+          <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-premium animate-slide-up space-y-4">
+              <h3 className="text-xl font-bold tracking-tight text-charcoal flex items-center gap-2">
+                <Eye className="w-5 h-5 text-terracotta" />
+                <span>Configured Rules: {viewRulesProperty.title}</span>
+              </h3>
+
+              {/* Price Summary Row */}
+              <div className="grid grid-cols-2 gap-4 bg-stone/50 p-4 rounded-2xl border border-sand-100">
+                <div>
+                  <span className="text-[10px] font-bold text-charcoal-muted uppercase block">Original Base Price</span>
+                  <span className="text-lg font-bold font-mono text-charcoal">₹{basePrice.toLocaleString('en-IN')}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-charcoal-muted uppercase block">Current Calculated Rate</span>
+                  <span className="text-lg font-bold font-mono text-terracotta">₹{livePrice.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+              
+              <div className="space-y-3 max-h-[350px] overflow-y-auto pr-2 divide-y divide-gray-100">
+                
+                {/* Weekend */}
+                <div className="pt-2.5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">Weekend Adjustments</h4>
+                    {rules.weekend?.is_enabled ? (
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                        weekendActive ? 'bg-green-100 text-green-800' : 'bg-blue-50 text-blue-700'
+                      }`}>
+                        {weekendActive ? 'Active Today' : 'Scheduled'}
+                      </span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Disabled</span>
+                    )}
+                  </div>
+                  {rules.weekend?.is_enabled && (
+                    <div className="text-xs text-charcoal-light mt-1 space-y-1">
+                      <p className="font-semibold text-charcoal-muted">{weekendLabel}</p>
+                      {weekendActive && (
+                        <p className="text-[11px] text-green-600 font-bold">
+                          Increase: +₹{((basePrice * weekendPct) / 100).toLocaleString('en-IN')} ({weekendPct}%)
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Seasonal */}
+                <div className="pt-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">Seasonal Pricing</h4>
+                    {rules.seasonal?.is_enabled ? (
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                        seasonalActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {seasonalActive ? 'Active Today' : 'Inactive Today'}
+                      </span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Disabled</span>
+                    )}
+                  </div>
+                  {rules.seasonal?.is_enabled && (
+                    <div className="text-xs text-charcoal-light mt-1 space-y-1">
+                      <p className="font-semibold text-charcoal-muted">{seasonalLabel}</p>
+                      {seasonalActive && (
+                        <p className="text-[11px] text-green-600 font-bold">
+                          Increase: +₹{((basePrice * seasonalPct) / 100).toLocaleString('en-IN')} ({seasonalPct}%)
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Occupancy */}
+                <div className="pt-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">Occupancy Brackets</h4>
+                    {rules.occupancy?.is_enabled ? (
+                      <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Active</span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Disabled</span>
+                    )}
+                  </div>
+                  {rules.occupancy?.is_enabled && (
+                    <div className="text-xs text-charcoal-light mt-1 space-y-1.5">
+                      <p className="font-semibold text-charcoal-muted">Active (Adjusts dynamically as occupancy changes):</p>
+                      <ul className="text-[11px] space-y-0.5 list-disc pl-4 text-charcoal-muted">
+                        <li>0–30% occupancy: +{rules.occupancy.bracket_0_30}%</li>
+                        <li>31–60% occupancy: +{rules.occupancy.bracket_31_60}%</li>
+                        <li>61–80% occupancy: +{rules.occupancy.bracket_61_80}%</li>
+                        <li>81–100% occupancy: +{rules.occupancy.bracket_81_100}%</li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Promo */}
+                <div className="pt-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider">Promotional Campaign</h4>
+                    {rules.promotional?.is_enabled ? (
+                      <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Active Today</span>
+                    ) : (
+                      <span className="bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase">Disabled</span>
+                    )}
+                  </div>
+                  {rules.promotional?.is_enabled && (
+                    <div className="text-xs text-charcoal-light mt-1 space-y-1">
+                      <p className="font-semibold text-charcoal-muted">{promoLabel}</p>
+                      <p className="text-[11px] text-green-600 font-bold">
+                        Adjustment: {promoPct > 0 ? '+' : ''}₹{((basePrice * promoPct) / 100).toLocaleString('en-IN')} ({promoPct}%)
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Festival */}
+                <div className="pt-3 pb-2">
+                  <h4 className="text-xs font-bold text-charcoal uppercase tracking-wider mb-2">Festival Adjustments</h4>
+                  {rules.festival?.is_enabled && rules.festival.festivals?.length > 0 ? (
+                    <div className="space-y-2 mt-1">
+                      {rules.festival.festivals.map((fest, idx) => {
+                        let festStatus = 'Expired';
+                        let badgeColor = 'bg-gray-100 text-gray-500';
+                        try {
+                          const start = new Date(fest.start_date);
+                          start.setHours(0,0,0,0);
+                          const end = new Date(fest.end_date);
+                          end.setHours(23,59,59,999);
+                          
+                          if (today >= start && today <= end) {
+                            festStatus = 'Active Today';
+                            badgeColor = 'bg-green-100 text-green-800 border-green-200';
+                          } else if (today < start) {
+                            festStatus = 'Scheduled (Future)';
+                            badgeColor = 'bg-blue-50 text-blue-700 border-blue-100';
+                          }
+                        } catch (e) {}
+
+                        return (
+                          <div key={idx} className="flex justify-between items-center bg-stone/40 border border-sand-100 p-2.5 rounded-xl text-xs">
+                            <div>
+                              <span className="font-bold text-charcoal block">{fest.name}</span>
+                              <span className="text-[10px] text-charcoal-muted">{fest.start_date} to {fest.end_date}</span>
+                            </div>
+                            <div className="text-right space-y-1">
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase block text-center ${badgeColor}`}>
+                                {festStatus}
+                              </span>
+                              <span className="font-mono text-terracotta font-bold text-[11px] block">
+                                +₹{((basePrice * (fest.increase_pct || 0)) / 100).toLocaleString('en-IN')} (+{fest.increase_pct}%)
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-charcoal-muted">Disabled / No festivals added</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-3">
+                <button
+                  onClick={() => setViewRulesProperty(null)}
+                  className="px-6 py-2.5 bg-charcoal text-white font-bold text-xs rounded-xl shadow-premium hover:bg-black transition uppercase tracking-wider"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+    </div>
+  );
+};
+
 // ---------------- Transactions ----------------
 
 const TransactionsTab = () => {
@@ -390,8 +1585,65 @@ const TransactionsTab = () => {
     }
   };
 
+  const formatMoney = (amount = 0) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(amount || 0));
+  const formatInvoiceDate = (value) => value ? new Date(value).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }).replace(/ /g, '-') : 'NA';
+  const formatPlanDate = (value) => value ? new Date(value).toLocaleDateString('en-GB').replace(/\//g, '-') : 'NA';
+  const formatPlanLabel = (txn) => {
+    const label = txn.plan?.bhk_type || txn.plan?.plan_type || txn.subscription?.plan_type || txn.type || '';
+    return label ? label.replaceAll('_', ' ').toUpperCase() : 'NA';
+  };
+  const formatPropertyName = (txn) => (
+    txn.property?.title ||
+    txn.property?.property_name ||
+    txn.property?.name ||
+    txn.property_name ||
+    txn.property?.property_id ||
+    txn.subscription?.property_id ||
+    'NA'
+  );
+  const getInvoiceBreakdown = (txn) => {
+    if (txn.invoice_breakdown) {
+      return {
+        planFee: Number(txn.invoice_breakdown.plan_fee || 0),
+        gross: Number(txn.invoice_breakdown.plan_fee || txn.invoice_breakdown.taxable_before_discount || txn.invoice_breakdown.taxable_amount || 0),
+        platformFee: Number(txn.invoice_breakdown.platform_fee || 0),
+        couponCode: txn.invoice_breakdown.coupon_code || txn.subscription?.coupon_code || '',
+        discount: Number(txn.invoice_breakdown.discount_amount || 0),
+        taxableAmount: Number(txn.invoice_breakdown.taxable_amount || 0),
+        igst: Number(txn.invoice_breakdown.igst || 0),
+        cgst: Number(txn.invoice_breakdown.cgst || 0),
+        sgst: Number(txn.invoice_breakdown.sgst || 0),
+        total: Number(txn.invoice_breakdown.total_amount || 0),
+      };
+    }
+    const total = (Number(txn.amount) || 0) / 100;
+    const taxPercent = Number(txn.plan?.tax_percent ?? 18);
+    const taxable = total / (1 + taxPercent / 100);
+    const tax = Math.max(0, total - taxable);
+    const platformFee = txn.plan?.platform_fee != null ? Number(txn.plan.platform_fee) : 0;
+    return {
+      planFee: Math.max(0, taxable - platformFee),
+      gross: Math.max(0, taxable - platformFee),
+      platformFee,
+      couponCode: txn.subscription?.coupon_code || '',
+      discount: Number(txn.subscription?.discount_amount || 0),
+      taxableAmount: taxable,
+      igst: 0,
+      cgst: tax / 2,
+      sgst: tax / 2,
+      total,
+    };
+  };
+
   return (
     <div className="space-y-6" data-testid="transactions-tab">
+<<<<<<< HEAD
       <div className="border border-gray-100 shadow-sm rounded-lg bg-white overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 px-5 py-4 border-b border-gray-100 bg-slate-50/70">
           <div className="flex items-start gap-3">
@@ -522,20 +1774,105 @@ const TransactionsTab = () => {
             />
             </label>
           </div>
+=======
+      <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-5">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 items-center">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search by Customer Name, Phone, Email, Booking ID, Payment ID, UTR ID..."
+                value={filters.q}
+                onChange={(e) => handleFilterChange({ ...filters, q: e.target.value })}
+                className="input-field h-14 w-full bg-stone/50 focus:bg-white border border-gray-200 focus:border-gold focus:ring-2 focus:ring-gold/10 rounded-xl transition text-sm px-5"
+                data-testid="filter-q"
+              />
+              {filters.q && (
+                <button
+                  type="button"
+                  onClick={() => handleFilterChange({ ...filters, q: '' })}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-charcoal-muted hover:text-charcoal"
+                  aria-label="Clear search"
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[minmax(230px,1fr)_minmax(230px,1fr)_minmax(360px,1.05fr)_150px] gap-4 items-end">
+            <label className="block">
+              <span className="block text-xs font-bold text-charcoal uppercase tracking-wide mb-2">Transaction Type</span>
+              <select
+                value={filters.type}
+                onChange={(e) => handleFilterChange({ ...filters, type: e.target.value })}
+                className="input-field h-12 w-full bg-stone/50 focus:bg-white border border-gray-200 rounded-xl px-5 text-sm"
+                data-testid="filter-type"
+              >
+                <option value="">All Transaction Types</option>
+                <option value="booking_payment">Booking payments</option>
+                <option value="registration_fee">Registration fees</option>
+                <option value="subscription">Subscriptions</option>
+                <option value="refund">Refunds</option>
+                <option value="payout">Payouts</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="block text-xs font-bold text-charcoal uppercase tracking-wide mb-2">Status</span>
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })}
+                className="input-field h-12 w-full bg-stone/50 focus:bg-white border border-gray-200 rounded-xl px-5 text-sm"
+                data-testid="filter-status"
+              >
+                <option value="">All Statuses</option>
+                <option value="success">Success</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="block text-xs font-bold text-charcoal uppercase tracking-wide mb-2">Date Range</span>
+              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+                <input
+                  type="date"
+                  value={filters.start}
+                  onChange={(e) => handleFilterChange({ ...filters, start: e.target.value })}
+                  className="input-field h-12 min-w-0 w-full bg-stone/50 focus:bg-white border border-gray-200 rounded-xl px-4 text-sm"
+                  data-testid="filter-start"
+                />
+                <span className="hidden sm:inline text-charcoal-muted text-xs font-bold">to</span>
+                <input
+                  type="date"
+                  value={filters.end}
+                  onChange={(e) => handleFilterChange({ ...filters, end: e.target.value })}
+                  className="input-field h-12 min-w-0 w-full bg-stone/50 focus:bg-white border border-gray-200 rounded-xl px-4 text-sm"
+                  data-testid="filter-end"
+                />
+              </div>
+            </label>
+
+            <button
+              onClick={downloadCsv}
+              className="h-12 w-full px-5 rounded-xl bg-sage hover:bg-sage-dark text-white font-bold transition flex items-center justify-center space-x-2 text-sm shadow-sm whitespace-nowrap"
+              data-testid="export-csv-btn"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export CSV</span>
+            </button>
+          </div>
+>>>>>>> 0c1ea17b28be8da7905be43affc2c805a6802de9
         </div>
       </div>
 
-      <div className="border border-gray-100 shadow-sm rounded-lg bg-white overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
-          <p className="text-sm font-bold text-charcoal flex items-center gap-2" data-testid="transactions-count">
-            <span className="w-6 h-6 rounded-md bg-blue-50 text-blue-700 inline-flex items-center justify-center">
-              <FileText className="w-3.5 h-3.5" />
-            </span>
+      <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-6 overflow-hidden">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-bold text-charcoal" data-testid="transactions-count">
             {loading ? 'Syncing transactions...' : `${total} Transactions Found`}
           </p>
-          <button className="px-3 py-1.5 rounded-lg border border-blue-100 text-blue-700 text-xs font-bold hover:bg-blue-50">
-            View Summary
-          </button>
         </div>
 
         {loading && <div className="text-center py-12 text-charcoal-light" data-testid="transactions-loading">Loading transactions…</div>}
@@ -550,60 +1887,83 @@ const TransactionsTab = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left border-collapse" data-testid="transactions-table">
                 <thead>
-                  <tr className="border-b border-gray-100 text-charcoal-muted text-[11px] font-bold bg-slate-50/80">
-                    <th className="py-3 px-4">Date & Time</th>
-                    <th className="py-3 px-4">Customer Details</th>
-                    <th className="py-3 px-4">Type</th>
-                    <th className="py-3 px-4">Amount</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4">Booking ID</th>
-                    <th className="py-3 px-4">Payment / UTR ID</th>
-                    <th className="py-3 px-4 text-center rounded-r-xl no-print">Actions</th>
+                  <tr className="border-b border-gray-100 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-stone/50">
+                    <th className="py-3 px-4 rounded-l-xl">Invoice Date</th>
+                    <th className="py-3 px-4">Invoice No</th>
+                    <th className="py-3 px-4">Broker</th>
+                    <th className="py-3 px-4">Employee (RM)</th>
+                    <th className="py-3 px-4">Host Name</th>
+                    <th className="py-3 px-4">Property</th>
+                    <th className="py-3 px-4">GST No</th>
+                    <th className="py-3 px-4">Property Type</th>
+                    <th className="py-3 px-4">Gross Amount</th>
+                    <th className="py-3 px-4">Platform Fee</th>
+                    <th className="py-3 px-4">Coupon</th>
+                    <th className="py-3 px-4">Discount</th>
+                    <th className="py-3 px-4">Taxable Amount</th>
+                    <th className="py-3 px-4">IGST</th>
+                    <th className="py-3 px-4">CGST</th>
+                    <th className="py-3 px-4">SGST</th>
+                    <th className="py-3 px-4">Total Amt.</th>
+                    <th className="py-3 px-4">Plan Start Date</th>
+                    <th className="py-3 px-4">Plan End Date</th>
+                    <th className="py-3 px-4">Refund</th>
+                    <th className="py-3 px-4">Payment Status</th>
+                    <th className="py-3 px-4">Select Service</th>
+                    <th className="py-3 px-4 text-center rounded-r-xl no-print">Invoice Details</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sand-100">
-                  {items.map((t, idx) => (
+                  {items.map((t) => {
+                    const breakdown = getInvoiceBreakdown(t);
+                    return (
                     <tr
                       key={t.transaction_id}
-                      className="hover:bg-blue-50/30 transition text-charcoal"
+                      className="hover:bg-stone/40 transition text-charcoal"
                       data-testid={`txn-${t.transaction_id}`}
                     >
-                      <td className="py-4 px-4 whitespace-nowrap text-[11px] font-semibold text-charcoal">
-                        {new Date(t.created_at).toLocaleString('en-IN', {
-                          dateStyle: 'medium',
-                          timeStyle: 'short'
-                        })}
+                      <td className="py-4 px-4 whitespace-nowrap text-xs">{formatInvoiceDate(t.created_at)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-bold">{t.invoice_no || 'NA'}</td>
+                      <td className="py-4 px-4 min-w-[150px]">
+                        <div className="font-bold text-charcoal text-sm">{t.broker?.full_name || t.broker_name || 'NA'}</div>
+                        <div className="text-xs text-charcoal-muted mt-0.5">LG Code: {t.broker?.lg_code || t.broker_lg_code || 'NA'}</div>
                       </td>
-                      <td className="py-4 px-4 flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${avatarColors[idx % avatarColors.length]}`}>
-                          {initials(t.user?.full_name)}
-                        </div>
-                        <div>
-                        <div className="font-bold text-charcoal text-sm">{t.user?.full_name || '—'}</div>
-                        <div className="text-xs text-charcoal-muted mt-0.5">{t.user?.email || '—'}</div>
-                        <div className="text-xs text-charcoal-light mt-0.5">{t.user?.phone || '—'}</div>
-                        </div>
+                      <td className="py-4 px-4 min-w-[150px]">
+                        <div className="font-bold text-charcoal text-sm">{t.employee?.full_name || t.employee_name || 'NA'}</div>
+                        <div className="text-xs text-charcoal-muted mt-0.5">{t.employee?.employee_code || t.employee_code || 'NA'}</div>
                       </td>
+                      <td className="py-4 px-4 min-w-[150px]">
+                        <div className="font-bold text-charcoal text-sm">{t.user?.full_name || 'NA'}</div>
+                        <div className="text-xs text-charcoal-muted mt-0.5">{t.user?.phone || t.user?.email || 'NA'}</div>
+                      </td>
+                      <td className="py-4 px-4 min-w-[170px]">
+                        <div className="font-bold text-charcoal text-sm">{formatPropertyName(t)}</div>
+                      </td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs text-charcoal-muted">{t.user?.gst_number || t.user?.gst_no || 'NA'}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-semibold">{formatPlanLabel(t)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.gross)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.platformFee)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-bold text-charcoal">{breakdown.couponCode || 'NA'}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{breakdown.discount ? `-${formatMoney(breakdown.discount)}` : 'NA'}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.taxableAmount)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{breakdown.igst ? formatMoney(breakdown.igst) : 'NA'}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.cgst)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{formatMoney(breakdown.sgst)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-sm font-bold">{formatMoney(breakdown.total)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs">{formatPlanDate(t.subscription?.start_date)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs">{formatPlanDate(t.subscription?.end_date)}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-mono">{t.type === 'refund' ? formatMoney(breakdown.total) : 'NA'}</td>
                       <td className="py-4 px-4 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide ${t.type === 'payout' ? 'bg-blue-50 text-blue-700' : 'bg-violet-50 text-violet-700'}`}>
-                          {t.type.replaceAll('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 font-bold tracking-tight text-sm text-charcoal whitespace-nowrap">
-                        {fmtINR(t.amount)}
-                      </td>
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase tracking-wide ${
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
                           t.status === 'success' ? 'bg-green-100 text-green-700' :
                           t.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                           'bg-red-100 text-red-700'
                         }`}>{t.status}</span>
                       </td>
-                      <td className="py-4 px-4 font-semibold text-xs text-charcoal-muted whitespace-nowrap">
-                        {t.booking_id || '—'}
-                      </td>
-                      <td className="py-4 px-4 text-charcoal-light text-xs font-mono whitespace-nowrap">
-                        {t.upi_transaction_id || t.razorpay_payment_id || t.razorpay_payout_id || t.razorpay_refund_id || '—'}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide bg-blue-50 text-blue-700">
+                          {t.type.replaceAll('_', ' ')}
+                        </span>
                       </td>
                       <td className="py-4 px-4 whitespace-nowrap text-center no-print">
                         <div className="flex items-center justify-center space-x-2">
@@ -663,7 +2023,8 @@ const TransactionsTab = () => {
                         )}
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -2231,21 +3592,36 @@ const TopHostsTab = () => {
 const InvoiceModal = ({ transaction, onClose }) => {
   const t = transaction;
   const user = t.user || {};
-  const amountINR = (t.amount || 0) / 100;
-  
-  // 18% GST calculation (GST included in all user payments)
-  const gstRate = 0.18;
-  const baseAmount = amountINR / (1 + gstRate);
-  const totalGst = amountINR - baseAmount;
-  const cgst = totalGst / 2;
-  const sgst = totalGst / 2;
+  const property = t.property || {};
+  const propertyName = property.title || property.property_name || property.name || t.property_name || property.property_id || 'NA';
+  const propertyAddress = [property.address, property.city, property.state, property.pin_code].filter(Boolean).join(', ') || 'NA';
+  const invoiceBreakdown = t.invoice_breakdown || {};
+  const amountINR = Number(invoiceBreakdown.total_amount ?? ((t.amount || 0) / 100));
+  const formatInvoiceMoney = (value) =>
+    new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(value || 0));
+
+  const baseAmount = Number(invoiceBreakdown.taxable_amount ?? (amountINR / 1.18));
+  const planFee = Number(invoiceBreakdown.plan_fee ?? Math.max(0, baseAmount - Number(t.plan?.platform_fee || 0)));
+  const platformFee = Number(invoiceBreakdown.platform_fee ?? t.plan?.platform_fee ?? 0);
+  const couponCode = invoiceBreakdown.coupon_code || t.subscription?.coupon_code || '';
+  const discountAmount = Number(invoiceBreakdown.discount_amount ?? t.subscription?.discount_amount ?? 0);
+  const discountBase = Math.max(0, planFee + platformFee);
+  const discountPercent = discountAmount > 0 && discountBase > 0 ? (discountAmount / discountBase) * 100 : 0;
+  const cgst = Number(invoiceBreakdown.cgst ?? ((amountINR - baseAmount) / 2));
+  const sgst = Number(invoiceBreakdown.sgst ?? ((amountINR - baseAmount) / 2));
+  const totalGst = cgst + sgst;
 
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:p-0 print:bg-white" data-testid="invoice-modal">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto print:p-0 print:bg-white" data-testid="invoice-modal">
       <style>{`
         @media print {
           body * {
@@ -2261,7 +3637,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
             width: 100%;
             border: none !important;
             box-shadow: none !important;
-            padding: 20px !important;
+            padding: 0 !important;
             margin: 0 !important;
           }
           .no-print {
@@ -2270,121 +3646,306 @@ const InvoiceModal = ({ transaction, onClose }) => {
         }
       `}</style>
       
-      <div id="printable-invoice" className="bg-white rounded-2xl max-w-lg w-full border border-gray-100 shadow-elevated p-6 relative overflow-hidden flex flex-col">
-        {/* Close Button */}
-        <button 
-          onClick={onClose} 
-          className="absolute top-4 right-4 text-charcoal-light hover:text-charcoal no-print"
-        >
-          <XCircle className="w-6 h-6" />
-        </button>
-
-        {/* Invoice Header */}
-        <div className="text-center pb-6 border-b border-dashed border-gray-200">
-          <div className="text-xs uppercase tracking-widest text-terracotta font-semibold tracking-tight mb-1">Tax Invoice</div>
-          <h2 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">X-SPACE360</h2>
-          <p className="text-xs text-charcoal-muted mt-1">Short-Term Rentals Platform · India</p>
-          <p className="text-xs text-charcoal-light">GSTIN: 27AAAAA1111A1Z1</p>
-        </div>
-
-        {/* Invoice Info */}
-        <div className="grid grid-cols-2 gap-4 py-6 text-xs border-b border-dashed border-gray-200">
-          <div>
-            <div className="text-charcoal-muted uppercase font-bold tracking-wider mb-1">Customer Details</div>
-            <div className="font-bold text-charcoal text-sm">{user.full_name || '—'}</div>
-            <div className="text-charcoal-light mt-0.5">{user.email || '—'}</div>
-            <div className="text-charcoal-light">{user.phone || '—'}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-charcoal-muted uppercase font-bold tracking-wider mb-1">Invoice Details</div>
-            <div><span className="font-semibold text-charcoal-light">Invoice #:</span> <span className="font-bold text-charcoal">{t.transaction_id}</span></div>
-            <div><span className="font-semibold text-charcoal-light">Date:</span> {new Date(t.created_at).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</div>
-            <div><span className="font-semibold text-charcoal-light">Type:</span> <span className="capitalize font-medium text-terracotta">{t.type.replaceAll('_', ' ')}</span></div>
+      <div className="bg-white rounded-xl w-full max-w-5xl border border-gray-100 shadow-elevated p-5 relative">
+        <div className="no-print flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-100">
+          <h2 className="text-lg font-bold text-charcoal">Tax Invoice Details</h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 transition flex items-center gap-2"
+            >
+              <Printer className="w-4 h-4" />
+              Print / Download PDF
+            </button>
+            <button
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-200 text-charcoal rounded-lg text-sm font-semibold hover:bg-gray-50 transition"
+            >
+              Close
+            </button>
           </div>
         </div>
 
-        {/* Transaction/Bill details Table */}
-        <div className="py-6 flex-1">
-          <div className="text-xs text-charcoal-muted uppercase font-bold tracking-wider mb-3">Itemized Details</div>
-          <table className="w-full text-xs text-left">
-            <thead>
-              <tr className="border-b border-gray-100 text-charcoal-muted font-bold">
-                <th className="py-2">Description</th>
-                <th className="py-2 text-right">Taxable Val.</th>
-                <th className="py-2 text-right">GST (18%)</th>
-                <th className="py-2 text-right">Total (INR)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-sand-100 text-charcoal">
-                <td className="py-3 font-semibold text-sm">
-                  {t.type === 'booking_payment' ? `Booking Accommodation Fee (${t.booking_id || '—'})` :
-                   t.type === 'registration_fee' ? 'Host Registration Fee' :
-                   t.type === 'subscription' ? 'Host Subscription Premium Plan' :
-                   t.type === 'refund' ? `Accommodation Refund Processed (${t.booking_id || '—'})` :
-                   'Platform Service Transaction'}
-                </td>
-                <td className="py-3 text-right">₹{baseAmount.toFixed(2)}</td>
-                <td className="py-3 text-right">₹{totalGst.toFixed(2)}</td>
-                <td className="py-3 text-right font-bold text-sm">₹{amountINR.toFixed(2)}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div className="overflow-x-auto">
+          {/* Printable Invoice element */}
+          <div id="printable-invoice" className="bg-white text-black font-sans border-2 border-black w-full min-w-[900px] mx-auto text-xs relative" style={{ boxSizing: 'border-box', padding: '2px' }}>
+            
+            {/* Header: Company details and Invoice details */}
+            <table className="w-full border-collapse border-b-2 border-black" style={{ borderCollapse: 'collapse', width: '100%' }}>
+              <tbody>
+                <tr>
+                  <td className="w-1/2 p-3 align-top border-r-2 border-black" style={{ width: '50%', padding: '8px', borderRight: '2px solid black', verticalAlign: 'top' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <img src="/logo.png" alt="X-Space360 Logo" style={{ width: '150px', height: '40px', objectFit: 'contain', objectPosition: 'left center', display: 'block' }} />
+                      <div>
+                        <div className="font-bold text-sm mb-1" style={{ fontSize: '13px', fontWeight: 'bold', lineHeight: '1.15' }}>
+                          Golden Rich Financial & Real Estate<br />Solutions Pvt. Ltd.
+                        </div>
+                        <div style={{ fontSize: '9px', lineHeight: '1.25' }}>
+                          Office No-804, Royal Avaan Avenue,<br />
+                          Opp. Bhosla School Gate, Jehan Circle,<br />
+                          Gangapur Road, Nashik-422013<br />
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '9px', lineHeight: '1.3', marginTop: '2px' }}>
+                      <strong>GSTIN/UIN:</strong> 27AAKCG1285C1ZP<br />
+                      <strong>State Name:</strong> Maharashtra, Code : 27<br />
+                      <strong>Contact:</strong> 9225586001<br />
+                      <strong>Email:</strong> finance.director@goldenrichproperties.com
+                    </div>
+                  </td>
+                  <td className="w-1/2 p-0 align-top" style={{ width: '50%', padding: 0, verticalAlign: 'top' }}>
+                    <table className="w-full border-collapse" style={{ borderCollapse: 'collapse', width: '100%' }}>
+                      <tbody>
+                        <tr style={{ borderBottom: '1px solid black' }}>
+                          <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Invoice No.</div>
+                            <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{t.invoice_no || t.transaction_id}</div>
+                          </td>
+                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Dated</div>
+                            <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{formatDateForInvoice(t.created_at)}</div>
+                          </td>
+                        </tr>
+                        <tr style={{ borderBottom: '1px solid black' }}>
+                          <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Mode/Terms of Payment</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }}>
+                              {t.upi_transaction_id ? 'UPI QR' : 'NET BANKING'}
+                            </div>
+                          </td>
+                          <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
+                            <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Reference No. & Date</div>
+                            <div style={{ fontSize: '10px', fontWeight: 'bold' }}>{t.upi_transaction_id || t.razorpay_payment_id || t.transaction_id || 'NA'}</div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
-          {/* GST breakdown table */}
-          <div className="mt-6 bg-stone/50 rounded-xl p-4 border border-sand-100 text-xs">
-            <div className="font-bold text-charcoal-muted uppercase tracking-wider mb-2 text-[10px]">Tax Breakdown</div>
-            <div className="flex justify-between py-1 border-b border-gray-100/60">
-              <span className="text-charcoal-light">CGST (9%)</span>
-              <span className="font-medium text-charcoal">₹{cgst.toFixed(2)}</span>
+            {/* Buyer (Bill to) & Dispatch section */}
+            <table className="w-full border-collapse border-b-2 border-black" style={{ borderCollapse: 'collapse', width: '100%' }}>
+              <tbody>
+                <tr>
+                  <td className="w-1/2 p-3 align-top border-r-2 border-black" style={{ width: '50%', padding: '12px', borderRight: '2px solid black', verticalAlign: 'top' }}>
+                    <div style={{ fontSize: '9px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '2px' }}>Buyer (Bill to)</div>
+                    <div className="font-bold text-xs mb-1" style={{ fontSize: '11px', fontWeight: 'bold' }}>{propertyName}</div>
+                    <div style={{ fontSize: '9px', lineHeight: '1.4' }}>
+                      Address: {propertyAddress}<br />
+                      GSTIN/UIN: {user.gst_number || user.gst_no || 'NA'}<br />
+                      State Name: {user.gst_number && user.gst_number.length >= 2 ? (user.gst_number.startsWith('27') ? 'Maharashtra, Code : 27' : 'Other State, Code : ' + user.gst_number.substring(0, 2)) : 'Maharashtra, Code : 27'}<br />
+                      Contact Person: {user.full_name || 'NA'}<br />
+                      Mobile: {user.phone || 'NA'}<br />
+                      Email: {user.email || 'NA'}
+                    </div>
+                  </td>
+                  <td className="w-1/2 p-0 align-top" style={{ width: '50%', padding: 0, verticalAlign: 'top' }}>
+                    <div style={{ minHeight: '112px' }}></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Description of Goods Table */}
+            <table className="w-full border-collapse border-b-2 border-black text-center text-[10px]" style={{ borderCollapse: 'collapse', width: '100%', fontSize: '10px', textAlign: 'center' }}>
+              <thead>
+                <tr className="bg-gray-50 font-bold" style={{ backgroundColor: '#f9f9f9', fontWeight: 'bold', borderBottom: '2px solid black' }}>
+                    <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '5%' }}>Sr.No</th>
+                  <th style={{ padding: '6px 6px', borderRight: '1px solid black', width: '45%', textAlign: 'left' }}>Description of Services</th>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '10%' }}>HSN/SAC</th>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '10%' }}>Services Offer</th>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '10%' }}>GST Rate</th>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '10%' }}>Rate</th>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '8%' }}>per</th>
+                  <th style={{ padding: '6px 4px', borderRight: '1px solid black', width: '8%' }}>Disc. %</th>
+                  <th style={{ padding: '6px 6px', width: '12%', textAlign: 'right' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid #ddd' }}>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>1</td>
+                  <td style={{ padding: '8px 6px', borderRight: '1px solid black', textAlign: 'left', verticalAlign: 'top', fontWeight: 'bold' }}>
+                    {t.type === 'subscription' ? `Property Subscription Charges [${t.subscription?.start_date ? formatDateForInvoice(t.subscription.start_date) : 'NA'} to ${t.subscription?.end_date ? formatDateForInvoice(t.subscription.end_date) : 'NA'}]` :
+                     t.type === 'booking_payment' ? `Booking Accommodation Charges [booking_id: ${t.booking_id || 'NA'}]` :
+                     t.type === 'registration_fee' ? 'Host Registration Fee' :
+                     t.type === 'refund' ? `Accommodation Refund [booking_id: ${t.booking_id || 'NA'}]` :
+                     'Platform Service Charges'}
+                  </td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontFamily: 'monospace' }}>{t.type === 'subscription' ? '' : '998399'}</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontWeight: 'bold' }}>{t.type === 'subscription' ? '' : '01'}</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>{t.type === 'subscription' ? '' : '18%'}</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontFamily: 'monospace' }}>{t.type === 'subscription' ? planFee.toFixed(2) : baseAmount.toFixed(2)}</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>{t.type === 'subscription' ? '' : 'Nos'}</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}></td>
+                  <td style={{ padding: '8px 6px', textAlign: 'right', verticalAlign: 'top', fontFamily: 'monospace' }}>{t.type === 'subscription' ? planFee.toFixed(2) : baseAmount.toFixed(2)}</td>
+                </tr>
+                {t.type === 'subscription' && (
+                  <>
+                    <tr style={{ borderBottom: '1px solid #ddd', color: '#555' }}>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>Platform Fee</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{platformFee.toFixed(2)}</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{platformFee.toFixed(2)}</td>
+                    </tr>
+                    {discountAmount > 0 && (
+                      <tr style={{ borderBottom: '1px solid #ddd', color: '#555' }}>
+                        <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                        <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>
+                          Coupon Discount{couponCode ? ` (${couponCode})` : ''}
+                        </td>
+                        <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                        <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                        <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                        <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>-{discountAmount.toFixed(2)}</td>
+                        <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                        <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>
+                          {discountPercent ? `${discountPercent.toFixed(2)}%` : ''}
+                        </td>
+                        <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>-{discountAmount.toFixed(2)}</td>
+                      </tr>
+                    )}
+                    <tr style={{ borderBottom: '1px solid #ddd', color: '#555' }}>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>Taxable Amount</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>998399</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black', fontWeight: 'bold' }}>01</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}>18%</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}>Nos</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                      <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                    </tr>
+                  </>
+                )}
+                {/* CGST row */}
+                <tr style={{ borderBottom: '1px solid #ddd', color: '#555' }}>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>CGST @ 9%</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
+                </tr>
+                {/* SGST row */}
+                <tr style={{ borderBottom: '1px solid black', color: '#555' }}>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>SGST @ 9%</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
+                </tr>
+                {/* Total row */}
+                <tr style={{ fontWeight: 'bold', backgroundColor: '#f9f9f9', borderBottom: '1px solid black' }}>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 6px', borderRight: '1px solid black', textAlign: 'left' }}>Total</td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black', fontWeight: 'bold' }}>01 Nos</td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 4px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '6px 6px', textAlign: 'right', fontFamily: 'monospace' }}>{formatInvoiceMoney(amountINR)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Amount in words */}
+            <div className="py-2 px-3 border-b-2 border-black" style={{ padding: '8px 12px', borderBottom: '2px solid black' }}>
+              <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Amount Chargeable (in words)</div>
+              <div className="font-bold text-xs capitalize" style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                Indian Rupees {numberToWords(amountINR)} Only
+              </div>
             </div>
-            <div className="flex justify-between py-1 border-b border-gray-100/60">
-              <span className="text-charcoal-light">SGST (9%)</span>
-              <span className="font-medium text-charcoal">₹{sgst.toFixed(2)}</span>
+
+            {/* GST summary */}
+            <table className="w-full border-collapse border-b-2 border-black text-center" style={{ borderCollapse: 'collapse', width: '100%', fontSize: '10px', textAlign: 'center' }}>
+              <thead>
+                <tr style={{ backgroundColor: '#f9f9f9', fontWeight: 'bold', borderBottom: '1px solid black' }}>
+                  <th rowSpan="2" style={{ padding: '7px 6px', borderRight: '1px solid black', width: '18%', textAlign: 'left' }}>HSN/SAC</th>
+                  <th rowSpan="2" style={{ padding: '7px 6px', borderRight: '1px solid black', width: '18%' }}>Taxable Value</th>
+                  <th colSpan="2" style={{ padding: '5px 6px', borderRight: '1px solid black' }}>Central Tax</th>
+                  <th colSpan="2" style={{ padding: '5px 6px', borderRight: '1px solid black' }}>State Tax</th>
+                  <th rowSpan="2" style={{ padding: '7px 6px', width: '12%' }}>Total Tax Amount</th>
+                </tr>
+                <tr style={{ backgroundColor: '#f9f9f9', fontWeight: 'bold', borderBottom: '1px solid black' }}>
+                  <th style={{ padding: '5px 6px', borderRight: '1px solid black' }}>Rate</th>
+                  <th style={{ padding: '5px 6px', borderRight: '1px solid black' }}>Amount</th>
+                  <th style={{ padding: '5px 6px', borderRight: '1px solid black' }}>Rate</th>
+                  <th style={{ padding: '5px 6px', borderRight: '1px solid black' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style={{ borderBottom: '1px solid black', fontWeight: 'bold' }}>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', textAlign: 'left', fontFamily: 'monospace' }}>998399</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
+                  <td style={{ padding: '7px 6px', fontFamily: 'monospace' }}>{totalGst.toFixed(2)}</td>
+                </tr>
+                <tr style={{ fontWeight: 'bold' }}>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', textAlign: 'left' }}>Total</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black' }}></td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
+                  <td style={{ padding: '7px 6px', fontFamily: 'monospace' }}>{totalGst.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div className="py-2 px-3 border-b-2 border-black" style={{ padding: '8px 12px', borderBottom: '2px solid black' }}>
+              <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Tax Amount (in words)</div>
+              <div className="font-bold text-xs capitalize" style={{ fontSize: '11px', fontWeight: 'bold' }}>
+                Indian Rupees {numberToWords(totalGst)} Only
+              </div>
             </div>
-            <div className="flex justify-between py-1 font-bold text-charcoal">
-              <span>Total GST Paid</span>
-              <span>₹{totalGst.toFixed(2)}</span>
-            </div>
+
+            {/* Bank details and signature */}
+            <table className="w-full border-collapse" style={{ borderCollapse: 'collapse', width: '100%', minHeight: '120px' }}>
+              <tbody>
+                <tr>
+                  <td style={{ width: '58%', padding: '12px', borderRight: '2px solid black', verticalAlign: 'top' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 'bold', textDecoration: 'underline', marginBottom: '6px' }}>Company's Bank Details:</div>
+                    <div style={{ fontSize: '10px', lineHeight: '1.45' }}>
+                      <strong>A/c Holder's Name:</strong> Golden Rich Financial & Real Estate Solutions Pvt. Ltd.<br />
+                      <strong>Bank Name:</strong> IDFC FIRST BANK<br />
+                      <strong>A/c No.:</strong> 10250563892<br />
+                      <strong>Branch & IFSC Code:</strong> Gangapur Road, Nashik & IDFB0042283
+                    </div>
+                    <div style={{ fontSize: '8px', color: '#666', fontStyle: 'italic', lineHeight: '1.4', marginTop: '14px' }}>
+                      Declaration: We declare that this invoice shows the actual price of the Service described and that all particulars are true and correct.
+                    </div>
+                  </td>
+                  <td style={{ width: '42%', padding: '12px', textAlign: 'right', verticalAlign: 'top' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 'bold' }}>For Golden Rich Properties</div>
+                    <div style={{ height: '70px' }}></div>
+                    <div style={{ fontSize: '11px', fontWeight: 'bold' }}>Authorized Signatory</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
-        {/* Invoice Footer Details */}
-        <div className="border-t border-dashed border-gray-200 pt-6">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-charcoal font-bold tracking-tight text-sm uppercase tracking-wider">Total Amount Paid</span>
-            <span className="text-2xl font-bold tracking-tight text-terracotta">₹{amountINR.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-          </div>
-
-          <div className="bg-stone rounded-xl p-3 text-[11px] text-charcoal-muted flex items-center justify-between">
-            <div>
-              <div><span className="font-semibold">Payment Method:</span> {t.upi_transaction_id ? 'UPI QR' : 'Razorpay Online Gateway'}</div>
-              <div><span className="font-semibold">Payment Status:</span> SUCCESS</div>
-              {t.razorpay_payment_id && <div><span className="font-semibold">Razorpay ID:</span> {t.razorpay_payment_id}</div>}
-              {t.upi_transaction_id && <div><span className="font-semibold">UTR / Transaction ID:</span> {t.upi_transaction_id}</div>}
-            </div>
-            <div className="text-right">
-              <span className="inline-block px-2.5 py-1 bg-green-100 text-green-800 rounded-full font-bold text-[10px] uppercase">Paid</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Buttons */}
-        <div className="mt-6 flex justify-end space-x-3 no-print">
-          <button 
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-200 text-charcoal rounded-xl text-xs font-semibold hover:bg-gray-50 transition"
-          >
-            Close
-          </button>
-          <button 
-            onClick={handlePrint}
-            className="px-4 py-2 bg-terracotta text-white rounded-xl text-xs font-semibold hover:bg-terracotta-dark transition flex items-center space-x-1.5 shadow-sm hover:shadow"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            <span>Print Invoice</span>
-          </button>
-        </div>
       </div>
     </div>
   );

@@ -598,4 +598,17 @@ export const aiCallAPI = {
   deleteAgent: (agentId) => apiClient.delete(`/ai-calls/agents/${agentId}`),
 };
 
+// Pricing API
+export const pricingAPI = {
+  getRules: () => apiClient.get('/pricing/rules'),
+  saveRules: (rules) => apiClient.post('/pricing/rules', rules),
+  getProperties: () => apiClient.get('/pricing/properties'),
+  previewPricing: (propertyIds, rules, targetTypes) => apiClient.post('/pricing/preview', { property_ids: propertyIds, rules, target_types: targetTypes }),
+  applyPricing: (propertyIds, rules, targetTypes) => apiClient.post('/pricing/apply', { property_ids: propertyIds, rules, target_types: targetTypes }),
+  toggleRulesStatus: (propertyId, status) => apiClient.post('/pricing/toggle-status', { property_id: propertyId, status }),
+  toggleRulesStatusBatch: (propertyIds, status) => apiClient.post('/pricing/toggle-status-batch', { property_ids: propertyIds, status }),
+  manualOverride: (propertyId, basePrice) => apiClient.post('/pricing/manual-override', { property_id: propertyId, base_price: basePrice }),
+  getHistory: () => apiClient.get('/pricing/history'),
+};
+
 export default apiClient;
