@@ -2260,7 +2260,7 @@ const LandingPage = () => {
         </div>
 
         {/* Center Menu Links (Flat Style) */}
-        <div className={`hidden lg:flex items-center space-x-8 font-bold text-xs uppercase tracking-widest transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
+        <div className={`hidden lg:flex items-center space-x-8 font-sans font-semibold text-[15px] tracking-tight transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
@@ -2280,7 +2280,7 @@ const LandingPage = () => {
           )}
           <button
             onClick={() => setShowHowItWorksModal(true)}
-            className="hover:text-terracotta transition-colors duration-200 uppercase"
+            className="hover:text-terracotta transition-colors duration-200"
           >
             How It Works
           </button>
@@ -2300,7 +2300,7 @@ const LandingPage = () => {
           {/* Get in Touch Button */}
           <button 
             onClick={() => navigate('/support')}
-            className={`flex items-center gap-2 rounded-full px-5 py-2 transition font-bold text-xs tracking-wider uppercase shadow-sm border ${
+            className={`flex items-center gap-2 rounded-full px-5 py-2.5 transition font-sans font-semibold text-[15px] tracking-tight shadow-sm border ${
               isNavScrolled
                 ? 'border-gray-200 text-charcoal hover:bg-gray-50'
                 : 'border-white/40 text-white hover:bg-white/10'
@@ -2326,7 +2326,7 @@ const LandingPage = () => {
               </button>
               <button
                 onClick={handleSignOut}
-                className="bg-terracotta hover:bg-terracotta/90 text-white font-bold text-[10px] uppercase tracking-wider px-4 py-2 rounded-full transition shadow-premium"
+                className="bg-terracotta hover:bg-terracotta/90 text-white font-sans font-semibold text-[14px] tracking-tight px-5 py-2.5 rounded-full transition shadow-premium"
               >
                 Sign Out
               </button>
@@ -2486,9 +2486,6 @@ const LandingPage = () => {
             const activeHero = heroSlides[currentHeroSlide] || heroSlides[0] || DEFAULT_HERO_SLIDES[0];
             return (
               <div className="flex flex-col items-center space-y-6 w-full animate-fade-in" key={currentHeroSlide}>
-                 <span className="text-[9px] md:text-[10px] font-bold tracking-[0.25em] uppercase px-4 py-1.5 rounded-full text-white bg-white/10 backdrop-blur-md border border-white/20 drop-shadow-md">
-                    {activeHero.tag}
-                 </span>
                  <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-bold leading-[1.25] text-white drop-shadow-premium font-lufga tracking-tight">
                    {activeHero.titlePrefix} {activeHero.titleHighlight} {activeHero.titleSuffix}
                  </h2>

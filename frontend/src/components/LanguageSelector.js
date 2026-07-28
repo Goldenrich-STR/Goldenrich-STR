@@ -133,11 +133,11 @@ const LanguageSelector = ({ mode = 'dropdown', showPropertyTypes = false }) => {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-1 text-xs font-bold uppercase tracking-widest hover:text-terracotta transition-colors duration-200 cursor-pointer group bg-transparent border-none p-0 text-inherit"
+        className="flex items-center space-x-1 font-sans font-semibold text-[15px] tracking-tight hover:text-terracotta transition-colors duration-200 cursor-pointer group bg-transparent border-none p-0 text-inherit"
       >
         <span>Property Types</span>
         <ChevronDown 
-          className={`w-3.5 h-3.5 transition-transform duration-300 ${
+          className={`w-4 h-4 transition-transform duration-300 ${
             isOpen ? 'rotate-180' : ''
           }`} 
         />
