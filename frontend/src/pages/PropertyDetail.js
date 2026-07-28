@@ -1320,8 +1320,8 @@ const PropertyDetail = () => {
           <div className="lg:col-span-2 space-y-12 animate-slide-up" style={{ animationDelay: '200ms' }}>
             {/* Host Profile */}
             {property.host && (
-              <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex items-center justify-between group">
-                <div className="flex items-center space-x-5">
+              <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between group">
+                <div className="flex items-center gap-4 min-w-0">
                   <div className="relative">
                     <img
                       src={
@@ -1329,15 +1329,15 @@ const PropertyDetail = () => {
                         `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(property.host.full_name || 'Host')}`
                       }
                       alt={property.host.full_name}
-                      className="w-16 h-16 rounded-full object-cover border-2 border-terracotta/20 group-hover:border-terracotta transition-colors"
+                      className="w-16 h-16 rounded-full object-cover border-2 border-terracotta/20 bg-stone group-hover:border-terracotta transition-colors"
                     />
                     <div className="absolute -bottom-1 -right-1 bg-sage text-white p-1 rounded-full shadow-sm">
                        <ShieldCheck className="w-3.5 h-3.5" />
                     </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold tracking-tight text-charcoal leading-tight">{t('hostedBy').replace('{name}', property.host.full_name)}</h3>
-                    <div className="flex items-center mt-1 space-x-3">
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-bold tracking-tight text-charcoal leading-tight break-words">{t('hostedBy').replace('{name}', property.host.full_name)}</h3>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
                        <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">{t('superhost')}</span>
                        <span className="w-1 h-1 rounded-full bg-sand-300"></span>
                        <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">
@@ -1349,7 +1349,7 @@ const PropertyDetail = () => {
                 {property.host.phone ? (
                   <a
                     href={`tel:${property.host.phone}`}
-                    className="px-5 py-2 border-2 border-charcoal rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-charcoal hover:text-white transition-all flex items-center gap-1.5 cursor-pointer decoration-none"
+                    className="inline-flex shrink-0 items-center justify-center px-5 py-3 border-2 border-charcoal rounded-2xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-charcoal hover:text-white transition-all cursor-pointer decoration-none"
                     style={{ textDecoration: 'none' }}
                   >
                     {property.host.phone}
@@ -1357,7 +1357,7 @@ const PropertyDetail = () => {
                 ) : (
                   <button
                     disabled
-                    className="px-5 py-2 border-2 border-gray-200 text-charcoal-muted rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest flex items-center gap-1.5 cursor-not-allowed bg-gray-50/80"
+                    className="inline-flex shrink-0 items-center justify-center px-5 py-3 border-2 border-gray-200 text-charcoal-muted rounded-2xl text-[10px] font-bold tracking-tight uppercase tracking-widest flex items-center gap-1.5 cursor-not-allowed bg-gray-50/80"
                     title="Host contact details will be unlocked after booking confirmation"
                   >
                     <Lock className="w-3.5 h-3.5" />

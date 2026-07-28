@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import '../../providers/property_provider.dart';
@@ -20,6 +22,7 @@ class HostListPropertyScreen extends StatefulWidget {
 class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
   int _currentStep = 0;
   final _formKey = GlobalKey<FormState>();
+  Timer? _draftPersistDebounce;
 
   // Step 1: Basics
   final _titleController = TextEditingController();
@@ -357,6 +360,15 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
 
   String? _createdPropertyId;
 
+  String get _draftStorageKey {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final userId = auth.currentUser?.userId ?? 'anonymous';
+    final propertyId = widget.property?.propertyId ?? _createdPropertyId;
+    return propertyId != null
+        ? 'host_list_property_draft_edit_$propertyId'
+        : 'host_list_property_draft_new_$userId';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -439,10 +451,23 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     if (_rulesControllers.isEmpty) {
       _rulesControllers.add(TextEditingController());
     }
+    _attachDraftListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _restoreDraft();
+    });
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    if (!mounted) return;
+    super.setState(fn);
+    _persistDraftDebounced();
   }
 
   @override
   void dispose() {
+    _persistDraft();
+    _draftPersistDebounce?.cancel();
     _titleController.dispose();
     _descController.dispose();
     _areaController.dispose();
@@ -471,6 +496,214 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  void _attachDraftListeners() {
+    final controllers = [
+      _titleController,
+      _descController,
+      _areaController,
+      _minGuestsController,
+      _maxGuestsController,
+      _addressController,
+      _cityController,
+      _stateController,
+      _pincodeController,
+      _mapsUrlController,
+      _priceController,
+      _vegPriceController,
+      _nonVegPriceController,
+      _minStayController,
+      _rulesController,
+      _taxesController,
+      _advanceController,
+      _roomsCountController,
+      _roomPriceController,
+      _parkingSpaceController,
+      _youtubeShortController,
+      _youtubeLongController,
+      _cookPriceController,
+      _subscriptionCouponController,
+    ];
+    for (final controller in controllers) {
+      controller.addListener(_persistDraftDebounced);
+    }
+  }
+
+  Map<String, dynamic> _buildDraftData() {
+    return {
+      'currentStep': _currentStep,
+      'title': _titleController.text,
+      'description': _descController.text,
+      'category': _category,
+      'propertyType': _propertyType,
+      'bhkType': _bhkType,
+      'area': _areaController.text,
+      'minGuests': _minGuestsController.text,
+      'maxGuests': _maxGuestsController.text,
+      'address': _addressController.text,
+      'city': _cityController.text,
+      'state': _stateController.text,
+      'pincode': _pincodeController.text,
+      'mapsUrl': _mapsUrlController.text,
+      'latitude': _latitude,
+      'longitude': _longitude,
+      'price': _priceController.text,
+      'vegPrice': _vegPriceController.text,
+      'nonVegPrice': _nonVegPriceController.text,
+      'minStay': _minStayController.text,
+      'pricingCycle': _pricingCycle,
+      'petFriendly': _petFriendly,
+      'smokingAllowed': _smokingAllowed,
+      'instantBooking': _instantBooking,
+      'hasCook': _hasCook,
+      'cookPrice': _cookPriceController.text,
+      'hasSelfCook': _hasSelfCook,
+      'hasTaxi': _hasTaxi,
+      'selectedAmenities': _selectedAmenities,
+      'venuePolicies': _venuePolicies,
+      'taxes': _taxesController.text,
+      'advance': _advanceController.text,
+      'roomsCount': _roomsCountController.text,
+      'roomPrice': _roomPriceController.text,
+      'parkingSpace': _parkingSpaceController.text,
+      'uploadedImages': _uploadedImages,
+      'videoUrl': _videoUrl,
+      'youtubeShort': _youtubeShortController.text,
+      'youtubeLong': _youtubeLongController.text,
+      'rules': _rulesControllers.map((controller) => controller.text).toList(),
+      'selectedSubscriptionPlanId': _selectedSubscriptionPlanId,
+      'vegPackageItems': _vegPackageItems
+          .map((item) => {'name': item.name, 'count': item.count})
+          .toList(),
+      'nonVegPackageItems': _nonVegPackageItems
+          .map((item) => {'name': item.name, 'count': item.count})
+          .toList(),
+    };
+  }
+
+  Future<void> _restoreDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_draftStorageKey);
+    if (raw == null || raw.isEmpty) return;
+
+    try {
+      final draft = jsonDecode(raw) as Map<String, dynamic>;
+      if (!mounted) return;
+      super.setState(() {
+        _currentStep = draft['currentStep'] ?? _currentStep;
+        _titleController.text = draft['title'] ?? _titleController.text;
+        _descController.text = draft['description'] ?? _descController.text;
+        _category = draft['category'] ?? _category;
+        _propertyType = draft['propertyType'] ?? _propertyType;
+        _bhkType = draft['bhkType'] ?? _bhkType;
+        _areaController.text = draft['area'] ?? _areaController.text;
+        _minGuestsController.text =
+            draft['minGuests'] ?? _minGuestsController.text;
+        _maxGuestsController.text =
+            draft['maxGuests'] ?? _maxGuestsController.text;
+        _addressController.text = draft['address'] ?? _addressController.text;
+        _cityController.text = draft['city'] ?? _cityController.text;
+        _stateController.text = draft['state'] ?? _stateController.text;
+        _pincodeController.text = draft['pincode'] ?? _pincodeController.text;
+        _mapsUrlController.text = draft['mapsUrl'] ?? _mapsUrlController.text;
+        _latitude = (draft['latitude'] as num?)?.toDouble() ?? _latitude;
+        _longitude = (draft['longitude'] as num?)?.toDouble() ?? _longitude;
+        _priceController.text = draft['price'] ?? _priceController.text;
+        _vegPriceController.text =
+            draft['vegPrice'] ?? _vegPriceController.text;
+        _nonVegPriceController.text =
+            draft['nonVegPrice'] ?? _nonVegPriceController.text;
+        _minStayController.text = draft['minStay'] ?? _minStayController.text;
+        _pricingCycle = draft['pricingCycle'] ?? _pricingCycle;
+        _petFriendly = draft['petFriendly'] ?? _petFriendly;
+        _smokingAllowed = draft['smokingAllowed'] ?? _smokingAllowed;
+        _instantBooking = draft['instantBooking'] ?? _instantBooking;
+        _hasCook = draft['hasCook'] ?? _hasCook;
+        _cookPriceController.text =
+            draft['cookPrice'] ?? _cookPriceController.text;
+        _hasSelfCook = draft['hasSelfCook'] ?? _hasSelfCook;
+        _hasTaxi = draft['hasTaxi'] ?? _hasTaxi;
+        _selectedAmenities
+          ..clear()
+          ..addAll(List<String>.from(draft['selectedAmenities'] ?? const []));
+        _uploadedImages
+          ..clear()
+          ..addAll(List<String>.from(draft['uploadedImages'] ?? const []));
+        _videoUrl = draft['videoUrl'] ?? _videoUrl;
+        _youtubeShortController.text =
+            draft['youtubeShort'] ?? _youtubeShortController.text;
+        _youtubeLongController.text =
+            draft['youtubeLong'] ?? _youtubeLongController.text;
+        _selectedSubscriptionPlanId =
+            draft['selectedSubscriptionPlanId'] ?? _selectedSubscriptionPlanId;
+        final venuePolicies = draft['venuePolicies'];
+        if (venuePolicies is Map<String, dynamic>) {
+          _venuePolicies.addAll(venuePolicies);
+        }
+        _taxesController.text = draft['taxes'] ?? _taxesController.text;
+        _advanceController.text = draft['advance'] ?? _advanceController.text;
+        _roomsCountController.text =
+            draft['roomsCount'] ?? _roomsCountController.text;
+        _roomPriceController.text =
+            draft['roomPrice'] ?? _roomPriceController.text;
+        _parkingSpaceController.text =
+            draft['parkingSpace'] ?? _parkingSpaceController.text;
+
+        final savedRules = List<String>.from(draft['rules'] ?? const []);
+        if (savedRules.isNotEmpty) {
+          for (final controller in _rulesControllers) {
+            controller.dispose();
+          }
+          _rulesControllers
+            ..clear()
+            ..addAll(
+              savedRules.map((rule) {
+                final controller = TextEditingController(text: rule);
+                controller.addListener(_persistDraftDebounced);
+                return controller;
+              }),
+            );
+        }
+
+        final savedVeg =
+            List<Map<String, dynamic>>.from(draft['vegPackageItems'] ?? const []);
+        if (savedVeg.length == _vegPackageItems.length) {
+          for (var i = 0; i < savedVeg.length; i++) {
+            _vegPackageItems[i].count =
+                savedVeg[i]['count'] ?? _vegPackageItems[i].count;
+          }
+        }
+
+        final savedNonVeg = List<Map<String, dynamic>>.from(
+          draft['nonVegPackageItems'] ?? const [],
+        );
+        if (savedNonVeg.length == _nonVegPackageItems.length) {
+          for (var i = 0; i < savedNonVeg.length; i++) {
+            _nonVegPackageItems[i].count =
+                savedNonVeg[i]['count'] ?? _nonVegPackageItems[i].count;
+          }
+        }
+      });
+    } catch (_) {}
+  }
+
+  void _persistDraftDebounced() {
+    _draftPersistDebounce?.cancel();
+    _draftPersistDebounce = Timer(
+      const Duration(milliseconds: 350),
+      _persistDraft,
+    );
+  }
+
+  Future<void> _persistDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_draftStorageKey, jsonEncode(_buildDraftData()));
+  }
+
+  Future<void> _clearDraft() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_draftStorageKey);
   }
 
   void _generateAIDescription() async {
@@ -1367,6 +1600,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
 
     if (mounted) {
       if (createdPropertyId != null) {
+        await _clearDraft();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Listing saved as draft successfully!')),
         );
@@ -2403,6 +2637,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       if (mounted) Navigator.pop(context); // Close loader
 
       if (verificationSuccess) {
+        await _clearDraft();
         if (mounted) {
           _showFinalSuccessDialog();
         }

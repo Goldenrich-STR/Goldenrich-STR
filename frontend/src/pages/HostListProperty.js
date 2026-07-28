@@ -555,30 +555,34 @@ const HostListProperty = () => {
   const location = useLocation();
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const editPropertyId = location.state?.editPropertyId || queryParams.get('edit');
+  const draftStorageId = useMemo(
+    () => (editPropertyId ? `edit_${editPropertyId}` : `new_${user?.user_id || 'anonymous'}`),
+    [editPropertyId, user?.user_id]
+  );
 
   const [step, setStep] = useState(() => {
     const editId = new URLSearchParams(window.location.search).get('edit') || window.history.state?.usr?.editPropertyId;
-    if (editId) {
-      const savedStep = localStorage.getItem(`list_property_step_${editId}`);
-      return savedStep ? parseInt(savedStep, 10) : 0;
-    }
+    const storedUser = JSON.parse(localStorage.getItem('propnest_user') || '{}');
+    const storageId = editId ? `edit_${editId}` : `new_${storedUser?.user_id || 'anonymous'}`;
+    const savedStep = localStorage.getItem(`list_property_step_${storageId}`);
+    if (savedStep) return parseInt(savedStep, 10);
     return 0;
   });
 
   const [form, setForm] = useState(() => {
     const editId = new URLSearchParams(window.location.search).get('edit') || window.history.state?.usr?.editPropertyId;
-    if (editId) {
-      const savedForm = localStorage.getItem(`list_property_form_${editId}`);
-      if (savedForm) {
-        try {
-          const parsed = JSON.parse(savedForm);
-          if (parsed.packages) {
-            parsed.packages = mergePackagesWithDefaults(parsed.packages);
-          }
-          return parsed;
-        } catch (e) {
-          console.error('Error parsing saved draft form from localStorage', e);
+    const storedUser = JSON.parse(localStorage.getItem('propnest_user') || '{}');
+    const storageId = editId ? `edit_${editId}` : `new_${storedUser?.user_id || 'anonymous'}`;
+    const savedForm = localStorage.getItem(`list_property_form_${storageId}`);
+    if (savedForm) {
+      try {
+        const parsed = JSON.parse(savedForm);
+        if (parsed.packages) {
+          parsed.packages = mergePackagesWithDefaults(parsed.packages);
         }
+        return parsed;
+      } catch (e) {
+        console.error('Error parsing saved draft form from localStorage', e);
       }
     }
     return initialForm;
@@ -619,16 +623,14 @@ const HostListProperty = () => {
   );
 
   useEffect(() => {
-    if (editPropertyId) {
-      localStorage.setItem(`list_property_step_${editPropertyId}`, String(step));
-    }
-  }, [step, editPropertyId]);
+    localStorage.setItem(`list_property_step_${draftStorageId}`, String(step));
+  }, [step, draftStorageId]);
 
   useEffect(() => {
-    if (editPropertyId && form !== initialForm) {
-      localStorage.setItem(`list_property_form_${editPropertyId}`, JSON.stringify(form));
+    if (form !== initialForm) {
+      localStorage.setItem(`list_property_form_${draftStorageId}`, JSON.stringify(form));
     }
-  }, [form, editPropertyId]);
+  }, [form, draftStorageId]);
 
   useEffect(() => {
     if (!editPropertyId && !createdPropertyId) {
@@ -698,7 +700,7 @@ const HostListProperty = () => {
           };
           
           // Only overwrite form with backend data if there was no local form in localStorage
-          if (!localStorage.getItem(`list_property_form_${editPropertyId}`)) {
+          if (!localStorage.getItem(`list_property_form_${draftStorageId}`)) {
             setForm(backendForm);
           }
         })
@@ -706,7 +708,7 @@ const HostListProperty = () => {
           setError(formatError(err, 'Failed to load draft property details'));
         });
     }
-  }, [editPropertyId]);
+  }, [editPropertyId, draftStorageId]);
 
   useEffect(() => {
     if (refreshUser) refreshUser();
@@ -1530,8 +1532,8 @@ const HostListProperty = () => {
     try {
       if (isHostManageMode) {
         await propertyAPI.updateProperty(editPropertyId, buildHostManagePayload());
-        localStorage.removeItem(`list_property_form_${editPropertyId}`);
-        localStorage.removeItem(`list_property_step_${editPropertyId}`);
+        localStorage.removeItem(`list_property_form_${draftStorageId}`);
+        localStorage.removeItem(`list_property_step_${draftStorageId}`);
         alert('Property manage details saved successfully.');
         navigate('/host/dashboard');
         return;
@@ -1557,8 +1559,8 @@ const HostListProperty = () => {
 
       // 4. Submit property for verification
       await propertyAPI.submitForVerification(propertyId);
-      localStorage.removeItem(`list_property_form_${propertyId}`);
-      localStorage.removeItem(`list_property_step_${propertyId}`);
+      localStorage.removeItem(`list_property_form_${draftStorageId}`);
+      localStorage.removeItem(`list_property_step_${draftStorageId}`);
       setSuccess(true);
     } catch (err) {
       setError(formatError(err, 'Failed to submit listing'));

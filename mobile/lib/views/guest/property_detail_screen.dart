@@ -1059,7 +1059,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   border: Border.all(color: Colors.grey.shade100, width: 1.5),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1067,8 +1067,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                     Text(
                                       'Hosted by Shivani',
                                       style: GoogleFonts.manrope(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
                                         color: AppTheme.charcoal,
                                       ),
                                     ),
@@ -1081,6 +1081,27 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                       ),
                                     ),
                                   ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppTheme.border),
+                                ),
+                                child: Text(
+                                  'Contact Host',
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.8,
+                                    color: AppTheme.charcoal,
+                                  ),
                                 ),
                               ),
                             ],
