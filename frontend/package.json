@@ -66,6 +66,8 @@
   "scripts": {
     "start": "craco start",
     "build": "craco build",
+    "admin:routes:check": "node scripts/verify-admin-routes.js",
+    "admin:smoke": "node scripts/smoke-admin-app.js",
     "deploy:production": "npm run build && bash scripts/deploy-production.sh",
     "test": "craco test"
   },

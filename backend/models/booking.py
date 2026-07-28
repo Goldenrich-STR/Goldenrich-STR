@@ -22,6 +22,10 @@ class Booking(BaseModel):
     property_id: str
     guest_id: str
     host_id: str
+    broker_id: Optional[str] = None
+    broker_lg_code: Optional[str] = None
+    rm_id: Optional[str] = None
+    employee_id: Optional[str] = None
     
     # Booking details
     check_in_date: date

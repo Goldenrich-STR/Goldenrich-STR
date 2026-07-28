@@ -294,7 +294,20 @@ const BookingFeeSettings = () => {
 const TransactionsTab = () => {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
-  const [filters, setFilters] = useState({ type: '', status: '', q: '', start: '', end: '' });
+  const [filters, setFilters] = useState({
+    q: '',
+    customer_name: '',
+    employee_name: '',
+    mobile_no: '',
+    booking_id: '',
+    payment_id: '',
+    broker_name: '',
+    property_type: '',
+    type: '',
+    status: '',
+    start: '',
+    end: '',
+  });
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const LIMIT = 10;
@@ -334,6 +347,23 @@ const TransactionsTab = () => {
     setFilters(newFilters);
   };
 
+  const updateFilter = (key, value) => handleFilterChange({ ...filters, [key]: value });
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+  const resetFilters = () => handleFilterChange({
+    q: '',
+    customer_name: '',
+    employee_name: '',
+    mobile_no: '',
+    booking_id: '',
+    payment_id: '',
+    broker_name: '',
+    property_type: '',
+    type: '',
+    status: '',
+    start: '',
+    end: '',
+  });
+
   const downloadCsv = async () => {
     const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
     const res = await accountAPI.downloadTransactionsCsv(params);
@@ -362,81 +392,136 @@ const TransactionsTab = () => {
 
   return (
     <div className="space-y-6" data-testid="transactions-tab">
-      <div className="border border-gray-100 shadow-sm rounded-lg bg-white p-4">
-        <div className="space-y-3">
+      <div className="border border-gray-100 shadow-sm rounded-lg bg-white overflow-hidden">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 px-5 py-4 border-b border-gray-100 bg-slate-50/70">
+          <div className="flex items-start gap-3">
+            <span className="w-9 h-9 rounded-lg bg-white border border-gray-100 text-terracotta inline-flex items-center justify-center shadow-sm">
+              <SlidersHorizontal className="w-4 h-4" />
+            </span>
+            <div>
+              <h3 className="text-sm font-bold text-charcoal">Search & Filter Transactions</h3>
+              <p className="text-xs text-charcoal-muted mt-0.5">
+                {activeFilterCount ? `${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} applied` : 'Use any field below to narrow account transactions'}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={resetFilters}
+              disabled={!activeFilterCount}
+              className="px-4 py-2 rounded-lg border border-gray-200 text-charcoal text-xs font-bold hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition"
+              data-testid="clear-filters-btn"
+            >
+              Clear
+            </button>
+            <button
+              onClick={downloadCsv}
+              className="px-4 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold transition flex items-center space-x-2 text-xs shadow-sm"
+              data-testid="export-csv-btn"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export Filtered Excel</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
           <div className="relative">
             <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-charcoal-muted" />
             </span>
             <input
               type="text"
-              placeholder="Search Customer Name / Phone / Email / Booking / Payment / UTR ID..."
+              placeholder="Quick search across name, phone, email, booking, payment and UTR ID"
               value={filters.q}
-              onChange={(e) => handleFilterChange({ ...filters, q: e.target.value })}
-              className="input-field pl-10 w-full bg-white border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 rounded-lg transition text-xs py-2.5"
+              onChange={(e) => updateFilter('q', e.target.value)}
+              className="input-field pl-10 w-full bg-white border border-gray-200 focus:border-terracotta focus:ring-2 focus:ring-amber-100 rounded-lg transition text-sm py-3"
               data-testid="filter-q"
             />
-            <SlidersHorizontal className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-charcoal-muted" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto_auto_auto] gap-3 items-center">
-          <select
-            value={filters.type}
-            onChange={(e) => handleFilterChange({ ...filters, type: e.target.value })}
-            className="input-field bg-white border border-gray-200 rounded-lg py-2.5 text-xs"
-            data-testid="filter-type"
-          >
-            <option value="">All transaction types</option>
-            <option value="booking_payment">Booking payments</option>
-            <option value="registration_fee">Registration fees</option>
-            <option value="subscription">Subscriptions</option>
-            <option value="refund">Refunds</option>
-            <option value="payout">Payouts</option>
-          </select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+            {[
+              ['customer_name', 'Customer name'],
+              ['employee_name', 'Employee name'],
+              ['mobile_no', 'Mobile no'],
+              ['booking_id', 'Booking ID'],
+              ['payment_id', 'Payment ID'],
+              ['broker_name', 'Broker name'],
+              ['property_type', 'Property type'],
+            ].map(([key, label]) => (
+              <label key={key} className="block">
+                <span className="text-[11px] uppercase font-bold text-charcoal-muted">{label}</span>
+                <input
+                  type="text"
+                  value={filters[key]}
+                  onChange={(e) => updateFilter(key, e.target.value)}
+                  placeholder={`Search ${label}`}
+                  className="input-field mt-1 w-full bg-white border border-gray-200 rounded-lg py-2.5 text-xs focus:border-terracotta focus:ring-2 focus:ring-amber-100"
+                  data-testid={`filter-${key.replaceAll('_', '-')}`}
+                />
+              </label>
+            ))}
 
-          <select
-            value={filters.status}
-            onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })}
-            className="input-field bg-white border border-gray-200 rounded-lg py-2.5 text-xs"
-            data-testid="filter-status"
-          >
-            <option value="">All statuses</option>
-            <option value="success">Success</option>
-            <option value="pending">Pending</option>
-            <option value="failed">Failed</option>
-          </select>
+            <label className="block">
+              <span className="text-[11px] uppercase font-bold text-charcoal-muted">Transaction type</span>
+              <select
+                value={filters.type}
+                onChange={(e) => updateFilter('type', e.target.value)}
+                className="input-field mt-1 w-full bg-white border border-gray-200 rounded-lg py-2.5 text-xs focus:border-terracotta focus:ring-2 focus:ring-amber-100"
+                data-testid="filter-type"
+              >
+                <option value="">All transaction types</option>
+                <option value="booking_payment">Booking payments</option>
+                <option value="registration_fee">Registration fees</option>
+                <option value="subscription">Subscriptions</option>
+                <option value="refund">Refunds</option>
+                <option value="payout">Payouts</option>
+              </select>
+            </label>
 
+            <label className="block">
+              <span className="text-[11px] uppercase font-bold text-charcoal-muted">Status</span>
+              <select
+                value={filters.status}
+                onChange={(e) => updateFilter('status', e.target.value)}
+                className="input-field mt-1 w-full bg-white border border-gray-200 rounded-lg py-2.5 text-xs focus:border-terracotta focus:ring-2 focus:ring-amber-100"
+                data-testid="filter-status"
+              >
+                <option value="">All statuses</option>
+                <option value="success">Success</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+            </label>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative">
+
+          <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,180px)_minmax(0,180px)] gap-3">
+            <label className="block">
+              <span className="text-[11px] uppercase font-bold text-charcoal-muted flex items-center gap-1">
+                <CalendarDays className="w-3.5 h-3.5" /> From date
+              </span>
             <input
               type="date"
               value={filters.start}
-              onChange={(e) => handleFilterChange({ ...filters, start: e.target.value })}
-              className="input-field w-44 bg-white border border-gray-200 rounded-lg py-2 text-xs"
+              onChange={(e) => updateFilter('start', e.target.value)}
+              className="input-field mt-1 w-full bg-white border border-gray-200 rounded-lg py-2.5 text-xs focus:border-terracotta focus:ring-2 focus:ring-amber-100"
               data-testid="filter-start"
             />
-            </div>
-            <span className="text-charcoal-muted text-xs font-bold">to</span>
-            <div className="relative">
+            </label>
+            <label className="block">
+              <span className="text-[11px] uppercase font-bold text-charcoal-muted flex items-center gap-1">
+                <CalendarDays className="w-3.5 h-3.5" /> To date
+              </span>
             <input
               type="date"
               value={filters.end}
-              onChange={(e) => handleFilterChange({ ...filters, end: e.target.value })}
-              className="input-field w-44 bg-white border border-gray-200 rounded-lg py-2 text-xs"
+              onChange={(e) => updateFilter('end', e.target.value)}
+              className="input-field mt-1 w-full bg-white border border-gray-200 rounded-lg py-2.5 text-xs focus:border-terracotta focus:ring-2 focus:ring-amber-100"
               data-testid="filter-end"
             />
-            </div>
+            </label>
           </div>
-
-          <button
-            onClick={downloadCsv}
-            className="px-5 py-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-bold transition flex items-center space-x-2 text-xs shadow-sm"
-            data-testid="export-csv-btn"
-          >
-            <Download className="w-4 h-4" />
-            <span>Export CSV</span>
-          </button>
         </div>
       </div>
 

@@ -4,7 +4,9 @@ from pydantic import BaseModel
 from typing import List, Optional
 from models.user import User, UserRole, KYCStatus, UserCreate, UserUpdate
 from models.property import PropertyStatus
+from models.verification import VerificationStatus
 from middleware.auth_middleware import get_current_user
+from services.audit_service import write_audit_log
 from datetime import datetime, timezone
 import logging
 import asyncio
@@ -1053,9 +1055,9 @@ async def approve_property(
             "admin_reviewed": True,
             "admin_approved": True,
             "admin_id": current_user["user_id"],
-            "admin_reviewed_at": datetime.now(timezone.utc),
-            "status": "approved",
-            "updated_at": datetime.now(timezone.utc),
+            "admin_reviewed_at": approved_at,
+            "status": VerificationStatus.APPROVED.value,
+            "updated_at": approved_at,
         }
         if payload and payload.checklist:
             v_update["checklist"] = payload.checklist
@@ -1064,6 +1066,30 @@ async def approve_property(
             {"property_id": property_id},
             {"$set": v_update},
         )
+
+        try:
+            await write_audit_log(
+                db,
+                user_id=current_user["user_id"],
+                role=current_user.get("role"),
+                module="property_verification",
+                action="admin_property_approved",
+                record_id=property_id,
+                old_value={
+                    "property_status": property_data.get("status"),
+                    "verification_status": verification.get("status"),
+                    "admin_reviewed": verification.get("admin_reviewed"),
+                    "admin_approved": verification.get("admin_approved"),
+                },
+                new_value={
+                    "property_status": PropertyStatus.LIVE.value,
+                    "verification_status": VerificationStatus.APPROVED.value,
+                    "verification_id": verification.get("verification_id"),
+                },
+                reason="Admin final approval",
+            )
+        except Exception as audit_err:
+            logger.warning(f"Failed to write admin approval audit: {audit_err}")
 
         # Notify host
         try:
@@ -1106,13 +1132,22 @@ async def reject_property(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Property not found"
             )
+        reason = (payload.reason or "").strip()
+        if not reason:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Rejection reason is required"
+            )
+
+        verification = await db.property_verifications.find_one({"property_id": property_id}, {"_id": 0}) or {}
+        rejected_at = datetime.now(timezone.utc)
 
         await db.properties.update_one(
             {"property_id": property_id},
             {"$set": {
                 "status": PropertyStatus.REJECTED.value,
-                "verification_remarks": payload.reason,
-                "updated_at": datetime.now(timezone.utc)
+                "verification_remarks": reason,
+                "updated_at": rejected_at
             }}
         )
         await db.property_verifications.update_one(
@@ -1120,18 +1155,43 @@ async def reject_property(
             {"$set": {
                 "admin_reviewed": True,
                 "admin_approved": False,
-                "admin_remarks": payload.reason,
+                "admin_remarks": reason,
                 "admin_id": current_user["user_id"],
-                "admin_reviewed_at": datetime.now(timezone.utc),
-                "status": "rejected",
-                "updated_at": datetime.now(timezone.utc),
+                "admin_reviewed_at": rejected_at,
+                "status": VerificationStatus.REJECTED.value,
+                "updated_at": rejected_at,
             }},
         )
+
+        try:
+            await write_audit_log(
+                db,
+                user_id=current_user["user_id"],
+                role=current_user.get("role"),
+                module="property_verification",
+                action="admin_property_rejected",
+                record_id=property_id,
+                old_value={
+                    "property_status": property_data.get("status"),
+                    "verification_status": verification.get("status"),
+                    "admin_reviewed": verification.get("admin_reviewed"),
+                    "admin_approved": verification.get("admin_approved"),
+                },
+                new_value={
+                    "property_status": PropertyStatus.REJECTED.value,
+                    "verification_status": VerificationStatus.REJECTED.value,
+                    "verification_id": verification.get("verification_id"),
+                    "reason": reason,
+                },
+                reason=reason,
+            )
+        except Exception as audit_err:
+            logger.warning(f"Failed to write admin rejection audit: {audit_err}")
 
         # Notify host
         try:
             from services.verification_workflow import on_admin_decision
-            asyncio.create_task(on_admin_decision(db, property_data, approved=False, reason=payload.reason))
+            asyncio.create_task(on_admin_decision(db, property_data, approved=False, reason=reason))
         except Exception as wf_err:
             logger.warning(f"on_admin_decision (reject) trigger failed: {wf_err}")
 

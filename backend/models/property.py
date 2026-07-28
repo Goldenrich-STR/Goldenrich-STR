@@ -59,6 +59,12 @@ class Property(BaseModel):
     property_id: str = Field(default_factory=lambda: f"prop_{uuid4().hex[:14]}")
     owner_id: str
     broker_id: Optional[str] = None
+    broker_lg_code: Optional[str] = None
+    rm_id: Optional[str] = None
+    employee_id: Optional[str] = None
+    created_by_role: Optional[str] = None
+    created_by_user_id: Optional[str] = None
+    managed_by_broker_id: Optional[str] = None
     
     # Basic details
     title: str

@@ -12,6 +12,42 @@ import {
   CheckCircle2, Upload, FileText, Eye, Trash2, Check, User, Landmark, Briefcase
 } from 'lucide-react';
 
+const brokerNavigation = [
+  { id: 'overview', label: 'Command Center', group: 'Control', status: 'Live', icon: Building2 },
+  { id: 'owners', label: 'Host Management', group: 'CRM', status: 'Live', icon: Users },
+  { id: 'properties', label: 'Property CRM', group: 'CRM', status: 'Live', icon: Building2 },
+  { id: 'verifications', label: 'Verification Hub', group: 'Operations', status: 'Live', icon: FileCheck },
+  { id: 'bookings', label: 'Bookings & Reports', group: 'Operations', status: 'Next', icon: FileText },
+  { id: 'leads', label: 'Lead Pipeline', group: 'Sales', status: 'Live', icon: Target },
+  { id: 'commissions', label: 'Commission Ledger', group: 'Finance', status: 'Live', icon: IndianRupee },
+  { id: 'tasks', label: 'Tasks & Escalations', group: 'Operations', status: 'Next', icon: Clock },
+  { id: 'analytics', label: 'Analytics', group: 'Insights', status: 'Next', icon: Target },
+  { id: 'audit', label: 'Activity & Audit', group: 'Compliance', status: 'Next', icon: Briefcase },
+];
+
+const BrokerModulePlaceholder = ({ title, description, checkpoints }) => (
+  <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium animate-slide-up">
+    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
+      <div>
+        <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Phase 12 Broker Module</p>
+        <h3 className="text-2xl font-bold tracking-tight text-charcoal">{title}</h3>
+        <p className="text-sm text-charcoal-muted mt-2 max-w-3xl">{description}</p>
+      </div>
+      <span className="inline-flex w-fit items-center rounded-full bg-sand-100 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-charcoal-muted">
+        Planned
+      </span>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      {checkpoints.map((item) => (
+        <div key={item} className="rounded-2xl border border-sand-200 bg-stone/40 p-5">
+          <CheckCircle2 className="w-5 h-5 text-sage mb-4" />
+          <p className="text-xs font-bold text-charcoal uppercase tracking-widest">{item}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 const BrokerDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -37,7 +73,7 @@ const BrokerDashboard = () => {
 
   const statCards = stats ? [
     { 
-      label: 'My Owners', 
+      label: 'My Hosts', 
       value: stats.owners.total, 
       icon: Users, 
       color: 'terracotta'
@@ -108,37 +144,44 @@ const BrokerDashboard = () => {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12 animate-fade-in">
           <div>
             <h2 className="text-2xl md:text-4xl font-bold tracking-tight text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
-              Operational Command
+              Broker Command Center
             </h2>
-            <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Global overview of your owner network and properties</p>
+            <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Enterprise workspace for hosts, properties, verifications, leads and commissions</p>
           </div>
 
         </div>
 
-        {/* Modern Navigation Tabs */}
-        <div className="flex space-x-4 mb-10 overflow-x-auto pb-4 scrollbar-hide no-scrollbar" data-testid="broker-tabs">
-          {[
-            { id: 'overview', label: 'OVERVIEW', icon: Building2 },
-            { id: 'owners', label: 'MY OWNERS', icon: Users },
-            { id: 'properties', label: 'PROPERTIES', icon: Building2 },
-            { id: 'verifications', label: 'VERIFICATIONS', icon: FileCheck },
-            { id: 'leads', label: 'LEADS', icon: Target },
-            { id: 'commissions', label: 'COMMISSIONS', icon: IndianRupee },
-          ].map((tab) => (
+        {/* Enterprise Navigation */}
+        <div className="bg-white border border-gray-100 rounded-3xl p-4 md:p-5 shadow-premium mb-10" data-testid="broker-tabs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+            {brokerNavigation.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-3 px-6 py-4 rounded-2xl font-bold tracking-tight text-[10px] tracking-widest transition-all duration-300 ${
+              className={`flex items-center justify-between gap-3 px-4 py-4 rounded-2xl font-bold tracking-tight text-left transition-all duration-300 ${
                 activeTab === tab.id
                   ? 'bg-charcoal text-white shadow-elevated'
                   : 'bg-white text-charcoal-muted border border-gray-100 hover:border-terracotta'
               }`}
               data-testid={`tab-${tab.id}`}
             >
-              <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-terracotta' : ''}`} />
-              <span>{tab.label}</span>
+              <span className="flex items-center gap-3 min-w-0">
+                <tab.icon className={`w-4 h-4 shrink-0 ${activeTab === tab.id ? 'text-terracotta' : ''}`} />
+                <span className="min-w-0">
+                  <span className="block text-xs uppercase tracking-widest truncate">{tab.label}</span>
+                  <span className={`mt-1 block text-[9px] uppercase tracking-[0.18em] ${activeTab === tab.id ? 'text-white/60' : 'text-charcoal-muted/70'}`}>
+                    {tab.group}
+                  </span>
+                </span>
+              </span>
+              <span className={`shrink-0 rounded-full px-2 py-1 text-[9px] uppercase tracking-widest ${
+                activeTab === tab.id ? 'bg-white/10 text-white' : tab.status === 'Live' ? 'bg-sage/10 text-sage-dark' : 'bg-sand-100 text-charcoal-muted'
+              }`}>
+                {tab.status}
+              </span>
             </button>
-          ))}
+            ))}
+          </div>
         </div>        {/* Tab Content Section */}
         <div className="transition-all duration-500">
           {/* Overview Tab */}
@@ -198,7 +241,7 @@ const BrokerDashboard = () => {
                       {[
                         { id: 'leads', label: 'GENERATE LEAD', icon: Target, color: 'text-terracotta' },
                         { id: 'verifications', label: 'SITE INSPECTION', icon: FileCheck, color: 'text-sage' },
-                        { id: 'owners', label: 'NETWORK VIEW', icon: Users, color: 'text-charcoal' }
+                        { id: 'owners', label: 'HOST MANAGEMENT', icon: Users, color: 'text-charcoal' }
                       ].map(action => (
                         <button
                           key={action.id}
@@ -221,7 +264,7 @@ const BrokerDashboard = () => {
           )}
         </div>
 
-        {/* My Owners Tab */}
+        {/* My Hosts Tab */}
         {activeTab === 'owners' && <MyOwnersSection />}
 
         {/* Properties Tab */}
@@ -235,6 +278,22 @@ const BrokerDashboard = () => {
 
         {/* Commissions Tab */}
         {activeTab === 'commissions' && <CommissionsSection />}
+
+        {activeTab === 'bookings' && (
+          <BookingsReportsSection />
+        )}
+
+        {activeTab === 'tasks' && (
+          <BrokerTasksSection />
+        )}
+
+        {activeTab === 'analytics' && (
+          <BrokerAnalyticsSection mode="analytics" />
+        )}
+
+        {activeTab === 'audit' && (
+          <BrokerAnalyticsSection mode="audit" />
+        )}
 
         {showProfileModal && (
           <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
@@ -345,11 +404,14 @@ const BrokerDashboard = () => {
   );
 };
 
-// My Owners Section
+// My Hosts Section
 const MyOwnersSection = () => {
   const [owners, setOwners] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOwnerKyc, setSelectedOwnerKyc] = useState(null);
+  const [selectedOwnerDetails, setSelectedOwnerDetails] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
 
   useEffect(() => {
     fetchOwners();
@@ -366,11 +428,42 @@ const MyOwnersSection = () => {
     }
   };
 
+  const openOwnerDetails = async (owner, focus = 'overview') => {
+    setSelectedOwnerDetails({ owner, loading: true, focus });
+    setDetailsLoading(true);
+    try {
+      const response = await apiClient.get(`/broker/owner/${owner.user_id}/details`);
+      setSelectedOwnerDetails({ ...response.data, focus });
+    } catch (error) {
+      console.error('Error fetching owner details:', error);
+      setSelectedOwnerDetails({ owner, error: true, focus });
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
   return (
     <div data-testid="owners-section" className="animate-slide-up">
-      <div className="flex items-center mb-8">
-         <h3 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">Owner Network</h3>
-         <div className="ml-4 h-px flex-1 bg-sand-200"></div>
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+        <div>
+          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker CRM</p>
+          <h3 className="text-2xl font-bold tracking-tight text-charcoal">Host Management</h3>
+          <p className="text-sm text-charcoal-muted mt-2">Assigned host portfolio with KYC, property, booking, revenue and reporting ownership.</p>
+        </div>
+        <div className="grid grid-cols-3 gap-3 w-full lg:w-auto">
+          <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 shadow-sm">
+            <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Hosts</p>
+            <p className="text-xl font-bold text-charcoal">{owners.length}</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 shadow-sm">
+            <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Live Props</p>
+            <p className="text-xl font-bold text-charcoal">{owners.reduce((sum, owner) => sum + Number(owner.live_properties || 0), 0)}</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 shadow-sm">
+            <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Bookings</p>
+            <p className="text-xl font-bold text-charcoal">{owners.reduce((sum, owner) => sum + Number(owner.total_bookings || 0), 0)}</p>
+          </div>
+        </div>
       </div>
 
       {loading ? (
@@ -399,21 +492,61 @@ const MyOwnersSection = () => {
                       KYC: {owner.kyc_status}
                     </span>
                   </div>
+                  <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-1">Host ID: {owner.user_id}</p>
                   <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-1">{owner.email}</p>
                   <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-3">{owner.phone}</p>
                   
-                  <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-100">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-100">
+                    <div>
+                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Status</p>
+                      <p className="text-xs font-bold text-charcoal mt-0.5">{owner.is_active === false ? 'Inactive' : 'Active'}</p>
+                    </div>
                     <div>
                       <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">City / Location</p>
                       <p className="text-xs font-bold text-charcoal mt-0.5">{owner.city || 'Not Specified'}</p>
                     </div>
                     <div>
-                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Registration Payment</p>
-                      <span className={`inline-block text-[8px] font-bold tracking-tight uppercase tracking-wider px-2 py-0.5 rounded mt-0.5 ${
-                        owner.registration_fee_paid ? 'bg-sage/20 text-sage-dark' : 'bg-red-50 text-red-600'
-                      }`}>
-                        {owner.registration_fee_paid ? 'PAID' : 'UNPAID'}
-                      </span>
+                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Host Rating</p>
+                      <p className="text-xs font-bold text-charcoal mt-0.5">{owner.rating || owner.host_rating || 'Not Rated'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Verification</p>
+                      <p className="text-xs font-bold text-charcoal mt-0.5">{owner.verification_status || owner.kyc_status || 'Pending'}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+                    {[
+                      ['Total Properties', owner.total_properties || owner.property_count || 0, 'properties'],
+                      ['Live Properties', owner.live_properties || 0, 'live_properties'],
+                      ['Pending Properties', owner.pending_properties || 0, 'pending_properties'],
+                      ['Total Bookings', owner.total_bookings || 0, 'bookings'],
+                    ].map(([label, value, focus]) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => openOwnerDetails(owner, focus)}
+                        className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3 text-left hover:border-terracotta hover:bg-terracotta/5 focus:outline-none focus:ring-2 focus:ring-terracotta/30 transition-all"
+                        title={`View ${label.toLowerCase()}`}
+                      >
+                        <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">{label}</p>
+                        <p className="text-sm font-bold text-charcoal mt-1">{value}</p>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                    <div className="rounded-2xl bg-sage/10 border border-sage/20 px-3 py-3">
+                      <p className="text-[8px] font-bold tracking-tight text-sage-dark uppercase tracking-wider">Revenue Generated</p>
+                      <p className="text-sm font-bold text-charcoal mt-1">{formatMoney(owner.revenue_generated)}</p>
+                    </div>
+                    <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
+                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Broker LG Code</p>
+                      <p className="text-sm font-bold text-charcoal mt-1">{owner.broker_lg_code || owner.lg_code || 'Not Assigned'}</p>
+                    </div>
+                    <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
+                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Assigned RM / Employee</p>
+                      <p className="text-sm font-bold text-charcoal mt-1">{owner.assigned_rm || owner.rm_id || 'No RM'} / {owner.assigned_employee || 'No Employee'}</p>
                     </div>
                   </div>
 
@@ -428,9 +561,15 @@ const MyOwnersSection = () => {
                       >
                         Documents
                       </button>
+                      <button
+                        onClick={() => openOwnerDetails(owner)}
+                        className="inline-flex px-3 py-1 border border-sage/20 hover:border-sage hover:bg-sage hover:text-white text-sage-dark text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full transition-all"
+                      >
+                        View Details
+                      </button>
                     </div>
                     <span className="text-[9px] text-charcoal-muted font-bold">
-                      📅 Registered: {new Date(owner.created_at || owner.timestamp || Date.now()).toLocaleDateString('en-IN', {
+                      Registered: {new Date(owner.created_at || owner.timestamp || Date.now()).toLocaleDateString('en-IN', {
                         day: 'numeric', month: 'short', year: 'numeric'
                       })}
                     </span>
@@ -443,8 +582,8 @@ const MyOwnersSection = () => {
       ) : (
         <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
           <Users className="w-16 h-16 text-sand-200 mx-auto mb-6" />
-          <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Owners Assigned</h4>
-          <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">You haven't been assigned any property owners yet.</p>
+          <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Hosts Assigned</h4>
+          <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">You haven't been assigned any property hosts yet.</p>
         </div>
       )}
 
@@ -458,9 +597,367 @@ const MyOwnersSection = () => {
           }}
         />
       )}
+
+      {selectedOwnerDetails && (
+        <HostDetailsModal
+          data={selectedOwnerDetails}
+          loading={detailsLoading}
+          formatMoney={formatMoney}
+          onClose={() => setSelectedOwnerDetails(null)}
+        />
+      )}
     </div>
   );
 };
+
+const HostDetailsModal = ({ data, loading, formatMoney, onClose }) => {
+  const owner = data?.owner || {};
+  const properties = data?.properties || [];
+  const bookings = data?.bookings || [];
+  const payments = data?.payments || [];
+  const verifications = data?.verifications || [];
+  const auditEvents = data?.audit_events || [];
+  const activityTimeline = data?.activity_timeline || [];
+  const [activeView, setActiveView] = useState(data?.focus || 'overview');
+
+  useEffect(() => {
+    setActiveView(data?.focus || 'overview');
+  }, [data?.focus]);
+
+  const formatDate = (value) => {
+    if (!value) return 'Not available';
+    return new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+  const trackerStages = buildHostVerificationStages(owner, properties, verifications, payments);
+  const pendingProperties = properties.filter((property) => ['draft', 'pending', 'pending_verification', 'under_review', 'rejected'].includes(property.status || 'draft'));
+  const focusedProperties = activeView === 'live_properties'
+    ? properties.filter((property) => property.status === 'live')
+    : activeView === 'pending_properties'
+      ? pendingProperties
+      : properties;
+  const focusedTitle = activeView === 'bookings'
+    ? 'Booking History'
+    : activeView === 'live_properties'
+      ? 'Live Properties'
+      : activeView === 'pending_properties'
+        ? 'Pending Properties'
+        : 'Property List';
+
+  return createPortal(
+    <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[220] flex items-center justify-center p-4">
+      <div className="bg-stone rounded-[2rem] max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-elevated border border-gray-100">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-5 flex items-start justify-between gap-4 z-10">
+          <div>
+            <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-1">Host Details</p>
+            <h3 className="text-2xl font-bold text-charcoal">{owner.full_name || 'Host Profile'}</h3>
+            <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest mt-1">Host ID: {owner.user_id || 'Not available'}</p>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 rounded-full bg-stone flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-all">
+            <Plus className="w-5 h-5 rotate-45" />
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map((item) => <div key={item} className="h-32 bg-white rounded-3xl animate-pulse" />)}
+          </div>
+        ) : data?.error ? (
+          <div className="p-8">
+            <div className="bg-red-50 border border-red-100 rounded-3xl p-6 text-red-600 font-bold">Failed to load host details</div>
+          </div>
+        ) : (
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {[
+                ['Email', owner.email || 'Not available'],
+                ['Mobile', owner.phone || 'Not available'],
+                ['KYC Status', owner.kyc_status || 'Pending'],
+                ['Assigned RM', data?.assigned_rm || owner.rm_id || 'No RM'],
+                ['Assigned Admin', data?.assigned_admin || 'No Admin'],
+                ['Broker LG Code', owner.lg_code || owner.broker_lg_code || 'Not assigned'],
+              ].map(([label, value]) => (
+                <div key={label} className="bg-white rounded-2xl border border-gray-100 p-4">
+                  <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
+                  <p className="text-sm font-bold text-charcoal mt-1 break-words">{value}</p>
+                </div>
+              ))}
+            </div>
+
+            <VerificationTracker stages={trackerStages} />
+            <DocumentVerificationPanel owner={owner} formatDate={formatDate} />
+
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-4">
+              <div className="flex flex-wrap gap-2">
+                {[
+                  ['properties', `Total Properties (${properties.length})`],
+                  ['live_properties', `Live Properties (${properties.filter((property) => property.status === 'live').length})`],
+                  ['pending_properties', `Pending Properties (${pendingProperties.length})`],
+                  ['bookings', `Bookings (${bookings.length})`],
+                ].map(([view, label]) => (
+                  <button
+                    key={view}
+                    type="button"
+                    onClick={() => setActiveView(view)}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                      activeView === view ? 'bg-charcoal text-white' : 'bg-stone text-charcoal-muted hover:text-charcoal'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <DetailPanel title={focusedTitle} empty={activeView === 'bookings' ? 'No bookings found' : 'No properties found'}>
+                {activeView === 'bookings'
+                  ? bookings.map((booking) => (
+                    <DetailRow
+                      key={booking.booking_id}
+                      title={booking.booking_id}
+                      meta={`${booking.property_summary?.title || booking.property_id || 'Property'} | ${booking.booking_status || booking.status || 'pending'} | ${formatMoney(booking.total_amount)}`}
+                    />
+                  ))
+                  : focusedProperties.map((property) => (
+                    <DetailRow
+                      key={property.property_id}
+                      title={property.title || property.property_id}
+                      meta={`${property.city || 'No city'} | ${property.status || 'draft'} | ${formatMoney(property.price_per_night)}`}
+                    />
+                  ))}
+              </DetailPanel>
+              <DetailPanel title="Payment History" empty="No payments found">
+                {payments.slice(0, 6).map((payment) => (
+                  <DetailRow key={payment.transaction_id || payment.payment_id || payment.created_at} title={payment.transaction_id || payment.type || 'Payment'} meta={`${payment.status || 'recorded'} | ${formatMoney((payment.amount || 0) / 100)}`} />
+                ))}
+              </DetailPanel>
+              <DetailPanel title="Verification Timeline" empty="No verification records found">
+                {verifications.slice(0, 6).map((verification) => (
+                  <DetailRow key={verification.verification_id || verification.property_id} title={verification.property_id || 'Property verification'} meta={`${verification.status || 'pending'} | ${formatDate(verification.updated_at || verification.created_at)}`} />
+                ))}
+              </DetailPanel>
+              <DetailPanel title="Audit History" empty="No audit events found">
+                {auditEvents.slice(0, 6).map((event) => (
+                  <DetailRow key={event.audit_id || event.id || event.created_at} title={event.action || event.event || 'Audit event'} meta={formatDate(event.created_at)} />
+                ))}
+              </DetailPanel>
+              <DetailPanel title="Activity Timeline" empty="No activity found">
+                {activityTimeline.slice(0, 6).map((item) => (
+                  <DetailRow key={`${item.type}-${item.label}-${item.created_at}`} title={`${item.type}: ${item.label || 'Activity'}`} meta={`${item.status || 'open'} | ${formatDate(item.created_at)}`} />
+                ))}
+              </DetailPanel>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+const documentLabels = [
+  { type: 'aadhar_card', label: 'Aadhaar', required: true },
+  { type: 'pan_card', label: 'PAN', required: false },
+  { type: 'cancelled_cheque', label: 'Cancelled Cheque', required: true },
+  { type: 'property_proof', label: 'Property Documents', required: true },
+  { type: 'society_noc', label: 'NOC', required: false },
+  { type: 'gst_certificate', label: 'GST', required: false },
+  { type: 'shop_act', label: 'Shop Act', required: true },
+  { type: 'agreement_signature', label: 'Agreement', required: true },
+];
+
+const DocumentVerificationPanel = ({ owner, formatDate }) => {
+  const docs = Array.isArray(owner.kyc_documents) ? owner.kyc_documents : [];
+  const getDoc = (type) => {
+    if (type === 'agreement_signature') {
+      return owner.agreement_signature ? {
+        document_type: 'agreement_signature',
+        document_url: owner.agreement_signature,
+        status: owner.kyc_status === 'approved' ? 'approved' : 'pending',
+        uploaded_at: owner.agreement_signed_at,
+        version: owner.verification_terms_version,
+        uploaded_by: owner.full_name,
+      } : null;
+    }
+    return docs.find((doc) => doc.document_type === type);
+  };
+
+  const statusClass = (statusValue) => {
+    if (statusValue === 'approved' || statusValue === 'verified') return 'bg-sage/10 text-sage-dark border-sage/20';
+    if (statusValue === 'rejected') return 'bg-red-50 text-red-600 border-red-100';
+    if (statusValue === 'pending') return 'bg-amber-100 text-amber-700 border-amber-200';
+    return 'bg-stone text-charcoal-muted border-sand-200';
+  };
+
+  return (
+    <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-5">
+      <div className="flex items-center justify-between gap-4 mb-5">
+        <div>
+          <h4 className="text-sm font-bold text-charcoal uppercase tracking-widest">Document Verification</h4>
+          <p className="text-xs text-charcoal-muted mt-1">Document status, version, uploader, reviewer and remarks.</p>
+        </div>
+        <FileText className="w-5 h-5 text-terracotta" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        {documentLabels.map((item) => {
+          const doc = getDoc(item.type);
+          const statusValue = doc?.status || 'not uploaded';
+          const remarks = doc?.remarks || doc?.rejection_reason || owner.kyc_remarks || 'No remarks';
+          return (
+            <div key={item.type} className="rounded-2xl border border-sand-200 bg-stone/40 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-charcoal">{item.label}</p>
+                  <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest mt-1">{item.required ? 'Mandatory' : 'Optional'}</p>
+                </div>
+                <span className={`rounded-full border px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${statusClass(statusValue)}`}>
+                  {statusValue}
+                </span>
+              </div>
+              <div className="mt-4 space-y-2">
+                <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">Uploaded: {formatDate(doc?.uploaded_at)}</p>
+                <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">Version: {doc?.version || owner.verification_terms_version || 'v1'}</p>
+                <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">Uploaded By: {doc?.uploaded_by || owner.full_name || 'Host/Broker'}</p>
+                <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">Verified By: {doc?.verified_by || doc?.reviewed_by || 'Admin pending'}</p>
+                <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest normal-case leading-relaxed">Remarks: {remarks}</p>
+              </div>
+              {doc?.document_url && (
+                <a
+                  href={getImageUrl(doc.document_url)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full border border-terracotta/20 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-terracotta hover:bg-terracotta hover:text-white transition-all"
+                >
+                  <Eye className="w-3 h-3" />
+                  View File
+                </a>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const buildHostVerificationStages = (owner, properties, verifications, payments = []) => {
+  const hasKycDocs = Array.isArray(owner.kyc_documents) && owner.kyc_documents.length > 0;
+  const hasRejectedDocs = hasKycDocs && owner.kyc_documents.some((doc) => doc.status === 'rejected');
+  const hasPendingDocs = hasKycDocs && owner.kyc_documents.some((doc) => !doc.status || doc.status === 'pending');
+  const hasProperties = properties.length > 0;
+  const latestVerification = verifications[0] || {};
+  const hasBrokerSubmitted = latestVerification.status === 'completed' || Boolean(latestVerification.completed_at);
+  const rmReviewed = Boolean(latestVerification.rm_reviewed);
+  const rmRejected = rmReviewed && latestVerification.rm_approved === false;
+  const rmApproved = rmReviewed && latestVerification.rm_approved === true;
+  const adminReviewed = Boolean(latestVerification.admin_reviewed);
+  const adminRejected = adminReviewed && latestVerification.admin_approved === false;
+  const adminApproved = adminReviewed && latestVerification.admin_approved === true;
+  const hasLiveProperty = properties.some((property) => property.status === 'live');
+
+  return [
+    {
+      label: 'Host Registration',
+      status: owner.user_id ? 'completed' : 'pending',
+      meta: owner.created_at ? `Registered ${new Date(owner.created_at).toLocaleDateString('en-IN')}` : 'Profile pending'
+    },
+    {
+      label: 'KYC Uploaded',
+      status: hasRejectedDocs ? 're-upload required' : hasKycDocs ? 'completed' : 'pending',
+      meta: hasKycDocs ? `${owner.kyc_documents.length} documents uploaded` : 'Waiting for KYC documents'
+    },
+    {
+      label: 'Document Verification',
+      status: hasRejectedDocs ? 'rejected' : owner.kyc_status === 'approved' ? 'completed' : hasPendingDocs ? 'pending' : 'waiting',
+      meta: owner.kyc_status || 'Not started'
+    },
+    {
+      label: 'Broker Verification',
+      status: hasBrokerSubmitted ? 'completed' : hasProperties ? 'pending' : 'waiting',
+      meta: latestVerification.property_id ? `Property ${latestVerification.property_id}` : 'No property verification yet'
+    },
+    {
+      label: 'RM Verification',
+      status: rmRejected ? 'rejected' : rmApproved ? 'completed' : hasBrokerSubmitted ? 'pending' : 'waiting',
+      meta: latestVerification.rm_id || owner.rm_id || 'RM not assigned'
+    },
+    {
+      label: 'Finance Approval',
+      status: payments.length > 0 ? 'completed' : hasBrokerSubmitted ? 'pending' : 'waiting',
+      meta: payments.length > 0 ? `${payments.length} payment records` : 'Payment ledger pending'
+    },
+    {
+      label: 'Admin Approval',
+      status: adminRejected ? 'rejected' : adminApproved ? 'completed' : rmApproved ? 'pending' : 'waiting',
+      meta: latestVerification.admin_id || owner.admin_id || 'Admin review pending'
+    },
+    {
+      label: 'Property Live',
+      status: hasLiveProperty ? 'completed' : adminApproved ? 'pending' : 'waiting',
+      meta: hasLiveProperty ? `${properties.filter((property) => property.status === 'live').length} live properties` : 'No live property yet'
+    },
+  ];
+};
+
+const VerificationTracker = ({ stages }) => {
+  const statusStyles = {
+    completed: 'bg-sage/10 text-sage-dark border-sage/20',
+    pending: 'bg-amber-100 text-amber-700 border-amber-200',
+    rejected: 'bg-red-50 text-red-600 border-red-100',
+    're-upload required': 'bg-red-50 text-red-600 border-red-100',
+    waiting: 'bg-stone text-charcoal-muted border-sand-200',
+    escalated: 'bg-terracotta/10 text-terracotta border-terracotta/20',
+  };
+
+  return (
+    <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-5">
+      <div className="flex items-center justify-between gap-4 mb-5">
+        <div>
+          <h4 className="text-sm font-bold text-charcoal uppercase tracking-widest">Host Verification Tracker</h4>
+          <p className="text-xs text-charcoal-muted mt-1">Stage wise status from registration to live property.</p>
+        </div>
+        <FileCheck className="w-5 h-5 text-terracotta" />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        {stages.map((stage, index) => (
+          <div key={stage.label} className="relative rounded-2xl border border-sand-200 bg-stone/40 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Stage {String(index + 1).padStart(2, '0')}</p>
+                <p className="text-sm font-bold text-charcoal mt-1">{stage.label}</p>
+              </div>
+              <span className={`rounded-full border px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${statusStyles[stage.status] || statusStyles.waiting}`}>
+                {stage.status}
+              </span>
+            </div>
+            <p className="text-[10px] text-charcoal-muted font-bold uppercase tracking-widest mt-4 break-words">{stage.meta}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const DetailPanel = ({ title, empty, children }) => {
+  const hasRows = React.Children.count(children) > 0;
+  return (
+    <div className="bg-white rounded-3xl border border-gray-100 shadow-premium overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-100">
+        <h4 className="text-sm font-bold text-charcoal uppercase tracking-widest">{title}</h4>
+      </div>
+      <div className="p-4 space-y-3">
+        {hasRows ? children : <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest py-6 text-center">{empty}</p>}
+      </div>
+    </div>
+  );
+};
+
+const DetailRow = ({ title, meta }) => (
+  <div className="rounded-2xl bg-stone/50 border border-sand-200 px-4 py-3">
+    <p className="text-sm font-bold text-charcoal break-words">{title}</p>
+    <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mt-1 break-words">{meta}</p>
+  </div>
+);
 
 
 // Properties Section
@@ -469,7 +966,23 @@ const PropertiesSection = () => {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProperty, setSelectedProperty] = useState(null);
+  const [editingProperty, setEditingProperty] = useState(null);
+  const [submittingPropertyId, setSubmittingPropertyId] = useState('');
+  const [actionError, setActionError] = useState('');
   const itemsPerPage = 5;
+  const [statusFilter, setStatusFilter] = useState('all');
+  const filteredProperties = statusFilter === 'all'
+    ? properties
+    : statusFilter === 'rejected'
+      ? properties.filter((property) => property.status === 'rejected' || property.verification_summary?.status === 'rejected' || (property.verification_summary?.rm_reviewed && property.verification_summary?.rm_approved === false) || (property.verification_summary?.admin_reviewed && property.verification_summary?.admin_approved === false))
+    : properties.filter((property) => (property.status || 'draft') === statusFilter);
+  const propertyStats = {
+    total: properties.length,
+    live: properties.filter((property) => property.status === 'live').length,
+    pending: properties.filter((property) => ['pending', 'pending_verification', 'under_review'].includes(property.status)).length,
+    draft: properties.filter((property) => property.status === 'draft').length,
+    rejected: properties.filter((property) => property.status === 'rejected' || property.verification_summary?.status === 'rejected' || (property.verification_summary?.rm_reviewed && property.verification_summary?.rm_approved === false) || (property.verification_summary?.admin_reviewed && property.verification_summary?.admin_approved === false)).length,
+  };
 
   useEffect(() => {
     fetchProperties();
@@ -486,21 +999,107 @@ const PropertiesSection = () => {
     }
   };
 
+  const submitDraftForVerification = async (property) => {
+    setSubmittingPropertyId(property.property_id);
+    setActionError('');
+    try {
+      await apiClient.post(`/broker/properties/${property.property_id}/submit-verification`);
+      setStatusFilter('pending_verification');
+      setCurrentPage(1);
+      fetchProperties();
+    } catch (error) {
+      setActionError(error.response?.data?.detail || 'Failed to submit property for verification');
+    } finally {
+      setSubmittingPropertyId('');
+    }
+  };
+
+  const startPropertyRework = async (property) => {
+    setSubmittingPropertyId(property.property_id);
+    setActionError('');
+    try {
+      const response = await apiClient.post(`/broker/properties/${property.property_id}/start-rework`);
+      setStatusFilter('draft');
+      setCurrentPage(1);
+      if (response.data?.property) {
+        setEditingProperty(response.data.property);
+      }
+      fetchProperties();
+    } catch (error) {
+      setActionError(error.response?.data?.detail || 'Failed to start property rework');
+    } finally {
+      setSubmittingPropertyId('');
+    }
+  };
+
+  const isPropertyRejected = (property) => (
+    property.status === 'rejected'
+    || property.verification_summary?.status === 'rejected'
+    || (property.verification_summary?.rm_reviewed && property.verification_summary?.rm_approved === false)
+    || (property.verification_summary?.admin_reviewed && property.verification_summary?.admin_approved === false)
+  );
+
   return (
     <div data-testid="properties-section" className="animate-slide-up">
-      <div className="flex items-center mb-8">
-         <h3 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">Property Inventory</h3>
-         <div className="ml-4 h-px flex-1 bg-sand-200"></div>
+      <div className="mb-8">
+        <div>
+          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker Property CRM</p>
+          <h3 className="text-2xl font-bold tracking-tight text-charcoal">Property Listing CRM</h3>
+          <p className="text-sm text-charcoal-muted mt-2">Assigned property pipeline with host, pricing, verification and publish readiness context.</p>
+        </div>
+      </div>
+
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-end gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 w-full lg:w-auto">
+          {[
+            ['Total', propertyStats.total],
+            ['Live', propertyStats.live],
+            ['Pending', propertyStats.pending],
+            ['Draft', propertyStats.draft],
+            ['Rejected', propertyStats.rejected],
+          ].map(([label, value]) => (
+            <div key={label} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 shadow-sm">
+              <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
+              <p className="text-xl font-bold text-charcoal">{value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-4 mb-6">
+        <div className="flex flex-wrap gap-2">
+          {[
+            ['all', 'All Properties'],
+            ['live', 'Live'],
+            ['pending_verification', 'Pending Verification'],
+            ['under_review', 'Under Review'],
+            ['draft', 'Draft'],
+            ['rejected', 'Rejected'],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => {
+                setStatusFilter(value);
+                setCurrentPage(1);
+              }}
+              className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                statusFilter === value ? 'bg-charcoal text-white' : 'bg-stone text-charcoal-muted hover:text-charcoal'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {loading ? (
         <div className="space-y-4">
            {[1,2,3].map(i => <div key={i} className="h-32 bg-white rounded-3xl animate-pulse"></div>)}
         </div>
-      ) : properties.length > 0 ? (
+      ) : filteredProperties.length > 0 ? (
         <div data-testid="properties-list">
           <div className="space-y-4">
-            {[...properties]
+            {[...filteredProperties]
               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((property) => (
               <div key={property.property_id} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium group hover:border-terracotta transition-all duration-300" data-testid={`property-${property.property_id}`}>
@@ -530,24 +1129,78 @@ const PropertiesSection = () => {
                          <span className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest ${
                            property.status === 'live' ? 'bg-sage/10 text-sage-dark' :
                            property.status === 'pending_verification' ? 'bg-amber-100 text-amber-700' :
+                           isPropertyRejected(property) ? 'bg-red-100 text-red-700' :
                            'bg-gray-50 text-charcoal-muted'
                          }`}>
                            {property.status.replace('_', ' ')}
                          </span>
+                         <span className="px-3 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest bg-stone text-charcoal-muted">
+                           Verification: {property.verification_summary?.status?.replace('_', ' ') || 'not started'}
+                         </span>
                       </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                        <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
+                          <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">Host</p>
+                          <p className="text-xs font-bold text-charcoal mt-1">{property.owner_summary?.full_name || property.owner_id || 'Not assigned'}</p>
+                        </div>
+                        <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
+                          <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">Host KYC</p>
+                          <p className="text-xs font-bold text-charcoal mt-1">{property.owner_summary?.kyc_status || 'Pending'}</p>
+                        </div>
+                        <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
+                          <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">RM Review</p>
+                          <p className="text-xs font-bold text-charcoal mt-1">
+                            {property.verification_summary?.rm_reviewed ? (property.verification_summary?.rm_approved ? 'Approved' : 'Rejected') : 'Pending'}
+                          </p>
+                        </div>
+                      </div>
+                      {isPropertyRejected(property) && (
+                        <div className="mt-4 rounded-2xl border border-red-100 bg-red-50 px-4 py-3">
+                          <p className="text-[9px] font-bold uppercase tracking-widest text-red-600">Rework Required</p>
+                          <p className="text-xs font-bold text-charcoal-muted mt-1">
+                            {property.verification_summary?.rm_approved === false
+                              ? 'RM rejected this verification. Start rework, update the draft, then submit again.'
+                              : property.verification_summary?.admin_approved === false
+                                ? 'Admin rejected this verification. Start rework, update the draft, then submit again.'
+                                : 'This property needs correction before it can be submitted again.'}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <button 
-                    onClick={() => setSelectedProperty(property)}
-                    className="px-6 py-3 bg-charcoal text-white rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
-                  >
-                     View Details
-                  </button>
+                  <div className="flex flex-col sm:flex-row md:flex-col gap-2 shrink-0">
+                    {((property.status || 'draft') === 'draft' || isPropertyRejected(property)) && (
+                      <button
+                        onClick={() => isPropertyRejected(property) && property.status !== 'draft' ? startPropertyRework(property) : setEditingProperty(property)}
+                        disabled={submittingPropertyId === property.property_id}
+                        className="px-6 py-3 bg-amber-100 text-charcoal rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-gold hover:text-white transition-all"
+                      >
+                        {isPropertyRejected(property) && property.status !== 'draft'
+                          ? (submittingPropertyId === property.property_id ? 'Starting...' : 'Start Rework')
+                          : 'Edit Draft'}
+                      </button>
+                    )}
+                    {(property.status || 'draft') === 'draft' && (
+                      <button
+                        onClick={() => submitDraftForVerification(property)}
+                        disabled={submittingPropertyId === property.property_id}
+                        className="px-6 py-3 bg-sage text-white rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-sage-dark transition-all disabled:opacity-50"
+                      >
+                        {submittingPropertyId === property.property_id ? 'Submitting...' : 'Submit Verification'}
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => setSelectedProperty(property)}
+                      className="px-6 py-3 bg-charcoal text-white rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
+                    >
+                       View Details
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
-          {properties.length > itemsPerPage && (
+          {filteredProperties.length > itemsPerPage && (
             <div className="mt-8 flex justify-center items-center space-x-4">
               <button 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -557,11 +1210,11 @@ const PropertiesSection = () => {
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <span className="text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">
-                Page {currentPage} of {Math.ceil(properties.length / itemsPerPage)}
+                Page {currentPage} of {Math.ceil(filteredProperties.length / itemsPerPage)}
               </span>
               <button 
-                onClick={() => setCurrentPage(p => Math.min(Math.ceil(properties.length / itemsPerPage), p + 1))}
-                disabled={currentPage === Math.ceil(properties.length / itemsPerPage)}
+                onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredProperties.length / itemsPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(filteredProperties.length / itemsPerPage)}
                 className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-charcoal hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <ChevronRight className="w-5 h-5" />
@@ -573,7 +1226,7 @@ const PropertiesSection = () => {
         <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
           <Building2 className="w-16 h-16 text-sand-200 mx-auto mb-6" />
           <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Properties Registered</h4>
-          <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Global inventory is currently empty.</p>
+          <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">No assigned properties match this view.</p>
         </div>
       )}
 
@@ -583,13 +1236,387 @@ const PropertiesSection = () => {
           onClose={() => setSelectedProperty(null)} 
         />
       )}
+
+      {editingProperty && (
+        <BrokerCreatePropertyModal
+          property={editingProperty}
+          onClose={() => setEditingProperty(null)}
+          onCreated={() => {
+            setEditingProperty(null);
+            setStatusFilter('draft');
+            setCurrentPage(1);
+            fetchProperties();
+          }}
+        />
+      )}
     </div>
   );
 };
 
+const BrokerCreatePropertyModal = ({ property = null, onClose, onCreated }) => {
+  const isEditMode = Boolean(property?.property_id);
+  const [hosts, setHosts] = useState([]);
+  const [loadingHosts, setLoadingHosts] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [imageInput, setImageInput] = useState('');
+  const [form, setForm] = useState({
+    owner_id: property?.owner_id || '',
+    title: property?.title || '',
+    description: property?.description || '',
+    category: property?.category || 'residential',
+    property_type: property?.property_type || 'apartment',
+    bhk_type: property?.bhk_type || '1bhk',
+    address: property?.address || '',
+    city: property?.city || '',
+    state: property?.state || '',
+    pin_code: property?.pin_code || '',
+    area_sqft: property?.area_sqft || '',
+    max_guests: property?.max_guests || '4',
+    price_per_night: property?.price_per_night || '',
+    extra_guest_price: property?.extra_guest_price || '',
+    minimum_stay_days: property?.minimum_stay_days || '1',
+    amenities: property?.amenities || [],
+    images: property?.images || [],
+    video_url: property?.video_url || '',
+    youtube_short_url: property?.youtube_short_url || '',
+    youtube_long_url: property?.youtube_long_url || '',
+    house_rules: property?.house_rules || '',
+    pet_friendly: !!property?.pet_friendly,
+    smoking_allowed: !!property?.smoking_allowed,
+    instant_booking: !!property?.instant_booking,
+    has_cook: !!property?.has_cook,
+    cook_price: property?.cook_price || '',
+    has_self_cook: !!property?.has_self_cook,
+    has_taxi: !!property?.has_taxi,
+  });
+
+  useEffect(() => {
+    const fetchHosts = async () => {
+      try {
+        const response = await apiClient.get('/broker/my-owners');
+        setHosts(response.data.owners || []);
+      } catch (err) {
+        setError('Failed to load assigned hosts');
+      } finally {
+        setLoadingHosts(false);
+      }
+    };
+    fetchHosts();
+  }, []);
+
+  const update = (patch) => setForm((prev) => ({ ...prev, ...patch }));
+  const amenityOptions = ['wifi', 'ac', 'parking', 'kitchen', 'pool', 'gym', 'power_backup', 'security', 'workspace', 'tv'];
+  const propertyTypeOptions = {
+    residential: ['apartment', 'villa', 'studio', 'independent_house', 'co_living'],
+    commercial: ['private_office', 'co_working', 'meeting_room'],
+    event_venue: ['banquet_hall', 'farmhouse', 'rooftop', 'hotel_ballroom', 'resort'],
+  };
+  const bhkOptions = form.category === 'commercial'
+    ? ['small', 'medium', 'large', 'extra_large', 'custom']
+    : form.category === 'event_venue'
+      ? ['small_event', 'medium_event', 'large_event', 'mega_event']
+      : ['studio', '1bhk', '2bhk', '3bhk', '4bhk', '5bhk'];
+  const toggleAmenity = (amenity) => {
+    update({
+      amenities: form.amenities.includes(amenity)
+        ? form.amenities.filter((item) => item !== amenity)
+        : [...form.amenities, amenity],
+    });
+  };
+  const addImageUrl = () => {
+    const value = imageInput.trim();
+    if (!value) return;
+    update({ images: [...form.images, value] });
+    setImageInput('');
+  };
+  const removeImageUrl = (imageUrl) => {
+    update({ images: form.images.filter((item) => item !== imageUrl) });
+  };
+  const toNullableNumber = (value) => value === '' || value === null || value === undefined ? null : Number(value);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError('');
+    try {
+      const payload = {
+        ...form,
+        area_sqft: Number(form.area_sqft),
+        max_guests: Number(form.max_guests),
+        price_per_night: Number(form.price_per_night),
+        pricing_cycle: 'day',
+        pricing_display_mode: 'per_night',
+        extra_guest_price: toNullableNumber(form.extra_guest_price),
+        minimum_stay_days: Number(form.minimum_stay_days || 1),
+        amenities: form.amenities,
+        images: form.images,
+        video_url: form.video_url || null,
+        youtube_short_url: form.youtube_short_url || null,
+        youtube_long_url: form.youtube_long_url || null,
+        house_rules: form.house_rules || null,
+        pet_friendly: form.pet_friendly,
+        smoking_allowed: form.smoking_allowed,
+        instant_booking: form.instant_booking,
+        has_cook: form.has_cook,
+        cook_price: form.has_cook ? toNullableNumber(form.cook_price) : null,
+        has_self_cook: form.has_self_cook,
+        has_taxi: form.has_taxi,
+      };
+      if (isEditMode) {
+        const { owner_id, ...draftUpdates } = payload;
+        await apiClient.patch(`/broker/properties/${property.property_id}`, draftUpdates);
+      } else {
+        await apiClient.post('/broker/properties', payload);
+      }
+      onCreated();
+    } catch (err) {
+      setError(err.response?.data?.detail || `Failed to ${isEditMode ? 'save' : 'create'} draft property`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[220] flex items-center justify-center p-4">
+      <div className="bg-white rounded-[2rem] max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-elevated border border-gray-100">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-5 flex items-start justify-between gap-4 z-10">
+          <div>
+            <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-1">Broker Property CRM</p>
+            <h3 className="text-2xl font-bold text-charcoal">{isEditMode ? 'Edit Draft Property' : 'Create Draft Property'}</h3>
+            <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest mt-1">
+              {isEditMode ? 'Save changes before sending the listing for verification.' : 'Create a host-owned draft listing under your broker portfolio.'}
+            </p>
+          </div>
+          <button onClick={onClose} className="w-9 h-9 rounded-full bg-stone flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-all">
+            <Plus className="w-5 h-5 rotate-45" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {error && <div className="rounded-2xl bg-red-50 border border-red-100 px-4 py-3 text-sm font-bold text-red-600">{error}</div>}
+
+          <div>
+            <label className="block text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-2">Assigned Host</label>
+            <select
+              required
+              value={form.owner_id}
+              onChange={(e) => update({ owner_id: e.target.value })}
+              className="w-full rounded-2xl border-2 border-gray-100 bg-stone px-4 py-3 text-sm font-bold text-charcoal outline-none focus:border-terracotta"
+              disabled={loadingHosts || isEditMode}
+            >
+              <option value="">{loadingHosts ? 'Loading hosts...' : 'Select assigned host'}</option>
+              {hosts.map((host) => (
+                <option key={host.user_id} value={host.user_id}>
+                  {host.full_name} - {host.phone || host.email || host.user_id}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-2">Category</label>
+              <select
+                value={form.category}
+                onChange={(e) => {
+                  const nextCategory = e.target.value;
+                  update({
+                    category: nextCategory,
+                    property_type: propertyTypeOptions[nextCategory][0],
+                    bhk_type: nextCategory === 'commercial' ? 'small' : nextCategory === 'event_venue' ? 'small_event' : '1bhk',
+                  });
+                }}
+                className="w-full rounded-2xl border-2 border-gray-100 bg-stone px-4 py-3 text-sm font-bold text-charcoal outline-none focus:border-terracotta"
+              >
+                <option value="residential">Residential</option>
+                <option value="commercial">Commercial</option>
+                <option value="event_venue">Event Venue</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-2">Property Type</label>
+              <select
+                value={form.property_type}
+                onChange={(e) => update({ property_type: e.target.value })}
+                className="w-full rounded-2xl border-2 border-gray-100 bg-stone px-4 py-3 text-sm font-bold text-charcoal outline-none focus:border-terracotta"
+              >
+                {(propertyTypeOptions[form.category] || propertyTypeOptions.residential).map((value) => (
+                  <option key={value} value={value}>{formatReadableText(value)}</option>
+                ))}
+              </select>
+            </div>
+            <BrokerFormInput label="Property Title" value={form.title} onChange={(value) => update({ title: value })} placeholder="Example: Cozy 1BHK Near Beach" required />
+            <BrokerFormInput label="City" value={form.city} onChange={(value) => update({ city: value })} placeholder="Example: Pune" required />
+            <BrokerFormInput label="State" value={form.state} onChange={(value) => update({ state: value })} placeholder="Example: Maharashtra" required />
+            <BrokerFormInput label="Pin Code" value={form.pin_code} onChange={(value) => update({ pin_code: value })} placeholder="Example: 411001" required />
+            <BrokerFormInput label="Area Sq.ft" type="number" value={form.area_sqft} onChange={(value) => update({ area_sqft: value })} placeholder="Example: 850" required />
+            <BrokerFormInput label="Max Guests" type="number" value={form.max_guests} onChange={(value) => update({ max_guests: value })} placeholder="Example: 4" required />
+            <BrokerFormInput label="Base Price" type="number" value={form.price_per_night} onChange={(value) => update({ price_per_night: value })} placeholder="Example: 3000" required />
+            <BrokerFormInput label="Extra Guest Price" type="number" value={form.extra_guest_price} onChange={(value) => update({ extra_guest_price: value })} placeholder="Optional, example: 500" />
+            <BrokerFormInput label="Minimum Stay Days" type="number" value={form.minimum_stay_days} onChange={(value) => update({ minimum_stay_days: value })} placeholder="Example: 1" />
+            <div>
+              <label className="block text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-2">BHK / Size</label>
+              <select
+                value={form.bhk_type}
+                onChange={(e) => update({ bhk_type: e.target.value })}
+                className="w-full rounded-2xl border-2 border-gray-100 bg-stone px-4 py-3 text-sm font-bold text-charcoal outline-none focus:border-terracotta"
+              >
+                {bhkOptions.map((value) => <option key={value} value={value}>{formatReadableText(value)}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <BrokerFormInput label="Address" value={form.address} onChange={(value) => update({ address: value })} placeholder="Full property address" required />
+          <div>
+            <label className="block text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-2">Description</label>
+            <textarea
+              required
+              rows={4}
+              value={form.description}
+              onChange={(e) => update({ description: e.target.value })}
+              placeholder="Short description of the property"
+              className="w-full rounded-2xl border-2 border-gray-100 bg-stone px-4 py-3 text-sm font-bold text-charcoal outline-none focus:border-terracotta resize-none"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <label className="block text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">Amenities</label>
+            <div className="flex flex-wrap gap-2">
+              {amenityOptions.map((amenity) => {
+                const active = form.amenities.includes(amenity);
+                return (
+                  <button
+                    key={amenity}
+                    type="button"
+                    onClick={() => toggleAmenity(amenity)}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                      active ? 'bg-charcoal text-white' : 'bg-stone text-charcoal-muted hover:text-charcoal'
+                    }`}
+                  >
+                    {formatReadableText(amenity)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <BrokerToggle label="Instant Booking" checked={form.instant_booking} onChange={(value) => update({ instant_booking: value })} />
+            <BrokerToggle label="Pet Friendly" checked={form.pet_friendly} onChange={(value) => update({ pet_friendly: value })} />
+            <BrokerToggle label="Smoking Allowed" checked={form.smoking_allowed} onChange={(value) => update({ smoking_allowed: value })} />
+            <BrokerToggle label="Cook Available" checked={form.has_cook} onChange={(value) => update({ has_cook: value, cook_price: value ? form.cook_price : '' })} />
+            <BrokerToggle label="Self Cook" checked={form.has_self_cook} onChange={(value) => update({ has_self_cook: value })} />
+            <BrokerToggle label="Taxi Available" checked={form.has_taxi} onChange={(value) => update({ has_taxi: value })} />
+          </div>
+
+          {form.has_cook && (
+            <BrokerFormInput label="Cook Price" type="number" value={form.cook_price} onChange={(value) => update({ cook_price: value })} placeholder="Optional, example: 1200 per day" />
+          )}
+
+          <div>
+            <label className="block text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-2">House Rules / Policies</label>
+            <textarea
+              rows={4}
+              value={form.house_rules}
+              onChange={(e) => update({ house_rules: e.target.value })}
+              placeholder="Example: No loud music after 10 PM, valid ID required, security deposit rules"
+              className="w-full rounded-2xl border-2 border-gray-100 bg-stone px-4 py-3 text-sm font-bold text-charcoal outline-none focus:border-terracotta resize-none"
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-2">Property Images</label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="url"
+                  value={imageInput}
+                  onChange={(e) => setImageInput(e.target.value)}
+                  placeholder="Paste image URL or uploaded /api/uploads/... path"
+                  className="flex-1 rounded-2xl border-2 border-gray-100 bg-stone px-4 py-3 text-sm font-bold text-charcoal outline-none focus:border-terracotta"
+                />
+                <button type="button" onClick={addImageUrl} className="px-5 py-3 rounded-2xl bg-charcoal text-white text-[10px] font-bold uppercase tracking-widest hover:bg-terracotta transition-all">
+                  Add Image
+                </button>
+              </div>
+            </div>
+            {form.images.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {form.images.map((imageUrl) => (
+                  <div key={imageUrl} className="flex items-center justify-between gap-3 rounded-2xl border border-sand-200 bg-stone/60 px-4 py-3">
+                    <span className="text-xs font-bold text-charcoal truncate">{imageUrl}</span>
+                    <button type="button" onClick={() => removeImageUrl(imageUrl)} className="text-[10px] font-bold uppercase tracking-widest text-red-600 hover:text-red-700">
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <BrokerFormInput label="Walkthrough Video" type="url" value={form.video_url} onChange={(value) => update({ video_url: value })} placeholder="Optional video upload URL" />
+            <BrokerFormInput label="YouTube Short" type="url" value={form.youtube_short_url} onChange={(value) => update({ youtube_short_url: value })} placeholder="https://youtube.com/shorts/..." />
+            <BrokerFormInput label="YouTube Video" type="url" value={form.youtube_long_url} onChange={(value) => update({ youtube_long_url: value })} placeholder="https://youtube.com/watch?v=..." />
+          </div>
+
+          <div className="rounded-2xl bg-stone/70 border border-sand-200 p-4">
+            <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">
+              {isEditMode ? 'Only draft properties can be edited here. Submit for verification will come in the next Phase 13 step.' : 'This creates a draft only. Submit for verification will be handled in the next Phase 13 step.'}
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <button type="button" onClick={onClose} disabled={submitting} className="flex-1 py-4 rounded-2xl border-2 border-gray-100 text-charcoal text-[10px] font-bold uppercase tracking-widest hover:border-charcoal transition-all">
+              Cancel
+            </button>
+            <button type="submit" disabled={submitting || loadingHosts} className="flex-1 btn-premium py-4 shadow-premium text-[10px] font-bold uppercase tracking-widest disabled:opacity-50">
+              {submitting ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Draft' : 'Create Draft')}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+const BrokerFormInput = ({ label, value, onChange, placeholder, type = 'text', required = false }) => (
+  <div>
+    <label className="block text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-2">{label}</label>
+    <input
+      type={type}
+      required={required}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full rounded-2xl border-2 border-gray-100 bg-stone px-4 py-3 text-sm font-bold text-charcoal outline-none focus:border-terracotta"
+    />
+  </div>
+);
+
+const BrokerToggle = ({ label, checked, onChange }) => (
+  <button
+    type="button"
+    onClick={() => onChange(!checked)}
+    className={`rounded-2xl border-2 px-4 py-3 text-left transition-all ${
+      checked ? 'border-charcoal bg-charcoal text-white' : 'border-gray-100 bg-stone text-charcoal'
+    }`}
+  >
+    <span className="flex items-center justify-between gap-3">
+      <span className="text-[10px] font-bold uppercase tracking-widest">{label}</span>
+      <span className={`h-5 w-9 rounded-full p-1 transition-all ${checked ? 'bg-gold' : 'bg-sand-200'}`}>
+        <span className={`block h-3 w-3 rounded-full bg-white transition-transform ${checked ? 'translate-x-4' : ''}`} />
+      </span>
+    </span>
+  </button>
+);
+
 // Verifications Section — broker physical-visit queue + submission form
 const VerificationsSection = () => {
   const [tasks, setTasks] = useState([]);
+  const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTask, setActiveTask] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -604,6 +1631,7 @@ const VerificationsSection = () => {
     try {
       const res = await verificationAPI.listBrokerTasks();
       setTasks(res.data.verifications || []);
+      setSummary(res.data.summary || {});
     } catch (e) {
       console.error('Error fetching verification tasks:', e);
     } finally {
@@ -611,11 +1639,36 @@ const VerificationsSection = () => {
     }
   };
 
+  const getTrackerStage = (task) => {
+    if (task.admin_reviewed) return task.admin_approved ? 'Admin Approved' : 'Admin Rejected';
+    if (task.rm_reviewed) return task.rm_approved ? 'RM Approved' : 'RM Rejected';
+    if (task.status === 'completed') return 'RM Review Pending';
+    if (task.status === 'in_progress') return 'Visit In Progress';
+    if (task.status === 'rejected') return 'Re-Verification Needed';
+    return 'Broker Visit Pending';
+  };
+
   return (
     <div data-testid="verifications-section" className="animate-slide-up">
-      <div className="flex items-center mb-8">
-         <h3 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight">Inspection Queue</h3>
-         <div className="ml-4 h-px flex-1 bg-sand-200"></div>
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+        <div>
+          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker Property CRM</p>
+          <h3 className="text-2xl font-bold tracking-tight text-charcoal">Verification Tracker</h3>
+          <p className="text-sm text-charcoal-muted mt-2">Track broker visit submission, RM review, admin approval and re-verification status.</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full lg:w-auto">
+          {[
+            ['Pending Visit', summary.pending_visit || 0],
+            ['RM Pending', summary.rm_pending || 0],
+            ['RM Approved', summary.rm_approved || 0],
+            ['Admin Approved', summary.admin_approved || 0],
+          ].map(([label, value]) => (
+            <div key={label} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 shadow-sm">
+              <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
+              <p className="text-xl font-bold text-charcoal">{value}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {loading ? (
@@ -635,6 +1688,7 @@ const VerificationsSection = () => {
               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((task) => {
               const pd = task.property_details || {};
+              const owner = task.owner_summary || {};
               const isOpen = task.status === 'pending' || task.status === 'in_progress' || task.status === 'rejected' || (task.rm_reviewed && !task.rm_approved);
               return (
                 <div
@@ -658,7 +1712,7 @@ const VerificationsSection = () => {
                         <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-4">
                           {pd.city}{pd.address ? ` · ${pd.address}` : ''}
                         </p>
-                        <div className="flex items-center space-x-3">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span
                             className={`px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
                               task.status === 'pending'
@@ -673,6 +1727,9 @@ const VerificationsSection = () => {
                           >
                             {task.status.replace('_', ' ')}
                           </span>
+                          <span className="px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full bg-stone text-charcoal-muted">
+                            {getTrackerStage(task)}
+                          </span>
                           {task.rm_reviewed && (
                             <span
                               className={`px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
@@ -684,11 +1741,40 @@ const VerificationsSection = () => {
                               RM {task.rm_approved ? 'APPROVED' : 'REJECTED'}
                             </span>
                           )}
+                          {task.admin_reviewed && (
+                            <span
+                              className={`px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
+                                task.admin_approved ? 'bg-sage/20 text-sage-dark' : 'bg-red-100 text-red-700'
+                              }`}
+                            >
+                              ADMIN {task.admin_approved ? 'APPROVED' : 'REJECTED'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                          <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
+                            <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">Host</p>
+                            <p className="text-xs font-bold text-charcoal mt-1">{owner.full_name || task.owner_id || 'Not assigned'}</p>
+                          </div>
+                          <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
+                            <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">RM Review</p>
+                            <p className="text-xs font-bold text-charcoal mt-1">{task.rm_reviewed ? (task.rm_approved ? 'Approved' : 'Rejected') : 'Pending'}</p>
+                          </div>
+                          <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
+                            <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">Admin Review</p>
+                            <p className="text-xs font-bold text-charcoal mt-1">{task.admin_reviewed ? (task.admin_approved ? 'Approved' : 'Rejected') : 'Pending'}</p>
+                          </div>
                         </div>
                         {task.broker_remarks && (
                           <p className="text-[10px] text-charcoal-muted mt-4 italic font-bold">
                             REMARKS: "{task.broker_remarks}"
                           </p>
+                        )}
+                        {(task.rm_remarks || task.admin_remarks) && (
+                          <div className="mt-3 space-y-1">
+                            {task.rm_remarks && <p className="text-[10px] text-charcoal-muted font-bold">RM REMARKS: {task.rm_remarks}</p>}
+                            {task.admin_remarks && <p className="text-[10px] text-charcoal-muted font-bold">ADMIN REMARKS: {task.admin_remarks}</p>}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -748,8 +1834,8 @@ const VerificationsSection = () => {
 // Modal: broker fills checklist + photos and submits site visit
 const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
   const checklistLabels = {
-    property_owner_verification: 'Property Owner Verification',
-    ownership_verification: 'Ownership Verification',
+    property_owner_verification: 'Property Host Verification',
+    ownership_verification: 'Host Ownership Verification',
     property_location_verification: 'Property Location Verification',
     amenities_verification: 'Amenities Verification',
     safety_security_verification: 'Safety & Security Verification',
@@ -893,10 +1979,20 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
     setPhotoFile(f || null);
   };
 
+  const hasValidCoordinates = () => {
+    const lat = parseFloat(photoLat);
+    const lng = parseFloat(photoLng);
+    return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && !(lat === 0 && lng === 0);
+  };
+
   const addPhoto = async () => {
     setError('');
     if (!photoFile) {
       setError('Please choose a photo to upload');
+      return;
+    }
+    if (!hasValidCoordinates()) {
+      setError('Please allow location access or enter valid latitude/longitude before adding the photo.');
       return;
     }
     const lat = parseFloat(photoLat) || 0.0;
@@ -944,6 +2040,10 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
     // Auto-add the currently selected photo if the list is empty but a file is picked
     let finalPhotos = [...photos];
     if (finalPhotos.length === 0 && photoFile) {
+      if (!hasValidCoordinates()) {
+        setError('Please allow location access or enter valid latitude/longitude before submitting.');
+        return;
+      }
       setUploading(true);
       try {
         const fd = new FormData();
@@ -994,7 +2094,9 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
       return;
     }
 
-    const finalRemarks = remarks.trim() ? `${remarks}\n\nUnchecked Items Reasons:${appendedRemarks}` : `Unchecked Items Reasons:${appendedRemarks}`;
+    const finalRemarks = appendedRemarks
+      ? (remarks.trim() ? `${remarks.trim()}\n\nUnchecked Items Reasons:${appendedRemarks}` : `Unchecked Items Reasons:${appendedRemarks}`)
+      : remarks.trim();
 
     setSubmitting(true);
     try {
@@ -1321,6 +2423,361 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
       </div>
     </div>,
     document.body
+  );
+};
+
+const BookingsReportsSection = () => {
+  const [bookings, setBookings] = useState([]);
+  const [summary, setSummary] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  useEffect(() => {
+    fetchBookings();
+  }, [statusFilter]);
+
+  const fetchBookings = async () => {
+    setLoading(true);
+    try {
+      const response = await apiClient.get('/broker/bookings', {
+        params: statusFilter === 'all' ? {} : { status_filter: statusFilter }
+      });
+      setBookings(response.data.bookings || []);
+      setSummary(response.data.summary || {});
+    } catch (error) {
+      console.error('Error fetching broker bookings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+  const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not available';
+
+  return (
+    <div data-testid="broker-bookings-section" className="animate-slide-up">
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+        <div>
+          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker Operations</p>
+          <h3 className="text-2xl font-bold tracking-tight text-charcoal">Bookings & Reports</h3>
+          <p className="text-sm text-charcoal-muted mt-2">Broker-owned bookings with host, guest, property and ownership snapshot visibility.</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 w-full lg:w-auto">
+          {[
+            ['Confirmed', summary.confirmed || 0],
+            ['Soft Locks', summary.soft_lock || 0],
+            ['Cancelled', summary.cancelled || 0],
+            ['Completed', summary.completed || 0],
+            ['Revenue', formatMoney(summary.revenue)],
+          ].map(([label, value]) => (
+            <div key={label} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 shadow-sm">
+              <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
+              <p className="text-lg font-bold text-charcoal">{value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-4 mb-6">
+        <div className="flex flex-wrap gap-2">
+          {[
+            ['all', 'All'],
+            ['soft_lock', 'Soft Lock'],
+            ['confirmed', 'Confirmed'],
+            ['completed', 'Completed'],
+            ['cancelled', 'Cancelled'],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => setStatusFilter(value)}
+              className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                statusFilter === value ? 'bg-charcoal text-white' : 'bg-stone text-charcoal-muted hover:text-charcoal'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((item) => <div key={item} className="h-28 bg-white rounded-3xl animate-pulse" />)}
+        </div>
+      ) : bookings.length > 0 ? (
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-premium overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-stone border-b border-gray-100">
+                <tr>
+                  {['Booking', 'Property', 'Host', 'Guest', 'Dates', 'Amount', 'Snapshot'].map((heading) => (
+                    <th key={heading} className="px-5 py-4 text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{heading}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {bookings.map((booking) => (
+                  <tr key={booking.booking_id} className="hover:bg-stone/40 transition-colors">
+                    <td className="px-5 py-4">
+                      <p className="text-sm font-bold text-charcoal">{booking.booking_id}</p>
+                      <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{booking.booking_status} | {booking.payment_status}</p>
+                    </td>
+                    <td className="px-5 py-4">
+                      <p className="text-sm font-bold text-charcoal">{booking.property_summary?.title || booking.property_id}</p>
+                      <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{booking.property_summary?.city || 'No city'}</p>
+                    </td>
+                    <td className="px-5 py-4 text-xs font-bold text-charcoal">{booking.host_summary?.full_name || booking.host_id}</td>
+                    <td className="px-5 py-4 text-xs font-bold text-charcoal">{booking.guest_summary?.full_name || booking.guest_id}</td>
+                    <td className="px-5 py-4">
+                      <p className="text-xs font-bold text-charcoal">{formatDate(booking.check_in_date)}</p>
+                      <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">to {formatDate(booking.check_out_date)}</p>
+                    </td>
+                    <td className="px-5 py-4 text-sm font-bold text-terracotta">{formatMoney(booking.total_amount)}</td>
+                    <td className="px-5 py-4">
+                      <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Broker: {booking.broker_id || 'Legacy fallback'}</p>
+                      <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">LG: {booking.broker_lg_code || 'Not captured'}</p>
+                      <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">RM: {booking.rm_id || 'Not captured'}</p>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
+          <FileText className="w-16 h-16 text-sand-200 mx-auto mb-6" />
+          <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Bookings Found</h4>
+          <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Broker-owned bookings will appear here.</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const BrokerTasksSection = () => {
+  const [tasks, setTasks] = useState([]);
+  const [escalations, setEscalations] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [summary, setSummary] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const response = await apiClient.get('/broker/tasks');
+      setTasks(response.data.tasks || []);
+      setEscalations(response.data.escalations || []);
+      setActivity(response.data.activity || []);
+      setSummary(response.data.summary || {});
+    } catch (error) {
+      console.error('Error fetching broker tasks:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const badgeClass = (statusValue) => {
+    if (statusValue === 'within_sla') return 'bg-sage/10 text-sage-dark';
+    if (statusValue === 'at_risk') return 'bg-amber-100 text-amber-700';
+    if (statusValue === 'breached' || statusValue === 'escalated') return 'bg-red-50 text-red-600';
+    return 'bg-stone text-charcoal-muted';
+  };
+  const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not available';
+
+  return (
+    <div data-testid="broker-tasks-section" className="animate-slide-up">
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+        <div>
+          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker Workflow</p>
+          <h3 className="text-2xl font-bold tracking-tight text-charcoal">Tasks & Escalations</h3>
+          <p className="text-sm text-charcoal-muted mt-2">Open work queue across verifications, lead follow-ups, support tickets and SLA risk.</p>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full lg:w-auto">
+          {[
+            ['Open Tasks', summary.open_tasks || 0],
+            ['High Priority', summary.high_priority || 0],
+            ['At Risk', summary.at_risk || 0],
+            ['Breached', summary.breached || 0],
+          ].map(([label, value]) => (
+            <div key={label} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 shadow-sm">
+              <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
+              <p className="text-xl font-bold text-charcoal">{value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map((item) => <div key={item} className="h-36 bg-white rounded-3xl animate-pulse" />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2 bg-white rounded-3xl border border-gray-100 shadow-premium overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h4 className="text-sm font-bold text-charcoal uppercase tracking-widest">Active Task Queue</h4>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {tasks.length > 0 ? tasks.slice(0, 30).map((task) => (
+                <div key={`${task.type}-${task.task_id}`} className="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-bold text-charcoal">{task.title}</p>
+                    <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mt-1">
+                      {task.type} | {task.entity_id} | age {task.age_hours}h
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="rounded-full bg-stone px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-charcoal-muted">{task.status || 'open'}</span>
+                    <span className="rounded-full bg-stone px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-charcoal-muted">{task.priority || 'normal'}</span>
+                    <span className={`rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-widest ${badgeClass(task.sla_status)}`}>{task.sla_status}</span>
+                  </div>
+                </div>
+              )) : (
+                <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest py-12 text-center">No open broker tasks</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-premium overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100">
+                <h4 className="text-sm font-bold text-charcoal uppercase tracking-widest">Escalation Watchlist</h4>
+              </div>
+              <div className="p-4 space-y-3">
+                {escalations.length > 0 ? escalations.slice(0, 10).map((item) => (
+                  <DetailRow key={`${item.type}-${item.task_id}`} title={item.title} meta={`${item.sla_status} | RM ${item.assigned_rm || 'not assigned'}`} />
+                )) : (
+                  <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest py-8 text-center">No escalation risk</p>
+                )}
+              </div>
+            </div>
+            <div className="bg-white rounded-3xl border border-gray-100 shadow-premium overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100">
+                <h4 className="text-sm font-bold text-charcoal uppercase tracking-widest">Recent Activity</h4>
+              </div>
+              <div className="p-4 space-y-3">
+                {activity.length > 0 ? activity.slice(0, 10).map((item) => (
+                  <DetailRow key={item.audit_id || item.id || item.created_at} title={item.action || item.event || 'Activity'} meta={`${item.module || 'broker'} | ${formatDate(item.created_at)}`} />
+                )) : (
+                  <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest py-8 text-center">No recent activity</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const BrokerAnalyticsSection = ({ mode }) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
+
+  const fetchAnalytics = async () => {
+    setLoading(true);
+    try {
+      const response = await apiClient.get('/broker/analytics');
+      setData(response.data || {});
+    } catch (error) {
+      console.error('Error fetching broker analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const metrics = data?.metrics || {};
+  const trends = data?.trends || {};
+  const audit = data?.audit || {};
+  const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+  const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not available';
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[1, 2, 3, 4, 5, 6].map((item) => <div key={item} className="h-28 bg-white rounded-3xl animate-pulse" />)}
+      </div>
+    );
+  }
+
+  if (mode === 'audit') {
+    return (
+      <div data-testid="broker-audit-section" className="animate-slide-up">
+        <div className="mb-8">
+          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker Compliance</p>
+          <h3 className="text-2xl font-bold tracking-tight text-charcoal">Activity & Audit</h3>
+          <p className="text-sm text-charcoal-muted mt-2">Audit coverage and recent broker-linked activity across Phase 12 modules.</p>
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <DetailPanel title="Audit Coverage" empty="No audit coverage data">
+            {(audit.coverage || []).map((item) => (
+              <DetailRow key={item.module} title={`${item.module} - ${item.status}`} meta={item.source} />
+            ))}
+          </DetailPanel>
+          <DetailPanel title="Recent Broker Activity" empty="No recent broker activity">
+            {(audit.recent_events || []).slice(0, 12).map((item) => (
+              <DetailRow key={item.audit_id || item.id || item.created_at} title={item.action || item.event || 'Activity'} meta={`${item.module || 'broker'} | ${formatDate(item.created_at)}`} />
+            ))}
+          </DetailPanel>
+        </div>
+      </div>
+    );
+  }
+
+  const cards = [
+    ['Hosts', metrics.hosts || 0],
+    ['Properties', metrics.properties || 0],
+    ['Live Properties', metrics.live_properties || 0],
+    ['Activation Rate', `${metrics.property_activation_rate || 0}%`],
+    ['Bookings', metrics.bookings || 0],
+    ['Revenue', formatMoney(metrics.revenue)],
+    ['Leads', metrics.leads || 0],
+    ['Lead Conversion', `${metrics.lead_conversion_rate || 0}%`],
+    ['Pending Verifications', metrics.pending_verifications || 0],
+    ['Commission Total', formatMoney((metrics.commission_total || 0) / 100)],
+    ['Commission Pending', formatMoney((metrics.commission_pending || 0) / 100)],
+    ['Audit Events', metrics.audit_events || 0],
+  ];
+
+  return (
+    <div data-testid="broker-analytics-section" className="animate-slide-up">
+      <div className="mb-8">
+        <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker Insights</p>
+        <h3 className="text-2xl font-bold tracking-tight text-charcoal">Analytics</h3>
+        <p className="text-sm text-charcoal-muted mt-2">Performance across host acquisition, property activation, bookings, revenue, lead conversion and commissions.</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+        {cards.map(([label, value]) => (
+          <div key={label} className="bg-white rounded-2xl border border-gray-100 px-5 py-4 shadow-sm">
+            <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
+            <p className="text-xl font-bold text-charcoal mt-1">{value}</p>
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        {[
+          ['Bookings By Status', trends.bookings_by_status || {}],
+          ['Leads By Status', trends.leads_by_status || {}],
+          ['Verifications By Status', trends.verifications_by_status || {}],
+          ['Commission By Status', trends.commission_by_status || {}],
+        ].map(([title, values]) => (
+          <DetailPanel key={title} title={title} empty="No data">
+            {Object.entries(values).map(([label, value]) => (
+              <DetailRow key={label} title={label.replace('_', ' ')} meta={typeof value === 'number' && title.includes('Commission') ? formatMoney(value / 100) : String(value)} />
+            ))}
+          </DetailPanel>
+        ))}
+      </div>
+    </div>
   );
 };
 
@@ -1802,6 +3259,20 @@ const PropertyDetailsModal = ({ property, onClose }) => {
         </div>
 
         <div className="p-8 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[
+              ['Host', property.owner_summary?.full_name || property.owner_id || 'Not assigned'],
+              ['Host KYC', property.owner_summary?.kyc_status || 'Pending'],
+              ['Verification', property.verification_summary?.status?.replace('_', ' ') || 'not started'],
+              ['RM Review', property.verification_summary?.rm_reviewed ? (property.verification_summary?.rm_approved ? 'Approved' : 'Rejected') : 'Pending'],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-2xl border border-sand-200 bg-stone/50 p-4">
+                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
+                <p className="text-sm font-bold text-charcoal mt-1 break-words">{value}</p>
+              </div>
+            ))}
+          </div>
+
           {/* Photo Gallery */}
           {propertyImages.length > 0 && (
             <div className="space-y-3">
@@ -2093,7 +3564,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
   );
 };
 
-// Modal: broker uploads owner KYC documents + signatures and submits verification
+// Modal: broker uploads host KYC documents + signatures and submits verification
 const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
   const [kycStatus, setKycStatus] = useState('unverified');
   const [kycDocuments, setKycDocuments] = useState([]);
@@ -2153,7 +3624,7 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
       setAgreementOwnerAddress(data.agreement_owner_address || '');
       setAgreementSignature(data.agreement_signature || '');
     } catch (e) {
-      console.error('Error fetching owner KYC:', e);
+      console.error('Error fetching host KYC:', e);
     } finally {
       setLoading(false);
     }
@@ -2264,11 +3735,11 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
 
   const handleSaveSignatureAndAgreement = async () => {
     if (!agreementOwnerName.trim()) {
-      alert('Please enter Owner Name');
+      alert('Please enter Host Name');
       return;
     }
     if (!agreementOwnerAddress.trim()) {
-      alert('Please enter Owner Address');
+      alert('Please enter Host Address');
       return;
     }
     const canvas = canvasRef.current;
@@ -2538,7 +4009,7 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
         </div>
 
         {loading ? (
-          <div className="text-center py-10 font-bold text-charcoal-muted uppercase text-xs tracking-widest">Loading owner KYC parameters...</div>
+          <div className="text-center py-10 font-bold text-charcoal-muted uppercase text-xs tracking-widest">Loading host KYC parameters...</div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-8">
             {kycRemarks && (
@@ -2549,7 +4020,7 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {renderDocCard("01", "Aadhar Card", "Aadhaar Card of the host / property owner", "aadhar", aadharCard, "image/*,application/pdf", true, User)}
+              {renderDocCard("01", "Aadhar Card", "Aadhaar Card of the host / property host", "aadhar", aadharCard, "image/*,application/pdf", true, User)}
               {renderDocCard("02", "Property Proof", "Index 2 / Light Bill / Tax Receipt", "property", propertyProof, "image/*,application/pdf", true, Building2)}
               {renderDocCard("03", "Cancelled Cheque", "Cancelled cheque for payout verification", "cheque", cancelledCheque, "image/*,application/pdf", true, Landmark)}
               {renderDocCard("04", "Shop Act", "Shop & Establishment Act certificate", "shop_act", shopAct, "image/*,application/pdf", true, Briefcase)}
@@ -2563,22 +4034,22 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">Agreement Owner Name</label>
+                  <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">Agreement Host Name</label>
                   <input
                     type="text"
                     required
-                    placeholder="Enter owner's full legal name"
+                    placeholder="Enter host's full legal name"
                     value={agreementOwnerName}
                     onChange={(e) => setAgreementOwnerName(e.target.value)}
                     className="w-full px-3 py-2 border border-sand-200 rounded-none text-xs outline-none focus:border-terracotta font-semibold"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">Agreement Owner Address</label>
+                  <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">Agreement Host Address</label>
                   <input
                     type="text"
                     required
-                    placeholder="Enter owner's permanent address"
+                    placeholder="Enter host's permanent address"
                     value={agreementOwnerAddress}
                     onChange={(e) => setAgreementOwnerAddress(e.target.value)}
                     className="w-full px-3 py-2 border border-sand-200 rounded-none text-xs outline-none focus:border-terracotta font-semibold"
@@ -2590,7 +4061,7 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
                 <div className="p-4 bg-white border border-sand-200 rounded-none flex items-center justify-between">
                   <div>
                     <span className="text-[8px] font-black text-charcoal-muted uppercase tracking-wider block">Signature Saved</span>
-                    <img src={getImageUrl(agreementSignature)} alt="Owner Signature" className="h-12 object-contain mt-1" />
+                    <img src={getImageUrl(agreementSignature)} alt="Host Signature" className="h-12 object-contain mt-1" />
                   </div>
                   <button
                     type="button"
@@ -2651,8 +4122,8 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
             <div className="bg-white rounded-[2rem] p-8 max-w-lg w-full shadow-elevated border border-gray-100">
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-xl font-bold text-charcoal">Draw Owner Signature</h3>
-                  <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mt-1">Please ask the owner to sign on the screen</p>
+                  <h3 className="text-xl font-bold text-charcoal">Draw Host Signature</h3>
+                  <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mt-1">Please ask the host to sign on the screen</p>
                 </div>
                 <button 
                   onClick={() => setShowAgreementModal(false)}

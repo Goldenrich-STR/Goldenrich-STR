@@ -59,6 +59,7 @@ from routes.webhook_routes import router as webhook_router
 from routes.coupon_routes import router as coupon_router
 from routes.ai_agent_routes import router as ai_agent_router
 from routes.support_ticket_routes import router as support_ticket_router
+from routes.admin_core_routes import router as admin_core_router
 
 # Include routers with /api prefix
 app.include_router(auth_router, prefix="/api")
@@ -79,6 +80,7 @@ app.include_router(webhook_router, prefix="/api")
 app.include_router(coupon_router, prefix="/api")
 app.include_router(ai_agent_router, prefix="/api")
 app.include_router(support_ticket_router, prefix="/api")
+app.include_router(admin_core_router, prefix="/api")
 from routes.seo_routes import router as seo_router
 app.include_router(seo_router)
 
@@ -283,7 +285,10 @@ async def startup_sequence():
             "notifications", "subscription_plans", "subscriptions", "cms_content", "leads", "coupons",
             "deleted_properties", "search_logs", "ai_calls", "ai_agents", "calendar_sync_logs",
             "contact_messages", "support_tickets", "commissions", "password_reset_tokens", "platform_settings",
-            "payout_job_runs"
+            "payout_job_runs", "roles", "permissions", "role_permissions", "user_permissions", "departments",
+            "business_divisions", "branches", "franchises", "teams", "reporting_relations",
+            "reporting_history", "escalation_rules", "sla_policies", "escalation_instances", "notification_rules",
+            "property_status_history", "audit_logs"
         ]
         for table in tables:
             await db_instance.ensure_table(table)
@@ -322,6 +327,13 @@ async def startup_sequence():
         await db_instance.calendar_sync_logs.create_index([("property_id", 1), ("synced_at", -1)])
         await db_instance.bookings.create_index([("booking_status", 1), ("soft_lock_expires_at", 1)])
         await db_instance.ai_agents.create_index("agent_id", unique=True)
+        await db_instance.roles.create_index("role_key", unique=True)
+        await db_instance.permissions.create_index("permission_key", unique=True)
+        await db_instance.reporting_relations.create_index("relation_id", unique=True)
+        await db_instance.escalation_rules.create_index("rule_id", unique=True)
+        await db_instance.audit_logs.create_index([("created_at", -1)])
+        from services.permission_service import ensure_default_permissions
+        await ensure_default_permissions(db_instance)
         
         # 3. Ensure demo users exist
         await create_missing_users(db_instance)
@@ -458,31 +470,37 @@ async def root():
 _frontend_build_dir = ROOT_DIR.parent / "frontend" / "build"
 _frontend_static_dir = _frontend_build_dir / "static"
 _frontend_index_file = _frontend_build_dir / "index.html"
-if _frontend_static_dir.is_dir() and _frontend_index_file.is_file():
+if _frontend_static_dir.is_dir():
     app.mount(
         "/static",
         DynamicCacheStaticFiles(directory=str(_frontend_static_dir)),
         name="frontend-static",
     )
 
-    @app.get("/{full_path:path}")
-    async def serve_frontend(full_path: str):
-        requested_file = _frontend_build_dir / full_path
-        if requested_file.is_file():
-            filename = full_path.lower()
-            response = FileResponse(str(requested_file))
-            if filename == "index.html" or filename == "service-worker.js":
-                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-                response.headers["Pragma"] = "no-cache"
-                response.headers["Expires"] = "0"
-            elif filename.endswith(('.webp', '.jpg', '.jpeg', '.png', '.svg', '.ico')):
-                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-            elif filename.endswith(('.js', '.css')):
-                response.headers["Cache-Control"] = "public, max-age=2592000"
-            return response
-        
-        index_response = FileResponse(str(_frontend_build_dir / "index.html"))
-        index_response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-        index_response.headers["Pragma"] = "no-cache"
-        index_response.headers["Expires"] = "0"
-        return index_response
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_frontend(full_path: str):
+    if full_path.startswith("api/"):
+        raise HTTPException(status_code=404, detail="Not Found")
+    if not _frontend_index_file.is_file():
+        raise HTTPException(status_code=404, detail="Frontend build not found")
+
+    requested_file = _frontend_build_dir / full_path
+    if requested_file.is_file():
+        filename = full_path.lower()
+        response = FileResponse(str(requested_file))
+        if filename == "index.html" or filename == "service-worker.js":
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+        elif filename.endswith(('.webp', '.jpg', '.jpeg', '.png', '.svg', '.ico')):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        elif filename.endswith(('.js', '.css')):
+            response.headers["Cache-Control"] = "public, max-age=2592000"
+        return response
+
+    index_response = FileResponse(str(_frontend_index_file))
+    index_response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    index_response.headers["Pragma"] = "no-cache"
+    index_response.headers["Expires"] = "0"
+    return index_response

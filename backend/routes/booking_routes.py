@@ -10,6 +10,7 @@ from services.booking_notifications import (
     notify_host_booking_confirmed,
     schedule_soft_lock_reminder,
 )
+from services.audit_service import write_audit_log
 from datetime import datetime, timedelta, timezone
 import asyncio
 import json
@@ -185,6 +186,7 @@ async def create_booking(
         
         # Check if the host/owner has completed document verification (KYC status must be approved)
         owner_id = property_dict.get("owner_id")
+        owner = None
         if owner_id:
             owner = await db.users.find_one({"user_id": owner_id})
             if owner and owner.get("kyc_status") != "approved" and owner.get("email") != "host@propnest.com":
@@ -288,6 +290,10 @@ async def create_booking(
             property_id=booking_data.property_id,
             guest_id=current_user["user_id"],
             host_id=property_dict["owner_id"],
+            broker_id=property_dict.get("broker_id") or (owner or {}).get("broker_id"),
+            broker_lg_code=property_dict.get("broker_lg_code") or (owner or {}).get("lg_code"),
+            rm_id=property_dict.get("rm_id") or (owner or {}).get("rm_id"),
+            employee_id=property_dict.get("employee_id") or property_dict.get("assigned_employee_id") or (owner or {}).get("employee_id") or (owner or {}).get("assigned_employee_id"),
             check_in_date=check_in,
             check_out_date=check_out,
             number_of_guests=booking_data.number_of_guests,
@@ -904,6 +910,8 @@ async def update_payment_config(
             detail="Platform fee percent must be between 0 and 100",
         )
 
+    await _ensure_platform_settings_table(db)
+    existing_config = await db.platform_settings.find_one({"key": BOOKING_PAYMENT_CONFIG_KEY}, {"_id": 0}) or {}
     update_data = {
         "key": BOOKING_PAYMENT_CONFIG_KEY,
         "platform_fee_percent": round(float(payload.platform_fee_percent), 2),
@@ -911,11 +919,21 @@ async def update_payment_config(
         "updated_at": datetime.now(timezone.utc),
         "updated_by": current_user.get("user_id"),
     }
-    await _ensure_platform_settings_table(db)
     await db.platform_settings.update_one(
         {"key": BOOKING_PAYMENT_CONFIG_KEY},
         {"$set": update_data},
         upsert=True,
+    )
+    await write_audit_log(
+        db,
+        user_id=current_user["user_id"],
+        role=current_user["role"],
+        module="platform_settings",
+        action="payment_config_updated",
+        record_id=BOOKING_PAYMENT_CONFIG_KEY,
+        old_value=existing_config,
+        new_value=update_data,
+        reason="Payment, tax and commission configuration updated",
     )
     return await _get_booking_payment_config(db)
 

@@ -6,6 +6,7 @@ import logging
 from middleware.auth_middleware import get_current_user
 from models.notification import NotificationChannel, NotificationType
 from models.support_ticket import SupportTicket, SupportTicketCreate, SupportTicketUpdate, SupportTicketStatus
+from services.audit_service import write_audit_log
 from services.notification_service import send_multi_channel_notification
 
 
@@ -71,6 +72,37 @@ async def _enrich_ticket_user_details(db: AsyncIOMotorDatabase, ticket: dict) ->
     return enriched
 
 
+def _ticket_age_hours(ticket: dict) -> float:
+    created_at = ticket.get("created_at")
+    if not created_at:
+        return 0
+    if isinstance(created_at, str):
+        created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    return max(0, (datetime.now(timezone.utc) - created_at).total_seconds() / 3600)
+
+
+def _ticket_sla_status(ticket: dict) -> str:
+    if ticket.get("status") in {SupportTicketStatus.RESOLVED.value, SupportTicketStatus.CLOSED.value}:
+        return "resolved"
+    due_at = ticket.get("sla_due_at")
+    if due_at:
+        if isinstance(due_at, str):
+            due_at = datetime.fromisoformat(due_at.replace("Z", "+00:00"))
+        if due_at.tzinfo is None:
+            due_at = due_at.replace(tzinfo=timezone.utc)
+        return "breached" if due_at < datetime.now(timezone.utc) else "within_sla"
+    age = _ticket_age_hours(ticket)
+    if age >= 16:
+        return "level_2_escalated"
+    if age >= 8:
+        return "level_1_escalated"
+    if age >= 4:
+        return "due_soon"
+    return "within_sla"
+
+
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_support_ticket(
     payload: SupportTicketCreate,
@@ -126,6 +158,13 @@ async def get_admin_support_tickets(
             query["status"] = status_filter
         tickets = await db.support_tickets.find(query, {"_id": 0}).sort("created_at", -1).to_list(length=300)
         tickets = [await _enrich_ticket_user_details(db, ticket) for ticket in tickets]
+        assignee_ids = list({ticket.get("assigned_admin_id") for ticket in tickets if ticket.get("assigned_admin_id")})
+        assignees = await db.users.find({"user_id": {"$in": assignee_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(assignee_ids) or 1)
+        assignee_map = {user["user_id"]: user for user in assignees}
+        for ticket in tickets:
+            ticket["assignee"] = assignee_map.get(ticket.get("assigned_admin_id"), {})
+            ticket["age_hours"] = _ticket_age_hours(ticket)
+            ticket["sla_status"] = _ticket_sla_status(ticket)
         return {"tickets": tickets, "total": len(tickets)}
     except Exception as e:
         logger.error(f"Error fetching admin support tickets: {str(e)}")
@@ -167,5 +206,16 @@ async def update_support_ticket(
         message=f"Your ticket '{ticket.get('subject', ticket_id)}' is now {updated.get('status', 'updated')}.",
         channels=[NotificationChannel.IN_APP],
         data={"ticket_id": ticket_id, "status": updated.get("status")},
+    )
+    await write_audit_log(
+        db,
+        user_id=current_user["user_id"],
+        role=current_user["role"],
+        module="support_ticket_management",
+        action="ticket_status_updated",
+        record_id=ticket_id,
+        old_value={"status": ticket.get("status"), "priority": ticket.get("priority"), "admin_response": ticket.get("admin_response")},
+        new_value={"status": updated.get("status"), "priority": updated.get("priority"), "admin_response": updated.get("admin_response")},
+        reason="Support ticket workflow updated",
     )
     return {"ticket": updated, "message": "Support ticket updated successfully."}

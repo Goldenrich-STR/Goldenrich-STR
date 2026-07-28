@@ -307,8 +307,16 @@ async def _txn_query_async(
     start: Optional[str],
     end: Optional[str],
     q: Optional[str],
+    customer_name: Optional[str] = None,
+    employee_name: Optional[str] = None,
+    mobile_no: Optional[str] = None,
+    booking_id: Optional[str] = None,
+    payment_id: Optional[str] = None,
+    broker_name: Optional[str] = None,
+    property_type: Optional[str] = None,
 ) -> dict:
     query: dict = {}
+    and_conditions = []
     if type:
         query["type"] = type
     if status:
@@ -346,7 +354,165 @@ async def _txn_query_async(
             or_conditions.append({"user_id": {"$in": user_ids}})
             or_conditions.append({"host_id": {"$in": user_ids}})
             
-        query["$or"] = or_conditions
+        and_conditions.append({"$or": or_conditions})
+
+    if customer_name:
+        customer_ids = []
+        user_cursor = db.users.find(
+            {"full_name": {"$regex": customer_name, "$options": "i"}},
+            {"user_id": 1, "_id": 0},
+        )
+        async for u in user_cursor:
+            customer_ids.append(u["user_id"])
+        and_conditions.append({"$or": [{"user_id": {"$in": customer_ids}}, {"host_id": {"$in": customer_ids}}]})
+
+    if mobile_no:
+        mobile_user_ids = []
+        user_cursor = db.users.find(
+            {"phone": {"$regex": mobile_no, "$options": "i"}},
+            {"user_id": 1, "_id": 0},
+        )
+        async for u in user_cursor:
+            mobile_user_ids.append(u["user_id"])
+        and_conditions.append({"$or": [{"user_id": {"$in": mobile_user_ids}}, {"host_id": {"$in": mobile_user_ids}}]})
+
+    if booking_id:
+        and_conditions.append({"booking_id": {"$regex": booking_id, "$options": "i"}})
+
+    if payment_id:
+        and_conditions.append({"$or": [
+            {"razorpay_payment_id": {"$regex": payment_id, "$options": "i"}},
+            {"upi_transaction_id": {"$regex": payment_id, "$options": "i"}},
+            {"razorpay_order_id": {"$regex": payment_id, "$options": "i"}},
+            {"razorpay_payout_id": {"$regex": payment_id, "$options": "i"}},
+            {"razorpay_refund_id": {"$regex": payment_id, "$options": "i"}},
+            {"transaction_id": {"$regex": payment_id, "$options": "i"}},
+        ]})
+
+    if broker_name:
+        broker_ids = []
+        broker_cursor = db.users.find(
+            {"role": "broker", "full_name": {"$regex": broker_name, "$options": "i"}},
+            {"user_id": 1, "_id": 0},
+        )
+        async for b in broker_cursor:
+            broker_ids.append(b["user_id"])
+        host_ids = []
+        if broker_ids:
+            host_cursor = db.users.find(
+                {"broker_id": {"$in": broker_ids}},
+                {"user_id": 1, "_id": 0},
+            )
+            async for h in host_cursor:
+                host_ids.append(h["user_id"])
+        property_ids = []
+        property_cursor = db.properties.find(
+            {"broker_id": {"$in": broker_ids}},
+            {"property_id": 1, "_id": 0},
+        )
+        async for p in property_cursor:
+            property_ids.append(p["property_id"])
+        and_conditions.append({"$or": [
+            {"user_id": {"$in": host_ids}},
+            {"host_id": {"$in": host_ids}},
+            {"property_id": {"$in": property_ids}},
+        ]})
+
+    if employee_name:
+        employee_ids = []
+        employee_codes = []
+        employee_cursor = db.users.find(
+            {"role": "employee", "full_name": {"$regex": employee_name, "$options": "i"}},
+            {"user_id": 1, "employee_code": 1, "_id": 0},
+        )
+        async for emp in employee_cursor:
+            employee_ids.append(emp["user_id"])
+            if emp.get("employee_code"):
+                employee_codes.append(emp["employee_code"])
+        broker_ids = []
+        if employee_ids:
+            broker_cursor = db.users.find(
+                {"role": "broker", "rm_id": {"$in": employee_ids}},
+                {"user_id": 1, "_id": 0},
+            )
+            async for b in broker_cursor:
+                broker_ids.append(b["user_id"])
+        host_or = []
+        if employee_ids:
+            host_or.append({"rm_id": {"$in": employee_ids}})
+        if employee_codes:
+            host_or.append({"employee_code": {"$in": employee_codes}})
+        if broker_ids:
+            host_or.append({"broker_id": {"$in": broker_ids}})
+        host_ids = []
+        if host_or:
+            host_cursor = db.users.find({"$or": host_or}, {"user_id": 1, "_id": 0})
+            async for h in host_cursor:
+                host_ids.append(h["user_id"])
+        property_or = []
+        if employee_ids:
+            property_or.append({"rm_id": {"$in": employee_ids}})
+        if broker_ids:
+            property_or.append({"broker_id": {"$in": broker_ids}})
+        property_ids = []
+        if property_or:
+            property_cursor = db.properties.find({"$or": property_or}, {"property_id": 1, "_id": 0})
+            async for p in property_cursor:
+                property_ids.append(p["property_id"])
+        and_conditions.append({"$or": [
+            {"user_id": {"$in": host_ids}},
+            {"host_id": {"$in": host_ids}},
+            {"property_id": {"$in": property_ids}},
+        ]})
+
+    if property_type:
+        property_ids = []
+        property_cursor = db.properties.find(
+            {"$or": [
+                {"property_type": {"$regex": property_type, "$options": "i"}},
+                {"bhk_type": {"$regex": property_type, "$options": "i"}},
+                {"category": {"$regex": property_type, "$options": "i"}},
+            ]},
+            {"property_id": 1, "_id": 0},
+        )
+        async for p in property_cursor:
+            property_ids.append(p["property_id"])
+        subscription_ids = []
+        sub_cursor = db.subscriptions.find(
+            {"$or": [
+                {"property_type": {"$regex": property_type, "$options": "i"}},
+                {"plan_type": {"$regex": property_type, "$options": "i"}},
+            ]},
+            {"subscription_id": 1, "_id": 0},
+        )
+        async for s in sub_cursor:
+            subscription_ids.append(s["subscription_id"])
+        plan_ids = []
+        plan_cursor = db.subscription_plans.find(
+            {"$or": [
+                {"property_type": {"$regex": property_type, "$options": "i"}},
+                {"bhk_type": {"$regex": property_type, "$options": "i"}},
+                {"plan_type": {"$regex": property_type, "$options": "i"}},
+                {"plan_name": {"$regex": property_type, "$options": "i"}},
+            ]},
+            {"plan_id": 1, "_id": 0},
+        )
+        async for p in plan_cursor:
+            plan_ids.append(p["plan_id"])
+        if plan_ids:
+            sub_cursor = db.subscriptions.find(
+                {"plan_id": {"$in": plan_ids}},
+                {"subscription_id": 1, "_id": 0},
+            )
+            async for s in sub_cursor:
+                subscription_ids.append(s["subscription_id"])
+        and_conditions.append({"$or": [
+            {"property_id": {"$in": property_ids}},
+            {"subscription_id": {"$in": list(set(subscription_ids))}},
+        ]})
+
+    if and_conditions:
+        query["$and"] = and_conditions
     return query
 
 
@@ -410,13 +576,23 @@ async def list_transactions(
     start: Optional[str] = None,
     end: Optional[str] = None,
     q: Optional[str] = None,
+    customer_name: Optional[str] = None,
+    employee_name: Optional[str] = None,
+    mobile_no: Optional[str] = None,
+    booking_id: Optional[str] = None,
+    payment_id: Optional[str] = None,
+    broker_name: Optional[str] = None,
+    property_type: Optional[str] = None,
     limit: int = Query(50, ge=1, le=500),
     skip: int = Query(0, ge=0),
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     try:
-        query = await _txn_query_async(db, type, status, start, end, q)
+        query = await _txn_query_async(
+            db, type, status, start, end, q,
+            customer_name, employee_name, mobile_no, booking_id, payment_id, broker_name, property_type,
+        )
         cursor = (
             db.transactions.find(query, {"_id": 0})
             .sort("created_at", -1)
@@ -559,10 +735,20 @@ async def export_transactions_csv(
     start: Optional[str] = None,
     end: Optional[str] = None,
     q: Optional[str] = None,
+    customer_name: Optional[str] = None,
+    employee_name: Optional[str] = None,
+    mobile_no: Optional[str] = None,
+    booking_id: Optional[str] = None,
+    payment_id: Optional[str] = None,
+    broker_name: Optional[str] = None,
+    property_type: Optional[str] = None,
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    query = await _txn_query_async(db, type, status, start, end, q)
+    query = await _txn_query_async(
+        db, type, status, start, end, q,
+        customer_name, employee_name, mobile_no, booking_id, payment_id, broker_name, property_type,
+    )
     cursor = db.transactions.find(query, {"_id": 0}).sort("created_at", -1)
     items = await cursor.to_list(length=10000)
 

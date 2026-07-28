@@ -8,6 +8,7 @@ class VerificationStatus(str, Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
+    APPROVED = "approved"
     REJECTED = "rejected"
 
 class GeoTaggedPhoto(BaseModel):

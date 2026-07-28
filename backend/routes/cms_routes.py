@@ -4,6 +4,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List, Optional
 from models.cms import CMSContent, CMSUpdate, HeroSection
 from middleware.auth_middleware import get_current_user
+from services.audit_service import write_audit_log
 from datetime import datetime, timezone
 import logging
 
@@ -767,6 +768,7 @@ async def create_cms_content(
         }
         
         await db.cms_content.insert_one(cms_content)
+        await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="marketing_cms", action="cms_content_created", record_id=content_id, new_value={k: v for k, v in cms_content.items() if k != "content_data"}, reason=f"Created {page}/{section}")
         
         logger.info(f"CMS content created: {content_id}")
         return {"message": "CMS content created successfully", "content_id": content_id}
@@ -788,6 +790,12 @@ async def update_cms_content(
     """Update CMS content."""
     try:
         update_fields = {"updated_at": datetime.now(timezone.utc)}
+        existing = await db.cms_content.find_one({"content_id": content_id}, {"_id": 0})
+        if not existing:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="CMS content not found"
+            )
         
         if update_data.content_data:
             update_fields["content_data"] = update_data.content_data
@@ -800,11 +808,17 @@ async def update_cms_content(
             {"$set": update_fields}
         )
         
-        if result.matched_count == 0:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="CMS content not found"
-            )
+        await write_audit_log(
+            db,
+            user_id=current_user["user_id"],
+            role=current_user["role"],
+            module="marketing_cms",
+            action="cms_content_updated",
+            record_id=content_id,
+            old_value={"page": existing.get("page"), "section": existing.get("section"), "is_active": existing.get("is_active")},
+            new_value={"page": existing.get("page"), "section": existing.get("section"), "is_active": update_fields.get("is_active", existing.get("is_active")), "updated_at": update_fields["updated_at"]},
+            reason=f"Updated {existing.get('page')}/{existing.get('section')}",
+        )
         
         logger.info(f"CMS content updated: {content_id}")
         return {"message": "CMS content updated successfully"}
@@ -826,6 +840,7 @@ async def delete_cms_content(
 ):
     """Delete CMS content."""
     try:
+        existing = await db.cms_content.find_one({"content_id": content_id}, {"_id": 0})
         result = await db.cms_content.delete_one({"content_id": content_id})
         
         if result.deleted_count == 0:
@@ -833,6 +848,7 @@ async def delete_cms_content(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="CMS content not found"
             )
+        await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="marketing_cms", action="cms_content_deleted", record_id=content_id, old_value={"page": existing.get("page"), "section": existing.get("section")} if existing else {}, reason="CMS content deleted")
         
         logger.info(f"CMS content deleted: {content_id}")
         return {"message": "CMS content deleted successfully"}

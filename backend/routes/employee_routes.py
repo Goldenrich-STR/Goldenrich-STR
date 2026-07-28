@@ -6,6 +6,7 @@ from typing import List, Optional
 from models.user import UserRole
 from models.verification import VerificationStatus
 from middleware.auth_middleware import get_current_user
+from services.audit_service import write_audit_log
 from datetime import datetime, date, timedelta, timezone
 import logging
 import io
@@ -491,6 +492,39 @@ async def approve_verification(
         )
         
         # Property stays in under_review - awaiting admin final approval
+        await db.properties.update_one(
+            {"property_id": verification["property_id"]},
+            {"$set": {
+                "status": "under_review",
+                "updated_at": datetime.now(timezone.utc)
+            }}
+        )
+
+        try:
+            await write_audit_log(
+                db,
+                user_id=current_user["user_id"],
+                role=current_user.get("role"),
+                module="rm_verification",
+                action="rm_verification_approved",
+                record_id=verification_id,
+                old_value={
+                    "rm_reviewed": verification.get("rm_reviewed"),
+                    "rm_approved": verification.get("rm_approved"),
+                    "status": verification.get("status"),
+                    "property_id": verification.get("property_id"),
+                },
+                new_value={
+                    "rm_reviewed": True,
+                    "rm_approved": True,
+                    "status": VerificationStatus.COMPLETED.value,
+                    "property_status": "under_review",
+                    "remarks": remarks,
+                },
+                reason=remarks or "",
+            )
+        except Exception as audit_err:
+            logger.warning(f"Failed to write RM approval audit: {audit_err}")
 
         # Notify admins + host
         try:
@@ -566,6 +600,32 @@ async def reject_verification(
                 "updated_at": datetime.now(timezone.utc)
             }}
         )
+
+        try:
+            await write_audit_log(
+                db,
+                user_id=current_user["user_id"],
+                role=current_user.get("role"),
+                module="rm_verification",
+                action="rm_verification_rejected",
+                record_id=verification_id,
+                old_value={
+                    "rm_reviewed": verification.get("rm_reviewed"),
+                    "rm_approved": verification.get("rm_approved"),
+                    "status": verification.get("status"),
+                    "property_id": verification.get("property_id"),
+                },
+                new_value={
+                    "rm_reviewed": True,
+                    "rm_approved": False,
+                    "status": VerificationStatus.REJECTED.value,
+                    "property_status": "draft",
+                    "reason": reason,
+                },
+                reason=reason,
+            )
+        except Exception as audit_err:
+            logger.warning(f"Failed to write RM rejection audit: {audit_err}")
 
         # Notify host that the listing needs revision
         try:

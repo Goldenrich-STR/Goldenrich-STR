@@ -17,6 +17,26 @@ const PropertyDetail = lazy(() => import("./pages/PropertyDetail"));
 const BookingConfirmation = lazy(() => import("./pages/BookingConfirmation"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminAccount = lazy(() => import("./pages/AdminAccount"));
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
+const ExecutiveDashboard = lazy(() => import("./pages/admin/ExecutiveDashboard"));
+const UserOrganizationManagement = lazy(() => import("./pages/admin/UserOrganizationManagement"));
+const RolesPermissions = lazy(() => import("./pages/admin/RolesPermissions"));
+const ReportingHierarchy = lazy(() => import("./pages/admin/ReportingHierarchy"));
+const EscalationMatrix = lazy(() => import("./pages/admin/EscalationMatrix"));
+const AuditLogs = lazy(() => import("./pages/admin/AuditLogs"));
+const DepartmentsAdmin = lazy(() => import("./pages/admin/Departments"));
+const HostManagementAdmin = lazy(() => import("./pages/admin/HostManagement"));
+const PropertyOperationsAdmin = lazy(() => import("./pages/admin/PropertyOperations"));
+const SubscriptionManagementAdmin = lazy(() => import("./pages/admin/SubscriptionManagement"));
+const BookingOperationsAdmin = lazy(() => import("./pages/admin/BookingOperations"));
+const FinanceSettlementsAdmin = lazy(() => import("./pages/admin/FinanceSettlements"));
+const SalesCrmAdmin = lazy(() => import("./pages/admin/SalesCrm"));
+const MarketingCmsAdmin = lazy(() => import("./pages/admin/MarketingCms"));
+const CommunicationCenterAdmin = lazy(() => import("./pages/admin/CommunicationCenter"));
+const SupportTicketManagementAdmin = lazy(() => import("./pages/admin/SupportTicketManagement"));
+const PlatformSettingsAdmin = lazy(() => import("./pages/admin/PlatformSettings"));
+const ReportsAnalyticsAdmin = lazy(() => import("./pages/admin/ReportsAnalytics"));
+const ApprovalCenterAdmin = lazy(() => import("./pages/admin/ApprovalCenter"));
 const BrokerDashboard = lazy(() => import("./pages/BrokerDashboard"));
 const EmployeeDashboard = lazy(() => import("./pages/EmployeeDashboard"));
 const HostPayouts = lazy(() => import("./pages/HostPayouts"));
@@ -147,8 +167,7 @@ function AppRoutes() {
   const isAuthRoute = 
     location.pathname === "/login" || 
     location.pathname === "/register" || 
-    location.pathname === "/admin/login" || 
-    location.pathname === "/admin";
+    location.pathname === "/admin/login";
 
   // Use state.backgroundLocation if navigating via React Router, or default to "/" (LandingPage)
   const backgroundLocation = location.state?.backgroundLocation || (isAuthRoute ? { pathname: "/" } : null);
@@ -162,7 +181,7 @@ function AppRoutes() {
         <Route path="/register" element={<AuthPage />} />
         <Route path="/forgot-password" element={<PasswordRecoveryPage mode="forgot" />} />
         <Route path="/reset-password" element={<PasswordRecoveryPage mode="reset" />} />
-        <Route path="/admin" element={<AuthPage isAdminLogin={true} />} />
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AuthPage isAdminLogin={true} />} />
         <Route path="/property/:id" element={<PropertyDetail />} />
         <Route path="/support" element={<SupportPage />} />
@@ -262,13 +281,33 @@ function AppRoutes() {
 
         {/* Admin Routes */}
         <Route
-          path="/admin/dashboard"
+          path="/admin"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-              <AdminDashboard />
+              <AdminLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          <Route path="dashboard" element={<ExecutiveDashboard />} />
+          <Route path="users" element={<UserOrganizationManagement />} />
+          <Route path="roles-permissions" element={<RolesPermissions />} />
+          <Route path="reporting-hierarchy" element={<ReportingHierarchy />} />
+          <Route path="escalation-matrix" element={<EscalationMatrix />} />
+          <Route path="audit-logs" element={<AuditLogs />} />
+          <Route path="departments" element={<DepartmentsAdmin />} />
+          <Route path="hosts" element={<HostManagementAdmin />} />
+          <Route path="properties" element={<PropertyOperationsAdmin />} />
+          <Route path="subscriptions" element={<SubscriptionManagementAdmin />} />
+          <Route path="bookings" element={<BookingOperationsAdmin />} />
+          <Route path="finance" element={<FinanceSettlementsAdmin />} />
+          <Route path="crm" element={<SalesCrmAdmin />} />
+          <Route path="cms" element={<MarketingCmsAdmin />} />
+          <Route path="communication" element={<CommunicationCenterAdmin />} />
+          <Route path="support" element={<SupportTicketManagementAdmin />} />
+          <Route path="settings" element={<PlatformSettingsAdmin />} />
+          <Route path="approvals" element={<ApprovalCenterAdmin />} />
+          <Route path="reports" element={<ReportsAnalyticsAdmin />} />
+        </Route>
         <Route
           path="/admin/account"
           element={

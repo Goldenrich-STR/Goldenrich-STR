@@ -20,10 +20,18 @@ const BACKEND_URL = configuredBackendUrl && !(isBrowser && !isLocalPage && point
 
 const apiClient = axios.create({
   baseURL: BACKEND_URL,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+export const getApiErrorMessage = (error, fallback = 'Something went wrong') => {
+  if (error?.code === 'ECONNABORTED') {
+    return 'Request timed out. Please try again.';
+  }
+  return error?.response?.data?.detail || error?.message || fallback;
+};
 
 export { apiClient };
 

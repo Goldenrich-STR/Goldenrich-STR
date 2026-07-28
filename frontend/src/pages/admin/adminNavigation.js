@@ -1,0 +1,52 @@
+import {
+  Activity,
+  BarChart3,
+  BellRing,
+  BookOpen,
+  BriefcaseBusiness,
+  Building2,
+  CalendarCheck,
+  FileCheck2,
+  FileText,
+  Headphones,
+  LayoutDashboard,
+  Megaphone,
+  Network,
+  ShieldCheck,
+  Users,
+  WalletCards,
+} from 'lucide-react';
+
+export const adminNavigation = [
+  { label: 'Executive Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+  {
+    label: 'Organization Management',
+    icon: Users,
+    children: [
+      { label: 'User Directory', path: '/admin/users', icon: Users },
+      { label: 'Roles & Permissions', path: '/admin/roles-permissions', icon: ShieldCheck },
+      { label: 'Departments', path: '/admin/departments', icon: BriefcaseBusiness },
+      { label: 'Reporting Hierarchy', path: '/admin/reporting-hierarchy', icon: Network },
+      { label: 'Escalation & SLA Matrix', path: '/admin/escalation-matrix', icon: BellRing },
+    ],
+  },
+  { label: 'Host Management', path: '/admin/hosts', icon: Building2 },
+  { label: 'Property Operations', path: '/admin/properties', icon: FileCheck2 },
+  { label: 'Subscription Management', path: '/admin/subscriptions', icon: WalletCards },
+  { label: 'Booking Operations', path: '/admin/bookings', icon: CalendarCheck },
+  { label: 'Finance & Settlements', path: '/admin/finance', icon: WalletCards },
+  { label: 'Sales & CRM', path: '/admin/crm', icon: BriefcaseBusiness },
+  { label: 'Marketing & CMS', path: '/admin/cms', icon: Megaphone },
+  { label: 'Communication Center', path: '/admin/communication', icon: Headphones },
+  { label: 'Support & Ticket Management', path: '/admin/support', icon: BookOpen },
+  { label: 'Approval Center', path: '/admin/approvals', icon: FileText },
+  { label: 'Reports & Analytics', path: '/admin/reports', icon: BarChart3 },
+  {
+    label: 'System Administration',
+    icon: Activity,
+    children: [
+      { label: 'Platform Settings', path: '/admin/settings', icon: Activity },
+      { label: 'Audit & Activity Logs', path: '/admin/audit-logs', icon: Activity },
+    ],
+  },
+];

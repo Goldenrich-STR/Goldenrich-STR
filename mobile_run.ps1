@@ -9,7 +9,7 @@ Write-Host "=============================================" -ForegroundColor Yell
 $flutterCheck = Get-Command flutter -ErrorAction SilentlyContinue
 
 # Fallback: check if we can locate it in D:\flutter_windows_3.44.1-stable
-if ($flutterCheck -eq $null) {
+if ($null -eq $flutterCheck) {
     $detectedPath = "D:\flutter_windows_3.44.1-stable\flutter\bin"
     if (Test-Path "$detectedPath\flutter.bat") {
         Write-Host "Detected Flutter SDK at $detectedPath. Adding to session path..." -ForegroundColor Cyan
@@ -18,7 +18,7 @@ if ($flutterCheck -eq $null) {
     }
 }
 
-if ($flutterCheck -eq $null) {
+if ($null -eq $flutterCheck) {
     Write-Host "[ERROR] Flutter SDK is not detected in your system PATH." -ForegroundColor Red
     exit 1
 }
@@ -29,7 +29,7 @@ if (Test-Path $emulatorPath) {
     # Check if any android/emulator device is connected
     $androidDevices = flutter devices | Select-String -Pattern "android|emulator-[0-9]"
     
-    if ($androidDevices -eq $null -or $androidDevices.Count -eq 0) {
+    if ($null -eq $androidDevices -or $androidDevices.Count -eq 0) {
         Write-Host "Android Emulator is not running. Launching 'Pixel_10_Pro'..." -ForegroundColor Cyan
         
         # Clear lock files if they exist to prevent "Running multiple emulators" fatal error
@@ -59,10 +59,11 @@ if (Test-Path $emulatorPath) {
                     $deviceReady = $true
                     break
                 }
-            } else {
+            }
+            else {
                 # Fallback to flutter devices if adb is not found
                 $flutterCheck = flutter devices | Select-String -Pattern "emulator-[0-9]"
-                if ($flutterCheck -ne $null -and $flutterCheck.Count -gt 0) {
+                if ($null -ne $flutterCheck -and $flutterCheck.Count -gt 0) {
                     $deviceReady = $true
                     break
                 }
@@ -77,7 +78,8 @@ if (Test-Path $emulatorPath) {
             Write-Host "Emulator is ready and online!" -ForegroundColor Green
             # Additional brief sleep to ensure emulator services are fully ready
             Start-Sleep -Seconds 3
-        } else {
+        }
+        else {
             Write-Host "Emulator launch timed out or still booting. Proceeding anyway..." -ForegroundColor Yellow
         }
     }
@@ -93,6 +95,7 @@ if ($connectedDevices -match "emulator-\d+") {
     $deviceId = $Matches[0]
     Write-Host "Targeting Emulator: $deviceId" -ForegroundColor Green
     flutter run -d $deviceId
-} else {
+}
+else {
     flutter run
 }
