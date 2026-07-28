@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Edit, History, Plus, Save, ShieldCheck, UserCog, X } from 'lucide-react';
+import { Edit, History, Plus, Save, ShieldCheck, Trash2, UserCog, X } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge } from './shared';
 
@@ -214,8 +214,28 @@ const RolesPermissions = () => {
   const toggleRoleStatus = async (role) => {
     const reason = window.prompt(`Reason for ${role.is_active ? 'deactivating' : 'activating'} ${role.role_name}`);
     if (!reason) return;
-    await adminPhase1API.updateRoleStatus(role.role_id, { is_active: !role.is_active, reason });
-    afterSave();
+    try {
+      await adminPhase1API.updateRoleStatus(role.role_id, { is_active: !role.is_active, reason });
+      afterSave();
+    } catch (error) {
+      setNotice(error.response?.data?.detail || 'Unable to update role status');
+    }
+  };
+
+  const deleteRole = async (role) => {
+    if (role.is_system) {
+      setNotice('System roles are protected and cannot be deleted.');
+      return;
+    }
+    const confirmed = window.confirm(`Delete role ${role.role_name}? This action cannot be undone.`);
+    if (!confirmed) return;
+    try {
+      await adminPhase1API.deleteRole(role.role_id);
+      setNotice('Role deleted and audit history updated');
+      load();
+    } catch (error) {
+      setNotice(error.response?.data?.detail || 'Unable to delete role');
+    }
   };
 
   if (state.loading) return <LoadingState />;
@@ -253,6 +273,11 @@ const RolesPermissions = () => {
               <div className="mt-4 flex flex-wrap gap-2">
                 <button onClick={() => setModal({ type: 'role', role })} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold"><Edit className="h-3.5 w-3.5" /> Edit</button>
                 <button onClick={() => toggleRoleStatus(role)} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold">{role.is_active ? 'Deactivate' : 'Activate'}</button>
+                {role.is_system ? (
+                  <span className="rounded-lg bg-slate-50 px-2 py-1 text-xs font-bold text-slate-400">Protected</span>
+                ) : (
+                  <button onClick={() => deleteRole(role)} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
+                )}
               </div>
             </Panel>
           ))}

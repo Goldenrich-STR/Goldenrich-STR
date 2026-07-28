@@ -55,6 +55,7 @@ import {
   Smartphone,
   Expand,
 } from 'lucide-react';
+import HostSupportWidget from '../components/HostSupportWidget';
 
 const SUBSCRIPTION_UPI = {
   id: 'goldenrich123@idfcbank',
@@ -1665,6 +1666,7 @@ const HostListProperty = () => {
             </div>
           </div>
         </div>
+        <HostSupportWidget context="property_listing" />
       </div>
     );
   }
@@ -3325,6 +3327,7 @@ const HostListProperty = () => {
           </div>
         </div>
       )}
+      <HostSupportWidget context="property_listing" />
     </div>
   );
 };

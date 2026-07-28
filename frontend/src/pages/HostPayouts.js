@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { accountAPI, bookingAPI } from '../services/api';
+import HostSupportWidget from '../components/HostSupportWidget';
 
 const fmtINR = (paise) =>
   new Intl.NumberFormat('en-IN', {
@@ -413,6 +414,7 @@ const HostPayouts = () => {
           </>
         )}
       </main>
+      <HostSupportWidget context="payout_issue" />
     </div>
   );
 };

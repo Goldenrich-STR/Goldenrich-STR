@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, getImageUrl, accountAPI, uploadAPI, loadRazorpaySdk, cmsAPI } from '../services/api';
 import ReactMarkdown from 'react-markdown';
-import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2, Clock, Users, Landmark, Briefcase, User } from 'lucide-react';
+import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2, Clock, Users, Landmark, Briefcase, User, Star } from 'lucide-react';
 import { NotificationBell } from '../components/NotificationCenter';
 import LegalLinks from '../components/LegalLinks';
+import HostSupportWidget from '../components/HostSupportWidget';
 
 const DEFAULT_HOST_AGREEMENT_TITLE = 'SHORT-TERM RENTAL HOST AGREEMENT';
 const DEFAULT_HOST_AGREEMENT_TEXT = `## SHORT-TERM RENTAL HOST AGREEMENT
@@ -697,6 +698,12 @@ const HostDashboard = () => {
     currency: 'INR',
     maximumFractionDigits: 0,
   }).format(totalEarningsPaise / 100);
+  const propertyRatings = properties
+    .map((property) => Number(property.rating || property.average_rating || 0))
+    .filter((rating) => rating > 0);
+  const averageRating = propertyRatings.length
+    ? `${(propertyRatings.reduce((sum, rating) => sum + rating, 0) / propertyRatings.length).toFixed(1)} / 5`
+    : 'Not Rated';
 
   const isRejected = (property) => {
     return property.status === 'rejected' || (property.status === 'draft' && property.verification_remarks);
@@ -711,11 +718,12 @@ const HostDashboard = () => {
   };
 
   const stats = [
-    { label: 'Total Properties', value: properties.length, icon: Building2, statusFilter: 'all' },
-    { label: 'Active Listings', value: properties.filter(isLive).length, icon: Eye, statusFilter: 'live' },
-    { label: 'Pending Review', value: properties.filter(isPending).length, icon: Calendar, statusFilter: 'pending_verification' },
-    { label: 'Rejected Properties', value: properties.filter(isRejected).length, icon: AlertCircle, statusFilter: 'rejected' },
-    { label: 'Total Earnings', value: formattedEarnings, icon: IndianRupee },
+    { label: 'Total Properties', value: properties.length, note: 'All listed spaces', icon: Building2, statusFilter: 'all', tone: 'text-slate-700 bg-slate-50' },
+    { label: 'Active Listings', value: properties.filter(isLive).length, note: 'Available to guests', icon: Eye, statusFilter: 'live', tone: 'text-sage bg-sage/10' },
+    { label: 'Pending Review', value: properties.filter(isPending).length, note: 'Awaiting approval', icon: Calendar, statusFilter: 'pending_verification', tone: 'text-amber-600 bg-amber-50' },
+    { label: 'Rejected Properties', value: properties.filter(isRejected).length, note: 'Needs correction', icon: AlertCircle, statusFilter: 'rejected', tone: 'text-red-600 bg-red-50' },
+    { label: 'Total Earnings', value: formattedEarnings, note: 'Paid payouts', icon: IndianRupee, tone: 'text-emerald-700 bg-emerald-50' },
+    { label: 'Guest Rating', value: averageRating, note: 'Property reviews', icon: Star, action: () => navigate('/host/performance'), tone: 'text-amber-500 bg-amber-50' },
   ];
 
   return (
@@ -801,27 +809,55 @@ const HostDashboard = () => {
         </div>
       </header>
 
-      <div className="w-full px-4 md:px-8 lg:px-12 py-10 mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 animate-fade-in">
-          <div>
-            <h2 className="text-2xl md:text-4xl font-bold tracking-tight text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
-              Your Portfolio
-            </h2>
-            <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Manage your properties and track performance</p>
+      <div className="w-full px-4 md:px-8 lg:px-12 py-8 md:py-10 mx-auto">
+        <section className="bg-white border border-gray-100 rounded-[2rem] shadow-sm p-5 md:p-7 mb-8 animate-fade-in">
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
+            <div className="max-w-3xl">
+              <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.22em] mb-2">Host Command Center</p>
+              <h2 className="text-2xl md:text-4xl font-bold text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
+                Your Portfolio
+              </h2>
+              <p className="text-sm text-charcoal-muted font-semibold leading-relaxed">
+                Manage listings, subscriptions, calendar readiness, payouts and guest experience from one clean workspace.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+              <button
+                onClick={() => navigate('/host/performance')}
+                className="min-h-[48px] rounded-2xl border border-gray-200 px-5 text-xs font-bold uppercase tracking-widest text-charcoal hover:border-terracotta hover:text-terracotta transition inline-flex items-center justify-center gap-2"
+              >
+                <Star className="w-4 h-4" />
+                Ratings
+              </button>
+              <button
+                onClick={handleListPropertyClick}
+                className={`min-h-[48px] rounded-2xl px-6 font-bold uppercase tracking-widest text-xs transition-all inline-flex items-center justify-center gap-2 ${
+                  isLocked 
+                    ? 'bg-sand-200 text-charcoal-muted hover:bg-sand-300' 
+                    : 'bg-charcoal text-white shadow-premium hover:bg-terracotta'
+                }`}
+                data-testid="create-property-btn"
+              >
+                {isLocked ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                List New Property
+              </button>
+            </div>
           </div>
-          <button
-            onClick={handleListPropertyClick}
-            className={`flex items-center space-x-3 px-8 py-4 shadow-premium rounded-3xl font-bold tracking-tight uppercase tracking-widest text-sm transition-all duration-500 ${
-              isLocked 
-                ? 'bg-sand-200 text-charcoal-muted hover:bg-sand-300' 
-                : 'btn-premium'
-            }`}
-            data-testid="create-property-btn"
-          >
-            {isLocked ? <Lock className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-            <span>List New Property</span>
-          </button>
-        </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-6 border-t border-gray-100">
+            {[
+              ['Host', user?.full_name || 'Host'],
+              ['KYC', user?.kyc_status || 'pending'],
+              ['Live Properties', properties.filter(isLive).length],
+              ['Open Payouts', payouts.filter(p => ['eligible', 'processing', 'needs_destination'].includes(p.status)).length],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-2xl bg-stone/70 border border-sand-100 px-4 py-3 min-w-0">
+                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
+                <p className="text-sm font-bold text-charcoal mt-1 truncate capitalize">{value}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Verification Status Banner */}
         {user?.kyc_status === 'pending' && (
@@ -860,22 +896,26 @@ const HostDashboard = () => {
         )}
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6 mb-12 animate-slide-up" data-testid="stats-grid">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-4 mb-8 animate-slide-up" data-testid="stats-grid">
           {stats.map((stat, idx) => {
-            const isClickable = !!stat.statusFilter;
+            const isClickable = !!stat.statusFilter || !!stat.action;
             const isActive = isClickable && filterStatus === stat.statusFilter;
             return (
               <div 
                 key={idx} 
                 onClick={() => {
+                  if (stat.action) {
+                    stat.action();
+                    return;
+                  }
                   if (isClickable) {
                     setFilterStatus(stat.statusFilter);
                     setCurrentPage(1);
                   }
                 }}
-                className={`bg-white rounded-3xl p-4 sm:p-8 border shadow-premium group transition-all duration-500 ${
+                className={`bg-white rounded-3xl p-5 border shadow-sm group transition-all duration-300 min-h-[150px] ${
                   isClickable 
-                    ? 'cursor-pointer hover:border-terracotta hover:scale-[1.02]' 
+                    ? 'cursor-pointer hover:border-terracotta hover:-translate-y-0.5 hover:shadow-premium' 
                     : ''
                 } ${
                   isActive 
@@ -884,13 +924,16 @@ const HostDashboard = () => {
                 }`}
                 data-testid={`stat-${idx}`}
               >
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-colors ${
-                  isActive ? 'bg-terracotta text-white' : 'bg-stone group-hover:bg-terracotta/5'
-                }`}>
-                  <stat.icon className={`w-6 h-6 ${isActive ? 'text-white' : 'text-terracotta'}`} />
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{stat.label}</p>
+                    <p className="text-2xl md:text-3xl font-bold text-charcoal mt-4 break-words">{stat.value}</p>
+                  </div>
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors ${isActive ? 'bg-terracotta text-white' : stat.tone}`}>
+                    <stat.icon className={`w-5 h-5 ${isActive ? 'text-white' : ''}`} />
+                  </div>
                 </div>
-                <p className="text-4xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">{stat.value}</p>
-                <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">{stat.label}</p>
+                <p className="text-[11px] font-semibold text-charcoal-muted mt-3">{stat.note}</p>
               </div>
             );
           })}
@@ -898,14 +941,40 @@ const HostDashboard = () => {
 
         {/* Properties List */}
         <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
-          <div className="flex items-center mb-6">
-             <h3 className="text-xl font-bold tracking-tight text-charcoal tracking-tight">
+          <div className="bg-white border border-gray-100 rounded-[2rem] shadow-sm p-4 md:p-5 mb-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-1">Listing Operations</p>
+                <h3 className="text-xl font-bold text-charcoal tracking-tight">
                {filterStatus === 'all' ? 'All Properties' :
                 filterStatus === 'live' ? 'Active Listings' :
                 filterStatus === 'pending_verification' ? 'Pending Review' :
                 filterStatus === 'rejected' ? 'Rejected Properties' : 'Properties'}
-             </h3>
-             <div className="ml-4 h-px flex-1 bg-sand-200"></div>
+                </h3>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  ['all', 'All'],
+                  ['live', 'Live'],
+                  ['pending_verification', 'Pending'],
+                  ['rejected', 'Rejected'],
+                ].map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => {
+                      setFilterStatus(value);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition ${
+                      filterStatus === value ? 'bg-charcoal text-white' : 'bg-stone text-charcoal-muted hover:text-charcoal'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {(() => {
@@ -930,23 +999,23 @@ const HostDashboard = () => {
             if (filteredProperties.length > 0) {
               return (
                 <div data-testid="properties-list">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5">
                     {[...filteredProperties]
                       .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
                       .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                       .map((property) => (
                       <div 
                         key={property.property_id} 
-                        className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-premium transition-all duration-300 flex flex-col h-full group" 
+                        className="bg-white rounded-[1.75rem] p-4 border border-gray-100 shadow-sm hover:shadow-premium transition-all duration-300 flex flex-col h-full group" 
                         data-testid={`property-${property.property_id}`}
                       >
-                        <div className="relative overflow-hidden w-full h-48 rounded-2xl mb-4">
+                        <div className="relative overflow-hidden w-full aspect-[16/9] rounded-2xl mb-4 bg-stone">
                           <img
-                            src={getImageUrl(property.images[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
+                            src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                             alt={property.title}
                             className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
                           />
-                          <div className="absolute inset-0 bg-charcoal/10"></div>
+                          <div className="absolute inset-0 bg-gradient-to-t from-charcoal/45 via-transparent to-transparent"></div>
                           <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest ${
                             isLive(property) ? 'bg-sage text-white' :
                             isPending(property) ? 'bg-amber-500 text-white' :
@@ -955,13 +1024,27 @@ const HostDashboard = () => {
                           }`}>
                             {isRejected(property) ? 'rejected' : (property.status === 'live' && property.is_edited ? 'live (edited)' : property.status.replace('_', ' '))}
                           </span>
+                          <div className="absolute bottom-3 left-3 right-3">
+                            <h3 className="text-lg font-bold text-white line-clamp-1" title={property.title}>{property.title}</h3>
+                            <div className="flex items-center text-white/85 gap-1 mt-1">
+                              <MapPin className="w-3 h-3" />
+                              <span className="text-[10px] font-bold uppercase tracking-widest">{property.city || 'No city'}</span>
+                            </div>
+                          </div>
                         </div>
                         
                         <div className="flex-1">
-                          <h3 className="text-lg font-bold tracking-tight text-charcoal mb-1 line-clamp-1" title={property.title}>{property.title}</h3>
-                          <div className="flex items-center text-charcoal-muted space-x-2 mb-4">
-                             <MapPin className="w-3 h-3" />
-                             <span className="text-[10px] font-bold uppercase tracking-widest">{property.city}</span>
+                          <div className="grid grid-cols-3 gap-2 mb-4">
+                            {[
+                              ['Rating', property.rating_avg || property.rating || '0.0'],
+                              ['Reviews', property.rating_count || property.review_count || 0],
+                              ['Type', property.bhk_type || property.property_type || 'N/A'],
+                            ].map(([label, value]) => (
+                              <div key={label} className="rounded-2xl bg-stone/70 border border-sand-100 px-3 py-2 min-w-0">
+                                <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
+                                <p className="text-xs font-bold text-charcoal mt-1 truncate">{value}</p>
+                              </div>
+                            ))}
                           </div>
 
                           {isRejected(property) && property.verification_remarks && (
@@ -990,7 +1073,7 @@ const HostDashboard = () => {
                             };
 
                             return (
-                              <div className="mt-3 p-3 bg-stone/80 rounded-2xl border border-sand-100 flex flex-col gap-2 mb-4">
+                              <div className="mt-3 p-4 bg-stone/80 rounded-2xl border border-sand-100 flex flex-col gap-2 mb-4">
                                 <div className="flex justify-between items-center text-[10px] font-bold">
                                   <span className="uppercase tracking-widest text-charcoal-muted">Sub Plan</span>
                                   <span className="text-terracotta">{plan ? plan.plan_name : (propSub.plan_type || 'N/A').toUpperCase()}</span>
@@ -1016,7 +1099,7 @@ const HostDashboard = () => {
                           })()}
                         </div>
 
-                        <div className="flex items-center space-x-3 mt-auto pt-4 border-t border-sand-100">
+                        <div className="grid grid-cols-2 gap-3 mt-auto pt-4 border-t border-sand-100">
                           <button
                             onClick={() => {
                               if (isLive(property)) {
@@ -1025,7 +1108,7 @@ const HostDashboard = () => {
                                 alert('This property is not verified yet. Calendar will be available once the property is live.');
                               }
                             }}
-                            className={`flex-1 py-3 rounded-xl border-2 border-gray-100 text-[10px] font-bold tracking-tight uppercase tracking-widest transition-all ${
+                            className={`py-3 rounded-xl border border-gray-200 text-[10px] font-bold uppercase tracking-widest transition-all ${
                               isLive(property) ? 'hover:border-charcoal' : 'opacity-50 cursor-not-allowed'
                             }`}
                             data-testid={`property-calendar-${property.property_id}`}
@@ -1034,7 +1117,7 @@ const HostDashboard = () => {
                           </button>
                           <button
                             onClick={() => navigate(`/host/list-property?edit=${property.property_id}`)}
-                            className="flex-1 py-3 rounded-xl bg-charcoal text-white text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
+                            className="py-3 rounded-xl bg-charcoal text-white text-[10px] font-bold uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
                           >
                             Manage
                           </button>
@@ -1741,6 +1824,7 @@ const HostDashboard = () => {
             </div>
           </div>
         )}
+        <HostSupportWidget context="host_dashboard" />
       </div>
     </div>
   );

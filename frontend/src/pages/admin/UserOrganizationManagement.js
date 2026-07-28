@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Edit, History, KeyRound, Power, Search, ShieldCheck, UserPlus, X } from 'lucide-react';
+import { Edit, History, KeyRound, Power, Search, ShieldCheck, Trash2, UserPlus, X } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge } from './shared';
 
@@ -18,6 +18,14 @@ const baseForm = {
 
 const accessOptions = ['self', 'assigned_records', 'direct_reports', 'full_team', 'department', 'branch', 'franchise', 'region', 'state', 'global', 'custom'];
 const permissionOptions = ['view', 'create', 'edit', 'approve', 'reject', 'assign', 'export', 'delete', 'manage_settings', 'view_sensitive_data', 'manage_permissions'];
+
+const getApiMessage = (error, fallback) => {
+  const detail = error?.response?.data?.detail;
+  if (Array.isArray(detail)) return detail.map((item) => item.msg || item.message || String(item)).join(', ');
+  return detail || error?.message || fallback;
+};
+
+const normalizeUsersResponse = (payload) => payload?.data?.users || payload?.users || [];
 
 const ModalShell = ({ title, children, onClose }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
@@ -159,11 +167,14 @@ const UserOrganizationManagement = () => {
   const loadUsers = useCallback(async () => {
     setState((s) => ({ ...s, loading: true }));
     try {
-      const params = tab === 'inactive' ? { status: 'inactive', search } : { role: tab, search };
+      const cleanSearch = search.trim() || undefined;
+      const params = tab === 'inactive'
+        ? { status: 'inactive', search: cleanSearch }
+        : { role: tab === 'all' ? undefined : tab, search: cleanSearch };
       const res = await adminPhase1API.users(params);
-      setState({ loading: false, error: '', users: res.data.data.users });
+      setState({ loading: false, error: '', users: normalizeUsersResponse(res.data) });
     } catch (error) {
-      setState({ loading: false, error: error.response?.data?.detail || 'Failed to load users', users: [] });
+      setState({ loading: false, error: getApiMessage(error, 'Failed to load users'), users: [] });
     }
   }, [tab, search]);
 
@@ -176,10 +187,18 @@ const UserOrganizationManagement = () => {
   };
 
   const changeStatus = async (user) => {
+    if (user.admin_delete_protected && user.is_active !== false) {
+      setNotice('Protected admin account cannot be deactivated.');
+      return;
+    }
     const reason = window.prompt(`Reason for ${user.is_active === false ? 'activating' : 'deactivating'} this user`);
     if (!reason) return;
-    await adminPhase1API.updateUserStatus(user.user_id, { is_active: user.is_active === false, reason });
-    closeAndReload(false);
+    try {
+      await adminPhase1API.updateUserStatus(user.user_id, { is_active: user.is_active === false, reason });
+      closeAndReload(false);
+    } catch (error) {
+      setNotice(getApiMessage(error, 'Unable to update user status'));
+    }
   };
 
   const resetPassword = async (user) => {
@@ -187,13 +206,41 @@ const UserOrganizationManagement = () => {
     if (!password) return;
     const reason = window.prompt('Reason for password reset');
     if (!reason) return;
-    await adminPhase1API.resetUserPassword(user.user_id, { password, reason });
-    setNotice('Password reset completed and audited');
+    try {
+      await adminPhase1API.resetUserPassword(user.user_id, { password, reason });
+      setNotice('Password reset completed and audited');
+    } catch (error) {
+      setNotice(getApiMessage(error, 'Unable to reset password'));
+    }
   };
 
   const openAudit = async (user) => {
-    const res = await adminPhase1API.userAuditLogs(user.user_id);
-    setModal({ type: 'audit', user, logs: res.data.data.logs });
+    try {
+      const res = await adminPhase1API.userAuditLogs(user.user_id);
+      setModal({ type: 'audit', user, logs: res.data?.data?.logs || res.data?.logs || [] });
+    } catch (error) {
+      setNotice(getApiMessage(error, 'Unable to load audit history'));
+    }
+  };
+
+  const deleteInactiveUser = async (user) => {
+    if (user.admin_delete_protected) {
+      setNotice('Protected admin account cannot be deleted.');
+      return;
+    }
+    if (user.is_active !== false) {
+      setNotice('Only inactive users can be deleted. Deactivate the user first.');
+      return;
+    }
+    const confirmed = window.confirm(`Delete inactive user ${user.full_name || user.email}? This action cannot be undone.`);
+    if (!confirmed) return;
+    try {
+      await adminPhase1API.deleteUser(user.user_id);
+      setNotice('Inactive user deleted and audit log created');
+      loadUsers();
+    } catch (error) {
+      setNotice(getApiMessage(error, 'Unable to delete inactive user'));
+    }
   };
 
   return (
@@ -244,6 +291,9 @@ const UserOrganizationManagement = () => {
                         <SmallAction icon={KeyRound} label="Reset" onClick={() => resetPassword(u)} />
                         <SmallAction icon={History} label="Audit" onClick={() => openAudit(u)} />
                         <SmallAction icon={Power} label={u.is_active === false ? 'Activate' : 'Deactivate'} tone={u.is_active === false ? 'slate' : 'red'} onClick={() => changeStatus(u)} />
+                        {tab === 'inactive' && (
+                          <SmallAction icon={Trash2} label="Delete" tone="red" onClick={() => deleteInactiveUser(u)} />
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -260,6 +310,9 @@ const UserOrganizationManagement = () => {
                   <SmallAction icon={Edit} label="Edit" onClick={() => setModal({ type: 'form', user: u })} />
                   <SmallAction icon={History} label="Audit" onClick={() => openAudit(u)} />
                   <SmallAction icon={Power} label={u.is_active === false ? 'Activate' : 'Deactivate'} onClick={() => changeStatus(u)} />
+                  {tab === 'inactive' && (
+                    <SmallAction icon={Trash2} label="Delete" tone="red" onClick={() => deleteInactiveUser(u)} />
+                  )}
                 </div>
               </div>
             ))}

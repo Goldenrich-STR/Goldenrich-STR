@@ -22,6 +22,7 @@ import {
   Building,
   Volume2
 } from 'lucide-react';
+import HostSupportWidget from '../components/HostSupportWidget';
 
 const STATUS_BADGE = {
   confirmed: { label: 'Confirmed', cls: 'bg-green-50 text-green-700 border-green-200', Icon: CheckCircle2 },
@@ -657,6 +658,7 @@ const HostBookings = () => {
           onClose={() => setSelectedCall(null)}
         />
       )}
+      <HostSupportWidget context="booking_issue" />
     </div>
   );
 };

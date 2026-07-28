@@ -48,21 +48,67 @@ async def get_employee_dashboard_stats(
 ):
     """Get employee dashboard statistics."""
     try:
-        # Get brokers in this RM's region
-        total_brokers = await db.users.count_documents({"role": "broker", "rm_id": current_user["user_id"]})
+        rm_id = current_user["user_id"]
+        now = datetime.now(timezone.utc)
+        today = date.today()
+        month_start = today.replace(day=1)
+        next_month = date(today.year + (1 if today.month == 12 else 0), 1 if today.month == 12 else today.month + 1, 1)
+
+        broker_cursor = db.users.find(
+            {"role": "broker", "rm_id": rm_id},
+            {"_id": 0, "user_id": 1, "is_active": 1}
+        )
+        my_brokers = await broker_cursor.to_list(length=1000)
+        my_broker_ids = [broker["user_id"] for broker in my_brokers]
+        total_brokers = len(my_broker_ids)
+        active_brokers = len([broker for broker in my_brokers if broker.get("is_active", True)])
+        inactive_brokers = total_brokers - active_brokers
+
+        host_cursor = db.users.find(
+            {
+                "role": "host",
+                "$or": [
+                    {"rm_id": rm_id},
+                    {"broker_id": {"$in": my_broker_ids}},
+                ],
+            },
+            {"_id": 0, "user_id": 1, "kyc_status": 1}
+        )
+        my_hosts = await host_cursor.to_list(length=3000)
+        my_host_ids = list({host["user_id"] for host in my_hosts if host.get("user_id")})
+        pending_host_verification = len([host for host in my_hosts if host.get("kyc_status") not in {"approved", "verified"}])
+
+        property_query = {
+            "$or": [
+                {"rm_id": rm_id},
+                {"employee_id": rm_id},
+                {"broker_id": {"$in": my_broker_ids}},
+                {"owner_id": {"$in": my_host_ids}},
+            ]
+        }
+        properties = await db.properties.find(
+            property_query,
+            {"_id": 0, "property_id": 1, "status": 1, "rating": 1}
+        ).to_list(length=5000)
+        property_ids = list({prop["property_id"] for prop in properties if prop.get("property_id")})
+
+        live_properties = len([prop for prop in properties if prop.get("status") == "live"])
+        pending_property_verification = len([prop for prop in properties if prop.get("status") in {"pending_verification", "under_review"}])
+        rejected_properties = len([prop for prop in properties if prop.get("status") == "rejected"])
+        draft_properties = len([prop for prop in properties if prop.get("status") == "draft"])
         
         # Pending verifications (all verifications waiting for this RM's review)
         pending_verifications = await db.property_verifications.count_documents({
             "status": VerificationStatus.COMPLETED.value,
             "rm_reviewed": False,
-            "rm_id": current_user["user_id"]
+            "rm_id": rm_id
         })
         
         # Total properties under review (pending this RM's review)
         pending_reviews = await db.property_verifications.find({
             "status": VerificationStatus.COMPLETED.value,
             "rm_reviewed": False,
-            "rm_id": current_user["user_id"]
+            "rm_id": rm_id
         }).to_list()
         
         pending_property_ids = list(set([v["property_id"] for v in pending_reviews if "property_id" in v]))
@@ -72,26 +118,112 @@ async def get_employee_dashboard_stats(
             "property_id": {"$in": pending_property_ids}
         })
         
-        # Subscription alerts under hosts assigned to this RM
-        from datetime import date
-        today = date.today()
         expiring_soon_date = (today + timedelta(days=5)).isoformat()
-        
-        my_hosts = await db.users.find(
-            {"role": "host", "rm_id": current_user["user_id"]},
-            {"user_id": 1}
-        ).to_list(length=1000)
-        my_host_ids = [h["user_id"] for h in my_hosts]
-        
+
         expiring_subscriptions = await db.subscriptions.count_documents({
             "status": {"$in": ["trial", "active"]},
             "end_date": {"$lte": expiring_soon_date},
             "user_id": {"$in": my_host_ids}
         })
-        
+
+        booking_query = {
+            "$or": [
+                {"rm_id": rm_id},
+                {"employee_id": rm_id},
+                {"broker_id": {"$in": my_broker_ids}},
+                {"host_id": {"$in": my_host_ids}},
+                {"property_id": {"$in": property_ids}},
+            ]
+        }
+        bookings = await db.bookings.find(
+            booking_query,
+            {"_id": 0, "booking_status": 1, "payment_status": 1, "total_amount": 1, "check_in_date": 1, "check_out_date": 1, "created_at": 1}
+        ).to_list(length=10000)
+
+        def _date_value(value):
+            if isinstance(value, datetime):
+                return value.date()
+            if isinstance(value, date):
+                return value
+            if isinstance(value, str):
+                try:
+                    return date.fromisoformat(value[:10])
+                except ValueError:
+                    return None
+            return None
+
+        bookings_today = len([booking for booking in bookings if _date_value(booking.get("created_at")) == today])
+        bookings_this_month = len([
+            booking for booking in bookings
+            if (created := _date_value(booking.get("created_at"))) and month_start <= created < next_month
+        ])
+        upcoming_checkins = len([
+            booking for booking in bookings
+            if booking.get("booking_status") in {"confirmed", "soft_lock"} and _date_value(booking.get("check_in_date")) and today <= _date_value(booking.get("check_in_date")) <= today + timedelta(days=7)
+        ])
+        upcoming_checkouts = len([
+            booking for booking in bookings
+            if booking.get("booking_status") in {"confirmed", "completed"} and _date_value(booking.get("check_out_date")) and today <= _date_value(booking.get("check_out_date")) <= today + timedelta(days=7)
+        ])
+        paid_bookings = [
+            booking for booking in bookings
+            if booking.get("payment_status") in {"paid", "partially_paid"} or booking.get("booking_status") in {"confirmed", "completed"}
+        ]
+        revenue_generated = round(sum(float(booking.get("total_amount") or 0) for booking in paid_bookings), 2)
+
+        commissions = await db.commissions.find(
+            {"broker_id": {"$in": my_broker_ids}},
+            {"_id": 0, "commission_amount": 1}
+        ).to_list(length=5000)
+        broker_commission_generated = round(sum(float(item.get("commission_amount") or 0) for item in commissions), 2)
+
+        rated_properties = [float(prop.get("rating") or 0) for prop in properties if float(prop.get("rating") or 0) > 0]
+        average_property_rating = round(sum(rated_properties) / len(rated_properties), 1) if rated_properties else 0
+        average_occupancy = round((len([b for b in bookings if b.get("booking_status") in {"confirmed", "completed"}]) / max(live_properties * 30, 1)) * 100, 1)
+
+        stale_cutoff = now - timedelta(hours=48)
+        pending_escalations = await db.property_verifications.count_documents({
+            "rm_id": rm_id,
+            "status": VerificationStatus.COMPLETED.value,
+            "rm_reviewed": False,
+            "completed_at": {"$lt": stale_cutoff}
+        })
+        sla_breaches = pending_escalations
+
         return {
             "brokers": {
-                "total": total_brokers
+                "total": total_brokers,
+                "active": active_brokers,
+                "inactive": inactive_brokers
+            },
+            "hosts": {
+                "total": len(my_host_ids),
+                "pending_verification": pending_host_verification
+            },
+            "properties": {
+                "total": len(property_ids),
+                "live": live_properties,
+                "pending_verification": pending_property_verification,
+                "rejected": rejected_properties,
+                "draft": draft_properties,
+                "average_rating": average_property_rating
+            },
+            "bookings": {
+                "today": bookings_today,
+                "this_month": bookings_this_month,
+                "upcoming_checkins": upcoming_checkins,
+                "upcoming_checkouts": upcoming_checkouts,
+                "total": len(bookings)
+            },
+            "finance": {
+                "revenue_generated": revenue_generated,
+                "broker_commission_generated": broker_commission_generated
+            },
+            "performance": {
+                "average_occupancy": average_occupancy,
+                "average_property_rating": average_property_rating,
+                "pending_escalations": pending_escalations,
+                "sla_breaches": sla_breaches
             },
             "verifications": {
                 "pending_review": pending_verifications,
@@ -684,18 +816,74 @@ async def get_all_brokers(
                 "broker_id": broker_id,
                 "status": "live"
             })
+            broker_property_ids = [
+                item["property_id"]
+                for item in await db.properties.find({"broker_id": broker_id}, {"_id": 0, "property_id": 1}).to_list(length=1000)
+                if item.get("property_id")
+            ]
             
             # Pending verifications
             pending_verifications = await db.property_verifications.count_documents({
                 "broker_id": broker_id,
-                "status": {"$in": ["pending", "in_progress"]}
+                "$or": [
+                    {"status": {"$in": ["pending", "in_progress", VerificationStatus.COMPLETED.value]}},
+                    {"rm_reviewed": False}
+                ]
             })
+            bookings = await db.bookings.find(
+                {
+                    "$or": [
+                        {"broker_id": broker_id},
+                        {"property_id": {"$in": broker_property_ids}},
+                    ]
+                },
+                {"_id": 0, "booking_status": 1, "payment_status": 1, "total_amount": 1, "created_at": 1}
+            ).to_list(length=2000)
+            revenue_generated = round(sum(
+                float(booking.get("total_amount") or 0)
+                for booking in bookings
+                if booking.get("payment_status") in {"paid", "partially_paid"} or booking.get("booking_status") in {"confirmed", "completed"}
+            ), 2)
+            commissions = await db.commissions.find(
+                {"broker_id": broker_id},
+                {"_id": 0, "commission_amount": 1, "payment_status": 1}
+            ).to_list(length=1000)
+            commission_earned = round(sum(float(item.get("commission_amount") or 0) for item in commissions), 2)
+            stale_cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
+            pending_escalations = await db.property_verifications.count_documents({
+                "broker_id": broker_id,
+                "rm_id": current_user["user_id"],
+                "rm_reviewed": False,
+                "created_at": {"$lt": stale_cutoff}
+            })
+            latest_audit = await db.audit_logs.find_one(
+                {
+                    "$or": [
+                        {"user_id": broker_id},
+                        {"record_id": broker_id},
+                        {"record_id": {"$in": broker_property_ids}},
+                    ]
+                },
+                {"_id": 0, "created_at": 1, "action": 1, "module": 1},
+                sort=[("created_at", -1)]
+            )
+            performance_rating = round(
+                min(5, (live_properties * 0.4) + (len(bookings) * 0.15) + (revenue_generated / 100000)),
+                1
+            ) if property_count or bookings else 0
             
             broker["stats"] = {
                 "owners": owner_count,
+                "hosts": owner_count,
                 "properties": property_count,
                 "live_properties": live_properties,
-                "pending_verifications": pending_verifications
+                "bookings": len(bookings),
+                "revenue_generated": revenue_generated,
+                "commission_earned": commission_earned,
+                "pending_verifications": pending_verifications,
+                "pending_escalations": pending_escalations,
+                "performance_rating": performance_rating,
+                "last_activity": latest_audit
             }
         
         return {
@@ -739,6 +927,7 @@ async def get_broker_portfolio(
         # Get all properties
         property_cursor = db.properties.find({"broker_id": broker_id}, {"_id": 0})
         properties = await property_cursor.to_list(length=200)
+        property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
         
         # Get all owners
         owner_cursor = db.users.find(
@@ -746,11 +935,60 @@ async def get_broker_portfolio(
             {"_id": 0, "password_hash": 0}
         )
         owners = await owner_cursor.to_list(length=200)
+
+        bookings = await db.bookings.find(
+            {
+                "$or": [
+                    {"broker_id": broker_id},
+                    {"property_id": {"$in": property_ids}},
+                ]
+            },
+            {"_id": 0}
+        ).sort("created_at", -1).to_list(length=200)
+        commissions = await db.commissions.find({"broker_id": broker_id}, {"_id": 0}).sort("created_at", -1).to_list(length=200)
+        verifications = await db.property_verifications.find({"broker_id": broker_id}, {"_id": 0}).sort("updated_at", -1).to_list(length=100)
+        audit_logs = await db.audit_logs.find(
+            {
+                "$or": [
+                    {"user_id": broker_id},
+                    {"record_id": broker_id},
+                    {"record_id": {"$in": property_ids}},
+                ]
+            },
+            {"_id": 0}
+        ).sort("created_at", -1).limit(50).to_list(length=50)
+
+        paid_bookings = [
+            booking for booking in bookings
+            if booking.get("payment_status") in {"paid", "partially_paid"} or booking.get("booking_status") in {"confirmed", "completed"}
+        ]
+        stale_cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
+        pending_escalations = [
+            item for item in verifications
+            if not item.get("rm_reviewed") and item.get("created_at") and item.get("created_at") < stale_cutoff
+        ]
+        summary = {
+            "hosts": len(owners),
+            "properties": len(properties),
+            "live_properties": len([prop for prop in properties if prop.get("status") == "live"]),
+            "pending_properties": len([prop for prop in properties if prop.get("status") in {"draft", "pending_verification", "under_review"}]),
+            "bookings": len(bookings),
+            "revenue_generated": round(sum(float(booking.get("total_amount") or 0) for booking in paid_bookings), 2),
+            "commission_earned": round(sum(float(item.get("commission_amount") or 0) for item in commissions), 2),
+            "pending_verifications": len([item for item in verifications if not item.get("rm_reviewed")]),
+            "pending_escalations": len(pending_escalations),
+        }
         
         return {
             "broker": broker,
             "properties": properties,
-            "owners": owners
+            "owners": owners,
+            "hosts": owners,
+            "bookings": bookings,
+            "commissions": commissions,
+            "verifications": verifications,
+            "audit_logs": audit_logs,
+            "summary": summary
         }
     
     except HTTPException:
@@ -762,7 +1000,845 @@ async def get_broker_portfolio(
             detail="Failed to fetch broker portfolio"
         )
 
+# ========== HOST MANAGEMENT ==========
+
+async def _get_rm_scope(db: AsyncIOMotorDatabase, rm_id: str):
+    brokers = await db.users.find(
+        {"role": "broker", "rm_id": rm_id},
+        {"_id": 0, "user_id": 1}
+    ).to_list(length=1000)
+    broker_ids = [broker["user_id"] for broker in brokers if broker.get("user_id")]
+    hosts = await db.users.find(
+        {
+            "role": "host",
+            "$or": [
+                {"rm_id": rm_id},
+                {"broker_id": {"$in": broker_ids}},
+            ],
+        },
+        {"_id": 0, "user_id": 1}
+    ).to_list(length=3000)
+    host_ids = list({host["user_id"] for host in hosts if host.get("user_id")})
+    return broker_ids, host_ids
+
+
+@router.get("/hosts")
+async def get_rm_hosts(
+    current_user: dict = Depends(require_employee),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get all hosts under this RM through direct RM assignment or assigned brokers."""
+    try:
+        broker_ids, _ = await _get_rm_scope(db, current_user["user_id"])
+        cursor = db.users.find(
+            {
+                "role": "host",
+                "$or": [
+                    {"rm_id": current_user["user_id"]},
+                    {"broker_id": {"$in": broker_ids}},
+                ],
+            },
+            {"_id": 0, "password_hash": 0}
+        ).sort("created_at", -1)
+        hosts = await cursor.to_list(length=500)
+        broker_map = {
+            broker["user_id"]: broker
+            for broker in await db.users.find(
+                {"user_id": {"$in": broker_ids}},
+                {"_id": 0, "user_id": 1, "full_name": 1, "lg_code": 1}
+            ).to_list(length=1000)
+        }
+
+        for host in hosts:
+            host_id = host["user_id"]
+            broker = broker_map.get(host.get("broker_id"), {})
+            properties = await db.properties.find(
+                {"owner_id": host_id},
+                {"_id": 0, "property_id": 1, "status": 1}
+            ).to_list(length=500)
+            bookings = await db.bookings.find(
+                {"host_id": host_id},
+                {"_id": 0, "booking_status": 1, "payment_status": 1, "total_amount": 1}
+            ).to_list(length=1000)
+            paid_bookings = [
+                booking for booking in bookings
+                if booking.get("payment_status") in {"paid", "partially_paid"} or booking.get("booking_status") in {"confirmed", "completed"}
+            ]
+            host["broker_name"] = broker.get("full_name") or "Not assigned"
+            host["broker_lg_code"] = broker.get("lg_code") or host.get("lg_code")
+            host["total_properties"] = len(properties)
+            host["live_properties"] = len([prop for prop in properties if prop.get("status") == "live"])
+            host["pending_properties"] = len([prop for prop in properties if prop.get("status") in {"draft", "pending", "pending_verification", "under_review", "rejected"}])
+            host["total_bookings"] = len(bookings)
+            host["revenue_generated"] = round(sum(float(booking.get("total_amount") or 0) for booking in paid_bookings), 2)
+            host["verification_status"] = host.get("kyc_status") or "pending"
+
+        return {"hosts": hosts, "total": len(hosts)}
+
+    except Exception as e:
+        logger.error(f"Error fetching RM hosts: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch hosts"
+        )
+
+
+@router.get("/hosts/{host_id}/details")
+async def get_rm_host_details(
+    host_id: str,
+    current_user: dict = Depends(require_employee),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get detailed host view for RM scoped host management."""
+    try:
+        broker_ids, host_ids = await _get_rm_scope(db, current_user["user_id"])
+        if host_id not in host_ids:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This host is not assigned to you"
+            )
+
+        host = await db.users.find_one(
+            {"user_id": host_id, "role": "host"},
+            {"_id": 0, "password_hash": 0}
+        )
+        if not host:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Host not found")
+
+        broker = None
+        if host.get("broker_id"):
+            broker = await db.users.find_one(
+                {"user_id": host.get("broker_id"), "role": "broker", "rm_id": current_user["user_id"]},
+                {"_id": 0, "password_hash": 0}
+            )
+
+        properties = await db.properties.find({"owner_id": host_id}, {"_id": 0}).sort("created_at", -1).to_list(length=200)
+        bookings = await db.bookings.find({"host_id": host_id}, {"_id": 0}).sort("created_at", -1).to_list(length=100)
+        payments = await db.transactions.find(
+            {"$or": [{"host_id": host_id}, {"user_id": host_id}]},
+            {"_id": 0}
+        ).sort("created_at", -1).to_list(length=100)
+        verifications = await db.property_verifications.find({"owner_id": host_id}, {"_id": 0}).sort("created_at", -1).to_list(length=100)
+        audit_events = await db.audit_logs.find(
+            {"$or": [{"user_id": host_id}, {"entity_id": host_id}, {"target_id": host_id}, {"record_id": host_id}]},
+            {"_id": 0}
+        ).sort("created_at", -1).to_list(length=50)
+
+        return {
+            "host": host,
+            "owner": host,
+            "broker": broker,
+            "properties": properties,
+            "bookings": bookings,
+            "payments": payments,
+            "verifications": verifications,
+            "audit_events": audit_events,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching RM host details: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch host details"
+        )
+
+# ========== PROPERTY MANAGEMENT ==========
+
+async def _get_rm_property_query(db: AsyncIOMotorDatabase, rm_id: str):
+    broker_ids, host_ids = await _get_rm_scope(db, rm_id)
+    return broker_ids, host_ids, {
+        "$or": [
+            {"rm_id": rm_id},
+            {"employee_id": rm_id},
+            {"broker_id": {"$in": broker_ids}},
+            {"owner_id": {"$in": host_ids}},
+        ]
+    }
+
+
+def _property_verification_stage(property_doc: dict, verification: Optional[dict]) -> dict:
+    status = property_doc.get("status") or "draft"
+    verification = verification or {}
+    rm_reviewed = bool(verification.get("rm_reviewed"))
+    admin_reviewed = bool(verification.get("admin_reviewed"))
+    stages = [
+        ("Basic Information", "completed" if property_doc.get("title") else "pending"),
+        ("Location", "completed" if property_doc.get("city") and property_doc.get("address") else "pending"),
+        ("Amenities", "completed" if property_doc.get("amenities") else "pending"),
+        ("Pricing", "completed" if property_doc.get("price_per_night") or property_doc.get("price_per_week") or property_doc.get("price_per_month") else "pending"),
+        ("Images", "completed" if property_doc.get("images") else "pending"),
+        ("Videos", "completed" if property_doc.get("video_url") or property_doc.get("youtube_short_url") or property_doc.get("youtube_long_url") else "waiting"),
+        ("Documents", "completed" if verification.get("documents") or verification.get("checklist") else "pending" if status != "draft" else "waiting"),
+        ("Broker Verification", "completed" if verification.get("status") == VerificationStatus.COMPLETED.value or verification.get("completed_at") else "pending" if status in {"pending_verification", "under_review"} else "waiting"),
+        ("RM Verification", "rejected" if rm_reviewed and verification.get("rm_approved") is False else "completed" if rm_reviewed and verification.get("rm_approved") is True else "pending" if verification.get("status") == VerificationStatus.COMPLETED.value else "waiting"),
+        ("Finance Approval", "pending" if rm_reviewed and verification.get("rm_approved") is True else "waiting"),
+        ("Admin Approval", "rejected" if admin_reviewed and verification.get("admin_approved") is False else "completed" if admin_reviewed and verification.get("admin_approved") is True else "pending" if rm_reviewed and verification.get("rm_approved") is True else "waiting"),
+        ("Property Live", "completed" if status == "live" else "rejected" if status == "rejected" else "pending" if admin_reviewed and verification.get("admin_approved") is True else "waiting"),
+    ]
+    completed = len([stage for stage in stages if stage[1] == "completed"])
+    return {
+        "current_stage": next((label for label, stage_status in stages if stage_status in {"pending", "rejected"}), "Property Live" if status == "live" else "Basic Information"),
+        "completed": completed,
+        "total": len(stages),
+        "stages": [{"label": label, "status": stage_status} for label, stage_status in stages],
+    }
+
+
+@router.get("/properties")
+async def get_rm_properties(
+    status_filter: Optional[str] = None,
+    current_user: dict = Depends(require_employee),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get all properties under this RM through broker/host/RM assignment."""
+    try:
+        _, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
+        if status_filter and status_filter != "all":
+            property_query = {"$and": [property_query, {"status": status_filter}]}
+
+        properties = await db.properties.find(property_query, {"_id": 0}).sort("updated_at", -1).to_list(length=500)
+        broker_ids = list({prop.get("broker_id") for prop in properties if prop.get("broker_id")})
+        host_ids = list({prop.get("owner_id") for prop in properties if prop.get("owner_id")})
+        brokers = {
+            row["user_id"]: row
+            for row in await db.users.find({"user_id": {"$in": broker_ids}}, {"_id": 0, "user_id": 1, "full_name": 1, "lg_code": 1}).to_list(length=500)
+        }
+        hosts = {
+            row["user_id"]: row
+            for row in await db.users.find({"user_id": {"$in": host_ids}}, {"_id": 0, "user_id": 1, "full_name": 1, "kyc_status": 1}).to_list(length=500)
+        }
+
+        for prop in properties:
+            prop_id = prop.get("property_id")
+            verification = await db.property_verifications.find_one({"property_id": prop_id}, {"_id": 0}, sort=[("updated_at", -1)])
+            booking_count = await db.bookings.count_documents({"property_id": prop_id})
+            revenue_rows = await db.bookings.find(
+                {"property_id": prop_id, "booking_status": {"$in": ["confirmed", "completed"]}},
+                {"_id": 0, "total_amount": 1}
+            ).to_list(length=1000)
+            prop["host_summary"] = hosts.get(prop.get("owner_id"), {})
+            prop["broker_summary"] = brokers.get(prop.get("broker_id"), {})
+            prop["booking_count"] = booking_count
+            prop["revenue_generated"] = round(sum(float(row.get("total_amount") or 0) for row in revenue_rows), 2)
+            prop["verification_stage"] = _property_verification_stage(prop, verification)
+
+        summary = {
+            "total": len(properties),
+            "live": len([prop for prop in properties if prop.get("status") == "live"]),
+            "pending_verification": len([prop for prop in properties if prop.get("status") in {"pending_verification", "under_review"}]),
+            "rejected": len([prop for prop in properties if prop.get("status") == "rejected"]),
+            "draft": len([prop for prop in properties if prop.get("status") == "draft"]),
+        }
+
+        return {"properties": properties, "summary": summary, "total": len(properties)}
+
+    except Exception as e:
+        logger.error(f"Error fetching RM properties: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch properties")
+
+
+@router.get("/properties/{property_id}/details")
+async def get_rm_property_details(
+    property_id: str,
+    current_user: dict = Depends(require_employee),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get detailed property view for RM scoped property operations."""
+    try:
+        _, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
+        scoped_query = {"$and": [property_query, {"property_id": property_id}]}
+        prop = await db.properties.find_one(scoped_query, {"_id": 0})
+        if not prop:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Property not found or not assigned to you")
+
+        host = await db.users.find_one({"user_id": prop.get("owner_id")}, {"_id": 0, "password_hash": 0})
+        broker = await db.users.find_one({"user_id": prop.get("broker_id")}, {"_id": 0, "password_hash": 0}) if prop.get("broker_id") else None
+        verifications = await db.property_verifications.find({"property_id": property_id}, {"_id": 0}).sort("updated_at", -1).to_list(length=100)
+        bookings = await db.bookings.find({"property_id": property_id}, {"_id": 0}).sort("created_at", -1).to_list(length=100)
+        audit_logs = await db.audit_logs.find({"record_id": property_id}, {"_id": 0}).sort("created_at", -1).to_list(length=50)
+        prop["verification_stage"] = _property_verification_stage(prop, verifications[0] if verifications else None)
+
+        return {
+            "property": prop,
+            "host": host,
+            "broker": broker,
+            "verifications": verifications,
+            "bookings": bookings,
+            "audit_logs": audit_logs,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching RM property details: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch property details")
+
+# ========== BOOKING MANAGEMENT ==========
+
+async def _get_rm_booking_query(db: AsyncIOMotorDatabase, rm_id: str):
+    broker_ids, host_ids, property_query = await _get_rm_property_query(db, rm_id)
+    properties = await db.properties.find(property_query, {"_id": 0, "property_id": 1}).to_list(length=5000)
+    property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
+    return broker_ids, host_ids, property_ids, {
+        "$or": [
+            {"rm_id": rm_id},
+            {"employee_id": rm_id},
+            {"broker_id": {"$in": broker_ids}},
+            {"host_id": {"$in": host_ids}},
+            {"property_id": {"$in": property_ids}},
+        ]
+    }
+
+
+def _booking_date(value):
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str):
+        try:
+            return date.fromisoformat(value[:10])
+        except ValueError:
+            return None
+    return None
+
+
+@router.get("/bookings")
+async def get_rm_bookings(
+    status_filter: Optional[str] = None,
+    period: Optional[str] = None,
+    current_user: dict = Depends(require_employee),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get RM scoped bookings across assigned brokers, hosts and properties."""
+    try:
+        _, _, _, booking_query = await _get_rm_booking_query(db, current_user["user_id"])
+        if status_filter and status_filter != "all":
+            booking_query = {"$and": [booking_query, {"booking_status": status_filter}]}
+
+        bookings = await db.bookings.find(booking_query, {"_id": 0}).sort("created_at", -1).to_list(length=500)
+        today = date.today()
+        if period and period != "all":
+            if period == "daily":
+                bookings = [booking for booking in bookings if _booking_date(booking.get("created_at")) == today]
+            elif period == "weekly":
+                start = today - timedelta(days=today.weekday())
+                end = start + timedelta(days=7)
+                bookings = [booking for booking in bookings if (created := _booking_date(booking.get("created_at"))) and start <= created < end]
+            elif period == "monthly":
+                start = today.replace(day=1)
+                end = date(today.year + (1 if today.month == 12 else 0), 1 if today.month == 12 else today.month + 1, 1)
+                bookings = [booking for booking in bookings if (created := _booking_date(booking.get("created_at"))) and start <= created < end]
+            elif period == "yearly":
+                start = date(today.year, 1, 1)
+                end = date(today.year + 1, 1, 1)
+                bookings = [booking for booking in bookings if (created := _booking_date(booking.get("created_at"))) and start <= created < end]
+
+        property_ids = list({booking.get("property_id") for booking in bookings if booking.get("property_id")})
+        host_ids = list({booking.get("host_id") for booking in bookings if booking.get("host_id")})
+        broker_ids = list({booking.get("broker_id") for booking in bookings if booking.get("broker_id")})
+        properties = {
+            row["property_id"]: row
+            for row in await db.properties.find({"property_id": {"$in": property_ids}}, {"_id": 0, "property_id": 1, "title": 1, "city": 1, "broker_id": 1, "owner_id": 1}).to_list(length=500)
+        }
+        hosts = {
+            row["user_id"]: row
+            for row in await db.users.find({"user_id": {"$in": host_ids}}, {"_id": 0, "user_id": 1, "full_name": 1, "phone": 1, "email": 1}).to_list(length=500)
+        }
+        brokers = {
+            row["user_id"]: row
+            for row in await db.users.find({"user_id": {"$in": broker_ids}}, {"_id": 0, "user_id": 1, "full_name": 1, "lg_code": 1}).to_list(length=500)
+        }
+        for booking in bookings:
+            prop = properties.get(booking.get("property_id"), {})
+            booking["property_summary"] = prop
+            booking["host_summary"] = hosts.get(booking.get("host_id") or prop.get("owner_id"), {})
+            booking["broker_summary"] = brokers.get(booking.get("broker_id") or prop.get("broker_id"), {})
+
+        revenue_bookings = [
+            booking for booking in bookings
+            if booking.get("payment_status") in {"paid", "partially_paid"} or booking.get("booking_status") in {"confirmed", "completed"}
+        ]
+        summary = {
+            "total": len(bookings),
+            "pending": len([booking for booking in bookings if booking.get("booking_status") == "pending"]),
+            "soft_lock": len([booking for booking in bookings if booking.get("booking_status") == "soft_lock"]),
+            "confirmed": len([booking for booking in bookings if booking.get("booking_status") == "confirmed"]),
+            "completed": len([booking for booking in bookings if booking.get("booking_status") == "completed"]),
+            "cancelled": len([booking for booking in bookings if booking.get("booking_status") == "cancelled"]),
+            "upcoming": len([booking for booking in bookings if booking.get("booking_status") in {"confirmed", "soft_lock"} and _booking_date(booking.get("check_in_date")) and _booking_date(booking.get("check_in_date")) >= today]),
+            "checked_in": len([booking for booking in bookings if booking.get("booking_status") == "confirmed" and _booking_date(booking.get("check_in_date")) and _booking_date(booking.get("check_in_date")) <= today and _booking_date(booking.get("check_out_date")) and _booking_date(booking.get("check_out_date")) >= today]),
+            "checked_out": len([booking for booking in bookings if booking.get("booking_status") in {"confirmed", "completed"} and _booking_date(booking.get("check_out_date")) and _booking_date(booking.get("check_out_date")) < today]),
+            "revenue": round(sum(float(booking.get("total_amount") or 0) for booking in revenue_bookings), 2),
+            "occupancy": round((len(revenue_bookings) / max(len(property_ids) * 30, 1)) * 100, 1),
+        }
+        return {"bookings": bookings, "summary": summary, "total": len(bookings)}
+
+    except Exception as e:
+        logger.error(f"Error fetching RM bookings: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch bookings")
+
+
+@router.get("/bookings/{booking_id}/details")
+async def get_rm_booking_details(
+    booking_id: str,
+    current_user: dict = Depends(require_employee),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get detailed booking view for RM scoped booking management."""
+    try:
+        _, _, _, booking_query = await _get_rm_booking_query(db, current_user["user_id"])
+        booking = await db.bookings.find_one({"$and": [booking_query, {"booking_id": booking_id}]}, {"_id": 0})
+        if not booking:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found or not assigned to you")
+
+        prop = await db.properties.find_one({"property_id": booking.get("property_id")}, {"_id": 0})
+        host = await db.users.find_one({"user_id": booking.get("host_id") or (prop or {}).get("owner_id")}, {"_id": 0, "password_hash": 0})
+        broker = await db.users.find_one({"user_id": booking.get("broker_id") or (prop or {}).get("broker_id")}, {"_id": 0, "password_hash": 0}) if booking.get("broker_id") or (prop or {}).get("broker_id") else None
+        guest = await db.users.find_one({"user_id": booking.get("guest_id")}, {"_id": 0, "password_hash": 0})
+        commissions = await db.commissions.find({"booking_id": booking_id}, {"_id": 0}).sort("created_at", -1).to_list(length=50)
+        audit_logs = await db.audit_logs.find({"record_id": booking_id}, {"_id": 0}).sort("created_at", -1).to_list(length=50)
+        timeline = [
+            {"label": "Booking Created", "status": "completed", "created_at": booking.get("created_at")},
+            {"label": "Payment", "status": booking.get("payment_status") or "pending", "created_at": booking.get("confirmed_at")},
+            {"label": "Check-in", "status": "scheduled", "created_at": booking.get("check_in_date")},
+            {"label": "Check-out", "status": "scheduled", "created_at": booking.get("check_out_date")},
+        ]
+        return {
+            "booking": booking,
+            "property": prop,
+            "host": host,
+            "broker": broker,
+            "guest": guest,
+            "commissions": commissions,
+            "audit_logs": audit_logs,
+            "timeline": timeline,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching RM booking details: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch booking details")
+
+# ========== TASKS, ESCALATIONS AND NOTIFICATIONS ==========
+
+def _parse_dt(value):
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return None
+
+
+def _rm_task_sla_status(created_at, sla_hours=24):
+    created = _parse_dt(created_at) or datetime.now(timezone.utc)
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    age_hours = (datetime.now(timezone.utc) - created).total_seconds() / 3600
+    if age_hours >= sla_hours * 2:
+        return "escalated", round(age_hours, 1)
+    if age_hours >= sla_hours:
+        return "breached", round(age_hours, 1)
+    if age_hours >= max(0, sla_hours - 4):
+        return "at_risk", round(age_hours, 1)
+    return "within_sla", round(age_hours, 1)
+
+
+@router.get("/tasks")
+async def get_rm_tasks(
+    current_user: dict = Depends(require_employee),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get RM operational tasks, escalation watchlist and notification feed."""
+    try:
+        rm_id = current_user["user_id"]
+        broker_ids, host_ids, property_query = await _get_rm_property_query(db, rm_id)
+        properties = await db.properties.find(property_query, {"_id": 0, "property_id": 1, "title": 1, "status": 1, "created_at": 1, "updated_at": 1}).to_list(length=5000)
+        property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
+        tasks = []
+
+        pending_rm_reviews = await db.property_verifications.find(
+            {"rm_id": rm_id, "status": VerificationStatus.COMPLETED.value, "rm_reviewed": False},
+            {"_id": 0}
+        ).sort("completed_at", -1).to_list(length=200)
+        for item in pending_rm_reviews:
+            sla_status, age_hours = _rm_task_sla_status(item.get("completed_at") or item.get("created_at"), 48)
+            tasks.append({
+                "task_id": item.get("verification_id"),
+                "type": "rm_verification",
+                "title": "Pending RM Verification",
+                "entity_id": item.get("property_id"),
+                "priority": "high" if sla_status in {"at_risk", "breached", "escalated"} else "normal",
+                "status": "open",
+                "sla_status": sla_status,
+                "age_hours": age_hours,
+                "due_label": "48h RM review SLA",
+                "created_at": item.get("completed_at") or item.get("created_at"),
+            })
+
+        missing_doc_hosts = await db.users.find(
+            {"user_id": {"$in": host_ids}, "role": "host", "kyc_status": {"$ne": "approved"}},
+            {"_id": 0, "user_id": 1, "full_name": 1, "kyc_status": 1, "created_at": 1, "broker_id": 1}
+        ).to_list(length=200)
+        for host in missing_doc_hosts:
+            sla_status, age_hours = _rm_task_sla_status(host.get("created_at"), 72)
+            tasks.append({
+                "task_id": f"host_docs_{host.get('user_id')}",
+                "type": "host_documents",
+                "title": f"Pending Host Documents - {host.get('full_name') or host.get('user_id')}",
+                "entity_id": host.get("user_id"),
+                "priority": "high" if sla_status in {"breached", "escalated"} else "normal",
+                "status": host.get("kyc_status") or "pending",
+                "sla_status": sla_status,
+                "age_hours": age_hours,
+                "due_label": "72h host document SLA",
+                "created_at": host.get("created_at"),
+            })
+
+        for prop in properties:
+            if prop.get("status") in {"draft", "pending_verification", "under_review", "rejected"}:
+                sla_status, age_hours = _rm_task_sla_status(prop.get("updated_at") or prop.get("created_at"), 48)
+                tasks.append({
+                    "task_id": f"property_review_{prop.get('property_id')}",
+                    "type": "property_review",
+                    "title": f"Pending Property Review - {prop.get('title') or prop.get('property_id')}",
+                    "entity_id": prop.get("property_id"),
+                    "priority": "high" if sla_status in {"breached", "escalated"} else "normal",
+                    "status": prop.get("status") or "draft",
+                    "sla_status": sla_status,
+                    "age_hours": age_hours,
+                    "due_label": "48h property review SLA",
+                    "created_at": prop.get("updated_at") or prop.get("created_at"),
+                })
+
+        support_tickets = await db.support_tickets.find(
+            {
+                "status": {"$nin": ["resolved", "closed"]},
+                "$or": [
+                    {"user_rm_id": rm_id},
+                    {"user_broker_id": {"$in": broker_ids}},
+                    {"user_id": {"$in": host_ids}},
+                ],
+            },
+            {"_id": 0}
+        ).sort("created_at", -1).to_list(length=100)
+        for ticket in support_tickets:
+            sla_status, age_hours = _rm_task_sla_status(ticket.get("sla_due_at") or ticket.get("created_at"), 24)
+            tasks.append({
+                "task_id": ticket.get("ticket_id"),
+                "type": "support_ticket",
+                "title": ticket.get("subject") or "Support ticket",
+                "entity_id": ticket.get("ticket_id"),
+                "priority": ticket.get("priority") or "normal",
+                "status": ticket.get("status") or "open",
+                "sla_status": sla_status,
+                "age_hours": age_hours,
+                "due_label": "24h support response SLA",
+                "created_at": ticket.get("created_at"),
+            })
+
+        escalation_instances = await db.escalation_instances.find(
+            {
+                "status": {"$nin": ["resolved", "closed"]},
+                "$or": [
+                    {"assigned_rm_id": rm_id},
+                    {"rm_id": rm_id},
+                    {"broker_id": {"$in": broker_ids}},
+                    {"host_id": {"$in": host_ids}},
+                    {"property_id": {"$in": property_ids}},
+                ],
+            },
+            {"_id": 0}
+        ).sort("created_at", -1).to_list(length=100)
+
+        notifications = await db.notifications.find(
+            {
+                "$or": [
+                    {"user_id": rm_id},
+                    {"data.rm_id": rm_id},
+                    {"data.broker_id": {"$in": broker_ids}},
+                    {"data.host_id": {"$in": host_ids}},
+                    {"data.property_id": {"$in": property_ids}},
+                ]
+            },
+            {"_id": 0}
+        ).sort("created_at", -1).limit(50).to_list(length=50)
+
+        tasks = sorted(tasks, key=lambda item: item.get("age_hours", 0), reverse=True)[:300]
+        escalations = [task for task in tasks if task.get("sla_status") in {"at_risk", "breached", "escalated"}]
+        escalations.extend([{
+            "task_id": item.get("escalation_id") or item.get("id"),
+            "type": item.get("type") or "escalation",
+            "title": item.get("title") or item.get("reason") or "Escalation",
+            "entity_id": item.get("property_id") or item.get("host_id") or item.get("broker_id"),
+            "priority": item.get("priority") or "high",
+            "status": item.get("status") or "open",
+            "sla_status": item.get("sla_status") or "escalated",
+            "age_hours": _rm_task_sla_status(item.get("created_at"), 1)[1],
+            "due_label": "Escalation matrix",
+            "created_at": item.get("created_at"),
+        } for item in escalation_instances])
+
+        return {
+            "tasks": tasks,
+            "escalations": escalations[:100],
+            "notifications": notifications,
+            "summary": {
+                "open_tasks": len(tasks),
+                "critical_tasks": len([task for task in tasks if task.get("priority") in {"high", "urgent"}]),
+                "overdue_tasks": len([task for task in tasks if task.get("sla_status") in {"breached", "escalated"}]),
+                "sla_breaches": len([task for task in tasks if task.get("sla_status") in {"breached", "escalated"}]),
+                "pending_approvals": len(pending_rm_reviews),
+                "notifications": len(notifications),
+                "escalations": len(escalations),
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching RM tasks: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch tasks")
+
 # ========== REPORTS ==========
+
+@router.get("/reports/rm-analytics-overview")
+async def get_rm_analytics_overview(
+    current_user: dict = Depends(require_employee),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get RM scoped analytics across brokers, hosts, properties, bookings and SLA."""
+    try:
+        rm_id = current_user["user_id"]
+        broker_ids, host_ids, property_query = await _get_rm_property_query(db, rm_id)
+        properties = await db.properties.find(property_query, {"_id": 0}).to_list(length=5000)
+        property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
+        bookings = await db.bookings.find(
+            {
+                "$or": [
+                    {"rm_id": rm_id},
+                    {"employee_id": rm_id},
+                    {"broker_id": {"$in": broker_ids}},
+                    {"host_id": {"$in": host_ids}},
+                    {"property_id": {"$in": property_ids}},
+                ]
+            },
+            {"_id": 0}
+        ).to_list(length=10000)
+        commissions = await db.commissions.find({"broker_id": {"$in": broker_ids}}, {"_id": 0}).to_list(length=5000)
+        verifications = await db.property_verifications.find(
+            {
+                "$or": [
+                    {"rm_id": rm_id},
+                    {"broker_id": {"$in": broker_ids}},
+                    {"property_id": {"$in": property_ids}},
+                ]
+            },
+            {"_id": 0}
+        ).to_list(length=5000)
+
+        paid_bookings = [
+            booking for booking in bookings
+            if booking.get("payment_status") in {"paid", "partially_paid"} or booking.get("booking_status") in {"confirmed", "completed"}
+        ]
+        revenue = round(sum(float(booking.get("total_amount") or 0) for booking in paid_bookings), 2)
+        commission_total = round(sum(float(item.get("commission_amount") or 0) for item in commissions), 2)
+        confirmed_bookings = len([booking for booking in bookings if booking.get("booking_status") in {"confirmed", "completed"}])
+        conversion_rate = round((confirmed_bookings / max(len(bookings), 1)) * 100, 1)
+        live_properties = len([prop for prop in properties if prop.get("status") == "live"])
+        pending_properties = len([prop for prop in properties if prop.get("status") in {"draft", "pending", "pending_verification", "under_review"}])
+        rejected_properties = len([prop for prop in properties if prop.get("status") == "rejected"])
+        approved_verifications = len([item for item in verifications if item.get("rm_reviewed") or item.get("admin_approved")])
+        verification_rate = round((approved_verifications / max(len(verifications), 1)) * 100, 1)
+        sla_breaches = len([
+            item for item in verifications
+            if not item.get("rm_reviewed") and _rm_task_sla_status(item.get("completed_at") or item.get("created_at"), 48)[0] in {"breached", "escalated"}
+        ])
+
+        broker_rows = []
+        brokers = await db.users.find({"user_id": {"$in": broker_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=1000)
+        for broker in brokers:
+            broker_id = broker.get("user_id")
+            broker_properties = [prop for prop in properties if prop.get("broker_id") == broker_id]
+            broker_property_ids = [prop["property_id"] for prop in broker_properties if prop.get("property_id")]
+            broker_bookings = [
+                booking for booking in bookings
+                if booking.get("broker_id") == broker_id or booking.get("property_id") in broker_property_ids
+            ]
+            broker_paid = [
+                booking for booking in broker_bookings
+                if booking.get("payment_status") in {"paid", "partially_paid"} or booking.get("booking_status") in {"confirmed", "completed"}
+            ]
+            broker_rows.append({
+                "broker_id": broker_id,
+                "broker_name": broker.get("full_name") or broker_id,
+                "lg_code": broker.get("lg_code") or "N/A",
+                "hosts": len([host_id for host_id in host_ids if any(prop.get("owner_id") == host_id and prop.get("broker_id") == broker_id for prop in properties)]),
+                "properties": len(broker_properties),
+                "live_properties": len([prop for prop in broker_properties if prop.get("status") == "live"]),
+                "bookings": len(broker_bookings),
+                "revenue": round(sum(float(booking.get("total_amount") or 0) for booking in broker_paid), 2),
+                "commission": round(sum(float(item.get("commission_amount") or 0) for item in commissions if item.get("broker_id") == broker_id), 2),
+            })
+
+        host_rows = []
+        hosts = await db.users.find({"user_id": {"$in": host_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=1000)
+        for host in hosts:
+            host_id = host.get("user_id")
+            host_properties = [prop for prop in properties if prop.get("owner_id") == host_id]
+            host_property_ids = [prop["property_id"] for prop in host_properties if prop.get("property_id")]
+            host_bookings = [
+                booking for booking in bookings
+                if booking.get("host_id") == host_id or booking.get("property_id") in host_property_ids
+            ]
+            host_paid = [
+                booking for booking in host_bookings
+                if booking.get("payment_status") in {"paid", "partially_paid"} or booking.get("booking_status") in {"confirmed", "completed"}
+            ]
+            host_rows.append({
+                "host_id": host_id,
+                "host_name": host.get("full_name") or host_id,
+                "kyc_status": host.get("kyc_status") or "pending",
+                "properties": len(host_properties),
+                "live_properties": len([prop for prop in host_properties if prop.get("status") == "live"]),
+                "bookings": len(host_bookings),
+                "revenue": round(sum(float(booking.get("total_amount") or 0) for booking in host_paid), 2),
+            })
+
+        property_rows = [{
+            "property_id": prop.get("property_id"),
+            "title": prop.get("title") or prop.get("property_id"),
+            "city": prop.get("city") or "N/A",
+            "status": prop.get("status") or "draft",
+            "broker_id": prop.get("broker_id"),
+            "host_id": prop.get("owner_id"),
+            "bookings": len([booking for booking in bookings if booking.get("property_id") == prop.get("property_id")]),
+            "revenue": round(sum(float(booking.get("total_amount") or 0) for booking in paid_bookings if booking.get("property_id") == prop.get("property_id")), 2),
+        } for prop in properties]
+
+        return {
+            "report_type": "rm_analytics_overview",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "summary": {
+                "brokers": len(broker_ids),
+                "hosts": len(host_ids),
+                "properties": len(properties),
+                "live_properties": live_properties,
+                "pending_properties": pending_properties,
+                "rejected_properties": rejected_properties,
+                "bookings": len(bookings),
+                "confirmed_bookings": confirmed_bookings,
+                "revenue": revenue,
+                "commission": commission_total,
+                "conversion_rate": conversion_rate,
+                "verification_rate": verification_rate,
+                "sla_breaches": sla_breaches,
+            },
+            "brokers": sorted(broker_rows, key=lambda item: item["revenue"], reverse=True),
+            "hosts": sorted(host_rows, key=lambda item: item["revenue"], reverse=True),
+            "properties": sorted(property_rows, key=lambda item: item["revenue"], reverse=True)[:300],
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching RM analytics overview: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch analytics overview")
+
+
+@router.get("/reports/rm-analytics-overview/export-csv")
+async def export_rm_analytics_overview_csv(
+    current_user: dict = Depends(require_employee),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Export RM analytics property performance as CSV."""
+    data = await get_rm_analytics_overview(current_user=current_user, db=db)
+    output = io.StringIO()
+    fieldnames = ["Property ID", "Title", "City", "Status", "Broker ID", "Host ID", "Bookings", "Revenue"]
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for prop in data.get("properties", []):
+        writer.writerow({
+            "Property ID": prop.get("property_id"),
+            "Title": prop.get("title"),
+            "City": prop.get("city"),
+            "Status": prop.get("status"),
+            "Broker ID": prop.get("broker_id"),
+            "Host ID": prop.get("host_id"),
+            "Bookings": prop.get("bookings"),
+            "Revenue": prop.get("revenue"),
+        })
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=rm_analytics_{datetime.now(timezone.utc).strftime('%Y%m%d')}.csv"}
+    )
+
+
+@router.get("/audit-activity")
+async def get_rm_audit_activity(
+    module: Optional[str] = None,
+    current_user: dict = Depends(require_employee),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """Get RM-scoped audit activity across assigned brokers, hosts, properties and bookings."""
+    try:
+        rm_id = current_user["user_id"]
+        broker_ids, host_ids, property_query = await _get_rm_property_query(db, rm_id)
+        properties = await db.properties.find(property_query, {"_id": 0, "property_id": 1}).to_list(length=5000)
+        property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
+        bookings = await db.bookings.find(
+            {
+                "$or": [
+                    {"rm_id": rm_id},
+                    {"employee_id": rm_id},
+                    {"broker_id": {"$in": broker_ids}},
+                    {"host_id": {"$in": host_ids}},
+                    {"property_id": {"$in": property_ids}},
+                ]
+            },
+            {"_id": 0, "booking_id": 1}
+        ).to_list(length=5000)
+        booking_ids = [booking["booking_id"] for booking in bookings if booking.get("booking_id")]
+        scoped_record_ids = list({rm_id, *broker_ids, *host_ids, *property_ids, *booking_ids})
+        audit_query = {
+            "$or": [
+                {"user_id": rm_id},
+                {"record_id": {"$in": scoped_record_ids}},
+                {"new_value.rm_id": rm_id},
+                {"old_value.rm_id": rm_id},
+            ]
+        }
+        if module and module != "all":
+            audit_query = {"$and": [audit_query, {"module": module}]}
+
+        audit_logs = await db.audit_logs.find(audit_query, {"_id": 0}).sort("created_at", -1).limit(300).to_list(length=300)
+        failed_events = len([item for item in audit_logs if item.get("status") not in {None, "success"}])
+        approval_events = len([item for item in audit_logs if "approve" in (item.get("action") or "").lower() or "reject" in (item.get("action") or "").lower()])
+        modules = sorted(list({item.get("module") or "general" for item in audit_logs}))
+
+        return {
+            "audit_logs": audit_logs,
+            "summary": {
+                "total_events": len(audit_logs),
+                "approval_events": approval_events,
+                "failed_events": failed_events,
+                "modules": len(modules),
+                "scoped_records": len(scoped_record_ids),
+            },
+            "filters": {
+                "module": module or "all",
+                "available_modules": modules,
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching RM audit activity: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch audit activity")
+
 
 @router.get("/reports/properties-not-booked")
 async def get_properties_not_booked_report(

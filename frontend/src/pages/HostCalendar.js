@@ -17,6 +17,7 @@ import {
   Building2,
   ArrowLeft,
 } from 'lucide-react';
+import HostSupportWidget from '../components/HostSupportWidget';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -822,6 +823,7 @@ const HostCalendar = () => {
           </div>
         )}
       </div>
+      <HostSupportWidget context="calendar_issue" />
     </div>
   );
 };

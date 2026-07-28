@@ -575,6 +575,8 @@ export const cmsAPI = {
 };
 
 export const supportTicketAPI = {
+  createTicket: (payload) => apiClient.post('/support-tickets', payload),
+  getMyTickets: () => apiClient.get('/support-tickets/my'),
   getAdminTickets: (params = {}) => apiClient.get('/support-tickets/admin', { params }),
   updateTicket: (ticketId, payload) => apiClient.patch(`/support-tickets/admin/${ticketId}`, payload),
 };

@@ -1028,6 +1028,8 @@ async def users(
         query["is_active"] = False
     elif status_filter == "active":
         query["is_active"] = True
+    else:
+        query["is_active"] = {"$ne": False}
     if search:
         query["$or"] = [
             {"full_name": {"$regex": search, "$options": "i"}},
@@ -1141,6 +1143,30 @@ async def user_audit_logs(user_id: str, current_user: dict = Depends(require_adm
     return api_response("User audit history loaded", {"logs": logs})
 
 
+@router.delete("/users/{user_id}")
+async def delete_inactive_admin_user(user_id: str, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    existing = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="User not found")
+    if existing.get("admin_delete_protected"):
+        raise HTTPException(status_code=400, detail="Protected admin accounts cannot be deleted")
+    if existing.get("is_active", True):
+        raise HTTPException(status_code=400, detail="Deactivate this user before deleting")
+
+    await db.users.delete_one({"user_id": user_id})
+    await write_audit_log(
+        db,
+        user_id=current_user["user_id"],
+        role=current_user["role"],
+        module="user_organization_management",
+        action="inactive_user_deleted",
+        record_id=user_id,
+        old_value=existing,
+        reason="Inactive user deleted from User Directory",
+    )
+    return api_response("Inactive user deleted")
+
+
 @router.get("/roles")
 async def roles(current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
     await ensure_default_permissions(db)
@@ -1189,6 +1215,33 @@ async def update_role_status(role_id: str, payload: RoleStatusPayload, current_u
     await db.roles.update_one({"role_id": role_id}, {"$set": {"is_active": payload.is_active, "updated_at": _now()}})
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="roles_access_permissions", action="role_activated" if payload.is_active else "role_deactivated", record_id=role_id, old_value={"is_active": existing.get("is_active", True)}, new_value={"is_active": payload.is_active}, reason=payload.reason)
     return api_response("Role status updated")
+
+
+@router.delete("/roles/{role_id}")
+async def delete_role(role_id: str, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    existing = await db.roles.find_one({"role_id": role_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Role not found")
+    if existing.get("is_system"):
+        raise HTTPException(status_code=400, detail="System roles cannot be deleted")
+
+    role_key = existing.get("role_key")
+    assigned_user = await db.users.find_one({"admin_role_key": role_key}, {"_id": 0, "user_id": 1, "full_name": 1})
+    if assigned_user:
+        raise HTTPException(status_code=400, detail="This role is assigned to users. Remove user access before deleting")
+
+    await db.roles.delete_one({"role_id": role_id})
+    await write_audit_log(
+        db,
+        user_id=current_user["user_id"],
+        role=current_user["role"],
+        module="roles_access_permissions",
+        action="role_deleted",
+        record_id=role_id,
+        old_value=existing,
+        reason="Role deleted from Roles & Permissions",
+    )
+    return api_response("Role deleted")
 
 
 @router.get("/permissions")
