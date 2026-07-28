@@ -12,7 +12,7 @@ import 'providers/notification_provider.dart';
 import 'providers/support_ticket_provider.dart';
 import 'services/localization_service.dart';
 import 'services/api_service.dart';
-import 'views/auth/welcome_screen.dart';
+import 'views/web/website_mirror_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,18 +45,7 @@ class MyApp extends StatelessWidget {
       title: 'X-Space360',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
-      home: Consumer<AuthProvider>(
-        builder: (context, auth, _) {
-          if (auth.isLoading) {
-            return const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(color: AppTheme.primary),
-              ),
-            );
-          }
-          return const WelcomeScreen();
-        },
-      ),
+      home: const WebsiteMirrorScreen(),
     );
   }
 }

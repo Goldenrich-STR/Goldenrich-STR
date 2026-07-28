@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, getImageUrl } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
+import DateRangePicker from '../components/ui/DateRangePicker';
 import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 import {
   Crown,
@@ -301,6 +302,7 @@ const GuestBrowse = () => {
   }, []);
 
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [browseCalendarAnchor, setBrowseCalendarAnchor] = useState('checkIn');
   const [guestCounts, setGuestCounts] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const initialGuests = parseInt(params.get('guests')) || 2;
@@ -810,45 +812,56 @@ const GuestBrowse = () => {
               {/* Check-in */}
               <div className="relative flex items-center px-4 lg:px-6 py-4 w-full lg:w-auto border-b border-gray-100 lg:border-none hover:bg-gray-50 transition group">
                 <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
-                <div className="w-full text-left pointer-events-none z-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBrowseCalendarAnchor('checkIn');
+                    setActiveDropdown('dates');
+                  }}
+                  className="w-full text-left"
+                >
                   <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
                   <p className={`font-bold text-sm mt-0.5 ${filters.check_in ? 'text-charcoal' : 'text-gray-400'}`}>
                     {filters.check_in || 'Check-in'}
                   </p>
-                </div>
-                <input
-                  id="browse-check-in"
-                  name="checkIn"
-                  type="date"
-                  min={todayISO}
-                  value={filters.check_in}
-                  onChange={(e) => setFilters({ ...filters, check_in: e.target.value })}
-                  onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                />
+                </button>
               </div>
               <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
               
               {/* Check-out */}
               <div className="relative flex items-center px-4 lg:px-6 py-4 w-full lg:w-auto border-b border-gray-100 lg:border-none hover:bg-gray-50 transition group">
                 <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
-                <div className="w-full text-left pointer-events-none z-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBrowseCalendarAnchor('checkOut');
+                    setActiveDropdown('dates');
+                  }}
+                  className="w-full text-left"
+                >
                   <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
                   <p className={`font-bold text-sm mt-0.5 ${filters.check_out ? 'text-charcoal' : 'text-gray-400'}`}>
                     {filters.check_out || 'Check-out'}
                   </p>
-                </div>
-                <input
-                  id="browse-check-out"
-                  name="checkOut"
-                  type="date"
-                  min={filters.check_in || todayISO}
-                  value={filters.check_out}
-                  onChange={(e) => setFilters({ ...filters, check_out: e.target.value })}
-                  onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                />
+                </button>
               </div>
+              {activeDropdown === 'dates' && (
+                <DateRangePicker
+                  open={activeDropdown === 'dates'}
+                  anchor={browseCalendarAnchor}
+                  checkIn={filters.check_in}
+                  checkOut={filters.check_out}
+                  minDate={todayISO}
+                  onChange={({ checkIn, checkOut }) => {
+                    setFilters((prev) => ({
+                      ...prev,
+                      check_in: checkIn,
+                      check_out: checkOut,
+                    }));
+                  }}
+                  onClose={() => setActiveDropdown(null)}
+                />
+              )}
               <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
 
 

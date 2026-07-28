@@ -12,6 +12,7 @@ import { getRecentlyVisitedProperties, RECENTLY_VISITED_PROPERTIES_EVENT } from 
 import { organizationSchema, websiteSchema } from '../lib/seoSchemas';
 import LegalDocument from '../components/LegalDocument';
 import ScrollReveal from '../components/ui/ScrollReveal';
+import DateRangePicker from '../components/ui/DateRangePicker';
 
 const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
 
@@ -1657,6 +1658,8 @@ const LandingPage = () => {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [guestCounts, setGuestCounts] = useState({ adults: 2, children: 0, infants: 0 });
   const [dates, setDates] = useState({ checkIn: '', checkOut: '' });
+  const [landingCalendarOpen, setLandingCalendarOpen] = useState(false);
+  const [landingCalendarAnchor, setLandingCalendarAnchor] = useState('checkIn');
   const todayISO = React.useMemo(() => {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -2292,7 +2295,7 @@ const LandingPage = () => {
 
         {/* Right Side Options */}
         <div className="hidden lg:flex items-center space-x-6">
-          <LanguageSelector />
+          <LanguageSelector showPropertyTypes />
 
           {/* Get in Touch Button */}
           <button 
@@ -2399,7 +2402,7 @@ const LandingPage = () => {
               <span>Get in Touch</span>
             </button>
             <div className="py-3 border-b border-white/10 flex flex-col items-start">
-              <LanguageSelector mode="inline" />
+              <LanguageSelector mode="inline" showPropertyTypes />
             </div>
 
             {user ? (
@@ -2586,22 +2589,19 @@ const LandingPage = () => {
                         {/* Check-in */}
                         <div className="relative flex items-center px-4 lg:px-6 py-3 w-full lg:w-auto hover:bg-stone/50 rounded-full transition duration-200 group shrink-0">
                           <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
-                          <div className="w-full text-left pointer-events-none z-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLandingCalendarAnchor('checkIn');
+                              setLandingCalendarOpen(true);
+                            }}
+                            className="w-full text-left"
+                          >
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Check-in</p>
                             <p className={`font-extrabold text-sm mt-1 leading-none ${dates.checkIn ? 'text-charcoal' : 'text-gray-400'}`}>
                               {dates.checkIn || 'Select Date'}
                             </p>
-                          </div>
-                          <input
-                            id="landing-check-in"
-                            name="checkIn"
-                            type="date"
-                            min={todayISO}
-                            value={dates.checkIn}
-                            onChange={(e) => setDates({ ...dates, checkIn: e.target.value })}
-                            onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                          />
+                          </button>
                         </div>
                         
                         {/* Arrow Separator */}
@@ -2612,23 +2612,31 @@ const LandingPage = () => {
                         {/* Check-out */}
                         <div className="relative flex items-center px-4 lg:px-6 py-3 w-full lg:w-auto hover:bg-stone/50 rounded-full transition duration-200 group shrink-0">
                           <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
-                          <div className="w-full text-left pointer-events-none z-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLandingCalendarAnchor('checkOut');
+                              setLandingCalendarOpen(true);
+                            }}
+                            className="w-full text-left"
+                          >
                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Check-out</p>
                             <p className={`font-extrabold text-sm mt-1 leading-none ${dates.checkOut ? 'text-charcoal' : 'text-gray-400'}`}>
                               {dates.checkOut || 'Select Date'}
                             </p>
-                          </div>
-                          <input
-                            id="landing-check-out"
-                            name="checkOut"
-                            type="date"
-                            min={dates.checkIn || todayISO}
-                            value={dates.checkOut}
-                            onChange={(e) => setDates({ ...dates, checkOut: e.target.value })}
-                            onClick={(e) => { try { e.target.showPicker(); } catch(err) {} }}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                          />
+                          </button>
                         </div>
+                        {landingCalendarOpen && (
+                          <DateRangePicker
+                            open={landingCalendarOpen}
+                            anchor={landingCalendarAnchor}
+                            checkIn={dates.checkIn}
+                            checkOut={dates.checkOut}
+                            minDate={todayISO}
+                            onChange={setDates}
+                            onClose={() => setLandingCalendarOpen(false)}
+                          />
+                        )}
                         <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
 
                         {/* Guests */}
@@ -3449,7 +3457,7 @@ const LandingPage = () => {
               Plan smart, explore more
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+            <div className="flex gap-6 overflow-x-auto pb-3 no-scrollbar md:grid md:grid-cols-2 md:gap-x-12 md:gap-y-10 md:overflow-visible">
               {landingBlogPosts.map((post, idx) => (
                 <div 
                   key={post.id || idx} 
@@ -3463,7 +3471,7 @@ const LandingPage = () => {
                     image_url: post.img,
                     read_time: post.read_time || '5 min read'
                   })}
-                  className="group cursor-pointer flex flex-col text-left"
+                  className="group cursor-pointer flex min-w-[290px] max-w-[290px] flex-col text-left md:min-w-0 md:max-w-none"
                 >
                   {/* Rectangular Image */}
                   <div className="aspect-[2/1] overflow-hidden rounded-xl bg-stone relative">

@@ -5,14 +5,18 @@ const configuredBackendUrl = (process.env.REACT_APP_BACKEND_URL || '')
   .replace(/\/+$/, '')
   .replace(/\/api$/i, '');
 const isBrowser = typeof window !== 'undefined';
-const isLocalPage = isBrowser && ['localhost', '127.0.0.1'].includes(window.location.hostname);
-const pointsToLocalBackend = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredBackendUrl);
+const localHostnames = ['localhost', '127.0.0.1', '10.0.2.2'];
+const isLocalPage = isBrowser && localHostnames.includes(window.location.hostname);
+const pointsToLocalBackend = /^https?:\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2)(:\d+)?$/i.test(configuredBackendUrl);
 const productionBackendUrl = isBrowser && ['x-space360.in', 'www.x-space360.in'].includes(window.location.hostname)
   ? 'https://api.x-space360.in'
   : '';
 const sameOriginBackendUrl = isBrowser ? window.location.origin : '';
+const emulatorBackendUrl = isBrowser && window.location.hostname === '10.0.2.2'
+  ? 'http://10.0.2.2:8001'
+  : '';
 const defaultBackendUrl = process.env.NODE_ENV === 'development'
-  ? 'http://localhost:8001'
+  ? (emulatorBackendUrl || 'http://localhost:8001')
   : (productionBackendUrl || sameOriginBackendUrl);
 const BACKEND_URL = configuredBackendUrl && !(isBrowser && !isLocalPage && pointsToLocalBackend)
   ? configuredBackendUrl

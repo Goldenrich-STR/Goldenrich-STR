@@ -2,9 +2,23 @@ import 'package:flutter/foundation.dart';
 import 'dart:io' show Platform;
 
 class AppConfig {
+  static String get webBaseUrl {
+    if (kIsWeb) {
+      return 'http://localhost:3000';
+    }
+    try {
+      if (Platform.isAndroid) {
+        // Android emulator uses adb reverse from mobile_run.ps1 so localhost
+        // stays aligned with the browser/frontend dev setup.
+        return 'http://localhost:3000';
+      }
+    } catch (_) {}
+    return 'http://localhost:3000';
+  }
+
   /// Base API URL.
   /// Automatically resolved based on platform:
-  /// - 'http://10.0.2.2:8001' for Android Emulator.
+  /// - 'http://localhost:8001' for Android Emulator via adb reverse.
   /// - 'http://localhost:8001' for Windows, Web, and iOS.
   static String get devBaseUrl {
     if (kIsWeb) {
@@ -12,7 +26,7 @@ class AppConfig {
     }
     try {
       if (Platform.isAndroid) {
-        return 'http://10.0.2.2:8001';
+        return 'http://localhost:8001';
       }
     } catch (_) {}
     return 'http://localhost:8001';

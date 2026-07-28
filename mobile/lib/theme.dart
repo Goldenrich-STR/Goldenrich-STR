@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color background = Color(0xFFFAF9F6); // Soft White
-  static const Color stone = Color(0xFFF1F5F9); // Light Neutral
+  static const Color background = Color(0xFFF6F0E8);
+  static const Color stone = Color(0xFFF2ECE4);
   static const Color white = Color(0xFFFFFFFF);
-  static const Color charcoal = Color(0xFF1E293B); // Slate-800
-  static const Color charcoalLight = Color(0xFF475569); // Slate-600
-  static const Color charcoalMuted = Color(0xFF64748B); // Slate-500
-  static const Color primary = Color(0xFFC5A059); // Gold
-  static const Color primaryHover = Color(0xFFB38F48);
-  static const Color secondary = Color(0xFF0F172A); // Deep Navy
-  static const Color border = Color(0xFFE2E8F0); // Subtle Border
+  static const Color charcoal = Color(0xFF1D1C1A);
+  static const Color charcoalLight = Color(0xFF4C4841);
+  static const Color charcoalMuted = Color(0xFF766F66);
+  static const Color primary = Color(0xFFE0A51B);
+  static const Color primaryHover = Color(0xFFC28A11);
+  static const Color secondary = Color(0xFF23211D);
+  static const Color border = Color(0xFFE6DDD2);
+  static const Color terracotta = Color(0xFFC56A46);
+  static const Color sage = Color(0xFF6F7F66);
+  static const Color sand = Color(0xFFF3ECE3);
   
   static ThemeData get lightTheme {
     return ThemeData(
@@ -28,16 +31,16 @@ class AppTheme {
       dividerColor: border,
       textTheme: GoogleFonts.manropeTextTheme().copyWith(
         displayLarge: GoogleFonts.manrope(
-          fontSize: 32,
+          fontSize: 34,
           fontWeight: FontWeight.w800,
           color: charcoal,
-          letterSpacing: -0.5,
+          letterSpacing: -1.0,
         ),
         displayMedium: GoogleFonts.manrope(
           fontSize: 24,
           fontWeight: FontWeight.w700,
           color: charcoal,
-          letterSpacing: -0.3,
+          letterSpacing: -0.4,
         ),
         bodyLarge: GoogleFonts.manrope(
           fontSize: 16,
@@ -53,33 +56,33 @@ class AppTheme {
           fontSize: 12,
           fontWeight: FontWeight.w700,
           color: secondary,
-          letterSpacing: 1.5,
+          letterSpacing: 1.8,
         ),
       ),
       cardTheme: CardThemeData(
         color: white,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          side: const BorderSide(color: stone, width: 1),
-          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: border, width: 1),
+          borderRadius: BorderRadius.circular(24),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: stone,
+        fillColor: white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(18),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(18),
           borderSide: const BorderSide(color: primary, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         hintStyle: GoogleFonts.manrope(color: charcoalMuted, fontSize: 14),
       ),
       buttonTheme: const ButtonThemeData(
@@ -92,13 +95,13 @@ class AppTheme {
           foregroundColor: white,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(18),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           textStyle: GoogleFonts.manrope(
             fontSize: 15,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.2,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.1,
           ),
         ),
       ),
@@ -107,12 +110,12 @@ class AppTheme {
           foregroundColor: secondary,
           side: const BorderSide(color: border, width: 1),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(18),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           textStyle: GoogleFonts.manrope(
             fontSize: 15,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

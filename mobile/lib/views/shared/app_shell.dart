@@ -109,15 +109,15 @@ class _AppShellState extends State<AppShell> {
       ];
       navItems = const [
         BottomNavigationBarItem(
-            icon: Icon(Icons.search_rounded), label: 'Explore'),
+            icon: Icon(Icons.home_filled), label: 'Homes'),
         BottomNavigationBarItem(
             icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
         BottomNavigationBarItem(
             icon: Icon(Icons.luggage_outlined), label: 'Trips'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
+            icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded), label: 'Log In'),
+            icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
       ];
     } else {
       final String role = user.role;
@@ -131,16 +131,16 @@ class _AppShellState extends State<AppShell> {
         ];
         navItems = [
           const BottomNavigationBarItem(
-              icon: Icon(Icons.search_rounded), label: 'Explore'),
+              icon: Icon(Icons.home_filled), label: 'Homes'),
           const BottomNavigationBarItem(
               icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
           const BottomNavigationBarItem(
               icon: Icon(Icons.luggage_outlined), label: 'Trips'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
+              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: const Icon(Icons.person_outline_rounded),
-              label: user.fullName.split(' ')[0]),
+              label: 'Profile'),
         ];
       } else if (role == 'host') {
         screens = [
@@ -234,9 +234,17 @@ class _AppShellState extends State<AppShell> {
       body: screens[_selectedIndex],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
+          color: Colors.white,
           border: Border(
             top: BorderSide(color: Colors.grey[200]!, width: 1),
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 18,
+              offset: const Offset(0, -4),
+            ),
+          ],
         ),
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
@@ -252,13 +260,14 @@ class _AppShellState extends State<AppShell> {
           backgroundColor: AppTheme.white,
           elevation: 0,
           type: BottomNavigationBarType.fixed,
+          iconSize: 22,
           selectedLabelStyle: GoogleFonts.manrope(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
           ),
           unselectedLabelStyle: GoogleFonts.manrope(
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
           ),
           items: navItems,
         ),

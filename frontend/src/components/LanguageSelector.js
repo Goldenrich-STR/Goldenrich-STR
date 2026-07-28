@@ -43,7 +43,7 @@ const CATEGORIES = [
   }
 ];
 
-const LanguageSelector = ({ mode = 'dropdown' }) => {
+const LanguageSelector = ({ mode = 'dropdown', showPropertyTypes = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -59,6 +59,10 @@ const LanguageSelector = ({ mode = 'dropdown' }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  if (!showPropertyTypes) {
+    return null;
+  }
 
   const handleCategoryClick = (categoryKey) => {
     navigate(`/guest/browse?category=${categoryKey}`);

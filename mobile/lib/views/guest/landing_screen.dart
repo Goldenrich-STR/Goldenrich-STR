@@ -1,18 +1,19 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
+import '../../models/property_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/property_provider.dart';
 import '../../theme.dart';
-import '../../services/localization_service.dart';
 import '../auth/login_screen.dart';
-import '../shared/app_shell.dart';
 import '../shared/app_logo.dart';
+import '../shared/app_shell.dart';
 import 'guest_browse_screen.dart';
 import 'property_detail_screen.dart';
-import '../../services/api_service.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -22,936 +23,503 @@ class LandingScreen extends StatefulWidget {
 }
 
 class _LandingScreenState extends State<LandingScreen> {
-  final TextEditingController _searchController = TextEditingController();
+  final PageController _heroController = PageController(viewportFraction: 1);
   Timer? _heroTimer;
-  int _currentHeroImageIndex = 0;
+  int _heroIndex = 0;
+  String _selectedCity = 'Anywhere';
+  String _selectedCategory = 'All Types';
+  DateTimeRange? _selectedRange;
+  int _guestCount = 2;
 
-  final List<String> _heroImages = [
-    'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=1200',
-    'https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&q=80&w=1200',
-    'https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1200',
-    'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&q=80&w=1200',
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1200',
+  static const List<_HeroSlide> _heroSlides = [
+    _HeroSlide(
+      image:
+          'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80',
+      tag: 'COMMERCIAL SPACES',
+      titlePrefix: 'Premium Office ',
+      titleHighlight: 'Spaces',
+      subtitle:
+          'Curated short-term work environments designed for teams that value atmosphere and flexibility.',
+      badge: '15% OFF On Weekday Bookings*',
+      category: 'commercial',
+    ),
+    _HeroSlide(
+      image:
+          'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=80',
+      tag: 'RESIDENTIAL SPACES',
+      titlePrefix: 'Cozy Luxury ',
+      titleHighlight: 'Homes',
+      subtitle:
+          'Elegant stays, refined finishes, and seamless booking for elevated city and leisure escapes.',
+      badge: '50% OFF on 2nd Night*',
+      category: 'residential',
+    ),
+    _HeroSlide(
+      image:
+          'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1400&q=80',
+      tag: 'WEDDING VENUES',
+      titlePrefix: 'Beautiful Wedding ',
+      titleHighlight: 'Venues',
+      subtitle:
+          'Statement venues for weddings, celebrations, and memorable guest experiences across India.',
+      badge: '26% OFF On All Sunday Events',
+      category: 'event',
+    ),
+  ];
+
+  static const List<_DestinationData> _destinations = [
+    _DestinationData('Goa', Icons.waves_outlined),
+    _DestinationData('Mumbai', Icons.location_city_outlined),
+    _DestinationData('Nashik', Icons.landscape_outlined),
+    _DestinationData('Bangalore', Icons.apartment_outlined),
+  ];
+
+  static const List<_TestimonialData> _testimonials = [
+    _TestimonialData(
+      name: 'Riya',
+      role: 'Frequent Guest',
+      quote:
+          'The app feels polished and the stays look exactly as premium as the website promised.',
+    ),
+    _TestimonialData(
+      name: 'Aman',
+      role: 'Corporate Booker',
+      quote:
+          'We found workspace-ready properties quickly, and the booking flow felt smooth from search to confirmation.',
+    ),
+    _TestimonialData(
+      name: 'Priya',
+      role: 'Host Partner',
+      quote:
+          'Branding, presentation, and listing quality all feel high-trust. It matches the platform identity beautifully.',
+    ),
   ];
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<PropertyProvider>(context, listen: false).searchProperties({});
-      // Delay promotional offer check to let the UI render first
-      Timer(const Duration(milliseconds: 2000), () {
-        if (mounted) {
-          _checkAndShowPromoOffer();
-        }
-      });
+      context.read<PropertyProvider>().searchProperties({});
     });
-    // Automatic transition every 5 seconds
     _heroTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (mounted) {
-        setState(() {
-          _currentHeroImageIndex = (_currentHeroImageIndex + 1) % _heroImages.length;
-        });
-      }
+      if (!mounted || !_heroController.hasClients) return;
+      final nextIndex = (_heroIndex + 1) % _heroSlides.length;
+      _heroController.animateToPage(
+        nextIndex,
+        duration: const Duration(milliseconds: 700),
+        curve: Curves.easeInOut,
+      );
     });
-  }
-
-  Future<void> _checkAndShowPromoOffer() async {
-    try {
-      final response = await ApiService().dio.get('/cms/landing-page');
-      if (response.statusCode == 200 && response.data != null) {
-        final offer = response.data['offer'];
-        if (offer != null && offer['is_enabled'] == true) {
-          _showOfferDialog(offer);
-        }
-      }
-    } catch (e) {
-      debugPrint('Error loading CMS promotional offer: $e');
-    }
-  }
-
-  void _showOfferDialog(Map<String, dynamic> offer) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).padding.bottom + 20,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                    child: Image.network(
-                      offer['image_url'] ?? 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=600',
-                      height: 220,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        height: 220,
-                        width: double.infinity,
-                        color: AppTheme.stone,
-                        child: const Icon(Icons.local_offer, size: 64, color: AppTheme.primary),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: CircleAvatar(
-                      backgroundColor: Colors.white.withOpacity(0.9),
-                      radius: 18,
-                      child: IconButton(
-                        icon: const Icon(Icons.close, color: Colors.black, size: 18),
-                        onPressed: () => Navigator.pop(context),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      offer['title'] ?? 'Save 10% on a summertime trip',
-                      style: GoogleFonts.outfit(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.charcoal,
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      offer['description'] ?? 'Book within 7 days and save up to \$100 on your next stay. Terms apply.',
-                      style: GoogleFonts.manrope(
-                        fontSize: 14,
-                        color: AppTheme.charcoalMuted,
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: Consumer<AuthProvider>(
-                        builder: (context, auth, _) {
-                          final bool isClaimed = auth.isAuthenticated && auth.isPromoClaimed;
-                          return ElevatedButton(
-                            onPressed: isClaimed
-                                ? null
-                                : () {
-                                    if (!auth.isAuthenticated) {
-                                      Navigator.pop(context);
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(builder: (context) => const LoginScreen(popOnSuccess: true)),
-                                      );
-                                    } else {
-                                      auth.claimPromo().then((success) {
-                                        if (success) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Promo claimed! The discount has been applied to your account.'),
-                                              backgroundColor: Colors.green,
-                                            ),
-                                          );
-                                        } else {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Failed to claim promo. Please try again later.'),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
-                                        }
-                                      });
-                                      Navigator.pop(context);
-                                    }
-                                  },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: isClaimed ? Colors.grey : AppTheme.primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: Text(
-                              auth.isAuthenticated
-                                  ? (isClaimed ? 'Offer Claimed' : 'Claim Offer')
-                                  : (offer['button_text'] ?? 'Log in to claim offer'),
-                              style: GoogleFonts.manrope(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   @override
   void dispose() {
     _heroTimer?.cancel();
-    _searchController.dispose();
+    _heroController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
-    final propertyProvider = Provider.of<PropertyProvider>(context);
-
-    // Group properties by category for the collections view
-    final residentialProps = propertyProvider.properties
-        .where((p) => p.category.toLowerCase() == 'residential')
-        .toList();
-    final commercialProps = propertyProvider.properties
-        .where((p) => p.category.toLowerCase() == 'commercial')
-        .toList();
-    final eventProps = propertyProvider.properties
-        .where((p) => p.category.toLowerCase() == 'event' || 
-                      p.category.toLowerCase() == 'event_venue' || 
-                      p.category.toLowerCase() == 'events_venue')
-        .toList();
+    final auth = context.watch<AuthProvider>();
+    final propertyProvider = context.watch<PropertyProvider>();
+    final properties = propertyProvider.properties;
+    final residential = _filterByCategory(properties, 'residential');
+    final commercial = _filterByCategory(properties, 'commercial');
+    final event = _filterEvent(properties);
+    final featured = properties.take(6).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF9F6), // Warm white background
-      body: SingleChildScrollView(
+      backgroundColor: AppTheme.background,
+      body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 1. HERO SECTION WITH IMAGE BACKGROUND AND OVERLAYS
-            _buildTopHeroSection(context, auth),
-
-            const SizedBox(height: 32),
-
-            // 2. CATEGORY CIRCULAR BUTTONS
-            _buildCategoryQuickLinks(context),
-
-            const SizedBox(height: 40),
-
-            // 3. FEATURED COLLECTIONS
-            // A. Residential Collection
-            _buildCollectionSection(
-              context,
-              title: 'RESIDENTIAL COLLECTION',
+        slivers: [
+          SliverToBoxAdapter(child: _buildHero(auth)),
+          SliverToBoxAdapter(
+            child: _buildDestinationStrip(),
+          ),
+          SliverToBoxAdapter(
+            child: _buildCollections(
+              title: 'Residential Collection',
               subtitle: 'Luxury homes, apartments, and private stays.',
-              properties: residentialProps,
+              properties: residential.isNotEmpty ? residential : featured,
             ),
-
-            const SizedBox(height: 32),
-
-            // B. Commercial Spaces
-            _buildCollectionSection(
-              context,
-              title: 'COMMERCIAL SPACES',
+          ),
+          SliverToBoxAdapter(
+            child: _buildCollections(
+              title: 'Commercial Spaces',
               subtitle: 'Premium offices, co-working spaces, and retail.',
-              properties: commercialProps.isEmpty ? residentialProps : commercialProps,
+              properties: commercial.isNotEmpty ? commercial : featured,
             ),
-
-            const SizedBox(height: 32),
-
-            // C. Events & Functions
-            _buildCollectionSection(
-              context,
-              title: 'FITNESS & FUNCTIONS',
-              subtitle: 'Banquet halls, rooftops, and celebration venues.',
-              properties: eventProps,
+          ),
+          SliverToBoxAdapter(
+            child: _buildCollections(
+              title: 'Wedding Venues',
+              subtitle: 'Celebration-ready venues with polished hospitality.',
+              properties: event.isNotEmpty ? event : featured,
             ),
-
-            const SizedBox(height: 48),
-
-            // 4. READY TO HOST BANNER
-            _buildReadyToHostBanner(context, auth),
-
-            const SizedBox(height: 48),
-
-            // 5. LOVED BY GUESTS (TESTIMONIALS)
-            _buildTestimonialsSection(context),
-
-            const SizedBox(height: 48),
-
-            // 6. LATEST FROM THE BLOG
-            _buildBlogSection(context),
-
-            const SizedBox(height: 48),
-
-            // 7. FOOTER
-            _buildFooter(context),
-          ],
-        ),
+          ),
+          SliverToBoxAdapter(child: _buildHostBanner(auth)),
+          SliverToBoxAdapter(child: _buildTestimonialSection()),
+          SliverToBoxAdapter(child: _buildFooter()),
+          const SliverToBoxAdapter(child: SizedBox(height: 110)),
+        ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppTheme.secondary,
+        foregroundColor: Colors.white,
         onPressed: () {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => const AppShell(initialIndex: 3),
+              builder: (_) => const AppShell(initialIndex: 3),
             ),
           );
         },
-        backgroundColor: AppTheme.primary,
-        icon: const Icon(Icons.chat_bubble_rounded, color: Colors.white),
         label: Text(
-          'MAYUR AI',
-          style: GoogleFonts.manrope(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-            letterSpacing: 0.5,
-          ),
+          'AI Chat',
+          style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
         ),
+        icon: const Icon(Icons.auto_awesome_outlined),
       ),
     );
   }
 
-  Widget _buildTopHeroSection(BuildContext context, AuthProvider auth) {
-    final double statusBarHeight = MediaQuery.of(context).padding.top;
-    return Stack(
-      children: [
-        // Background image with beautiful transition and scale animation
-        SizedBox(
-          height: 380 + statusBarHeight,
-          width: double.infinity,
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 1200),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: ScaleTransition(
-                  scale: Tween<double>(begin: 1.05, end: 1.0).animate(
-                    CurvedAnimation(parent: animation, curve: Curves.easeOut),
+  Widget _buildHero(AuthProvider auth) {
+    final topPadding = MediaQuery.of(context).padding.top;
+    return SizedBox(
+      height: 560 + topPadding,
+      child: Stack(
+        children: [
+          PageView.builder(
+            controller: _heroController,
+            itemCount: _heroSlides.length,
+            onPageChanged: (index) => setState(() => _heroIndex = index),
+            itemBuilder: (context, index) {
+              final slide = _heroSlides[index];
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    slide.image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(color: AppTheme.secondary);
+                    },
                   ),
-                  child: child,
-                ),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.40),
+                          Colors.black.withValues(alpha: 0.18),
+                          AppTheme.secondary.withValues(alpha: 0.86),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
-            child: Container(
-              key: ValueKey<int>(_currentHeroImageIndex),
-              height: double.infinity,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  image: NetworkImage(_heroImages[_currentHeroImageIndex]),
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
           ),
-        ),
-        // Dark/gold gradient overlay
-        Container(
-          height: 380 + statusBarHeight,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.black.withOpacity(0.6),
-                Colors.black.withOpacity(0.3),
-                Colors.black.withOpacity(0.7),
+          Padding(
+            padding: EdgeInsets.fromLTRB(18, topPadding + 18, 18, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildHeroHeader(auth),
+                const Spacer(),
+                _buildHeroCopy(_heroSlides[_heroIndex]),
+                const SizedBox(height: 20),
+                _buildSearchPanel(),
+                const SizedBox(height: 18),
+                _buildHeroIndicators(),
               ],
             ),
           ),
-        ),
-        // Slide indicators (dots)
-        Positioned(
-          bottom: 110,
-          left: 0,
-          right: 0,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(_heroImages.length, (index) {
-              final isSelected = index == _currentHeroImageIndex;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                height: 6,
-                width: isSelected ? 20 : 6,
-                decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFFD4AF37) : Colors.white.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              );
-            }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroHeader(AuthProvider auth) {
+    return Row(
+      children: [
+        const AppLogo(height: 24, white: true, framed: false),
+        const Spacer(),
+        TextButton(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    auth.isAuthenticated ? const AppShell() : const LoginScreen(),
+              ),
+            );
+          },
+          child: Text(
+            auth.isAuthenticated ? 'Dashboard' : 'Sign In',
+            style: GoogleFonts.manrope(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+            ),
           ),
         ),
-        // Content
-        Padding(
-          padding: EdgeInsets.only(top: statusBarHeight),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header inside the Stack
-              _buildHeaderTranslucent(context, auth),
-              const SizedBox(height: 30),
-              // Gold indicator
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.5)),
-                  ),
-                  child: Text(
-                    'LUXURY PROPERTY RENTALS',
-                    style: GoogleFonts.outfit(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFFD4AF37),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Explore your place to stay
-              Text(
-                'Explore your place\nto stay',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.outfit(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  height: 1.2,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black.withOpacity(0.3),
-                      offset: const Offset(0, 2),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 35),
-              // Search capsule overlay
-              _buildSearchCapsule(context),
-            ],
+        const SizedBox(width: 8),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+          ),
+          child: IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            },
+            icon: const Icon(Icons.menu_rounded, color: Colors.white),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildHeaderTranslucent(BuildContext context, AuthProvider auth) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Brand Logo
-          const AppLogo(
-            height: 22,
-            white: true,
-            framed: false,
-          ),
-          // Action Buttons
-          Row(
-            children: [
-              auth.isAuthenticated
-                  ? TextButton(
-                      onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (context) => const AppShell()),
-                        );
-                      },
-                      child: Text(
-                        'Dashboard',
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFFD4AF37),
-                        ),
-                      ),
-                    )
-                  : Row(
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const LoginScreen()),
-                            );
-                          },
-                          child: Text(
-                            'Sign In',
-                            style: GoogleFonts.manrope(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const LoginScreen(
-                                  initialSignUpMode: true,
-                                  initialRole: 'host',
-                                ),
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: Text(
-                            'Become\na Host',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.manrope(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              height: 1.1,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => _showWebsiteMenu(context, auth),
-                          icon: const Icon(Icons.menu_rounded, color: Colors.white, size: 24),
-                          tooltip: 'Menu',
-                        ),
-                      ],
-                    ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _openHostRegistration(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const LoginScreen(
-          initialSignUpMode: true,
-          initialRole: 'host',
-        ),
-      ),
-    );
-  }
-
-  void _showWebsiteMenu(BuildContext context, AuthProvider auth) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return Container(
-          padding: EdgeInsets.fromLTRB(24, 18, 24, MediaQuery.of(sheetContext).padding.bottom + 24),
-          decoration: const BoxDecoration(
-            color: Color(0xF21E293B),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const AppLogo(height: 26, white: true, framed: false),
-                    IconButton(
-                      onPressed: () => Navigator.pop(sheetContext),
-                      icon: const Icon(Icons.close_rounded, color: Colors.white),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                _buildMenuAction(
-                  icon: Icons.explore_outlined,
-                  label: 'Discover',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const GuestBrowseScreen()));
-                  },
-                ),
-                _buildMenuAction(
-                  icon: Icons.favorite_rounded,
-                  label: 'Wishlist',
-                  iconColor: Colors.redAccent,
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AppShell(initialIndex: 1)));
-                  },
-                ),
-                _buildMenuAction(
-                  icon: Icons.route_outlined,
-                  label: 'How It Works',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _showHowItWorksSheet(context);
-                  },
-                ),
-                const SizedBox(height: 10),
-                Consumer<LocaleProvider>(
-                  builder: (context, localeProvider, _) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withOpacity(0.12)),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: localeProvider.currentLocale,
-                          dropdownColor: AppTheme.charcoal,
-                          iconEnabledColor: Colors.white,
-                          style: GoogleFonts.manrope(color: Colors.white, fontWeight: FontWeight.w700),
-                          items: const [
-                            DropdownMenuItem(value: 'en', child: Text('English')),
-                            DropdownMenuItem(value: 'hi', child: Text('Hindi')),
-                            DropdownMenuItem(value: 'mr', child: Text('Marathi')),
-                          ],
-                          onChanged: (value) {
-                            if (value != null) {
-                              localeProvider.setLocale(value);
-                            }
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 18),
-                if (auth.isAuthenticated) ...[
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(sheetContext);
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AppShell()));
-                    },
-                    child: const Text('Dashboard'),
-                  ),
-                ] else ...[
-                  OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(sheetContext);
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white30),
-                    ),
-                    child: const Text('Sign In'),
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(sheetContext);
-                      _openHostRegistration(context);
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary),
-                    child: const Text('Become a Host'),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildMenuAction({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    Color? iconColor,
-  }) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: iconColor ?? Colors.white, size: 24),
-      title: Text(
-        label,
-        style: GoogleFonts.manrope(
-          color: Colors.white,
-          fontSize: 22,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.white54),
-      onTap: onTap,
-    );
-  }
-
-  void _showHowItWorksSheet(BuildContext context) {
-    final steps = [
-      ('Host Account Setup', 'Register as a host and complete your identity basics.'),
-      ('Choose Subscription', 'Pick a plan that fits your property and hosting goals.'),
-      ('List Property', 'Upload details, pricing, photos, amenities, and availability.'),
-      ('Physical Verification', 'Our team verifies the property before it goes live.'),
-      ('Go Live', 'Start receiving booking requests on X-Space360.'),
-    ];
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return Container(
-          padding: EdgeInsets.fromLTRB(24, 18, 24, MediaQuery.of(sheetContext).padding.bottom + 24),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'How It Works',
-                      style: GoogleFonts.outfit(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.charcoal,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(sheetContext),
-                      icon: const Icon(Icons.close_rounded),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ...steps.asMap().entries.map((entry) {
-                  final index = entry.key + 1;
-                  final step = entry.value;
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          radius: 14,
-                          backgroundColor: AppTheme.primary,
-                          child: Text(
-                            '$index',
-                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(step.$1, style: GoogleFonts.manrope(fontWeight: FontWeight.w800, color: AppTheme.charcoal)),
-                              const SizedBox(height: 3),
-                              Text(step.$2, style: GoogleFonts.manrope(fontSize: 12, color: AppTheme.charcoalMuted, height: 1.35)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
-                const SizedBox(height: 6),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(sheetContext);
-                    _openHostRegistration(context);
-                  },
-                  child: const Text('Start Hosting Now'),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _showSearchBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return const _SearchBottomSheet();
-      },
-    );
-  }
-
-  // --- SEARCH CAPSULE ---
-  Widget _buildSearchCapsule(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: GestureDetector(
-        onTap: () {
-          _showSearchBottomSheet(context);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+  Widget _buildHeroCopy(_HeroSlide slide) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(color: const Color(0xFFE5E5DF)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 15,
-                offset: const Offset(0, 5),
+            color: Colors.white.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppTheme.primary.withValues(alpha: 0.55)),
+          ),
+          child: Text(
+            slide.tag,
+            style: GoogleFonts.manrope(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2.4,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            style: GoogleFonts.manrope(
+              fontSize: 33,
+              height: 1.12,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+            children: [
+              TextSpan(text: slide.titlePrefix),
+              TextSpan(
+                text: slide.titleHighlight,
+                style: GoogleFonts.manrope(
+                  fontSize: 33,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
-          child: Row(
-            children: [
-              const Icon(Icons.search, color: AppTheme.primary, size: 22),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: Colors.white),
+              ),
+              child: Text(
+                slide.badge,
+                style: GoogleFonts.manrope(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSearchPanel() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.16),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: _openSearchSheet,
+              borderRadius: BorderRadius.circular(999),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                child: Row(
                   children: [
-                    Text(
-                      'Where to next?',
-                      style: GoogleFonts.outfit(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.charcoal,
-                        letterSpacing: 0.5,
-                      ),
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 20,
+                      color: AppTheme.charcoalMuted,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Search destinations...',
-                      style: GoogleFonts.manrope(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.charcoalMuted,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Where to?',
+                            style: GoogleFonts.manrope(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.charcoal,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            _searchSummary,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.manrope(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.charcoalMuted,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              const CircleAvatar(
-                radius: 20,
-                backgroundColor: AppTheme.primary,
-                child: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  // --- CATEGORY QUICK LINKS ---
-  Widget _buildCategoryQuickLinks(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildCategoryItem(context, 'Residential', Icons.home_rounded, 'residential', isNew: false),
-          _buildCategoryItem(context, 'Commercial', Icons.business_rounded, 'commercial', isNew: true),
-          _buildCategoryItem(context, 'Events', Icons.celebration_rounded, 'event_venue', isNew: true),
+          _SearchIconButton(
+            icon: Icons.apartment_outlined,
+            onTap: _openSearchSheet,
+          ),
+          _SearchIconButton(
+            icon: Icons.calendar_month_outlined,
+            onTap: _openSearchSheet,
+          ),
+          _SearchIconButton(
+            icon: Icons.person_outline_rounded,
+            onTap: _openSearchSheet,
+          ),
+          const SizedBox(width: 6),
+          InkWell(
+            onTap: _runSearch,
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              width: 46,
+              height: 46,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1A1A1A),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.search, color: Colors.white, size: 22),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryItem(BuildContext context, String label, IconData iconData, String categoryValue, {bool isNew = false}) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AppShell(
-              initialIndex: 0,
-              initialCategory: categoryValue,
-            ),
+  String get _searchSummary {
+    final dateText = _selectedRange == null
+        ? 'Any week'
+        : '${DateFormat('dd MMM').format(_selectedRange!.start)} - ${DateFormat('dd MMM').format(_selectedRange!.end)}';
+    return '$_selectedCity · $_selectedCategory · $dateText · $_guestCount guests';
+  }
+
+  Widget _buildHeroIndicators() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(_heroSlides.length, (index) {
+        final active = index == _heroIndex;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: active ? 24 : 7,
+          height: 7,
+          decoration: BoxDecoration(
+            color: active ? AppTheme.primary : Colors.white.withValues(alpha: 0.38),
+            borderRadius: BorderRadius.circular(99),
           ),
         );
-      },
-      behavior: HitTestBehavior.opaque,
+      }),
+    );
+  }
+
+  Widget _buildCollections({
+    required String title,
+    required String subtitle,
+    required List<PropertyModel> properties,
+  }) {
+    if (properties.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 6),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(
-                iconData,
-                size: 28,
-                color: Colors.black87,
-              ),
-              if (isNew)
-                Positioned(
-                  top: -6,
-                  right: -16,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F2C59), // Deep Navy Blue
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'NEW',
-                      style: TextStyle(
-                        fontSize: 7,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+          Text(
+            title,
+            style: GoogleFonts.manrope(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.7,
+              color: AppTheme.charcoal,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
-            label,
+            subtitle,
             style: GoogleFonts.manrope(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              fontSize: 14,
+              height: 1.6,
+              color: AppTheme.charcoalMuted,
+            ),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 330,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: properties.length.clamp(0, 8),
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemBuilder: (context, index) {
+                final property = properties[index];
+                return _PropertyCard(property: property);
+              },
             ),
           ),
         ],
@@ -959,443 +527,148 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  // --- COLLECTION SECTION ---
-  Widget _buildCollectionSection(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required List<dynamic> properties,
-  }) {
-    final auth = Provider.of<AuthProvider>(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.outfit(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.charcoal,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: GoogleFonts.manrope(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.charcoalMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 260,
-          child: properties.isEmpty
-              ? Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 20.0),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.stone),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'No verified listings in this collection.',
-                      style: GoogleFonts.manrope(
-                        fontSize: 12,
-                        color: AppTheme.charcoalMuted,
-                      ),
-                    ),
-                  ),
-                )
-              : ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.only(left: 20.0, right: 8.0),
-                  itemCount: properties.length,
-                  itemBuilder: (context, index) {
-                    final prop = properties[index];
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PropertyDetailScreen(propertyId: prop.propertyId),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: 200,
-                        margin: const EdgeInsets.only(right: 14.0, bottom: 6.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.stone),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: Stack(
-                                children: [
-                                  Positioned.fill(
-                                    child: ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                                      child: Image.network(
-                                        prop.images.isNotEmpty
-                                            ? prop.images[0]
-                                            : 'https://images.unsplash.com/photo-1503174971373-b1f69850bded',
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => Container(
-                                          width: double.infinity,
-                                          height: double.infinity,
-                                          color: AppTheme.stone,
-                                          child: const Icon(Icons.holiday_village_outlined, color: AppTheme.primary, size: 24),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  // Rating Badge Top Left
-                                  if (prop.rating != null && prop.rating! > 0)
-                                    Positioned(
-                                      top: 10,
-                                      left: 10,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.9),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(Icons.star, color: Color(0xFFD4AF37), size: 12),
-                                            const SizedBox(width: 2),
-                                            Text(
-                                              prop.rating!.toStringAsFixed(1),
-                                              style: GoogleFonts.manrope(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w800,
-                                                color: AppTheme.charcoal,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  // Action Buttons Top Right
-                                  Positioned(
-                                    top: 10,
-                                    right: 10,
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(5),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(0.9),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(Icons.share_outlined, color: AppTheme.charcoal, size: 14),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Container(
-                                          padding: const EdgeInsets.all(5),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(0.9),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(Icons.favorite_border, color: AppTheme.charcoal, size: 14),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    prop.title,
-                                    style: GoogleFonts.outfit(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.charcoal,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                                    textBaseline: TextBaseline.alphabetic,
-                                    children: [
-                                      Text(
-                                        prop.category.toLowerCase() == 'commercial' || prop.category.toLowerCase() == 'event_venue'
-                                            ? '₹${(prop.pricePerNight * (auth.isPromoClaimed ? 0.9 : 1.0)).toStringAsFixed(0)} / day'
-                                            : '₹${(prop.pricePerNight * (auth.isPromoClaimed ? 0.9 : 1.0)).toStringAsFixed(0)} / night',
-                                        style: GoogleFonts.manrope(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTheme.primary,
-                                        ),
-                                      ),
-                                      if (auth.isPromoClaimed) ...[
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '₹${prop.pricePerNight.toStringAsFixed(0)}',
-                                          style: GoogleFonts.manrope(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w600,
-                                            color: AppTheme.charcoalMuted,
-                                            decoration: TextDecoration.lineThrough,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  // --- READY TO HOST BANNER ---
-  Widget _buildReadyToHostBanner(BuildContext context, AuthProvider auth) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-      child: Container(
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          gradient: const LinearGradient(
-            colors: [Color(0xFF262626), Color(0xFF121212)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Text(
-              'Ready to Host with Us?',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(
-                fontSize: 22,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                letterSpacing: -0.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'An initialization process that transforms your premium space into a lifestyle placement.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.manrope(
-                fontSize: 11,
-                color: Colors.grey.shade400,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    'List Your Property',
-                    style: GoogleFonts.manrope(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.white24),
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    'Learn More',
-                    style: GoogleFonts.manrope(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // --- LOVED BY GUESTS (TESTIMONIALS) ---
-  Widget _buildTestimonialsSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Loved by Guests & Hosts',
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.charcoal,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Hear from our community members about their experience.',
-                style: GoogleFonts.manrope(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.charcoalMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 160,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.only(left: 20.0, right: 8.0),
-            children: [
-              _buildTestimonialCard(
-                'Mayur Patil',
-                'Amazing stay! The property was highly clean and geofenced coordinates matched perfectly.',
-                'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde',
-              ),
-              _buildTestimonialCard(
-                'Vishwas More',
-                'Excellent host panel. Payout calculations are seamless and direct bank settlement works instantly.',
-                'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61',
-              ),
-              _buildTestimonialCard(
-                'Mayur More',
-                'Super simple booking. Verified badge gives absolute trust. Razorpay lock security is awesome.',
-                'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d',
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTestimonialCard(String name, String review, String avatarUrl) {
+  Widget _buildDestinationStrip() {
     return Container(
-      width: 240,
-      margin: const EdgeInsets.only(right: 12.0, bottom: 4.0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.stone),
-      ),
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 26, 20, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: List.generate(
-              5,
-              (index) => const Icon(Icons.star, color: Color(0xFFD4AF37), size: 14),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Text(
-              review,
-              style: GoogleFonts.manrope(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.charcoalLight,
-                height: 1.3,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
             children: [
-              CircleAvatar(
-                radius: 12,
-                backgroundImage: NetworkImage(avatarUrl),
+              Text(
+                'Pick a Destination',
+                style: GoogleFonts.cormorantGaramond(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.charcoal,
+                ),
               ),
               const SizedBox(width: 8),
               Text(
-                name,
-                style: GoogleFonts.outfit(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.charcoal,
+                'Show nearby locations',
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.charcoalMuted,
+                ),
+              ),
+              const Spacer(),
+              const Icon(Icons.chevron_left, color: AppTheme.charcoal, size: 20),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right, color: AppTheme.charcoal, size: 20),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 118,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _destinations.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 24),
+              itemBuilder: (context, index) {
+                final destination = _destinations[index];
+                return InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GuestBrowseScreen(
+                          initialCity: destination.city,
+                        ),
+                      ),
+                    );
+                  },
+                  child: SizedBox(
+                    width: 82,
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 58,
+                          height: 58,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF7F7F7),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFFEDEDED)),
+                          ),
+                          child: Icon(
+                            destination.icon,
+                            color: AppTheme.charcoal,
+                            size: 26,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          destination.city,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.charcoal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHostBanner(AuthProvider auth) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFFF7EA), Color(0xFFF3ECE3)],
+        ),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Ready to Host with Us?',
+            style: GoogleFonts.manrope(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.charcoal,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Join India\'s premium short-term rental network and turn curated spaces into high-yield assets.',
+            style: GoogleFonts.manrope(
+              fontSize: 14,
+              height: 1.6,
+              color: AppTheme.charcoalMuted,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => auth.isAuthenticated
+                            ? const AppShell()
+                            : const LoginScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('List Your Property'),
                 ),
               ),
             ],
@@ -1405,381 +678,364 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  // --- LATEST FROM THE BLOG ---
-  Widget _buildBlogSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'LATEST FROM THE BLOG',
-                style: GoogleFonts.outfit(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFFD4AF37),
-                  letterSpacing: 1.5,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Insights, trends, and hosting tips for your STR business.',
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.charcoalMuted,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 290,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.only(left: 20.0, right: 8.0),
-            children: [
-              _buildBlogCard(
-                context,
-                title: 'The Future of Short-Term Rentals in India',
-                summary: 'Insights and projections on how guest expectations and micro-vacation trends are transforming properties.',
-                imageUrl: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6',
-                author: 'Aarav Sharma',
-                date: 'June 12, 2026',
-                readTime: '4 mins read',
-                content: 'The short-term rental (STR) landscape in India is undergoing a massive transformation. Driven by rising disposable incomes, high-speed mobile connectivity, and a desire for experiential travel, guests are moving away from traditional hotels towards curated, private luxury villas.\n\nA key driver is the "workation" and "micro-vacation" trend, where urban professionals seek premium retreats within a 3-hour driving distance from major hubs like Mumbai, Pune, Delhi, and Bangalore. This shift demands that hosts invest in high-speed Wi-Fi, dedicated workstations, and wellness amenities.\n\nFurthermore, technology integration (such as automated self check-ins, geofenced access, and digital host panels) is no longer a luxury but an expectation. Property owners who align their listings with these trends stand to experience substantial growth in yields and occupancy rates.',
-              ),
-              _buildBlogCard(
-                context,
-                title: 'Design Guidelines for Your Property Yard',
-                summary: 'Turn your outdoor space into an oasis that drives higher booking conversions and premium rates.',
-                imageUrl: 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf',
-                author: 'Riya Mehta',
-                date: 'June 08, 2026',
-                readTime: '6 mins read',
-                content: 'Your property\'s yard is the first visual impression guests receive when browsing online. Creating a beautifully designed yard is one of the most effective strategies to increase booking conversions and command premium night rates.\n\nStart by defining distinct functional zones. Establish a relaxation zone with weather-resistant luxury loungers, an entertainment zone with a fire pit or outdoor BBQ station, and a scenic zone utilizing native plants and soft lighting.\n\nLighting is crucial. Integrate warm LED path lights, fairy lights on trees, and soft uplighting on architectural features to create an enchanting evening atmosphere. A well-designed yard turns a standard property into a memorable lifestyle placement, prompting guests to share their experience on social media.',
-              ),
-              _buildBlogCard(
-                context,
-                title: 'Top 5 Outdoor Escapes Near Mumbai & Nashik',
-                summary: 'Discover the most beautiful villas and properties offering premium escapes and resort-style living.',
-                imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750',
-                author: 'Kabir Malhotra',
-                date: 'May 29, 2026',
-                readTime: '5 mins read',
-                content: 'Escaping the hustle of Mumbai and Nashik has never been more alluring. The region offers stunning landscapes from the mist-covered hills of Lonavala to the serene vineyards of Nashik. Here are the top five curated escapes that define luxury:\n\n1. The Goldenrich Glasshouse (Nashik): A stunning contemporary villa overlooking the backwaters, featuring floor-to-ceiling glass windows and a private infinity pool.\n2. Whispering Palms Estate (Karjat): A sprawling rustic villa set in a coconut grove, featuring open-air showers and private lawn access.\n3. Cliffside Retreat (Lonavala): Perched on a cliff, offering panoramic valley views and premium wooden deck areas.\n4. Stone Oasis (Igathpuri): Built with local stone, blending traditional architecture with modern amenities.\n5. Vineyard Villa (Nashik): Located inside a private vineyard, offering wine tasting sessions and private lounge decks.\n\nEach of these estates offers a curated placement that ensures privacy, high-end hospitality, and a perfect weekend escape.',
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBlogCard(
-    BuildContext context, {
-    required String title,
-    required String summary,
-    required String imageUrl,
-    required String content,
-    required String author,
-    required String date,
-    required String readTime,
-  }) {
-    return GestureDetector(
-      onTap: () => _showBlogDetailModal(
-        context,
-        title: title,
-        summary: summary,
-        imageUrl: imageUrl,
-        content: content,
-        author: author,
-        date: date,
-        readTime: readTime,
-      ),
-      child: Container(
-        width: 240,
-        margin: const EdgeInsets.only(right: 14.0, bottom: 6.0),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.stone),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.02),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+  Widget _buildTestimonialSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 30, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Loved by Guests & Hosts',
+            style: GoogleFonts.manrope(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.charcoal,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                ),
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'A premium experience should feel refined on every screen, from discovery to checkout.',
+            style: GoogleFonts.manrope(
+              fontSize: 14,
+              height: 1.6,
+              color: AppTheme.charcoalMuted,
             ),
-            Padding(
-              padding: const EdgeInsets.all(12.0),
+          ),
+          const SizedBox(height: 18),
+          ..._testimonials.map(
+            (item) => Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppTheme.border),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Row(
+                    children: List.generate(
+                      5,
+                      (_) => const Padding(
+                        padding: EdgeInsets.only(right: 2),
+                        child: Icon(Icons.star_rounded,
+                            size: 16, color: AppTheme.primary),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   Text(
-                    title,
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                    item.quote,
+                    style: GoogleFonts.manrope(
+                      fontSize: 14,
+                      height: 1.7,
                       color: AppTheme.charcoal,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 14),
                   Text(
-                    summary,
+                    item.name,
                     style: GoogleFonts.manrope(
-                      fontSize: 10,
-                      color: AppTheme.charcoalLight,
-                      height: 1.3,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.charcoal,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
-                  const Divider(height: 1, color: AppTheme.stone),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '$date · $readTime',
-                        style: GoogleFonts.manrope(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.charcoalMuted,
-                        ),
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'READ ARTICLE',
-                            style: GoogleFonts.outfit(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFFD4AF37),
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          const Icon(
-                            Icons.chevron_right,
-                            size: 11,
-                            color: Color(0xFFD4AF37),
-                          ),
-                        ],
-                      ),
-                    ],
+                  const SizedBox(height: 2),
+                  Text(
+                    item.role,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: AppTheme.charcoalMuted,
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFooter() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 22, 20, 26),
+      decoration: BoxDecoration(
+        color: AppTheme.secondary,
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AppLogo(height: 22, white: true, framed: false),
+          const SizedBox(height: 16),
+          Text(
+            'Redefining short-term rentals in India through curation, technology, and premium service.',
+            style: GoogleFonts.manrope(
+              color: Colors.white.withValues(alpha: 0.76),
+              fontSize: 13,
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Nashik, Maharashtra',
+            style: GoogleFonts.manrope(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '© 2026 X-Space360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.',
+            style: GoogleFonts.manrope(
+              color: Colors.white.withValues(alpha: 0.54),
+              fontSize: 11,
+              height: 1.6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openSearchSheet() async {
+    final result = await showModalBottomSheet<_SearchSelection>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _SearchBottomSheet(
+        initialCity: _selectedCity == 'Anywhere' ? '' : _selectedCity,
+        initialCategory: _selectedCategory,
+        initialRange: _selectedRange,
+        initialGuests: _guestCount,
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _selectedCity = result.city.isEmpty ? 'Anywhere' : result.city;
+      _selectedCategory = result.category;
+      _selectedRange = result.range;
+      _guestCount = result.guests;
+    });
+    _runSearch();
+  }
+
+  void _runSearch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GuestBrowseScreen(
+          initialCity: _selectedCity == 'Anywhere' ? null : _selectedCity,
+          initialGuests: _guestCount,
+          initialCategory: _mapCategoryToBrowseValue(_selectedCategory),
         ),
       ),
     );
   }
 
-  void _showBlogDetailModal(
-    BuildContext context, {
-    required String title,
-    required String summary,
-    required String imageUrl,
-    required String content,
-    required String author,
-    required String date,
-    required String readTime,
-  }) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.85,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.stone,
-                    borderRadius: BorderRadius.circular(2),
+  String? _mapCategoryToBrowseValue(String category) {
+    switch (category.toLowerCase()) {
+      case 'residential':
+        return 'residential';
+      case 'commercial':
+        return 'commercial';
+      case 'event venue':
+        return 'event_venue';
+      default:
+        return null;
+    }
+  }
+
+  List<PropertyModel> _filterByCategory(
+    List<PropertyModel> properties,
+    String category,
+  ) {
+    return properties
+        .where((property) => property.category.toLowerCase() == category)
+        .toList();
+  }
+
+  List<PropertyModel> _filterEvent(List<PropertyModel> properties) {
+    return properties
+        .where((property) {
+          final category = property.category.toLowerCase();
+          return category == 'event' ||
+              category == 'event_venue' ||
+              category == 'events_venue';
+        })
+        .toList();
+  }
+}
+
+class _PropertyCard extends StatelessWidget {
+  final PropertyModel property;
+
+  const _PropertyCard({required this.property});
+
+  @override
+  Widget build(BuildContext context) {
+    final rating = property.rating ?? 4.8;
+    final image = property.images.isNotEmpty ? property.images.first : null;
+
+    return SizedBox(
+      width: 250,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PropertyDetailScreen(propertyId: property.propertyId),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(26),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(26),
+                    child: image != null
+                        ? Image.network(
+                            image,
+                            width: double.infinity,
+                            height: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: AppTheme.stone,
+                                child: const Center(
+                                  child: Icon(Icons.home_work_outlined,
+                                      color: AppTheme.charcoalMuted, size: 34),
+                                ),
+                              );
+                            },
+                          )
+                        : Container(
+                            color: AppTheme.stone,
+                            child: const Center(
+                              child: Icon(Icons.home_work_outlined,
+                                  color: AppTheme.charcoalMuted, size: 34),
+                            ),
+                          ),
                   ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'EDITORIAL JOURNAL',
-                      style: GoogleFonts.outfit(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFFD4AF37),
-                        letterSpacing: 1.5,
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.88),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        property.category.toUpperCase(),
+                        style: GoogleFonts.manrope(
+                          color: AppTheme.charcoal,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.0,
+                        ),
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: AppTheme.charcoal, size: 20),
-                      onPressed: () => Navigator.pop(context),
+                  ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.90),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.favorite_border_rounded,
+                        color: AppTheme.charcoal,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    property.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.charcoal,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.star_rounded,
+                        color: AppTheme.primary, size: 16),
+                    const SizedBox(width: 3),
+                    Text(
+                      rating.toStringAsFixed(1),
+                      style: GoogleFonts.manrope(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.charcoal,
+                      ),
                     ),
                   ],
                 ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.outfit(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.charcoal,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 18,
-                            backgroundColor: AppTheme.stone,
-                            child: Text(
-                              author.substring(0, 1),
-                              style: GoogleFonts.outfit(
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.charcoal,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'By $author',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppTheme.charcoal,
-                                ),
-                              ),
-                              Text(
-                                '$date · $readTime',
-                                style: GoogleFonts.manrope(
-                                  fontSize: 10,
-                                  color: AppTheme.charcoalMuted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.network(
-                          imageUrl,
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      RichText(
-                        text: TextSpan(
-                          children: [
-                            TextSpan(
-                              text: content.substring(0, 1),
-                              style: GoogleFonts.outfit(
-                                fontSize: 44,
-                                fontWeight: FontWeight.w900,
-                                color: const Color(0xFFD4AF37),
-                                height: 0.8,
-                              ),
-                            ),
-                            TextSpan(
-                              text: content.substring(1),
-                              style: GoogleFonts.manrope(
-                                fontSize: 13,
-                                color: AppTheme.charcoal,
-                                height: 1.6,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // --- FOOTER WIDGET ---
-  Widget _buildFooter(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
-      child: Column(
-        children: [
-          const Divider(color: AppTheme.stone),
-          const SizedBox(height: 16),
-          Text(
-            '© 2026 X-Space360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.manrope(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.charcoalMuted,
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              '${property.city}, ${property.state}',
+              style: GoogleFonts.manrope(
+                fontSize: 12,
+                color: AppTheme.charcoalMuted,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0).format(property.pricePerNight)} / night',
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.charcoal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _SearchBottomSheet extends StatefulWidget {
-  const _SearchBottomSheet();
+  final String initialCity;
+  final String initialCategory;
+  final DateTimeRange? initialRange;
+  final int initialGuests;
+
+  const _SearchBottomSheet({
+    required this.initialCity,
+    required this.initialCategory,
+    required this.initialRange,
+    required this.initialGuests,
+  });
 
   @override
   State<_SearchBottomSheet> createState() => _SearchBottomSheetState();
@@ -1787,17 +1043,33 @@ class _SearchBottomSheet extends StatefulWidget {
 
 class _SearchBottomSheetState extends State<_SearchBottomSheet> {
   final TextEditingController _cityController = TextEditingController();
-  DateTimeRange? _selectedDateRange;
-  int _guests = 1;
+  DateTimeRange? _range;
+  int _guests = 2;
+  String _category = 'All Types';
 
-  final List<String> _popularCities = [
+  static const List<String> _popularCities = [
     'Goa',
     'Mumbai',
     'Nashik',
-    'Udaipur',
-    'Manali',
     'Pune',
+    'Bangalore',
   ];
+
+  static const List<String> _categories = [
+    'All Types',
+    'Residential',
+    'Commercial',
+    'Event Venue',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _cityController.text = widget.initialCity;
+    _range = widget.initialRange;
+    _guests = widget.initialGuests;
+    _category = widget.initialCategory;
+  }
 
   @override
   void dispose() {
@@ -1805,18 +1077,223 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
     super.dispose();
   }
 
-  Future<void> _selectDates(BuildContext context) async {
-    final DateTimeRange? picked = await showDateRangePicker(
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            22,
+            14,
+            22,
+            MediaQuery.of(context).viewInsets.bottom + 22,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.border,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Search stays',
+                style: GoogleFonts.manrope(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+              const SizedBox(height: 18),
+              TextField(
+                controller: _cityController,
+                decoration: const InputDecoration(
+                  hintText: 'Search destinations',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 38,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _popularCities.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final city = _popularCities[index];
+                    return ChoiceChip(
+                      label: Text(city),
+                      selected: _cityController.text == city,
+                      onSelected: (_) {
+                        setState(() => _cityController.text = city);
+                      },
+                      selectedColor: AppTheme.secondary,
+                      labelStyle: GoogleFonts.manrope(
+                        color: _cityController.text == city
+                            ? Colors.white
+                            : AppTheme.charcoal,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      backgroundColor: AppTheme.stone,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                        side: BorderSide.none,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 40,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _categories.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final category = _categories[index];
+                    final selected = _category == category;
+                    return ChoiceChip(
+                      label: Text(category),
+                      selected: selected,
+                      onSelected: (_) {
+                        setState(() => _category = category);
+                      },
+                      selectedColor: AppTheme.primary,
+                      backgroundColor: AppTheme.stone,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(999),
+                        side: BorderSide.none,
+                      ),
+                      labelStyle: GoogleFonts.manrope(
+                        color: selected ? AppTheme.secondary : AppTheme.charcoal,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 12,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: _pickDates,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.sand,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.calendar_month_outlined,
+                          color: AppTheme.terracotta),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _range == null
+                              ? 'Select dates'
+                              : '${DateFormat('dd MMM').format(_range!.start)} - ${DateFormat('dd MMM').format(_range!.end)}',
+                          style: GoogleFonts.manrope(
+                            color: AppTheme.charcoal,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: AppTheme.sand,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.people_outline, color: AppTheme.sage),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Guests',
+                      style: GoogleFonts.manrope(
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.charcoal,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: _guests > 1
+                          ? () => setState(() => _guests--)
+                          : null,
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                    Text(
+                      '$_guests',
+                      style: GoogleFonts.manrope(
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.charcoal,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => setState(() => _guests++),
+                      icon: const Icon(Icons.add_circle_outline),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(
+                      context,
+                      _SearchSelection(
+                        city: _cityController.text.trim(),
+                        category: _category,
+                        range: _range,
+                        guests: _guests,
+                      ),
+                    );
+                  },
+                  child: const Text('Apply & Search'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickDates() async {
+    final picked = await showDateRangePicker(
       context: context,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      initialDateRange: _selectedDateRange,
+      initialDateRange: _range,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
               primary: AppTheme.primary,
-              onPrimary: Colors.white,
+              onPrimary: AppTheme.secondary,
               surface: Colors.white,
               onSurface: AppTheme.charcoal,
             ),
@@ -1826,263 +1303,87 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
       },
     );
     if (picked != null) {
-      setState(() {
-        _selectedDateRange = picked;
-      });
+      setState(() => _range = picked);
     }
   }
+}
+
+class _SearchIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _SearchIconButton({
+    required this.icon,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Handle bar
-              Align(
-                alignment: Alignment.center,
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text(
-                'Search stays',
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.charcoal,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Location Input
-              Text(
-                'WHERE TO?',
-                style: GoogleFonts.outfit(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.charcoalMuted,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _cityController,
-                style: GoogleFonts.manrope(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.charcoal,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Search destinations',
-                  prefixIcon: const Icon(Icons.location_on_outlined, color: AppTheme.primary),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[200]!),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey[200]!),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              // Popular city chips
-              SizedBox(
-                height: 38,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _popularCities.length,
-                  itemBuilder: (context, index) {
-                    final city = _popularCities[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: ActionChip(
-                        label: Text(city),
-                        labelStyle: GoogleFonts.manrope(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: _cityController.text == city ? Colors.white : AppTheme.charcoal,
-                        ),
-                        backgroundColor: _cityController.text == city ? AppTheme.primary : Colors.grey[100],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                          side: const BorderSide(color: Colors.transparent),
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _cityController.text = city;
-                          });
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Date Selection
-              Text(
-                'WHEN?',
-                style: GoogleFonts.outfit(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  color: AppTheme.charcoalMuted,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: () => _selectDates(context),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[200]!),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today_outlined, color: AppTheme.primary, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _selectedDateRange == null
-                              ? 'Select dates'
-                              : '${DateFormat('dd MMM').format(_selectedDateRange!.start)} - ${DateFormat('dd MMM').format(_selectedDateRange!.end)}',
-                          style: GoogleFonts.manrope(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: _selectedDateRange == null ? AppTheme.charcoalMuted : AppTheme.charcoal,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Guest selection
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'WHO?',
-                        style: GoogleFonts.outfit(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.charcoalMuted,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Number of Guests',
-                        style: GoogleFonts.manrope(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.charcoal,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.remove_circle_outline, color: AppTheme.primary, size: 28),
-                        onPressed: _guests > 1
-                            ? () {
-                                setState(() {
-                                  _guests--;
-                                });
-                              }
-                            : null,
-                      ),
-                      Text(
-                        '$_guests',
-                        style: GoogleFonts.manrope(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.charcoal,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary, size: 28),
-                        onPressed: () {
-                          setState(() {
-                            _guests++;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-
-              // Search Button
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // close bottom sheet
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AppShell(
-                        initialIndex: 0,
-                        initialSearchCity: _cityController.text.trim(),
-                        initialSearchGuests: _guests,
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Text(
-                  'Search properties',
-                  style: GoogleFonts.manrope(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        width: 38,
+        height: 38,
+        margin: const EdgeInsets.symmetric(horizontal: 1.5),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
         ),
+        child: Icon(icon, size: 20, color: AppTheme.charcoal),
       ),
     );
   }
+}
+
+class _SearchSelection {
+  final String city;
+  final String category;
+  final DateTimeRange? range;
+  final int guests;
+
+  const _SearchSelection({
+    required this.city,
+    required this.category,
+    required this.range,
+    required this.guests,
+  });
+}
+
+class _HeroSlide {
+  final String image;
+  final String tag;
+  final String titlePrefix;
+  final String titleHighlight;
+  final String subtitle;
+  final String badge;
+  final String? category;
+
+  const _HeroSlide({
+    required this.image,
+    required this.tag,
+    required this.titlePrefix,
+    required this.titleHighlight,
+    required this.subtitle,
+    required this.badge,
+    required this.category,
+  });
+}
+
+class _DestinationData {
+  final String city;
+  final IconData icon;
+
+  const _DestinationData(this.city, this.icon);
+}
+
+class _TestimonialData {
+  final String name;
+  final String role;
+  final String quote;
+
+  const _TestimonialData({
+    required this.name,
+    required this.role,
+    required this.quote,
+  });
 }

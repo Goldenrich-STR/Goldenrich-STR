@@ -5,6 +5,7 @@ import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient
 import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
 import LegalLinks from '../components/LegalLinks';
+import DateRangePicker from '../components/ui/DateRangePicker';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
 import {
   ArrowLeft,
@@ -499,6 +500,8 @@ const PropertyDetail = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('checkOut') || '';
   });
+  const [bookingCalendarOpen, setBookingCalendarOpen] = useState(false);
+  const [bookingCalendarAnchor, setBookingCalendarAnchor] = useState('checkIn');
   const [guests, setGuests] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return Number(params.get('guests')) || 1;
@@ -2015,34 +2018,48 @@ const PropertyDetail = () => {
               <div className="bg-stone/80 rounded-2xl border border-gray-100 mb-6">
                 <div className="grid grid-cols-2 divide-x divide-sand-200">
                   <button 
-                    onClick={() => document.getElementById('cal-trigger')?.focus()}
+                    onClick={() => {
+                      setBookingCalendarAnchor('checkIn');
+                      setBookingCalendarOpen(true);
+                    }}
                     className="p-4 text-left hover:bg-white transition-colors group rounded-tl-2xl"
                   >
                     <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block group-hover:text-terracotta transition-colors">{t('checkIn')}</label>
-                    <input
-                      type="date"
-                      id="cal-trigger"
-                      value={checkIn}
-                      min={todayISO}
-                      onChange={(e) => setCheckIn(e.target.value)}
-                      className="w-full text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none cursor-pointer"
-                    />
+                    <div id="cal-trigger" className="w-full text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none cursor-pointer">
+                      {checkIn || 'Select Date'}
+                    </div>
                   </button>
                   <button 
-                    onClick={() => document.getElementById('cal-trigger-out')?.focus()}
+                    onClick={() => {
+                      setBookingCalendarAnchor('checkOut');
+                      setBookingCalendarOpen(true);
+                    }}
                     className="p-4 text-left hover:bg-white transition-colors group rounded-tr-2xl"
                   >
                     <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block group-hover:text-terracotta transition-colors">{t('checkOut')}</label>
-                    <input
-                      type="date"
-                      id="cal-trigger-out"
-                      value={checkOut}
-                      min={checkIn || todayISO}
-                      onChange={(e) => setCheckOut(e.target.value)}
-                      className="w-full text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none cursor-pointer"
-                    />
+                    <div id="cal-trigger-out" className="w-full text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none cursor-pointer">
+                      {checkOut || 'Select Date'}
+                    </div>
                   </button>
                 </div>
+                {bookingCalendarOpen && (
+                  <div className="relative">
+                    <div className="absolute left-4 right-4 top-2 z-20">
+                      <DateRangePicker
+                        open={bookingCalendarOpen}
+                        anchor={bookingCalendarAnchor}
+                        checkIn={checkIn}
+                        checkOut={checkOut}
+                        minDate={todayISO}
+                        onChange={({ checkIn: nextCheckIn, checkOut: nextCheckOut }) => {
+                          setCheckIn(nextCheckIn);
+                          setCheckOut(nextCheckOut);
+                        }}
+                        onClose={() => setBookingCalendarOpen(false)}
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="p-4 border-t border-gray-100 flex flex-col hover:bg-white transition-colors group gap-4 rounded-b-2xl">
                   <div className="flex items-center w-full justify-between">
                     <div className="flex items-center w-full">
