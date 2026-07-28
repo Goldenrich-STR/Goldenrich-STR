@@ -1643,7 +1643,6 @@ const TransactionsTab = () => {
 
   return (
     <div className="space-y-6" data-testid="transactions-tab">
-<<<<<<< HEAD
       <div className="border border-gray-100 shadow-sm rounded-lg bg-white overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 px-5 py-4 border-b border-gray-100 bg-slate-50/70">
           <div className="flex items-start gap-3">
@@ -1774,97 +1773,6 @@ const TransactionsTab = () => {
             />
             </label>
           </div>
-=======
-      <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-5">
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 items-center">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search by Customer Name, Phone, Email, Booking ID, Payment ID, UTR ID..."
-                value={filters.q}
-                onChange={(e) => handleFilterChange({ ...filters, q: e.target.value })}
-                className="input-field h-14 w-full bg-stone/50 focus:bg-white border border-gray-200 focus:border-gold focus:ring-2 focus:ring-gold/10 rounded-xl transition text-sm px-5"
-                data-testid="filter-q"
-              />
-              {filters.q && (
-                <button
-                  type="button"
-                  onClick={() => handleFilterChange({ ...filters, q: '' })}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-charcoal-muted hover:text-charcoal"
-                  aria-label="Clear search"
-                >
-                  <XCircle className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[minmax(230px,1fr)_minmax(230px,1fr)_minmax(360px,1.05fr)_150px] gap-4 items-end">
-            <label className="block">
-              <span className="block text-xs font-bold text-charcoal uppercase tracking-wide mb-2">Transaction Type</span>
-              <select
-                value={filters.type}
-                onChange={(e) => handleFilterChange({ ...filters, type: e.target.value })}
-                className="input-field h-12 w-full bg-stone/50 focus:bg-white border border-gray-200 rounded-xl px-5 text-sm"
-                data-testid="filter-type"
-              >
-                <option value="">All Transaction Types</option>
-                <option value="booking_payment">Booking payments</option>
-                <option value="registration_fee">Registration fees</option>
-                <option value="subscription">Subscriptions</option>
-                <option value="refund">Refunds</option>
-                <option value="payout">Payouts</option>
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="block text-xs font-bold text-charcoal uppercase tracking-wide mb-2">Status</span>
-              <select
-                value={filters.status}
-                onChange={(e) => handleFilterChange({ ...filters, status: e.target.value })}
-                className="input-field h-12 w-full bg-stone/50 focus:bg-white border border-gray-200 rounded-xl px-5 text-sm"
-                data-testid="filter-status"
-              >
-                <option value="">All Statuses</option>
-                <option value="success">Success</option>
-                <option value="pending">Pending</option>
-                <option value="failed">Failed</option>
-              </select>
-            </label>
-
-            <label className="block">
-              <span className="block text-xs font-bold text-charcoal uppercase tracking-wide mb-2">Date Range</span>
-              <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-                <input
-                  type="date"
-                  value={filters.start}
-                  onChange={(e) => handleFilterChange({ ...filters, start: e.target.value })}
-                  className="input-field h-12 min-w-0 w-full bg-stone/50 focus:bg-white border border-gray-200 rounded-xl px-4 text-sm"
-                  data-testid="filter-start"
-                />
-                <span className="hidden sm:inline text-charcoal-muted text-xs font-bold">to</span>
-                <input
-                  type="date"
-                  value={filters.end}
-                  onChange={(e) => handleFilterChange({ ...filters, end: e.target.value })}
-                  className="input-field h-12 min-w-0 w-full bg-stone/50 focus:bg-white border border-gray-200 rounded-xl px-4 text-sm"
-                  data-testid="filter-end"
-                />
-              </div>
-            </label>
-
-            <button
-              onClick={downloadCsv}
-              className="h-12 w-full px-5 rounded-xl bg-sage hover:bg-sage-dark text-white font-bold transition flex items-center justify-center space-x-2 text-sm shadow-sm whitespace-nowrap"
-              data-testid="export-csv-btn"
-            >
-              <Download className="w-4 h-4" />
-              <span>Export CSV</span>
-            </button>
-          </div>
->>>>>>> 0c1ea17b28be8da7905be43affc2c805a6802de9
         </div>
       </div>
 
@@ -3615,9 +3523,484 @@ const InvoiceModal = ({ transaction, onClose }) => {
   const cgst = Number(invoiceBreakdown.cgst ?? ((amountINR - baseAmount) / 2));
   const sgst = Number(invoiceBreakdown.sgst ?? ((amountINR - baseAmount) / 2));
   const totalGst = cgst + sgst;
+  const escapeInvoiceHtml = (value) =>
+    String(value ?? 'NA')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  const plainMoney = (value) => Number(value || 0).toFixed(2);
+  const serviceDescription = t.type === 'subscription'
+    ? `Property Subscription Charges [${t.subscription?.start_date ? formatDateForInvoice(t.subscription.start_date) : 'NA'} to ${t.subscription?.end_date ? formatDateForInvoice(t.subscription.end_date) : 'NA'}]`
+    : t.type === 'booking_payment'
+      ? `Booking Accommodation Charges [booking_id: ${t.booking_id || 'NA'}]`
+      : t.type === 'registration_fee'
+        ? 'Host Registration Fee'
+        : t.type === 'refund'
+          ? `Accommodation Refund [booking_id: ${t.booking_id || 'NA'}]`
+          : 'Platform Service Charges';
 
   const handlePrint = () => {
-    window.print();
+    const printWindow = window.open('', 'xspace-invoice-print', 'width=1100,height=900');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    const invoiceHtml = `
+      <table class="invoice-shell">
+        <tbody>
+          <tr>
+            <td class="company-cell">
+              <table class="company-heading-table">
+                <tbody>
+                  <tr>
+                    <td class="logo-cell"><img src="/logo.png" alt="X-Space360 Logo" /></td>
+                    <td class="company-name-cell">
+                      <strong>Golden Rich Financial &amp; Real Estate<br />Solutions Pvt. Ltd.</strong><br />
+                      Office No-804, Royal Avaan Avenue,<br />
+                      Opp. Bhosla School Gate, Jehan Circle,<br />
+                      Gangapur Road, Nashik-422013
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <table class="company-meta-table">
+                <tbody>
+                  <tr>
+                    <td class="company-meta">
+                      <strong>GSTIN/UIN:</strong> 27AAKCG1285C1ZP<br />
+                      <strong>State Name:</strong> Maharashtra, Code : 27<br />
+                      <strong>Contact:</strong> 9225586001<br />
+                      <strong>Email:</strong> finance.director@goldenrichproperties.com
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+            <td class="details-cell">
+              <table>
+                <tbody>
+                  <tr>
+                    <td><span>Invoice No.</span><strong>${escapeInvoiceHtml(t.invoice_no || t.transaction_id)}</strong></td>
+                    <td><span>Dated</span><strong>${escapeInvoiceHtml(formatDateForInvoice(t.created_at))}</strong></td>
+                  </tr>
+                  <tr>
+                    <td><span>Mode/Terms of Payment</span><strong>${t.upi_transaction_id ? 'UPI QR' : 'NET BANKING'}</strong></td>
+                    <td><span>Reference No. &amp; Date</span><strong>${escapeInvoiceHtml(t.upi_transaction_id || t.razorpay_payment_id || t.transaction_id || 'NA')}</strong></td>
+                  </tr>
+                  <tr>
+                    <td class="blank-detail">&nbsp;</td>
+                    <td class="blank-detail">&nbsp;</td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="buyer-cell">
+              <table>
+                <tbody>
+                  <tr><td>
+                    <span>Buyer (Bill to)</span><br />
+                    <strong>${escapeInvoiceHtml(propertyName)}</strong><br />
+                    Address: ${escapeInvoiceHtml(propertyAddress)}<br />
+                    GSTIN/UIN: ${escapeInvoiceHtml(user.gst_number || user.gst_no || 'NA')}<br />
+                    State Name: ${escapeInvoiceHtml(user.gst_number && user.gst_number.length >= 2 ? (user.gst_number.startsWith('27') ? 'Maharashtra, Code : 27' : 'Other State, Code : ' + user.gst_number.substring(0, 2)) : 'Maharashtra, Code : 27')}<br />
+                    Contact Person: ${escapeInvoiceHtml(user.full_name || 'NA')}<br />
+                    Mobile: ${escapeInvoiceHtml(user.phone || 'NA')}<br />
+                    Email: ${escapeInvoiceHtml(user.email || 'NA')}
+                  </td></tr>
+                </tbody>
+              </table>
+            </td>
+            <td class="buyer-blank-cell">&nbsp;</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="services-table">
+        <thead>
+          <tr>
+            <th class="sr">Sr.No</th>
+            <th class="desc">Description of Services</th>
+            <th class="hsn">HSN/SAC</th>
+            <th class="offer">Services Offer</th>
+            <th class="gst">GST Rate</th>
+            <th class="rate">Rate</th>
+            <th class="per">per</th>
+            <th class="disc">Disc. %</th>
+            <th class="amt">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="center">1</td>
+            <td class="desc-text"><strong>${escapeInvoiceHtml(serviceDescription)}</strong></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td class="right mono">${t.type === 'subscription' ? plainMoney(planFee) : plainMoney(baseAmount)}</td>
+            <td></td>
+            <td></td>
+            <td class="right mono">${t.type === 'subscription' ? plainMoney(planFee) : plainMoney(baseAmount)}</td>
+          </tr>
+          ${t.type === 'subscription' ? `
+            <tr>
+              <td></td>
+              <td class="sub-desc">Platform Fee</td>
+              <td></td><td></td><td></td>
+              <td class="right mono">${plainMoney(platformFee)}</td>
+              <td></td><td></td>
+              <td class="right mono">${plainMoney(platformFee)}</td>
+            </tr>
+            ${discountAmount > 0 ? `
+              <tr>
+                <td></td>
+                <td class="sub-desc">Coupon Discount${couponCode ? ` (${escapeInvoiceHtml(couponCode)})` : ''}</td>
+                <td></td><td></td><td></td>
+                <td class="right mono">-${plainMoney(discountAmount)}</td>
+                <td></td>
+                <td class="right mono">${discountPercent ? `${discountPercent.toFixed(2)}%` : ''}</td>
+                <td class="right mono">-${plainMoney(discountAmount)}</td>
+              </tr>
+            ` : ''}
+            <tr>
+              <td></td>
+              <td class="sub-desc">Taxable Amount</td>
+              <td class="center mono">998399</td>
+              <td class="center"><strong>01</strong></td>
+              <td class="center">18%</td>
+              <td class="right mono">${plainMoney(baseAmount)}</td>
+              <td class="center">Nos</td>
+              <td></td>
+              <td class="right mono">${plainMoney(baseAmount)}</td>
+            </tr>
+          ` : ''}
+          <tr>
+            <td></td>
+            <td class="sub-desc">CGST @ 9%</td>
+            <td></td><td></td>
+            <td class="center">9%</td>
+            <td class="right mono">${plainMoney(cgst)}</td>
+            <td></td><td></td>
+            <td class="right mono">${plainMoney(cgst)}</td>
+          </tr>
+          <tr>
+            <td></td>
+            <td class="sub-desc">SGST @ 9%</td>
+            <td></td><td></td>
+            <td class="center">9%</td>
+            <td class="right mono">${plainMoney(sgst)}</td>
+            <td></td><td></td>
+            <td class="right mono">${plainMoney(sgst)}</td>
+          </tr>
+          <tr class="total-row">
+            <td></td>
+            <td><strong>Total</strong></td>
+            <td></td>
+            <td class="center"><strong>01 Nos</strong></td>
+            <td></td><td></td><td></td><td></td>
+            <td class="right"><strong>${formatInvoiceMoney(amountINR)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="words-table">
+        <tbody>
+          <tr><td><span>Amount Chargeable (in words)</span><br /><strong>Indian Rupees ${escapeInvoiceHtml(numberToWords(amountINR))} Only</strong></td></tr>
+        </tbody>
+      </table>
+
+      <table class="gst-table">
+        <thead>
+          <tr>
+            <th>HSN/SAC</th>
+            <th>Taxable Value</th>
+            <th>Central Tax Rate</th>
+            <th>Central Tax Amount</th>
+            <th>State Tax Rate</th>
+            <th>State Tax Amount</th>
+            <th>Total Tax Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">998399</td>
+            <td class="center mono">${plainMoney(baseAmount)}</td>
+            <td class="center"><strong>9%</strong></td>
+            <td class="center mono"><strong>${plainMoney(cgst)}</strong></td>
+            <td class="center"><strong>9%</strong></td>
+            <td class="center mono"><strong>${plainMoney(sgst)}</strong></td>
+            <td class="center mono"><strong>${plainMoney(totalGst)}</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Total</strong></td>
+            <td class="center mono"><strong>${plainMoney(baseAmount)}</strong></td>
+            <td></td>
+            <td class="center mono"><strong>${plainMoney(cgst)}</strong></td>
+            <td></td>
+            <td class="center mono"><strong>${plainMoney(sgst)}</strong></td>
+            <td class="center mono"><strong>${plainMoney(totalGst)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <table class="words-table">
+        <tbody>
+          <tr><td><span>Tax Amount (in words)</span><br /><strong>Indian Rupees ${escapeInvoiceHtml(numberToWords(totalGst))} Only</strong></td></tr>
+        </tbody>
+      </table>
+
+      <table class="signature-table">
+        <tbody>
+          <tr>
+            <td class="bank-cell">
+              <strong><u>Company's Bank Details:</u></strong><br />
+              <strong>A/c Holder's Name:</strong> Golden Rich Financial &amp; Real Estate Solutions Pvt. Ltd.<br />
+              <strong>Bank Name:</strong> IDFC FIRST BANK<br />
+              <strong>A/c No.:</strong> 10250563892<br />
+              <strong>Branch &amp; IFSC Code:</strong> Gangapur Road, Nashik &amp; IDFB0042283<br />
+              <em>Declaration: We declare that this invoice shows the actual price of the Service described and that all particulars are true and correct.</em>
+            </td>
+            <td class="sign-cell">
+              <strong>For Golden Rich Properties</strong><br />
+              <br /><br /><br /><br />
+              <strong>Authorized Signatory</strong>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>${t.invoice_no || 'Tax Invoice'}</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 8mm;
+            }
+
+            html,
+            body {
+              margin: 0;
+              padding: 0;
+              width: 210mm;
+              min-height: 297mm;
+              background: #ffffff;
+              color: #000000;
+              font-family: Arial, Helvetica, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+
+            body {
+              display: block;
+            }
+
+            * {
+              box-sizing: border-box;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+
+            .invoice-print-page {
+              width: 190mm;
+              margin: 0 auto;
+              padding: 0;
+              background: #ffffff;
+              overflow: visible;
+            }
+
+            .print-invoice {
+              width: 190mm;
+              margin: 0 auto;
+              border: 1.5px solid #000 !important;
+              background: #fff !important;
+              color: #000 !important;
+              box-shadow: none !important;
+              font-size: 10.5px !important;
+              line-height: 1.28 !important;
+              overflow: visible !important;
+              transform: none !important;
+              zoom: 1 !important;
+            }
+
+            table {
+              width: 100% !important;
+              max-width: 100% !important;
+              border-collapse: collapse !important;
+              border-spacing: 0 !important;
+              table-layout: fixed !important;
+              border-top: 0.75px solid #444 !important;
+              border-right: 0.75px solid #444 !important;
+              border-bottom: 0.75px solid #444 !important;
+              border-left: 0.75px solid #444 !important;
+              transform: none !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+
+            thead,
+            tbody,
+            tr,
+            td,
+            th {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+
+            tr {
+              page-break-after: auto !important;
+            }
+
+            td,
+            th {
+              border-top: 0.75px solid #444 !important;
+              border-right: 0.75px solid #444 !important;
+              border-bottom: 0.75px solid #444 !important;
+              border-left: 0.75px solid #444 !important;
+              border-color: #444 !important;
+              color: #000 !important;
+              overflow-wrap: anywhere;
+              box-sizing: border-box !important;
+              padding: 5px;
+              vertical-align: top;
+            }
+
+            img {
+              max-width: 100% !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+
+            span {
+              color: #555;
+              display: inline-block;
+              font-size: 8px;
+              font-weight: 700;
+              text-transform: uppercase;
+            }
+
+            strong { font-weight: 700; }
+            .invoice-shell { border-bottom: 0 !important; }
+            .company-cell { width: 50%; padding: 0; }
+            .details-cell { width: 50%; padding: 0; }
+            .logo-cell { width: 33%; padding: 8px; border-right: 0 !important; }
+            .logo-cell img { width: 136px; height: 38px; object-fit: contain; object-position: left center; display: block; }
+            .company-name-cell { width: 67%; padding: 8px 6px; border-left: 0 !important; font-size: 9.5px; line-height: 1.2; }
+            .company-name-cell strong { font-size: 12px; line-height: 1.12; }
+            .company-meta { padding: 6px 8px; font-size: 8.5px; line-height: 1.25; }
+            .details-cell td { width: 50%; height: 27px; font-size: 9px; line-height: 1.2; }
+            .blank-detail { height: 76px; }
+            .buyer-cell { width: 50%; padding: 0; }
+            .buyer-cell td { height: 105px; padding: 9px; font-size: 9px; line-height: 1.32; }
+            .buyer-blank-cell { width: 50%; height: 105px; }
+            .services-table th { background: #f9f9f9; font-size: 9px; padding: 7px 5px; text-align: center; vertical-align: middle; }
+            .services-table td { font-size: 9px; padding: 6px 5px; }
+            .sr { width: 5%; }
+            .desc { width: 42%; text-align: left !important; }
+            .hsn { width: 10%; }
+            .offer { width: 10%; }
+            .gst { width: 9%; }
+            .rate { width: 10%; }
+            .per { width: 7%; }
+            .disc { width: 7%; }
+            .amt { width: 10%; }
+            .center { text-align: center; vertical-align: middle; }
+            .right { text-align: right; }
+            .mono { font-family: Consolas, 'Courier New', monospace; }
+            .desc-text { text-align: left; line-height: 1.18; }
+            .sub-desc { padding-left: 18px !important; text-align: left; font-weight: 700; color: #555; }
+            .total-row td { background: #f9f9f9; font-weight: 700; }
+            .words-table td { padding: 8px 9px; font-size: 9px; line-height: 1.3; }
+            .gst-table th { background: #f9f9f9; font-size: 9px; padding: 7px 5px; text-align: center; vertical-align: middle; }
+            .gst-table td { font-size: 9px; padding: 7px 5px; }
+            .signature-table td { height: 92px; font-size: 9px; line-height: 1.35; }
+            .bank-cell { width: 58%; padding: 10px; }
+            .bank-cell em { display: block; margin-top: 10px; color: #555; font-size: 8px; }
+            .sign-cell { width: 42%; padding: 10px; text-align: right; }
+
+            @media print {
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 210mm !important;
+                min-height: 297mm !important;
+                overflow: visible !important;
+              }
+
+              .invoice-print-page,
+              .print-invoice {
+                width: 190mm !important;
+                overflow: visible !important;
+                transform: none !important;
+                zoom: 1 !important;
+              }
+
+              table {
+                border-collapse: collapse !important;
+                border-spacing: 0 !important;
+              }
+
+              table,
+              th,
+              td {
+                border-top: 0.75px solid #444 !important;
+                border-right: 0.75px solid #444 !important;
+                border-bottom: 0.75px solid #444 !important;
+                border-left: 0.75px solid #444 !important;
+                border-color: #444 !important;
+                box-sizing: border-box !important;
+              }
+
+              .print-invoice {
+                border: 1.5px solid #000 !important;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <main class="invoice-print-page">
+            <section class="print-invoice">
+              ${invoiceHtml}
+            </section>
+          </main>
+          <script>
+            const printInvoice = () => {
+              window.focus();
+              window.print();
+            };
+            const images = Array.from(document.images);
+            if (!images.length) {
+              setTimeout(printInvoice, 150);
+            } else {
+              let pending = images.length;
+              const done = () => {
+                pending -= 1;
+                if (pending <= 0) setTimeout(printInvoice, 150);
+              };
+              images.forEach((img) => {
+                if (img.complete) done();
+                else {
+                  img.addEventListener('load', done, { once: true });
+                  img.addEventListener('error', done, { once: true });
+                }
+              });
+              setTimeout(printInvoice, 1200);
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   return (
