@@ -108,8 +108,7 @@ class _AppShellState extends State<AppShell> {
         ),
       ];
       navItems = const [
-        BottomNavigationBarItem(
-            icon: Icon(Icons.home_filled), label: 'Homes'),
+        BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Homes'),
         BottomNavigationBarItem(
             icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
         BottomNavigationBarItem(
@@ -139,50 +138,85 @@ class _AppShellState extends State<AppShell> {
           const BottomNavigationBarItem(
               icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
           BottomNavigationBarItem(
-              icon: const Icon(Icons.person_outline_rounded),
-              label: 'Profile'),
+              icon: const Icon(Icons.person_outline_rounded), label: 'Profile'),
         ];
       } else if (role == 'host') {
         screens = [
+          const LandingScreen(),
+          const _WishlistsTab(isAuthenticated: true),
           const HostDashboardScreen(),
+          const AIChatScreen(),
           _ProfileTab(user: user, auth: auth),
         ];
         navItems = const [
           BottomNavigationBarItem(
+              icon: Icon(Icons.home_filled), label: 'Homes'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+          BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'broker') {
         screens = [
+          const LandingScreen(),
+          const _WishlistsTab(isAuthenticated: true),
           const BrokerDashboardScreen(),
+          const AIChatScreen(),
           _ProfileTab(user: user, auth: auth),
         ];
         navItems = const [
           BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+              icon: Icon(Icons.home_filled), label: 'Homes'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.dashboard_outlined), label: 'Broker'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'employee') {
         screens = [
+          const LandingScreen(),
+          const _WishlistsTab(isAuthenticated: true),
           const EmployeeDashboardScreen(),
+          const AIChatScreen(),
           _ProfileTab(user: user, auth: auth),
         ];
         navItems = const [
           BottomNavigationBarItem(
+              icon: Icon(Icons.home_filled), label: 'Homes'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+          BottomNavigationBarItem(
               icon: Icon(Icons.rate_review_outlined), label: 'Reviews'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'admin') {
         screens = [
+          const LandingScreen(),
+          const _WishlistsTab(isAuthenticated: true),
           const AdminDashboardScreen(),
+          const AIChatScreen(),
           _ProfileTab(user: user, auth: auth),
         ];
         navItems = const [
           BottomNavigationBarItem(
+              icon: Icon(Icons.home_filled), label: 'Homes'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+          BottomNavigationBarItem(
               icon: Icon(Icons.admin_panel_settings_outlined), label: 'Admin'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
@@ -217,7 +251,7 @@ class _AppShellState extends State<AppShell> {
               unreadCount: notificationProvider.unreadCount,
               onDashboard: () {
                 Navigator.pop(context);
-                setState(() => _selectedIndex = 0);
+                setState(() => _selectedIndex = 2);
               },
             )
           : isBroker
@@ -227,7 +261,7 @@ class _AppShellState extends State<AppShell> {
                   unreadCount: notificationProvider.unreadCount,
                   onDashboard: () {
                     Navigator.pop(context);
-                    setState(() => _selectedIndex = 0);
+                    setState(() => _selectedIndex = 2);
                   },
                 )
               : null,
@@ -249,7 +283,7 @@ class _AppShellState extends State<AppShell> {
         child: BottomNavigationBar(
           currentIndex: _selectedIndex,
           onTap: (index) {
-            if ((isHost || isBroker) && index == 1) {
+            if ((isHost || isBroker) && index == 4) {
               _openHostMenu();
               return;
             }
@@ -281,6 +315,7 @@ class _HostProfileDrawer extends StatelessWidget {
   final AuthProvider auth;
   final int unreadCount;
   final VoidCallback onDashboard;
+  final String roleLabel = 'Host';
 
   const _HostProfileDrawer({
     required this.user,
@@ -396,6 +431,15 @@ class _HostProfileDrawer extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '$roleLabel Dashboard',
+                          style: GoogleFonts.manrope(
+                            color: AppTheme.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -410,9 +454,15 @@ class _HostProfileDrawer extends StatelessWidget {
                   children: [
                     _HostDrawerItem(
                       icon: Icons.dashboard_outlined,
-                      label: 'Dashboard',
+                      label: 'View Dashboard',
                       selected: true,
                       onTap: onDashboard,
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.home_filled,
+                      label: 'Open Home',
+                      onTap: () =>
+                          _push(context, const AppShell(initialIndex: 0)),
                     ),
                     _HostDrawerItem(
                       icon: Icons.home_outlined,
@@ -475,6 +525,7 @@ class _BrokerProfileDrawer extends StatelessWidget {
   final AuthProvider auth;
   final int unreadCount;
   final VoidCallback onDashboard;
+  final String roleLabel = 'Broker';
 
   const _BrokerProfileDrawer({
     required this.user,
@@ -618,6 +669,15 @@ class _BrokerProfileDrawer extends StatelessWidget {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '$roleLabel Dashboard',
+                          style: GoogleFonts.manrope(
+                            color: AppTheme.primary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -632,9 +692,15 @@ class _BrokerProfileDrawer extends StatelessWidget {
                   children: [
                     _HostDrawerItem(
                       icon: Icons.dashboard_outlined,
-                      label: 'Dashboard',
+                      label: 'View Dashboard',
                       selected: true,
                       onTap: onDashboard,
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.home_filled,
+                      label: 'Open Home',
+                      onTap: () =>
+                          _push(context, const AppShell(initialIndex: 0)),
                     ),
                     ..._sections.map(
                       (section) => _HostDrawerItem(

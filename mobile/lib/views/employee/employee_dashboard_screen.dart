@@ -4,6 +4,7 @@ import '../../config.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/verification_provider.dart';
 import '../../theme.dart';
+import '../shared/app_shell.dart';
 import '../../services/api_service.dart';
 import '../auth/login_screen.dart';
 import '../shared/app_logo.dart';
@@ -13,15 +14,17 @@ class EmployeeDashboardScreen extends StatefulWidget {
   const EmployeeDashboardScreen({super.key});
 
   @override
-  State<EmployeeDashboardScreen> createState() => _EmployeeDashboardScreenState();
+  State<EmployeeDashboardScreen> createState() =>
+      _EmployeeDashboardScreenState();
 }
 
-class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with SingleTickerProviderStateMixin {
+class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _remarksController = TextEditingController();
   final _reasonController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  
+
   // Report state
   String _selectedReportType = 'Properties Not Booked';
   bool _hasGeneratedReport = false;
@@ -61,7 +64,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
   void _showActionDialog(String verificationId, bool approve) {
     _remarksController.clear();
     _reasonController.clear();
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -88,7 +91,10 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                   children: [
                     Text(
                       approve ? 'Approve Verification' : 'Reject Verification',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.charcoal),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
@@ -98,47 +104,64 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  approve 
-                      ? 'This will approve the broker\'s report and send it to the administrator for final approval.' 
+                  approve
+                      ? 'This will approve the broker\'s report and send it to the administrator for final approval.'
                       : 'Provide a reason for rejecting the report. The host will be notified to revise details.',
-                  style: const TextStyle(fontSize: 12, color: AppTheme.charcoalLight),
+                  style: const TextStyle(
+                      fontSize: 12, color: AppTheme.charcoalLight),
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: approve ? _remarksController : _reasonController,
                   decoration: InputDecoration(
-                    labelText: approve ? 'Approval Remarks' : 'Reason for Rejection',
-                    hintText: approve ? 'Enter approval comments...' : 'Provide feedback on what needs correction...',
+                    labelText:
+                        approve ? 'Approval Remarks' : 'Reason for Rejection',
+                    hintText: approve
+                        ? 'Enter approval comments...'
+                        : 'Provide feedback on what needs correction...',
                     filled: true,
                     fillColor: const Color(0xFFF9F9F9),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none),
                   ),
                   maxLines: 3,
-                  validator: (v) => v == null || v.trim().isEmpty ? 'Please enter some remarks/reasons' : null,
+                  validator: (v) => v == null || v.trim().isEmpty
+                      ? 'Please enter some remarks/reasons'
+                      : null,
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () async {
                     if (!_formKey.currentState!.validate()) return;
-                    final prov = Provider.of<VerificationProvider>(context, listen: false);
+                    final prov = Provider.of<VerificationProvider>(context,
+                        listen: false);
                     final success = approve
-                        ? await prov.employeeApprove(verificationId, _remarksController.text.trim())
-                        : await prov.employeeReject(verificationId, _reasonController.text.trim());
-                            
+                        ? await prov.employeeApprove(
+                            verificationId, _remarksController.text.trim())
+                        : await prov.employeeReject(
+                            verificationId, _reasonController.text.trim());
+
                     if (success && context.mounted) {
                       Navigator.pop(context);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(approve ? 'Verification approved and sent to Admin!' : 'Verification rejected successfully.'),
-                          backgroundColor: approve ? Colors.green.shade700 : AppTheme.primary,
+                          content: Text(approve
+                              ? 'Verification approved and sent to Admin!'
+                              : 'Verification rejected successfully.'),
+                          backgroundColor: approve
+                              ? Colors.green.shade700
+                              : AppTheme.primary,
                         ),
                       );
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: approve ? const Color(0xFF4CAF50) : AppTheme.primary,
+                    backgroundColor:
+                        approve ? const Color(0xFF4CAF50) : AppTheme.primary,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   child: Text(
@@ -165,14 +188,17 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
   }
 
   // --- TAB VIEWS ---
-  
+
   // Overview Tab View
   Widget _buildOverviewTab(VerificationProvider prov) {
     final stats = prov.rmStats;
     final totalBrokers = stats['brokers']?['total']?.toString() ?? '0';
-    final pendingCount = stats['verifications']?['pending_review']?.toString() ?? '0';
-    final underReview = stats['verifications']?['under_review']?.toString() ?? '0';
-    final expiringSoon = stats['subscriptions']?['expiring_soon']?.toString() ?? '0';
+    final pendingCount =
+        stats['verifications']?['pending_review']?.toString() ?? '0';
+    final underReview =
+        stats['verifications']?['under_review']?.toString() ?? '0';
+    final expiringSoon =
+        stats['subscriptions']?['expiring_soon']?.toString() ?? '0';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -188,13 +214,29 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
             crossAxisSpacing: 12,
             childAspectRatio: 1.4,
             children: [
-              _buildStatCard('Total Brokers', totalBrokers, Icons.people_outline, const Color(0xFFFAF6F2), const Color(0xFFC05C4F)),
-              _buildStatCard('Pending Reviews', pendingCount, Icons.assignment_turned_in_outlined, const Color(0xFFF2F6F5), const Color(0xFF788574)),
-              _buildStatCard('Under Review', underReview, Icons.error_outline, const Color(0xFFFDF8F2), const Color(0xFFE28A3E)),
-              _buildStatCard('Expiring Subs', expiringSoon, Icons.hourglass_empty_outlined, const Color(0xFFF9FAF2), const Color(0xFFB5BD4D)),
+              _buildStatCard(
+                  'Total Brokers',
+                  totalBrokers,
+                  Icons.people_outline,
+                  const Color(0xFFFAF6F2),
+                  const Color(0xFFC05C4F)),
+              _buildStatCard(
+                  'Pending Reviews',
+                  pendingCount,
+                  Icons.assignment_turned_in_outlined,
+                  const Color(0xFFF2F6F5),
+                  const Color(0xFF788574)),
+              _buildStatCard('Under Review', underReview, Icons.error_outline,
+                  const Color(0xFFFDF8F2), const Color(0xFFE28A3E)),
+              _buildStatCard(
+                  'Expiring Subs',
+                  expiringSoon,
+                  Icons.hourglass_empty_outlined,
+                  const Color(0xFFF9FAF2),
+                  const Color(0xFFB5BD4D)),
             ],
           ),
-          
+
           const SizedBox(height: 20),
 
           // Alert banner card
@@ -208,7 +250,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline, color: Color(0xFFC05C4F), size: 24),
+                  const Icon(Icons.info_outline,
+                      color: Color(0xFFC05C4F), size: 24),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -216,12 +259,16 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                       children: [
                         Text(
                           '${prov.pendingReviews.length} Verifications Pending Your Review',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.charcoal),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: AppTheme.charcoal),
                         ),
                         const SizedBox(height: 2),
                         const Text(
                           'Review broker-submitted verification reports',
-                          style: TextStyle(fontSize: 11, color: AppTheme.charcoalLight),
+                          style: TextStyle(
+                              fontSize: 11, color: AppTheme.charcoalLight),
                         ),
                       ],
                     ),
@@ -232,35 +279,46 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFC05C4F),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
                     ),
-                    child: const Text('Review Now', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    child: const Text('Review Now',
+                        style: TextStyle(
+                            fontSize: 11, fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),
             ),
-            
+
           const SizedBox(height: 24),
 
           // Quick Actions
           const Text(
             'Quick Actions',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.charcoal),
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: AppTheme.charcoal),
           ),
           const SizedBox(height: 12),
-          
-          _buildQuickActionRow('Review Verifications', Icons.rate_review_outlined, () => _tabController.animateTo(1)),
+
+          _buildQuickActionRow('Review Verifications',
+              Icons.rate_review_outlined, () => _tabController.animateTo(1)),
           const SizedBox(height: 8),
-          _buildQuickActionRow('View Brokers', Icons.people_outline, () => _tabController.animateTo(2)),
+          _buildQuickActionRow('View Brokers', Icons.people_outline,
+              () => _tabController.animateTo(2)),
           const SizedBox(height: 8),
-          _buildQuickActionRow('Generate Reports', Icons.analytics_outlined, () => _tabController.animateTo(3)),
+          _buildQuickActionRow('Generate Reports', Icons.analytics_outlined,
+              () => _tabController.animateTo(3)),
         ],
       ),
     );
   }
 
-  Widget _buildStatCard(String title, String count, IconData icon, Color bgColor, Color iconColor) {
+  Widget _buildStatCard(String title, String count, IconData icon,
+      Color bgColor, Color iconColor) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -277,14 +335,20 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
             children: [
               Text(
                 count,
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AppTheme.charcoal),
+                style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.charcoal),
               ),
               Icon(icon, color: iconColor, size: 24),
             ],
           ),
           Text(
             title,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.charcoalLight),
+            style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoalLight),
           ),
         ],
       ),
@@ -309,10 +373,14 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.charcoal),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: AppTheme.charcoal),
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, size: 12, color: AppTheme.charcoalMuted),
+            const Icon(Icons.arrow_forward_ios,
+                size: 12, color: AppTheme.charcoalMuted),
           ],
         ),
       ),
@@ -325,7 +393,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
       children: [
         // Custom Segmented Toggle Control
         Padding(
-          padding: const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 10),
+          padding:
+              const EdgeInsets.only(top: 20, left: 20, right: 20, bottom: 10),
           child: Row(
             children: [
               Expanded(
@@ -334,11 +403,21 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: _activeReviewSubTab == 'pending' ? AppTheme.primary : Colors.white,
+                      color: _activeReviewSubTab == 'pending'
+                          ? AppTheme.primary
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _activeReviewSubTab == 'pending' ? AppTheme.primary : AppTheme.stone),
+                      border: Border.all(
+                          color: _activeReviewSubTab == 'pending'
+                              ? AppTheme.primary
+                              : AppTheme.stone),
                       boxShadow: _activeReviewSubTab == 'pending'
-                          ? [BoxShadow(color: AppTheme.primary.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 4))]
+                          ? [
+                              BoxShadow(
+                                  color: AppTheme.primary.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4))
+                            ]
                           : null,
                     ),
                     child: Center(
@@ -347,7 +426,9 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
-                          color: _activeReviewSubTab == 'pending' ? Colors.white : AppTheme.charcoalLight,
+                          color: _activeReviewSubTab == 'pending'
+                              ? Colors.white
+                              : AppTheme.charcoalLight,
                         ),
                       ),
                     ),
@@ -361,11 +442,21 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: _activeReviewSubTab == 'history' ? AppTheme.primary : Colors.white,
+                      color: _activeReviewSubTab == 'history'
+                          ? AppTheme.primary
+                          : Colors.white,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: _activeReviewSubTab == 'history' ? AppTheme.primary : AppTheme.stone),
+                      border: Border.all(
+                          color: _activeReviewSubTab == 'history'
+                              ? AppTheme.primary
+                              : AppTheme.stone),
                       boxShadow: _activeReviewSubTab == 'history'
-                          ? [BoxShadow(color: AppTheme.primary.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 4))]
+                          ? [
+                              BoxShadow(
+                                  color: AppTheme.primary.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4))
+                            ]
                           : null,
                     ),
                     child: Center(
@@ -374,7 +465,9 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
-                          color: _activeReviewSubTab == 'history' ? Colors.white : AppTheme.charcoalLight,
+                          color: _activeReviewSubTab == 'history'
+                              ? Colors.white
+                              : AppTheme.charcoalLight,
                         ),
                       ),
                     ),
@@ -401,9 +494,13 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.assignment_turned_in_outlined, size: 48, color: AppTheme.charcoalMuted),
+            Icon(Icons.assignment_turned_in_outlined,
+                size: 48, color: AppTheme.charcoalMuted),
             SizedBox(height: 12),
-            Text('No pending property reviews.', style: TextStyle(color: AppTheme.charcoalMuted, fontWeight: FontWeight.bold)),
+            Text('No pending property reviews.',
+                style: TextStyle(
+                    color: AppTheme.charcoalMuted,
+                    fontWeight: FontWeight.bold)),
           ],
         ),
       );
@@ -419,9 +516,11 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
         final checklist = review['checklist'] ?? {};
         final String verificationId = review['verification_id'];
         final String propTitle = prop['title'] ?? 'Luxury Stay';
-        final String propLoc = '${prop['city'] ?? 'N/A'} | ${prop['bhk_type'] ?? 'N/A'}';
+        final String propLoc =
+            '${prop['city'] ?? 'N/A'} | ${prop['bhk_type'] ?? 'N/A'}';
         final String brokerName = broker['full_name'] ?? 'N/A';
-        final int photoCount = (review['geo_tagged_photos'] as List?)?.length ?? 0;
+        final int photoCount =
+            (review['geo_tagged_photos'] as List?)?.length ?? 0;
 
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
@@ -450,7 +549,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                           width: 70,
                           height: 70,
                           color: AppTheme.stone,
-                          child: const Icon(Icons.broken_image, size: 20, color: AppTheme.charcoalMuted),
+                          child: const Icon(Icons.broken_image,
+                              size: 20, color: AppTheme.charcoalMuted),
                         ),
                       ),
                     ),
@@ -461,26 +561,33 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                         children: [
                           Text(
                             propTitle,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: AppTheme.charcoal),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
                             propLoc,
-                            style: const TextStyle(fontSize: 11, color: AppTheme.charcoalLight),
+                            style: const TextStyle(
+                                fontSize: 11, color: AppTheme.charcoalLight),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Broker: $brokerName (${broker['lg_code'] ?? ''})',
-                            style: const TextStyle(fontSize: 10, color: AppTheme.charcoalMuted, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                fontSize: 10,
+                                color: AppTheme.charcoalMuted,
+                                fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 12),
                 const Divider(color: Color(0xFFF2F2F2)),
                 const SizedBox(height: 8),
@@ -490,7 +597,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                   spacing: 12,
                   runSpacing: 6,
                   children: checklist.entries.map<Widget>((entry) {
-                    final keyName = entry.key.replaceAll('_', ' ').toUpperCase();
+                    final keyName =
+                        entry.key.replaceAll('_', ' ').toUpperCase();
                     final val = entry.value == true;
                     return Row(
                       mainAxisSize: MainAxisSize.min,
@@ -506,7 +614,9 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
-                            color: val ? AppTheme.charcoalLight : AppTheme.charcoalMuted,
+                            color: val
+                                ? AppTheme.charcoalLight
+                                : AppTheme.charcoalMuted,
                           ),
                         ),
                       ],
@@ -515,21 +625,25 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                 ),
 
                 const SizedBox(height: 12),
-                
+
                 // Photo count & Actions Row
                 Row(
                   children: [
-                    const Icon(Icons.camera_alt_outlined, size: 14, color: AppTheme.charcoalLight),
+                    const Icon(Icons.camera_alt_outlined,
+                        size: 14, color: AppTheme.charcoalLight),
                     const SizedBox(width: 4),
                     Text(
                       '$photoCount geo-tagged photo${photoCount == 1 ? '' : 's'}',
-                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalLight),
+                      style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.charcoalLight),
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Button Bar
                 Row(
                   children: [
@@ -540,37 +654,48 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                           side: const BorderSide(color: Color(0xFFE0E0DF)),
                           foregroundColor: AppTheme.charcoal,
                           padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: const Text('View Details', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        child: const Text('View Details',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => _showActionDialog(verificationId, true),
+                        onPressed: () =>
+                            _showActionDialog(verificationId, true),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFE8F5E9),
                           foregroundColor: Colors.green.shade800,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: const Text('Approve', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        child: const Text('Approve',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => _showActionDialog(verificationId, false),
+                        onPressed: () =>
+                            _showActionDialog(verificationId, false),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFFEBEE),
                           foregroundColor: Colors.red.shade800,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: const Text('Reject', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        child: const Text('Reject',
+                            style: TextStyle(
+                                fontSize: 12, fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
@@ -589,9 +714,13 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history_outlined, size: 48, color: AppTheme.charcoalMuted),
+            Icon(Icons.history_outlined,
+                size: 48, color: AppTheme.charcoalMuted),
             SizedBox(height: 12),
-            Text('No reviewed verifications found.', style: TextStyle(color: AppTheme.charcoalMuted, fontWeight: FontWeight.bold)),
+            Text('No reviewed verifications found.',
+                style: TextStyle(
+                    color: AppTheme.charcoalMuted,
+                    fontWeight: FontWeight.bold)),
           ],
         ),
       );
@@ -605,11 +734,12 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
         final prop = review['property_details'] ?? {};
         final broker = review['broker_details'] ?? {};
         final String propTitle = prop['title'] ?? 'Luxury Stay';
-        final String propLoc = '${prop['city'] ?? 'N/A'} | ${prop['bhk_type'] ?? 'N/A'}';
+        final String propLoc =
+            '${prop['city'] ?? 'N/A'} | ${prop['bhk_type'] ?? 'N/A'}';
         final String brokerName = broker['full_name'] ?? 'N/A';
         final String status = review['status'] ?? 'pending';
         final bool rmApproved = review['rm_approved'] == true;
-        
+
         Color badgeBgColor;
         Color badgeTextColor;
         String badgeText;
@@ -649,7 +779,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: badgeBgColor,
                         borderRadius: BorderRadius.circular(6),
@@ -683,7 +814,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                           width: 70,
                           height: 70,
                           color: AppTheme.stone,
-                          child: const Icon(Icons.broken_image, size: 20, color: AppTheme.charcoalMuted),
+                          child: const Icon(Icons.broken_image,
+                              size: 20, color: AppTheme.charcoalMuted),
                         ),
                       ),
                     ),
@@ -694,43 +826,59 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                         children: [
                           Text(
                             propTitle,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: AppTheme.charcoal),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Text(
                             propLoc,
-                            style: const TextStyle(fontSize: 11, color: AppTheme.charcoalLight),
+                            style: const TextStyle(
+                                fontSize: 11, color: AppTheme.charcoalLight),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             'Broker: $brokerName (${broker['lg_code'] ?? ''})',
-                            style: const TextStyle(fontSize: 10, color: AppTheme.charcoalMuted, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                fontSize: 10,
+                                color: AppTheme.charcoalMuted,
+                                fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                
-                if (review['rm_remarks'] != null && (review['rm_remarks'] as String).isNotEmpty) ...[
+
+                if (review['rm_remarks'] != null &&
+                    (review['rm_remarks'] as String).isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text(
                     'RM Remarks: "${review['rm_remarks']}"',
-                    style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: AppTheme.charcoalLight),
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                        color: AppTheme.charcoalLight),
                   ),
                 ],
-                if (review['admin_remarks'] != null && (review['admin_remarks'] as String).isNotEmpty) ...[
+                if (review['admin_remarks'] != null &&
+                    (review['admin_remarks'] as String).isNotEmpty) ...[
                   const SizedBox(height: 6),
                   Text(
                     'Admin Remarks: "${review['admin_remarks']}"',
-                    style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.red.shade800, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.red.shade800,
+                        fontWeight: FontWeight.bold),
                   ),
                 ],
 
                 const SizedBox(height: 16),
-                
+
                 // Button Bar
                 OutlinedButton(
                   onPressed: () => _showDetailsSheet(review),
@@ -738,9 +886,12 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                     side: const BorderSide(color: Color(0xFFE0E0DF)),
                     foregroundColor: AppTheme.charcoal,
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text('View Details', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  child: const Text('View Details',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -754,7 +905,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
   Widget _buildBrokersTab(VerificationProvider prov) {
     if (prov.brokers.isEmpty) {
       return const Center(
-        child: Text('No brokers assigned.', style: TextStyle(color: AppTheme.charcoalMuted)),
+        child: Text('No brokers assigned.',
+            style: TextStyle(color: AppTheme.charcoalMuted)),
       );
     }
 
@@ -790,7 +942,9 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                       radius: 20,
                       child: Text(
                         name.isNotEmpty ? name[0].toUpperCase() : 'B',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primary),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primary),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -800,20 +954,24 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                         children: [
                           Text(
                             name,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: AppTheme.charcoal),
                           ),
                           Text(
                             'LG Code: $lgCode  |  Phone: $phone',
-                            style: const TextStyle(fontSize: 10, color: AppTheme.charcoalMuted),
+                            style: const TextStyle(
+                                fontSize: 10, color: AppTheme.charcoalMuted),
                           ),
                         ],
                       ),
                     )
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Stats row
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -826,26 +984,49 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                       Expanded(
                         child: Column(
                           children: [
-                            Text(ownersCount, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.charcoal)),
-                            const Text('Owners', style: TextStyle(fontSize: 9, color: AppTheme.charcoalMuted)),
+                            Text(ownersCount,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: AppTheme.charcoal)),
+                            const Text('Owners',
+                                style: TextStyle(
+                                    fontSize: 9,
+                                    color: AppTheme.charcoalMuted)),
                           ],
                         ),
                       ),
-                      Container(height: 24, width: 1, color: Colors.grey.shade300),
+                      Container(
+                          height: 24, width: 1, color: Colors.grey.shade300),
                       Expanded(
                         child: Column(
                           children: [
-                            Text(propertiesCount, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.charcoal)),
-                            const Text('Properties', style: TextStyle(fontSize: 9, color: AppTheme.charcoalMuted)),
+                            Text(propertiesCount,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: AppTheme.charcoal)),
+                            const Text('Properties',
+                                style: TextStyle(
+                                    fontSize: 9,
+                                    color: AppTheme.charcoalMuted)),
                           ],
                         ),
                       ),
-                      Container(height: 24, width: 1, color: Colors.grey.shade300),
+                      Container(
+                          height: 24, width: 1, color: Colors.grey.shade300),
                       Expanded(
                         child: Column(
                           children: [
-                            Text(pendingCount, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.primary)),
-                            const Text('Pending', style: TextStyle(fontSize: 9, color: AppTheme.charcoalMuted)),
+                            Text(pendingCount,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: AppTheme.primary)),
+                            const Text('Pending',
+                                style: TextStyle(
+                                    fontSize: 9,
+                                    color: AppTheme.charcoalMuted)),
                           ],
                         ),
                       ),
@@ -869,10 +1050,12 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
         children: [
           const Text(
             'Select Report',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.charcoal),
+            style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: AppTheme.charcoal),
           ),
           const SizedBox(height: 8),
-          
           DropdownButtonFormField<String>(
             value: _selectedReportType,
             style: const TextStyle(fontSize: 13, color: AppTheme.charcoal),
@@ -883,10 +1066,14 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                 borderRadius: BorderRadius.circular(10),
                 borderSide: const BorderSide(color: AppTheme.stone),
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
-            items: <String>['Properties Not Booked', 'Broker Performance', 'Verification SLA']
-                .map<DropdownMenuItem<String>>((String value) {
+            items: <String>[
+              'Properties Not Booked',
+              'Broker Performance',
+              'Verification SLA'
+            ].map<DropdownMenuItem<String>>((String value) {
               return DropdownMenuItem<String>(
                 value: value,
                 child: Text(value),
@@ -901,9 +1088,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
               }
             },
           ),
-          
           const SizedBox(height: 16),
-          
           ElevatedButton(
             onPressed: () async {
               if (_selectedReportType == 'Properties Not Booked') {
@@ -915,36 +1100,45 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFC05C4F),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-            child: const Text('Generate Report', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Generate Report',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
-          
           const SizedBox(height: 24),
-          
           if (_hasGeneratedReport) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Report Results',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.charcoal),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: AppTheme.charcoal),
                 ),
-                if (_selectedReportType == 'Properties Not Booked' && prov.propertiesNotBooked.isNotEmpty)
+                if (_selectedReportType == 'Properties Not Booked' &&
+                    prov.propertiesNotBooked.isNotEmpty)
                   TextButton.icon(
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('CSV download initiated!')),
+                        const SnackBar(
+                            content: Text('CSV download initiated!')),
                       );
                     },
-                    icon: const Icon(Icons.download_outlined, size: 16, color: AppTheme.primary),
-                    label: const Text('Export CSV', style: TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.download_outlined,
+                        size: 16, color: AppTheme.primary),
+                    label: const Text('Export CSV',
+                        style: TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.primary,
+                            fontWeight: FontWeight.bold)),
                   ),
               ],
             ),
             const SizedBox(height: 12),
-            
             if (_selectedReportType == 'Properties Not Booked')
               prov.propertiesNotBooked.isEmpty
                   ? Container(
@@ -957,7 +1151,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                       child: const Center(
                         child: Text(
                           'No properties found without bookings.',
-                          style: TextStyle(fontSize: 12, color: AppTheme.charcoalMuted),
+                          style: TextStyle(
+                              fontSize: 12, color: AppTheme.charcoalMuted),
                         ),
                       ),
                     )
@@ -980,7 +1175,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
                                 child: Image.network(
-                                  _getImageUrl((prop['images'] as List?)?.firstOrNull),
+                                  _getImageUrl(
+                                      (prop['images'] as List?)?.firstOrNull),
                                   width: 50,
                                   height: 50,
                                   fit: BoxFit.cover,
@@ -988,7 +1184,9 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                                     width: 50,
                                     height: 50,
                                     color: AppTheme.stone,
-                                    child: const Icon(Icons.broken_image, size: 16, color: AppTheme.charcoalMuted),
+                                    child: const Icon(Icons.broken_image,
+                                        size: 16,
+                                        color: AppTheme.charcoalMuted),
                                   ),
                                 ),
                               ),
@@ -999,17 +1197,25 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                                   children: [
                                     Text(
                                       prop['title'] ?? 'Property',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppTheme.charcoal),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                          color: AppTheme.charcoal),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     Text(
                                       '${prop['city'] ?? 'N/A'}  |  ${prop['bhk_type'] ?? 'N/A'}  |  ₹${prop['price_per_night'] ?? '0'}/night',
-                                      style: const TextStyle(fontSize: 9, color: AppTheme.charcoalLight),
+                                      style: const TextStyle(
+                                          fontSize: 9,
+                                          color: AppTheme.charcoalLight),
                                     ),
                                     Text(
                                       'Broker: ${prop['broker_name'] ?? 'N/A'}',
-                                      style: const TextStyle(fontSize: 8, color: AppTheme.charcoalMuted, fontWeight: FontWeight.bold),
+                                      style: const TextStyle(
+                                          fontSize: 8,
+                                          color: AppTheme.charcoalMuted,
+                                          fontWeight: FontWeight.bold),
                                     ),
                                   ],
                                 ),
@@ -1030,7 +1236,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                 child: const Center(
                   child: Text(
                     'No data available for this report type.',
-                    style: TextStyle(fontSize: 12, color: AppTheme.charcoalMuted),
+                    style:
+                        TextStyle(fontSize: 12, color: AppTheme.charcoalMuted),
                   ),
                 ),
               ),
@@ -1058,14 +1265,30 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
             children: [
               // Styled Brand Bar
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const AppLogo(height: 24, tintColor: Colors.black, framed: false),
+                        InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AppShell(initialIndex: 0),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(12),
+                          child: const AppLogo(
+                            height: 24,
+                            tintColor: Colors.black,
+                            framed: false,
+                          ),
+                        ),
                         Text(
                           'EMPLOYEE (RM) PORTAL',
                           style: TextStyle(
@@ -1081,16 +1304,21 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                       children: [
                         Text(
                           'RM: ${user?.fullName.split(' ').first ?? 'User'}',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey.shade600),
                         ),
                         const SizedBox(width: 12),
                         IconButton(
-                          icon: const Icon(Icons.logout, size: 16, color: AppTheme.charcoalMuted),
+                          icon: const Icon(Icons.logout,
+                              size: 16, color: AppTheme.charcoalMuted),
                           onPressed: () {
                             authProvider.logout();
                             Navigator.pushAndRemoveUntil(
                               context,
-                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                              MaterialPageRoute(
+                                  builder: (_) => const LoginScreen()),
                               (route) => false,
                             );
                           },
@@ -1100,19 +1328,28 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
                   ],
                 ),
               ),
-              
+
               // Custom styled tab header
               TabBar(
                 controller: _tabController,
                 indicatorColor: AppTheme.primary,
                 labelColor: AppTheme.primary,
                 unselectedLabelColor: AppTheme.charcoalLight,
-                labelStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                labelStyle:
+                    const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                 tabs: const [
-                  Tab(icon: Icon(Icons.dashboard_outlined, size: 18), text: 'Overview'),
-                  Tab(icon: Icon(Icons.rate_review_outlined, size: 18), text: 'Reviews'),
-                  Tab(icon: Icon(Icons.people_outline, size: 18), text: 'Brokers'),
-                  Tab(icon: Icon(Icons.analytics_outlined, size: 18), text: 'Reports'),
+                  Tab(
+                      icon: Icon(Icons.dashboard_outlined, size: 18),
+                      text: 'Overview'),
+                  Tab(
+                      icon: Icon(Icons.rate_review_outlined, size: 18),
+                      text: 'Reviews'),
+                  Tab(
+                      icon: Icon(Icons.people_outline, size: 18),
+                      text: 'Brokers'),
+                  Tab(
+                      icon: Icon(Icons.analytics_outlined, size: 18),
+                      text: 'Reports'),
                 ],
               ),
             ],
@@ -1120,7 +1357,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen> with 
         ),
       ),
       body: prov.isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary))
           : TabBarView(
               controller: _tabController,
               children: [

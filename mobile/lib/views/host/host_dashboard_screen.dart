@@ -10,7 +10,9 @@ import '../../providers/property_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
+import '../guest/landing_screen.dart';
 import '../shared/app_logo.dart';
+import '../shared/app_shell.dart';
 import 'host_list_property_screen.dart';
 import 'host_calendar_screen.dart';
 import 'host_payouts_screen.dart';
@@ -419,10 +421,35 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const AppLogo(
-          height: 24,
-          tintColor: Colors.black,
-          framed: false,
+        leading: IconButton(
+          onPressed: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AppShell(initialIndex: 0),
+              ),
+            );
+          },
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: AppTheme.charcoal,
+          ),
+        ),
+        title: InkWell(
+          onTap: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AppShell(initialIndex: 0),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: const AppLogo(
+            height: 24,
+            tintColor: Colors.black,
+            framed: false,
+          ),
         ),
         centerTitle: false,
         backgroundColor: AppTheme.white,
@@ -1881,7 +1908,7 @@ class _DocumentVerificationSheetState
                       crossAxisCount: 2,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
-                      childAspectRatio: 0.78,
+                      childAspectRatio: 0.72,
                       children: [
                         _buildUploadCard(
                           number: '01',

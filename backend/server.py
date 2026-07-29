@@ -59,11 +59,8 @@ from routes.webhook_routes import router as webhook_router
 from routes.coupon_routes import router as coupon_router
 from routes.ai_agent_routes import router as ai_agent_router
 from routes.support_ticket_routes import router as support_ticket_router
-<<<<<<< HEAD
 from routes.admin_core_routes import router as admin_core_router
-=======
 from routes.pricing_routes import router as pricing_router
->>>>>>> 0c1ea17b28be8da7905be43affc2c805a6802de9
 
 # Include routers with /api prefix
 app.include_router(auth_router, prefix="/api")
@@ -84,11 +81,8 @@ app.include_router(webhook_router, prefix="/api")
 app.include_router(coupon_router, prefix="/api")
 app.include_router(ai_agent_router, prefix="/api")
 app.include_router(support_ticket_router, prefix="/api")
-<<<<<<< HEAD
 app.include_router(admin_core_router, prefix="/api")
-=======
 app.include_router(pricing_router, prefix="/api")
->>>>>>> 0c1ea17b28be8da7905be43affc2c805a6802de9
 from routes.seo_routes import router as seo_router
 app.include_router(seo_router)
 
@@ -295,14 +289,10 @@ async def startup_sequence():
             "notifications", "subscription_plans", "subscriptions", "cms_content", "leads", "coupons",
             "deleted_properties", "search_logs", "ai_calls", "ai_agents", "calendar_sync_logs",
             "contact_messages", "support_tickets", "commissions", "password_reset_tokens", "platform_settings",
-<<<<<<< HEAD
             "payout_job_runs", "roles", "permissions", "role_permissions", "user_permissions", "departments",
             "business_divisions", "branches", "franchises", "teams", "reporting_relations",
             "reporting_history", "escalation_rules", "sla_policies", "escalation_instances", "notification_rules",
-            "property_status_history", "audit_logs"
-=======
-            "payout_job_runs", "pricing_rules", "price_history"
->>>>>>> 0c1ea17b28be8da7905be43affc2c805a6802de9
+            "property_status_history", "audit_logs", "pricing_rules", "price_history"
         ]
         for table in tables:
             await db_instance.ensure_table(table)

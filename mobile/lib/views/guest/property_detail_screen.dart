@@ -29,7 +29,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   int _currentImageIndex = 0;
   bool _isDescriptionExpanded = false;
   final PageController _pageController = PageController();
-  
+
   // New State variables for availability calendar, reviews, and guest count
   int _guestCount = 1;
   DateTime _calendarMonth = DateTime.now();
@@ -43,7 +43,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final propertyProvider = Provider.of<PropertyProvider>(context, listen: false);
+      final propertyProvider =
+          Provider.of<PropertyProvider>(context, listen: false);
       await propertyProvider.getProperty(widget.propertyId);
       final prop = propertyProvider.currentProperty;
       if (prop != null && prop.category.toLowerCase() == 'event_venue') {
@@ -60,13 +61,16 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       _loadingBlockedDates = true;
       _loadingReviews = true;
     });
-    final propertyProvider = Provider.of<PropertyProvider>(context, listen: false);
+    final propertyProvider =
+        Provider.of<PropertyProvider>(context, listen: false);
     final blocked = await propertyProvider.getBlockedDates(widget.propertyId);
-    final reviewsData = await propertyProvider.getPropertyReviews(widget.propertyId);
+    final reviewsData =
+        await propertyProvider.getPropertyReviews(widget.propertyId);
     setState(() {
       _blockedDatesList = blocked;
       if (reviewsData != null) {
-        _reviewsList = List<Map<String, dynamic>>.from(reviewsData['reviews'] ?? []);
+        _reviewsList =
+            List<Map<String, dynamic>>.from(reviewsData['reviews'] ?? []);
         _reviewsSummary = reviewsData['summary'];
       }
       _loadingBlockedDates = false;
@@ -82,7 +86,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   Future<void> _selectCheckIn(BuildContext context) async {
-    final propertyProvider = Provider.of<PropertyProvider>(context, listen: false);
+    final propertyProvider =
+        Provider.of<PropertyProvider>(context, listen: false);
     final prop = propertyProvider.currentProperty;
     final isEvent = prop?.category.toLowerCase() == 'event_venue';
 
@@ -109,7 +114,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         _checkInDate = picked;
         if (isEvent) {
           _checkOutDate = picked;
-        } else if (_checkOutDate != null && _checkOutDate!.isBefore(_checkInDate!)) {
+        } else if (_checkOutDate != null &&
+            _checkOutDate!.isBefore(_checkInDate!)) {
           _checkOutDate = null;
         }
       });
@@ -143,7 +149,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     }
   }
 
-  Future<void> _handleBooking(BuildContext context, double pricePerNight) async {
+  Future<void> _handleBooking(
+      BuildContext context, double pricePerNight) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (!auth.isAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -164,23 +171,68 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       return;
     }
 
-    final propertyProvider = Provider.of<PropertyProvider>(context, listen: false);
+    final userRole = auth.currentUser?.role.toLowerCase().trim();
+    if (userRole != 'guest') {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Guest Booking Only',
+            style: GoogleFonts.manrope(
+              fontWeight: FontWeight.w800,
+              color: AppTheme.charcoal,
+            ),
+          ),
+          content: Text(
+            'Property booking is available only for guest accounts. '
+            'Your current role is ${auth.currentUser?.role ?? 'user'}. '
+            'Please sign in with a guest account to continue booking.',
+            style: GoogleFonts.manrope(
+              color: AppTheme.charcoalMuted,
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(
+                'OK',
+                style: GoogleFonts.manrope(
+                  color: AppTheme.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final propertyProvider =
+        Provider.of<PropertyProvider>(context, listen: false);
     final prop = propertyProvider.currentProperty;
     final isEvent = prop?.category.toLowerCase() == 'event_venue';
 
     if (_checkInDate == null || _checkOutDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isEvent ? 'Please select event date' : 'Please select check-in and check-out dates'),
+          content: Text(isEvent
+              ? 'Please select event date'
+              : 'Please select check-in and check-out dates'),
           backgroundColor: AppTheme.primary,
         ),
       );
       return;
     }
 
-    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+    final bookingProvider =
+        Provider.of<BookingProvider>(context, listen: false);
     final dateFormat = DateFormat('yyyy-MM-dd');
-    
+
     final Map<String, dynamic> bookingData = {
       'property_id': widget.propertyId,
       'check_in_date': dateFormat.format(_checkInDate!),
@@ -197,7 +249,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     final booking = await bookingProvider.createBooking(bookingData);
 
     if (booking != null && context.mounted) {
-      final double displayPayable = (booking.paymentType == 'advance' && (booking.advanceAmount ?? 0.0) > 0.0)
+      final double displayPayable = (booking.paymentType == 'advance' &&
+              (booking.advanceAmount ?? 0.0) > 0.0)
           ? booking.advanceAmount!
           : booking.totalAmount;
       _showPaymentSheet(context, booking.bookingId, displayPayable);
@@ -211,7 +264,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     }
   }
 
-  void _showPaymentSheet(BuildContext context, String bookingId, double totalAmount) {
+  void _showPaymentSheet(
+      BuildContext context, String bookingId, double totalAmount) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -288,10 +342,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       style: GoogleFonts.manrope(fontSize: 14),
                       decoration: InputDecoration(
                         hintText: 'Enter Coupon Code',
-                        hintStyle: GoogleFonts.manrope(color: AppTheme.charcoalMuted),
+                        hintStyle:
+                            GoogleFonts.manrope(color: AppTheme.charcoalMuted),
                         filled: true,
                         fillColor: AppTheme.stone,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide.none,
@@ -302,16 +358,20 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   const SizedBox(width: 12),
                   ElevatedButton(
                     onPressed: () async {
-                      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
-                      final success = await bookingProvider.applyCoupon(bookingId, _couponController.text.trim());
+                      final bookingProvider =
+                          Provider.of<BookingProvider>(context, listen: false);
+                      final success = await bookingProvider.applyCoupon(
+                          bookingId, _couponController.text.trim());
                       if (success && context.mounted) {
                         Navigator.pop(context);
-                        _showPaymentSheet(context, bookingId, bookingProvider.currentBooking!.totalAmount);
+                        _showPaymentSheet(context, bookingId,
+                            bookingProvider.currentBooking!.totalAmount);
                       }
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.secondary,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
                     ),
                     child: const Text('Apply'),
                   ),
@@ -320,7 +380,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () async {
-                  final success = await Provider.of<BookingProvider>(context, listen: false).mockPay(bookingId);
+                  final success =
+                      await Provider.of<BookingProvider>(context, listen: false)
+                          .mockPay(bookingId);
                   if (success && context.mounted) {
                     Navigator.pop(context); // Close sheet
                     Navigator.pop(context); // Close details screen
@@ -383,7 +445,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   Widget _buildEventVenueOptions(PropertyModel prop) {
-    if (prop.category.toLowerCase() != 'event_venue') return const SizedBox.shrink();
+    if (prop.category.toLowerCase() != 'event_venue')
+      return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -413,9 +476,13 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _foodPreference == 'veg' ? Colors.green.withOpacity(0.05) : Colors.transparent,
+                    color: _foodPreference == 'veg'
+                        ? Colors.green.withOpacity(0.05)
+                        : Colors.transparent,
                     border: Border.all(
-                      color: _foodPreference == 'veg' ? Colors.green : AppTheme.border,
+                      color: _foodPreference == 'veg'
+                          ? Colors.green
+                          : AppTheme.border,
                       width: 1.5,
                     ),
                     borderRadius: BorderRadius.circular(12),
@@ -423,8 +490,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        _foodPreference == 'veg' ? Icons.radio_button_checked : Icons.radio_button_off,
-                        color: _foodPreference == 'veg' ? Colors.green : AppTheme.charcoalMuted,
+                        _foodPreference == 'veg'
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                        color: _foodPreference == 'veg'
+                            ? Colors.green
+                            : AppTheme.charcoalMuted,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -468,9 +539,13 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: _foodPreference == 'non_veg' ? Colors.red.withOpacity(0.05) : Colors.transparent,
+                    color: _foodPreference == 'non_veg'
+                        ? Colors.red.withOpacity(0.05)
+                        : Colors.transparent,
                     border: Border.all(
-                      color: _foodPreference == 'non_veg' ? Colors.red : AppTheme.border,
+                      color: _foodPreference == 'non_veg'
+                          ? Colors.red
+                          : AppTheme.border,
                       width: 1.5,
                     ),
                     borderRadius: BorderRadius.circular(12),
@@ -478,8 +553,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        _foodPreference == 'non_veg' ? Icons.radio_button_checked : Icons.radio_button_off,
-                        color: _foodPreference == 'non_veg' ? Colors.red : AppTheme.charcoalMuted,
+                        _foodPreference == 'non_veg'
+                            ? Icons.radio_button_checked
+                            : Icons.radio_button_off,
+                        color: _foodPreference == 'non_veg'
+                            ? Colors.red
+                            : AppTheme.charcoalMuted,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -585,7 +664,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
-                    color: _paymentType == 'full' ? AppTheme.primary : Colors.white,
+                    color: _paymentType == 'full'
+                        ? AppTheme.primary
+                        : Colors.white,
                     border: Border.all(color: AppTheme.primary, width: 1.5),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -595,7 +676,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       style: GoogleFonts.manrope(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: _paymentType == 'full' ? Colors.white : AppTheme.primary,
+                        color: _paymentType == 'full'
+                            ? Colors.white
+                            : AppTheme.primary,
                       ),
                     ),
                   ),
@@ -609,7 +692,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   decoration: BoxDecoration(
-                    color: _paymentType == 'advance' ? AppTheme.primary : Colors.white,
+                    color: _paymentType == 'advance'
+                        ? AppTheme.primary
+                        : Colors.white,
                     border: Border.all(color: AppTheme.primary, width: 1.5),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -619,7 +704,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       style: GoogleFonts.manrope(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: _paymentType == 'advance' ? Colors.white : AppTheme.primary,
+                        color: _paymentType == 'advance'
+                            ? Colors.white
+                            : AppTheme.primary,
                       ),
                     ),
                   ),
@@ -634,8 +721,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
 
   Widget _buildVideoSection(PropertyModel prop) {
     final hasVideo = prop.videoUrl != null && prop.videoUrl!.isNotEmpty;
-    final hasShort = prop.youtubeShortUrl != null && prop.youtubeShortUrl!.isNotEmpty;
-    final hasLong = prop.youtubeLongUrl != null && prop.youtubeLongUrl!.isNotEmpty;
+    final hasShort =
+        prop.youtubeShortUrl != null && prop.youtubeShortUrl!.isNotEmpty;
+    final hasLong =
+        prop.youtubeLongUrl != null && prop.youtubeLongUrl!.isNotEmpty;
 
     if (!hasVideo && !hasShort && !hasLong) {
       return const SizedBox.shrink();
@@ -743,11 +832,13 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   onTap: () async {
                     final uri = Uri.parse(url);
                     if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      await launchUrl(uri,
+                          mode: LaunchMode.externalApplication);
                     } else {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Could not open video URL: $url')),
+                          SnackBar(
+                              content: Text('Could not open video URL: $url')),
                         );
                       }
                     }
@@ -785,7 +876,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           ),
                         ),
                         const Spacer(),
-                        const Icon(Icons.open_in_new, size: 12, color: AppTheme.charcoalMuted),
+                        const Icon(Icons.open_in_new,
+                            size: 12, color: AppTheme.charcoalMuted),
                       ],
                     ),
                   ],
@@ -831,7 +923,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           // 1. SCROLLABLE CONTENT
           Positioned.fill(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 110), // Room for sticky booking bar
+              padding: const EdgeInsets.only(
+                  bottom: 110), // Room for sticky booking bar
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -854,7 +947,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                               fit: BoxFit.cover,
                               errorBuilder: (context, _, __) => Container(
                                 color: AppTheme.stone,
-                                child: const Icon(Icons.image_not_supported, size: 60, color: AppTheme.charcoalMuted),
+                                child: const Icon(Icons.image_not_supported,
+                                    size: 60, color: AppTheme.charcoalMuted),
                               ),
                             );
                           },
@@ -882,7 +976,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         right: 16,
                         bottom: 36, // leave room for card overlap
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.6),
                             borderRadius: BorderRadius.circular(12),
@@ -906,9 +1001,11 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     child: Container(
                       decoration: const BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(28)),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -955,7 +1052,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 border: Border.all(color: Colors.grey.shade200),
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
                                 children: [
                                   Column(
                                     children: [
@@ -970,12 +1068,16 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                             ),
                                           ),
                                           const SizedBox(width: 2),
-                                          const Icon(Icons.star, size: 14, color: AppTheme.charcoal),
+                                          const Icon(Icons.star,
+                                              size: 14,
+                                              color: AppTheme.charcoal),
                                         ],
                                       ),
                                       const SizedBox(height: 2),
                                       Text(
-                                        List.generate(prop.rating!.round().clamp(1, 5), (index) => '★').join(''),
+                                        List.generate(
+                                            prop.rating!.round().clamp(1, 5),
+                                            (index) => '★').join(''),
                                         style: GoogleFonts.manrope(
                                           fontSize: 8,
                                           color: AppTheme.charcoalMuted,
@@ -983,13 +1085,20 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                       ),
                                     ],
                                   ),
-                                  Container(width: 1, height: 28, color: Colors.grey.shade200),
+                                  Container(
+                                      width: 1,
+                                      height: 28,
+                                      color: Colors.grey.shade200),
                                   Column(
                                     children: [
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          const Icon(Icons.keyboard_double_arrow_left_rounded, size: 14, color: AppTheme.charcoal),
+                                          const Icon(
+                                              Icons
+                                                  .keyboard_double_arrow_left_rounded,
+                                              size: 14,
+                                              color: AppTheme.charcoal),
                                           Text(
                                             'Guest favourite',
                                             style: GoogleFonts.manrope(
@@ -998,7 +1107,11 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                               color: AppTheme.charcoal,
                                             ),
                                           ),
-                                          const Icon(Icons.keyboard_double_arrow_right_rounded, size: 14, color: AppTheme.charcoal),
+                                          const Icon(
+                                              Icons
+                                                  .keyboard_double_arrow_right_rounded,
+                                              size: 14,
+                                              color: AppTheme.charcoal),
                                         ],
                                       ),
                                       const SizedBox(height: 2),
@@ -1012,7 +1125,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                       ),
                                     ],
                                   ),
-                                  Container(width: 1, height: 28, color: Colors.grey.shade200),
+                                  Container(
+                                      width: 1,
+                                      height: 28,
+                                      color: Colors.grey.shade200),
                                   Column(
                                     children: [
                                       Text(
@@ -1053,10 +1169,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   image: const DecorationImage(
-                                    image: NetworkImage('https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'),
+                                    image: NetworkImage(
+                                        'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'),
                                     fit: BoxFit.cover,
                                   ),
-                                  border: Border.all(color: Colors.grey.shade100, width: 1.5),
+                                  border: Border.all(
+                                      color: Colors.grey.shade100, width: 1.5),
                                 ),
                               ),
                               const SizedBox(width: 14),
@@ -1123,8 +1241,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             'Guests who stayed here in the past year loved the location.',
                           ),
                           _buildPremiumHighlight(
-                            prop.petFriendly ? Icons.pets_outlined : Icons.local_parking_rounded,
-                            prop.petFriendly ? 'Pet friendly environment' : 'Park for free',
+                            prop.petFriendly
+                                ? Icons.pets_outlined
+                                : Icons.local_parking_rounded,
+                            prop.petFriendly
+                                ? 'Pet friendly environment'
+                                : 'Park for free',
                             prop.petFriendly
                                 ? 'Pets are welcomed with open arms at this listing.'
                                 : 'This is one of the few places in the area with free parking.',
@@ -1141,7 +1263,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.translate, size: 16, color: AppTheme.charcoal),
+                                const Icon(Icons.translate,
+                                    size: 16, color: AppTheme.charcoal),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
@@ -1165,7 +1288,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           Text(
                             prop.description,
                             maxLines: _isDescriptionExpanded ? null : 4,
-                            overflow: _isDescriptionExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                            overflow: _isDescriptionExpanded
+                                ? TextOverflow.visible
+                                : TextOverflow.ellipsis,
                             style: GoogleFonts.manrope(
                               fontSize: 14,
                               color: AppTheme.charcoalLight,
@@ -1176,13 +1301,16 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           InkWell(
                             onTap: () {
                               setState(() {
-                                _isDescriptionExpanded = !_isDescriptionExpanded;
+                                _isDescriptionExpanded =
+                                    !_isDescriptionExpanded;
                               });
                             },
                             child: Row(
                               children: [
                                 Text(
-                                  _isDescriptionExpanded ? 'Show less' : 'Read more',
+                                  _isDescriptionExpanded
+                                      ? 'Show less'
+                                      : 'Read more',
                                   style: GoogleFonts.manrope(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -1192,7 +1320,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 ),
                                 const SizedBox(width: 4),
                                 Icon(
-                                  _isDescriptionExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                  _isDescriptionExpanded
+                                      ? Icons.keyboard_arrow_up
+                                      : Icons.keyboard_arrow_down,
                                   size: 16,
                                   color: AppTheme.charcoal,
                                 ),
@@ -1207,7 +1337,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           const SizedBox(height: 24),
 
                           // Cook & Taxi Services Section
-                          if (prop.hasCook || prop.hasSelfCook || prop.hasTaxi) ...[
+                          if (prop.hasCook ||
+                              prop.hasSelfCook ||
+                              prop.hasTaxi) ...[
                             Text(
                               'Services & Kitchen',
                               style: GoogleFonts.manrope(
@@ -1223,14 +1355,16 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 decoration: BoxDecoration(
                                   color: AppTheme.stone,
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppTheme.border, width: 1),
+                                  border: Border.all(
+                                      color: AppTheme.border, width: 1),
                                 ),
                                 child: Row(
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: AppTheme.primary.withOpacity(0.1),
+                                        color:
+                                            AppTheme.primary.withOpacity(0.1),
                                         shape: BoxShape.circle,
                                       ),
                                       child: const Icon(
@@ -1242,7 +1376,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             'Cook Available',
@@ -1274,7 +1409,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   ],
                                 ),
                               ),
-                              if (prop.hasSelfCook || prop.hasTaxi) const SizedBox(height: 12),
+                              if (prop.hasSelfCook || prop.hasTaxi)
+                                const SizedBox(height: 12),
                             ],
                             if (prop.hasSelfCook) ...[
                               Container(
@@ -1282,14 +1418,16 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 decoration: BoxDecoration(
                                   color: AppTheme.stone,
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppTheme.border, width: 1),
+                                  border: Border.all(
+                                      color: AppTheme.border, width: 1),
                                 ),
                                 child: Row(
                                   children: [
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF10B981).withOpacity(0.1),
+                                        color: const Color(0xFF10B981)
+                                            .withOpacity(0.1),
                                         shape: BoxShape.circle,
                                       ),
                                       child: const Icon(
@@ -1301,7 +1439,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             'Self Cooking Allowed',
@@ -1341,7 +1480,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 decoration: BoxDecoration(
                                   color: AppTheme.stone,
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppTheme.border, width: 1),
+                                  border: Border.all(
+                                      color: AppTheme.border, width: 1),
                                 ),
                                 child: Row(
                                   children: [
@@ -1360,7 +1500,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             'Taxi Service Available',
@@ -1411,19 +1552,23 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           if (prop.amenities.isEmpty)
                             Text(
                               'No specific amenities listed.',
-                              style: GoogleFonts.manrope(color: AppTheme.charcoalMuted),
+                              style: GoogleFonts.manrope(
+                                  color: AppTheme.charcoalMuted),
                             )
                           else
                             GridView.builder(
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,
                                 childAspectRatio: 3.5,
                                 crossAxisSpacing: 16,
                                 mainAxisSpacing: 12,
                               ),
-                              itemCount: prop.amenities.length > 6 ? 6 : prop.amenities.length,
+                              itemCount: prop.amenities.length > 6
+                                  ? 6
+                                  : prop.amenities.length,
                               itemBuilder: (context, index) {
                                 final amenity = prop.amenities[index];
                                 return Row(
@@ -1465,13 +1610,15 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   showModalBottomSheet(
                                     context: context,
                                     shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                                      borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(24)),
                                     ),
                                     builder: (context) {
                                       return Padding(
                                         padding: const EdgeInsets.all(24.0),
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               'What this place offers',
@@ -1484,17 +1631,28 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                             const SizedBox(height: 20),
                                             Expanded(
                                               child: ListView.separated(
-                                                itemCount: prop.amenities.length,
-                                                separatorBuilder: (context, index) => const Divider(),
+                                                itemCount:
+                                                    prop.amenities.length,
+                                                separatorBuilder:
+                                                    (context, index) =>
+                                                        const Divider(),
                                                 itemBuilder: (context, index) {
-                                                  final amenity = prop.amenities[index];
+                                                  final amenity =
+                                                      prop.amenities[index];
                                                   return ListTile(
-                                                    leading: Icon(_getAmenityIcon(amenity), color: AppTheme.primary),
+                                                    leading: Icon(
+                                                        _getAmenityIcon(
+                                                            amenity),
+                                                        color:
+                                                            AppTheme.primary),
                                                     title: Text(
                                                       amenity.toUpperCase(),
-                                                      style: GoogleFonts.manrope(
-                                                        fontWeight: FontWeight.w600,
-                                                        color: AppTheme.charcoal,
+                                                      style:
+                                                          GoogleFonts.manrope(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color:
+                                                            AppTheme.charcoal,
                                                       ),
                                                     ),
                                                   );
@@ -1508,8 +1666,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   );
                                 },
                                 style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  side: const BorderSide(color: AppTheme.charcoal),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 14),
+                                  side: const BorderSide(
+                                      color: AppTheme.charcoal),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -1554,7 +1714,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
                               image: const DecorationImage(
-                                image: NetworkImage('https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600'),
+                                image: NetworkImage(
+                                    'https://images.unsplash.com/photo-1524661135-423995f22d0b?w=600'),
                                 fit: BoxFit.cover,
                               ),
                             ),
@@ -1575,7 +1736,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                       color: AppTheme.primary,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.home_work_rounded, color: Colors.white, size: 24),
+                                    child: const Icon(Icons.home_work_rounded,
+                                        color: Colors.white, size: 24),
                                   ),
                                 ),
                               ],
@@ -1591,7 +1753,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             Center(
                               child: Column(
                                 children: [
-                                  LaurelWreathWidget(rating: prop.rating ?? 4.95),
+                                  LaurelWreathWidget(
+                                      rating: prop.rating ?? 4.95),
                                   const SizedBox(height: 8),
                                   Text(
                                     'Guest favourite',
@@ -1634,7 +1797,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppTheme.border, width: 1.5),
+                              border: Border.all(
+                                  color: AppTheme.border, width: 1.5),
                             ),
                             child: Column(
                               children: [
@@ -1647,10 +1811,13 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                         child: InkWell(
                                           onTap: () => _selectCheckIn(context),
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                isEvent ? 'EVENT DATE' : 'CHECK-IN',
+                                                isEvent
+                                                    ? 'EVENT DATE'
+                                                    : 'CHECK-IN',
                                                 style: GoogleFonts.manrope(
                                                   fontSize: 10,
                                                   fontWeight: FontWeight.w800,
@@ -1660,16 +1827,26 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                               const SizedBox(height: 6),
                                               Row(
                                                 children: [
-                                                  const Icon(Icons.calendar_today, size: 14, color: AppTheme.primary),
+                                                  const Icon(
+                                                      Icons.calendar_today,
+                                                      size: 14,
+                                                      color: AppTheme.primary),
                                                   const SizedBox(width: 6),
                                                   Text(
                                                     _checkInDate == null
                                                         ? 'Add Date'
-                                                        : DateFormat('dd-MM-yyyy').format(_checkInDate!),
+                                                        : DateFormat(
+                                                                'dd-MM-yyyy')
+                                                            .format(
+                                                                _checkInDate!),
                                                     style: GoogleFonts.manrope(
                                                       fontSize: 14,
-                                                      fontWeight: FontWeight.w700,
-                                                      color: _checkInDate == null ? AppTheme.primary : AppTheme.charcoal,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      color: _checkInDate ==
+                                                              null
+                                                          ? AppTheme.primary
+                                                          : AppTheme.charcoal,
                                                     ),
                                                   ),
                                                 ],
@@ -1679,20 +1856,31 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                         ),
                                       ),
                                       if (!isEvent) ...[
-                                        Container(width: 1.5, height: 40, color: AppTheme.border),
+                                        Container(
+                                            width: 1.5,
+                                            height: 40,
+                                            color: AppTheme.border),
                                         const SizedBox(width: 16),
                                         Expanded(
                                           child: InkWell(
-                                            onTap: _checkInDate == null ? null : () => _selectCheckOut(context),
+                                            onTap: _checkInDate == null
+                                                ? null
+                                                : () =>
+                                                    _selectCheckOut(context),
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   'CHECK-OUT',
                                                   style: GoogleFonts.manrope(
                                                     fontSize: 10,
                                                     fontWeight: FontWeight.w800,
-                                                    color: _checkInDate == null ? AppTheme.charcoalMuted.withOpacity(0.5) : AppTheme.charcoalMuted,
+                                                    color: _checkInDate == null
+                                                        ? AppTheme.charcoalMuted
+                                                            .withOpacity(0.5)
+                                                        : AppTheme
+                                                            .charcoalMuted,
                                                   ),
                                                 ),
                                                 const SizedBox(height: 6),
@@ -1701,18 +1889,36 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                                     Icon(
                                                       Icons.calendar_today,
                                                       size: 14,
-                                                      color: _checkInDate == null ? AppTheme.charcoalMuted.withOpacity(0.4) : AppTheme.primary,
+                                                      color: _checkInDate ==
+                                                              null
+                                                          ? AppTheme
+                                                              .charcoalMuted
+                                                              .withOpacity(0.4)
+                                                          : AppTheme.primary,
                                                     ),
                                                     const SizedBox(width: 6),
                                                     Text(
                                                       _checkOutDate == null
                                                           ? 'Add Date'
-                                                          : DateFormat('dd-MM-yyyy').format(_checkOutDate!),
-                                                      style: GoogleFonts.manrope(
+                                                          : DateFormat(
+                                                                  'dd-MM-yyyy')
+                                                              .format(
+                                                                  _checkOutDate!),
+                                                      style:
+                                                          GoogleFonts.manrope(
                                                         fontSize: 14,
-                                                        fontWeight: FontWeight.w700,
-                                                        color: _checkOutDate == null
-                                                            ? (_checkInDate == null ? AppTheme.charcoalMuted.withOpacity(0.5) : AppTheme.primary)
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: _checkOutDate ==
+                                                                null
+                                                            ? (_checkInDate ==
+                                                                    null
+                                                                ? AppTheme
+                                                                    .charcoalMuted
+                                                                    .withOpacity(
+                                                                        0.5)
+                                                                : AppTheme
+                                                                    .primary)
                                                             : AppTheme.charcoal,
                                                       ),
                                                     ),
@@ -1726,58 +1932,96 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                     ],
                                   ),
                                 ),
-                                
-                                Divider(height: 1, thickness: 1.5, color: AppTheme.border),
-                                
+
+                                Divider(
+                                    height: 1,
+                                    thickness: 1.5,
+                                    color: AppTheme.border),
+
                                 // Guests row
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
                                         child: Row(
                                           children: [
                                             Icon(
-                                              isCommercial ? Icons.groups_outlined : Icons.people_outline,
+                                              isCommercial
+                                                  ? Icons.groups_outlined
+                                                  : Icons.people_outline,
                                               color: AppTheme.charcoalLight,
                                               size: 22,
                                             ),
                                             const SizedBox(width: 12),
                                             Expanded(
                                               child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    isCommercial ? 'TOTAL STAFF' : 'TOTAL GUESTS',
+                                                    isCommercial
+                                                        ? 'TOTAL STAFF'
+                                                        : 'TOTAL GUESTS',
                                                     style: GoogleFonts.manrope(
                                                       fontSize: 10,
-                                                      fontWeight: FontWeight.w800,
-                                                      color: AppTheme.charcoalMuted,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: AppTheme
+                                                          .charcoalMuted,
                                                     ),
                                                   ),
                                                   const SizedBox(height: 4),
                                                   if (isEvent)
                                                     DropdownButton<int>(
                                                       value: _guestCount,
-                                                      underline: const SizedBox(),
-                                                      icon: const Icon(Icons.arrow_drop_down, color: AppTheme.primary),
-                                                      style: GoogleFonts.manrope(
+                                                      underline:
+                                                          const SizedBox(),
+                                                      icon: const Icon(
+                                                          Icons.arrow_drop_down,
+                                                          color:
+                                                              AppTheme.primary),
+                                                      style:
+                                                          GoogleFonts.manrope(
                                                         fontSize: 15,
-                                                        fontWeight: FontWeight.w700,
-                                                        color: AppTheme.charcoal,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color:
+                                                            AppTheme.charcoal,
                                                       ),
                                                       items: const [
-                                                        DropdownMenuItem(value: 100, child: Text('Less than 100')),
-                                                        DropdownMenuItem(value: 200, child: Text('100-200')),
-                                                        DropdownMenuItem(value: 300, child: Text('200-300')),
-                                                        DropdownMenuItem(value: 400, child: Text('300-400')),
-                                                        DropdownMenuItem(value: 500, child: Text('400-500')),
-                                                        DropdownMenuItem(value: 600, child: Text('Greater than 500')),
+                                                        DropdownMenuItem(
+                                                            value: 100,
+                                                            child: Text(
+                                                                'Less than 100')),
+                                                        DropdownMenuItem(
+                                                            value: 200,
+                                                            child: Text(
+                                                                '100-200')),
+                                                        DropdownMenuItem(
+                                                            value: 300,
+                                                            child: Text(
+                                                                '200-300')),
+                                                        DropdownMenuItem(
+                                                            value: 400,
+                                                            child: Text(
+                                                                '300-400')),
+                                                        DropdownMenuItem(
+                                                            value: 500,
+                                                            child: Text(
+                                                                '400-500')),
+                                                        DropdownMenuItem(
+                                                            value: 600,
+                                                            child: Text(
+                                                                'Greater than 500')),
                                                       ],
                                                       onChanged: (val) {
                                                         setState(() {
-                                                          _guestCount = val ?? 100;
+                                                          _guestCount =
+                                                              val ?? 100;
                                                         });
                                                       },
                                                     )
@@ -1786,38 +2030,66 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                                       children: [
                                                         InkWell(
                                                           onTap: _guestCount > 1
-                                                              ? () => setState(() => _guestCount--)
+                                                              ? () => setState(() =>
+                                                                  _guestCount--)
                                                               : null,
                                                           child: Container(
-                                                            padding: const EdgeInsets.all(4),
-                                                            decoration: BoxDecoration(
-                                                              shape: BoxShape.circle,
-                                                              border: Border.all(color: AppTheme.border),
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(4),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              shape: BoxShape
+                                                                  .circle,
+                                                              border: Border.all(
+                                                                  color: AppTheme
+                                                                      .border),
                                                             ),
-                                                            child: const Icon(Icons.remove, size: 14, color: AppTheme.charcoal),
+                                                            child: const Icon(
+                                                                Icons.remove,
+                                                                size: 14,
+                                                                color: AppTheme
+                                                                    .charcoal),
                                                           ),
                                                         ),
-                                                        const SizedBox(width: 12),
+                                                        const SizedBox(
+                                                            width: 12),
                                                         Text(
                                                           '$_guestCount',
-                                                          style: GoogleFonts.manrope(
+                                                          style: GoogleFonts
+                                                              .manrope(
                                                             fontSize: 16,
-                                                            fontWeight: FontWeight.w700,
-                                                            color: AppTheme.charcoal,
+                                                            fontWeight:
+                                                                FontWeight.w700,
+                                                            color: AppTheme
+                                                                .charcoal,
                                                           ),
                                                         ),
-                                                        const SizedBox(width: 12),
+                                                        const SizedBox(
+                                                            width: 12),
                                                         InkWell(
-                                                          onTap: _guestCount < prop.maxGuests
-                                                              ? () => setState(() => _guestCount++)
+                                                          onTap: _guestCount <
+                                                                  prop.maxGuests
+                                                              ? () => setState(() =>
+                                                                  _guestCount++)
                                                               : null,
                                                           child: Container(
-                                                            padding: const EdgeInsets.all(4),
-                                                            decoration: BoxDecoration(
-                                                              shape: BoxShape.circle,
-                                                              border: Border.all(color: AppTheme.border),
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(4),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              shape: BoxShape
+                                                                  .circle,
+                                                              border: Border.all(
+                                                                  color: AppTheme
+                                                                      .border),
                                                             ),
-                                                            child: const Icon(Icons.add, size: 14, color: AppTheme.charcoal),
+                                                            child: const Icon(
+                                                                Icons.add,
+                                                                size: 14,
+                                                                color: AppTheme
+                                                                    .charcoal),
                                                           ),
                                                         ),
                                                       ],
@@ -1830,7 +2102,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                       ),
                                       if (!isEvent)
                                         Text(
-                                          isCommercial ? 'MAX ${prop.maxGuests} STAFF' : 'MAX ${prop.maxGuests}',
+                                          isCommercial
+                                              ? 'MAX ${prop.maxGuests} STAFF'
+                                              : 'MAX ${prop.maxGuests}',
                                           style: GoogleFonts.manrope(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w800,
@@ -1890,7 +2164,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         )
                       ],
                     ),
-                    child: const Icon(Icons.arrow_back, color: AppTheme.charcoal, size: 20),
+                    child: const Icon(Icons.arrow_back,
+                        color: AppTheme.charcoal, size: 20),
                   ),
                 ),
                 // Share & Favorite Buttons
@@ -1909,7 +2184,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           )
                         ],
                       ),
-                      child: const Icon(Icons.share_outlined, color: AppTheme.charcoal, size: 20),
+                      child: const Icon(Icons.share_outlined,
+                          color: AppTheme.charcoal, size: 20),
                     ),
                     const SizedBox(width: 12),
                     GestureDetector(
@@ -1955,7 +2231,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
+                border:
+                    Border(top: BorderSide(color: AppTheme.border, width: 1)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
@@ -2026,10 +2303,13 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   ),
                   // Book Button (Reserve - Airbnb style)
                   ElevatedButton(
-                    onPressed: () => _handleBooking(context, prop.pricePerNight),
+                    onPressed: () =>
+                        _handleBooking(context, prop.pricePerNight),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                      backgroundColor: const Color(0xFFE61E4F), // Airbnb hot pink
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 40, vertical: 16),
+                      backgroundColor:
+                          const Color(0xFFE61E4F), // Airbnb hot pink
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -2086,7 +2366,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     for (final block in _blockedDatesList) {
       final start = block['start_date'] as String;
       final end = block['end_date'] as String;
-      if (checkDateStr.compareTo(start) >= 0 && checkDateStr.compareTo(end) <= 0) {
+      if (checkDateStr.compareTo(start) >= 0 &&
+          checkDateStr.compareTo(end) <= 0) {
         return true;
       }
     }
@@ -2094,11 +2375,13 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   void _onCalendarDayTap(DateTime date) {
-    if (_isDateBlocked(date) || date.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
+    if (_isDateBlocked(date) ||
+        date.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
       return;
     }
     setState(() {
-      if (_checkInDate == null || (_checkInDate != null && _checkOutDate != null)) {
+      if (_checkInDate == null ||
+          (_checkInDate != null && _checkOutDate != null)) {
         _checkInDate = date;
         _checkOutDate = null;
       } else if (_checkInDate != null && _checkOutDate == null) {
@@ -2126,8 +2409,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   Widget _buildAvailabilityCalendar() {
-    final daysInMonth = DateTime(_calendarMonth.year, _calendarMonth.month + 1, 0).day;
-    final firstDayOfMonth = DateTime(_calendarMonth.year, _calendarMonth.month, 1);
+    final daysInMonth =
+        DateTime(_calendarMonth.year, _calendarMonth.month + 1, 0).day;
+    final firstDayOfMonth =
+        DateTime(_calendarMonth.year, _calendarMonth.month, 1);
     final startOffset = firstDayOfMonth.weekday % 7;
     final totalCells = startOffset + daysInMonth;
 
@@ -2164,10 +2449,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left, color: AppTheme.charcoal),
+                    icon: const Icon(Icons.chevron_left,
+                        color: AppTheme.charcoal),
                     onPressed: () {
                       setState(() {
-                        _calendarMonth = DateTime(_calendarMonth.year, _calendarMonth.month - 1, 1);
+                        _calendarMonth = DateTime(
+                            _calendarMonth.year, _calendarMonth.month - 1, 1);
                       });
                     },
                   ),
@@ -2180,10 +2467,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.chevron_right, color: AppTheme.charcoal),
+                    icon: const Icon(Icons.chevron_right,
+                        color: AppTheme.charcoal),
                     onPressed: () {
                       setState(() {
-                        _calendarMonth = DateTime(_calendarMonth.year, _calendarMonth.month + 1, 1);
+                        _calendarMonth = DateTime(
+                            _calendarMonth.year, _calendarMonth.month + 1, 1);
                       });
                     },
                   ),
@@ -2192,7 +2481,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((day) {
+                children: ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+                    .map((day) {
                   return SizedBox(
                     width: 36,
                     child: Center(
@@ -2224,13 +2514,16 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     return const SizedBox.shrink();
                   }
                   final day = index - startOffset + 1;
-                  final cellDate = DateTime(_calendarMonth.year, _calendarMonth.month, day);
+                  final cellDate =
+                      DateTime(_calendarMonth.year, _calendarMonth.month, day);
                   final isBlocked = _isDateBlocked(cellDate);
-                  final isPast = cellDate.isBefore(DateTime.now().subtract(const Duration(days: 1)));
-                  
+                  final isPast = cellDate.isBefore(
+                      DateTime.now().subtract(const Duration(days: 1)));
+
                   bool isSelected = false;
                   if (_checkInDate != null && _checkOutDate != null) {
-                    isSelected = cellDate.compareTo(_checkInDate!) >= 0 && cellDate.compareTo(_checkOutDate!) <= 0;
+                    isSelected = cellDate.compareTo(_checkInDate!) >= 0 &&
+                        cellDate.compareTo(_checkOutDate!) <= 0;
                   } else if (_checkInDate != null) {
                     isSelected = cellDate.compareTo(_checkInDate!) == 0;
                   }
@@ -2307,11 +2600,15 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildLegendItem(Colors.white, AppTheme.border, 'AVAILABLE', showBorder: true),
+                  _buildLegendItem(Colors.white, AppTheme.border, 'AVAILABLE',
+                      showBorder: true),
                   const SizedBox(width: 16),
-                  _buildLegendItem(Colors.white, AppTheme.primary.withOpacity(0.5), 'UNAVAILABLE', hasDot: true),
+                  _buildLegendItem(Colors.white,
+                      AppTheme.primary.withOpacity(0.5), 'UNAVAILABLE',
+                      hasDot: true),
                   const SizedBox(width: 16),
-                  _buildLegendItem(AppTheme.charcoal, Colors.transparent, 'SELECTED'),
+                  _buildLegendItem(
+                      AppTheme.charcoal, Colors.transparent, 'SELECTED'),
                 ],
               ),
             ],
@@ -2321,7 +2618,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     );
   }
 
-  Widget _buildLegendItem(Color color, Color borderColor, String label, {bool showBorder = false, bool hasDot = false}) {
+  Widget _buildLegendItem(Color color, Color borderColor, String label,
+      {bool showBorder = false, bool hasDot = false}) {
     return Row(
       children: [
         Container(
@@ -2440,7 +2738,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             Expanded(
               flex: 4,
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
                 decoration: BoxDecoration(
                   color: AppTheme.charcoal,
                   borderRadius: BorderRadius.circular(16),
@@ -2461,7 +2760,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: List.generate(5, (index) {
                         return Icon(
-                          index < avgRating.round() ? Icons.star : Icons.star_border,
+                          index < avgRating.round()
+                              ? Icons.star
+                              : Icons.star_border,
                           color: Colors.amber,
                           size: 12,
                         );
@@ -2512,7 +2813,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             ),
             child: Column(
               children: [
-                Icon(Icons.rate_review_outlined, color: AppTheme.charcoalMuted, size: 28),
+                Icon(Icons.rate_review_outlined,
+                    color: AppTheme.charcoalMuted, size: 28),
                 const SizedBox(height: 12),
                 Text(
                   'NO REVIEWS YET. BE THE FIRST TO SHARE YOUR STAY.',
@@ -2536,10 +2838,11 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             itemBuilder: (context, index) {
               final review = _reviewsList[index];
               final dateStr = review['created_at'] != null
-                  ? DateFormat('dd MMM yyyy').format(DateTime.parse(review['created_at']))
+                  ? DateFormat('dd MMM yyyy')
+                      .format(DateTime.parse(review['created_at']))
                   : '';
               final rating = (review['overall_rating'] ?? 0.0).toDouble();
-              
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2684,7 +2987,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Host Card
         Container(
           padding: const EdgeInsets.all(24),
@@ -2711,7 +3014,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       children: [
                         CircleAvatar(
                           radius: 44,
-                          backgroundImage: const NetworkImage('https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'),
+                          backgroundImage: const NetworkImage(
+                              'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'),
                           backgroundColor: Colors.grey.shade100,
                         ),
                         Positioned(
@@ -2723,7 +3027,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                               color: Color(0xFFE61E4F),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.star_rounded, color: Colors.white, size: 14),
+                            child: const Icon(Icons.star_rounded,
+                                color: Colors.white, size: 14),
                           ),
                         ),
                       ],
@@ -2740,7 +3045,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.workspace_premium, size: 14, color: AppTheme.charcoal),
+                        const Icon(Icons.workspace_premium,
+                            size: 14, color: AppTheme.charcoal),
                         const SizedBox(width: 4),
                         Text(
                           'Superhost',
@@ -2796,7 +3102,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         Row(
                           children: [
                             Text(
-                              prop.rating != null && prop.rating! > 0 ? prop.rating!.toStringAsFixed(1) : '—',
+                              prop.rating != null && prop.rating! > 0
+                                  ? prop.rating!.toStringAsFixed(1)
+                                  : '—',
                               style: GoogleFonts.manrope(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
@@ -2804,7 +3112,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                               ),
                             ),
                             const SizedBox(width: 2),
-                            const Icon(Icons.star_rounded, size: 14, color: AppTheme.charcoal),
+                            const Icon(Icons.star_rounded,
+                                size: 14, color: AppTheme.charcoal),
                           ],
                         ),
                         Text(
@@ -2846,7 +3155,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        
+
         // Host Bio details
         Row(
           children: [
@@ -2865,7 +3174,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         const SizedBox(height: 12),
         Row(
           children: [
-            const Icon(Icons.lightbulb_outline, color: AppTheme.charcoal, size: 20),
+            const Icon(Icons.lightbulb_outline,
+                color: AppTheme.charcoal, size: 20),
             const SizedBox(width: 12),
             Text(
               "My favorite: Traveling",
@@ -2878,7 +3188,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           ],
         ),
         const SizedBox(height: 20),
-        
+
         // Superhost Description
         Text(
           'Shivani is a Superhost',
@@ -2898,7 +3208,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        
+
         // Co-Hosts
         Text(
           'Co-Hosts',
@@ -2913,7 +3223,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           children: [
             const CircleAvatar(
               radius: 18,
-              backgroundImage: NetworkImage('https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150'),
+              backgroundImage: NetworkImage(
+                  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150'),
             ),
             const SizedBox(width: 12),
             Text(
@@ -2927,7 +3238,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           ],
         ),
         const SizedBox(height: 24),
-        
+
         // Host details
         Text(
           'Host details',
@@ -2947,7 +3258,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           ),
         ),
         const SizedBox(height: 20),
-        
+
         // Message Host Button
         SizedBox(
           width: double.infinity,
@@ -2975,7 +3286,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        
+
         // Warning note
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -3068,7 +3379,8 @@ class LaurelWreathPainter extends CustomPainter {
     } else {
       // Draw right curved branch
       path.moveTo(0, size.height);
-      path.quadraticBezierTo(size.width, size.height * 0.7, size.width, size.height * 0.2);
+      path.quadraticBezierTo(
+          size.width, size.height * 0.7, size.width, size.height * 0.2);
       path.quadraticBezierTo(size.width, 0, size.width * 0.6, 0);
     }
     canvas.drawPath(path, paint);
@@ -3079,17 +3391,27 @@ class LaurelWreathPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     if (isLeft) {
-      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.8, size.height * 0.85), -0.5);
-      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.4, size.height * 0.7), -0.8);
-      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.15, size.height * 0.5), -1.1);
-      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.1, size.height * 0.3), -1.4);
-      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.25, size.height * 0.1), -1.8);
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.8, size.height * 0.85),
+          -0.5);
+      _drawLeaf(
+          canvas, leafPaint, Offset(size.width * 0.4, size.height * 0.7), -0.8);
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.15, size.height * 0.5),
+          -1.1);
+      _drawLeaf(
+          canvas, leafPaint, Offset(size.width * 0.1, size.height * 0.3), -1.4);
+      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.25, size.height * 0.1),
+          -1.8);
     } else {
-      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.2, size.height * 0.85), 0.5);
-      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.6, size.height * 0.7), 0.8);
-      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.85, size.height * 0.5), 1.1);
-      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.9, size.height * 0.3), 1.4);
-      _drawLeaf(canvas, leafPaint, Offset(size.width * 0.75, size.height * 0.1), 1.8);
+      _drawLeaf(
+          canvas, leafPaint, Offset(size.width * 0.2, size.height * 0.85), 0.5);
+      _drawLeaf(
+          canvas, leafPaint, Offset(size.width * 0.6, size.height * 0.7), 0.8);
+      _drawLeaf(
+          canvas, leafPaint, Offset(size.width * 0.85, size.height * 0.5), 1.1);
+      _drawLeaf(
+          canvas, leafPaint, Offset(size.width * 0.9, size.height * 0.3), 1.4);
+      _drawLeaf(
+          canvas, leafPaint, Offset(size.width * 0.75, size.height * 0.1), 1.8);
     }
   }
 
@@ -3097,11 +3419,11 @@ class LaurelWreathPainter extends CustomPainter {
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(rotation);
-    canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: 14, height: 6), paint);
+    canvas.drawOval(
+        Rect.fromCenter(center: Offset.zero, width: 14, height: 6), paint);
     canvas.restore();
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

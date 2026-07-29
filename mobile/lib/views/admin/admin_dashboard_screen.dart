@@ -12,6 +12,7 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../config.dart';
 import '../../theme.dart';
+import '../shared/app_shell.dart';
 import '../guest/property_detail_screen.dart';
 import '../host/host_list_property_screen.dart';
 import '../employee/verification_report_screen.dart';
@@ -4055,7 +4056,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       appBar: AppBar(
         title: Row(
           children: [
-            const AppLogo(height: 24, tintColor: Colors.black, framed: false),
+            InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AppShell(initialIndex: 0),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: const AppLogo(
+                height: 24,
+                tintColor: Colors.black,
+                framed: false,
+              ),
+            ),
             const SizedBox(width: 10),
             Text(
               'Dashboard Overview',

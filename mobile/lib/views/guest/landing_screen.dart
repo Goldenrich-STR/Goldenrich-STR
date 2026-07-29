@@ -12,6 +12,7 @@ import '../../theme.dart';
 import '../auth/login_screen.dart';
 import '../shared/app_logo.dart';
 import '../shared/app_shell.dart';
+import '../shared/support_tickets_screen.dart';
 import 'guest_browse_screen.dart';
 import 'property_detail_screen.dart';
 
@@ -23,26 +24,15 @@ class LandingScreen extends StatefulWidget {
 }
 
 class _LandingScreenState extends State<LandingScreen> {
-  final PageController _heroController = PageController(viewportFraction: 1);
-  Timer? _heroTimer;
-  int _heroIndex = 0;
   String _selectedCity = 'Anywhere';
   String _selectedCategory = 'All Types';
   DateTimeRange? _selectedRange;
   int _guestCount = 2;
+  late final PageController _heroPageController;
+  Timer? _heroTimer;
+  int _activeHeroIndex = 0;
 
   static const List<_HeroSlide> _heroSlides = [
-    _HeroSlide(
-      image:
-          'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1600&q=80',
-      tag: 'COMMERCIAL SPACES',
-      titlePrefix: 'Premium Office ',
-      titleHighlight: 'Spaces',
-      subtitle:
-          'Curated short-term work environments designed for teams that value atmosphere and flexibility.',
-      badge: '15% OFF On Weekday Bookings*',
-      category: 'commercial',
-    ),
     _HeroSlide(
       image:
           'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=80',
@@ -56,22 +46,33 @@ class _LandingScreenState extends State<LandingScreen> {
     ),
     _HeroSlide(
       image:
-          'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1400&q=80',
-      tag: 'WEDDING VENUES',
-      titlePrefix: 'Beautiful Wedding ',
-      titleHighlight: 'Venues',
+          'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1400&q=80',
+      tag: 'COMMERCIAL SPACES',
+      titlePrefix: 'Premium Office ',
+      titleHighlight: 'Spaces',
       subtitle:
-          'Statement venues for weddings, celebrations, and memorable guest experiences across India.',
-      badge: '26% OFF On All Sunday Events',
-      category: 'event',
+          'Elegant work-ready addresses for teams, founders, and business stays.',
+      badge: '15% OFF on Weekday Bookings*',
+      category: 'commercial',
+    ),
+    _HeroSlide(
+      image:
+          'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1400&q=80',
+      tag: 'EVENT DESTINATIONS',
+      titlePrefix: 'Celebrate in ',
+      titleHighlight: 'Style',
+      subtitle:
+          'Wedding venues and curated event spaces with hospitality-first experiences.',
+      badge: 'Curated Venue Support Included',
+      category: 'event_venue',
     ),
   ];
 
   static const List<_DestinationData> _destinations = [
-    _DestinationData('Goa', Icons.waves_outlined),
-    _DestinationData('Mumbai', Icons.location_city_outlined),
-    _DestinationData('Nashik', Icons.landscape_outlined),
-    _DestinationData('Bangalore', Icons.apartment_outlined),
+    _DestinationData('Nashik', Icons.location_on_outlined),
+    _DestinationData('Trimbak', Icons.account_balance_outlined),
+    _DestinationData('Igatpuri', Icons.landscape_outlined),
+    _DestinationData('Sula Vineyards', Icons.wine_bar_outlined),
   ];
 
   static const List<_TestimonialData> _testimonials = [
@@ -95,27 +96,94 @@ class _LandingScreenState extends State<LandingScreen> {
     ),
   ];
 
+  static const List<_PromoCardData> _promoCards = [
+    _PromoCardData(
+      eyebrow: 'LIMITED OFFER',
+      title: 'Monsoon getaways with premium add-ons',
+      description:
+          'Unlock breakfast upgrades, scenic stays, and flexible planning on select homes.',
+      icon: Icons.local_offer_outlined,
+    ),
+    _PromoCardData(
+      eyebrow: 'BUSINESS READY',
+      title: 'Smart spaces for meetings and team offsites',
+      description:
+          'Discover curated offices and workcation stays tailored for weekday productivity.',
+      icon: Icons.corporate_fare_outlined,
+    ),
+  ];
+
+  static const List<_BlogData> _blogCards = [
+    _BlogData(
+      category: 'X-Space360 Guide',
+      title: 'How to choose the right stay on X-Space360',
+      excerpt:
+          'Compare location, space type, amenities, and host quality before locking your next booking.',
+    ),
+    _BlogData(
+      category: 'Host Success',
+      title:
+          'How better presentation helps Goldenrich host partners win more bookings',
+      excerpt:
+          'Cleaner listing photos, better pricing clarity, and stronger trust signals improve conversions faster.',
+    ),
+    _BlogData(
+      category: 'Local Picks',
+      title: 'Top Nashik stays for weekends, events, and work trips',
+      excerpt:
+          'Explore curated homes, venues, and commercial spaces across Nashik and nearby destinations.',
+    ),
+  ];
+
+  static const List<_FooterSectionData> _footerSections = [
+    _FooterSectionData(
+      title: 'Premium Stays',
+      links: ['Residential Homes', 'Weekend Retreats', 'Managed Apartments'],
+    ),
+    _FooterSectionData(
+      title: 'Places To Visit',
+      links: ['Sula Vineyards', 'Anjaneri', 'Gangapur Dam'],
+    ),
+    _FooterSectionData(
+      title: 'Top Locations',
+      links: ['Stays in Nashik', 'Stays in Igatpuri', 'Stays in Trimbak'],
+    ),
+    _FooterSectionData(
+      title: 'Top Collections',
+      links: ['Corporate Stays', 'Wedding Venues', 'Commercial Spaces'],
+    ),
+    _FooterSectionData(
+      title: 'Platform Guide',
+      links: ['Booking Tips', 'Host Stories', 'Guest Support'],
+    ),
+    _FooterSectionData(
+      title: 'Support',
+      links: ['Help Centre', 'Call Support', 'Terms of Stay'],
+    ),
+  ];
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PropertyProvider>().searchProperties({});
-    });
-    _heroTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (!mounted || !_heroController.hasClients) return;
-      final nextIndex = (_heroIndex + 1) % _heroSlides.length;
-      _heroController.animateToPage(
+    _heroPageController = PageController(viewportFraction: 1);
+    _heroTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!_heroPageController.hasClients || _heroSlides.length <= 1) return;
+      final nextIndex = (_activeHeroIndex + 1) % _heroSlides.length;
+      _heroPageController.animateToPage(
         nextIndex,
-        duration: const Duration(milliseconds: 700),
+        duration: const Duration(milliseconds: 450),
         curve: Curves.easeInOut,
       );
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PropertyProvider>().searchProperties({});
     });
   }
 
   @override
   void dispose() {
     _heroTimer?.cancel();
-    _heroController.dispose();
+    _heroPageController.dispose();
     super.dispose();
   }
 
@@ -135,6 +203,7 @@ class _LandingScreenState extends State<LandingScreen> {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverToBoxAdapter(child: _buildHero(auth)),
+          SliverToBoxAdapter(child: _buildCategorySelector()),
           SliverToBoxAdapter(
             child: _buildDestinationStrip(),
           ),
@@ -159,16 +228,16 @@ class _LandingScreenState extends State<LandingScreen> {
               properties: event.isNotEmpty ? event : featured,
             ),
           ),
+          SliverToBoxAdapter(child: _buildPromoSection()),
           SliverToBoxAdapter(child: _buildHostBanner(auth)),
           SliverToBoxAdapter(child: _buildTestimonialSection()),
+          SliverToBoxAdapter(child: _buildBlogSection()),
+          SliverToBoxAdapter(child: _buildChatbotSection()),
           SliverToBoxAdapter(child: _buildFooter()),
-          const SliverToBoxAdapter(child: SizedBox(height: 110)),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppTheme.secondary,
-        foregroundColor: Colors.white,
-        onPressed: () {
+      floatingActionButton: GestureDetector(
+        onTap: () {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -176,11 +245,146 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
           );
         },
-        label: Text(
-          'AI Chat',
-          style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF23211D),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_outlined,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'AI Chat',
+                    style: GoogleFonts.manrope(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              right: -1,
+              top: -1,
+              child: Container(
+                width: 11,
+                height: 11,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2ED08C),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+              ),
+            ),
+          ],
         ),
-        icon: const Icon(Icons.auto_awesome_outlined),
+      ),
+    );
+  }
+
+  Widget _buildCategorySelector() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Explore Spaces',
+            style: GoogleFonts.manrope(
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.charcoal,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildCategorySelectorItem(
+                  'Residential', Icons.home_work_outlined, 'residential'),
+              _buildCategorySelectorItem(
+                  'Commercial', Icons.business_center_outlined, 'commercial'),
+              _buildCategorySelectorItem(
+                  'Events Venue', Icons.event_seat_outlined, 'event_venue'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategorySelectorItem(
+      String label, IconData icon, String categoryValue) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => GuestBrowseScreen(
+                initialCategory: categoryValue,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.border.withValues(alpha: 0.55)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.045),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.11),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: AppTheme.charcoal, size: 22),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -192,9 +396,12 @@ class _LandingScreenState extends State<LandingScreen> {
       child: Stack(
         children: [
           PageView.builder(
-            controller: _heroController,
+            controller: _heroPageController,
             itemCount: _heroSlides.length,
-            onPageChanged: (index) => setState(() => _heroIndex = index),
+            onPageChanged: (index) {
+              if (!mounted) return;
+              setState(() => _activeHeroIndex = index);
+            },
             itemBuilder: (context, index) {
               final slide = _heroSlides[index];
               return Stack(
@@ -231,7 +438,7 @@ class _LandingScreenState extends State<LandingScreen> {
               children: [
                 _buildHeroHeader(auth),
                 const Spacer(),
-                _buildHeroCopy(_heroSlides[_heroIndex]),
+                _buildHeroCopy(_heroSlides[_activeHeroIndex]),
                 const SizedBox(height: 20),
                 _buildSearchPanel(),
                 const SizedBox(height: 18),
@@ -245,50 +452,234 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   Widget _buildHeroHeader(AuthProvider auth) {
+    final user = auth.currentUser;
     return Row(
       children: [
         const AppLogo(height: 24, white: true, framed: false),
         const Spacer(),
-        TextButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    auth.isAuthenticated ? const AppShell() : const LoginScreen(),
-              ),
-            );
-          },
-          child: Text(
-            auth.isAuthenticated ? 'Dashboard' : 'Sign In',
-            style: GoogleFonts.manrope(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: 13,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-          ),
-          child: IconButton(
+        if (!auth.isAuthenticated)
+          TextButton(
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
               );
             },
-            icon: const Icon(Icons.menu_rounded, color: Colors.white),
+            child: Text(
+              'Sign In',
+              style: GoogleFonts.manrope(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
+              ),
+            ),
+          )
+        else ...[
+          InkWell(
+            onTap: () => _showAccountSheet(auth),
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
+              ),
+              child: user?.profileImage?.isNotEmpty == true
+                  ? ClipOval(
+                      child: Image.network(
+                        user!.profileImage!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.person_outline_rounded,
+                          color: Colors.white,
+                        ),
+                      ),
+                    )
+                  : const Icon(
+                      Icons.person_outline_rounded,
+                      color: Colors.white,
+                    ),
+            ),
           ),
-        ),
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: () async {
+              await auth.logout();
+              if (!mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AppShell(initialIndex: 0),
+                ),
+                (route) => false,
+              );
+            },
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.primary,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                'Sign Out',
+                style: GoogleFonts.manrope(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ],
       ],
     );
+  }
+
+  Future<void> _showAccountSheet(AuthProvider auth) {
+    final user = auth.currentUser;
+    if (user == null) {
+      return Future.value();
+    }
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.border,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Container(
+                    width: 54,
+                    height: 54,
+                    decoration: const BoxDecoration(
+                      color: AppTheme.secondary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person_outline_rounded,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.fullName,
+                          style: GoogleFonts.manrope(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.charcoal,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          user.email,
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            color: AppTheme.charcoalMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Role: ${_roleLabel(user.role)}',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              _AccountActionTile(
+                icon: Icons.dashboard_outlined,
+                label: 'View Full Dashboard',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AppShell()),
+                  );
+                },
+              ),
+              _AccountActionTile(
+                icon: Icons.support_agent_outlined,
+                label: 'Support',
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SupportTicketsScreen(),
+                    ),
+                  );
+                },
+              ),
+              _AccountActionTile(
+                icon: Icons.logout_rounded,
+                label: 'Logout',
+                destructive: true,
+                onTap: () async {
+                  Navigator.pop(context);
+                  await auth.logout();
+                  if (!mounted) return;
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AppShell(initialIndex: 0),
+                    ),
+                    (route) => false,
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _roleLabel(String role) {
+    switch (role.toLowerCase()) {
+      case 'host':
+        return 'Host';
+      case 'broker':
+        return 'Broker';
+      case 'employee':
+        return 'Employee';
+      case 'admin':
+        return 'Admin';
+      default:
+        return 'Guest';
+    }
   }
 
   Widget _buildHeroCopy(_HeroSlide slide) {
@@ -465,14 +856,16 @@ class _LandingScreenState extends State<LandingScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(_heroSlides.length, (index) {
-        final active = index == _heroIndex;
+        final active = index == _activeHeroIndex;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           margin: const EdgeInsets.symmetric(horizontal: 4),
           width: active ? 24 : 7,
           height: 7,
           decoration: BoxDecoration(
-            color: active ? AppTheme.primary : Colors.white.withValues(alpha: 0.38),
+            color: active
+                ? AppTheme.primary
+                : Colors.white.withValues(alpha: 0.38),
             borderRadius: BorderRadius.circular(99),
           ),
         );
@@ -527,6 +920,105 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
+  Widget _buildPromoSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Offers & Highlights',
+            style: GoogleFonts.manrope(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.charcoal,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Web-style promo blocks adapted for mobile so guests discover new offers faster.',
+            style: GoogleFonts.manrope(
+              fontSize: 14,
+              height: 1.6,
+              color: AppTheme.charcoalMuted,
+            ),
+          ),
+          const SizedBox(height: 18),
+          ..._promoCards.map(
+            (card) => Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(22),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(28),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF26221C), Color(0xFF3B342A)],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(card.icon, color: AppTheme.primary),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          card.eyebrow,
+                          style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.6,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          card.title,
+                          style: GoogleFonts.manrope(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          card.description,
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            height: 1.6,
+                            color: Colors.white.withValues(alpha: 0.72),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDestinationStrip() {
     return Container(
       color: Colors.white,
@@ -534,30 +1026,48 @@ class _LandingScreenState extends State<LandingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                'Pick a Destination',
-                style: GoogleFonts.cormorantGaramond(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.charcoal,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Show nearby locations',
-                style: GoogleFonts.manrope(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.charcoalMuted,
-                ),
-              ),
-              const Spacer(),
-              const Icon(Icons.chevron_left, color: AppTheme.charcoal, size: 20),
-              const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, color: AppTheme.charcoal, size: 20),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final showArrows = constraints.maxWidth >= 390;
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 2,
+                      children: [
+                        Text(
+                          'Pick a Destination',
+                          style: GoogleFonts.cormorantGaramond(
+                            fontSize: 30,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.charcoal,
+                          ),
+                        ),
+                        Text(
+                          'Show nearby locations',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.charcoalMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (showArrows) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_left,
+                        color: AppTheme.charcoal, size: 20),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right,
+                        color: AppTheme.charcoal, size: 20),
+                  ],
+                ],
+              );
+            },
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -702,56 +1212,231 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          ..._testimonials.map(
-            (item) => Container(
-              margin: const EdgeInsets.only(bottom: 14),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppTheme.border),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: List.generate(
-                      5,
-                      (_) => const Padding(
-                        padding: EdgeInsets.only(right: 2),
-                        child: Icon(Icons.star_rounded,
-                            size: 16, color: AppTheme.primary),
+          SizedBox(
+            height: 230,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _testimonials.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              itemBuilder: (context, index) {
+                final item = _testimonials[index];
+                return Container(
+                  width: 288,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: List.generate(
+                          5,
+                          (_) => const Padding(
+                            padding: EdgeInsets.only(right: 2),
+                            child: Icon(
+                              Icons.star_rounded,
+                              size: 16,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      Text(
+                        item.quote,
+                        maxLines: 5,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.manrope(
+                          fontSize: 14,
+                          height: 1.7,
+                          color: AppTheme.charcoal,
+                        ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        item.name,
+                        style: GoogleFonts.manrope(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.charcoal,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        item.role,
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          color: AppTheme.charcoalMuted,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    item.quote,
-                    style: GoogleFonts.manrope(
-                      fontSize: 14,
-                      height: 1.7,
-                      color: AppTheme.charcoal,
-                    ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBlogSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 30, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'From the Blog',
+            style: GoogleFonts.manrope(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.charcoal,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Content-led trust sections from the website, now shaped for app discovery.',
+            style: GoogleFonts.manrope(
+              fontSize: 14,
+              height: 1.6,
+              color: AppTheme.charcoalMuted,
+            ),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 244,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _blogCards.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              itemBuilder: (context, index) {
+                final blog = _blogCards[index];
+                return Container(
+                  width: 288,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: AppTheme.border),
                   ),
-                  const SizedBox(height: 14),
-                  Text(
-                    item.name,
-                    style: GoogleFonts.manrope(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.charcoal,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.sand,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          blog.category,
+                          style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.charcoal,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        blog.title,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.manrope(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.charcoal,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Text(
+                          blog.excerpt,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            height: 1.65,
+                            color: AppTheme.charcoalMuted,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.role,
-                    style: GoogleFonts.manrope(
-                      fontSize: 12,
-                      color: AppTheme.charcoalMuted,
-                    ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChatbotSection() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 30, 20, 0),
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Need instant help?',
+                  style: GoogleFonts.manrope(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.charcoal,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Use the AI concierge for stay suggestions, booking help, and quick answers anytime.',
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    height: 1.6,
+                    color: AppTheme.charcoalMuted,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AppShell(initialIndex: 3),
+                      ),
+                    );
+                  },
+                  child: const Text('Open AI Concierge'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppTheme.secondary,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: const Icon(
+              Icons.auto_awesome_outlined,
+              color: AppTheme.primary,
             ),
           ),
         ],
@@ -761,11 +1446,14 @@ class _LandingScreenState extends State<LandingScreen> {
 
   Widget _buildFooter() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 28, 20, 0),
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 26),
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 28),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 120),
       decoration: BoxDecoration(
         color: AppTheme.secondary,
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(28),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -780,15 +1468,44 @@ class _LandingScreenState extends State<LandingScreen> {
               height: 1.6,
             ),
           ),
+          const SizedBox(height: 14),
+          ..._footerSections.map(
+            (section) => _FooterAccordion(section: section),
+          ),
+          const SizedBox(height: 12),
+          const Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _FooterChip(label: 'Privacy'),
+              _FooterChip(label: 'Terms & Conditions'),
+              _FooterChip(label: 'Sitemap'),
+            ],
+          ),
           const SizedBox(height: 16),
           Text(
-            'Nashik, Maharashtra',
+            'Call Us: +91 8104 954 254',
             style: GoogleFonts.manrope(
               color: Colors.white,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
+              fontSize: 15,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
+          const Row(
+            children: [
+              _FooterSocial(icon: Icons.chat),
+              SizedBox(width: 10),
+              _FooterSocial(icon: Icons.camera_alt_outlined),
+              SizedBox(width: 10),
+              _FooterSocial(icon: Icons.play_arrow_outlined),
+              SizedBox(width: 10),
+              _FooterSocial(icon: Icons.business_center_outlined),
+              SizedBox(width: 10),
+              _FooterSocial(icon: Icons.push_pin_outlined),
+            ],
+          ),
+          const SizedBox(height: 18),
           Text(
             '© 2026 X-Space360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.',
             style: GoogleFonts.manrope(
@@ -860,14 +1577,12 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   List<PropertyModel> _filterEvent(List<PropertyModel> properties) {
-    return properties
-        .where((property) {
-          final category = property.category.toLowerCase();
-          return category == 'event' ||
-              category == 'event_venue' ||
-              category == 'events_venue';
-        })
-        .toList();
+    return properties.where((property) {
+      final category = property.category.toLowerCase();
+      return category == 'event' ||
+          category == 'event_venue' ||
+          category == 'events_venue';
+    }).toList();
   }
 }
 
@@ -888,7 +1603,8 @@ class _PropertyCard extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => PropertyDetailScreen(propertyId: property.propertyId),
+              builder: (_) =>
+                  PropertyDetailScreen(propertyId: property.propertyId),
             ),
           );
         },
@@ -1178,7 +1894,8 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                         side: BorderSide.none,
                       ),
                       labelStyle: GoogleFonts.manrope(
-                        color: selected ? AppTheme.secondary : AppTheme.charcoal,
+                        color:
+                            selected ? AppTheme.secondary : AppTheme.charcoal,
                         fontWeight: FontWeight.w800,
                         fontSize: 12,
                       ),
@@ -1238,9 +1955,8 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                     ),
                     const Spacer(),
                     IconButton(
-                      onPressed: _guests > 1
-                          ? () => setState(() => _guests--)
-                          : null,
+                      onPressed:
+                          _guests > 1 ? () => setState(() => _guests--) : null,
                       icon: const Icon(Icons.remove_circle_outline),
                     ),
                     Text(
@@ -1386,4 +2102,160 @@ class _TestimonialData {
     required this.role,
     required this.quote,
   });
+}
+
+class _PromoCardData {
+  final String eyebrow;
+  final String title;
+  final String description;
+  final IconData icon;
+
+  const _PromoCardData({
+    required this.eyebrow,
+    required this.title,
+    required this.description,
+    required this.icon,
+  });
+}
+
+class _BlogData {
+  final String category;
+  final String title;
+  final String excerpt;
+
+  const _BlogData({
+    required this.category,
+    required this.title,
+    required this.excerpt,
+  });
+}
+
+class _FooterSectionData {
+  final String title;
+  final List<String> links;
+
+  const _FooterSectionData({
+    required this.title,
+    required this.links,
+  });
+}
+
+class _FooterChip extends StatelessWidget {
+  final String label;
+
+  const _FooterChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.manrope(
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+class _FooterAccordion extends StatelessWidget {
+  final _FooterSectionData section;
+
+  const _FooterAccordion({required this.section});
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: Material(
+        color: Colors.transparent,
+        child: ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          childrenPadding: const EdgeInsets.only(bottom: 12),
+          iconColor: Colors.white,
+          collapsedIconColor: Colors.white,
+          title: Text(
+            section.title,
+            style: GoogleFonts.manrope(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          children: [
+            SizedBox(
+              height: 38,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: section.links.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  return _FooterChip(label: section.links[index]);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FooterSocial extends StatelessWidget {
+  final IconData icon;
+
+  const _FooterSocial({required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.09),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(icon, color: Colors.white, size: 20),
+    );
+  }
+}
+
+class _AccountActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool destructive;
+  final VoidCallback onTap;
+
+  const _AccountActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? Colors.redAccent : AppTheme.charcoal;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: color),
+      title: Text(
+        label,
+        style: GoogleFonts.manrope(
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+      onTap: onTap,
+    );
+  }
 }

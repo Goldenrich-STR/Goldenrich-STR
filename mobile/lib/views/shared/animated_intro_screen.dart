@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../theme.dart';
 import '../web/website_mirror_screen.dart';
 import 'app_logo.dart';
+import 'app_shell.dart';
 
 class AnimatedIntroScreen extends StatefulWidget {
   const AnimatedIntroScreen({super.key});
@@ -60,7 +61,7 @@ class _AnimatedIntroScreenState extends State<AnimatedIntroScreen>
       switchInCurve: Curves.easeOut,
       switchOutCurve: Curves.easeIn,
       child: _showHome
-          ? const WebsiteMirrorScreen()
+          ? const AppShell()
           : const _IntroScene(key: ValueKey('intro')),
     );
   }

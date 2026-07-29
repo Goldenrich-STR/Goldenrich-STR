@@ -319,6 +319,7 @@ const GuestBrowse = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
   const [viewMode, setViewMode] = useState(VIEW_MODES.GRID);
   const [hoveredId, setHoveredId] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -447,6 +448,14 @@ const GuestBrowse = () => {
     filters.amenities,
     showWishlistOnly,
   ]);
+
+  useEffect(() => {
+    if (!showSortMenu) return undefined;
+
+    const handleClose = () => setShowSortMenu(false);
+    window.addEventListener('click', handleClose);
+    return () => window.removeEventListener('click', handleClose);
+  }, [showSortMenu]);
 
   const usesCommercialSizeFilter = COMMERCIAL_SIZE_TYPES.has(filters.property_type);
   const configurationOptions = usesCommercialSizeFilter ? SIZE_TYPES : BHK_TYPES;
@@ -1117,17 +1126,53 @@ const GuestBrowse = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 relative">
              <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">{t('sortBy')}</span>
-             <select
-               value={filters.sort}
-               onChange={(e) => setFilters({ ...filters, sort: e.target.value })}
-               className="bg-transparent border-none text-sm font-bold tracking-tight text-charcoal outline-none cursor-pointer hover:text-terracotta transition-colors"
+             <button
+               type="button"
+               onClick={(e) => {
+                 e.stopPropagation();
+                 setShowSortMenu((prev) => !prev);
+               }}
+               className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2 text-sm font-bold tracking-tight text-charcoal hover:border-sand-300 hover:text-terracotta transition-colors shadow-sm"
              >
-               {SORT_OPTIONS.map((s) => (
-                 <option key={s.value} value={s.value}>{t(s.value)}</option>
-               ))}
-             </select>
+               <span>{t(filters.sort)}</span>
+               <svg className={`w-4 h-4 transition-transform ${showSortMenu ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                 <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 011.08 1.04l-4.25 4.51a.75.75 0 01-1.08 0l-4.25-4.51a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+               </svg>
+             </button>
+             {showSortMenu && (
+               <div
+                 className="absolute right-0 top-full mt-3 w-[240px] rounded-2xl border border-gray-200 bg-white shadow-2xl overflow-hidden z-40"
+                 onClick={(e) => e.stopPropagation()}
+               >
+                 {SORT_OPTIONS.map((option) => {
+                   const active = filters.sort === option.value;
+                   return (
+                     <button
+                       key={option.value}
+                       type="button"
+                       onClick={() => {
+                         setFilters({ ...filters, sort: option.value });
+                         setShowSortMenu(false);
+                       }}
+                       className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors ${
+                         active ? 'bg-[#FFF8E8] text-charcoal' : 'bg-white text-charcoal hover:bg-stone'
+                       }`}
+                     >
+                       <span className="text-sm font-semibold">{t(option.value)}</span>
+                       <span
+                         className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                           active ? 'border-[#D4AF37] bg-[#D4AF37]/15' : 'border-gray-300'
+                         }`}
+                       >
+                         <span className={`w-2.5 h-2.5 rounded-full ${active ? 'bg-[#A3C644]' : 'bg-transparent'}`}></span>
+                       </span>
+                     </button>
+                   );
+                 })}
+               </div>
+             )}
           </div>
 
           <div className="h-6 w-[1px] bg-sand-200"></div>

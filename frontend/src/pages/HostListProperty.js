@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, uploadAPI, couponAPI, getImageUrl, loadRazorpaySdk } from '../services/api';
+import { Dialog, DialogContent, DialogTitle } from '../components/ui/dialog';
 import {
   Building2,
   ArrowLeft,
@@ -52,6 +53,7 @@ import {
   Play,
   QrCode,
   Smartphone,
+  Expand,
 } from 'lucide-react';
 
 const SUBSCRIPTION_UPI = {
@@ -503,6 +505,7 @@ const initialForm = {
   minimum_stay_days: 1,
   amenities: [],
   images: [],
+  watermark_confirmed: false,
   video_url: '',
   youtube_short_url: '',
   youtube_long_url: '',
@@ -595,6 +598,7 @@ const HostListProperty = () => {
   const [upiPayment, setUpiPayment] = useState({ isOpen: false, utr: '', error: '', submitting: false });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null);
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
@@ -677,6 +681,7 @@ const HostListProperty = () => {
             minimum_stay_days: p.minimum_stay_days || 1,
             amenities: p.amenities || [],
             images: p.images || [],
+            watermark_confirmed: Boolean((p.images || []).length),
             video_url: p.video_url || '',
             youtube_short_url: p.youtube_short_url || '',
             youtube_long_url: p.youtube_long_url || '',
@@ -1067,6 +1072,7 @@ const HostListProperty = () => {
     if (k === 'photos') {
       if (form.images.length < 3) return 'Add at least 3 photos';
       if (form.images.length > 15) return 'Maximum 15 photos allowed';
+      if (!form.watermark_confirmed) return 'Please confirm the bottom-right watermark is visible before continuing';
       
       const pureUrls = form.images.map(img => img.split('#')[0]);
       const hasDuplicates = pureUrls.some((url, idx) => pureUrls.indexOf(url) !== idx);
@@ -1212,7 +1218,7 @@ const HostListProperty = () => {
       }
 
       // Default category 'Other'
-      update({ images: [...form.images, `${url}#Other`] });
+      update({ images: [...form.images, `${url}#Other`], watermark_confirmed: false });
     } catch (err) {
       setError(formatError(err, 'Image upload failed'));
     } finally {
@@ -1240,11 +1246,11 @@ const HostListProperty = () => {
       return;
     }
 
-    update({ images: [...form.images, `${url}#Other`] });
+    update({ images: [...form.images, `${url}#Other`], watermark_confirmed: false });
   };
 
   const removeImage = (idx) => {
-    update({ images: form.images.filter((_, i) => i !== idx) });
+    update({ images: form.images.filter((_, i) => i !== idx), watermark_confirmed: false });
   };
 
   const handleVideoUpload = async (e) => {
@@ -2487,7 +2493,9 @@ const HostListProperty = () => {
           {currentStep === 'photos' && (
             <div className="space-y-4" data-testid="step-photos-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">Add photos</h2>
-              <p className="text-sm text-charcoal-light">Upload device photos or paste image URLs. The first photo is your cover.</p>
+              <p className="text-sm text-charcoal-light">
+                Upload device photos or paste image URLs. The first photo is your cover. Device uploads are automatically watermarked before they appear here, while pasted URLs display as provided.
+              </p>
               <div className="flex gap-2 flex-wrap">
                 <label
                   className={`btn-primary cursor-pointer flex items-center space-x-2 ${uploadingPhoto ? 'opacity-50 pointer-events-none' : ''}`}
@@ -2507,6 +2515,15 @@ const HostListProperty = () => {
                   <ImageIcon className="w-4 h-4" />
                   <span>Paste URL</span>
                 </button>
+                <label className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                  <input
+                    type="checkbox"
+                    checked={!!form.watermark_confirmed}
+                    onChange={(e) => update({ watermark_confirmed: e.target.checked })}
+                    className="h-4 w-4 accent-amber-600"
+                  />
+                  <span>Add watermark compulsory</span>
+                </label>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6" data-testid="photos-grid">
                 {form.images.map((src, idx) => {
@@ -2515,11 +2532,32 @@ const HostListProperty = () => {
                     <div key={src + idx} className="relative group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm transition-all hover:shadow-premium">
                       <div className="relative h-48">
                         <img src={getImageUrl(url)} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
-                        {idx === 0 && (
-                          <span className="absolute top-2 left-2 text-[10px] bg-terracotta text-white px-2 py-0.5 rounded-full font-bold tracking-tight uppercase tracking-widest">
-                            COVER
+                        <img
+                          src="/logo.png"
+                          alt=""
+                          aria-hidden="true"
+                          className="pointer-events-none absolute bottom-3 right-3 w-24 max-w-[38%] object-contain"
+                          style={{ opacity: 0.1, filter: 'brightness(0) invert(1)' }}
+                        />
+                        <div className="absolute top-2 left-2 flex flex-col gap-2">
+                          {idx === 0 && (
+                            <span className="text-[10px] bg-terracotta text-white px-2 py-0.5 rounded-full font-bold tracking-tight uppercase tracking-widest">
+                              COVER
+                            </span>
+                          )}
+                          <span className="text-[10px] bg-white/90 text-charcoal px-2 py-0.5 rounded-full font-bold tracking-tight uppercase tracking-widest shadow-sm">
+                            Watermarked Preview
                           </span>
-                        )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewImage({ url, index: idx })}
+                          className="absolute bottom-2 right-2 bg-white/90 text-charcoal rounded-full p-2 opacity-100 transition shadow-sm hover:bg-white"
+                          aria-label={`Preview photo ${idx + 1}`}
+                          title="Preview full image"
+                        >
+                          <Expand className="w-4 h-4" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => removeImage(idx)}
@@ -2554,6 +2592,31 @@ const HostListProperty = () => {
                   </div>
                 )}
               </div>
+
+              <Dialog open={Boolean(previewImage)} onOpenChange={(open) => !open && setPreviewImage(null)}>
+                <DialogContent className="max-w-5xl p-0 overflow-hidden border-none bg-black/95">
+                  <DialogTitle className="sr-only">Photo preview</DialogTitle>
+                  {previewImage && (
+                    <div className="relative">
+                      <img
+                        src={getImageUrl(previewImage.url)}
+                        alt={`Preview ${previewImage.index + 1}`}
+                        className="w-full max-h-[85vh] object-contain bg-black"
+                      />
+                      <img
+                        src="/logo.png"
+                        alt=""
+                        aria-hidden="true"
+                        className="pointer-events-none absolute bottom-6 right-6 w-40 max-w-[32%] object-contain"
+                        style={{ opacity: 0.1, filter: 'brightness(0) invert(1)' }}
+                      />
+                      <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-charcoal shadow-sm">
+                        Full Preview
+                      </div>
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
 
               {/* Property Video & YouTube Links Section */}
               <div className="mt-8 pt-8 border-t border-gray-100 space-y-6">

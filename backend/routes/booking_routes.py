@@ -147,6 +147,12 @@ async def create_booking(
 ):
     """Create a new booking (soft lock) and return Razorpay order."""
     try:
+        if current_user.get("role") != "guest":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only guest accounts can book properties. Please sign in with a guest account to continue."
+            )
+
         # Get property details
         property_dict = await db.properties.find_one(
             {"property_id": booking_data.property_id},

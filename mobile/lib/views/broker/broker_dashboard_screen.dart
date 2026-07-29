@@ -6,6 +6,7 @@ import 'package:dio/dio.dart' as dio;
 import '../../config.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
+import '../shared/app_shell.dart';
 import '../../models/property_model.dart';
 import '../shared/app_logo.dart';
 
@@ -210,9 +211,24 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Row(
+        title: Row(
           children: [
-            AppLogo(height: 24, tintColor: Colors.black, framed: false),
+            InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AppShell(initialIndex: 0),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: const AppLogo(
+                height: 24,
+                tintColor: Colors.black,
+                framed: false,
+              ),
+            ),
           ],
         ),
         backgroundColor: Colors.transparent,

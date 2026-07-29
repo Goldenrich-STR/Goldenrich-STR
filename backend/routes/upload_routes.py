@@ -12,6 +12,7 @@ from uuid import uuid4
 import logging
 import os
 from services.object_storage import store_upload
+from services.image_watermark import apply_image_watermark
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/upload", tags=["Uploads"])
@@ -60,7 +61,7 @@ async def upload_image(
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_user),
 ):
-    """Upload a property image. Auth required. Returns the public URL."""
+    """Upload a property image, save original + watermarked copies, and return the public watermarked URL."""
     if not file.filename:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No filename")
 
@@ -98,24 +99,40 @@ async def upload_image(
             detail=f"File content (.{detected}) does not match the .{ext} extension",
         )
 
-    filename = f"{uuid4().hex}.{ext}"
-    object_key = store_upload(
+    original_filename = f"{uuid4().hex}_original.{ext}"
+    watermarked_filename = original_filename.replace("_original.", "_wm.")
+
+    original_object_key = store_upload(
         contents,
-        filename,
+        original_filename,
+        "properties-original",
+        file.content_type,
+    )
+    watermarked_contents = apply_image_watermark(contents, detected)
+    watermarked_object_key = store_upload(
+        watermarked_contents,
+        watermarked_filename,
         "properties",
         file.content_type,
     )
 
     logger.info(
-        f"Image uploaded by {current_user['user_id']}: {filename} ({len(contents)} bytes, kind={detected})"
+        f"Image uploaded by {current_user['user_id']}: "
+        f"original={original_filename} watermarked={watermarked_filename} "
+        f"({len(contents)} bytes, kind={detected})"
     )
 
     return {
-        "filename": filename,
-        "url": _public_url(object_key),
+        "filename": watermarked_filename,
+        "original_filename": original_filename,
+        "url": _public_url(watermarked_object_key),
+        "watermarked_url": _public_url(watermarked_object_key),
+        "original_url": _public_url(original_object_key),
         "size": len(contents),
+        "watermarked_size": len(watermarked_contents),
         "content_type": file.content_type,
         "detected_kind": detected,
+        "watermark_applied": True,
     }
 
 ALLOWED_DOC_EXT = {"png", "jpg", "jpeg", "webp", "gif", "pdf"}

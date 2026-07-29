@@ -2907,7 +2907,7 @@ const LandingPage = () => {
               }, [slides.length]);
 
               return (
-                <div className="relative w-full h-[520px] md:h-[600px] overflow-hidden my-12 md:my-16">
+                <div className="relative w-full min-h-[360px] md:h-[600px] overflow-hidden my-12 md:my-16 rounded-none">
                   {/* Sliding Background Images */}
                   {slides.map((slide, idx) => (
                     <div
@@ -2925,7 +2925,7 @@ const LandingPage = () => {
                   ))}
                   
                   {/* Dark overlay */}
-                  <div className="absolute inset-0 bg-black/45 z-10" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/30 to-black/60 md:bg-black/45 z-10" />
 
                   {/* Slider Dots indicators */}
                   {slides.length > 1 && (
@@ -2946,96 +2946,98 @@ const LandingPage = () => {
                   )}
 
                   {/* Floating Overlay Card on the right */}
-                  <div className="absolute inset-y-0 right-0 w-full md:w-[480px] lg:w-[550px] bg-black/65 backdrop-blur-md flex flex-col justify-center px-8 md:px-12 text-left text-white border-l border-white/10 z-20">
-                    <span className="text-amber-400 font-extrabold text-[10px] uppercase tracking-[0.2em] mb-2">
-                      Hospitality Reimagined
-                    </span>
-                    <h3 className="font-lufga text-3xl md:text-4xl font-bold mb-3 tracking-tight text-white leading-tight">
-                      The X-Space360 Standard
-                    </h3>
-                    <p className="text-white/80 text-xs md:text-sm leading-relaxed mb-8">
-                      Enjoy our handpicked signature features designed to make every stay effortlessly luxurious, memorable, and unique.
-                    </p>
+                  <div className="absolute inset-x-0 bottom-0 md:inset-y-0 md:right-0 md:left-auto w-full md:w-[480px] lg:w-[550px] bg-gradient-to-t from-black/88 via-black/72 to-black/55 md:bg-black/65 backdrop-blur-md flex flex-col justify-end md:justify-center px-5 py-6 md:px-12 md:py-0 text-left text-white border-t border-white/10 md:border-t-0 md:border-l md:border-white/10 z-20">
+                    <div className="max-w-[92%] md:max-w-none">
+                      <span className="text-amber-400 font-extrabold text-[9px] md:text-[10px] uppercase tracking-[0.22em] mb-2 block">
+                        Hospitality Reimagined
+                      </span>
+                      <h3 className="font-lufga text-[1.9rem] leading-[1.05] md:text-4xl font-bold mb-2 md:mb-3 tracking-tight text-white">
+                        The X-Space360 Standard
+                      </h3>
+                      <p className="text-white/78 text-[11px] md:text-sm leading-relaxed mb-4 md:mb-8 max-w-[30rem]">
+                        Handpicked signature features that make every stay feel elevated, effortless, and memorable.
+                      </p>
+                    </div>
 
                     {/* Features Grid */}
-                    <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                    <div className="grid grid-cols-2 gap-y-3 gap-x-3 md:gap-y-6 md:gap-x-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <Waves className="w-5 h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <Waves className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
                         </div>
                         <div>
-                          <h5 className="font-semibold text-sm text-white leading-tight">Private Pool</h5>
-                          <p className="text-white/60 text-[10px] mt-0.5">Exclusive access stays</p>
+                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Private Pool</h5>
+                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Exclusive access stays</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <ChefHat className="w-5 h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <ChefHat className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
                         </div>
                         <div>
-                          <h5 className="font-semibold text-sm text-white leading-tight">In-house Chef</h5>
-                          <p className="text-white/60 text-[10px] mt-0.5">Gourmet dining on demand</p>
+                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">In-house Chef</h5>
+                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Gourmet dining on demand</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <ConciergeBell className="w-5 h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <ConciergeBell className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
                         </div>
                         <div>
-                          <h5 className="font-semibold text-sm text-white leading-tight">Butler Service</h5>
-                          <p className="text-white/60 text-[10px] mt-0.5">Personalized assistance</p>
+                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Butler Service</h5>
+                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Personalized assistance</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <UserCheck className="w-5 h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <UserCheck className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
                         </div>
                         <div>
-                          <h5 className="font-semibold text-sm text-white leading-tight">Caretaker Onsite</h5>
-                          <p className="text-white/60 text-[10px] mt-0.5">24/7 guest support</p>
+                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Caretaker Onsite</h5>
+                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">24/7 guest support</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <Compass className="w-5 h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <Compass className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
                         </div>
                         <div>
-                          <h5 className="font-semibold text-sm text-white leading-tight">Local Experiences</h5>
-                          <p className="text-white/60 text-[10px] mt-0.5">Curated local guides</p>
+                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Local Experiences</h5>
+                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Curated local guides</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <Gamepad2 className="w-5 h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <Gamepad2 className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
                         </div>
                         <div>
-                          <h5 className="font-semibold text-sm text-white leading-tight">Recreation & Games</h5>
-                          <p className="text-white/60 text-[10px] mt-0.5">Indoor & outdoor setups</p>
+                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Recreation & Games</h5>
+                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Indoor & outdoor setups</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <Trees className="w-5 h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <Trees className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
                         </div>
                         <div>
-                          <h5 className="font-semibold text-sm text-white leading-tight">Green Open Spaces</h5>
-                          <p className="text-white/60 text-[10px] mt-0.5">Lush gardens & lawns</p>
+                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Green Open Spaces</h5>
+                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Lush gardens & lawns</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <PartyPopper className="w-5 h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+                          <PartyPopper className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
                         </div>
                         <div>
-                          <h5 className="font-semibold text-sm text-white leading-tight">Custom Events</h5>
-                          <p className="text-white/60 text-[10px] mt-0.5">Bespoke celebrations</p>
+                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Custom Events</h5>
+                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Bespoke celebrations</p>
                         </div>
                       </div>
                     </div>
