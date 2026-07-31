@@ -84,10 +84,10 @@ class _LandingScreenState extends State<LandingScreen> {
   ];
 
   static const List<_DestinationData> _destinations = [
-    _DestinationData('Nashik', Icons.location_on_outlined),
-    _DestinationData('Trimbak', Icons.account_balance_outlined),
-    _DestinationData('Igatpuri', Icons.landscape_outlined),
-    _DestinationData('Sula Vineyards', Icons.wine_bar_outlined),
+    _DestinationData('Nashik', 'nashik'),
+    _DestinationData('Trimbak', 'trimbak'),
+    _DestinationData('Igatpuri', 'igatpuri'),
+    _DestinationData('Sula Vineyards', 'sula'),
   ];
 
   static const List<_TestimonialData> _testimonials = [
@@ -362,7 +362,6 @@ class _LandingScreenState extends State<LandingScreen> {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverToBoxAdapter(child: _buildHero(auth)),
-          SliverToBoxAdapter(child: _buildCategorySelector()),
           SliverToBoxAdapter(
             child: _buildDestinationStrip(),
           ),
@@ -465,104 +464,6 @@ class _LandingScreenState extends State<LandingScreen> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategorySelector() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Explore Spaces',
-            style: GoogleFonts.manrope(
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.charcoal,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _buildCategorySelectorItem('Residential',
-                  Icons.home_work_outlined, 'residential'),
-              _buildCategorySelectorItem(
-                  'Commercial', Icons.business_center_outlined, 'commercial'),
-              _buildCategorySelectorItem(
-                  'Events', Icons.event_seat_outlined, 'event_venue'),
-              _buildCategorySelectorItem(
-                  'Villas', Icons.villa_outlined, 'residential',
-                  propertyType: 'villa'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategorySelectorItem(
-    String label,
-    IconData icon,
-    String categoryValue, {
-    String? propertyType,
-  }) {
-    return SizedBox(
-      width: (MediaQuery.of(context).size.width - 50) / 2,
-      child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => GuestBrowseScreen(
-                initialCategory: categoryValue,
-                initialPropertyType: propertyType,
-              ),
-            ),
-          );
-        },
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.border.withValues(alpha: 0.55)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.045),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.11),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: AppTheme.charcoal, size: 22),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.charcoal,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -1296,10 +1197,8 @@ class _LandingScreenState extends State<LandingScreen> {
                             shape: BoxShape.circle,
                             border: Border.all(color: const Color(0xFFEDEDED)),
                           ),
-                          child: Icon(
-                            destination.icon,
-                            color: AppTheme.charcoal,
-                            size: 26,
+                          child: Center(
+                            child: _DestinationGlyph(type: destination.type),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -2816,9 +2715,9 @@ class _HeroSlide {
 
 class _DestinationData {
   final String city;
-  final IconData icon;
+  final String type;
 
-  const _DestinationData(this.city, this.icon);
+  const _DestinationData(this.city, this.type);
 }
 
 class _TestimonialData {
@@ -2881,6 +2780,349 @@ class _CollectionCardData {
     required this.category,
     this.propertyType,
   });
+}
+
+class _CategoryGlyph extends StatelessWidget {
+  final String type;
+
+  const _CategoryGlyph({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    switch (type) {
+      case 'commercial':
+        return SizedBox(
+          width: 22,
+          height: 22,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned(
+                left: 3,
+                top: 5,
+                child: Container(
+                  width: 6,
+                  height: 11,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.charcoal, width: 1.6),
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 3,
+                top: 3,
+                child: Container(
+                  width: 9,
+                  height: 13,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.charcoal, width: 1.6),
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 2,
+                child: Container(
+                  width: 16,
+                  height: 2,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+            ],
+          ),
+        );
+      case 'events':
+        return SizedBox(
+          width: 22,
+          height: 22,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned(
+                top: 2,
+                child: Container(
+                  width: 8,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.charcoal, width: 1.6),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 4,
+                left: 4,
+                child: Container(
+                  width: 5,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.charcoal, width: 1.6),
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 4,
+                right: 4,
+                child: Container(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.charcoal, width: 1.6),
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      case 'villas':
+        return SizedBox(
+          width: 22,
+          height: 22,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned(
+                top: 3,
+                child: Transform.rotate(
+                  angle: 0.78,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppTheme.charcoal, width: 1.6),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 3,
+                child: Container(
+                  width: 14,
+                  height: 9,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.charcoal, width: 1.6),
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 4,
+                child: Container(
+                  width: 4,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.charcoal, width: 1.4),
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      case 'residential':
+      default:
+        return SizedBox(
+          width: 22,
+          height: 22,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned(
+                top: 3,
+                child: Transform.rotate(
+                  angle: 0.78,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppTheme.charcoal, width: 1.6),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 3,
+                child: Container(
+                  width: 14,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.charcoal, width: 1.6),
+                    borderRadius: BorderRadius.circular(1.5),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 4,
+                left: 7,
+                child: Container(
+                  width: 3.5,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.charcoal, width: 1.4),
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 8,
+                right: 5,
+                child: Container(
+                  width: 3,
+                  height: 3,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.charcoal, width: 1.2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+    }
+  }
+}
+
+class _DestinationGlyph extends StatelessWidget {
+  final String type;
+
+  const _DestinationGlyph({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    switch (type) {
+      case 'sula':
+        return SizedBox(
+          width: 28,
+          height: 28,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned(
+                right: 3,
+                top: 4,
+                child: Container(
+                  width: 7,
+                  height: 13,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.charcoal, width: 1.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 5,
+                top: 1,
+                child: Container(width: 3, height: 4, color: AppTheme.charcoal),
+              ),
+              Positioned(
+                left: 5,
+                top: 9,
+                child: Container(
+                  width: 9,
+                  height: 9,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.sand,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 4,
+                top: 6,
+                child: Icon(
+                  Icons.wine_bar_outlined,
+                  size: 15,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+            ],
+          ),
+        );
+      case 'igatpuri':
+        return SizedBox(
+          width: 28,
+          height: 28,
+          child: Stack(
+            children: [
+              Positioned(
+                left: 2,
+                bottom: 6,
+                child: Icon(
+                  Icons.terrain_outlined,
+                  size: 22,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+              const Positioned(
+                right: 5,
+                top: 3,
+                child: Icon(
+                  Icons.water_drop_outlined,
+                  size: 12,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ],
+          ),
+        );
+      case 'trimbak':
+        return SizedBox(
+          width: 28,
+          height: 28,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Positioned(
+                top: 3,
+                child: Icon(
+                  Icons.temple_hindu_outlined,
+                  size: 22,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+              const Positioned(
+                top: 1,
+                child: Icon(
+                  Icons.circle,
+                  size: 4,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ],
+          ),
+        );
+      case 'nashik':
+      default:
+        return SizedBox(
+          width: 28,
+          height: 28,
+          child: Stack(
+            children: const [
+              Positioned(
+                left: 8,
+                top: 2,
+                child: Icon(
+                  Icons.grass_rounded,
+                  size: 12,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+              Positioned(
+                left: 4,
+                top: 8,
+                child: Icon(
+                  Icons.blur_circular_rounded,
+                  size: 18,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ],
+          ),
+        );
+    }
+  }
 }
 
 class _BlogDetailScreen extends StatelessWidget {
