@@ -1087,6 +1087,48 @@ const DESTINATION_SPOT_CATALOG = [
   { name: 'Baga', hub: 'Goa', latitude: 15.5553, longitude: 73.7517, type: 'tourist' }
 ];
 
+const DESTINATION_ICON_IMAGE_MAP = {
+  'Nashik': '/images/destinations/nashik.png',
+  'Sula Vineyards': '/images/destinations/sula-vineyards.png',
+  'Gangapur Dam': '/images/destinations/gangapur-dam.png',
+  'Anjaneri': '/images/destinations/anjaneri.png',
+  'Trimbakeshwar': '/images/destinations/trimbakeshwar.png',
+  'Igatpuri': '/images/destinations/igatpuri.png',
+  'Harihar Fort': '/images/destinations/harihar-fort.png',
+  'Bhandardara': '/images/destinations/bhandardara.png',
+  'Lonavala': '/images/destinations/lonavala.png',
+  'Karjat': '/images/destinations/karjat.png',
+  'Mahabaleshwar': '/images/destinations/mahabaleshwar.png',
+  'Goa': '/images/destinations/goa.png',
+  'Alibaug': '/images/destinations/alibaug.png',
+  'Kokan': '/images/destinations/kokan.png',
+  'Pune': '/images/destinations/pune.png',
+  'Mumbai': '/images/destinations/mumbai.png',
+};
+
+const CURATED_DESTINATION_ROWS = [
+  [
+    { name: 'Nashik', type: 'tourist' },
+    { name: 'Sula Vineyards', type: 'tourist' },
+    { name: 'Trimbakeshwar', type: 'spiritual' },
+    { name: 'Gangapur Dam', type: 'tourist' },
+    { name: 'Igatpuri', type: 'tourist' },
+    { name: 'Anjaneri', type: 'tourist' },
+    { name: 'Harihar Fort', type: 'historical' },
+    { name: 'Bhandardara', type: 'tourist' },
+  ],
+  [
+    { name: 'Mumbai', type: 'city' },
+    { name: 'Pune', type: 'city' },
+    { name: 'Karjat', type: 'tourist' },
+    { name: 'Alibaug', type: 'tourist' },
+    { name: 'Goa', type: 'tourist' },
+    { name: 'Lonavala', type: 'tourist' },
+    { name: 'Mahabaleshwar', type: 'tourist' },
+    { name: 'Kokan', type: 'tourist' },
+  ],
+];
+
 const NEARBY_LOCATION_CENTERS = [
   { city: 'Nashik', latitude: 19.9975, longitude: 73.7898 },
   { city: 'Mumbai', latitude: 19.0760, longitude: 72.8777 },
@@ -1147,312 +1189,390 @@ const getDestinationSpotsForHub = (hub, radiusKm = 50) => {
   return spots.length ? spots : (NEARBY_DESTINATION_GROUPS[hub] || DESTINATION_SHORTCUTS).map((name) => ({ name }));
 };
 
-const DestinationLineIcon = ({ label }) => {
-  // Define custom hand-drawn outline SVGs with subtle theme accent fills for each destination
-  const renderCustomSVG = () => {
-    const strokeColor = "#2C2C2C";
-    const accentFill = "#E8D8C8"; // Light sand accent
-    const accentHighlight = "#E0A96D"; // Golden terracotta accent
+const DestinationLineIcon = ({ label, destinationType = 'tourist' }) => {
+  const strokeColor = "#232323";
+  const blush = "#E8A2B1";
+  const sand = "#F4CB98";
+  const cream = "#FBF7EF";
+  const sizeClass = "h-[70px] w-[70px] md:h-[82px] md:w-[82px]";
+  const imageSrc = DESTINATION_ICON_IMAGE_MAP[label];
+  const enlargedImageLabels = new Set(['Nashik', 'Sula Vineyards', 'Trimbakeshwar', 'Igatpuri', 'Mumbai']);
+  const imageScaleClass = enlargedImageLabels.has(label)
+    ? 'scale-[1.24] md:scale-[1.28]'
+    : 'scale-100';
 
-    // Fuzzy matching key
-    const getMatchKey = (lbl) => {
-      const l = lbl.toLowerCase();
-      if (l.includes('pandav') || l.includes('leni')) return 'Pandav Leni';
-      if (l.includes('anjaneri')) return 'Anjaneri';
-      if (l.includes('sula') || l.includes('vineyard')) return 'Sula Vineyards';
-      if (l.includes('basilica') || l.includes('church') || l.includes('jesus')) return 'Basilica of Born Jesus';
-      if (l.includes('aguada') || l.includes('fort')) return 'Fort Aguada';
-      if (l.includes('baga')) return 'Baga';
-      if (l.includes('calangute') || l.includes('beach') || l.includes('sea') || l.includes('coast') || l.includes('ocean')) return 'Calangute';
-      if (l.includes('panjim')) return 'Panjim';
-      if (l.includes('goa')) return 'Goa';
-      if (l.includes('alibaug')) return 'Alibaug';
-      if (l.includes('pune')) return 'Pune';
-      if (l.includes('mumbai') || l.includes('bombay')) return 'Mumbai';
-      if (l.includes('nashik') || l.includes('nasik')) return 'Nashik';
-      if (l.includes('igatpuri')) return 'Igatpuri';
-      if (l.includes('trimbakeshwar') || l.includes('temple')) return 'Trimbakeshwar';
-      if (l.includes('bhandardara')) return 'Bhandardara';
-      if (l.includes('saputara')) return 'Saputara';
-      if (l.includes('vaitarna') || l.includes('lake') || l.includes('river') || l.includes('dam') || l.includes('waterfall')) return 'Vaitarna';
-      if (l.includes('jawhar') || l.includes('palace') || l.includes('wada') || l.includes('shaniwar')) return 'Jawhar';
-      if (l.includes('wada')) return 'Wada';
-      if (l.includes('lonavala') || l.includes('khandala') || l.includes('cave')) return 'Lonavala';
-      if (l.includes('mahabaleshwar')) return 'Mahabaleshwar';
-      if (l.includes('panchgani')) return 'Panchgani';
-      if (l.includes('karjat')) return 'Karjat';
-      return lbl;
-    };
+  const normalize = (value = '') => value.toLowerCase();
 
-    switch (getMatchKey(label)) {
-      case 'Nashik': // Grape Bunch
+  const resolveVariant = () => {
+    const l = normalize(label);
+    if (l === 'nashik') return 'grapes';
+    if (l === 'pandav leni') return 'caves';
+    if (l === 'sula vineyards') return 'wine';
+    if (l === 'gangapur dam') return 'dam';
+    if (l === 'anjaneri') return 'peak_flag';
+    if (l === 'trimbakeshwar') return 'temple_town';
+    if (l === 'vaitarna') return 'lake';
+    if (l === 'igatpuri') return 'waterfall';
+    if (l.includes('vineyard') || l.includes('nashik')) return 'grapes';
+    if (l.includes('trimbak') || l.includes('shirdi') || l.includes('temple') || destinationType === 'spiritual') return 'temple';
+    if (l.includes('gangapur') || l.includes('vaitarna') || l.includes('dam')) return 'water';
+    if (l.includes('igatpuri')) return 'waterfall';
+    if (l.includes('pandav') || l.includes('leni')) return 'caves';
+    if (l.includes('anjaneri') || l.includes('harihar') || l.includes('trek')) return 'peaks';
+    if (l.includes('lonavala') || l.includes('khandala')) return 'hillstation';
+    if (l.includes('mahabaleshwar')) return 'strawberry';
+    if (l.includes('panchgani')) return 'paraglide';
+    if (l.includes('saputara')) return 'sunrise';
+    if (l.includes('bhandardara')) return 'lake_mountains';
+    if (l.includes('karjat')) return 'forest_camp';
+    if (l.includes('goa') || l.includes('calangute') || l.includes('baga') || l.includes('palolem') || l.includes('colva') || l.includes('anjuna') || l.includes('vagator') || l.includes('candolim') || l.includes('morjim')) return 'beach';
+    if (l.includes('alibaug')) return 'palm_beach';
+    if (l.includes('mumbai')) return 'skyline';
+    if (l.includes('pune')) return 'fort';
+    if (l.includes('jaipur')) return 'hawa_mahal';
+    if (l.includes('udaipur')) return 'palace_lake';
+    if (l.includes('panjim')) return 'boat_city';
+    if (l.includes('jawhar')) return 'palace';
+    if (l.includes('wada')) return 'farmhouse';
+    if (l.includes('fort')) return 'fort';
+    if (destinationType === 'city') return 'skyline';
+    if (destinationType === 'historical') return 'palace';
+    return 'landmark';
+  };
+
+  const DecorativePillars = () => (
+    <>
+      <rect x="50" y="8" width="12" height="34" rx="6" fill={sand} />
+      <rect x="38" y="8" width="14" height="34" rx="7" fill={blush} />
+    </>
+  );
+
+  const IconFrame = ({ children }) => (
+    <svg viewBox="0 0 72 72" className={sizeClass} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <DecorativePillars />
+      {children}
+    </svg>
+  );
+
+  const renderVariant = () => {
+    switch (resolveVariant()) {
+      case 'grapes':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M24 10C24 10 27 6 30 8" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <circle cx="24" cy="16" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" />
-            <circle cx="20" cy="22" r="4" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
-            <circle cx="28" cy="22" r="4" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
-            <circle cx="16" cy="28" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" opacity="0.8" />
-            <circle cx="24" cy="28" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" opacity="0.8" />
-            <circle cx="32" cy="28" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" opacity="0.8" />
-            <circle cx="20" cy="34" r="4" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
-            <circle cx="28" cy="34" r="4" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
-            <circle cx="24" cy="40" r="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" />
-          </svg>
+          <IconFrame>
+            <path d="M27 17C27 17 30 13 34 15" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <circle cx="23" cy="24" r="4.2" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <circle cx="29" cy="24" r="4.2" stroke={strokeColor} strokeWidth="1.7" fill={sand} />
+            <circle cx="20" cy="31" r="4.2" stroke={strokeColor} strokeWidth="1.7" fill={sand} />
+            <circle cx="26" cy="31" r="4.2" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <circle cx="32" cy="31" r="4.2" stroke={strokeColor} strokeWidth="1.7" fill={sand} />
+            <circle cx="23" cy="38" r="4.2" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <circle cx="29" cy="38" r="4.2" stroke={strokeColor} strokeWidth="1.7" fill={sand} />
+          </IconFrame>
         );
-      case 'Sula Vineyards': // Wine bottle and glass
+      case 'wine':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="25" y="8" width="12" height="18" rx="2" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M31 8V4H31.5" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M12 28C12 21.3726 17.3726 16 24 16V28H12Z" fill={accentFill} />
-            <circle cx="21" cy="30" r="4" fill={accentHighlight} opacity="0.8" />
-            <path d="M15 16C15 22.6274 20.3726 28 27 28" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M21 28V38" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M17 38H25" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <circle cx="15" cy="22" r="2" fill={strokeColor} />
-            <circle cx="19" cy="19" r="2" fill={strokeColor} />
-          </svg>
+          <IconFrame>
+            <path d="M21 46V25" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M16 25H26C26 31 23.5 34.5 21 34.5C18.5 34.5 16 31 16 25Z" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <path d="M17 46H25" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <rect x="34" y="18" width="10" height="24" rx="2.5" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <path d="M39 18V13" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+          </IconFrame>
         );
-      case 'Pandav Leni': // Mountain Caves
+      case 'dam':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6 38L18 14L30 28L38 18L44 38H6Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M14 38C14 32 18 30 22 30C26 30 30 32 30 38" fill="#FFF" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M32 38C32 34 35 32 38 32C41 32 44 34 44 38" fill="#FFF" stroke={strokeColor} strokeWidth="1.5" />
-            <circle cx="28" cy="10" r="3.5" fill={accentHighlight} />
-          </svg>
+          <IconFrame>
+            <path d="M18 24V44" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M24 26V44" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M30 28V44" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M36 24V44" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M14 46C20 43 26 43 32 46C38 49 44 49 50 46" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M15 20H38" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+          </IconFrame>
         );
-      case 'Anjaneri': // Mountain Peak/Fort
+      case 'peak_flag':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="34" cy="14" r="6" fill={accentHighlight} opacity="0.8" />
-            <path d="M4 38L18 16L32 32L38 24L44 38H4Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M12 28L18 22L24 28" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M30 38H18" stroke={strokeColor} strokeWidth="1.5" />
-          </svg>
+          <IconFrame>
+            <path d="M13 46L25 23L36 35L48 18L59 46" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M47 18V28" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M47 18H53L50 22L53 26H47" stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
+            <path d="M13 46H59" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+          </IconFrame>
         );
-      case 'Igatpuri': // Waterfall & Lake
+      case 'temple_town':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 32C12 20 20 18 24 24C28 30 36 28 40 18" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M14 26C18 36 30 36 34 26" fill={accentFill} opacity="0.6" />
-            <path d="M24 10V38" stroke={strokeColor} strokeWidth="1.5" strokeDasharray="3 3" />
-            <path d="M20 16V34" stroke={strokeColor} strokeWidth="1.5" strokeDasharray="3 3" />
-            <path d="M28 14V36" stroke={strokeColor} strokeWidth="1.5" strokeDasharray="3 3" />
-            <circle cx="24" cy="40" r="1.5" fill={strokeColor} />
-            <circle cx="28" cy="39" r="1" fill={strokeColor} />
-            <circle cx="20" cy="38" r="1" fill={strokeColor} />
-          </svg>
+          <IconFrame>
+            <path d="M16 47H47" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M30 17L20 29H40L30 17Z" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" fill={cream} />
+            <rect x="23" y="29" width="14" height="18" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <path d="M44 24C47 27 49 30 49 34" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <circle cx="50" cy="18" r="3" stroke={strokeColor} strokeWidth="1.5" fill={cream} />
+          </IconFrame>
         );
-      case 'Trimbakeshwar': // Temple / Spiritual
+      case 'lake':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M24 6L14 18H34L24 6Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <rect x="16" y="18" width="16" height="18" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M24 6V2" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M24 2H29" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" fill={accentHighlight} />
-            <circle cx="24" cy="26" r="4" stroke={strokeColor} strokeWidth="1.5" fill={accentHighlight} />
-            <path d="M10 36H38" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+          <IconFrame>
+            <path d="M13 28C19 24 25 24 31 28C37 32 43 32 49 28" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M13 36C19 32 25 32 31 36C37 40 43 40 49 36" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M13 44C19 40 25 40 31 44C37 48 43 48 49 44" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <circle cx="47" cy="18" r="3.5" fill={sand} />
+          </IconFrame>
         );
-      case 'Bhandardara': // Mountains & Lake
+      case 'temple':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="30" cy="18" r="7" fill={accentHighlight} opacity="0.75" />
-            <path d="M6 34L18 16L28 28L36 20L42 34H6Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M10 38C18 38 22 41 38 38" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M14 41C20 41 24 43 34 41" stroke={strokeColor} strokeWidth="1" strokeLinecap="round" />
-          </svg>
+          <IconFrame>
+            <path d="M16 48H46" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M31 16L20 29H42L31 16Z" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" fill={cream} />
+            <rect x="24" y="29" width="14" height="19" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <path d="M31 16V11" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M31 11H36" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <circle cx="49" cy="18" r="3.5" fill={sand} />
+          </IconFrame>
         );
-      case 'Saputara': // Hill Station / Sunrise
+      case 'mountains':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="24" cy="20" r="8" stroke={strokeColor} strokeWidth="1.5" fill={accentHighlight} />
-            <path d="M8 32C16 26 22 28 28 32C34 36 40 32 40 32" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M4 36H44" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" fill={accentFill} />
-            <path d="M12 10L14 13" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M36 10L34 13" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M24 7V10" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+          <IconFrame>
+            <path d="M12 46L25 22L34 35L45 18L58 46" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M12 46H58" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M45 18L48 15L51 18" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M18 19L21 17" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M22 16L24 15" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+          </IconFrame>
         );
-      case 'Vaitarna': // Lake / River
+      case 'water':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 18C16 14 20 22 28 18C36 14 40 18 40 18" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M8 26C16 22 20 30 28 26C36 22 40 26 40 26" fill={accentFill} opacity="0.5" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M8 34C16 30 20 38 28 34C36 30 40 34 40 34" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <circle cx="32" cy="12" r="3" fill={accentHighlight} />
-          </svg>
+          <IconFrame>
+            <path d="M14 26C20 22 25 22 31 26C37 30 42 30 48 26" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M14 34C20 30 25 30 31 34C37 38 42 38 48 34" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M14 42C20 38 25 38 31 42C37 46 42 46 48 42" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <circle cx="49" cy="18" r="3.3" fill={sand} />
+          </IconFrame>
         );
-      case 'Jawhar': // Palace / Heritage
+      case 'hills':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 38V20H14V38" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M34 38V20H40V38" stroke={strokeColor} strokeWidth="1.5" />
-            <rect x="14" y="16" width="20" height="22" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M18 16C18 10.4772 20.6863 6 24 6C27.3137 6 30 10.4772 30 16" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M21 28C21 26.3431 22.3431 25 24 25C25.6569 25 27 26.3431 27 28V38H21V28Z" stroke={strokeColor} strokeWidth="1.5" />
-          </svg>
+          <IconFrame>
+            <path d="M13 44L25 24L36 36L47 21L59 44" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M14 47C19 44 24 44 29 47C34 50 39 50 44 47C49 44 54 44 58 47" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <circle cx="48" cy="20" r="3.4" fill={sand} />
+          </IconFrame>
         );
-      case 'Wada': // Farms & Countryside
+      case 'waterfall':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="10" y="22" width="16" height="16" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M6 22L18 12L30 22" stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <circle cx="34" cy="24" r="6" fill={accentHighlight} opacity="0.8" />
-            <path d="M34 18V38" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M30 30H38" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M15 28H21V38H15V28Z" stroke={strokeColor} strokeWidth="1.5" />
-          </svg>
+          <IconFrame>
+            <path d="M12 44L24 24L36 36L48 20L58 44" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M46 18V39" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" strokeDasharray="2.5 3" />
+            <path d="M14 47C20 44 26 44 32 47C38 50 44 50 50 47" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+          </IconFrame>
         );
-      case 'Lonavala': // Caves / Forest
+      case 'caves':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 38C10 28.0589 16.268 20 24 20C31.732 20 38 28.0589 38 38" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M18 38C18 33.5817 20.6863 30 24 30C27.3137 30 30 33.5817 30 38" fill="#FFF" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M6 38H42" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <circle cx="24" cy="12" r="3" fill={accentHighlight} />
-          </svg>
+          <IconFrame>
+            <path d="M12 46L25 22L36 35L48 19L59 46" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M27 46C27 40 30 36.5 34.5 36.5C39 36.5 42 40 42 46" stroke={strokeColor} strokeWidth="1.7" />
+            <path d="M12 46H59" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+          </IconFrame>
         );
-      case 'Mahabaleshwar': // Strawberry & Hills
+      case 'peaks':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M24 10C24 10 14 14 14 26C14 34 19 38 24 38C29 38 34 34 34 26C34 14 24 10 24 10Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M24 10C24 7 26 5 28 6" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M21 11C23 12 25 12 27 11" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.2" />
-            <circle cx="20" cy="20" r="1" fill={strokeColor} />
-            <circle cx="28" cy="22" r="1" fill={strokeColor} />
-            <circle cx="24" cy="27" r="1" fill={strokeColor} />
-            <circle cx="18" cy="29" r="1" fill={strokeColor} />
-            <circle cx="30" cy="30" r="1" fill={strokeColor} />
-          </svg>
+          <IconFrame>
+            <path d="M13 45L25 23L36 35L48 18L59 45" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M49 18L52 15L55 18" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M13 45H59" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+          </IconFrame>
         );
-      case 'Panchgani': // Table Land / Plateau
+      case 'hillstation':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 26H40" stroke={strokeColor} strokeWidth="2.5" strokeLinecap="round" />
-            <path d="M12 26V36H36V26" stroke={strokeColor} strokeWidth="1.5" fill={accentFill} />
-            <path d="M6 38H42" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <circle cx="24" cy="14" r="5" fill={accentHighlight} />
-          </svg>
+          <IconFrame>
+            <path d="M12 45L24 22L35 34L47 19L58 45" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M16 13L18 15" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M20 11L22 13" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="47" cy="21" r="3.6" fill={sand} />
+          </IconFrame>
         );
-      case 'Alibaug': // Palms & Beach
+      case 'strawberry':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="32" cy="16" r="6" fill={accentHighlight} opacity="0.8" />
-            <path d="M14 12C16 18 15 32 15 38" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" />
-            <path d="M15 16C10 14 6 18 6 18" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M15 14C22 11 26 14 26 14" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M15 20C21 21 24 19 24 19" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M8 38C14 38 20 40 38 38" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+          <IconFrame>
+            <path d="M29 18C29 15 31 13 34 14" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M31 19C34 20 37 20 39 18" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M24 24C24 17 30 14 35 14C40 14 46 17 46 24C46 34 40 42 35 42C30 42 24 34 24 24Z" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <circle cx="31" cy="26" r="1.2" fill={strokeColor} />
+            <circle cx="37" cy="28" r="1.2" fill={strokeColor} />
+            <circle cx="34" cy="33" r="1.2" fill={strokeColor} />
+            <path d="M12 46C19 42 25 42 31 46" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+          </IconFrame>
         );
-      case 'Karjat': // Rivers / Waterfalls
+      case 'paraglide':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M6 20L16 10L24 18L32 8L42 18" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M12 24C16 28 20 28 24 24C28 20 32 20 36 24" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" fill={accentFill} />
-            <path d="M12 32C16 36 20 36 24 32C28 28 32 28 36 32" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <circle cx="28" cy="14" r="2.5" fill={accentHighlight} />
-          </svg>
+          <IconFrame>
+            <path d="M16 45C21 37 27 33 34 33C41 33 47 37 52 45" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M23 23C28 18 33 16 39 16C45 16 49 19 52 23C49 26 45 28 39 29C33 28 28 26 23 23Z" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" fill={cream} />
+            <path d="M39 29V40" stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="50" cy="21" r="3" fill={sand} />
+          </IconFrame>
         );
-      case 'Pune': // Heritage Fort Gateway
+      case 'sunrise':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="8" y="14" width="32" height="24" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M18 38V24C18 20.6863 20.6863 18 24 18C27.3137 18 30 20.6863 30 24V38" fill="#FFF" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M14 14V10H34V14" stroke={strokeColor} strokeWidth="1.5" />
-            <circle cx="24" cy="10" r="3" fill={accentHighlight} />
-          </svg>
+          <IconFrame>
+            <circle cx="33" cy="24" r="7" fill={sand} />
+            <path d="M13 40C18 35 24 34 30 38C36 42 42 42 49 37" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M11 46H58" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M21 15L23 18" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+            <path d="M45 15L43 18" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+          </IconFrame>
         );
-      case 'Mumbai': // Gateway Monument
+      case 'lake_mountains':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="10" y="16" width="28" height="22" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M18 38V22C18 19 20.5 17 24 17C27.5 17 30 19 30 22V38" fill="#FFF" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M6 38H42" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" />
-            <circle cx="24" cy="10" r="4" fill={accentHighlight} />
-            <path d="M12 16V12H36V16" stroke={strokeColor} strokeWidth="1.5" />
-          </svg>
+          <IconFrame>
+            <path d="M13 39L24 23L35 34L47 21L58 39" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M14 45C20 42 26 42 32 45C38 48 44 48 50 45" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <circle cx="49" cy="18" r="3.4" fill={sand} />
+          </IconFrame>
         );
-      case 'Goa': // Coconut & Beach bed
+      case 'forest_camp':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="24" cy="15" r="7" fill={accentHighlight} opacity="0.8" />
-            <path d="M10 14C12 22 12 32 12 38" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M12 16C6 16 4 19 4 19" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M12 15C18 12 21 16 21 16" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M22 34H36L38 38H20L22 34Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M30 26L34 34" stroke={strokeColor} strokeWidth="1.5" />
-          </svg>
+          <IconFrame>
+            <path d="M18 45L27 28L36 45" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M29 45L39 30L49 45" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M13 47C18 44 24 44 30 47C36 50 42 50 49 47" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M14 21L17 18" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+          </IconFrame>
         );
-      case 'Basilica of Born Jesus': // Church style
+      case 'beach':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M24 6V14" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M20 10H28" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M12 22V38H36V22L24 14L12 22Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <rect x="20" y="26" width="8" height="12" rx="4" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" />
-            <circle cx="24" cy="20" r="2.5" fill={strokeColor} />
-          </svg>
+          <IconFrame>
+            <path d="M20 19C22 25 21 33 21 41" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M21 22C16 19 12 22 10 25" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M21 21C27 18 32 20 35 24" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M21 27C27 28 30 27 34 24.5" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M10 46C18 43 26 43 36 46" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M31 29L39 33L42 46H26L31 29Z" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" fill={cream} />
+            <circle cx="11" cy="18" r="4" fill={cream} stroke={strokeColor} strokeWidth="1.7" />
+          </IconFrame>
         );
-      case 'Fort Aguada': // Lighthouse & Bastion style
+      case 'palm_beach':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="18" y="16" width="12" height="22" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M14 38H34" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" />
-            <path d="M16 16H32" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M24 6L18 12H30L24 6Z" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <line x1="24" y1="12" x2="24" y2="16" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M20 22H28" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-            <path d="M20 28H28" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
+          <IconFrame>
+            <path d="M25 18C27 24 26 33 26 41" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M26 21C21 18 17 21 14 24" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M26 20C32 17 37 19 41 23" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M26 27C32 28 36 26 39 23.5" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M12 46C20 43 30 43 42 46" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <circle cx="15" cy="16" r="4" fill={cream} stroke={strokeColor} strokeWidth="1.7" />
+          </IconFrame>
         );
-      case 'Calangute': // Beach Umbrella & Sun
+      case 'skyline':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M24 10V38" stroke={strokeColor} strokeWidth="2" strokeLinecap="round" />
-            <path d="M10 24C10 16 16 12 24 12C32 12 38 16 38 24H10Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M17 24C17 20 20 18 24 18" stroke={strokeColor} strokeWidth="1.2" />
-            <path d="M31 24C31 20 28 18 24 18" stroke={strokeColor} strokeWidth="1.2" />
-            <circle cx="34" cy="12" r="4" fill={accentHighlight} />
-            <path d="M6 38H42" stroke={strokeColor} strokeWidth="1.5" />
-          </svg>
+          <IconFrame>
+            <path d="M14 47H58" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <rect x="18" y="31" width="8" height="16" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <rect x="27" y="24" width="10" height="23" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <rect x="38" y="28" width="8" height="19" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <path d="M32 18C36 18 39 15 39 12" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" />
+          </IconFrame>
         );
-      case 'Baga': // Surfboard & Wave
+      case 'hawa_mahal':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M16 8C16 8 26 12 26 24C26 36 16 40 16 40C16 40 18 30 18 24C18 18 16 8 16 8Z" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M21 16C22 20 22 28 21 32" stroke={strokeColor} strokeWidth="1.2" strokeLinecap="round" />
-            <path d="M6 34C12 30 18 36 24 32C30 28 36 34 42 32" stroke={strokeColor} strokeWidth="1.5" strokeLinecap="round" fill={accentFill} opacity="0.6" />
-            <path d="M10 38C16 36 22 40 28 38C34 36 40 38 42 38" stroke={strokeColor} strokeWidth="1" strokeLinecap="round" />
-          </svg>
+          <IconFrame>
+            <path d="M17 47H49" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M21 47V24L28 18L35 24V47" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" fill={cream} />
+            <path d="M35 47V25L42 20L49 25V47" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" fill={cream} />
+            <circle cx="26" cy="29" r="1.6" fill={strokeColor} />
+            <circle cx="31" cy="29" r="1.6" fill={strokeColor} />
+            <circle cx="40" cy="30" r="1.6" fill={strokeColor} />
+          </IconFrame>
         );
-      case 'Panjim': // Sailboat / Cruise Boat
+      case 'palace_lake':
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 30L36 30L32 36H16L12 30Z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M24 30V10" stroke={strokeColor} strokeWidth="1.5" />
-            <path d="M24 12L34 22H24V12Z" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <path d="M6 38C12 36 18 40 24 38C30 36 36 40 42 38" stroke={strokeColor} strokeWidth="1" strokeLinecap="round" />
-          </svg>
+          <IconFrame>
+            <path d="M18 39L25 29L32 39L39 25L46 39" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M16 45C21 42 27 42 33 45C39 48 45 48 50 45" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M40 18C43 21 45 24 45 28" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+          </IconFrame>
+        );
+      case 'boat_city':
+        return (
+          <IconFrame>
+            <path d="M18 42H45L40 47H23L18 42Z" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" fill={cream} />
+            <path d="M31 42V22" stroke={strokeColor} strokeWidth="1.7" />
+            <path d="M31 24L42 33H31V24Z" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" fill={cream} />
+            <path d="M12 50C18 47 24 47 30 50C36 53 42 53 48 50" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+          </IconFrame>
+        );
+      case 'palace':
+        return (
+          <IconFrame>
+            <path d="M17 47H50" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M20 47V28H27V47" stroke={strokeColor} strokeWidth="1.7" />
+            <path d="M40 47V28H47V47" stroke={strokeColor} strokeWidth="1.7" />
+            <rect x="27" y="23" width="13" height="24" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <path d="M27 23C27 18 30 14 33.5 14C37 14 40 18 40 23" stroke={strokeColor} strokeWidth="1.7" />
+          </IconFrame>
+        );
+      case 'farmhouse':
+        return (
+          <IconFrame>
+            <path d="M17 47V30L29 21L41 30V47" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" fill={cream} />
+            <path d="M23 47V36H29V47" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M47 20V47" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M43 29H51" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+          </IconFrame>
+        );
+      case 'heritage':
+        return (
+          <IconFrame>
+            <path d="M14 47C22 43 30 43 40 47C46 49 51 49 57 46" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M18 45V28L25 22L31 28V45" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" fill={cream} />
+            <path d="M31 45V30L38 24L45 30V45" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" fill={cream} />
+            <path d="M24 32V45" stroke={strokeColor} strokeWidth="1.5" />
+            <path d="M38 34V45" stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="56" cy="16" r="3.2" stroke={strokeColor} strokeWidth="1.5" fill={cream} />
+          </IconFrame>
+        );
+      case 'fort':
+        return (
+          <IconFrame>
+            <path d="M18 46V27H24V46" stroke={strokeColor} strokeWidth="1.7" />
+            <path d="M38 46V27H44V46" stroke={strokeColor} strokeWidth="1.7" />
+            <rect x="24" y="22" width="14" height="24" stroke={strokeColor} strokeWidth="1.7" fill={cream} />
+            <path d="M24 22L31 16L38 22" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M29 33H33V46H29V33Z" stroke={strokeColor} strokeWidth="1.5" />
+            <circle cx="49" cy="17" r="3.4" fill={sand} />
+          </IconFrame>
         );
       default:
         return (
-          <svg viewBox="0 0 48 48" className="w-11 h-11 md:w-12 md:h-12 scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M24 4C15.7 4 9 10.7 9 19c0 10.2 13 23 14 24a1.4 1.4 0 0 0 2 0c1-1 14-13.8 14-24 0-8.3-6.7-15-15-15z" fill={accentFill} stroke={strokeColor} strokeWidth="1.5" strokeLinejoin="round" />
-            <circle cx="24" cy="18" r="4.5" fill={accentHighlight} stroke={strokeColor} strokeWidth="1.5" />
-          </svg>
+          <IconFrame>
+            <path d="M16 47L28 23L38 36L48 20L58 47" stroke={strokeColor} strokeWidth="1.7" strokeLinejoin="round" />
+            <path d="M44 20C46 23 47 26 47 29" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+            <path d="M14 47H58" stroke={strokeColor} strokeWidth="1.7" strokeLinecap="round" />
+          </IconFrame>
         );
     }
   };
 
-  return (
-    <div className="relative flex items-center justify-center h-14 w-14 md:h-16 md:w-16 rounded-full bg-slate-50 border border-gray-100 shadow-sm hover:shadow hover:scale-[1.05] transition-all duration-300">
-      {renderCustomSVG()}
-    </div>
-  );
+  if (imageSrc) {
+    return (
+      <div className="relative flex items-center justify-center h-[94px] w-[94px] md:h-[116px] md:w-[116px] overflow-hidden">
+        <img
+          src={imageSrc}
+          alt={label}
+          loading="lazy"
+          decoding="async"
+          onError={(event) => {
+            event.currentTarget.style.display = 'none';
+            const fallback = event.currentTarget.nextSibling;
+            if (fallback) fallback.style.display = 'flex';
+          }}
+          className={`h-full w-full object-contain ${imageScaleClass}`}
+        />
+        <div className="hidden items-center justify-center">
+          {renderVariant()}
+        </div>
+      </div>
+    );
+  }
+
+  return <div className="relative flex items-center justify-center">{renderVariant()}</div>;
 };
 
 const PREMIUM_COLLECTIONS = [
@@ -2042,8 +2162,8 @@ const LandingPage = () => {
   };
 
   const nearbyDestinations = React.useMemo(() => {
-    return getDestinationSpotsForHub(nearbyHub, 50);
-  }, [nearbyHub]);
+    return CURATED_DESTINATION_ROWS.flat();
+  }, []);
 
   const openDestinationProperties = (destination) => {
     const destinationName = typeof destination === 'string' ? destination : destination.name;
@@ -2116,7 +2236,7 @@ const LandingPage = () => {
         {/* Header */}
         <div className="flex items-end justify-between mb-6 px-4 md:px-[10vw] w-full">
           <div className="text-left">
-            <h3 className="text-xl md:text-2xl font-bold tracking-tight text-charcoal flex items-center gap-2">
+            <h3 className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-charcoal flex items-center gap-2">
               <span>{title}</span>
               <IconComponent className="w-5 h-5 text-charcoal/85 stroke-[2]" />
             </h3>
@@ -2776,22 +2896,31 @@ const LandingPage = () => {
               </div>
             </div>
 
-            <div className="flex overflow-x-auto no-scrollbar snap-x scroll-smooth pb-4 gap-6 md:grid md:grid-cols-6 lg:grid-cols-8 md:gap-x-6 md:gap-y-8 md:overflow-visible md:pb-0">
-              {nearbyDestinations.map((destination) => {
-                const label = typeof destination === 'string' ? destination : destination.name;
-                return (
-                <button
-                  key={label}
-                  onClick={() => openDestinationProperties(destination)}
-                  className="group flex flex-col items-center gap-1.5 cursor-pointer flex-shrink-0 snap-start min-w-[76px] md:min-w-0"
+            <div className="space-y-6 md:space-y-8">
+              {CURATED_DESTINATION_ROWS.map((row, rowIndex) => (
+                <div
+                  key={`destination-row-${rowIndex}`}
+                  className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-x-4 gap-y-6 md:gap-x-5"
                 >
-                  <div className="flex h-16 md:h-20 items-center justify-center transition-transform duration-300 group-hover:-translate-y-1">
-                    <DestinationLineIcon label={label} />
-                  </div>
-                  <p className="text-charcoal font-semibold text-[11px] md:text-xs tracking-tight leading-snug text-center">{label}</p>
-                </button>
-              );
-              })}
+                  {row.map((destination) => {
+                    const label = destination.name;
+                    return (
+                      <button
+                        key={label}
+                        onClick={() => openDestinationProperties(destination)}
+                        className="group flex flex-col items-center gap-2 cursor-pointer min-w-0"
+                      >
+                        <div className="flex h-[104px] md:h-[124px] items-center justify-center transition-transform duration-300 group-hover:-translate-y-1">
+                          <DestinationLineIcon label={label} destinationType={destination.type || 'tourist'} />
+                        </div>
+                        <p className="max-w-[120px] text-charcoal font-medium text-[12px] md:text-[14px] tracking-tight leading-[1.25] text-center">
+                          {label}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
 
             {recentlyVisitedProperties.length > 0 && (
@@ -3224,9 +3353,7 @@ const LandingPage = () => {
 
               return (
                 <div className="w-full px-4 md:px-[10vw] mt-16 mb-24">
-                  {/* Split card banner */}
                   <div className="w-full bg-[#E5DFD9] rounded-3xl overflow-hidden shadow-lg flex flex-col md:flex-row h-auto md:h-[380px] mb-16 border border-[#dcd6d0]">
-                    {/* Left text area */}
                     <div className="w-full md:w-[45%] p-8 md:p-10 flex flex-col justify-center text-left text-[#3c3732]">
                       <div>
                         <h4 className="font-serif text-xl md:text-2xl font-bold leading-relaxed mb-6">
@@ -3253,18 +3380,15 @@ const LandingPage = () => {
                       </div>
                     </div>
 
-                    {/* Right single image area with brown/warm overlay */}
                     <div className="w-full md:w-[55%] relative h-[280px] md:h-full overflow-hidden">
                       <img
                         src="https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1200"
                         alt="Amarah Villa Dining"
                         className="w-full h-full object-cover"
                       />
-                      {/* Brown / Warm sepia tint overlay */}
                       <div className="absolute inset-0 bg-[#8c7b50]/15 mix-blend-multiply pointer-events-none" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent z-10 pointer-events-none" />
 
-                      {/* Info overlay (bottom-left) */}
                       <div className="absolute bottom-6 left-6 z-20 text-left text-white">
                         <h5 className="font-serif text-lg font-bold leading-tight text-white">Amarah</h5>
                         <p className="text-white/80 text-[10px] uppercase tracking-wider mt-0.5">Assagao, Goa</p>
@@ -3277,7 +3401,7 @@ const LandingPage = () => {
                     <div className="flex justify-between items-end mb-6">
                       <div>
                         <div className="flex items-center gap-3">
-                          <h3 className="font-lufga text-2xl md:text-3xl font-bold tracking-tight text-charcoal">
+                          <h3 className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-charcoal">
                             Signature Series
                           </h3>
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black border border-[#D4AF37] text-[9px] font-serif font-bold uppercase tracking-[0.15em] text-[#D4AF37] shadow-lg shrink-0">
