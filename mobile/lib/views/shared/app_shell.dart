@@ -18,9 +18,11 @@ import '../guest/ai_chat_screen.dart';
 import '../host/host_bookings_screen.dart';
 import '../host/host_dashboard_screen.dart';
 import '../host/host_my_properties_screen.dart';
+import '../host/host_performance_screen.dart';
 import '../host/host_payouts_screen.dart';
 import 'app_logo.dart';
 import 'notifications_screen.dart';
+import 'public_info_screens.dart';
 import 'support_tickets_screen.dart';
 import '../broker/broker_dashboard_screen.dart';
 import '../employee/employee_dashboard_screen.dart';
@@ -483,6 +485,12 @@ class _HostProfileDrawer extends StatelessWidget {
                       icon: Icons.account_balance_wallet_outlined,
                       label: 'Payouts',
                       onTap: () => _push(context, const HostPayoutsScreen()),
+                    ),
+                    _HostDrawerItem(
+                      icon: Icons.insights_outlined,
+                      label: 'Performance',
+                      onTap: () =>
+                          _push(context, const HostPerformanceScreen()),
                     ),
                     _HostDrawerItem(
                       icon: Icons.notifications_none_rounded,
@@ -1062,6 +1070,30 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
                 ),
               ),
               _ProfileOptionTile(
+                icon: Icons.article_outlined,
+                label: 'Open full legal pages in app',
+                compact: true,
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => LegalPoliciesScreen(
+                        policies: legalItems
+                            .map(
+                              (item) => LegalPolicyData(
+                                label: item.label,
+                                title: item.title,
+                                content: item.content,
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  );
+                },
+              ),
+              _ProfileOptionTile(
                 icon: Icons.open_in_browser_rounded,
                 label: 'Open legal pages on website',
                 compact: true,
@@ -1269,8 +1301,18 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const SupportTicketsScreen(),
+                  builder: (_) => const SupportCenterScreen(),
                 ),
+              );
+            },
+          ),
+          _ProfileOptionTile(
+            icon: Icons.info_outline_rounded,
+            label: 'About X-Space360',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AboutUsScreen()),
               );
             },
           ),

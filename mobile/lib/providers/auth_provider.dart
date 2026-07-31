@@ -128,6 +128,68 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<String?> forgotPassword(String email) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio.post(
+        '/auth/forgot-password',
+        data: {'email': email},
+      );
+      if (response.statusCode == 200) {
+        return response.data['detail']?.toString() ??
+            'If this email is registered, a reset link has been sent.';
+      }
+      return null;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['detail'] != null) {
+        _lastError = data['detail'].toString();
+      } else {
+        _lastError = e.message ?? 'Unable to send reset link.';
+      }
+      return null;
+    } catch (e) {
+      _lastError = 'Unable to send reset link.';
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> resetPassword(String token, String password) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio.post(
+        '/auth/reset-password',
+        data: {
+          'token': token,
+          'password': password,
+        },
+      );
+      if (response.statusCode == 200) {
+        return response.data['login_path']?.toString();
+      }
+      return null;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['detail'] != null) {
+        _lastError = data['detail'].toString();
+      } else {
+        _lastError = e.message ?? 'Unable to reset password.';
+      }
+      return null;
+    } catch (e) {
+      _lastError = 'Unable to reset password.';
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> refreshProfile() async {
     if (_token == null) return;
     try {

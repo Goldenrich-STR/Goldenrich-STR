@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme.dart';
+import 'password_recovery_screen.dart';
 import '../shared/app_shell.dart';
 import '../shared/app_logo.dart';
 import '../../services/api_service.dart';
@@ -1732,7 +1733,14 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 16),
             Center(
               child: TextButton(
-                onPressed: _showForgotPasswordSheet,
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ForgotPasswordScreen(),
+                    ),
+                  );
+                },
                 child: Text(
                   'Forgot Password?',
                   style: GoogleFonts.manrope(
