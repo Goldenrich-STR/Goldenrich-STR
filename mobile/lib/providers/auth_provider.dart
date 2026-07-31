@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../services/api_service.dart';
+import '../services/session_storage.dart';
 
 class AuthProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -19,17 +19,13 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _token != null;
   bool get isPromoClaimed => _currentUser?.isPromoClaimed ?? false;
 
-  String? _demoOtp;
-  String? get demoOtp => _demoOtp;
-
   Future<void> loadSession() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      _token = prefs.getString('propnest_token');
-      final userStr = prefs.getString('propnest_user');
+      _token = await SessionStorage.readToken();
+      final userStr = await SessionStorage.readUser();
 
       if (_token != null && userStr != null) {
         _currentUser = UserModel.fromJson(json.decode(userStr));
@@ -45,7 +41,6 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> sendOTP(String phone, {String purpose = 'registration'}) async {
     _isLoading = true;
-    _demoOtp = null;
     notifyListeners();
     try {
       final response = await _apiService.dio.post('/api/auth/send-otp', data: {
@@ -53,9 +48,6 @@ class AuthProvider with ChangeNotifier {
         'purpose': purpose,
       });
       if (response.statusCode == 200) {
-        if (response.data != null && response.data['otp'] != null) {
-          _demoOtp = response.data['otp'].toString();
-        }
         return true;
       }
       return false;
@@ -97,11 +89,8 @@ class AuthProvider with ChangeNotifier {
         final data = response.data;
         _token = data['access_token'];
         _currentUser = UserModel.fromJson(data['user']);
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('propnest_token', _token!);
-        await prefs.setString(
-            'propnest_user', json.encode(_currentUser!.toJson()));
+        await SessionStorage.writeToken(_token!);
+        await SessionStorage.writeUser(json.encode(_currentUser!.toJson()));
         return true;
       }
       return false;
@@ -126,11 +115,8 @@ class AuthProvider with ChangeNotifier {
         final data = response.data;
         _token = data['access_token'];
         _currentUser = UserModel.fromJson(data['user']);
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('propnest_token', _token!);
-        await prefs.setString(
-            'propnest_user', json.encode(_currentUser!.toJson()));
+        await SessionStorage.writeToken(_token!);
+        await SessionStorage.writeUser(json.encode(_currentUser!.toJson()));
         return true;
       }
       return false;
@@ -148,9 +134,7 @@ class AuthProvider with ChangeNotifier {
       final response = await _apiService.dio.get('/api/auth/me');
       if (response.statusCode == 200) {
         _currentUser = UserModel.fromJson(response.data);
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(
-            'propnest_user', json.encode(_currentUser!.toJson()));
+        await SessionStorage.writeUser(json.encode(_currentUser!.toJson()));
         notifyListeners();
       }
     } catch (e) {
@@ -210,9 +194,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     _token = null;
     _currentUser = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('propnest_token');
-    await prefs.remove('propnest_user');
+    await SessionStorage.clearSession();
     notifyListeners();
   }
 }

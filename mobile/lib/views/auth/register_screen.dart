@@ -24,7 +24,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _cityController = TextEditingController();
   final _lgCodeController = TextEditingController();
-  
+
   String _selectedRole = 'guest';
   int _step = 1; // 1: Enter Phone, 2: Enter OTP, 3: Complete Register Details
   String? _errorMessage;
@@ -34,16 +34,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
   late TapGestureRecognizer _privacyRecognizer;
   late TapGestureRecognizer _checkinRecognizer;
 
-  String _termsText = 'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.';
-  String _privacyText = 'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.';
-  String _checkinText = 'Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival. Quiet hours are from 10:00 PM to 7:00 AM.';
+  String _termsText =
+      'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.';
+  String _privacyText =
+      'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.';
+  String _checkinText =
+      'Standard check-in time starts at 2:00 PM. Please present your valid Government ID upon arrival. Quiet hours are from 10:00 PM to 7:00 AM.';
 
   @override
   void initState() {
     super.initState();
-    _termsRecognizer = TapGestureRecognizer()..onTap = () => _showDocumentDialog('Terms & Conditions', _termsText);
-    _privacyRecognizer = TapGestureRecognizer()..onTap = () => _showDocumentDialog('Privacy Policy', _privacyText);
-    _checkinRecognizer = TapGestureRecognizer()..onTap = () => _showDocumentDialog('Check-in Instructions', _checkinText);
+    _termsRecognizer = TapGestureRecognizer()
+      ..onTap = () => _showDocumentDialog('Terms & Conditions', _termsText);
+    _privacyRecognizer = TapGestureRecognizer()
+      ..onTap = () => _showDocumentDialog('Privacy Policy', _privacyText);
+    _checkinRecognizer = TapGestureRecognizer()
+      ..onTap =
+          () => _showDocumentDialog('Check-in Instructions', _checkinText);
     _fetchCmsContent();
   }
 
@@ -54,13 +61,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         final footer = response.data['footer'];
         if (footer != null) {
           setState(() {
-            if (footer['terms_text'] != null && footer['terms_text'].toString().isNotEmpty) {
+            if (footer['terms_text'] != null &&
+                footer['terms_text'].toString().isNotEmpty) {
               _termsText = footer['terms_text'];
             }
-            if (footer['privacy_text'] != null && footer['privacy_text'].toString().isNotEmpty) {
+            if (footer['privacy_text'] != null &&
+                footer['privacy_text'].toString().isNotEmpty) {
               _privacyText = footer['privacy_text'];
             }
-            if (footer['checkin_text'] != null && footer['checkin_text'].toString().isNotEmpty) {
+            if (footer['checkin_text'] != null &&
+                footer['checkin_text'].toString().isNotEmpty) {
               _checkinText = footer['checkin_text'];
             }
           });
@@ -76,7 +86,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             title,
             style: GoogleFonts.outfit(
@@ -129,22 +140,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _sendOTP() async {
     if (_phoneController.text.trim().isEmpty) return;
     setState(() => _errorMessage = null);
-    
+
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.sendOTP(_phoneController.text.trim());
     if (success) {
       setState(() => _step = 2);
     } else {
-      setState(() => _errorMessage = 'Failed to send OTP. Please check the number.');
+      setState(
+          () => _errorMessage = 'Failed to send OTP. Please check the number.');
     }
   }
 
   Future<void> _verifyOTP() async {
     if (_otpController.text.trim().isEmpty) return;
     setState(() => _errorMessage = null);
-    
+
     final auth = Provider.of<AuthProvider>(context, listen: false);
-    final success = await auth.verifyOTP(_phoneController.text.trim(), _otpController.text.trim());
+    final success = await auth.verifyOTP(
+        _phoneController.text.trim(), _otpController.text.trim());
     if (success) {
       setState(() => _step = 3);
     } else {
@@ -155,11 +168,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _completeRegistration() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_acceptTerms) {
-      setState(() => _errorMessage = 'Please accept the Terms & Conditions, Privacy Policy, and Check-in Instructions.');
+      setState(() => _errorMessage =
+          'Please accept the Terms & Conditions, Privacy Policy, and Check-in Instructions.');
       return;
     }
     setState(() => _errorMessage = null);
-    
+
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final Map<String, dynamic> regData = {
       'email': _emailController.text.trim(),
@@ -170,7 +184,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'city': _cityController.text.trim(),
       'terms_accepted': true,
     };
-    
+
     if (_selectedRole == 'host' && _lgCodeController.text.trim().isNotEmpty) {
       regData['lg_code'] = _lgCodeController.text.trim();
     }
@@ -187,7 +201,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
     } else {
-      setState(() => _errorMessage = 'Registration failed. Email/phone might already exist.');
+      setState(() => _errorMessage =
+          'Registration failed. Email/phone might already exist.');
     }
   }
 
@@ -227,7 +242,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               if (_step == 1) ...[
                 Text('Verify Phone Number', style: textTheme.displayMedium),
                 const SizedBox(height: 8),
-                Text('We\'ll send a 6-digit OTP code to verify your phone.', style: textTheme.bodyMedium),
+                Text('We\'ll send a 6-digit OTP code to verify your phone.',
+                    style: textTheme.bodyMedium),
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: _phoneController,
@@ -240,7 +256,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 24),
                 auth.isLoading
-                    ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                    ? const Center(
+                        child:
+                            CircularProgressIndicator(color: AppTheme.primary))
                     : ElevatedButton(
                         onPressed: _sendOTP,
                         child: const Text('Send OTP'),
@@ -248,7 +266,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ] else if (_step == 2) ...[
                 Text('Enter Verification Code', style: textTheme.displayMedium),
                 const SizedBox(height: 8),
-                Text('Enter the 6-digit OTP sent to ${_phoneController.text}', style: textTheme.bodyMedium),
+                Text('Enter the 6-digit OTP sent to ${_phoneController.text}',
+                    style: textTheme.bodyMedium),
                 const SizedBox(height: 32),
                 TextFormField(
                   controller: _otpController,
@@ -261,7 +280,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 24),
                 auth.isLoading
-                    ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                    ? const Center(
+                        child:
+                            CircularProgressIndicator(color: AppTheme.primary))
                     : ElevatedButton(
                         onPressed: _verifyOTP,
                         child: const Text('Verify OTP'),
@@ -285,41 +306,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           labelText: 'Full Name',
                           prefixIcon: Icon(Icons.person),
                         ),
-                        validator: (v) => v == null || v.isEmpty ? 'Enter your name' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Email Address',
-                          prefixIcon: Icon(Icons.email),
-                        ),
-                        validator: (v) => v == null || v.isEmpty ? 'Enter your email' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: Icon(Icons.lock),
-                        ),
-                        validator: (v) => v == null || v.length < 6 ? 'Password min 6 chars' : null,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _cityController,
-                        decoration: const InputDecoration(
-                          labelText: 'City',
-                          prefixIcon: Icon(Icons.location_city),
-                        ),
-                        validator: (v) => v == null || v.isEmpty ? 'Enter your city' : null,
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Enter your name' : null,
                       ),
                       const SizedBox(height: 16),
                       Center(
                         child: Text(
-                          'SELECT PROFESSIONAL ROLE',
+                          'SELECT ROLE',
                           style: GoogleFonts.outfit(
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
@@ -336,22 +329,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               onTap: () {
                                 setState(() {
                                   _selectedRole = 'guest';
+                                  _lgCodeController.clear();
                                 });
                               },
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 200),
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: _selectedRole == 'guest' ? AppTheme.primary : Colors.white,
+                                  color: _selectedRole == 'guest'
+                                      ? AppTheme.primary
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(24),
                                   border: Border.all(
-                                    color: _selectedRole == 'guest' ? AppTheme.primary : AppTheme.border,
+                                    color: _selectedRole == 'guest'
+                                        ? AppTheme.primary
+                                        : AppTheme.border,
                                     width: 1,
                                   ),
                                   boxShadow: _selectedRole == 'guest'
                                       ? [
                                           BoxShadow(
-                                            color: AppTheme.primary.withOpacity(0.25),
+                                            color: AppTheme.primary
+                                                .withOpacity(0.25),
                                             blurRadius: 8,
                                             offset: const Offset(0, 4),
                                           )
@@ -360,11 +359,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(
-                                  'EXPLORER',
+                                  'GUEST',
                                   style: GoogleFonts.outfit(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w900,
-                                    color: _selectedRole == 'guest' ? Colors.white : AppTheme.charcoalMuted,
+                                    color: _selectedRole == 'guest'
+                                        ? Colors.white
+                                        : AppTheme.charcoalMuted,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
@@ -383,16 +384,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 duration: const Duration(milliseconds: 200),
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: _selectedRole == 'host' ? AppTheme.primary : Colors.white,
+                                  color: _selectedRole == 'host'
+                                      ? AppTheme.primary
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(24),
                                   border: Border.all(
-                                    color: _selectedRole == 'host' ? AppTheme.primary : AppTheme.border,
+                                    color: _selectedRole == 'host'
+                                        ? AppTheme.primary
+                                        : AppTheme.border,
                                     width: 1,
                                   ),
                                   boxShadow: _selectedRole == 'host'
                                       ? [
                                           BoxShadow(
-                                            color: AppTheme.primary.withOpacity(0.25),
+                                            color: AppTheme.primary
+                                                .withOpacity(0.25),
                                             blurRadius: 8,
                                             offset: const Offset(0, 4),
                                           )
@@ -401,11 +407,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                                 alignment: Alignment.center,
                                 child: Text(
-                                  'OWNER',
+                                  'HOST',
                                   style: GoogleFonts.outfit(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w900,
-                                    color: _selectedRole == 'host' ? Colors.white : AppTheme.charcoalMuted,
+                                    color: _selectedRole == 'host'
+                                        ? Colors.white
+                                        : AppTheme.charcoalMuted,
                                     letterSpacing: 0.5,
                                   ),
                                 ),
@@ -420,14 +428,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           controller: _lgCodeController,
                           decoration: const InputDecoration(
                             labelText: 'Broker LG Code (Optional)',
-                            hintText: 'Enter referral code if referred by a broker',
+                            hintText:
+                                'Enter referral code if referred by a broker',
                             prefixIcon: Icon(Icons.qr_code),
                           ),
                         ),
                       ],
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          labelText: 'Email Address',
+                          prefixIcon: Icon(Icons.email),
+                        ),
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Enter your email' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Password',
+                          prefixIcon: Icon(Icons.lock),
+                        ),
+                        validator: (v) => v == null || v.length < 6
+                            ? 'Password min 6 chars'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _cityController,
+                        decoration: const InputDecoration(
+                          labelText: 'City',
+                          prefixIcon: Icon(Icons.location_city),
+                        ),
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Enter your city' : null,
+                      ),
                       const SizedBox(height: 20),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFAF7F2),
                           borderRadius: BorderRadius.circular(20),
@@ -450,10 +493,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 width: 22,
                                 height: 22,
                                 decoration: BoxDecoration(
-                                  color: _acceptTerms ? AppTheme.primary : Colors.transparent,
+                                  color: _acceptTerms
+                                      ? AppTheme.primary
+                                      : Colors.transparent,
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: _acceptTerms ? AppTheme.primary : AppTheme.charcoalMuted,
+                                    color: _acceptTerms
+                                        ? AppTheme.primary
+                                        : AppTheme.charcoalMuted,
                                     width: 1.5,
                                   ),
                                 ),
@@ -517,7 +564,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(height: 24),
                       auth.isLoading
-                          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                  color: AppTheme.primary))
                           : ElevatedButton(
                               onPressed: _completeRegistration,
                               child: const Text('Complete Registration'),

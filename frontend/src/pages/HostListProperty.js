@@ -562,6 +562,10 @@ const HostListProperty = () => {
     () => (editPropertyId ? `edit_${editPropertyId}` : `new_${user?.user_id || 'anonymous'}`),
     [editPropertyId, user?.user_id]
   );
+  const hostResumePathKey = useMemo(
+    () => `host_resume_path_${user?.user_id || 'anonymous'}`,
+    [user?.user_id]
+  );
 
   const [step, setStep] = useState(() => {
     const editId = new URLSearchParams(window.location.search).get('edit') || window.history.state?.usr?.editPropertyId;
@@ -599,6 +603,8 @@ const HostListProperty = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  const [isImageUrlDialogOpen, setIsImageUrlDialogOpen] = useState(false);
+  const [imageUrlDraft, setImageUrlDraft] = useState('');
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
@@ -635,6 +641,22 @@ const HostListProperty = () => {
       localStorage.setItem(`list_property_form_${draftStorageId}`, JSON.stringify(form));
     }
   }, [form, draftStorageId]);
+
+  useEffect(() => {
+    const hasMeaningfulDraft =
+      Boolean(form.title?.trim()) ||
+      Boolean(form.description?.trim()) ||
+      Boolean(form.address?.trim()) ||
+      Boolean(form.city?.trim()) ||
+      Boolean(form.images?.length);
+
+    if (hasMeaningfulDraft || editPropertyId) {
+      const resumePath = editPropertyId
+        ? `/host/list-property?edit=${encodeURIComponent(editPropertyId)}`
+        : '/host/list-property';
+      localStorage.setItem(hostResumePathKey, resumePath);
+    }
+  }, [form, editPropertyId, hostResumePathKey]);
 
   useEffect(() => {
     if (!editPropertyId && !createdPropertyId) {
@@ -1072,7 +1094,6 @@ const HostListProperty = () => {
     if (k === 'photos') {
       if (form.images.length < 3) return 'Add at least 3 photos';
       if (form.images.length > 15) return 'Maximum 15 photos allowed';
-      if (!form.watermark_confirmed) return 'Please confirm the bottom-right watermark is visible before continuing';
       
       const pureUrls = form.images.map(img => img.split('#')[0]);
       const hasDuplicates = pureUrls.some((url, idx) => pureUrls.indexOf(url) !== idx);
@@ -1218,7 +1239,7 @@ const HostListProperty = () => {
       }
 
       // Default category 'Other'
-      update({ images: [...form.images, `${url}#Other`], watermark_confirmed: false });
+      update({ images: [...form.images, `${url}#Other`], watermark_confirmed: true });
     } catch (err) {
       setError(formatError(err, 'Image upload failed'));
     } finally {
@@ -1228,8 +1249,11 @@ const HostListProperty = () => {
   };
 
   const handleAddImageUrl = () => {
-    const url = window.prompt('Paste image URL:');
-    if (!url) return;
+    const url = imageUrlDraft.trim();
+    if (!url) {
+      setError('Please paste an image URL');
+      return;
+    }
     if (!/^https?:\/\//.test(url)) {
       setError('URL must start with http:// or https://');
       return;
@@ -1246,11 +1270,32 @@ const HostListProperty = () => {
       return;
     }
 
-    update({ images: [...form.images, `${url}#Other`], watermark_confirmed: false });
+    setUploadingPhoto(true);
+    setError('');
+    setIsImageUrlDialogOpen(false);
+
+    uploadAPI.uploadImageFromUrl(url)
+      .then((data) => {
+        const hostedUrl = data.url;
+        const hostedPureUrl = hostedUrl.split('#')[0];
+        if (form.images.some(img => img.split('#')[0] === hostedPureUrl)) {
+          setError('This image is already uploaded');
+          return;
+        }
+        update({ images: [...form.images, `${hostedUrl}#Other`], watermark_confirmed: true });
+        setImageUrlDraft('');
+      })
+      .catch((err) => {
+        setError(formatError(err, 'Image URL upload failed'));
+        setIsImageUrlDialogOpen(true);
+      })
+      .finally(() => {
+        setUploadingPhoto(false);
+      });
   };
 
   const removeImage = (idx) => {
-    update({ images: form.images.filter((_, i) => i !== idx), watermark_confirmed: false });
+    update({ images: form.images.filter((_, i) => i !== idx), watermark_confirmed: true });
   };
 
   const handleVideoUpload = async (e) => {
@@ -1540,6 +1585,7 @@ const HostListProperty = () => {
         await propertyAPI.updateProperty(editPropertyId, buildHostManagePayload());
         localStorage.removeItem(`list_property_form_${draftStorageId}`);
         localStorage.removeItem(`list_property_step_${draftStorageId}`);
+        localStorage.removeItem(hostResumePathKey);
         alert('Property manage details saved successfully.');
         navigate('/host/dashboard');
         return;
@@ -1567,6 +1613,7 @@ const HostListProperty = () => {
       await propertyAPI.submitForVerification(propertyId);
       localStorage.removeItem(`list_property_form_${draftStorageId}`);
       localStorage.removeItem(`list_property_step_${draftStorageId}`);
+      localStorage.removeItem(hostResumePathKey);
       setSuccess(true);
     } catch (err) {
       setError(formatError(err, 'Failed to submit listing'));
@@ -1580,7 +1627,7 @@ const HostListProperty = () => {
     return (
       <div className="min-h-screen bg-stone">
         <Header user={user} logout={logout} navigate={navigate} />
-        <div className="max-w-2xl mx-auto px-4 md:px-6 py-12 md:py-16 text-center">
+        <div className="max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16 text-center">
           <div className="dashboard-card" data-testid="listing-success">
             <CheckCircle2 className="w-20 h-20 text-sage-dark mx-auto mb-4" />
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-charcoal mb-2">Listing submitted!</h2>
@@ -1628,7 +1675,7 @@ const HostListProperty = () => {
     <div className="min-h-screen bg-stone">
       <Header user={user} logout={logout} navigate={navigate} />
 
-      <div className="max-w-4xl mx-auto px-4 md:px-6 py-4 md:py-6">
+      <div className="w-full max-w-[1480px] mx-auto px-5 md:px-8 xl:px-12 py-5 md:py-7">
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-charcoal mb-1" data-testid="form-title">
           List your property
         </h1>
@@ -2511,19 +2558,18 @@ const HostListProperty = () => {
                     data-testid="upload-file-input"
                   />
                 </label>
-                <button type="button" onClick={handleAddImageUrl} className="btn-secondary flex items-center space-x-2" data-testid="add-url-btn">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError('');
+                    setIsImageUrlDialogOpen(true);
+                  }}
+                  className="btn-secondary flex items-center space-x-2"
+                  data-testid="add-url-btn"
+                >
                   <ImageIcon className="w-4 h-4" />
                   <span>Paste URL</span>
                 </button>
-                <label className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
-                  <input
-                    type="checkbox"
-                    checked={!!form.watermark_confirmed}
-                    onChange={(e) => update({ watermark_confirmed: e.target.checked })}
-                    className="h-4 w-4 accent-amber-600"
-                  />
-                  <span>Add watermark compulsory</span>
-                </label>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6" data-testid="photos-grid">
                 {form.images.map((src, idx) => {
@@ -2532,13 +2578,6 @@ const HostListProperty = () => {
                     <div key={src + idx} className="relative group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm transition-all hover:shadow-premium">
                       <div className="relative h-48">
                         <img src={getImageUrl(url)} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
-                        <img
-                          src="/logo.png"
-                          alt=""
-                          aria-hidden="true"
-                          className="pointer-events-none absolute bottom-3 right-3 w-24 max-w-[38%] object-contain"
-                          style={{ opacity: 0.1, filter: 'brightness(0) invert(1)' }}
-                        />
                         <div className="absolute top-2 left-2 flex flex-col gap-2">
                           {idx === 0 && (
                             <span className="text-[10px] bg-terracotta text-white px-2 py-0.5 rounded-full font-bold tracking-tight uppercase tracking-widest">
@@ -2603,18 +2642,71 @@ const HostListProperty = () => {
                         alt={`Preview ${previewImage.index + 1}`}
                         className="w-full max-h-[85vh] object-contain bg-black"
                       />
-                      <img
-                        src="/logo.png"
-                        alt=""
-                        aria-hidden="true"
-                        className="pointer-events-none absolute bottom-6 right-6 w-40 max-w-[32%] object-contain"
-                        style={{ opacity: 0.1, filter: 'brightness(0) invert(1)' }}
-                      />
                       <div className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-charcoal shadow-sm">
                         Full Preview
                       </div>
                     </div>
                   )}
+                </DialogContent>
+              </Dialog>
+
+              <Dialog
+                open={isImageUrlDialogOpen}
+                onOpenChange={(open) => {
+                  setIsImageUrlDialogOpen(open);
+                  if (!open) setImageUrlDraft('');
+                }}
+              >
+                <DialogContent className="max-w-xl border-none rounded-[28px] bg-white p-0 overflow-hidden shadow-2xl">
+                  <DialogTitle className="sr-only">Paste image URL</DialogTitle>
+                  <div className="p-8">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.28em] text-terracotta">
+                          Add Photo By URL
+                        </p>
+                        <h3 className="mt-2 text-2xl font-black tracking-tight text-charcoal">
+                          Paste image link
+                        </h3>
+                        <p className="mt-2 text-sm leading-6 text-charcoal-light">
+                          Add a public image URL and we will save a hosted copy with the same transparent watermark.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-6">
+                      <label className="mb-2 block text-xs font-black uppercase tracking-[0.22em] text-charcoal-muted">
+                        Image URL
+                      </label>
+                      <input
+                        type="url"
+                        value={imageUrlDraft}
+                        onChange={(e) => setImageUrlDraft(e.target.value)}
+                        placeholder="https://example.com/property-photo.jpg"
+                        className="w-full rounded-2xl border border-[#E8D7A8] bg-[#FFFCF4] px-4 py-4 text-sm font-semibold text-charcoal outline-none transition focus:border-terracotta"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="mt-6 flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsImageUrlDialogOpen(false);
+                          setImageUrlDraft('');
+                        }}
+                        className="rounded-full border border-[#E8D7A8] px-5 py-3 text-sm font-black text-charcoal transition hover:bg-stone"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAddImageUrl}
+                        disabled={uploadingPhoto}
+                        className="rounded-full bg-[#8A6A00] px-6 py-3 text-sm font-black text-white transition hover:bg-[#725700] disabled:opacity-60"
+                      >
+                        {uploadingPhoto ? 'Adding...' : 'Add URL'}
+                      </button>
+                    </div>
+                  </div>
                 </DialogContent>
               </Dialog>
 
@@ -3239,7 +3331,7 @@ const HostListProperty = () => {
 
 const Header = ({ user, logout, navigate }) => (
   <header className="header-glass px-4 py-4 animate-fade-in">
-    <div className="max-w-4xl mx-auto flex justify-between items-center flex-wrap gap-2">
+    <div className="w-full max-w-[1480px] mx-auto px-1 md:px-2 flex justify-between items-center flex-wrap gap-2">
       <div className="flex items-center space-x-2">
         <Building2 className="w-5 h-5 text-terracotta" />
         <span className="text-lg font-bold text-charcoal tracking-tight">X-Space360</span>

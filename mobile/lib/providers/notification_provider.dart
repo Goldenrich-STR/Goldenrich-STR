@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 
 class NotificationProvider with ChangeNotifier {
@@ -6,10 +8,27 @@ class NotificationProvider with ChangeNotifier {
   bool _isLoading = false;
   int _unreadCount = 0;
   List<dynamic> _notifications = [];
+  bool _permissionRequested = false;
 
   bool get isLoading => _isLoading;
   int get unreadCount => _unreadCount;
   List<dynamic> get notifications => _notifications;
+  bool get permissionRequested => _permissionRequested;
+
+  Future<void> requestNotificationPermission() async {
+    if (_permissionRequested) return;
+    _permissionRequested = true;
+    try {
+      final status = await Permission.notification.status;
+      if (status.isDenied || status.isRestricted || status.isLimited) {
+        await Permission.notification.request();
+      }
+    } on MissingPluginException {
+      // Plugin may be unavailable until a full app restart after dependency changes.
+    } catch (_) {
+      // Ignore permission channel failures so core app flows still work.
+    }
+  }
 
   Future<void> loadNotifications({bool unreadOnly = false}) async {
     _isLoading = true;

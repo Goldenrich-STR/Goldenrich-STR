@@ -231,7 +231,14 @@ const AuthPage = ({ isAdminLogin = false }) => {
       if (userRole === 'admin') {
         navigate('/admin/dashboard');
       } else if (userRole === 'host') {
-        navigate(requestedNext.startsWith('/host/') ? requestedNext : '/host/dashboard');
+        const savedResumePath = result.user?.user_id
+          ? localStorage.getItem(`host_resume_path_${result.user.user_id}`)
+          : null;
+        navigate(
+          requestedNext.startsWith('/host/')
+            ? requestedNext
+            : (savedResumePath || '/host/dashboard')
+        );
       } else if (userRole === 'broker') {
         navigate('/broker/dashboard');
       } else if (userRole === 'employee') {

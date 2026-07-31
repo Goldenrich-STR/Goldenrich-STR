@@ -12,11 +12,8 @@ WATERMARK_LOGO_CANDIDATES = [
     ROOT_DIR / "frontend" / "public" / "logo.png",
 ]
 WATERMARK_MARGIN_PX = 24
-WATERMARK_WIDTH_RATIO = 0.20
-WATERMARK_OPACITY = 0.32
-WATERMARK_BACKPLATE_OPACITY = 72
-WATERMARK_BACKPLATE_PADDING_X = 14
-WATERMARK_BACKPLATE_PADDING_Y = 10
+WATERMARK_WIDTH_RATIO = 0.14
+WATERMARK_OPACITY = 0.18
 
 
 def _load_logo() -> Image.Image:
@@ -48,14 +45,9 @@ def _build_overlay(base_size: tuple[int, int], logo: Image.Image) -> Image.Image
     resized_logo.putalpha(alpha)
 
     overlay = Image.new("RGBA", (base_width, base_height), (255, 255, 255, 0))
-    plate_width = target_width + (WATERMARK_BACKPLATE_PADDING_X * 2)
-    plate_height = target_height + (WATERMARK_BACKPLATE_PADDING_Y * 2)
-    x = max(WATERMARK_MARGIN_PX, base_width - plate_width - WATERMARK_MARGIN_PX)
-    y = max(WATERMARK_MARGIN_PX, base_height - plate_height - WATERMARK_MARGIN_PX)
-
-    backplate = Image.new("RGBA", (plate_width, plate_height), (0, 0, 0, WATERMARK_BACKPLATE_OPACITY))
-    overlay.alpha_composite(backplate, (x, y))
-    overlay.alpha_composite(resized_logo, (x + WATERMARK_BACKPLATE_PADDING_X, y + WATERMARK_BACKPLATE_PADDING_Y))
+    x = max(WATERMARK_MARGIN_PX, base_width - target_width - WATERMARK_MARGIN_PX)
+    y = max(WATERMARK_MARGIN_PX, base_height - target_height - WATERMARK_MARGIN_PX)
+    overlay.alpha_composite(resized_logo, (x, y))
     return overlay
 
 

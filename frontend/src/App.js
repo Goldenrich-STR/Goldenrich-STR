@@ -97,11 +97,15 @@ const RoleBasedRedirect = () => {
 
   if (!user) return <Navigate to="/login" replace />;
 
+  const hostResumePath = user?.user_id
+    ? localStorage.getItem(`host_resume_path_${user.user_id}`)
+    : null;
+
   switch (user.role) {
     case "admin":
       return <Navigate to="/admin/dashboard" replace />;
     case "host":
-      return <Navigate to="/host/dashboard" replace />;
+      return <Navigate to={hostResumePath || "/host/dashboard"} replace />;
     case "broker":
       return <Navigate to="/broker/dashboard" replace />;
     case "employee":

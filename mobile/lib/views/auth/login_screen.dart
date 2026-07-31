@@ -1169,22 +1169,6 @@ class _LoginScreenState extends State<LoginScreen> {
       _clearOtpFields();
       setState(() => _step = 2); // Go to OTP verification
       _startOtpCountdown();
-      if (auth.demoOtp != null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text('Demo OTP sent: ${auth.demoOtp} (Use this or 123456)'),
-            duration: const Duration(seconds: 10),
-            action: SnackBarAction(
-              label: 'Copy',
-              textColor: const Color(0xFFD4AF37),
-              onPressed: () {
-                _fillOtpDigits(auth.demoOtp!);
-              },
-            ),
-          ),
-        );
-      }
     } else {
       setState(
           () => _errorMessage = 'Failed to send OTP. Please check the number.');
@@ -1300,196 +1284,335 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
+    final title = _step == 3
+        ? 'Complete your profile'
+        : _step == 2
+            ? 'Verify your phone'
+            : _isSignUpMode
+                ? 'Welcome to X-Space360'
+                : 'Welcome to X-Space360';
+    final eyebrow = _step == 3
+        ? 'Finish Registration'
+        : _step == 2
+            ? 'Phone Verification'
+            : _isSignUpMode
+                ? 'Create account'
+                : 'Login/Signup';
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.black, size: 24),
-            onPressed: _handleClose,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      backgroundColor: const Color(0xFFF4F1EA),
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
           child: Form(
             key: _formKey,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 20),
-
-                // Centered Logo
-                Center(
-                  child: GestureDetector(
-                    onTap: () {
-                      _logoTapCount++;
-                      if (_logoTapCount >= 5) {
-                        _logoTapCount = 0;
-                        _showDeveloperSettingsDialog();
-                      }
-                    },
-                    child: const AppLogo(
-                      height: 54,
-                      tintColor: Colors.black,
-                      framed: false,
-                    ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.08),
+                        blurRadius: 32,
+                        offset: const Offset(0, 18),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 28),
-
-                // Title (Airbnb Image 1 style)
-                Text(
-                  _step == 3
-                      ? 'Complete registration'
-                      : _step == 2
-                          ? 'Verification'
-                          : _isSignUpMode
-                              ? 'Create your account'
-                              : 'Welcome back',
-                  style: GoogleFonts.outfit(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.charcoal,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-
-                if (_step == 0) ...[
-                  Container(
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: AppTheme.stone,
-                      borderRadius: BorderRadius.circular(16),
-                      border:
-                          Border.all(color: AppTheme.border.withOpacity(0.5)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _isSignUpMode = false;
-                                _errorMessage = null;
-                              });
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 250),
-                              curve: Curves.easeInOut,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: !_isSignUpMode
-                                    ? Colors.white
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: !_isSignUpMode
-                                    ? [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.06),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 3),
-                                        )
-                                      ]
-                                    : null,
+                  child: Column(
+                    children: [
+                      ClipRRect(
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(28),
+                        ),
+                        child: Stack(
+                          children: [
+                            SizedBox(
+                              height: 250,
+                              width: double.infinity,
+                              child: Image.asset(
+                                'assets/images/hero_villa.jpg',
+                                fit: BoxFit.cover,
                               ),
-                              margin: const EdgeInsets.all(4),
-                              child: Text(
-                                'Sign In',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: !_isSignUpMode
-                                      ? AppTheme.charcoal
-                                      : AppTheme.charcoalMuted,
+                            ),
+                            Positioned.fill(
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.black.withValues(alpha: 0.16),
+                                      Colors.black.withValues(alpha: 0.50),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                _isSignUpMode = true;
-                                _errorMessage = null;
-                              });
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 250),
-                              curve: Curves.easeInOut,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: _isSignUpMode
-                                    ? Colors.white
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: _isSignUpMode
-                                    ? [
-                                        BoxShadow(
-                                          color: Colors.black.withOpacity(0.06),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 3),
-                                        )
-                                      ]
-                                    : null,
-                              ),
-                              margin: const EdgeInsets.all(4),
-                              child: Text(
-                                'Sign Up',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: _isSignUpMode
-                                      ? AppTheme.charcoal
-                                      : AppTheme.charcoalMuted,
+                            Positioned(
+                              top: 18,
+                              left: 18,
+                              child: GestureDetector(
+                                onTap: () {
+                                  _logoTapCount++;
+                                  if (_logoTapCount >= 5) {
+                                    _logoTapCount = 0;
+                                    _showDeveloperSettingsDialog();
+                                  }
+                                },
+                                child: const AppLogo(
+                                  height: 30,
+                                  white: true,
+                                  framed: false,
                                 ),
                               ),
                             ),
-                          ),
+                            Positioned(
+                              top: 14,
+                              right: 14,
+                              child: Material(
+                                color: Colors.white.withValues(alpha: 0.88),
+                                shape: const CircleBorder(),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: AppTheme.charcoal,
+                                    size: 20,
+                                  ),
+                                  onPressed: _handleClose,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              left: 20,
+                              right: 20,
+                              bottom: 18,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Book a Room.\nEnjoy A Villa Getaway',
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 28,
+                                      height: 1.12,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Enjoy the luxuries and privacy of a villa with curated premium stays.',
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 13,
+                                      height: 1.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white.withValues(
+                                        alpha: 0.92,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 9,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.85,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Rooms Starting at Rs.5000+',
+                                      style: GoogleFonts.manrope(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 18, 20, 22),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const AppLogo(
+                              height: 28,
+                              tintColor: Colors.black,
+                              framed: false,
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              eyebrow,
+                              style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.charcoalMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              title,
+                              style: GoogleFonts.manrope(
+                                fontSize: 22,
+                                height: 1.18,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF1C2536),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            if (_step == 0) ...[
+                              _buildAuthTabs(),
+                              const SizedBox(height: 18),
+                            ],
+                            if (_errorMessage != null) ...[
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade50,
+                                  border: Border.all(
+                                    color: Colors.red.shade200,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  _errorMessage!,
+                                  style: GoogleFonts.manrope(
+                                    color: Colors.red.shade900,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                            ],
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 300),
+                              child: _buildFormContent(auth),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              'By continuing, you agree to our Terms & Conditions and Privacy Policy',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.manrope(
+                                fontSize: 11,
+                                height: 1.45,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.charcoalMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 24),
-                ],
-
-                // Error Banner
-                if (_errorMessage != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      border: Border.all(color: Colors.red.shade200),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      _errorMessage!,
-                      style:
-                          TextStyle(color: Colors.red.shade900, fontSize: 13),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
-
-                // Form Steps
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: _buildFormContent(auth),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildAuthTabs() {
+    return Container(
+      height: 52,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F6FC),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isSignUpMode = false;
+                  _errorMessage = null;
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                margin: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: !_isSignUpMode ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: !_isSignUpMode
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Sign In',
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: !_isSignUpMode
+                        ? AppTheme.charcoal
+                        : AppTheme.charcoalMuted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isSignUpMode = true;
+                  _errorMessage = null;
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                margin: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: _isSignUpMode ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: _isSignUpMode
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Sign Up',
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: _isSignUpMode
+                        ? AppTheme.charcoal
+                        : AppTheme.charcoalMuted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1837,6 +1960,101 @@ class _LoginScreenState extends State<LoginScreen> {
         key: const ValueKey('step3'),
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Center(
+            child: Text(
+              'SELECT ROLE',
+              style: GoogleFonts.outfit(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoalMuted,
+                letterSpacing: 1.0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedRole = 'guest';
+                      _lgCodeController.clear();
+                      _employeeCodeController.clear();
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _selectedRole == 'guest'
+                          ? AppTheme.primary
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: _selectedRole == 'guest'
+                            ? AppTheme.primary
+                            : AppTheme.border,
+                        width: 1,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'GUEST',
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: _selectedRole == 'guest'
+                            ? Colors.white
+                            : AppTheme.charcoalMuted,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedRole = 'host';
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _selectedRole == 'host'
+                          ? AppTheme.primary
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: _selectedRole == 'host'
+                            ? AppTheme.primary
+                            : AppTheme.border,
+                        width: 1,
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      'HOST',
+                      style: GoogleFonts.outfit(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: _selectedRole == 'host'
+                            ? Colors.white
+                            : AppTheme.charcoalMuted,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
           Text(
             'FULL NAME',
             style: GoogleFonts.outfit(
@@ -1864,6 +2082,30 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             validator: (v) => v == null || v.isEmpty ? 'Enter your name' : null,
           ),
+          if (_selectedRole == 'host') ...[
+            const SizedBox(height: 16),
+            _buildRegistrationDropdown(
+              label: 'BROKER CODE',
+              hint: '-- Select Broker Code --',
+              value: _lgCodeController.text,
+              items: _availableBrokers,
+              codeKey: 'lg_code',
+              onChanged: (value) {
+                setState(() => _lgCodeController.text = value ?? '');
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildRegistrationDropdown(
+              label: 'EMPLOYEE CODE',
+              hint: '-- Select Employee Code --',
+              value: _employeeCodeController.text,
+              items: _availableEmployees,
+              codeKey: 'employee_code',
+              onChanged: (value) {
+                setState(() => _employeeCodeController.text = value ?? '');
+              },
+            ),
+          ],
           const SizedBox(height: 16),
 
           Text(
@@ -2002,123 +2244,6 @@ class _LoginScreenState extends State<LoginScreen> {
           _buildCityAutocomplete(),
           const SizedBox(height: 20),
 
-          Center(
-            child: Text(
-              'SELECT ROLE',
-              style: GoogleFonts.outfit(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.charcoalMuted,
-                letterSpacing: 1.0,
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedRole = 'guest';
-                      _lgCodeController.clear();
-                      _employeeCodeController.clear();
-                    });
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: _selectedRole == 'guest'
-                          ? AppTheme.primary
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: _selectedRole == 'guest'
-                            ? AppTheme.primary
-                            : AppTheme.border,
-                        width: 1,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'GUEST',
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: _selectedRole == 'guest'
-                            ? Colors.white
-                            : AppTheme.charcoalMuted,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _selectedRole = 'host';
-                    });
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: _selectedRole == 'host'
-                          ? AppTheme.primary
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: _selectedRole == 'host'
-                            ? AppTheme.primary
-                            : AppTheme.border,
-                        width: 1,
-                      ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'HOST',
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: _selectedRole == 'host'
-                            ? Colors.white
-                            : AppTheme.charcoalMuted,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (_selectedRole == 'host') ...[
-            const SizedBox(height: 16),
-            _buildRegistrationDropdown(
-              label: 'BROKER CODE',
-              hint: '-- Select Broker Code --',
-              value: _lgCodeController.text,
-              items: _availableBrokers,
-              codeKey: 'lg_code',
-              onChanged: (value) {
-                setState(() => _lgCodeController.text = value ?? '');
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildRegistrationDropdown(
-              label: 'EMPLOYEE CODE',
-              hint: '-- Select Employee Code --',
-              value: _employeeCodeController.text,
-              items: _availableEmployees,
-              codeKey: 'employee_code',
-              onChanged: (value) {
-                setState(() => _employeeCodeController.text = value ?? '');
-              },
-            ),
-          ],
           const SizedBox(height: 24),
 
           // Accept Terms
@@ -2183,7 +2308,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextSpan(
                           text: 'Terms & Conditions',
                           recognizer: _termsRecognizer,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppTheme.primary,
                             fontWeight: FontWeight.w900,
                           ),
@@ -2192,7 +2317,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextSpan(
                           text: 'Privacy Policy',
                           recognizer: _privacyRecognizer,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppTheme.primary,
                             fontWeight: FontWeight.w900,
                           ),
@@ -2201,7 +2326,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextSpan(
                           text: 'Check-in Instructions',
                           recognizer: _checkinRecognizer,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppTheme.primary,
                             fontWeight: FontWeight.w900,
                           ),

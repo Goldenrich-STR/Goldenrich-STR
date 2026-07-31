@@ -1,13 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/property_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/property_provider.dart';
+import '../../services/api_service.dart';
 import '../../theme.dart';
 import '../auth/login_screen.dart';
 import '../shared/app_logo.dart';
@@ -24,6 +27,7 @@ class LandingScreen extends StatefulWidget {
 }
 
 class _LandingScreenState extends State<LandingScreen> {
+  static const String _recentlyVisitedKey = 'recently_visited_properties';
   String _selectedCity = 'Anywhere';
   String _selectedCategory = 'All Types';
   DateTimeRange? _selectedRange;
@@ -31,38 +35,49 @@ class _LandingScreenState extends State<LandingScreen> {
   late final PageController _heroPageController;
   Timer? _heroTimer;
   int _activeHeroIndex = 0;
+  List<PropertyModel> _recentlyVisitedProperties = [];
+  List<_BlogData> _blogCards = _defaultBlogCards;
 
   static const List<_HeroSlide> _heroSlides = [
     _HeroSlide(
-      image:
-          'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=80',
-      tag: 'RESIDENTIAL SPACES',
-      titlePrefix: 'Cozy Luxury ',
-      titleHighlight: 'Homes',
+      image: 'assets/images/hero_villa.jpg',
+      tag: 'VILLA ESCAPES',
+      titlePrefix: 'Luxury Private ',
+      titleHighlight: 'Villas',
       subtitle:
-          'Elegant stays, refined finishes, and seamless booking for elevated city and leisure escapes.',
-      badge: '50% OFF on 2nd Night*',
+          'Premium villa stays for family trips, celebrations, and peaceful weekend getaways.',
+      badge: 'Private Pool and Scenic Views',
       category: 'residential',
     ),
     _HeroSlide(
       image:
-          'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1400&q=80',
+          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1400&q=80',
+      tag: 'RESIDENTIAL STAYS',
+      titlePrefix: 'Comfortable Premium ',
+      titleHighlight: 'Stays',
+      subtitle:
+          'Elegant homes and apartments designed for smooth short stays and longer city breaks.',
+      badge: 'Verified Homes and Easy Booking',
+      category: 'residential',
+    ),
+    _HeroSlide(
+      image: 'assets/images/hero_commercial_office.jpg',
       tag: 'COMMERCIAL SPACES',
-      titlePrefix: 'Premium Office ',
+      titlePrefix: 'Smart Business ',
       titleHighlight: 'Spaces',
       subtitle:
-          'Elegant work-ready addresses for teams, founders, and business stays.',
-      badge: '15% OFF on Weekday Bookings*',
+          'Modern offices and work-ready spaces for meetings, teams, and professional stays.',
+      badge: 'Office and Workspace Ready',
       category: 'commercial',
     ),
     _HeroSlide(
       image:
           'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1400&q=80',
       tag: 'EVENT DESTINATIONS',
-      titlePrefix: 'Celebrate in ',
-      titleHighlight: 'Style',
+      titlePrefix: 'Celebrate Special ',
+      titleHighlight: 'Events',
       subtitle:
-          'Wedding venues and curated event spaces with hospitality-first experiences.',
+          'Stylish venues for weddings, parties, launches, and memorable gatherings.',
       badge: 'Curated Venue Support Included',
       category: 'event_venue',
     ),
@@ -113,25 +128,37 @@ class _LandingScreenState extends State<LandingScreen> {
     ),
   ];
 
-  static const List<_BlogData> _blogCards = [
+  static const List<_BlogData> _defaultBlogCards = [
     _BlogData(
+      imageUrl:
+          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1400&q=80',
       category: 'X-Space360 Guide',
       title: 'How to choose the right stay on X-Space360',
       excerpt:
           'Compare location, space type, amenities, and host quality before locking your next booking.',
+      content:
+          'Compare location, property type, host credibility, amenities, and booking flexibility before confirming your next stay on X-Space360. Focus on the purpose of your trip first, then shortlist spaces that match your guest count, budget, and experience expectations.',
     ),
     _BlogData(
+      imageUrl:
+          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1400&q=80',
       category: 'Host Success',
       title:
           'How better presentation helps Goldenrich host partners win more bookings',
       excerpt:
           'Cleaner listing photos, better pricing clarity, and stronger trust signals improve conversions faster.',
+      content:
+          'Cleaner visuals, sharper pricing presentation, and stronger trust signals help host partners convert more visitors into bookings. Well-structured listing descriptions and polished imagery can directly improve guest confidence and booking intent.',
     ),
     _BlogData(
+      imageUrl:
+          'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=80',
       category: 'Local Picks',
       title: 'Top Nashik stays for weekends, events, and work trips',
       excerpt:
           'Explore curated homes, venues, and commercial spaces across Nashik and nearby destinations.',
+      content:
+          'Explore curated homes, event venues, villas, and work-friendly spaces across Nashik and nearby destinations. Whether you are planning a weekend break, a celebration, or a professional visit, the right space can shape the whole experience.',
     ),
   ];
 
@@ -177,6 +204,8 @@ class _LandingScreenState extends State<LandingScreen> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PropertyProvider>().searchProperties({});
+      _loadRecentlyVisitedProperties();
+      _loadCmsBlogs();
     });
   }
 
@@ -187,6 +216,68 @@ class _LandingScreenState extends State<LandingScreen> {
     super.dispose();
   }
 
+  Future<void> _loadRecentlyVisitedProperties() async {
+    final prefs = await SharedPreferences.getInstance();
+    try {
+      final raw = jsonDecode(prefs.getString(_recentlyVisitedKey) ?? '[]');
+      if (raw is! List) return;
+      final items = raw
+          .whereType<Map>()
+          .map((item) => PropertyModel.fromJson(Map<String, dynamic>.from(item)))
+          .where((item) => item.propertyId.isNotEmpty)
+          .toList();
+      if (!mounted) return;
+      setState(() => _recentlyVisitedProperties = items);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _recentlyVisitedProperties = []);
+    }
+  }
+
+  Future<void> _loadCmsBlogs() async {
+    try {
+      final response = await ApiService().dio.get('/cms/landing-page');
+      final blogPosts = response.data?['blog']?['posts'];
+      if (blogPosts is! List) return;
+
+      final nextBlogs = blogPosts
+          .whereType<Map>()
+          .where((post) => post['is_active'] != false)
+          .map((post) {
+            final item = Map<String, dynamic>.from(post);
+            return _BlogData(
+              imageUrl: item['image_url']?.toString().isNotEmpty == true
+                  ? item['image_url'].toString()
+                  : item['img']?.toString().isNotEmpty == true
+                      ? item['img'].toString()
+                      : _defaultBlogCards.first.imageUrl,
+              category:
+                  (item['category']?.toString().trim().isNotEmpty == true)
+                      ? item['category'].toString()
+                      : 'X-Space360 Journal',
+              title: (item['title']?.toString().trim().isNotEmpty == true)
+                  ? item['title'].toString()
+                  : 'Untitled',
+              excerpt: (item['excerpt']?.toString().trim().isNotEmpty == true)
+                  ? item['excerpt'].toString()
+                      : (item['content']?.toString().trim().isNotEmpty == true)
+                          ? item['content'].toString()
+                          : 'Discover more from X-Space360.',
+              content: (item['content']?.toString().trim().isNotEmpty == true)
+                  ? item['content'].toString()
+                  : (item['excerpt']?.toString().trim().isNotEmpty == true)
+                      ? item['excerpt'].toString()
+                      : 'Discover more from X-Space360.',
+            );
+          })
+          .take(6)
+          .toList();
+
+      if (!mounted || nextBlogs.isEmpty) return;
+      setState(() => _blogCards = nextBlogs);
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
@@ -195,6 +286,7 @@ class _LandingScreenState extends State<LandingScreen> {
     final residential = _filterByCategory(properties, 'residential');
     final commercial = _filterByCategory(properties, 'commercial');
     final event = _filterEvent(properties);
+    final villas = _filterByPropertyType(properties, const ['villa', 'resort']);
     final featured = properties.take(6).toList();
 
     return Scaffold(
@@ -208,9 +300,19 @@ class _LandingScreenState extends State<LandingScreen> {
             child: _buildDestinationStrip(),
           ),
           SliverToBoxAdapter(
+            child: _buildRecentlyVisitedSection(),
+          ),
+          SliverToBoxAdapter(
+            child: _buildCollections(
+              title: 'Villas & Resorts',
+              subtitle: 'Private pool villas, vineyard escapes, and destination-led premium stays.',
+              properties: villas.isNotEmpty ? villas : residential,
+            ),
+          ),
+          SliverToBoxAdapter(
             child: _buildCollections(
               title: 'Residential Collection',
-              subtitle: 'Luxury homes, apartments, and private stays.',
+              subtitle: 'Managed homes, elegant apartments, and private family stays.',
               properties: residential.isNotEmpty ? residential : featured,
             ),
           ),
@@ -228,12 +330,9 @@ class _LandingScreenState extends State<LandingScreen> {
               properties: event.isNotEmpty ? event : featured,
             ),
           ),
-          SliverToBoxAdapter(child: _buildPromoSection()),
           SliverToBoxAdapter(child: _buildHostBanner(auth)),
           SliverToBoxAdapter(child: _buildTestimonialSection()),
           SliverToBoxAdapter(child: _buildBlogSection()),
-          SliverToBoxAdapter(child: _buildChatbotSection()),
-          SliverToBoxAdapter(child: _buildFooter()),
         ],
       ),
       floatingActionButton: GestureDetector(
@@ -317,15 +416,19 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
             children: [
-              _buildCategorySelectorItem(
-                  'Residential', Icons.home_work_outlined, 'residential'),
+              _buildCategorySelectorItem('Residential',
+                  Icons.home_work_outlined, 'residential'),
               _buildCategorySelectorItem(
                   'Commercial', Icons.business_center_outlined, 'commercial'),
               _buildCategorySelectorItem(
-                  'Events Venue', Icons.event_seat_outlined, 'event_venue'),
+                  'Events', Icons.event_seat_outlined, 'event_venue'),
+              _buildCategorySelectorItem(
+                  'Villas', Icons.villa_outlined, 'residential',
+                  propertyType: 'villa'),
             ],
           ),
         ],
@@ -334,8 +437,13 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   Widget _buildCategorySelectorItem(
-      String label, IconData icon, String categoryValue) {
-    return Expanded(
+    String label,
+    IconData icon,
+    String categoryValue, {
+    String? propertyType,
+  }) {
+    return SizedBox(
+      width: (MediaQuery.of(context).size.width - 50) / 2,
       child: GestureDetector(
         onTap: () {
           Navigator.push(
@@ -343,6 +451,7 @@ class _LandingScreenState extends State<LandingScreen> {
             MaterialPageRoute(
               builder: (_) => GuestBrowseScreen(
                 initialCategory: categoryValue,
+                initialPropertyType: propertyType,
               ),
             ),
           );
@@ -407,13 +516,21 @@ class _LandingScreenState extends State<LandingScreen> {
               return Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.network(
-                    slide.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(color: AppTheme.secondary);
-                    },
-                  ),
+                  slide.image.startsWith('assets/')
+                      ? Image.asset(
+                          slide.image,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(color: AppTheme.secondary);
+                          },
+                        )
+                      : Image.network(
+                          slide.image,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(color: AppTheme.secondary);
+                          },
+                        ),
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -626,7 +743,12 @@ class _LandingScreenState extends State<LandingScreen> {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const AppShell()),
+                    MaterialPageRoute(
+                      builder: (_) => LegacyProfileDashboardScreen(
+                        user: user,
+                        auth: auth,
+                      ),
+                    ),
                   );
                 },
               ),
@@ -911,7 +1033,10 @@ class _LandingScreenState extends State<LandingScreen> {
               separatorBuilder: (_, __) => const SizedBox(width: 16),
               itemBuilder: (context, index) {
                 final property = properties[index];
-                return _PropertyCard(property: property);
+                return _PropertyCard(
+                  property: property,
+                  onViewed: _loadRecentlyVisitedProperties,
+                );
               },
             ),
           ),
@@ -1308,67 +1433,111 @@ class _LandingScreenState extends State<LandingScreen> {
           ),
           const SizedBox(height: 18),
           SizedBox(
-            height: 244,
+            height: 286,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _blogCards.length,
               separatorBuilder: (_, __) => const SizedBox(width: 14),
               itemBuilder: (context, index) {
                 final blog = _blogCards[index];
-                return Container(
-                  width: 288,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppTheme.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.sand,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          blog.category,
-                          style: GoogleFonts.manrope(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.charcoal,
+                return InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => _BlogDetailScreen(blog: blog),
+                      ),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    width: 288,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: AppTheme.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(24),
+                          ),
+                          child: SizedBox(
+                            height: 110,
+                            width: double.infinity,
+                            child: Image.network(
+                              blog.imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: AppTheme.stone,
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.article_outlined,
+                                    color: AppTheme.charcoalMuted,
+                                    size: 30,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      Text(
-                        blog.title,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.manrope(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.charcoal,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: Text(
-                          blog.excerpt,
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
-                            fontSize: 13,
-                            height: 1.65,
-                            color: AppTheme.charcoalMuted,
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.sand,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    blog.category,
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.charcoal,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                Text(
+                                  blog.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.25,
+                                    color: AppTheme.charcoal,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Expanded(
+                                  child: Text(
+                                    blog.excerpt,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.manrope(
+                                      fontSize: 13,
+                                      height: 1.65,
+                                      color: AppTheme.charcoalMuted,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
@@ -1584,12 +1753,112 @@ class _LandingScreenState extends State<LandingScreen> {
           category == 'events_venue';
     }).toList();
   }
+
+  Widget _buildRecentlyVisitedSection() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(height: 1, color: const Color(0xFFEDE7DD)),
+          const SizedBox(height: 28),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Recently Visited',
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.charcoal,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 82,
+                      height: 2,
+                      color: AppTheme.charcoal,
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_left,
+                  color: AppTheme.charcoal, size: 20),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right,
+                  color: AppTheme.charcoal, size: 20),
+            ],
+          ),
+          const SizedBox(height: 18),
+          if (_recentlyVisitedProperties.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F6F1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFEDE7DD)),
+              ),
+              child: Text(
+                'Open any property once and it will appear here just like the website recently visited section.',
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  height: 1.6,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.charcoalMuted,
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: 272,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _recentlyVisitedProperties.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 14),
+                itemBuilder: (context, index) {
+                  final property = _recentlyVisitedProperties[index];
+                  return _RecentlyVisitedCard(
+                    property: property,
+                    onViewed: _loadRecentlyVisitedProperties,
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  List<PropertyModel> _filterByPropertyType(
+    List<PropertyModel> properties,
+    List<String> propertyTypes,
+  ) {
+    final normalizedTypes =
+        propertyTypes.map((type) => type.toLowerCase()).toSet();
+    return properties.where((property) {
+      return normalizedTypes.contains(property.propertyType.toLowerCase());
+    }).toList();
+  }
 }
 
 class _PropertyCard extends StatelessWidget {
   final PropertyModel property;
+  final Future<void> Function() onViewed;
 
-  const _PropertyCard({required this.property});
+  const _PropertyCard({required this.property, required this.onViewed});
+
+  bool get _isSignatureSeries {
+    final type = property.propertyType.toLowerCase();
+    return property.pricePerNight >= 50000 &&
+        (type.contains('villa') ||
+            type.contains('resort') ||
+            property.category.toLowerCase() == 'residential');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1599,14 +1868,15 @@ class _PropertyCard extends StatelessWidget {
     return SizedBox(
       width: 250,
       child: InkWell(
-        onTap: () {
-          Navigator.push(
+        onTap: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) =>
                   PropertyDetailScreen(propertyId: property.propertyId),
             ),
           );
+          await onViewed();
         },
         borderRadius: BorderRadius.circular(26),
         child: Column(
@@ -1644,22 +1914,60 @@ class _PropertyCard extends StatelessWidget {
                   Positioned(
                     top: 12,
                     left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.88),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        property.category.toUpperCase(),
-                        style: GoogleFonts.manrope(
-                          color: AppTheme.charcoal,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.0,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.88),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            property.category.toUpperCase(),
+                            style: GoogleFonts.manrope(
+                              color: AppTheme.charcoal,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (_isSignatureSeries) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.92),
+                              borderRadius: BorderRadius.circular(999),
+                              border:
+                                  Border.all(color: const Color(0xFFD4AF37)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.workspace_premium_rounded,
+                                  color: Color(0xFFD4AF37),
+                                  size: 12,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'SIGNATURE SERIES',
+                                  style: GoogleFonts.manrope(
+                                    color: const Color(0xFFD4AF37),
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   Positioned(
@@ -1734,6 +2042,168 @@ class _PropertyCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentlyVisitedCard extends StatelessWidget {
+  final PropertyModel property;
+  final Future<void> Function() onViewed;
+
+  const _RecentlyVisitedCard({
+    required this.property,
+    required this.onViewed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final image = property.images.isNotEmpty ? property.images.first : null;
+    final rating = property.rating ?? 4.8;
+
+    return SizedBox(
+      width: 258,
+      child: InkWell(
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  PropertyDetailScreen(propertyId: property.propertyId),
+            ),
+          );
+          await onViewed();
+        },
+        borderRadius: BorderRadius.circular(22),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: const Color(0xFFEDEDED)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(22),
+                ),
+                child: SizedBox(
+                  height: 152,
+                  width: double.infinity,
+                  child: image != null
+                      ? Image.network(
+                          image,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: AppTheme.stone,
+                            child: const Icon(
+                              Icons.home_work_outlined,
+                              color: AppTheme.charcoalMuted,
+                              size: 32,
+                            ),
+                          ),
+                        )
+                      : Container(
+                          color: AppTheme.stone,
+                          child: const Icon(
+                            Icons.home_work_outlined,
+                            color: AppTheme.charcoalMuted,
+                            size: 32,
+                          ),
+                        ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            property.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.manrope(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.charcoal,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.star_rounded,
+                                size: 15, color: AppTheme.primary),
+                            const SizedBox(width: 3),
+                            Text(
+                              rating.toStringAsFixed(1),
+                              style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.charcoal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined,
+                            size: 14, color: AppTheme.charcoalMuted),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            '${property.city}${property.state.isNotEmpty ? ', ${property.state}' : ''}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.manrope(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.charcoalMuted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.only(top: 10),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          top: BorderSide(color: Color(0xFFF0F0F0)),
+                        ),
+                      ),
+                      child: Text(
+                        'Up to ${property.maxGuests} Guests - ${property.bhkType.isNotEmpty ? property.bhkType.toUpperCase() : property.propertyType.replaceAll('_', ' ')}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.manrope(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.charcoalMuted,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -2119,15 +2589,131 @@ class _PromoCardData {
 }
 
 class _BlogData {
+  final String imageUrl;
   final String category;
   final String title;
   final String excerpt;
+  final String content;
 
   const _BlogData({
+    required this.imageUrl,
     required this.category,
     required this.title,
     required this.excerpt,
+    required this.content,
   });
+}
+
+class _BlogDetailScreen extends StatelessWidget {
+  final _BlogData blog;
+
+  const _BlogDetailScreen({required this.blog});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F4EE),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF7F4EE),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              color: AppTheme.charcoal),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Blog',
+          style: GoogleFonts.manrope(
+            color: AppTheme.charcoal,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: AspectRatio(
+                aspectRatio: 16 / 10,
+                child: Image.network(
+                  blog.imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: AppTheme.stone,
+                    child: const Center(
+                      child: Icon(
+                        Icons.article_outlined,
+                        size: 38,
+                        color: AppTheme.charcoalMuted,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: AppTheme.sand,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                blog.category,
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              blog.title,
+              style: GoogleFonts.manrope(
+                fontSize: 28,
+                height: 1.2,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.charcoal,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              blog.excerpt,
+              style: GoogleFonts.manrope(
+                fontSize: 15,
+                height: 1.7,
+                color: AppTheme.charcoalMuted,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppTheme.border),
+              ),
+              child: Text(
+                blog.content,
+                style: GoogleFonts.manrope(
+                  fontSize: 15,
+                  height: 1.85,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _FooterSectionData {
@@ -2244,18 +2830,21 @@ class _AccountActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = destructive ? Colors.redAccent : AppTheme.charcoal;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: color),
-      title: Text(
-        label,
-        style: GoogleFonts.manrope(
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
-          color: color,
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: Icon(icon, color: color),
+        title: Text(
+          label,
+          style: GoogleFonts.manrope(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
         ),
+        onTap: onTap,
       ),
-      onTap: onTap,
     );
   }
 }

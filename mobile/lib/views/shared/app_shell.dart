@@ -5,6 +5,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/property_provider.dart';
 import '../../models/property_model.dart';
+import '../../config.dart';
+import '../../services/api_service.dart';
 import '../../services/localization_service.dart';
 import '../../theme.dart';
 import '../auth/login_screen.dart';
@@ -23,6 +25,7 @@ import 'support_tickets_screen.dart';
 import '../broker/broker_dashboard_screen.dart';
 import '../employee/employee_dashboard_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AppShell extends StatefulWidget {
   final int initialIndex;
@@ -68,8 +71,10 @@ class _AppShellState extends State<AppShell> {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NotificationProvider>(context, listen: false)
-          .loadUnreadCount();
+      final notifications =
+          Provider.of<NotificationProvider>(context, listen: false);
+      notifications.requestNotificationPermission();
+      notifications.loadUnreadCount();
     });
   }
 
@@ -102,10 +107,7 @@ class _AppShellState extends State<AppShell> {
           message: 'Please sign in to view and manage your property bookings.',
         ),
         const AIChatScreen(),
-        const _UnauthenticatedPlaceholder(
-          title: 'Profile',
-          message: 'Please sign in to view your profile and account settings.',
-        ),
+        _ModernProfileTab(user: null, auth: auth),
       ];
       navItems = const [
         BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Homes'),
@@ -126,7 +128,7 @@ class _AppShellState extends State<AppShell> {
           const _WishlistsTab(isAuthenticated: true),
           const GuestBookingsScreen(),
           const AIChatScreen(),
-          _ProfileTab(user: user, auth: auth),
+          _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = [
           const BottomNavigationBarItem(
@@ -146,7 +148,7 @@ class _AppShellState extends State<AppShell> {
           const _WishlistsTab(isAuthenticated: true),
           const HostDashboardScreen(),
           const AIChatScreen(),
-          _ProfileTab(user: user, auth: auth),
+          _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = const [
           BottomNavigationBarItem(
@@ -166,7 +168,7 @@ class _AppShellState extends State<AppShell> {
           const _WishlistsTab(isAuthenticated: true),
           const BrokerDashboardScreen(),
           const AIChatScreen(),
-          _ProfileTab(user: user, auth: auth),
+          _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = const [
           BottomNavigationBarItem(
@@ -186,7 +188,7 @@ class _AppShellState extends State<AppShell> {
           const _WishlistsTab(isAuthenticated: true),
           const EmployeeDashboardScreen(),
           const AIChatScreen(),
-          _ProfileTab(user: user, auth: auth),
+          _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = const [
           BottomNavigationBarItem(
@@ -206,7 +208,7 @@ class _AppShellState extends State<AppShell> {
           const _WishlistsTab(isAuthenticated: true),
           const AdminDashboardScreen(),
           const AIChatScreen(),
-          _ProfileTab(user: user, auth: auth),
+          _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = const [
           BottomNavigationBarItem(
@@ -223,7 +225,7 @@ class _AppShellState extends State<AppShell> {
       } else {
         screens = [
           const Center(child: Text('Unknown Role')),
-          _ProfileTab(user: user, auth: auth),
+          _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = const [
           BottomNavigationBarItem(
@@ -500,8 +502,8 @@ class _HostProfileDrawer extends StatelessWidget {
                     _HostDrawerItem(
                       icon: Icons.person_outline_rounded,
                       label: 'Profile',
-                      onTap: () =>
-                          _push(context, _ProfileTab(user: user, auth: auth)),
+                      onTap: () => _push(
+                          context, _ModernProfileTab(user: user, auth: auth)),
                     ),
                     _HostDrawerItem(
                       icon: Icons.logout_rounded,
@@ -732,8 +734,8 @@ class _BrokerProfileDrawer extends StatelessWidget {
                     _HostDrawerItem(
                       icon: Icons.person_outline_rounded,
                       label: 'Profile',
-                      onTap: () =>
-                          _push(context, _ProfileTab(user: user, auth: auth)),
+                      onTap: () => _push(
+                          context, _ModernProfileTab(user: user, auth: auth)),
                     ),
                     _HostDrawerItem(
                       icon: Icons.logout_rounded,
@@ -839,11 +841,610 @@ class _HostDrawerItem extends StatelessWidget {
   }
 }
 
-class _ProfileTab extends StatelessWidget {
+class _ModernProfileTab extends StatefulWidget {
   final dynamic user;
   final AuthProvider auth;
 
-  const _ProfileTab({required this.user, required this.auth});
+  const _ModernProfileTab({required this.user, required this.auth});
+
+  @override
+  State<_ModernProfileTab> createState() => _ModernProfileTabState();
+}
+
+class _ModernProfileTabState extends State<_ModernProfileTab> {
+  String _termsText =
+      'By using X-Space360, users agree to follow booking, listing, verification, payment, cancellation, and platform conduct rules published by X-Space360.';
+  String _privacyText =
+      'X-Space360 respects your privacy. We collect only the information needed to manage accounts, property listings, bookings, support, verification, and secure platform operations.';
+  String _refundText =
+      'Refund timelines depend on cancellation window, booking status, property policy, and payment verification.';
+  List<_LegalPolicyItem> _legalPolicies = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchCmsLegalContent();
+  }
+
+  Future<void> _fetchCmsLegalContent() async {
+    try {
+      final response = await ApiService().dio.get('/cms/landing-page');
+      if (response.statusCode == 200 && response.data != null) {
+        final footer = response.data['footer'];
+        final legalTerms = response.data['legal_terms'];
+        if (mounted) {
+          setState(() {
+            if ((footer['terms_text'] ?? '').toString().isNotEmpty) {
+              _termsText = footer['terms_text'].toString();
+            }
+            if ((footer['privacy_text'] ?? '').toString().isNotEmpty) {
+              _privacyText = footer['privacy_text'].toString();
+            }
+            if ((footer['refund_text'] ?? '').toString().isNotEmpty) {
+              _refundText = footer['refund_text'].toString();
+            }
+            if (legalTerms != null) {
+              if ((legalTerms['terms_text'] ?? '').toString().isNotEmpty) {
+                _termsText = legalTerms['terms_text'].toString();
+              }
+              if ((legalTerms['privacy_text'] ?? '').toString().isNotEmpty) {
+                _privacyText = legalTerms['privacy_text'].toString();
+              }
+              if ((legalTerms['refund_text'] ?? '').toString().isNotEmpty) {
+                _refundText = legalTerms['refund_text'].toString();
+              }
+              _legalPolicies = _buildLegalPolicies(legalTerms);
+            }
+          });
+        }
+      }
+    } catch (_) {}
+  }
+
+  List<_LegalPolicyItem> _buildLegalPolicies(dynamic legalTerms) {
+    final items = <_LegalPolicyItem>[
+      if (_privacyText.trim().isNotEmpty)
+        _LegalPolicyItem(
+          icon: Icons.privacy_tip_outlined,
+          label: (legalTerms['privacy_label'] ?? 'Privacy Policy').toString(),
+          title: 'Privacy Policy',
+          content: _privacyText,
+        ),
+      if (_termsText.trim().isNotEmpty)
+        _LegalPolicyItem(
+          icon: Icons.gavel_outlined,
+          label:
+              (legalTerms['terms_label'] ?? 'Terms & Conditions').toString(),
+          title: 'Terms & Conditions',
+          content: _termsText,
+        ),
+      if (_refundText.trim().isNotEmpty)
+        _LegalPolicyItem(
+          icon: Icons.receipt_long_outlined,
+          label: (legalTerms['refund_label'] ?? 'Refund Policy').toString(),
+          title: 'Refund Policy',
+          content: _refundText,
+        ),
+    ];
+
+    final customPolicies = legalTerms['custom_policies'];
+    if (customPolicies is List) {
+      for (final policy in customPolicies) {
+        if (policy is! Map) continue;
+        final text = (policy['text'] ?? '').toString().trim();
+        final status = (policy['status'] ?? '').toString().toLowerCase();
+        if (text.isEmpty || status == 'archived') continue;
+
+        items.add(
+          _LegalPolicyItem(
+            icon: policy['type'] == 'agreement'
+                ? Icons.assignment_outlined
+                : Icons.policy_outlined,
+            label: (policy['label'] ?? policy['title'] ?? 'Legal Policy')
+                .toString(),
+            title: (policy['title'] ?? policy['label'] ?? 'Legal Policy')
+                .toString(),
+            content: text,
+          ),
+        );
+      }
+    }
+
+    return items;
+  }
+
+  Future<void> _openWebPage(String path) async {
+    final uri = Uri.parse('${AppConfig.webBaseUrl}$path');
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  void _showDocumentDialog(String title, String content) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.border,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                title,
+                style: GoogleFonts.manrope(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Text(
+                    content,
+                    style: GoogleFonts.manrope(
+                      fontSize: 14,
+                      height: 1.65,
+                      color: AppTheme.charcoalMuted,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLegalSheet() {
+    final legalItems = _legalPolicies.isNotEmpty
+        ? _legalPolicies
+        : [
+            _LegalPolicyItem(
+              icon: Icons.privacy_tip_outlined,
+              label: 'Privacy Policy',
+              title: 'Privacy Policy',
+              content: _privacyText,
+            ),
+            _LegalPolicyItem(
+              icon: Icons.gavel_outlined,
+              label: 'Terms & Conditions',
+              title: 'Terms & Conditions',
+              content: _termsText,
+            ),
+            _LegalPolicyItem(
+              icon: Icons.receipt_long_outlined,
+              label: 'Refund Policy',
+              title: 'Refund Policy',
+              content: _refundText,
+            ),
+          ];
+
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...legalItems.map(
+                (item) => _ProfileOptionTile(
+                  icon: item.icon,
+                  label: item.label,
+                  compact: true,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showDocumentDialog(item.title, item.content);
+                  },
+                ),
+              ),
+              _ProfileOptionTile(
+                icon: Icons.open_in_browser_rounded,
+                label: 'Open legal pages on website',
+                compact: true,
+                onTap: () {
+                  Navigator.pop(context);
+                  _openWebPage('/legal');
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAccountSettings(dynamic user, LocaleProvider localeProvider) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 26),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _ProfileInfoRow(
+                icon: Icons.email_outlined,
+                title: 'Email',
+                value: user.email,
+              ),
+              _ProfileInfoRow(
+                icon: Icons.phone_outlined,
+                title: 'Phone',
+                value: user.phone,
+              ),
+              _ProfileInfoRow(
+                icon: Icons.location_city_outlined,
+                title: 'City',
+                value: user.city,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: localeProvider.currentLocale,
+                decoration: const InputDecoration(
+                  labelText: 'App Language',
+                  prefixIcon: Icon(Icons.language_rounded),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'en', child: Text('English')),
+                  DropdownMenuItem(value: 'hi', child: Text('Hindi')),
+                  DropdownMenuItem(value: 'mr', child: Text('Marathi')),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    localeProvider.setLocale(val);
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final localeProvider = Provider.of<LocaleProvider>(context);
+    final user = widget.user;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(
+          'Profile',
+          style: GoogleFonts.manrope(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.charcoal,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(22, 8, 22, 30),
+        children: [
+          if (user == null) ...[
+            Text(
+              'Log in and start planning your next trip.',
+              style: GoogleFonts.manrope(
+                fontSize: 15,
+                color: AppTheme.charcoalMuted,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 22),
+            SizedBox(
+              height: 56,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.secondary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+                child: Text(
+                  'Log in or sign up',
+                  style: GoogleFonts.manrope(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ] else ...[
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppTheme.stone,
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: const Icon(
+                      Icons.person_outline_rounded,
+                      color: AppTheme.primary,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          user.fullName,
+                          style: GoogleFonts.manrope(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.charcoal,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          user.email,
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            color: AppTheme.charcoalMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Role: ${user.role.toUpperCase()}',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 28),
+          _ProfileOptionTile(
+            icon: Icons.settings_outlined,
+            label: 'Account settings',
+            onTap: () {
+              if (user == null) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+                return;
+              }
+              _showAccountSettings(user, localeProvider);
+            },
+          ),
+          _ProfileOptionTile(
+            icon: Icons.help_outline_rounded,
+            label: 'Get help',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const SupportTicketsScreen(),
+                ),
+              );
+            },
+          ),
+          _ProfileOptionTile(
+            icon: Icons.article_outlined,
+            label: 'Legal',
+            onTap: _showLegalSheet,
+          ),
+          if (user != null) ...[
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 54,
+              child: ElevatedButton(
+                onPressed: () async {
+                  await widget.auth.logout();
+                  if (!context.mounted) return;
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const LoginScreen(),
+                    ),
+                    (route) => false,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.secondary,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+                child: Text(
+                  localeProvider.translate('sign_out'),
+                  style: GoogleFonts.manrope(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LegalPolicyItem {
+  final IconData icon;
+  final String label;
+  final String title;
+  final String content;
+
+  const _LegalPolicyItem({
+    required this.icon,
+    required this.label,
+    required this.title,
+    required this.content,
+  });
+}
+
+class _ProfileOptionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool compact;
+
+  const _ProfileOptionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 0 : 2,
+          vertical: compact ? 8 : 15,
+        ),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: Colors.grey.shade200),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppTheme.charcoal, size: 24),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.manrope(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppTheme.charcoalMuted,
+              size: 24,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileInfoRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+
+  const _ProfileInfoRow({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppTheme.charcoalMuted, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.charcoalMuted,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value.isEmpty ? '-' : value,
+                  style: GoogleFonts.manrope(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.charcoal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class LegacyProfileDashboardScreen extends StatelessWidget {
+  final dynamic user;
+  final AuthProvider auth;
+
+  const LegacyProfileDashboardScreen({
+    super.key,
+    required this.user,
+    required this.auth,
+  });
 
   @override
   Widget build(BuildContext context) {

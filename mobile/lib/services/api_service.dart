@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config.dart';
+import 'session_storage.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -22,8 +23,7 @@ class ApiService {
     // Request interceptor to add Authorization token
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final prefs = await SharedPreferences.getInstance();
-        final token = prefs.getString('propnest_token');
+        final token = await SessionStorage.readToken();
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
@@ -40,10 +40,7 @@ class ApiService {
       },
       onError: (DioException e, handler) async {
         if (e.response?.statusCode == 401) {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.remove('propnest_token');
-          await prefs.remove('propnest_user');
-          // In a real application, you'd trigger a stream or state change to redirect the user to login.
+          await SessionStorage.clearSession();
         }
         return handler.next(e);
       },

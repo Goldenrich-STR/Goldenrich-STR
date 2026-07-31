@@ -287,17 +287,12 @@ class AdminProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      print('DEBUG: Calling getCMSContent...');
       final response = await _apiService.dio
           .get('/cms/admin/content', queryParameters: {'page': 'landing'});
-      print('DEBUG: getCMSContent status code: ${response.statusCode}');
-      print('DEBUG: getCMSContent response data: ${response.data}');
       if (response.statusCode == 200) {
         _cmsContent = response.data['content'] ?? [];
-        print('DEBUG: loaded ${_cmsContent.length} CMS items');
       }
     } catch (e) {
-      print('DEBUG: Error in getCMSContent: $e');
       _cmsContent = [];
     } finally {
       _isLoading = false;
@@ -310,20 +305,16 @@ class AdminProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      print('DEBUG: Calling updateCMSContent for $contentId...');
-      print('DEBUG: updateCMSContent payload: $data');
       final response = await _apiService.dio.patch(
         '/cms/admin/content/$contentId',
         data: {'content_data': data},
       );
-      print('DEBUG: updateCMSContent status: ${response.statusCode}');
       if (response.statusCode == 200) {
         await getCMSContent();
         return true;
       }
       return false;
     } catch (e) {
-      print('DEBUG: Error in updateCMSContent: $e');
       return false;
     } finally {
       _isLoading = false;

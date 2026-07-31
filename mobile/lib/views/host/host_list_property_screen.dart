@@ -666,8 +666,8 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
             );
         }
 
-        final savedVeg =
-            List<Map<String, dynamic>>.from(draft['vegPackageItems'] ?? const []);
+        final savedVeg = List<Map<String, dynamic>>.from(
+            draft['vegPackageItems'] ?? const []);
         if (savedVeg.length == _vegPackageItems.length) {
           for (var i = 0; i < savedVeg.length; i++) {
             _vegPackageItems[i].count =
@@ -852,7 +852,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           );
           resolvedUrl = redirectResponse.realUri.toString();
         } catch (e) {
-          print("Redirect resolve error: $e");
+          // Ignore redirect parsing failure and continue with the provided URL.
         }
       }
 
@@ -1023,7 +1023,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
         }
       }
     } catch (e) {
-      print('Google Maps Link Parsing Error: $e');
+      // Ignore invalid Maps URLs and fall back to manual entry.
     } finally {
       if (mounted) {
         setState(() {

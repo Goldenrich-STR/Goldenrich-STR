@@ -38,6 +38,7 @@ import {
   Camera,
   Sparkles,
   Tag,
+  Crown,
   Lock,
   Minus,
   Plus
@@ -1075,6 +1076,12 @@ const PropertyDetail = () => {
   const propertyCity = property.city || 'India';
   const bedroomLabel = getBhkTypeLabel(property.category, property.bhk_type || property.bedrooms, property.max_guests);
   const guestCapacity = Number(property.guestCapacity || property.max_guests || property.maxGuests || 0);
+  const propertyTypeValue = `${property.property_type || property.propertyType || property.type || ''}`.toLowerCase();
+  const isSignatureSeries = Number(property.price_per_night || property.price || 0) >= 50000 && (
+    propertyTypeValue.includes('villa') ||
+    propertyTypeValue.includes('resort') ||
+    property.category === 'residential'
+  );
   const seoImages = images
     .map((img) => toAbsoluteSiteUrl(img))
     .filter(Boolean);
@@ -1235,10 +1242,16 @@ const PropertyDetail = () => {
 
       <div className="max-w-7xl mx-auto px-8 py-8">
         <div className="mb-8 animate-fade-in">
-           <div className="flex items-center space-x-2 mb-3">
+           <div className="flex items-center gap-2 flex-wrap mb-3">
               <span className="px-3 py-1 bg-terracotta/10 text-terracotta text-[10px] font-bold tracking-tight uppercase tracking-[0.2em] rounded-full">
                 {formatCategoryLabel(property.category)}
               </span>
+              {isSignatureSeries && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black border border-[#D4AF37] text-[9px] font-serif font-bold uppercase tracking-[0.15em] text-[#D4AF37] shadow-lg shrink-0">
+                  <Crown className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
+                  Signature Series
+                </span>
+              )}
               {property.instant_booking && (
                 <span className="flex items-center text-amber-500 text-[10px] font-bold tracking-tight uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
                   <Zap className="w-3 h-3 mr-1 fill-current" /> {t('instant')}

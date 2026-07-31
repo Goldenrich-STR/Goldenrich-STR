@@ -296,6 +296,13 @@ export const uploadAPI = {
       url: getImageUrl(res.data.url),
     };
   },
+  uploadImageFromUrl: async (url) => {
+    const res = await apiClient.post('/upload/image-from-url', { url });
+    return {
+      ...res.data,
+      url: getImageUrl(res.data.url),
+    };
+  },
   uploadDocument: async (file) => {
     const formData = new FormData();
     formData.append('file', file);

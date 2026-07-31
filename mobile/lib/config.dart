@@ -3,14 +3,15 @@ import 'dart:io' show Platform;
 
 class AppConfig {
   static String get webBaseUrl {
+    if (kReleaseMode) {
+      return prodBaseUrl;
+    }
     if (kIsWeb) {
       return 'http://localhost:3000';
     }
     try {
       if (Platform.isAndroid) {
-        // Android emulator uses adb reverse from mobile_run.ps1 so localhost
-        // stays aligned with the browser/frontend dev setup.
-        return 'http://localhost:3000';
+        return 'http://10.0.2.2:3000';
       }
     } catch (_) {}
     return 'http://localhost:3000';
@@ -18,21 +19,24 @@ class AppConfig {
 
   /// Base API URL.
   /// Automatically resolved based on platform:
-  /// - 'http://localhost:8001' for Android Emulator via adb reverse.
+  /// - 'http://10.0.2.2:8001' for Android Emulator.
   /// - 'http://localhost:8001' for Windows, Web, and iOS.
   static String get devBaseUrl {
+    if (kReleaseMode) {
+      return prodBaseUrl;
+    }
     if (kIsWeb) {
       return 'http://localhost:8001';
     }
     try {
       if (Platform.isAndroid) {
-        return 'http://localhost:8001';
+        return 'http://10.0.2.2:8001';
       }
     } catch (_) {}
     return 'http://localhost:8001';
   }
 
-  static const String prodBaseUrl = 'https://uat.x-space360.in';
+  static const String prodBaseUrl = 'https://www.x-space360.in';
 
   /// Whether to use production backend configuration.
   /// Keep this false for local development so the mobile app and website use

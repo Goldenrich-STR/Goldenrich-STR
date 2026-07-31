@@ -12,12 +12,14 @@ class GuestBrowseScreen extends StatefulWidget {
   final String? initialCity;
   final int? initialGuests;
   final String? initialCategory;
+  final String? initialPropertyType;
 
   const GuestBrowseScreen({
     super.key,
     this.initialCity,
     this.initialGuests,
     this.initialCategory,
+    this.initialPropertyType,
   });
 
   @override
@@ -48,6 +50,10 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
     }
     if (widget.initialGuests != null && widget.initialGuests! > 0) {
       _advancedFilters['guests'] = widget.initialGuests;
+    }
+    if (widget.initialPropertyType != null &&
+        widget.initialPropertyType!.isNotEmpty) {
+      _advancedFilters['property_type'] = widget.initialPropertyType;
     }
     if (widget.initialCategory != null && widget.initialCategory!.isNotEmpty) {
       _advancedFilters['category'] = widget.initialCategory;

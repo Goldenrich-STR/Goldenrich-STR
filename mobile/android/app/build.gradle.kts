@@ -11,11 +11,17 @@ val keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
 }
+val releaseStoreFilePath = keystoreProperties["storeFile"] as String?
+val releaseStoreFile = if (releaseStoreFilePath.isNullOrBlank()) {
+    null
+} else {
+    rootProject.file(releaseStoreFilePath)
+}
 val hasReleaseKeystore = keystorePropertiesFile.exists() &&
     keystoreProperties["keyAlias"] != null &&
     keystoreProperties["keyPassword"] != null &&
-    keystoreProperties["storeFile"] != null &&
-    keystoreProperties["storePassword"] != null
+    keystoreProperties["storePassword"] != null &&
+    releaseStoreFile?.exists() == true
 
 android {
     namespace = "com.goldenrich.str.goldenrich_str_mobile"
@@ -43,19 +49,29 @@ android {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
+                storeFile = releaseStoreFile
                 storePassword = keystoreProperties["storePassword"] as String
             }
         }
     }
 
     buildTypes {
+        debug {
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
+            isMinifyEnabled = true
+            isShrinkResources = true
             if (hasReleaseKeystore) {
                 signingConfig = signingConfigs.getByName("release")
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
             }
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }
