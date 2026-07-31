@@ -162,6 +162,73 @@ class _LandingScreenState extends State<LandingScreen> {
     ),
   ];
 
+  static const List<_CollectionCardData> _collectionCards = [
+    _CollectionCardData(
+      id: 'luxury-villas',
+      label: 'Luxury Villas & Farmhouses',
+      detail:
+          'From Alibaug to Coorg, our hand-picked villas offer privacy, caretakers, BBQ setups, and breathtaking views for family vacations and weekend escapes.',
+      tag: 'Most Booked',
+      image:
+          'https://images.unsplash.com/photo-1744448365250-9b6aa1a7e4a3?auto=format&fit=crop&q=80&w=900',
+      category: 'residential',
+      propertyType: 'villa',
+    ),
+    _CollectionCardData(
+      id: 'hilltop-retreats',
+      label: 'Signature Series',
+      detail:
+          'A curated portfolio of exclusive private estates featuring elevated luxury, premium hospitality, and unforgettable destination-led stays.',
+      tag: 'Signature Series',
+      image:
+          'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=900',
+      category: 'residential',
+      propertyType: 'resort',
+    ),
+    _CollectionCardData(
+      id: 'wedding-venues',
+      label: 'Intimate Wedding & Event Venues',
+      detail:
+          'Curated celebration venues with floral courtyards, rooftop terraces, and in-house hospitality for memorable gatherings.',
+      tag: 'Trending',
+      image:
+          'https://images.pexels.com/photos/12153938/pexels-photo-12153938.jpeg?auto=compress&cs=tinysrgb&w=900',
+      category: 'event_venue',
+      propertyType: 'banquet_hall',
+    ),
+    _CollectionCardData(
+      id: 'residential-stays',
+      label: 'Premium Apartments & Homes',
+      detail:
+          'Fully serviced urban homes with hotel-grade amenities, ideal for business travelers, relocating professionals, and long stays.',
+      tag: 'New Launches',
+      image:
+          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&q=80&w=900',
+      category: 'residential',
+      propertyType: 'apartment',
+    ),
+    _CollectionCardData(
+      id: 'commercial-spaces',
+      label: 'Commercial & Co-working Spaces',
+      detail:
+          'Short-term and long-term rentals for startups, corporate offsites, and growing teams with boardrooms and plug-and-play work setups.',
+      tag: 'Corporate Picks',
+      image:
+          'https://images.unsplash.com/photo-1497366412874-3415097a27e7?auto=format&fit=crop&q=80&w=900',
+      category: 'commercial',
+    ),
+    _CollectionCardData(
+      id: 'resort-villas',
+      label: 'Resort Villas & Pool Stays',
+      detail:
+          'Scenic villas, pool stays, and weekend resorts with lawns, caretakers, and premium leisure amenities across top getaway destinations.',
+      tag: 'Resort Picks',
+      image: 'assets/images/hero_villa.jpg',
+      category: 'residential',
+      propertyType: 'villa',
+    ),
+  ];
+
   static const List<_FooterSectionData> _footerSections = [
     _FooterSectionData(
       title: 'Premium Stays',
@@ -301,6 +368,9 @@ class _LandingScreenState extends State<LandingScreen> {
           ),
           SliverToBoxAdapter(
             child: _buildRecentlyVisitedSection(),
+          ),
+          SliverToBoxAdapter(
+            child: _buildDiscoverCollectionsSection(),
           ),
           SliverToBoxAdapter(
             child: _buildCollections(
@@ -1834,6 +1904,38 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
+  Widget _buildDiscoverCollectionsSection() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Discover Our Collection',
+            style: GoogleFonts.cormorantGaramond(
+              fontSize: 30,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.charcoal,
+            ),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            height: 320,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _collectionCards.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemBuilder: (context, index) {
+                final card = _collectionCards[index];
+                return _DiscoverCollectionCard(card: card);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<PropertyModel> _filterByPropertyType(
     List<PropertyModel> properties,
     List<String> propertyTypes,
@@ -2042,6 +2144,163 @@ class _PropertyCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscoverCollectionCard extends StatelessWidget {
+  final _CollectionCardData card;
+
+  const _DiscoverCollectionCard({required this.card});
+
+  @override
+  Widget build(BuildContext context) {
+    final isLocalAsset = card.image.startsWith('assets/');
+    final isSignature = card.tag == 'Signature Series';
+
+    return SizedBox(
+      width: 240,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => GuestBrowseScreen(
+                initialCategory: card.category,
+                initialPropertyType: card.propertyType,
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(24),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: isLocalAsset
+                    ? Image.asset(card.image, fit: BoxFit.cover)
+                    : Image.network(
+                        card.image,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: AppTheme.stone,
+                        ),
+                      ),
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.10),
+                        Colors.black.withValues(alpha: 0.32),
+                        Colors.black.withValues(alpha: 0.92),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 14,
+                left: 14,
+                child: isSignature
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.92),
+                          border: Border.all(color: const Color(0xFFD4AF37)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.workspace_premium_rounded,
+                              size: 12,
+                              color: Color(0xFFD4AF37),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Signature Series',
+                              style: GoogleFonts.manrope(
+                                fontSize: 8.5,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                                color: const Color(0xFFD4AF37),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.96),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          card.tag,
+                          style: GoogleFonts.manrope(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.0,
+                            color: AppTheme.charcoal,
+                          ),
+                        ),
+                      ),
+              ),
+              Positioned(
+                left: 18,
+                right: 18,
+                bottom: 18,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Explore',
+                      style: GoogleFonts.manrope(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.6,
+                        color: Colors.white.withValues(alpha: 0.66),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      card.label,
+                      style: GoogleFonts.manrope(
+                        fontSize: 19,
+                        height: 1.2,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      card.detail,
+                      maxLines: 5,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.manrope(
+                        fontSize: 11.5,
+                        height: 1.55,
+                        color: Colors.white.withValues(alpha: 0.80),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -2601,6 +2860,26 @@ class _BlogData {
     required this.title,
     required this.excerpt,
     required this.content,
+  });
+}
+
+class _CollectionCardData {
+  final String id;
+  final String label;
+  final String detail;
+  final String tag;
+  final String image;
+  final String category;
+  final String? propertyType;
+
+  const _CollectionCardData({
+    required this.id,
+    required this.label,
+    required this.detail,
+    required this.tag,
+    required this.image,
+    required this.category,
+    this.propertyType,
   });
 }
 
