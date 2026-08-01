@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, CreditCard, FileText, PlayCircle, RefreshCcw, Search, TrendingUp, WalletCards } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney } from './shared';
+import { AdminAccountTransactionsTab } from '../AdminAccount';
 
 const financeSteps = [
   ['Step 1', 'Finance Overview', 'completed'],
@@ -17,10 +18,27 @@ const workspaceTabs = [
   ['refunds', 'Refunds & Cancellations'],
   ['tax_commission', 'Taxes'],
   ['commissions', 'Commissions'],
+  ['transactions_ledger', 'Transactions'],
   ['reports_config', 'Invoices & Config'],
 ];
 
 const paiseToMoney = (value) => formatMoney(Number(value || 0) / 100);
+const entityName = (entity, fallback = 'NA') => entity?.full_name || entity?.name || entity?.user_id || entity?.uid || fallback;
+const entityCode = (entity) => entity?.employee_code || entity?.lg_code || entity?.uid || entity?.user_id || 'NA';
+const shortDate = (value) => (value ? String(value).slice(0, 10) : '-');
+const chargeLineItems = (charges = {}) => [
+  ['Platform fee', charges.platform_fee],
+  ['Gateway charge', charges.gateway_charge],
+  ['Convenience fee', charges.convenience_fee],
+  ['Insurance fee', charges.insurance_fee],
+  ['Cleaning fee', charges.cleaning_fee],
+  ['Extra guest fee', charges.extra_guest_fee],
+  ['Company charge', charges.company_charge],
+  ['Customer GST', charges.customer_gst],
+].filter(([, value]) => Number(value || 0) > 0);
+const extraChargeLineItems = (charges = {}) => chargeLineItems(charges).filter(([label]) => label !== 'Customer GST');
+const extraChargeTotal = (charges = {}) => extraChargeLineItems(charges).reduce((total, [, value]) => total + Number(value || 0), 0);
+const tdsBaseNote = (payout = {}) => (Number(payout.tds_base_amount || 0) > 0 ? 'Host actual value only' : 'No TDS base');
 
 const FinanceSettlements = () => {
   const [state, setState] = useState({ loading: true, error: '', overview: null, transactions: [], payouts: [], refunds: [], autoStatus: null, taxCommission: null, paymentConfig: null });
@@ -78,16 +96,18 @@ const FinanceSettlements = () => {
     const hostMap = new Map();
     (state.payouts || []).forEach((payout) => {
       const key = payout.host_id || 'unknown';
-      const row = hostMap.get(key) || { host_id: key, host: payout.host || {}, count: 0, net_amount: 0, gross_amount: 0, failed: 0 };
+      const row = hostMap.get(key) || { host_id: key, host: payout.host || {}, count: 0, net_amount: 0, gross_amount: 0, tds_amount: 0, tds_fy_gross_after: 0, failed: 0 };
       row.count += 1;
       row.net_amount += Number(payout.net_amount || 0);
       row.gross_amount += Number(payout.gross_amount || 0);
+      row.tds_amount += Number(payout.tds_amount || 0);
+      row.tds_fy_gross_after = Math.max(row.tds_fy_gross_after, Number(payout.tds_fy_gross_after || 0));
       if (payout.status === 'failed' || payout.status === 'needs_destination') row.failed += 1;
       hostMap.set(key, row);
     });
     return {
       gross: sum((item) => item.gross_amount),
-      platformFee: sum((item) => item.platform_fee),
+      extraCharges: sum((item) => extraChargeTotal(item.customer_charge_breakdown || {})),
       tds: sum((item) => item.tds_amount),
       net: sum((item) => item.net_amount),
       hosts: Array.from(hostMap.values()),
@@ -220,33 +240,9 @@ const FinanceSettlements = () => {
               </Panel>
             ))}
           </div>
-          {active === 'overview' ? <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <Panel className="overflow-hidden">
-              <div className="border-b border-slate-200 p-4">
-                <h2 className="font-black">Recent Transactions</h2>
-                <p className="text-xs text-slate-500">Booking, subscription, registration fee, payout and refund ledger preview.</p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px] text-left text-sm">
-                  <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Transaction', 'Type', 'Customer', 'Booking/Property', 'Amount', 'Status', 'Payment Ref'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {state.transactions.map((item) => (
-                      <tr key={item.transaction_id}>
-                        <td className="px-4 py-3"><p className="font-mono text-xs font-bold">{item.invoice_no || item.transaction_id}</p><p className="text-xs text-slate-500">{String(item.created_at || '-').slice(0, 10)}</p></td>
-                        <td className="px-4 py-3 capitalize">{String(item.type || '-').replace(/_/g, ' ')}</td>
-                        <td className="px-4 py-3">{item.customer?.full_name || item.host?.full_name || item.user_id || item.host_id || '-'}</td>
-                        <td className="px-4 py-3">{item.booking_id || item.property?.title || item.property_id || '-'}</td>
-                        <td className="px-4 py-3 font-bold">{paiseToMoney(item.amount)}</td>
-                        <td className="px-4 py-3"><StatusBadge value={item.status} /></td>
-                        <td className="px-4 py-3 font-mono text-xs">{item.razorpay_payment_id || item.razorpay_payout_id || item.razorpay_refund_id || item.upi_transaction_id || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {!state.transactions.length && <p className="p-6 text-sm text-slate-500">No transactions found.</p>}
-              </div>
-            </Panel>
-            <div className="space-y-4">
+          {active === 'overview' ? <div className="space-y-4">
+            <AdminAccountTransactionsTab />
+            <div className="grid gap-4 lg:grid-cols-2">
               <Panel className="p-4">
                 <h2 className="font-black">Phase 3 Steps</h2>
                 <div className="mt-3 space-y-2">
@@ -264,11 +260,13 @@ const FinanceSettlements = () => {
                 </div>
               </Panel>
             </div>
-          </div> : active === 'settlements' ? <SettlementWorkspace payouts={state.payouts} totals={settlementTotals} payoutStatus={payoutStatus} setPayoutStatus={setPayoutStatus} autoStatus={state.autoStatus} busy={busy} onProcess={processOne} onAction={runPayoutAction} /> : active === 'refunds' ? <RefundWorkspace refunds={state.refunds} refundStatus={refundStatus} setRefundStatus={setRefundStatus} busy={busy} onInitiate={initiateRefund} onPreview={previewRefundPolicy} policyPreview={policyPreview} /> : active === 'tax_commission' ? <TaxesWorkspace data={state.taxCommission} /> : active === 'commissions' ? <CommissionWorkspace data={state.taxCommission} payouts={state.payouts} busy={busy} onProcessHost={processOne} /> : <ReportsConfigWorkspace transactions={state.transactions} paymentConfig={state.paymentConfig} autoStatus={state.autoStatus} onExport={exportTransactions} onShare={shareInvoice} onSavePaymentConfig={savePaymentConfig} />}
-          <div className="grid gap-4 lg:grid-cols-2">
-            <QueuePanel title="Payout Queue" rows={state.payouts} idKey="payout_id" amountKey="net_amount" />
-            <QueuePanel title="Refund Queue" rows={state.refunds} idKey="refund_id" amountKey="refund_amount" />
-          </div>
+          </div> : active === 'settlements' ? <SettlementWorkspace payouts={state.payouts} totals={settlementTotals} payoutStatus={payoutStatus} setPayoutStatus={setPayoutStatus} autoStatus={state.autoStatus} busy={busy} onProcess={processOne} onAction={runPayoutAction} /> : active === 'refunds' ? <RefundWorkspace refunds={state.refunds} refundStatus={refundStatus} setRefundStatus={setRefundStatus} busy={busy} onInitiate={initiateRefund} onPreview={previewRefundPolicy} policyPreview={policyPreview} /> : active === 'tax_commission' ? <TaxesWorkspace data={state.taxCommission} /> : active === 'commissions' ? <CommissionWorkspace data={state.taxCommission} payouts={state.payouts} busy={busy} onProcessHost={processOne} /> : active === 'transactions_ledger' ? <AdminAccountTransactionsTab /> : <ReportsConfigWorkspace transactions={state.transactions} paymentConfig={state.paymentConfig} autoStatus={state.autoStatus} onExport={exportTransactions} onShare={shareInvoice} onSavePaymentConfig={savePaymentConfig} />}
+          {active !== 'transactions_ledger' && (
+            <div className="grid gap-4 lg:grid-cols-2">
+              <QueuePanel title="Payout Queue" rows={state.payouts} idKey="payout_id" amountKey="net_amount" />
+              <QueuePanel title="Refund Queue" rows={state.refunds} idKey="refund_id" amountKey="refund_amount" />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -277,83 +275,123 @@ const FinanceSettlements = () => {
 
 const Info = ({ label, value }) => <p className="flex justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2"><span className="font-bold text-slate-500">{label}</span><span className="font-black">{value}</span></p>;
 
-const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, autoStatus, busy, onProcess, onAction }) => (
-  <div className="space-y-4">
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      {[
-        ['Gross Settlement', formatMoney(totals.gross || 0)],
-        ['Platform Commission', formatMoney(totals.platformFee || 0)],
-        ['TDS Hold', formatMoney(totals.tds || 0)],
-        ['Net Host Payable', formatMoney(totals.net || 0)],
-      ].map(([label, value]) => <Panel key={label} className="p-4"><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
-    </div>
-    <Panel className="p-4">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div>
-          <h2 className="font-black">Settlement Controls</h2>
-          <p className="text-xs text-slate-500">Sweep completed bookings, process eligible payouts, or run the auto payout engine manually.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button disabled={!!busy} onClick={() => onAction('sweep', 'sweep')} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-black disabled:opacity-50"><RefreshCcw className="h-4 w-4" /> Sweep Eligibility</button>
-          <button disabled={!!busy} onClick={() => onAction('processEligible', 'batch')} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 disabled:opacity-50"><CheckCircle2 className="h-4 w-4" /> Process Eligible</button>
-          <button disabled={!!busy} onClick={() => onAction('runAuto', 'auto')} className="inline-flex items-center gap-1 rounded-lg bg-charcoal px-3 py-2 text-xs font-black text-white disabled:opacity-50"><PlayCircle className="h-4 w-4" /> Run Auto Engine</button>
-        </div>
+const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, autoStatus, busy, onProcess, onAction }) => {
+  const sample = payouts[0] || {};
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          ['Host Actual Value', paiseToMoney(totals.gross || 0)],
+          ['Extra Charges', paiseToMoney(totals.extraCharges || 0)],
+          ['TDS Hold', paiseToMoney(totals.tds || 0)],
+          ['Net Host Payable', paiseToMoney(totals.net || 0)],
+        ].map(([label, value]) => <Panel key={label} className="p-4"><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
       </div>
-      <div className="mt-4 grid gap-2 text-sm md:grid-cols-5">
-        <Info label="Auto" value={autoStatus?.auto_payout_enabled ? 'Enabled' : 'Disabled'} />
-        <Info label="Eligible" value={autoStatus?.pending_eligible || 0} />
-        <Info label="Processing" value={autoStatus?.processing || 0} />
-        <Info label="Failed" value={autoStatus?.failed || 0} />
-        <Info label="Mode" value={autoStatus?.payouts_are_mock ? 'Mock' : 'Live'} />
-      </div>
-    </Panel>
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <Panel className="overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
-          <div><h2 className="font-black">Host Settlement Queue</h2><p className="text-xs text-slate-500">Booking-wise payout ledger with destination, status, payout date and failure reason.</p></div>
-          <select value={payoutStatus} onChange={(event) => setPayoutStatus(event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm">
-            <option value="">All Status</option>
-            <option value="eligible">Eligible</option>
-            <option value="needs_destination">Needs Destination</option>
-            <option value="processing">Processing</option>
-            <option value="paid">Paid</option>
-            <option value="failed">Failed</option>
-          </select>
+      <Panel className="p-4">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+          <div>
+            <h2 className="font-black">Settlement Controls</h2>
+            <p className="text-xs text-slate-500">Sweep completed bookings, process eligible payouts, or run the auto payout engine manually.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button disabled={!!busy} onClick={() => onAction('sweep', 'sweep')} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-black disabled:opacity-50"><RefreshCcw className="h-4 w-4" /> Sweep Eligibility</button>
+            <button disabled={!!busy} onClick={() => onAction('processEligible', 'batch')} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 disabled:opacity-50"><CheckCircle2 className="h-4 w-4" /> Process Eligible</button>
+            <button disabled={!!busy} onClick={() => onAction('runAuto', 'auto')} className="inline-flex items-center gap-1 rounded-lg bg-charcoal px-3 py-2 text-xs font-black text-white disabled:opacity-50"><PlayCircle className="h-4 w-4" /> Run Auto Engine</button>
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Payout', 'Host', 'Property', 'Booking', 'Gross', 'Commission', 'TDS', 'Net', 'Destination', 'Status', 'Action'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
-            <tbody className="divide-y divide-slate-100">
-              {payouts.map((payout) => (
-                <tr key={payout.payout_id}>
-                  <td className="px-4 py-3"><p className="font-mono text-xs font-bold">{payout.payout_id}</p><p className="text-xs text-slate-500">{String(payout.eligible_at || payout.created_at || '-').slice(0, 10)}</p></td>
-                  <td className="px-4 py-3"><p className="font-bold">{payout.host?.full_name || payout.host_id}</p><p className="text-xs text-slate-500">{payout.host?.email || '-'}</p></td>
-                  <td className="px-4 py-3">{payout.property?.title || payout.property_id}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{payout.booking_id}</td>
-                  <td className="px-4 py-3">{formatMoney(payout.gross_amount || 0)}</td>
-                  <td className="px-4 py-3">{formatMoney(payout.platform_fee || 0)}</td>
-                  <td className="px-4 py-3">{formatMoney(payout.tds_amount || 0)}</td>
-                  <td className="px-4 py-3 font-black">{formatMoney(payout.net_amount || 0)}</td>
-                  <td className="px-4 py-3"><p className="capitalize">{payout.destination_type || '-'}</p><p className="font-mono text-xs text-slate-500">{payout.destination_ref || '-'}</p></td>
-                  <td className="px-4 py-3"><StatusBadge value={payout.status} />{payout.failure_reason && <p className="mt-1 text-xs font-semibold text-red-700">{payout.failure_reason}</p>}</td>
-                  <td className="px-4 py-3"><button disabled={busy === payout.payout_id || !['eligible', 'failed'].includes(payout.status)} onClick={() => onProcess(payout)} className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700 disabled:opacity-40">Pay / Retry</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!payouts.length && <p className="p-6 text-sm text-slate-500">No payouts in this bucket.</p>}
+        <div className="mt-4 grid gap-2 text-sm md:grid-cols-6">
+          <Info label="Auto" value={autoStatus?.auto_payout_enabled ? 'Enabled' : 'Disabled'} />
+          <Info label="Pending" value={autoStatus?.pending || 0} />
+          <Info label="Eligible" value={autoStatus?.pending_eligible || 0} />
+          <Info label="Processing" value={autoStatus?.processing || 0} />
+          <Info label="Failed" value={autoStatus?.failed || 0} />
+          <Info label="Mode" value={autoStatus?.payouts_are_mock ? 'Mock' : 'Live'} />
+        </div>
+        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Host payout uses only the host-entered booking value before customer GST. Customer-side charges are shown separately so finance can track host settlement, platform commission, broker payout, and RM payout clearly.
         </div>
       </Panel>
-      <Panel className="overflow-hidden">
-        <div className="border-b border-slate-200 p-4"><h2 className="font-black">Host-Wise Summary</h2></div>
-        <div className="divide-y divide-slate-100">
-          {totals.hosts.map((host) => <div key={host.host_id} className="p-3 text-sm"><div className="flex items-start justify-between gap-3"><div><p className="font-black">{host.host?.full_name || host.host_id}</p><p className="text-xs text-slate-500">{host.count} payouts / {host.failed} exceptions</p></div><p className="font-black">{formatMoney(host.net_amount)}</p></div></div>)}
-          {!totals.hosts.length && <p className="p-5 text-sm text-slate-500">No host settlement rows found.</p>}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <Panel className="overflow-hidden">
+          <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
+            <div><h2 className="font-black">Host Settlement Queue</h2><p className="text-xs text-slate-500">Booking-wise payout ledger with broker/RM ownership, extra charges, destination and due date.</p></div>
+            <select value={payoutStatus} onChange={(event) => setPayoutStatus(event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm">
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="eligible">Eligible</option>
+              <option value="needs_destination">Needs Destination</option>
+              <option value="processing">Processing</option>
+              <option value="paid">Paid</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1900px] text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>{['Payout / Due', 'Host', 'Property', 'Broker', 'Employee (RM)', 'Booking', 'Host Actual Value', 'Extra Charges', 'TDS Base', 'TDS', 'Net Host Payable', 'Destination', 'Status', 'Action'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {payouts.map((payout) => {
+                  const chargesTotal = extraChargeTotal(payout.customer_charge_breakdown);
+                  return (
+                    <tr key={payout.payout_id}>
+                      <td className="px-4 py-3"><p className="font-mono text-xs font-bold">{payout.payout_id}</p><p className="text-xs text-slate-500">Due: {shortDate(payout.settlement_due_at || payout.eligible_at || payout.created_at)}</p></td>
+                      <td className="px-4 py-3"><p className="font-bold">{payout.host?.full_name || payout.host_id}</p><p className="text-xs text-slate-500">{payout.host?.email || '-'}</p></td>
+                      <td className="px-4 py-3"><p className="font-semibold">{payout.property?.title || payout.property_id}</p><p className="text-xs text-slate-500">{payout.property?.city || '-'}</p></td>
+                      <td className="px-4 py-3"><p className="font-bold">{entityName(payout.broker)}</p><p className="text-xs text-slate-500">Code: {entityCode(payout.broker)}</p></td>
+                      <td className="px-4 py-3"><p className="font-bold">{entityName(payout.employee)}</p><p className="text-xs text-slate-500">Code: {entityCode(payout.employee)}</p></td>
+                      <td className="px-4 py-3"><p className="font-mono text-xs">{payout.booking_id}</p><p className="text-xs text-slate-500">{shortDate(payout.booking?.check_in_date)} to {shortDate(payout.booking?.check_out_date)}</p></td>
+                      <td className="px-4 py-3"><p className="font-black">{paiseToMoney(payout.gross_amount || 0)}</p><p className="text-xs text-slate-500">Host base without GST</p></td>
+                      <td className="px-4 py-3">
+                        <p className="font-black">{paiseToMoney(chargesTotal)}</p>
+                        <p className="text-xs text-slate-500">Total customer-side charges, excluding GST</p>
+                      </td>
+                      <td className="px-4 py-3"><p>{paiseToMoney(payout.tds_base_amount || payout.gross_amount || 0)}</p><p className="text-xs text-slate-500">{tdsBaseNote(payout)}</p></td>
+                      <td className="px-4 py-3"><p>{paiseToMoney(payout.tds_amount || 0)}</p><p className="text-xs text-slate-500">{Number(payout.tds_rate_percent || 0)}%</p></td>
+                      <td className="px-4 py-3 font-black">{paiseToMoney(payout.net_amount || 0)}</td>
+                      <td className="px-4 py-3"><p className="capitalize">{payout.destination_type || '-'}</p><p className="font-mono text-xs text-slate-500">{payout.destination_ref || '-'}</p></td>
+                      <td className="px-4 py-3"><StatusBadge value={payout.status} />{payout.failure_reason && <p className="mt-1 text-xs font-semibold text-red-700">{payout.failure_reason}</p>}</td>
+                      <td className="px-4 py-3"><button disabled={busy === payout.payout_id || !['eligible', 'failed'].includes(payout.status)} onClick={() => onProcess(payout)} className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700 disabled:opacity-40">Pay / Retry</button></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {!payouts.length && <p className="p-6 text-sm text-slate-500">No payouts in this bucket. Click Sweep Eligibility after paid/completed bookings are available.</p>}
+          </div>
+        </Panel>
+        <div className="space-y-4">
+          <Panel className="overflow-hidden">
+            <div className="border-b border-slate-200 p-4"><h2 className="font-black">Host-Wise Summary</h2></div>
+            <div className="divide-y divide-slate-100">
+              {totals.hosts.map((host) => <div key={host.host_id} className="p-3 text-sm"><div className="flex items-start justify-between gap-3"><div><p className="font-black">{host.host?.full_name || host.host_id}</p><p className="text-xs text-slate-500">{host.count} payouts / {host.failed} exceptions</p><p className="mt-1 text-xs text-slate-500">FY gross {paiseToMoney(host.tds_fy_gross_after || host.gross_amount)} / TDS {paiseToMoney(host.tds_amount)}</p></div><p className="font-black">{paiseToMoney(host.net_amount)}</p></div></div>)}
+              {!totals.hosts.length && <p className="p-5 text-sm text-slate-500">No host settlement rows found.</p>}
+            </div>
+          </Panel>
+          <Panel className="p-4">
+            <h2 className="font-black">Sample Payout Invoice Format</h2>
+            <p className="mt-1 text-xs text-slate-500">This is the structure finance can use for host, broker, or RM payout invoices.</p>
+            <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 text-xs">
+              {[
+                ['Payout ID', sample.payout_id || 'pyo_SAMPLE'],
+                ['Host', sample.host?.full_name || sample.host_id || 'Host Name'],
+                ['Property', sample.property?.title || sample.property_id || 'Property Name'],
+                ['Broker', `${entityName(sample.broker)} / ${entityCode(sample.broker)}`],
+                ['Employee (RM)', `${entityName(sample.employee)} / ${entityCode(sample.employee)}`],
+                ['Host Actual Value', paiseToMoney(sample.gross_amount || 0)],
+                ['Extra Charges', paiseToMoney(extraChargeTotal(sample.customer_charge_breakdown || {}))],
+                ['TDS', paiseToMoney(sample.tds_amount || 0)],
+                ['Net Payable', paiseToMoney(sample.net_amount || 0)],
+                ['Settlement Due', shortDate(sample.settlement_due_at || sample.eligible_at || sample.created_at)],
+              ].map(([label, value]) => <div key={label} className="grid grid-cols-[140px_minmax(0,1fr)] border-b border-slate-100 last:border-b-0"><span className="bg-slate-50 px-3 py-2 font-bold text-slate-500">{label}</span><span className="px-3 py-2 font-semibold">{value}</span></div>)}
+            </div>
+          </Panel>
         </div>
-      </Panel>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onInitiate, onPreview, policyPreview }) => {
   const totals = refunds.reduce((acc, row) => {

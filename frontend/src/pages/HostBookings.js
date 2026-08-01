@@ -611,7 +611,7 @@ const HostBookings = () => {
                                         <span>₹{Math.round(b.service_fee || 0).toLocaleString('en-IN')}</span>
                                       </div>
                                       <div className="flex justify-between text-charcoal-light">
-                                        <span>Taxes & GST (18%):</span>
+                                        <span>Taxes & GST ({Number(b.tax_percent ?? 0)}%):</span>
                                         <span>₹{Math.round(b.taxes || 0).toLocaleString('en-IN')}</span>
                                       </div>
                                       {b.discount_amount > 0 && (

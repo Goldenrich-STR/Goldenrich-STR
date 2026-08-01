@@ -289,6 +289,8 @@ async def startup_sequence():
             "notifications", "subscription_plans", "subscriptions", "cms_content", "leads", "coupons",
             "deleted_properties", "search_logs", "ai_calls", "ai_agents", "calendar_sync_logs",
             "contact_messages", "support_tickets", "commissions", "password_reset_tokens", "platform_settings",
+            "booking_tax_slabs", "tds_configurations", "host_tax_profiles",
+            "host_financial_year_summaries", "host_payout_ledger",
             "payout_job_runs", "roles", "permissions", "role_permissions", "user_permissions", "departments",
             "business_divisions", "branches", "franchises", "teams", "reporting_relations",
             "reporting_history", "escalation_rules", "sla_policies", "escalation_instances", "notification_rules",

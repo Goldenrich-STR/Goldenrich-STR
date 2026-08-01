@@ -11,6 +11,16 @@ from services.booking_notifications import (
     schedule_soft_lock_reminder,
 )
 from services.audit_service import write_audit_log
+from services.booking_calculation_service import (
+    BOOKING_PAYMENT_CONFIG_KEY,
+    DEFAULT_BOOKING_GST_PERCENT,
+    calculate_booking_breakdown,
+    ensure_booking_tax_slabs_table,
+    ensure_platform_settings_table,
+    get_active_booking_tax_slab,
+    get_booking_payment_config,
+    normalize_booking_payment_config,
+)
 from datetime import datetime, timedelta, timezone
 import asyncio
 import json
@@ -104,15 +114,11 @@ async def get_db():
     from server import db_instance
     return db_instance
 
-BOOKING_PAYMENT_CONFIG_KEY = "booking_payment_config"
+async def _ensure_booking_tax_slabs_table(db: AsyncIOMotorDatabase) -> None:
+    await ensure_booking_tax_slabs_table(db)
 
 async def _ensure_platform_settings_table(db: AsyncIOMotorDatabase) -> None:
-    ensure_table = getattr(db, "ensure_table", None)
-    if ensure_table:
-        try:
-            await ensure_table("platform_settings")
-        except Exception as exc:
-            logger.warning("Could not ensure platform_settings table: %s", exc)
+    await ensure_platform_settings_table(db)
 
 def _default_platform_fee_percent() -> float:
     try:
@@ -122,22 +128,33 @@ def _default_platform_fee_percent() -> float:
     return max(0.0, min(100.0, value))
 
 async def _get_booking_payment_config(db: AsyncIOMotorDatabase) -> dict:
-    await _ensure_platform_settings_table(db)
-    try:
-        config = await db.platform_settings.find_one({"key": BOOKING_PAYMENT_CONFIG_KEY}, {"_id": 0}) or {}
-    except Exception as exc:
-        logger.warning("Could not load booking payment config, using defaults: %s", exc)
-        config = {}
-    platform_fee_percent = config.get("platform_fee_percent", _default_platform_fee_percent())
-    try:
-        platform_fee_percent = float(platform_fee_percent)
-    except (TypeError, ValueError):
-        platform_fee_percent = _default_platform_fee_percent()
+    return await get_booking_payment_config(db)
 
-    return {
-        "platform_fee_percent": max(0.0, min(100.0, platform_fee_percent)),
-        "platform_fee_label": config.get("platform_fee_label") or "Premium Service Fee",
-    }
+async def _get_active_booking_tax_slab(db: AsyncIOMotorDatabase, taxable_amount: float) -> dict:
+    return await get_active_booking_tax_slab(db, taxable_amount)
+
+async def _calculate_booking_pricing(
+    db: AsyncIOMotorDatabase,
+    taxable_amount: float,
+    *,
+    service_fee_percent: Optional[float] = None,
+    coupon_discount: float = 0,
+    coupon_code: Optional[str] = None,
+    tax_slab_base_amount: Optional[float] = None,
+    pricing_units: Optional[int] = 1,
+    extra_guest_amount: float = 0,
+) -> dict:
+    """Calculate booking charges through the centralized pricing engine."""
+    return await calculate_booking_breakdown(
+        db,
+        taxable_amount,
+        coupon_discount=coupon_discount,
+        coupon_code=coupon_code,
+        legacy_service_fee_percent=service_fee_percent,
+        tax_slab_base_amount=tax_slab_base_amount,
+        pricing_units=pricing_units,
+        extra_guest_amount=extra_guest_amount,
+    )
 
 @router.post("/", response_model=dict)
 async def create_booking(
@@ -245,18 +262,27 @@ async def create_booking(
         if property_dict.get("category") == "event_venue":
             num_nights = max(1, num_nights + 1)
             
-        base_amount = property_dict.get("price_per_night", 0) * num_nights
+        nightly_price = property_dict.get("base_price")
+        if nightly_price in (None, ""):
+            nightly_price = property_dict.get("price_per_night", 0)
+        nightly_price = float(nightly_price or 0)
+        base_amount = nightly_price * num_nights
+        tax_slab_base_amount = nightly_price
+        extra_guest_amount = 0.0
         
         if property_dict.get("category") == "event_venue" and booking_data.food_preference:
             food_pref = booking_data.food_preference.lower()
-            plate_price = property_dict.get("non_veg_price", 0) if food_pref == "non_veg" else property_dict.get("veg_price", 0)
-            base_amount += plate_price * booking_data.number_of_guests * num_nights
+            raw_plate_price = property_dict.get("non_veg_price") if food_pref == "non_veg" else property_dict.get("veg_price")
+            plate_price = float(raw_plate_price or 0)
+            per_day_food_amount = plate_price * booking_data.number_of_guests
+            base_amount += per_day_food_amount * num_nights
+            tax_slab_base_amount += per_day_food_amount
         elif property_dict.get("category") in {"residential", "commercial"}:
             included_guests = int(property_dict.get("max_guests") or 1)
             requested_guests = max(1, int(booking_data.number_of_guests or 1))
             extra_guest_price = float(property_dict.get("extra_guest_price") or 0)
             extra_guests = max(0, requested_guests - included_guests)
-            base_amount += extra_guest_price * extra_guests * num_nights
+            extra_guest_amount = round(extra_guest_price * extra_guests * num_nights, 2)
             
         # Apply promo discount
         user = await db.users.find_one({"user_id": current_user["user_id"]})
@@ -266,16 +292,26 @@ async def create_booking(
         coupon_code = None
         if is_promo_claimed:
             discount_amount = round(base_amount * 0.10, 2)
-            base_amount = round(base_amount - discount_amount, 2)
             coupon_code = "SUMMER10"
             
-        tax_rate = _event_policy_percent(property_dict, "taxes", 18.0)
         advance_rate = _event_policy_percent(property_dict, "advance", 50.0)
-        payment_settings = await _get_booking_payment_config(db)
-        service_fee_percent = payment_settings["platform_fee_percent"]
-        service_fee = base_amount * (service_fee_percent / 100)
-        taxes = base_amount * (tax_rate / 100)
-        total_amount = base_amount + service_fee + taxes
+        pricing = await _calculate_booking_pricing(
+            db,
+            base_amount,
+            coupon_discount=discount_amount,
+            coupon_code=coupon_code,
+            tax_slab_base_amount=tax_slab_base_amount,
+            pricing_units=num_nights,
+            extra_guest_amount=extra_guest_amount,
+        )
+        base_amount = pricing["base_amount"]
+        service_fee = pricing["service_fee"]
+        service_fee_percent = pricing["service_fee_percent"]
+        taxes = pricing["taxes"]
+        tax_rate = pricing["tax_percent"]
+        total_amount = pricing["total_amount"]
+        tax_slab_id = pricing["tax_slab_id"]
+        taxable_amount = pricing["taxable_amount"]
         
         # Determine payment order amount
         order_amount = total_amount
@@ -322,6 +358,24 @@ async def create_booking(
         booking_dict = booking.model_dump()
         booking_dict["check_in_date"] = booking_dict["check_in_date"].isoformat()
         booking_dict["check_out_date"] = booking_dict["check_out_date"].isoformat()
+        booking_dict["service_fee_percent"] = service_fee_percent
+        booking_dict["tax_percent"] = tax_rate
+        booking_dict["tax_slab_id"] = tax_slab_id
+        booking_dict["tax_slab_base_amount"] = pricing["tax_slab_base_amount"]
+        booking_dict["tax_slab_basis_amount"] = pricing["tax_slab_basis_amount"]
+        booking_dict["final_nightly_price"] = pricing["final_nightly_price"]
+        booking_dict["pricing_units"] = pricing["pricing_units"]
+        booking_dict["host_amount"] = pricing["host_amount"]
+        booking_dict["taxable_amount"] = taxable_amount
+        booking_dict["charges"] = pricing["charges"]
+        booking_dict["pricing_breakdown"] = pricing
+        booking_dict["payment_gateway_charge"] = pricing["payment_gateway_charge"]
+        booking_dict["convenience_fee"] = pricing["convenience_fee"]
+        booking_dict["insurance_fee"] = pricing["insurance_fee"]
+        booking_dict["cleaning_fee"] = pricing["cleaning_fee"]
+        booking_dict["extra_guest_fee"] = pricing["extra_guest_fee"]
+        booking_dict["host_extra_guest_fee"] = pricing.get("host_extra_guest_fee", 0)
+        booking_dict["subtotal_before_discount"] = pricing["subtotal_before_discount"]
         await db.bookings.insert_one(booking_dict)
 
         logger.info(
@@ -370,6 +424,14 @@ async def create_booking(
                 "service_fee_percent": service_fee_percent,
                 "taxes": taxes,
                 "tax_percent": tax_rate,
+                "tax_slab_id": tax_slab_id,
+                "tax_slab_base_amount": pricing["tax_slab_base_amount"],
+                "tax_slab_basis_amount": pricing["tax_slab_basis_amount"],
+                "final_nightly_price": pricing["final_nightly_price"],
+                "pricing_units": pricing["pricing_units"],
+                "taxable_amount": taxable_amount,
+                "charges": pricing["charges"],
+                "pricing_breakdown": pricing,
                 "total_amount": total_amount,
                 "advance_amount": advance_amount,
                 "payment_type": booking.payment_type,
@@ -769,6 +831,32 @@ class ApplyCouponRequest(BaseModel):
     coupon_code: str
 
 
+class BookingPricingQuoteRequest(BaseModel):
+    host_amount: float
+    tax_slab_base_amount: Optional[float] = None
+    pricing_units: Optional[int] = 1
+    extra_guest_amount: Optional[float] = 0
+    coupon_discount: Optional[float] = 0
+    coupon_code: Optional[str] = None
+
+
+@router.post("/pricing/quote", response_model=dict)
+async def booking_pricing_quote(
+    payload: BookingPricingQuoteRequest,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Return the central booking pricing breakdown used by checkout and payment."""
+    return await _calculate_booking_pricing(
+        db,
+        payload.host_amount,
+        tax_slab_base_amount=payload.tax_slab_base_amount,
+        pricing_units=payload.pricing_units,
+        extra_guest_amount=payload.extra_guest_amount or 0,
+        coupon_discount=payload.coupon_discount or 0,
+        coupon_code=payload.coupon_code,
+    )
+
+
 @router.post("/{booking_id}/apply-coupon", response_model=dict)
 async def apply_coupon(
     booking_id: str,
@@ -803,7 +891,12 @@ async def apply_coupon(
         code = payload.coupon_code.strip().upper()
         discount = 0.0
         
-        original_total = booking_dict["base_amount"] + booking_dict["service_fee"] + booking_dict["taxes"]
+        original_taxable = float(
+            booking_dict.get("host_amount")
+            or booking_dict.get("original_base_amount")
+            or booking_dict.get("base_amount")
+            or 0
+        )
         
         # Check database for dynamic coupon
         db_coupon = await db.coupons.find_one({"code": code, "is_active": True, "coupon_type": "booking"})
@@ -817,7 +910,7 @@ async def apply_coupon(
                 )
                 
             if db_coupon.get("discount_type") == "percentage":
-                discount = round(original_total * (db_coupon.get("discount_value", 0) / 100), 2)
+                discount = round(original_taxable * (db_coupon.get("discount_value", 0) / 100), 2)
             else:
                 discount = float(db_coupon.get("discount_value", 0))
         else:
@@ -825,7 +918,7 @@ async def apply_coupon(
             if code == "GOLDEN500":
                 discount = 500.0
             elif code == "WELCOME10":
-                discount = round(original_total * 0.10, 2)
+                discount = round(original_taxable * 0.10, 2)
             elif code == "STRSPECIAL":
                 discount = 1000.0
             else:
@@ -834,8 +927,27 @@ async def apply_coupon(
                     detail="Invalid coupon code"
                 )
 
-        # Apply discount to total_amount
-        new_total = max(0.0, original_total - discount)
+        preview = await _calculate_booking_pricing(
+            db,
+            original_taxable,
+            service_fee_percent=booking_dict.get("service_fee_percent"),
+            tax_slab_base_amount=booking_dict.get("tax_slab_base_amount"),
+            pricing_units=booking_dict.get("pricing_units") or 1,
+            extra_guest_amount=booking_dict.get("host_extra_guest_fee") or booking_dict.get("extra_guest_fee") or 0,
+        )
+        discount_base = float(preview.get("subtotal_before_discount") or original_taxable)
+        discount = round(min(max(0.0, discount), discount_base), 2)
+        pricing = await _calculate_booking_pricing(
+            db,
+            original_taxable,
+            service_fee_percent=booking_dict.get("service_fee_percent"),
+            coupon_discount=discount,
+            coupon_code=code,
+            tax_slab_base_amount=booking_dict.get("tax_slab_base_amount"),
+            pricing_units=booking_dict.get("pricing_units") or 1,
+            extra_guest_amount=booking_dict.get("host_extra_guest_fee") or booking_dict.get("extra_guest_fee") or 0,
+        )
+        new_total = pricing["total_amount"]
         
         # Update Razorpay order ID if not in mock mode
         razorpay_order_id = booking_dict.get("razorpay_order_id")
@@ -858,6 +970,27 @@ async def apply_coupon(
                 "$set": {
                     "coupon_code": code,
                     "discount_amount": discount,
+                    "base_amount": pricing["base_amount"],
+                    "host_amount": pricing["host_amount"],
+                    "service_fee": pricing["service_fee"],
+                    "service_fee_percent": pricing["service_fee_percent"],
+                    "taxes": pricing["taxes"],
+                    "tax_percent": pricing["tax_percent"],
+                    "tax_slab_id": pricing["tax_slab_id"],
+                    "tax_slab_base_amount": pricing["tax_slab_base_amount"],
+                    "tax_slab_basis_amount": pricing["tax_slab_basis_amount"],
+                    "final_nightly_price": pricing["final_nightly_price"],
+                    "pricing_units": pricing["pricing_units"],
+                    "taxable_amount": pricing["taxable_amount"],
+                    "charges": pricing["charges"],
+                    "pricing_breakdown": pricing,
+                    "payment_gateway_charge": pricing["payment_gateway_charge"],
+                    "convenience_fee": pricing["convenience_fee"],
+                    "insurance_fee": pricing["insurance_fee"],
+                    "cleaning_fee": pricing["cleaning_fee"],
+                    "extra_guest_fee": pricing["extra_guest_fee"],
+                    "host_extra_guest_fee": pricing.get("host_extra_guest_fee", 0),
+                    "subtotal_before_discount": pricing["subtotal_before_discount"],
                     "total_amount": new_total,
                     "razorpay_order_id": razorpay_order_id,
                     "updated_at": datetime.now(timezone.utc)
@@ -870,6 +1003,18 @@ async def apply_coupon(
             "message": "Coupon applied successfully",
             "coupon_code": code,
             "discount_amount": discount,
+            "base_amount": pricing["base_amount"],
+            "service_fee": pricing["service_fee"],
+            "taxes": pricing["taxes"],
+            "tax_percent": pricing["tax_percent"],
+            "tax_slab_id": pricing["tax_slab_id"],
+            "tax_slab_base_amount": pricing["tax_slab_base_amount"],
+            "tax_slab_basis_amount": pricing["tax_slab_basis_amount"],
+            "final_nightly_price": pricing["final_nightly_price"],
+            "pricing_units": pricing["pricing_units"],
+            "taxable_amount": pricing["taxable_amount"],
+            "charges": pricing["charges"],
+            "pricing_breakdown": pricing,
             "new_total": new_total,
             "razorpay_order_id": razorpay_order_id
         }
@@ -896,9 +1041,29 @@ async def payment_config(db: AsyncIOMotorDatabase = Depends(get_db)):
         **payment_settings,
     }
 
+
+@router.get("/tax/slab")
+async def get_booking_tax_slab(
+    amount: float = 0,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Return the active booking GST slab for a checkout taxable amount."""
+    slab = await _get_active_booking_tax_slab(db, amount)
+    return {
+        "amount": max(0.0, float(amount or 0)),
+        "slab_id": slab.get("slab_id"),
+        "from_amount": slab.get("from_amount"),
+        "to_amount": slab.get("to_amount"),
+        "gst_percent": slab.get("gst_percent"),
+        "status": slab.get("status"),
+    }
+
 class BookingPaymentConfigUpdate(BaseModel):
-    platform_fee_percent: float
+    platform_fee_percent: Optional[float] = None
     platform_fee_label: Optional[str] = None
+    charges: Optional[dict] = None
+    coupon_discount: Optional[dict] = None
+    host_payout: Optional[dict] = None
 
 @router.put("/admin/payment/config")
 async def update_payment_config(
@@ -910,18 +1075,31 @@ async def update_payment_config(
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
 
-    if payload.platform_fee_percent < 0 or payload.platform_fee_percent > 100:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Platform fee percent must be between 0 and 100",
-        )
-
     await _ensure_platform_settings_table(db)
     existing_config = await db.platform_settings.find_one({"key": BOOKING_PAYMENT_CONFIG_KEY}, {"_id": 0}) or {}
+    payload_dict = payload.dict(exclude_none=True)
+    merged_config = {**existing_config, **payload_dict}
+    if payload.platform_fee_percent is not None:
+        if payload.platform_fee_percent < 0 or payload.platform_fee_percent > 100:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Platform fee percent must be between 0 and 100",
+            )
+        charges = dict(merged_config.get("charges") or {})
+        platform_fee = dict(charges.get("platform_fee") or {})
+        platform_fee.update({
+            "enabled": True,
+            "charge_type": "percentage",
+            "value": payload.platform_fee_percent,
+            "label": payload.platform_fee_label or merged_config.get("platform_fee_label") or "Platform Fee",
+        })
+        charges["platform_fee"] = platform_fee
+        merged_config["charges"] = charges
+
+    update_data = normalize_booking_payment_config(merged_config)
     update_data = {
+        **update_data,
         "key": BOOKING_PAYMENT_CONFIG_KEY,
-        "platform_fee_percent": round(float(payload.platform_fee_percent), 2),
-        "platform_fee_label": (payload.platform_fee_label or "Premium Service Fee").strip() or "Premium Service Fee",
         "updated_at": datetime.now(timezone.utc),
         "updated_by": current_user.get("user_id"),
     }

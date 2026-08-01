@@ -4817,7 +4817,7 @@ export const BookingManagement = () => {
                     </span>
                   </div>
                   <div className="flex justify-between text-charcoal-light">
-                    <span>Taxes & GST (18%)</span>
+                    <span>Taxes & GST ({Number(selectedBooking.tax_percent ?? 0)}%)</span>
                     <span>
                       ₹{(selectedBooking.taxes || 0).toLocaleString('en-IN', {
                         minimumFractionDigits: 2,

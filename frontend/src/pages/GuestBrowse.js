@@ -125,6 +125,16 @@ function priceIcon(price, active) {
   });
 }
 
+function getCustomerNightlyPrice(property) {
+  return Number(
+    property?.display_price_per_night
+    ?? property?.customer_price_per_night
+    ?? property?.price_per_night
+    ?? property?.price
+    ?? 0
+  );
+}
+
 // Centers the map on bounds of properties
 function FitBounds({ properties }) {
   const map = useMap();
@@ -1275,7 +1285,7 @@ const GuestBrowse = () => {
                     <Marker
                       key={p.property_id}
                       position={[p.latitude, p.longitude]}
-                      icon={priceIcon(p.price_per_night, hoveredId === p.property_id)}
+                      icon={priceIcon(getCustomerNightlyPrice(p).toLocaleString('en-IN'), hoveredId === p.property_id)}
                       eventHandlers={{
                         click: () => navigateToProperty(p.property_id),
                         mouseover: () => setHoveredId(p.property_id),
@@ -1295,7 +1305,7 @@ const GuestBrowse = () => {
                           </div>
                           <div className="flex items-center justify-between pt-2 border-t border-sand-100">
                             <div>
-                              <span className="text-lg font-bold tracking-tight text-terracotta">₹{p.price_per_night}</span>
+                              <span className="text-lg font-bold tracking-tight text-terracotta">₹{getCustomerNightlyPrice(p).toLocaleString('en-IN')}</span>
                               <span className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest ml-1">
                                 {p.category === 'commercial' || p.category === 'event_venue'
                                   ? (p.pricing_cycle === 'hourly' ? `/ ${t('hour')}` : p.pricing_cycle === 'weekly' ? `/ ${t('week')}` : p.pricing_cycle === 'monthly' ? `/ ${t('month')}` : `/ ${t('day')}`)
@@ -1490,7 +1500,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
       <div className="flex items-center justify-between pt-4 border-t border-sand-100">
         <div>
           <span className="text-2xl font-bold tracking-tight text-terracotta">
-            ₹{property.price_per_night}
+            ₹{getCustomerNightlyPrice(property).toLocaleString('en-IN')}
           </span>
           <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest ml-1">
             {property.category === 'commercial' || property.category === 'event_venue'

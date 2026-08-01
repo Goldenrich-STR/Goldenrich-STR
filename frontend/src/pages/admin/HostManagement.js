@@ -8,11 +8,29 @@ const tabs = [
   ['agreement_pending', 'Agreement Pending'], ['bank_verification', 'Bank Verification'], ['subscription_status', 'Subscription Status'], ['suspended', 'Suspended Hosts'], ['risk_review', 'Host Risk Review'],
 ];
 
+const getAssigneeCode = (user) => user?.lg_code || user?.employee_code || user?.uid || user?.user_id || '';
+
+const getAssigneeLabel = (user) => {
+  const name = user?.full_name || user?.name || user?.email || user?.phone || 'Unnamed';
+  const code = getAssigneeCode(user);
+  return code ? `${name} (${code})` : name;
+};
+
 const HostManagement = () => {
   const [tab, setTab] = useState('all');
   const [search, setSearch] = useState('');
   const [state, setState] = useState({ loading: true, error: '', hosts: [] });
   const [selected, setSelected] = useState({ loading: false, host: null, error: '' });
+  const [assignees, setAssignees] = useState({ loading: true, error: '', brokers: [], relationship_managers: [] });
+  const [assignment, setAssignment] = useState({
+    open: false,
+    host: null,
+    broker_id: '',
+    rm_id: '',
+    reason: 'Host team assignment updated from Host Management',
+    saving: false,
+    error: '',
+  });
 
   const load = useCallback(async () => {
     try {
@@ -25,6 +43,24 @@ const HostManagement = () => {
   }, [tab, search]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadAssignees = useCallback(async () => {
+    try {
+      setAssignees((current) => ({ ...current, loading: true, error: '' }));
+      const res = await adminPhase1API.crmAssignees();
+      const data = res.data?.data || {};
+      setAssignees({
+        loading: false,
+        error: '',
+        brokers: data.brokers || [],
+        relationship_managers: data.relationship_managers || [],
+      });
+    } catch (error) {
+      setAssignees({ loading: false, error: error.response?.data?.detail || 'Failed to load brokers and RMs', brokers: [], relationship_managers: [] });
+    }
+  }, []);
+
+  useEffect(() => { loadAssignees(); }, [loadAssignees]);
 
   const decideKyc = async (host, status) => {
     const remarks = window.prompt(`Remarks for ${status} KYC`);
@@ -82,15 +118,48 @@ const HostManagement = () => {
     refreshSelected();
   };
 
-  const assignTeam = async (host) => {
-    const broker_id = window.prompt('Broker user ID');
-    if (broker_id === null) return;
-    const rm_id = window.prompt('RM employee user ID');
-    if (rm_id === null) return;
-    const reason = window.prompt('Reason for assignment');
-    if (!reason) return;
-    await adminPhase1API.assignHostTeam(host.user_id, { broker_id, rm_id, reason });
-    load();
+  const openAssignment = (host) => {
+    setAssignment({
+      open: true,
+      host,
+      broker_id: host.broker_id || '',
+      rm_id: host.rm_id || '',
+      reason: 'Host team assignment updated from Host Management',
+      saving: false,
+      error: '',
+    });
+  };
+
+  const closeAssignment = () => {
+    setAssignment({
+      open: false,
+      host: null,
+      broker_id: '',
+      rm_id: '',
+      reason: 'Host team assignment updated from Host Management',
+      saving: false,
+      error: '',
+    });
+  };
+
+  const saveAssignment = async () => {
+    if (!assignment.host?.user_id) return;
+    try {
+      setAssignment((current) => ({ ...current, saving: true, error: '' }));
+      await adminPhase1API.assignHostTeam(assignment.host.user_id, {
+        broker_id: assignment.broker_id,
+        rm_id: assignment.rm_id,
+        reason: assignment.reason || 'Host team assignment updated from Host Management',
+      });
+      closeAssignment();
+      load();
+    } catch (error) {
+      setAssignment((current) => ({
+        ...current,
+        saving: false,
+        error: error.response?.data?.detail || 'Failed to update host assignment',
+      }));
+    }
   };
 
   return (
@@ -125,7 +194,7 @@ const HostManagement = () => {
                 <button onClick={() => openKyc(host)} className="inline-flex items-center gap-1 rounded-lg bg-charcoal px-2 py-1 text-xs font-bold text-white"><Building2 className="h-3.5 w-3.5" /> Review KYC</button>
                 <button onClick={() => decideKyc(host, 'approved')} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700"><FileCheck2 className="h-3.5 w-3.5" /> Approve KYC</button>
                 <button onClick={() => decideKyc(host, 'rejected')} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700">Reject KYC</button>
-                <button onClick={() => assignTeam(host)} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold"><UserCog className="h-3.5 w-3.5" /> Assign</button>
+                <button onClick={() => openAssignment(host)} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold"><UserCog className="h-3.5 w-3.5" /> Assign</button>
               </div>
             </Panel>
           );})}
@@ -134,6 +203,13 @@ const HostManagement = () => {
         <KycReviewPanel selected={selected} onClose={() => setSelected({ loading: false, host: null, error: '' })} onDoc={decideDocument} onBank={decideBank} onAgreement={decideAgreement} onReupload={requestReupload} onFinal={decideKyc} />
         </div>
       )}
+      <AssignmentModal
+        assignees={assignees}
+        assignment={assignment}
+        onChange={setAssignment}
+        onClose={closeAssignment}
+        onSave={saveAssignment}
+      />
     </div>
   );
 };
@@ -203,5 +279,82 @@ const ReviewBlock = ({ title, status, rows, onApprove, onReject }) => (
     </div>
   </div>
 );
+
+const AssignmentModal = ({ assignees, assignment, onChange, onClose, onSave }) => {
+  if (!assignment.open) return null;
+  const host = assignment.host || {};
+  const updateField = (field, value) => onChange((current) => ({ ...current, [field]: value, error: '' }));
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <Panel className="w-full max-w-xl p-5 shadow-2xl">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-terracotta">Host Assignment</p>
+            <h2 className="mt-1 text-xl font-black">{host.full_name || 'Host'}</h2>
+            <p className="text-xs text-slate-500">{host.user_id || '-'} / {host.phone || '-'}</p>
+          </div>
+          <button onClick={onClose} disabled={assignment.saving} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-black disabled:opacity-50">Close</button>
+        </div>
+
+        {assignees.error && <ErrorState message={assignees.error} />}
+        {assignment.error && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{assignment.error}</div>}
+
+        <div className="grid gap-4">
+          <label className="grid gap-2 text-sm font-bold">
+            Broker
+            <select
+              value={assignment.broker_id}
+              onChange={(event) => updateField('broker_id', event.target.value)}
+              disabled={assignees.loading || assignment.saving}
+              className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-terracotta"
+            >
+              <option value="">-- No Broker Assigned --</option>
+              {(assignees.brokers || []).map((broker) => (
+                <option key={broker.user_id} value={broker.user_id}>{getAssigneeLabel(broker)}</option>
+              ))}
+            </select>
+            <span className="text-xs font-medium text-slate-500">Current: {host.broker_id || '-'}</span>
+          </label>
+
+          <label className="grid gap-2 text-sm font-bold">
+            Relationship Manager (RM)
+            <select
+              value={assignment.rm_id}
+              onChange={(event) => updateField('rm_id', event.target.value)}
+              disabled={assignees.loading || assignment.saving}
+              className="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-terracotta"
+            >
+              <option value="">-- No RM Assigned --</option>
+              {(assignees.relationship_managers || []).map((rm) => (
+                <option key={rm.user_id} value={rm.user_id}>{getAssigneeLabel(rm)}</option>
+              ))}
+            </select>
+            <span className="text-xs font-medium text-slate-500">Current: {host.rm_id || '-'}</span>
+          </label>
+
+          <label className="grid gap-2 text-sm font-bold">
+            Assignment Reason
+            <textarea
+              value={assignment.reason}
+              onChange={(event) => updateField('reason', event.target.value)}
+              disabled={assignment.saving}
+              rows={3}
+              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-terracotta"
+              placeholder="Reason for audit log"
+            />
+          </label>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button onClick={onClose} disabled={assignment.saving} className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-black disabled:opacity-50">Cancel</button>
+          <button onClick={onSave} disabled={assignees.loading || assignment.saving} className="rounded-lg bg-charcoal px-4 py-2 text-sm font-black text-white disabled:opacity-50">
+            {assignment.saving ? 'Saving...' : 'Save Assignment'}
+          </button>
+        </div>
+      </Panel>
+    </div>
+  );
+};
 
 export default HostManagement;

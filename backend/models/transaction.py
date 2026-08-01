@@ -31,6 +31,7 @@ class TransactionStatus(str, Enum):
 
 
 class PayoutStatus(str, Enum):
+    PENDING = "pending"
     ELIGIBLE = "eligible"
     NEEDS_DESTINATION = "needs_destination"
     PROCESSING = "processing"
@@ -113,8 +114,23 @@ class Payout(BaseModel):
 
     gross_amount: int           # total paid by guest (paise) — excludes tax/service since those are platform revenue
     platform_fee: int           # platform take (paise)
+    gateway_charge: int = 0
+    company_charge: int = 0
+    host_actual_value_amount: int = 0
+    total_extra_charges_amount: int = 0
+    customer_final_payable_amount: int = 0
+    customer_charge_breakdown: Optional[dict] = None
     tds_amount: int = 0         # TDS deducted from host payout (paise)
     net_amount: int             # what host actually receives (paise)
+    deductions: Optional[list[dict]] = None
+    tds_breakdown: Optional[dict] = None
+    tds_base_amount: int = 0
+    tds_rate_percent: float = 0.0
+    tds_threshold_amount: int = 0
+    tds_fy_gross_before: int = 0
+    tds_fy_gross_after: int = 0
+    tds_threshold_crossed: bool = False
+    tds_financial_year: Optional[str] = None
 
     destination_type: PayoutDestinationType
     destination_ref: str        # VPA or masked bank account

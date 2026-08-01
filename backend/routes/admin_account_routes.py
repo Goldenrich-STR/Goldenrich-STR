@@ -29,6 +29,7 @@ from services.account_service import (
     process_payout,
     sweep_payout_eligibility,
 )
+from services.booking_calculation_service import extract_booking_pricing_snapshot
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin/account", tags=["Admin Account"])
@@ -169,6 +170,12 @@ async def overview(
         ])
         pending_rows = await pending_payouts_amount_cursor.to_list(length=1)
         pending_payouts_amount = pending_rows[0]["total"] if pending_rows else 0
+        booking_tax_cursor = db.bookings.aggregate([
+            {"$match": {"booking_status": {"$nin": ["cancelled", "failed"]}}},
+            {"$group": {"_id": None, "total": {"$sum": "$taxes"}}},
+        ])
+        booking_tax_rows = await booking_tax_cursor.to_list(length=1)
+        booking_tax_paise = int(round(float(booking_tax_rows[0]["total"] or 0) * 100)) if booking_tax_rows else 0
 
         # MRR — sum of monthly-equivalent from active subscriptions
         mrr = await _compute_mrr(db)
@@ -183,7 +190,7 @@ async def overview(
                 "subscriptions_paise": sub_rev["amount_paise"],
                 "refunds_paise": refunds["amount_paise"],
                 "payouts_paid_paise": payouts["amount_paise"],
-                "total_tax_paise": int(round(booking_rev["amount_paise"] * (0.18 / 1.28))),
+                "total_tax_paise": booking_tax_paise,
             },
             "counts": {
                 "booking_payments": booking_rev["count"],
@@ -1127,6 +1134,35 @@ async def share_transaction_invoice(
 
 # --------------- Payouts ----------------
 
+def _first_present(*values):
+    for value in values:
+        if value not in (None, "", "-", "NA", "N/A"):
+            return value
+    return None
+
+
+async def _lookup_finance_user_ref(db: AsyncIOMotorDatabase, reference):
+    reference = _first_present(reference)
+    if not reference:
+        return None
+    projection = {
+        "_id": 0,
+        "user_id": 1,
+        "uid": 1,
+        "full_name": 1,
+        "email": 1,
+        "phone": 1,
+        "role": 1,
+        "lg_code": 1,
+        "employee_code": 1,
+    }
+    for key in ("user_id", "uid", "lg_code", "employee_code", "email"):
+        user = await db.users.find_one({key: reference}, projection)
+        if user:
+            return user
+    return {"user_id": reference, "uid": reference, "full_name": str(reference)}
+
+
 @router.get("/payouts")
 async def list_payouts(
     status: Optional[str] = None,
@@ -1146,16 +1182,213 @@ async def list_payouts(
         .limit(limit)
     )
     items = await cursor.to_list(length=limit)
-    # enrich with host name + property title
+    # enrich settlement ledger rows for finance review without changing payouts
     for p in items:
         host = await db.users.find_one(
-            {"user_id": p["host_id"]}, {"_id": 0, "full_name": 1, "email": 1, "payout_preference": 1}
+            {"user_id": p["host_id"]},
+            {
+                "_id": 0,
+                "full_name": 1,
+                "email": 1,
+                "phone": 1,
+                "payout_preference": 1,
+                "broker_id": 1,
+                "assigned_broker_id": 1,
+                "broker_code": 1,
+                "lg_code": 1,
+                "rm_id": 1,
+                "employee_id": 1,
+                "assigned_employee_id": 1,
+                "employee_code": 1,
+            },
         )
         prop = await db.properties.find_one(
-            {"property_id": p["property_id"]}, {"_id": 0, "title": 1, "city": 1}
+            {"property_id": p["property_id"]},
+            {
+                "_id": 0,
+                "title": 1,
+                "city": 1,
+                "broker_id": 1,
+                "assigned_broker_id": 1,
+                "broker_code": 1,
+                "lg_code": 1,
+                "rm_id": 1,
+                "employee_id": 1,
+                "assigned_employee_id": 1,
+                "employee_code": 1,
+            },
+        )
+        booking = await db.bookings.find_one(
+            {"booking_id": p.get("booking_id")},
+            {
+                "_id": 0,
+                "booking_id": 1,
+                "check_in_date": 1,
+                "check_out_date": 1,
+                "created_at": 1,
+                "nights": 1,
+                "number_of_nights": 1,
+                "host_base_amount": 1,
+                "base_amount": 1,
+                "price_per_night": 1,
+                "subtotal_amount": 1,
+                "total_amount": 1,
+                "platform_fee": 1,
+                "platform_fee_amount": 1,
+                "payment_gateway_charge": 1,
+                "gateway_charge": 1,
+                "convenience_fee": 1,
+                "insurance_fee": 1,
+                "cleaning_fee": 1,
+                "extra_guest_fee": 1,
+                "gst_amount": 1,
+                "tax_amount": 1,
+                "pricing": 1,
+                "pricing_snapshot": 1,
+                "pricing_breakdown": 1,
+                "breakdown": 1,
+                "extra_charges": 1,
+                "customer_charge_breakdown": 1,
+                "charge_breakdown": 1,
+                "applied_charges": 1,
+                "host_actual_value": 1,
+                "host_amount": 1,
+                "unit_host_price": 1,
+                "host_price_per_night": 1,
+                "pricing_units": 1,
+                "discount_amount": 1,
+                "customer_discount_amount": 1,
+                "total_extra_charges": 1,
+                "total_extra_charges_amount": 1,
+                "customer_final_payable": 1,
+                "gateway_charge_amount": 1,
+                "payment_gateway_charge_amount": 1,
+                "convenience_fee_amount": 1,
+                "insurance_fee_amount": 1,
+                "cleaning_fee_amount": 1,
+                "extra_guest_fee_amount": 1,
+                "company_charge_amount": 1,
+                "service_fee_amount": 1,
+            },
         )
         p["host"] = host
         p["property"] = prop
+        p["booking"] = booking
+
+        broker_ref = _first_present(
+            (prop or {}).get("broker_id"),
+            (prop or {}).get("assigned_broker_id"),
+            (prop or {}).get("broker_code"),
+            (prop or {}).get("lg_code"),
+            (host or {}).get("broker_id"),
+            (host or {}).get("assigned_broker_id"),
+            (host or {}).get("broker_code"),
+            (host or {}).get("lg_code"),
+        )
+        employee_ref = _first_present(
+            (prop or {}).get("rm_id"),
+            (prop or {}).get("employee_id"),
+            (prop or {}).get("assigned_employee_id"),
+            (prop or {}).get("employee_code"),
+            (host or {}).get("rm_id"),
+            (host or {}).get("employee_id"),
+            (host or {}).get("assigned_employee_id"),
+            (host or {}).get("employee_code"),
+        )
+        p["broker"] = await _lookup_finance_user_ref(db, broker_ref)
+        p["employee"] = await _lookup_finance_user_ref(db, employee_ref)
+        p["settlement_due_at"] = _first_present(p.get("eligible_at"), p.get("created_at"))
+
+        def _rupees_to_paise(value) -> int:
+            try:
+                return int(round(float(value or 0) * 100))
+            except (TypeError, ValueError):
+                return 0
+
+        def _paise(value) -> int:
+            try:
+                return int(value or 0)
+            except (TypeError, ValueError):
+                return 0
+
+        def _first_paise(*values) -> int:
+            for value in values:
+                amount = _paise(value)
+                if amount:
+                    return amount
+            return 0
+
+        pricing_snapshot = extract_booking_pricing_snapshot(booking or {})
+        extra_charges = pricing_snapshot.get("extra_charges") or {}
+        existing_charge_breakdown = p.get("customer_charge_breakdown") or {}
+        snapshot_charge_breakdown = {
+            "platform_fee": _rupees_to_paise(extra_charges.get("platform_fee")),
+            "gateway_charge": _rupees_to_paise(extra_charges.get("gateway_charge")),
+            "company_charge": _rupees_to_paise(extra_charges.get("company_charge")),
+            "convenience_fee": _rupees_to_paise(extra_charges.get("convenience_fee")),
+            "insurance_fee": _rupees_to_paise(extra_charges.get("insurance_fee")),
+            "cleaning_fee": _rupees_to_paise(extra_charges.get("cleaning_fee")),
+            "extra_guest_fee": _rupees_to_paise(extra_charges.get("extra_guest_fee")),
+            "customer_gst": _rupees_to_paise(pricing_snapshot.get("gst_amount")),
+        }
+        p["customer_charge_breakdown"] = {
+            "platform_fee": _first_paise(snapshot_charge_breakdown.get("platform_fee"), existing_charge_breakdown.get("platform_fee"), p.get("platform_fee")),
+            "gateway_charge": _first_paise(snapshot_charge_breakdown.get("gateway_charge"), existing_charge_breakdown.get("gateway_charge"), p.get("gateway_charge")),
+            "company_charge": _first_paise(snapshot_charge_breakdown.get("company_charge"), existing_charge_breakdown.get("company_charge"), p.get("company_charge")),
+            "convenience_fee": _first_paise(snapshot_charge_breakdown.get("convenience_fee"), existing_charge_breakdown.get("convenience_fee")),
+            "insurance_fee": _first_paise(snapshot_charge_breakdown.get("insurance_fee"), existing_charge_breakdown.get("insurance_fee")),
+            "cleaning_fee": _first_paise(snapshot_charge_breakdown.get("cleaning_fee"), existing_charge_breakdown.get("cleaning_fee")),
+            "extra_guest_fee": _first_paise(snapshot_charge_breakdown.get("extra_guest_fee"), existing_charge_breakdown.get("extra_guest_fee")),
+            "customer_gst": _first_paise(snapshot_charge_breakdown.get("customer_gst"), existing_charge_breakdown.get("customer_gst")),
+        }
+        host_actual_amount = _first_paise(
+            p.get("host_actual_value_amount"),
+            _rupees_to_paise(pricing_snapshot.get("host_actual_value")),
+            p.get("gross_amount"),
+        )
+        p["host_actual_value_amount"] = host_actual_amount
+        p["gross_amount"] = host_actual_amount
+        p["total_extra_charges_amount"] = _first_paise(
+            p.get("total_extra_charges_amount"),
+            _rupees_to_paise(pricing_snapshot.get("total_extra_charges")),
+            sum(p["customer_charge_breakdown"].get(k, 0) for k in (
+                "platform_fee",
+                "gateway_charge",
+                "company_charge",
+                "convenience_fee",
+                "insurance_fee",
+                "cleaning_fee",
+                "extra_guest_fee",
+            )),
+        )
+        p["customer_final_payable_amount"] = _first_paise(
+            p.get("customer_final_payable_amount"),
+            _rupees_to_paise(pricing_snapshot.get("customer_final_payable")),
+        )
+        p["platform_fee"] = p["customer_charge_breakdown"].get("platform_fee") or p.get("platform_fee") or 0
+        p["gateway_charge"] = p["customer_charge_breakdown"].get("gateway_charge") or p.get("gateway_charge") or 0
+        p["company_charge"] = p["customer_charge_breakdown"].get("company_charge") or p.get("company_charge") or 0
+
+        tds_breakdown = p.get("tds_breakdown") or {}
+        if not tds_breakdown:
+            for deduction in p.get("deductions") or []:
+                if deduction.get("key") == "tds":
+                    tds_breakdown = deduction.get("breakdown") or {}
+                    break
+        p["tds_breakdown"] = tds_breakdown
+
+        if not p.get("tds_base_amount"):
+            p["tds_base_amount"] = _rupees_to_paise(tds_breakdown.get("tds_base_amount")) or host_actual_amount
+        if not p.get("tds_rate_percent"):
+            p["tds_rate_percent"] = float(tds_breakdown.get("rate_percent") or 0)
+        if not p.get("tds_threshold_amount"):
+            p["tds_threshold_amount"] = _rupees_to_paise(tds_breakdown.get("threshold_amount"))
+        if not p.get("tds_fy_gross_before"):
+            p["tds_fy_gross_before"] = _rupees_to_paise(tds_breakdown.get("prior_fy_gross"))
+        if not p.get("tds_fy_gross_after"):
+            p["tds_fy_gross_after"] = _rupees_to_paise(tds_breakdown.get("projected_fy_gross"))
+        p["tds_threshold_crossed"] = bool(p.get("tds_threshold_crossed") or tds_breakdown.get("threshold_crossed"))
+        p["tds_financial_year"] = p.get("tds_financial_year") or tds_breakdown.get("financial_year")
 
     total = await db.payouts.count_documents(query)
     return {"payouts": items, "total": total}
@@ -1186,9 +1419,9 @@ async def sweep_eligibility(
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Manually trigger a sweep that marks completed bookings payout_eligible."""
+    """Manually trigger a sweep that creates or promotes booking payout ledger rows."""
     n = await sweep_payout_eligibility(db)
-    return {"message": f"Marked {n} bookings as payout eligible", "count": n}
+    return {"message": f"Created or updated {n} payout ledger rows", "count": n}
 
 
 @router.post("/payouts/process-eligible")
@@ -1249,6 +1482,7 @@ async def auto_payout_status(
 ):
     """Show whether automatic payout is enabled and the latest run result."""
     latest = await db.payout_job_runs.find_one({}, {"_id": 0}, sort=[("ran_at", -1)])
+    pending = await db.payouts.count_documents({"status": PayoutStatus.PENDING.value})
     pending_eligible = await db.payouts.count_documents({"status": PayoutStatus.ELIGIBLE.value})
     processing = await db.payouts.count_documents({"status": PayoutStatus.PROCESSING.value})
     failed = await db.payouts.count_documents({"status": PayoutStatus.FAILED.value})
@@ -1257,6 +1491,7 @@ async def auto_payout_status(
         "interval_seconds": int(os.environ.get("PAYOUT_SWEEP_INTERVAL", "3600")),
         "batch_limit": int(os.environ.get("AUTO_PAYOUT_BATCH_LIMIT", "100")),
         "payouts_are_mock": os.environ.get("RAZORPAYX_DEMO_MODE", "true").strip().lower() in {"1", "true", "yes", "on"},
+        "pending": pending,
         "pending_eligible": pending_eligible,
         "processing": processing,
         "failed": failed,

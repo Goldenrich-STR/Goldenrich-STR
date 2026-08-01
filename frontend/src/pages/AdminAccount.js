@@ -6,7 +6,7 @@ import {
 import {
   ArrowLeft, Download, IndianRupee, TrendingUp, Wallet, Users,
   RefreshCcw, CheckCircle, XCircle, AlertCircle, Clock,
-  Search, Share2, FileText, Mail, MessageSquare, Printer, ChevronLeft, ChevronRight,
+  Search, Share2, FileText, Mail, MessageSquare, Printer, CalendarDays, ChevronLeft, ChevronRight,
   Plus, Trash, SlidersHorizontal, Eye
 } from 'lucide-react';
 
@@ -4334,4 +4334,5 @@ const InvoiceModal = ({ transaction, onClose }) => {
   );
 };
 
+export { TransactionsTab as AdminAccountTransactionsTab };
 export default AdminAccount;

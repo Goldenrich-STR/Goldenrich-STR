@@ -345,6 +345,12 @@ export const bookingAPI = {
   getPaymentConfig: () =>
     apiClient.get('/bookings/payment/config'),
 
+  getPricingQuote: (payload) =>
+    apiClient.post('/bookings/pricing/quote', payload),
+
+  getBookingTaxSlab: (amount = 0) =>
+    apiClient.get('/bookings/tax/slab', { params: { amount } }),
+
   getGuestBookings: () =>
     apiClient.get('/bookings/guest/my-bookings'),
   

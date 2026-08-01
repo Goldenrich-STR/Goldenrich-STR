@@ -6,6 +6,13 @@ from models.property import Property, PropertyCreate, PropertyUpdate, PropertySt
 from models.subscription import SubscriptionStatus
 from models.user import UserRole
 from middleware.auth_middleware import get_current_user, require_role
+from services.booking_calculation_service import (
+    BOOKING_CHARGE_KEYS,
+    as_float,
+    calculate_configured_charges_total,
+    get_booking_payment_config,
+    money,
+)
 from datetime import datetime, timezone
 import asyncio
 import logging
@@ -52,6 +59,34 @@ HOST_MANAGE_EDITABLE_FIELDS = {
 async def get_db():
     from server import db_instance
     return db_instance
+
+
+def _property_host_nightly_price(prop: dict) -> float:
+    try:
+        raw_price = prop.get("base_price") if prop.get("base_price") not in (None, "") else prop.get("price_per_night")
+        return float(raw_price or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+async def _add_customer_display_price(db: AsyncIOMotorDatabase, prop: dict, config: Optional[dict] = None) -> dict:
+    try:
+        config = config or await get_booking_payment_config(db)
+        host_price = money(_property_host_nightly_price(prop))
+        display_price = money(host_price + calculate_configured_charges_total(host_price, config))
+        prop["host_price_per_night"] = as_float(host_price)
+        prop["display_price_per_night"] = as_float(display_price)
+        prop["customer_price_per_night"] = as_float(display_price)
+        prop["display_price_excludes_tax"] = True
+        enabled_charges = [
+            key
+            for key in BOOKING_CHARGE_KEYS
+            if config.get("charges", {}).get(key, {}).get("enabled")
+        ]
+        prop["display_price_includes"] = enabled_charges
+    except Exception as exc:
+        logger.warning("Failed to add customer display price for %s: %s", prop.get("property_id"), exc)
+    return prop
 
 
 class DeletePropertyRequest(BaseModel):
@@ -217,7 +252,7 @@ async def search_properties(
 
         def numeric_price(prop: dict) -> float:
             try:
-                return float(prop.get("price_per_night") or 0)
+                return float(prop.get("base_price") if prop.get("base_price") not in (None, "") else prop.get("price_per_night") or 0)
             except (TypeError, ValueError):
                 return 0
 
@@ -234,6 +269,7 @@ async def search_properties(
             "longitude": 1,
             "max_guests": 1,
             "price_per_night": 1,
+            "base_price": 1,
             "pricing_cycle": 1,
             "images": 1,
             "average_rating": 1,
@@ -335,6 +371,11 @@ async def search_properties(
 
         total = len(raw_properties)
         properties = raw_properties[skip: skip + limit]
+        price_config = await get_booking_payment_config(db)
+        for prop in properties:
+            if prop.get("base_price") not in (None, ""):
+                prop["price_per_night"] = prop["base_price"]
+            await _add_customer_display_price(db, prop, price_config)
 
         # Log search activity for analytics (admin dashboard)
         try:
@@ -443,6 +484,9 @@ async def get_property(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Property not found"
             )
+        if property_dict.get("base_price") not in (None, ""):
+            property_dict["price_per_night"] = property_dict["base_price"]
+        await _add_customer_display_price(db, property_dict)
 
         # Get optional user from Request headers (Authorization)
         current_user = None
