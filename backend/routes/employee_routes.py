@@ -12,6 +12,7 @@ import logging
 import io
 import csv
 import asyncio
+import re
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
@@ -39,6 +40,63 @@ async def get_db():
     from server import db_instance
     return db_instance
 
+
+def _clean_identifier(value):
+    text = str(value or "").strip()
+    return text if text else None
+
+
+async def _get_rm_identifiers(db: AsyncIOMotorDatabase, current_user_or_id):
+    if isinstance(current_user_or_id, dict):
+        rm_user = current_user_or_id
+        rm_id = rm_user.get("user_id")
+    else:
+        rm_id = current_user_or_id
+        rm_user = await db.users.find_one({"user_id": rm_id, "role": "employee"}, {"_id": 0}) or {}
+
+    identifiers = {
+        _clean_identifier(rm_id),
+        _clean_identifier(rm_user.get("user_id")),
+        _clean_identifier(rm_user.get("employee_code")),
+        _clean_identifier(rm_user.get("uid")),
+        _clean_identifier(rm_user.get("rm_id")),
+    }
+    return [identifier for identifier in identifiers if identifier]
+
+
+def _field_matches_identifiers(field, identifiers):
+    exact_values = [value for value in identifiers if value]
+    regex_values = [
+        {"$regex": f"^{re.escape(value)}$", "$options": "i"}
+        for value in identifiers
+        if value
+    ]
+    return [{field: {"$in": exact_values}}] + [{field: regex} for regex in regex_values]
+
+
+async def _get_rm_scope(db: AsyncIOMotorDatabase, current_user_or_id):
+    """Return brokers and hosts visible to an RM across legacy and current assignment fields."""
+    identifiers = await _get_rm_identifiers(db, current_user_or_id)
+    if not identifiers:
+        return [], []
+
+    broker_query = {
+        "role": "broker",
+        "$or": _field_matches_identifiers("rm_id", identifiers),
+    }
+    brokers = await db.users.find(broker_query, {"_id": 0, "user_id": 1}).to_list(length=1000)
+    broker_ids = list({broker["user_id"] for broker in brokers if broker.get("user_id")})
+
+    host_or = _field_matches_identifiers("rm_id", identifiers)
+    if broker_ids:
+        host_or.append({"broker_id": {"$in": broker_ids}})
+    hosts = await db.users.find(
+        {"role": "host", "$or": host_or},
+        {"_id": 0, "user_id": 1}
+    ).to_list(length=3000)
+    host_ids = list({host["user_id"] for host in hosts if host.get("user_id")})
+    return broker_ids, host_ids
+
 # ========== EMPLOYEE DASHBOARD ==========
 
 @router.get("/dashboard/stats")
@@ -49,13 +107,15 @@ async def get_employee_dashboard_stats(
     """Get employee dashboard statistics."""
     try:
         rm_id = current_user["user_id"]
+        rm_identifiers = await _get_rm_identifiers(db, current_user)
         now = datetime.now(timezone.utc)
         today = date.today()
         month_start = today.replace(day=1)
         next_month = date(today.year + (1 if today.month == 12 else 0), 1 if today.month == 12 else today.month + 1, 1)
 
+        broker_ids, my_host_ids = await _get_rm_scope(db, current_user)
         broker_cursor = db.users.find(
-            {"role": "broker", "rm_id": rm_id},
+            {"user_id": {"$in": broker_ids}, "role": "broker"},
             {"_id": 0, "user_id": 1, "is_active": 1}
         )
         my_brokers = await broker_cursor.to_list(length=1000)
@@ -65,14 +125,14 @@ async def get_employee_dashboard_stats(
         inactive_brokers = total_brokers - active_brokers
 
         host_cursor = db.users.find(
-            {"role": "host", "broker_id": {"$in": my_broker_ids}},
+            {"role": "host", "user_id": {"$in": my_host_ids}},
             {"_id": 0, "user_id": 1, "kyc_status": 1}
         )
         my_hosts = await host_cursor.to_list(length=3000)
         my_host_ids = list({host["user_id"] for host in my_hosts if host.get("user_id")})
         pending_host_verification = len([host for host in my_hosts if host.get("kyc_status") not in {"approved", "verified"}])
 
-        property_query = {"broker_id": {"$in": my_broker_ids}}
+        property_query = {"$or": [{"broker_id": {"$in": my_broker_ids}}, {"owner_id": {"$in": my_host_ids}}, *_field_matches_identifiers("rm_id", rm_identifiers)]}
         properties = await db.properties.find(
             property_query,
             {"_id": 0, "property_id": 1, "status": 1, "rating": 1}
@@ -784,8 +844,9 @@ async def get_all_brokers(
     """Get all brokers under this RM."""
     try:
         # Get brokers assigned to this RM
+        broker_ids, _ = await _get_rm_scope(db, current_user)
         cursor = db.users.find(
-            {"role": "broker", "rm_id": current_user["user_id"]},
+            {"role": "broker", "user_id": {"$in": broker_ids}},
             {"_id": 0, "password_hash": 0}
         )
         brokers = await cursor.to_list(length=200)
@@ -842,7 +903,6 @@ async def get_all_brokers(
             stale_cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
             pending_escalations = await db.property_verifications.count_documents({
                 "broker_id": broker_id,
-                "rm_id": current_user["user_id"],
                 "rm_reviewed": False,
                 "created_at": {"$lt": stale_cutoff}
             })
@@ -908,7 +968,8 @@ async def get_broker_portfolio(
                 detail="Broker not found"
             )
             
-        if broker.get("rm_id") != current_user["user_id"]:
+        broker_ids, _ = await _get_rm_scope(db, current_user)
+        if broker_id not in broker_ids:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="This broker is not assigned to you"
@@ -992,21 +1053,6 @@ async def get_broker_portfolio(
 
 # ========== HOST MANAGEMENT ==========
 
-async def _get_rm_scope(db: AsyncIOMotorDatabase, rm_id: str):
-    """Return only brokers assigned to this RM and the hosts under those brokers."""
-    brokers = await db.users.find(
-        {"role": "broker", "rm_id": rm_id},
-        {"_id": 0, "user_id": 1}
-    ).to_list(length=1000)
-    broker_ids = [broker["user_id"] for broker in brokers if broker.get("user_id")]
-    hosts = await db.users.find(
-        {"role": "host", "broker_id": {"$in": broker_ids}},
-        {"_id": 0, "user_id": 1}
-    ).to_list(length=3000)
-    host_ids = list({host["user_id"] for host in hosts if host.get("user_id")})
-    return broker_ids, host_ids
-
-
 @router.get("/hosts")
 async def get_rm_hosts(
     current_user: dict = Depends(require_employee),
@@ -1087,7 +1133,7 @@ async def get_rm_host_details(
         broker = None
         if host.get("broker_id"):
             broker = await db.users.find_one(
-                {"user_id": host.get("broker_id"), "role": "broker", "rm_id": current_user["user_id"]},
+                {"user_id": host.get("broker_id"), "role": "broker"},
                 {"_id": 0, "password_hash": 0}
             )
 
@@ -1127,7 +1173,13 @@ async def get_rm_host_details(
 
 async def _get_rm_property_query(db: AsyncIOMotorDatabase, rm_id: str):
     broker_ids, host_ids = await _get_rm_scope(db, rm_id)
-    return broker_ids, host_ids, {"broker_id": {"$in": broker_ids}}
+    identifiers = await _get_rm_identifiers(db, rm_id)
+    property_or = _field_matches_identifiers("rm_id", identifiers)
+    if broker_ids:
+        property_or.append({"broker_id": {"$in": broker_ids}})
+    if host_ids:
+        property_or.append({"owner_id": {"$in": host_ids}})
+    return broker_ids, host_ids, {"$or": property_or}
 
 
 def _property_verification_stage(property_doc: dict, verification: Optional[dict]) -> dict:
@@ -1816,30 +1868,17 @@ async def get_properties_not_booked_report(
     """Get report of active properties with zero bookings."""
     try:
         # Get my brokers
-        my_brokers = await db.users.find(
-            {"role": "broker", "rm_id": current_user["user_id"]},
-            {"user_id": 1}
-        ).to_list(length=500)
-        my_broker_ids = [b["user_id"] for b in my_brokers]
-
-        # Get my hosts
-        my_hosts = await db.users.find(
-            {"role": "host", "broker_id": {"$in": my_broker_ids}},
-            {"user_id": 1}
-        ).to_list(length=1000)
-        my_host_ids = [h["user_id"] for h in my_hosts]
+        my_broker_ids, my_host_ids, scoped_property_query = await _get_rm_property_query(db, current_user["user_id"])
 
         # Build property query
-        property_query = {"status": "live"}
+        property_query = {"$and": [scoped_property_query, {"status": "live"}]}
         if broker_id:
             if broker_id not in my_broker_ids:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Broker is not assigned to you"
                 )
-            property_query["broker_id"] = broker_id
-        else:
-            property_query["broker_id"] = {"$in": my_broker_ids}
+            property_query = {"$and": [scoped_property_query, {"status": "live"}, {"broker_id": broker_id}]}
         
         # Get all matching live properties
         property_cursor = db.properties.find(property_query, {"_id": 0})
@@ -1894,30 +1933,17 @@ async def export_properties_not_booked_csv(
     """Export properties not booked report as CSV."""
     try:
         # Get my brokers
-        my_brokers = await db.users.find(
-            {"role": "broker", "rm_id": current_user["user_id"]},
-            {"user_id": 1}
-        ).to_list(length=500)
-        my_broker_ids = [b["user_id"] for b in my_brokers]
-
-        # Get my hosts
-        my_hosts = await db.users.find(
-            {"role": "host", "broker_id": {"$in": my_broker_ids}},
-            {"user_id": 1}
-        ).to_list(length=1000)
-        my_host_ids = [h["user_id"] for h in my_hosts]
+        my_broker_ids, my_host_ids, scoped_property_query = await _get_rm_property_query(db, current_user["user_id"])
 
         # Get report data
-        property_query = {"status": "live"}
+        property_query = {"$and": [scoped_property_query, {"status": "live"}]}
         if broker_id:
             if broker_id not in my_broker_ids:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Broker is not assigned to you"
                 )
-            property_query["broker_id"] = broker_id
-        else:
-            property_query["broker_id"] = {"$in": my_broker_ids}
+            property_query = {"$and": [scoped_property_query, {"status": "live"}, {"broker_id": broker_id}]}
         
         property_cursor = db.properties.find(property_query, {"_id": 0})
         properties = await property_cursor.to_list(length=500)
@@ -1986,7 +2012,8 @@ async def get_broker_portfolio_summary(
 ):
     """Get summary report of all brokers' portfolios."""
     try:
-        broker_cursor = db.users.find({"role": "broker", "rm_id": current_user["user_id"]}, {"_id": 0})
+        broker_ids, _ = await _get_rm_scope(db, current_user)
+        broker_cursor = db.users.find({"role": "broker", "user_id": {"$in": broker_ids}}, {"_id": 0})
         brokers = await broker_cursor.to_list(length=200)
         
         summary = []
