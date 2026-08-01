@@ -85,9 +85,21 @@ class _LandingScreenState extends State<LandingScreen> {
 
   static const List<_DestinationData> _destinations = [
     _DestinationData('Nashik', 'nashik'),
-    _DestinationData('Trimbak', 'trimbak'),
+    _DestinationData('Trimbakeshwar', 'trimbak'),
+    _DestinationData('Gangapur Dam', 'gangapur_dam'),
     _DestinationData('Igatpuri', 'igatpuri'),
     _DestinationData('Sula Vineyards', 'sula'),
+    _DestinationData('Anjaneri', 'anjaneri'),
+    _DestinationData('Harihar Fort', 'harihar_fort'),
+    _DestinationData('Bhandardara', 'bhandardara'),
+    _DestinationData('Mumbai', 'mumbai'),
+    _DestinationData('Pune', 'pune'),
+    _DestinationData('Karjat', 'karjat'),
+    _DestinationData('Alibaug', 'alibaug'),
+    _DestinationData('Goa', 'goa'),
+    _DestinationData('Lonavala', 'lonavala'),
+    _DestinationData('Mahabaleshwar', 'mahabaleshwar'),
+    _DestinationData('Kokan', 'kokan'),
   ];
 
   static const List<_TestimonialData> _testimonials = [
@@ -1189,16 +1201,14 @@ class _LandingScreenState extends State<LandingScreen> {
                     width: 82,
                     child: Column(
                       children: [
-                        Container(
-                          width: 58,
-                          height: 58,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF7F7F7),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFEDEDED)),
-                          ),
+                        SizedBox(
+                          width: 72,
+                          height: 72,
                           child: Center(
-                            child: _DestinationGlyph(type: destination.type),
+                            child: _DestinationGlyph(
+                              type: destination.type,
+                              assetPath: _destinationIconAssets[destination.type],
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
@@ -2720,6 +2730,25 @@ class _DestinationData {
   const _DestinationData(this.city, this.type);
 }
 
+const Map<String, String> _destinationIconAssets = {
+  'nashik': 'assets/images/destinations/nashik.png',
+  'trimbak': 'assets/images/destinations/trimbakeshwar.png',
+  'gangapur_dam': 'assets/images/destinations/gangapur-dam.png',
+  'igatpuri': 'assets/images/destinations/igatpuri.png',
+  'sula': 'assets/images/destinations/sula-vineyards.png',
+  'anjaneri': 'assets/images/destinations/anjaneri.png',
+  'harihar_fort': 'assets/images/destinations/harihar-fort.png',
+  'bhandardara': 'assets/images/destinations/bhandardara.png',
+  'mumbai': 'assets/images/destinations/mumbai.png',
+  'pune': 'assets/images/destinations/pune.png',
+  'karjat': 'assets/images/destinations/karjat.png',
+  'alibaug': 'assets/images/destinations/alibaug.png',
+  'goa': 'assets/images/destinations/goa.png',
+  'lonavala': 'assets/images/destinations/lonavala.png',
+  'mahabaleshwar': 'assets/images/destinations/mahabaleshwar.png',
+  'kokan': 'assets/images/destinations/kokan.png',
+};
+
 class _TestimonialData {
   final String name;
   final String role;
@@ -2986,142 +3015,175 @@ class _CategoryGlyph extends StatelessWidget {
 
 class _DestinationGlyph extends StatelessWidget {
   final String type;
+  final String? assetPath;
 
-  const _DestinationGlyph({required this.type});
+  const _DestinationGlyph({required this.type, this.assetPath});
 
   @override
   Widget build(BuildContext context) {
+    if (assetPath != null) {
+      return Image.asset(
+        assetPath!,
+        width: 62,
+        height: 62,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return SizedBox(
+            width: 62,
+            height: 62,
+            child: CustomPaint(
+              painter: _DestinationIconPainter(type),
+            ),
+          );
+        },
+      );
+    }
+
+    return SizedBox(
+      width: 62,
+      height: 62,
+      child: CustomPaint(
+        painter: _DestinationIconPainter(type),
+      ),
+    );
+  }
+}
+
+class _DestinationIconPainter extends CustomPainter {
+  final String type;
+
+  _DestinationIconPainter(this.type);
+
+  static const Color _stroke = Color(0xFF232323);
+  static const Color _blush = Color(0xFFE8A2B1);
+  static const Color _sand = Color(0xFFF4CB98);
+  static const Color _cream = Color(0xFFFBF7EF);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final strokePaint = Paint()
+      ..color = _stroke
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final sandPaint = Paint()..color = _sand;
+    final blushPaint = Paint()..color = _blush;
+    final creamPaint = Paint()..color = _cream;
+    final fillStrokePaint = Paint()
+      ..color = _stroke
+      ..style = PaintingStyle.fill;
+
+    final scaleX = size.width / 72;
+    final scaleY = size.height / 72;
+    canvas.scale(scaleX, scaleY);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(50, 8, 12, 34), const Radius.circular(6)),
+      sandPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(38, 8, 14, 34), const Radius.circular(7)),
+      blushPaint,
+    );
+
     switch (type) {
       case 'sula':
-        return SizedBox(
-          width: 28,
-          height: 28,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Positioned(
-                right: 3,
-                top: 4,
-                child: Container(
-                  width: 7,
-                  height: 13,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: AppTheme.charcoal, width: 1.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Positioned(
-                right: 5,
-                top: 1,
-                child: Container(width: 3, height: 4, color: AppTheme.charcoal),
-              ),
-              Positioned(
-                left: 5,
-                top: 9,
-                child: Container(
-                  width: 9,
-                  height: 9,
-                  decoration: const BoxDecoration(
-                    color: AppTheme.sand,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 4,
-                top: 6,
-                child: Icon(
-                  Icons.wine_bar_outlined,
-                  size: 15,
-                  color: AppTheme.charcoal,
-                ),
-              ),
-            ],
-          ),
-        );
-      case 'igatpuri':
-        return SizedBox(
-          width: 28,
-          height: 28,
-          child: Stack(
-            children: [
-              Positioned(
-                left: 2,
-                bottom: 6,
-                child: Icon(
-                  Icons.terrain_outlined,
-                  size: 22,
-                  color: AppTheme.charcoal,
-                ),
-              ),
-              const Positioned(
-                right: 5,
-                top: 3,
-                child: Icon(
-                  Icons.water_drop_outlined,
-                  size: 12,
-                  color: AppTheme.primary,
-                ),
-              ),
-            ],
-          ),
-        );
+        _drawWine(canvas, strokePaint, creamPaint, fillStrokePaint);
+        break;
       case 'trimbak':
-        return SizedBox(
-          width: 28,
-          height: 28,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Positioned(
-                top: 3,
-                child: Icon(
-                  Icons.temple_hindu_outlined,
-                  size: 22,
-                  color: AppTheme.charcoal,
-                ),
-              ),
-              const Positioned(
-                top: 1,
-                child: Icon(
-                  Icons.circle,
-                  size: 4,
-                  color: AppTheme.primary,
-                ),
-              ),
-            ],
-          ),
-        );
+        _drawTempleTown(canvas, strokePaint, creamPaint);
+        break;
+      case 'igatpuri':
+        _drawWaterfall(canvas, strokePaint);
+        break;
       case 'nashik':
       default:
-        return SizedBox(
-          width: 28,
-          height: 28,
-          child: Stack(
-            children: const [
-              Positioned(
-                left: 8,
-                top: 2,
-                child: Icon(
-                  Icons.grass_rounded,
-                  size: 12,
-                  color: AppTheme.charcoal,
-                ),
-              ),
-              Positioned(
-                left: 4,
-                top: 8,
-                child: Icon(
-                  Icons.blur_circular_rounded,
-                  size: 18,
-                  color: AppTheme.primary,
-                ),
-              ),
-            ],
-          ),
-        );
+        _drawGrapes(canvas, strokePaint, creamPaint, sandPaint);
+        break;
     }
+  }
+
+  void _drawGrapes(Canvas canvas, Paint strokePaint, Paint creamPaint, Paint sandPaint) {
+    final stem = Path()
+      ..moveTo(27, 17)
+      ..quadraticBezierTo(30, 13, 34, 15);
+    canvas.drawPath(stem, strokePaint);
+
+    void circle(double x, double y, Paint fill) {
+      canvas.drawCircle(Offset(x, y), 4.2, fill);
+      canvas.drawCircle(Offset(x, y), 4.2, strokePaint);
+    }
+
+    circle(23, 24, creamPaint);
+    circle(29, 24, sandPaint);
+    circle(20, 31, sandPaint);
+    circle(26, 31, creamPaint);
+    circle(32, 31, sandPaint);
+    circle(23, 38, creamPaint);
+    circle(29, 38, sandPaint);
+  }
+
+  void _drawWine(Canvas canvas, Paint strokePaint, Paint creamPaint, Paint fillStrokePaint) {
+    canvas.drawLine(const Offset(21, 46), const Offset(21, 25), strokePaint);
+    final glass = Path()
+      ..moveTo(16, 25)
+      ..lineTo(26, 25)
+      ..quadraticBezierTo(25.5, 31, 21, 34.5)
+      ..quadraticBezierTo(16.5, 31, 16, 25);
+    canvas.drawPath(glass, creamPaint);
+    canvas.drawPath(glass, strokePaint);
+    canvas.drawLine(const Offset(17, 46), const Offset(25, 46), strokePaint);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(34, 18, 10, 24), const Radius.circular(2.5)),
+      creamPaint,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(34, 18, 10, 24), const Radius.circular(2.5)),
+      strokePaint,
+    );
+    canvas.drawLine(const Offset(39, 18), const Offset(39, 13), strokePaint);
+  }
+
+  void _drawTempleTown(Canvas canvas, Paint strokePaint, Paint creamPaint) {
+    canvas.drawLine(const Offset(16, 47), const Offset(47, 47), strokePaint);
+    final roof = Path()
+      ..moveTo(30, 17)
+      ..lineTo(20, 29)
+      ..lineTo(40, 29)
+      ..close();
+    canvas.drawPath(roof, creamPaint);
+    canvas.drawPath(roof, strokePaint);
+    canvas.drawRect(const Rect.fromLTWH(23, 29, 14, 18), creamPaint);
+    canvas.drawRect(const Rect.fromLTWH(23, 29, 14, 18), strokePaint);
+    final wave = Path()
+      ..moveTo(44, 24)
+      ..quadraticBezierTo(47, 27, 49, 34);
+    canvas.drawPath(wave, strokePaint);
+    canvas.drawCircle(const Offset(50, 18), 3, creamPaint);
+    canvas.drawCircle(const Offset(50, 18), 3, strokePaint);
+  }
+
+  void _drawWaterfall(Canvas canvas, Paint strokePaint) {
+    final mountain = Path()
+      ..moveTo(12, 44)
+      ..lineTo(24, 24)
+      ..lineTo(36, 36)
+      ..lineTo(48, 20)
+      ..lineTo(58, 44);
+    canvas.drawPath(mountain, strokePaint);
+    canvas.drawLine(const Offset(46, 18), const Offset(46, 39), strokePaint);
+    final base = Path()
+      ..moveTo(14, 47)
+      ..cubicTo(20, 44, 26, 44, 32, 47)
+      ..cubicTo(38, 50, 44, 50, 50, 47);
+    canvas.drawPath(base, strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _DestinationIconPainter oldDelegate) {
+    return oldDelegate.type != type;
   }
 }
 
