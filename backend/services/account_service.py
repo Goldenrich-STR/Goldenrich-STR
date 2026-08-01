@@ -10,7 +10,7 @@ Refund policy (tier):
 Admin can override the tier with an explicit amount or percent.
 
 Payout eligibility: booking is confirmed AND check_out_date <= today - 1 day.
-Platform fee = 10% of total_amount. Host receives the remaining 90%.
+Payout deductions are read from the booking payment configuration.
 """
 from __future__ import annotations
 
@@ -31,11 +31,10 @@ from models.transaction import (
     TransactionType,
 )
 from services.razorpay_service import razorpay_service
+from services.booking_calculation_service import calculate_host_payout_breakdown
+from services.tds_service import record_host_payout_tds_ledger
 
 logger = logging.getLogger(__name__)
-
-
-PLATFORM_FEE_PCT = 0.10  # 10% platform take; net 90% to host
 
 
 # --------------- Ledger ----------------
@@ -259,9 +258,17 @@ def _mask_account(s: str) -> str:
 
 
 async def mark_booking_payout_eligible(
-    db: AsyncIOMotorDatabase, booking: dict
+    db: AsyncIOMotorDatabase,
+    booking: dict,
+    *,
+    status: PayoutStatus = PayoutStatus.ELIGIBLE,
+    eligible_at: Optional[datetime] = None,
 ) -> Optional[Payout]:
-    """Create a Payout row in ELIGIBLE state for a completed booking.
+    """Create a Payout row for a paid booking.
+
+    Newly paid bookings are inserted as PENDING so finance can see the payout
+    ledger immediately. Once checkout + payout cycle has passed, the sweep
+    promotes the row to ELIGIBLE. Idempotent on booking_id.
     Idempotent on booking_id."""
     existing = await db.payouts.find_one({"booking_id": booking["booking_id"]})
     if existing:
@@ -278,12 +285,20 @@ async def mark_booking_payout_eligible(
         dest_ref = pref.get("upi_vpa") or ""
     else:
         dest_ref = pref.get("bank_account_number") or ""
+    payout_status = status if dest_ref else PayoutStatus.NEEDS_DESTINATION
 
-    total_rupees = int(booking.get("total_amount", 0))
-    gross_paise = total_rupees * 100
-    fee_paise = int(round(gross_paise * PLATFORM_FEE_PCT))
-    tds_paise = int(round(gross_paise * 0.01))
-    net_paise = gross_paise - fee_paise - tds_paise
+    payout_breakdown = await calculate_host_payout_breakdown(db, booking=booking)
+    gross_paise = payout_breakdown["gross_amount"]
+    fee_paise = payout_breakdown["platform_fee"]
+    tds_paise = payout_breakdown["tds_amount"]
+    net_paise = payout_breakdown["net_amount"]
+    tds_breakdown = payout_breakdown.get("tds_breakdown") or {}
+
+    def _rupees_to_paise(value) -> int:
+        try:
+            return int(round(float(value or 0) * 100))
+        except (TypeError, ValueError):
+            return 0
 
     payout = Payout(
         host_id=booking["host_id"],
@@ -291,21 +306,78 @@ async def mark_booking_payout_eligible(
         property_id=booking["property_id"],
         gross_amount=gross_paise,
         platform_fee=fee_paise,
+        host_actual_value_amount=payout_breakdown.get("host_actual_value_amount", gross_paise),
+        total_extra_charges_amount=payout_breakdown.get("total_extra_charges_amount", 0),
+        customer_final_payable_amount=payout_breakdown.get("customer_final_payable_amount", 0),
+        customer_charge_breakdown=payout_breakdown.get("customer_charge_breakdown") or {},
         tds_amount=tds_paise,
         net_amount=net_paise,
+        deductions=payout_breakdown.get("deductions"),
+        tds_breakdown=tds_breakdown,
+        tds_base_amount=_rupees_to_paise(tds_breakdown.get("tds_base_amount")),
+        tds_rate_percent=float(tds_breakdown.get("rate_percent") or 0),
+        tds_threshold_amount=_rupees_to_paise(tds_breakdown.get("threshold_amount")),
+        tds_fy_gross_before=_rupees_to_paise(tds_breakdown.get("prior_fy_gross")),
+        tds_fy_gross_after=_rupees_to_paise(tds_breakdown.get("projected_fy_gross")),
+        tds_threshold_crossed=bool(tds_breakdown.get("threshold_crossed")),
+        tds_financial_year=tds_breakdown.get("financial_year"),
+        gateway_charge=payout_breakdown.get("gateway_charge", 0),
+        company_charge=payout_breakdown.get("company_charge", 0),
         destination_type=dest_type,
         destination_ref=_mask_account(dest_ref),
         destination_holder=pref.get("bank_account_holder"),
         destination_ifsc=pref.get("bank_ifsc"),
-        status=PayoutStatus.ELIGIBLE if dest_ref else PayoutStatus.NEEDS_DESTINATION,
+        status=payout_status,
         failure_reason=None if dest_ref else "Host payout destination is not configured",
+        eligible_at=eligible_at or datetime.now(timezone.utc),
     )
     await db.payouts.insert_one(payout.model_dump())
+    await record_host_payout_tds_ledger(
+        db,
+        host_id=booking["host_id"],
+        booking_id=booking["booking_id"],
+        payout_id=payout.payout_id,
+        tds_breakdown={**tds_breakdown, "payout_id": payout.payout_id},
+    )
     await db.bookings.update_one(
         {"booking_id": booking["booking_id"]},
-        {"$set": {"payout_status": "eligible", "payout_id": payout.payout_id}},
+        {"$set": {"payout_status": payout.status.value, "payout_id": payout.payout_id}},
     )
     return payout
+
+
+def _parse_booking_date(value) -> Optional[date]:
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except (TypeError, ValueError):
+        return None
+
+
+async def _payout_due_for_booking(
+    db: AsyncIOMotorDatabase, booking: dict, today: date
+) -> tuple[PayoutStatus, datetime]:
+    host = await db.users.find_one({"user_id": booking.get("host_id")})
+    pref = (host or {}).get("payout_preference") or {}
+    payout_cycle = pref.get("payout_cycle") or "daily"
+    delay_days = 7 if payout_cycle == "weekly" else 30 if payout_cycle == "monthly" else 1
+
+    checkout_date = _parse_booking_date(
+        booking.get("check_out_date") or booking.get("checkout_date") or booking.get("end_date")
+    )
+    if not checkout_date:
+        return PayoutStatus.PENDING, datetime.now(timezone.utc)
+
+    due_date = checkout_date + timedelta(days=delay_days)
+    due_at = datetime.combine(due_date, datetime.min.time(), tzinfo=timezone.utc)
+    if today >= due_date:
+        return PayoutStatus.ELIGIBLE, due_at
+    return PayoutStatus.PENDING, due_at
 
 
 async def process_payout(
@@ -412,48 +484,73 @@ async def process_payout(
 
 
 async def sweep_payout_eligibility(db: AsyncIOMotorDatabase) -> int:
-    """Find confirmed bookings whose check-out satisfies the host's payout cycle and mark them eligible."""
+    """Create/update booking payout ledger rows.
+
+    Paid bookings are visible immediately as PENDING. Rows become ELIGIBLE only
+    after checkout + the host payout cycle. This makes finance/TDS exposure
+    visible before the payout can actually be processed.
+    """
     today = date.today()
-    today_str = today.isoformat()
+    count = 0
+
+    pending_cursor = db.payouts.find({"status": PayoutStatus.PENDING.value}, {"_id": 0})
+    async for payout in pending_cursor:
+        try:
+            booking = await db.bookings.find_one({"booking_id": payout.get("booking_id")}, {"_id": 0})
+            if not booking:
+                continue
+            status, eligible_at = await _payout_due_for_booking(db, booking, today)
+            if status != PayoutStatus.ELIGIBLE:
+                continue
+
+            host = await db.users.find_one({"user_id": booking.get("host_id")})
+            pref = (host or {}).get("payout_preference") or {}
+            dest_type = pref.get("preferred", payout.get("destination_type") or "upi")
+            dest_ref = pref.get("upi_vpa") if dest_type == "upi" else pref.get("bank_account_number")
+            new_status = PayoutStatus.ELIGIBLE if dest_ref else PayoutStatus.NEEDS_DESTINATION
+            await db.payouts.update_one(
+                {"payout_id": payout.get("payout_id")},
+                {"$set": {
+                    "status": new_status.value,
+                    "eligible_at": eligible_at,
+                    "destination_type": dest_type,
+                    "destination_ref": _mask_account(dest_ref or ""),
+                    "destination_holder": pref.get("bank_account_holder"),
+                    "destination_ifsc": pref.get("bank_ifsc"),
+                    "failure_reason": None if dest_ref else "Host payout destination is not configured",
+                    "updated_at": datetime.now(timezone.utc),
+                }},
+            )
+            await db.bookings.update_one(
+                {"booking_id": booking.get("booking_id")},
+                {"$set": {"payout_status": new_status.value, "payout_id": payout.get("payout_id")}},
+            )
+            count += 1
+        except Exception as e:
+            logger.warning(f"pending payout promotion failed for {payout.get('booking_id')}: {e}")
 
     # Only target bookings without an existing payout row
     existing_payout_ids = await db.payouts.distinct("booking_id")
 
-    # Find all confirmed + paid bookings that have checked out
     cursor = db.bookings.find({
-        "booking_status": "confirmed",
-        "payment_status": "paid",
-        "check_out_date": {"$lte": today_str},
         "booking_id": {"$nin": existing_payout_ids},
+        "$or": [
+            {"booking_status": {"$in": ["confirmed", "completed"]}},
+            {"status": {"$in": ["confirmed", "completed"]}},
+        ],
+        "payment_status": {"$in": ["paid", "success", "captured", "completed"]},
     }, {"_id": 0})
 
-    count = 0
     async for booking in cursor:
         try:
-            host = await db.users.find_one({"user_id": booking["host_id"]})
-            payout_cycle = "daily"
-            if host:
-                pref = host.get("payout_preference") or {}
-                payout_cycle = pref.get("payout_cycle") or "daily"
-
-            # Determine threshold delay
-            if payout_cycle == "weekly":
-                delay_days = 7
-            elif payout_cycle == "monthly":
-                delay_days = 30
-            else:
-                delay_days = 1
-
-            checkout_date = date.fromisoformat(booking["check_out_date"])
-            # The booking is eligible for payout if today >= check_out_date + delay_days
-            if today >= checkout_date + timedelta(days=delay_days):
-                await mark_booking_payout_eligible(db, booking)
-                count += 1
+            status, eligible_at = await _payout_due_for_booking(db, booking, today)
+            await mark_booking_payout_eligible(db, booking, status=status, eligible_at=eligible_at)
+            count += 1
         except Exception as e:
-            logger.warning(f"mark_payout_eligible failed for {booking.get('booking_id')}: {e}")
+            logger.warning(f"create payout ledger failed for {booking.get('booking_id')}: {e}")
 
     if count:
-        logger.info(f"[payout-sweep] marked {count} bookings as payout_eligible")
+        logger.info(f"[payout-sweep] created/updated {count} booking payout ledger rows")
     return count
 
 

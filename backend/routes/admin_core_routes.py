@@ -11,7 +11,17 @@ from pydantic import BaseModel, EmailStr
 from middleware.auth_middleware import get_current_user
 from models.user import UserRole
 from services.audit_service import write_audit_log
+from services.booking_calculation_service import (
+    calculate_host_payout_breakdown,
+    get_booking_payment_config,
+)
 from services.permission_service import ensure_default_permissions
+from services.tds_service import (
+    calculate_host_payout_tds,
+    get_active_tds_config,
+    get_host_tax_profile,
+    save_tds_config,
+)
 
 
 router = APIRouter(prefix="/admin/core", tags=["Admin Core"])
@@ -292,12 +302,77 @@ class SupportTicketAssignmentPayload(BaseModel):
     reason: str
 
 
+class BookingTaxSlabPayload(BaseModel):
+    from_amount: float
+    to_amount: Optional[float] = None
+    gst_percent: float
+    is_active: bool = True
+    reason: Optional[str] = ""
+
+
+class BookingTaxSlabStatusPayload(BaseModel):
+    is_active: bool
+    reason: Optional[str] = ""
+
+
 def api_response(message: str, data=None, meta=None):
     return {"success": True, "message": message, "data": data if data is not None else {}, "meta": meta or {}}
 
 
 def _now():
     return datetime.now(timezone.utc)
+
+
+async def _ensure_booking_tax_slabs_table(db: AsyncIOMotorDatabase) -> None:
+    ensure_table = getattr(db, "ensure_table", None)
+    if ensure_table:
+        await ensure_table("booking_tax_slabs")
+
+
+def _normalize_tax_amount(value: Optional[float]) -> Optional[float]:
+    if value is None:
+        return None
+    amount = round(float(value), 2)
+    if amount < 0:
+        raise HTTPException(status_code=400, detail="Tax slab amounts cannot be negative")
+    return amount
+
+
+async def _validate_booking_tax_slab(
+    db: AsyncIOMotorDatabase,
+    payload: BookingTaxSlabPayload,
+    *,
+    ignore_slab_id: Optional[str] = None,
+) -> tuple[float, Optional[float], float]:
+    from_amount = _normalize_tax_amount(payload.from_amount)
+    to_amount = _normalize_tax_amount(payload.to_amount)
+    gst_percent = round(float(payload.gst_percent), 2)
+
+    if from_amount is None:
+        raise HTTPException(status_code=400, detail="From Amount is required")
+    if gst_percent < 0:
+        raise HTTPException(status_code=400, detail="GST cannot be negative")
+    if to_amount is not None and from_amount >= to_amount:
+        raise HTTPException(status_code=400, detail="From Amount must be less than To Amount")
+
+    await _ensure_booking_tax_slabs_table(db)
+    existing = await db.booking_tax_slabs.find(
+        {"slab_id": {"$ne": ignore_slab_id}} if ignore_slab_id else {},
+        {"_id": 0, "slab_id": 1, "from_amount": 1, "to_amount": 1},
+    ).to_list(500)
+
+    new_end = float("inf") if to_amount is None else to_amount
+    for slab in existing:
+        try:
+            start = float(slab.get("from_amount") or 0)
+            raw_end = slab.get("to_amount")
+            end = float("inf") if raw_end in (None, "") else float(raw_end)
+        except (TypeError, ValueError):
+            continue
+        if from_amount <= end and new_end >= start:
+            raise HTTPException(status_code=400, detail="Tax slab overlaps with an existing slab")
+
+    return from_amount, to_amount, gst_percent
 
 
 def _parse_optional_datetime(value: Optional[str]):
@@ -688,6 +763,11 @@ async def executive_dashboard(
     recent_activity = await db.audit_logs.find({}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(length=10)
     properties = await db.properties.find(property_query, {"_id": 0}).to_list(length=5000)
     bookings = await db.bookings.find(booking_query, {"_id": 0}).to_list(length=5000)
+    booking_tax_liability = sum(
+        float(b.get("taxes", 0) or 0)
+        for b in bookings
+        if b.get("booking_status") not in {"cancelled", "failed"}
+    )
 
     def group_count(items, key, default="Unassigned"):
         counts = {}
@@ -708,7 +788,7 @@ async def executive_dashboard(
             "users": {"total": users_total, "hosts": hosts, "guests": guests, "employees": employees, "brokers": brokers},
             "properties": {"total": properties_total, "live": live_properties, "pending_verification": pending_properties, "rejected": rejected_properties, "inactive": max(properties_total - live_properties, 0), "draft": draft_properties},
             "bookings": {"total": bookings_total, "upcoming": upcoming_bookings, "active_stays": active_bookings, "completed": completed_bookings, "cancelled": cancelled_bookings},
-            "finance": {"gross_booking_value": gross, "net_collections": net_collections or gross, "platform_revenue": round(gross * 0.12, 2), "host_payable": round(gross * 0.88, 2), "host_paid": host_paid, "pending_payout": pending_payout_amount, "tax_liability": round(gross * 0.18, 2), "refund_amount": refund_amount, "broker_commission": round(gross * 0.02, 2)},
+            "finance": {"gross_booking_value": gross, "net_collections": net_collections or gross, "platform_revenue": round(gross * 0.12, 2), "host_payable": round(gross * 0.88, 2), "host_paid": host_paid, "pending_payout": pending_payout_amount, "tax_liability": round(booking_tax_liability, 2), "refund_amount": refund_amount, "broker_commission": round(gross * 0.02, 2)},
         },
         "pending_actions": [
             {"key": "host_kyc", "label": "Host KYC Pending", "count": pending_kyc, "sla": "24h", "trend": "stable", "path": "/admin/users"},
@@ -2120,14 +2200,34 @@ async def finance_tax_commission(current_user: dict = Depends(require_admin), db
     for row in commissions:
         row["broker"] = broker_map.get(row.get("broker_id"), {})
 
-    booking_tax = sum(float(txn.get("amount") or 0) * 18 / 118 for txn in booking_txns)
+    booking_ids = [txn.get("booking_id") for txn in booking_txns if txn.get("booking_id")]
+    booking_docs = await db.bookings.find(
+        {"booking_id": {"$in": booking_ids}},
+        {"_id": 0, "booking_id": 1, "base_amount": 1, "taxes": 1, "tax_percent": 1},
+    ).to_list(length=len(booking_ids) or 1)
+    booking_map = {booking.get("booking_id"): booking for booking in booking_docs}
+    booking_taxable = 0.0
+    booking_tax = 0.0
+    legacy_booking_total = 0.0
+    for txn in booking_txns:
+        booking = booking_map.get(txn.get("booking_id"))
+        if booking:
+            booking_taxable += float(booking.get("base_amount") or 0)
+            booking_tax += float(booking.get("taxes") or 0)
+        else:
+            legacy_booking_total += float(txn.get("amount") or 0)
+    if legacy_booking_total:
+        # Legacy booking transactions did not store the applied slab.
+        # Do not infer a hardcoded booking GST rate for those records.
+        booking_taxable += legacy_booking_total
+    booking_tax_rate = round((booking_tax / booking_taxable) * 100, 2) if booking_taxable else 0
     subscription_tax = sum(float(txn.get("amount") or 0) * 18 / 118 for txn in subscription_txns)
     tds_hold = sum(float(payout.get("tds_amount") or 0) for payout in payouts)
     platform_commission = sum(float(payout.get("platform_fee") or 0) for payout in payouts)
     broker_commission_total = sum(float(row.get("commission_amount") or 0) for row in commissions)
     broker_commission_paid = sum(float(row.get("commission_amount") or 0) for row in commissions if row.get("payment_status") == "paid")
     tax_ledger = [
-        {"tax_id": "TAX-GST-BOOKING", "tax_type": "GST on Booking Payments", "taxable_amount": sum(float(txn.get("amount") or 0) for txn in booking_txns) - booking_tax, "tax_rate": 18, "tax_amount": booking_tax, "status": "payable"},
+        {"tax_id": "TAX-GST-BOOKING", "tax_type": "GST on Booking Payments", "taxable_amount": booking_taxable, "tax_rate": booking_tax_rate, "tax_amount": booking_tax, "status": "payable"},
         {"tax_id": "TAX-GST-SUBSCRIPTION", "tax_type": "GST on Subscriptions", "taxable_amount": sum(float(txn.get("amount") or 0) for txn in subscription_txns) - subscription_tax, "tax_rate": 18, "tax_amount": subscription_tax, "status": "payable"},
         {"tax_id": "TAX-TDS-HOST", "tax_type": "Host TDS Hold", "taxable_amount": sum(float(payout.get("gross_amount") or 0) for payout in payouts), "tax_rate": 1, "tax_amount": tds_hold, "status": "withheld"},
     ]
@@ -2709,9 +2809,205 @@ async def support_reports(current_user: dict = Depends(require_admin), db: Async
     })
 
 
+@router.get("/settings/booking-tax-slabs")
+async def booking_tax_slabs(current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    await _ensure_booking_tax_slabs_table(db)
+    slabs = await db.booking_tax_slabs.find({}, {"_id": 0}).sort("from_amount", 1).to_list(500)
+    return api_response("Booking tax slabs loaded", {"slabs": slabs})
+
+
+@router.post("/settings/booking-tax-slabs", status_code=status.HTTP_201_CREATED)
+async def create_booking_tax_slab(
+    payload: BookingTaxSlabPayload,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    from_amount, to_amount, gst_percent = await _validate_booking_tax_slab(db, payload)
+    now = _now()
+    slab = {
+        "slab_id": f"bts_{uuid4().hex[:14]}",
+        "from_amount": from_amount,
+        "to_amount": to_amount,
+        "gst_percent": gst_percent,
+        "is_active": bool(payload.is_active),
+        "created_at": now,
+        "updated_at": now,
+        "created_by": current_user.get("user_id"),
+        "updated_by": current_user.get("user_id"),
+    }
+    await db.booking_tax_slabs.insert_one(slab)
+    await write_audit_log(
+        db,
+        user_id=current_user.get("user_id"),
+        role=current_user.get("role", "admin"),
+        action="create_booking_tax_slab",
+        module="platform_settings",
+        record_id=slab["slab_id"],
+        new_value=slab,
+        reason=payload.reason or "Booking tax slab created",
+    )
+    return api_response("Booking tax slab created", {"slab": {k: v for k, v in slab.items() if k != "_id"}})
+
+
+@router.put("/settings/booking-tax-slabs/{slab_id}")
+async def update_booking_tax_slab(
+    slab_id: str,
+    payload: BookingTaxSlabPayload,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    existing = await db.booking_tax_slabs.find_one({"slab_id": slab_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Booking tax slab not found")
+    from_amount, to_amount, gst_percent = await _validate_booking_tax_slab(db, payload, ignore_slab_id=slab_id)
+    update_doc = {
+        "from_amount": from_amount,
+        "to_amount": to_amount,
+        "gst_percent": gst_percent,
+        "is_active": bool(payload.is_active),
+        "updated_at": _now(),
+        "updated_by": current_user.get("user_id"),
+    }
+    await db.booking_tax_slabs.update_one({"slab_id": slab_id}, {"$set": update_doc})
+    updated = await db.booking_tax_slabs.find_one({"slab_id": slab_id}, {"_id": 0})
+    await write_audit_log(
+        db,
+        user_id=current_user.get("user_id"),
+        role=current_user.get("role", "admin"),
+        action="update_booking_tax_slab",
+        module="platform_settings",
+        record_id=slab_id,
+        old_value=existing,
+        new_value=updated,
+        reason=payload.reason or "Booking tax slab updated",
+    )
+    return api_response("Booking tax slab updated", {"slab": updated})
+
+
+@router.patch("/settings/booking-tax-slabs/{slab_id}/status")
+async def update_booking_tax_slab_status(
+    slab_id: str,
+    payload: BookingTaxSlabStatusPayload,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    existing = await db.booking_tax_slabs.find_one({"slab_id": slab_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Booking tax slab not found")
+    await db.booking_tax_slabs.update_one(
+        {"slab_id": slab_id},
+        {"$set": {"is_active": bool(payload.is_active), "updated_at": _now(), "updated_by": current_user.get("user_id")}},
+    )
+    await write_audit_log(
+        db,
+        user_id=current_user.get("user_id"),
+        role=current_user.get("role", "admin"),
+        action="toggle_booking_tax_slab",
+        module="platform_settings",
+        record_id=slab_id,
+        old_value={"is_active": existing.get("is_active")},
+        new_value={"is_active": bool(payload.is_active)},
+        reason=payload.reason or "Booking tax slab status updated",
+    )
+    updated = await db.booking_tax_slabs.find_one({"slab_id": slab_id}, {"_id": 0})
+    return api_response("Booking tax slab status updated", {"slab": updated})
+
+
+@router.delete("/settings/booking-tax-slabs/{slab_id}")
+async def delete_booking_tax_slab(
+    slab_id: str,
+    payload: dict = None,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    existing = await db.booking_tax_slabs.find_one({"slab_id": slab_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Booking tax slab not found")
+    await db.booking_tax_slabs.delete_one({"slab_id": slab_id})
+    await write_audit_log(
+        db,
+        user_id=current_user.get("user_id"),
+        role=current_user.get("role", "admin"),
+        action="delete_booking_tax_slab",
+        module="platform_settings",
+        record_id=slab_id,
+        old_value=existing,
+        reason=(payload or {}).get("reason") or "Booking tax slab deleted",
+    )
+    return api_response("Booking tax slab deleted", {"slab_id": slab_id})
+
+
+@router.get("/settings/tds")
+@router.get("/platform-settings/tds")
+async def get_tds_settings(current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    config = await get_active_tds_config(db)
+    return api_response("TDS configuration loaded", {"config": config})
+
+
+@router.put("/settings/tds")
+@router.put("/platform-settings/tds")
+async def update_tds_settings(payload: dict, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    existing = await get_active_tds_config(db)
+    config = await save_tds_config(db, payload, current_user)
+    await write_audit_log(
+        db,
+        user_id=current_user.get("user_id"),
+        role=current_user.get("role", "admin"),
+        action="update_tds_configuration",
+        module="platform_settings",
+        record_id=config.get("config_id"),
+        old_value=existing,
+        new_value=config,
+        reason=payload.get("reason") or "TDS configuration updated",
+    )
+    return api_response("TDS configuration saved", {"config": config})
+
+
+@router.get("/settings/host-tax-profiles/{host_id}")
+@router.get("/platform-settings/host-tax-profiles/{host_id}")
+async def get_admin_host_tax_profile(host_id: str, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    profile = await get_host_tax_profile(db, host_id)
+    return api_response("Host tax profile loaded", {"profile": profile})
+
+
+@router.post("/settings/tds/preview")
+@router.post("/platform-settings/tds/preview")
+async def preview_tds(payload: dict, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    host_id = payload.get("host_id")
+    gross_booking_value = payload.get("gross_booking_value")
+    if not host_id or gross_booking_value is None:
+        raise HTTPException(status_code=400, detail="host_id and gross_booking_value are required")
+    breakdown = await calculate_host_payout_tds(
+        db,
+        host_id=host_id,
+        booking_id=payload.get("booking_id"),
+        gross_booking_value=gross_booking_value,
+        transaction_date=payload.get("transaction_date"),
+        payout_id=payload.get("payout_id"),
+    )
+    return api_response("TDS preview calculated", {"breakdown": breakdown})
+
+
+@router.post("/settings/host-payout-preview")
+@router.post("/platform-settings/host-payout-preview")
+async def preview_host_payout(payload: dict, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    booking = payload.get("booking") or dict(payload)
+    if not booking.get("host_id") and payload.get("host_id"):
+        booking["host_id"] = payload["host_id"]
+    if not booking.get("booking_id") and payload.get("booking_id"):
+        booking["booking_id"] = payload["booking_id"]
+    if not any(booking.get(key) is not None for key in ("base_amount", "host_amount", "total_amount")):
+        if payload.get("gross_booking_value") is None:
+            raise HTTPException(status_code=400, detail="booking amount is required")
+        booking["base_amount"] = payload.get("gross_booking_value")
+    breakdown = await calculate_host_payout_breakdown(db, booking)
+    return api_response("Host payout preview calculated", {"breakdown": breakdown})
+
+
 @router.get("/settings/overview")
 async def platform_settings_overview(current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
-    payment_config = await db.platform_settings.find_one({"key": "booking_payment_config"}, {"_id": 0}) or {}
+    payment_config = await get_booking_payment_config(db)
+    tds_config = await get_active_tds_config(db)
     security_doc = await db.platform_settings.find_one({"key": "security_settings"}, {"_id": 0}) or {}
     maintenance_doc = await db.platform_settings.find_one({"key": "maintenance_settings"}, {"_id": 0}) or {}
     security_settings = {**_default_security_settings(), **(security_doc.get("value") or {})}
@@ -2732,7 +3028,7 @@ async def platform_settings_overview(current_user: dict = Depends(require_admin)
     modules = [
         {"key": "security", "label": "Security & Access", "status": "ready" if active_roles else "needs_review", "value": f"{admin_users} active admins"},
         {"key": "payments", "label": "Payment Gateway", "status": "sandbox" if payment_config.get("is_mock", True) else "live", "value": payment_config.get("gateway") or "Razorpay"},
-        {"key": "tax_commission", "label": "Tax & Commission", "status": "configured", "value": f"{payment_config.get('platform_fee_percent', 10)}% platform fee"},
+        {"key": "tax_commission", "label": "Tax & Commission", "status": "configured", "value": f"{payment_config.get('charges', {}).get('platform_fee', {}).get('value', payment_config.get('platform_fee_percent', 10))}% platform fee"},
         {"key": "notifications", "label": "Automation Rules", "status": "ready" if active_notifications else "needs_review", "value": f"{active_notifications} active rules"},
         {"key": "content", "label": "CMS Publishing", "status": "ready" if active_cms else "needs_review", "value": f"{active_cms} active sections"},
         {"key": "operations", "label": "Operational Queue", "status": "attention" if sum(pending_operations.values()) else "clear", "value": f"{sum(pending_operations.values())} pending items"},
@@ -2756,6 +3052,7 @@ async def platform_settings_overview(current_user: dict = Depends(require_admin)
         "security_settings": security_settings,
         "maintenance_settings": maintenance_settings,
         "payment_config": payment_config,
+        "tds_config": tds_config,
         "pending_operations": pending_operations,
         "modules": modules,
         "recent_audits": recent_audits,

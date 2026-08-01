@@ -1801,7 +1801,7 @@ const LandingPage = () => {
     ];
     return all.filter(item => {
       const type = (item.property_type || item.type || '').toLowerCase();
-      const price = item.price_per_night || item.price || 0;
+      const price = item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0;
       return (type.includes('villa') || type.includes('resort')) && price >= 50000;
     });
   }, [properties]);
@@ -2315,7 +2315,7 @@ const LandingPage = () => {
                   </p>
                   
                   <div className="mt-auto flex items-baseline">
-                    <span className="font-bold text-sm md:text-base text-charcoal">₹{(item.price || item.price_per_night || 0).toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-sm md:text-base text-charcoal">₹{Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0).toLocaleString('en-IN')}</span>
                     <span className="text-gray-500 text-[10px] md:text-xs ml-1 font-normal">
                       &nbsp;/ {item.category === 'commercial' || item.category === 'event_venue'
                         ? (item.pricing_cycle === 'hourly' ? 'hour' : item.pricing_cycle === 'weekly' ? 'week' : item.pricing_cycle === 'monthly' ? 'month' : 'day')
@@ -3478,7 +3478,7 @@ const LandingPage = () => {
                                 {item.property_type || item.type || 'Villa'} in {item.city}
                               </p>
                               <div className="flex items-baseline gap-1">
-                                <span className="font-black text-sm text-charcoal">₹{(item.price_per_night || item.price || 0).toLocaleString('en-IN')}</span>
+                                <span className="font-black text-sm text-charcoal">₹{Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0).toLocaleString('en-IN')}</span>
                                 <span className="text-[10px] text-gray-500 font-semibold">/ night</span>
                               </div>
                             </div>

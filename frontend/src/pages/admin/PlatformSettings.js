@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Activity, BellRing, CreditCard, LockKeyhole, Settings, ShieldCheck } from 'lucide-react';
+import { Activity, BellRing, CreditCard, LockKeyhole, Pencil, Plus, Power, Settings, ShieldCheck, Trash2 } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
+import { getApiErrorMessage } from '../../services/api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge } from './shared';
 
 const phaseSteps = [
@@ -66,6 +67,7 @@ const fallbackOverview = {
   security_settings: defaultSecuritySettings,
   maintenance_settings: defaultMaintenanceSettings,
   payment_config: {},
+  tds_config: null,
   pending_operations: {},
   modules: [],
   recent_audits: [],
@@ -73,17 +75,20 @@ const fallbackOverview = {
 
 const PlatformSettings = () => {
   const [active, setActive] = useState('overview');
-  const [state, setState] = useState({ loading: true, error: '', data: null, paymentConfig: null, taxCommission: null, subscriptionPlans: [], notificationRules: [], escalationRules: [], activeEscalations: [], communication: null, operations: null });
+  const [state, setState] = useState({ loading: true, error: '', data: null, paymentConfig: null, taxCommission: null, bookingTaxSlabs: [], tdsConfig: null, subscriptionPlans: [], notificationRules: [], escalationRules: [], activeEscalations: [], communication: null, operations: null });
   const [savingSecurity, setSavingSecurity] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
+  const [savingTds, setSavingTds] = useState(false);
 
   const load = useCallback(async () => {
     try {
       setState((current) => ({ ...current, loading: true }));
-      const [overviewRes, paymentRes, taxCommissionRes, plansRes, notificationRulesRes, escalationRulesRes, activeEscalationsRes, communicationRes, operationsRes] = await Promise.allSettled([
+      const [overviewRes, paymentRes, taxCommissionRes, bookingTaxSlabsRes, tdsRes, plansRes, notificationRulesRes, escalationRulesRes, activeEscalationsRes, communicationRes, operationsRes] = await Promise.allSettled([
         adminPhase1API.platformSettingsOverview(),
         adminPhase1API.paymentConfig(),
         adminPhase1API.financeTaxCommission(),
+        adminPhase1API.bookingTaxSlabs(),
+        adminPhase1API.tdsConfig(),
         adminPhase1API.subscriptionPlans(),
         adminPhase1API.notificationRules(),
         adminPhase1API.escalationRules(),
@@ -104,6 +109,8 @@ const PlatformSettings = () => {
         data: overviewData,
         paymentConfig: paymentRes.status === 'fulfilled' ? paymentRes.value.data : null,
         taxCommission: taxCommissionRes.status === 'fulfilled' ? taxCommissionRes.value.data.data : null,
+        bookingTaxSlabs: bookingTaxSlabsRes.status === 'fulfilled' ? bookingTaxSlabsRes.value.data.data.slabs || [] : [],
+        tdsConfig: tdsRes.status === 'fulfilled' ? tdsRes.value.data.data.config : overviewData.tds_config || null,
         subscriptionPlans: plansRes.status === 'fulfilled' ? plansRes.value.data.data.plans || [] : [],
         notificationRules: notificationRulesRes.status === 'fulfilled' ? notificationRulesRes.value.data.data.rules || [] : [],
         escalationRules: escalationRulesRes.status === 'fulfilled' ? escalationRulesRes.value.data.data.rules || [] : [],
@@ -112,7 +119,7 @@ const PlatformSettings = () => {
         operations: operationsData,
       });
     } catch (error) {
-      setState({ loading: false, error: '', data: fallbackOverview, paymentConfig: null, taxCommission: null, subscriptionPlans: [], notificationRules: [], escalationRules: [], activeEscalations: [], communication: null, operations: { settings: defaultMaintenanceSettings, readiness: {}, collection_counts: [], operational_logs: [] } });
+      setState({ loading: false, error: '', data: fallbackOverview, paymentConfig: null, taxCommission: null, bookingTaxSlabs: [], tdsConfig: null, subscriptionPlans: [], notificationRules: [], escalationRules: [], activeEscalations: [], communication: null, operations: { settings: defaultMaintenanceSettings, readiness: {}, collection_counts: [], operational_logs: [] } });
     }
   }, []);
 
@@ -149,6 +156,64 @@ const PlatformSettings = () => {
     }
   };
 
+  const saveBookingTaxSlab = async (payload, slabId = null) => {
+    const reason = window.prompt('Tax slab audit reason', slabId ? 'Booking tax slab updated' : 'Booking tax slab created');
+    if (!reason) return;
+    setSavingPayment(true);
+    try {
+      const body = { ...payload, reason };
+      if (slabId) {
+        await adminPhase1API.updateBookingTaxSlab(slabId, body);
+      } else {
+        await adminPhase1API.createBookingTaxSlab(body);
+      }
+      await load();
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
+  const saveTdsConfig = async (payload) => {
+    if (payload.is_enabled && !window.confirm('Activate this TDS configuration for future host payout calculations?')) return;
+    const reason = window.prompt('TDS audit reason', 'TDS configuration updated');
+    if (!reason) return;
+    setSavingTds(true);
+    try {
+      await adminPhase1API.updateTdsConfig({ ...payload, reason });
+      await load();
+    } catch (error) {
+      window.alert(getApiErrorMessage(error, 'Unable to save TDS configuration. Please check the backend and try again.'));
+    } finally {
+      setSavingTds(false);
+    }
+  };
+
+  const toggleBookingTaxSlab = async (slab) => {
+    const nextState = !slab.is_active;
+    const reason = window.prompt('Tax slab audit reason', nextState ? 'Booking tax slab enabled' : 'Booking tax slab disabled');
+    if (!reason) return;
+    setSavingPayment(true);
+    try {
+      await adminPhase1API.updateBookingTaxSlabStatus(slab.slab_id, { is_active: nextState, reason });
+      await load();
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
+  const deleteBookingTaxSlab = async (slab) => {
+    if (!window.confirm('Delete this booking tax slab?')) return;
+    const reason = window.prompt('Tax slab audit reason', 'Booking tax slab deleted');
+    if (!reason) return;
+    setSavingPayment(true);
+    try {
+      await adminPhase1API.deleteBookingTaxSlab(slab.slab_id, { reason });
+      await load();
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
   const toggleNotificationRule = async (rule) => {
     const nextStatus = rule.status === 'active' ? 'inactive' : 'active';
     const reason = window.prompt('Automation audit reason', `Notification rule marked ${nextStatus}`);
@@ -174,7 +239,7 @@ const PlatformSettings = () => {
         </div>
       </Panel>
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} /> : (
-        active === 'security' ? <SecurityAccess settings={security} metrics={metrics} saving={savingSecurity} onSave={saveSecuritySetting} /> : active === 'payments' ? <PaymentTaxCommission paymentConfig={state.paymentConfig} taxCommission={state.taxCommission} plans={state.subscriptionPlans} saving={savingPayment} onSave={savePaymentConfig} /> : active === 'automation' ? <AutomationSettings notificationRules={state.notificationRules} escalationRules={state.escalationRules} activeEscalations={state.activeEscalations} communication={state.communication} onToggleRule={toggleNotificationRule} /> : active === 'operations' ? <OperationalControls data={state.operations} fallbackSettings={data.maintenance_settings} onSave={saveOperations} /> : <div className="space-y-5">
+        active === 'security' ? <SecurityAccess settings={security} metrics={metrics} saving={savingSecurity} onSave={saveSecuritySetting} /> : active === 'payments' ? <PaymentTaxCommission paymentConfig={state.paymentConfig} taxCommission={state.taxCommission} bookingTaxSlabs={state.bookingTaxSlabs} tdsConfig={state.tdsConfig} plans={state.subscriptionPlans} saving={savingPayment} savingTds={savingTds} onSave={savePaymentConfig} onSaveTds={saveTdsConfig} onSaveTaxSlab={saveBookingTaxSlab} onToggleTaxSlab={toggleBookingTaxSlab} onDeleteTaxSlab={deleteBookingTaxSlab} /> : active === 'automation' ? <AutomationSettings notificationRules={state.notificationRules} escalationRules={state.escalationRules} activeEscalations={state.activeEscalations} communication={state.communication} onToggleRule={toggleNotificationRule} /> : active === 'operations' ? <OperationalControls data={state.operations} fallbackSettings={data.maintenance_settings} onSave={saveOperations} /> : <div className="space-y-5">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
             {[
               ['Active Users', metrics.active_users || 0],
@@ -325,45 +390,310 @@ const SecurityAccess = ({ settings, metrics, saving, onSave }) => {
   );
 };
 
-const PaymentTaxCommission = ({ paymentConfig, taxCommission, plans, saving, onSave }) => {
+const paymentChargeDefinitions = [
+  ['platform_fee', 'Platform Fee', 'Percentage fee applied on host-entered booking amount.'],
+  ['payment_gateway_charge', 'Payment Gateway Charge', 'Gateway cost collected during booking checkout.'],
+  ['convenience_fee', 'Convenience Fee', 'Operational convenience charge for customer checkout.'],
+  ['insurance_fee', 'Insurance Fee', 'Insurance or protection charge when enabled.'],
+  ['cleaning_fee', 'Cleaning Fee', 'Cleaning charge shown in booking pricing.'],
+  ['extra_guest_fee', 'Extra Guest Fee', 'Additional guest or staff charge when configured.'],
+];
+
+const hostPayoutDefinitions = [
+  ['platform_commission', 'Platform Commission', 'Commission deducted before host payout.'],
+  ['gateway_charge', 'Gateway Charges', 'Payment gateway deduction before payout.'],
+];
+
+const chargeTypeOptions = [
+  ['percentage', 'Percentage (%)'],
+  ['fixed', 'Fixed Amount (Rs.)'],
+];
+
+const defaultCharge = (key, existing = {}) => ({
+  enabled: key === 'platform_fee' ? existing.enabled !== false : Boolean(existing.enabled),
+  charge_type: existing.charge_type || existing.type || (key === 'platform_fee' ? 'percentage' : 'fixed'),
+  value: existing.value ?? existing.percent ?? (key === 'platform_fee' ? 10 : 0),
+  label: existing.label || paymentChargeDefinitions.find(([chargeKey]) => chargeKey === key)?.[1] || key,
+});
+
+const defaultPayoutCharge = (key, existing = {}) => ({
+  enabled: key === 'platform_commission' ? existing.enabled !== false : Boolean(existing.enabled),
+  charge_type: existing.charge_type || existing.type || 'percentage',
+  value: existing.value ?? 0,
+  label: existing.label || hostPayoutDefinitions.find(([chargeKey]) => chargeKey === key)?.[1] || key,
+});
+
+const currentFyStart = () => {
+  const now = new Date();
+  const year = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+  return `${year}-04-01`;
+};
+
+const buildTdsDraft = (config = {}) => ({
+  is_enabled: config.is_enabled !== false,
+  provision_code: config.provision_code || 'Section 194-O',
+  standard_rate: config.standard_rate ?? 0.10,
+  calculation_base: 'GROSS_BOOKING_VALUE',
+  effective_from: (config.effective_from || currentFyStart()).slice(0, 10),
+  effective_to: config.effective_to ? String(config.effective_to).slice(0, 10) : '',
+  rounding_method: config.rounding_method || 'NEAREST_RUPEE',
+  thresholds: {
+    individual_huf: config.thresholds?.individual_huf ?? 500000,
+    other_entity: config.thresholds?.other_entity ?? 0,
+  },
+  pan_aadhaar_required: config.pan_aadhaar_required !== false,
+  missing_pan_rate: config.missing_pan_rate ?? 20,
+});
+
+const buildPaymentDraft = (paymentConfig = {}) => {
+  const rawCharges = paymentConfig.charges || {};
+  const rawPayout = paymentConfig.host_payout || {};
+  const platformCharge = {
+    ...rawCharges.platform_fee,
+    value: rawCharges.platform_fee?.value ?? paymentConfig.platform_fee_percent ?? 10,
+    label: rawCharges.platform_fee?.label || paymentConfig.platform_fee_label || 'Platform Fee',
+  };
+
+  return {
+    charges: Object.fromEntries(paymentChargeDefinitions.map(([key]) => [
+      key,
+      defaultCharge(key, key === 'platform_fee' ? platformCharge : rawCharges[key]),
+    ])),
+    host_payout: Object.fromEntries(hostPayoutDefinitions.map(([key]) => [
+      key,
+      defaultPayoutCharge(key, rawPayout[key]),
+    ])),
+  };
+};
+
+const ConfigChargeRow = ({ title, description, value, typeOptions = chargeTypeOptions, onChange, forceEnabled }) => (
+  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p className="font-black text-slate-900">{title}</p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+      </div>
+      <label className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wide text-slate-500">
+        <input
+          type="checkbox"
+          checked={forceEnabled ? true : Boolean(value.enabled)}
+          disabled={forceEnabled}
+          onChange={(event) => onChange({ enabled: event.target.checked })}
+          className="h-4 w-4 accent-emerald-700"
+        />
+        {forceEnabled ? 'Required' : value.enabled ? 'Enabled' : 'Disabled'}
+      </label>
+    </div>
+    <div className="mt-4 grid gap-3 md:grid-cols-[180px_minmax(0,1fr)]">
+      <select
+        value={value.charge_type || value.discount_type || 'percentage'}
+        onChange={(event) => onChange(value.discount_type !== undefined ? { discount_type: event.target.value } : { charge_type: event.target.value })}
+        className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none focus:border-gold"
+      >
+        {typeOptions.map(([optionValue, label]) => <option key={optionValue} value={optionValue}>{label}</option>)}
+      </select>
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={value.value ?? value.default_value ?? 0}
+        onChange={(event) => onChange(value.discount_type !== undefined ? { default_value: event.target.value } : { value: event.target.value })}
+        className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
+        placeholder="Value"
+      />
+    </div>
+  </div>
+);
+
+const PaymentTaxCommission = ({
+  paymentConfig,
+  taxCommission,
+  bookingTaxSlabs = [],
+  tdsConfig,
+  plans,
+  saving,
+  savingTds,
+  onSave,
+  onSaveTds,
+  onSaveTaxSlab,
+  onToggleTaxSlab,
+  onDeleteTaxSlab,
+}) => {
   const summary = taxCommission?.summary || {};
   const taxLedger = taxCommission?.tax_ledger || [];
-  const commissions = taxCommission?.commissions || [];
-  const updateFee = () => {
-    const percent = window.prompt('Platform fee percent', paymentConfig?.platform_fee_percent ?? 10);
-    if (percent === null) return;
-    const label = window.prompt('Platform fee label', paymentConfig?.platform_fee_label || 'Premium Service Fee');
-    if (label === null) return;
-    onSave({ platform_fee_percent: Number(percent), platform_fee_label: label });
+  const [draft, setDraft] = useState(() => buildPaymentDraft(paymentConfig || {}));
+  const [editingSlab, setEditingSlab] = useState(null);
+
+  useEffect(() => {
+    setDraft(buildPaymentDraft(paymentConfig || {}));
+  }, [paymentConfig]);
+
+  const updateCharge = (key, patch) => {
+    setDraft((current) => ({
+      ...current,
+      charges: {
+        ...current.charges,
+        [key]: { ...current.charges[key], ...patch },
+      },
+    }));
+  };
+
+  const updatePayout = (key, patch) => {
+    setDraft((current) => ({
+      ...current,
+      host_payout: {
+        ...current.host_payout,
+        [key]: { ...current.host_payout[key], ...patch },
+      },
+    }));
+  };
+
+  const validateConfig = () => {
+    const rows = [
+      ...Object.values(draft.charges),
+      ...Object.values(draft.host_payout),
+    ];
+    for (const row of rows) {
+      const value = Number(row.value ?? row.default_value ?? 0);
+      if (Number.isNaN(value) || value < 0) return 'Configuration values cannot be negative.';
+      const type = row.charge_type || row.discount_type;
+      if (type === 'percentage' && value > 100) return 'Percentage values must be between 0 and 100.';
+    }
+    return '';
+  };
+
+  const saveConfig = () => {
+    const error = validateConfig();
+    if (error) {
+      window.alert(error);
+      return;
+    }
+    const platformFee = draft.charges.platform_fee || {};
+    onSave({
+      platform_fee_percent: platformFee.charge_type === 'percentage' ? Number(platformFee.value || 0) : 0,
+      platform_fee_label: platformFee.label || 'Platform Fee',
+      charges: draft.charges,
+      host_payout: draft.host_payout,
+    });
+  };
+
+  const displayAmount = (value) => {
+    if (value === null || value === undefined || value === '') return 'Unlimited';
+    return money(value);
   };
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         {[
-          ['Gateway', paymentConfig?.provider || 'razorpay'],
-          ['Mode', paymentConfig?.is_mock ? 'Mock' : 'Live'],
-          ['Currency', paymentConfig?.currency || 'INR'],
-          ['Platform Fee', `${paymentConfig?.platform_fee_percent ?? 10}%`],
-          ['Booking GST', money(summary.booking_gst || 0)],
-          ['Broker Pending', money(summary.broker_commission_pending || 0)],
+          ['Payment Configuration', `${draft.charges.platform_fee?.value ?? 0}% platform fee`],
+          ['Booking GST Slabs', `${bookingTaxSlabs.filter((slab) => slab.is_active !== false).length} active`],
+          ['Host Payout Configuration', `${draft.host_payout.platform_commission?.value ?? 0}% commission`],
+          ['TDS Configuration', tdsConfig?.is_enabled === false ? 'Disabled' : `${tdsConfig?.standard_rate ?? 0.10}% ${tdsConfig?.provision_code || 'Section 194-O'}`],
+          ['Subscription Tax', `${plans.length} plans`],
         ].map(([label, value]) => <Panel key={label} className="p-4"><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-2 break-words text-xl font-black">{value}</p></Panel>)}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-        <Panel className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="font-black">Payment Configuration</h2>
-              <p className="mt-1 text-xs text-slate-500">Booking fee label and platform commission percent used in checkout pricing.</p>
-            </div>
-            <button disabled={saving} onClick={updateFee} className="rounded-lg bg-charcoal px-3 py-2 text-xs font-black text-white disabled:opacity-60">{saving ? 'Saving...' : 'Edit'}</button>
+      <Panel className="p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
+          <div>
+            <h2 className="font-black">Payment Configuration</h2>
+            <p className="mt-1 text-xs text-slate-500">Booking checkout charges are read dynamically from this configuration.</p>
           </div>
-          <div className="mt-4 grid gap-3">
-            <Info label="Provider" value={paymentConfig?.provider || 'razorpay'} />
-            <Info label="Key Mode" value={paymentConfig?.is_mock ? 'Mock / Sandbox' : 'Live'} />
-            <Info label="Platform Fee Label" value={paymentConfig?.platform_fee_label || 'Premium Service Fee'} />
-            <Info label="Platform Fee Percent" value={`${paymentConfig?.platform_fee_percent ?? 10}%`} />
+          <button
+            disabled={saving}
+            onClick={saveConfig}
+            className="rounded-xl bg-charcoal px-5 py-3 text-sm font-black text-white shadow-sm disabled:opacity-60"
+          >
+            {saving ? 'Saving...' : 'Save Configuration'}
+          </button>
+        </div>
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+          {paymentChargeDefinitions.map(([key, title, description]) => (
+            <ConfigChargeRow
+              key={key}
+              title={title}
+              description={description}
+              value={draft.charges[key]}
+              onChange={(patch) => updateCharge(key, patch)}
+              forceEnabled={key === 'platform_fee'}
+            />
+          ))}
+        </div>
+      </Panel>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <Panel className="overflow-hidden">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 p-4">
+            <div>
+              <h2 className="font-black">Booking Tax Slab Configuration</h2>
+              <p className="mt-1 text-xs text-slate-500">Booking GST is calculated from the matching active taxable amount slab.</p>
+            </div>
+            <button
+              disabled={saving}
+              onClick={() => setEditingSlab({ __new: true })}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-black text-white shadow-sm disabled:opacity-60"
+            >
+              <Plus className="h-4 w-4" /> Add Tax Slab
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr>
+                  {['From Amount', 'To Amount', 'GST Percentage', 'Status', 'Actions'].map((header) => <th key={header} className="px-4 py-3">{header}</th>)}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {bookingTaxSlabs.map((slab) => (
+                  <tr key={slab.slab_id}>
+                    <td className="px-4 py-3 font-bold">{displayAmount(slab.from_amount)}</td>
+                    <td className="px-4 py-3 font-bold">{displayAmount(slab.to_amount)}</td>
+                    <td className="px-4 py-3">{slab.gst_percent}%</td>
+                    <td className="px-4 py-3"><StatusBadge value={slab.is_active === false ? 'inactive' : 'active'} /></td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-2">
+                        <button disabled={saving} onClick={() => setEditingSlab(slab)} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 disabled:opacity-60"><Pencil className="h-3.5 w-3.5" /> Edit</button>
+                        <button disabled={saving} onClick={() => onToggleTaxSlab(slab)} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-60"><Power className="h-3.5 w-3.5" /> {slab.is_active === false ? 'Enable' : 'Disable'}</button>
+                        <button disabled={saving} onClick={() => onDeleteTaxSlab(slab)} className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 disabled:opacity-60"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!bookingTaxSlabs.length && <p className="p-6 text-sm text-slate-500">No booking tax slabs configured. Checkout will use the fallback GST rate until a slab is added.</p>}
+          </div>
+        </Panel>
+
+        <Panel className="p-4">
+          <h2 className="font-black">Host Payout Configuration</h2>
+          <p className="mt-1 text-xs text-slate-500">Deductions used by host settlement calculations.</p>
+          <div className="mt-4 space-y-3">
+            {hostPayoutDefinitions.map(([key, title, description]) => (
+              <ConfigChargeRow
+                key={key}
+                title={title}
+                description={description}
+                value={draft.host_payout[key]}
+                onChange={(patch) => updatePayout(key, patch)}
+              />
+            ))}
+          </div>
+        </Panel>
+      </div>
+
+      <TdsConfigurationPanel config={tdsConfig} saving={savingTds} onSave={onSaveTds} />
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Panel className="overflow-hidden">
+          <div className="border-b border-slate-200 p-4">
+            <h2 className="font-black">Subscription Plan Tax</h2>
+            <p className="text-xs text-slate-500">Subscription tax remains separate from booking tax slab rules.</p>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {plans.slice(0, 8).map((plan) => <div key={plan.plan_id} className="grid gap-2 p-4 text-sm md:grid-cols-[1fr_100px_100px] md:items-center"><div><p className="font-black">{plan.name || plan.plan_name || plan.plan_id}</p><p className="text-xs text-slate-500">{plan.plan_id}</p></div><span>{plan.tax_percent ?? 18}% tax</span><StatusBadge value={plan.is_active === false ? 'inactive' : 'active'} /></div>)}
+            {!plans.length && <p className="p-4 text-sm text-slate-500">No subscription plans found.</p>}
           </div>
         </Panel>
 
@@ -373,7 +703,7 @@ const PaymentTaxCommission = ({ paymentConfig, taxCommission, plans, saving, onS
             <p className="text-xs text-slate-500">Estimated tax and commission liabilities from finance records.</p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
+            <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Tax ID', 'Type', 'Taxable', 'Rate', 'Amount', 'Status'].map((header) => <th key={header} className="px-4 py-3">{header}</th>)}</tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {taxLedger.map((row) => <tr key={row.tax_id}><td className="px-4 py-3 font-mono text-xs">{row.tax_id}</td><td className="px-4 py-3">{row.tax_type}</td><td className="px-4 py-3">{money(row.taxable_amount || 0)}</td><td className="px-4 py-3">{row.tax_rate}%</td><td className="px-4 py-3 font-black">{money(row.tax_amount || 0)}</td><td className="px-4 py-3"><StatusBadge value={row.status} /></td></tr>)}
@@ -384,29 +714,274 @@ const PaymentTaxCommission = ({ paymentConfig, taxCommission, plans, saving, onS
         </Panel>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Panel className="overflow-hidden">
-          <div className="border-b border-slate-200 p-4">
-            <h2 className="font-black">Subscription Plan Tax</h2>
-            <p className="text-xs text-slate-500">Current subscription pricing tax configuration.</p>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {plans.slice(0, 8).map((plan) => <div key={plan.plan_id} className="grid gap-2 p-4 text-sm md:grid-cols-[1fr_100px_100px] md:items-center"><div><p className="font-black">{plan.name || plan.plan_name || plan.plan_id}</p><p className="text-xs text-slate-500">{plan.plan_id}</p></div><span>{plan.tax_percent ?? 18}% tax</span><StatusBadge value={plan.is_active === false ? 'inactive' : 'active'} /></div>)}
-            {!plans.length && <p className="p-4 text-sm text-slate-500">No subscription plans found.</p>}
-          </div>
-        </Panel>
+      {editingSlab && (
+        <TaxSlabModal
+          slab={editingSlab.__new ? null : editingSlab}
+          saving={saving}
+          onClose={() => setEditingSlab(null)}
+          onSave={async (payload, slabId) => {
+            await onSaveTaxSlab(payload, slabId);
+            setEditingSlab(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
 
-        <Panel className="overflow-hidden">
-          <div className="border-b border-slate-200 p-4">
-            <h2 className="font-black">Broker Commission Preview</h2>
-            <p className="text-xs text-slate-500">Latest broker commission rows for payout readiness.</p>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {commissions.slice(0, 8).map((row) => <div key={row.commission_id} className="grid gap-2 p-4 text-sm md:grid-cols-[1fr_120px_110px] md:items-center"><div><p className="font-black">{row.broker?.full_name || row.broker_id || '-'}</p><p className="text-xs text-slate-500">{row.booking_id || row.commission_id}</p></div><span>{money(row.commission_amount || 0)}</span><StatusBadge value={row.payment_status || 'pending'} /></div>)}
-            {!commissions.length && <p className="p-4 text-sm text-slate-500">No commission rows found.</p>}
-          </div>
-        </Panel>
+const TdsConfigurationPanel = ({ config, saving, onSave }) => {
+  const [draft, setDraft] = useState(() => buildTdsDraft(config || {}));
+
+  useEffect(() => {
+    setDraft(buildTdsDraft(config || {}));
+  }, [config]);
+
+  const update = (patch) => setDraft((current) => ({ ...current, ...patch }));
+  const updateThreshold = (key, value) => setDraft((current) => ({
+    ...current,
+    thresholds: { ...current.thresholds, [key]: value },
+  }));
+
+  const submit = () => {
+    const standardRate = Number(draft.standard_rate);
+    const missingPanRate = Number(draft.missing_pan_rate);
+    const individualThreshold = Number(draft.thresholds.individual_huf);
+    const otherThreshold = Number(draft.thresholds.other_entity);
+    if (!draft.effective_from) {
+      window.alert('Effective From date is required.');
+      return;
+    }
+    if ([standardRate, missingPanRate, individualThreshold, otherThreshold].some((value) => Number.isNaN(value) || value < 0)) {
+      window.alert('TDS rates and thresholds cannot be negative.');
+      return;
+    }
+    if (draft.effective_to && draft.effective_from > draft.effective_to) {
+      window.alert('Effective To must be after Effective From.');
+      return;
+    }
+    onSave({
+      ...draft,
+      standard_rate: standardRate,
+      missing_pan_rate: missingPanRate,
+      thresholds: {
+        individual_huf: individualThreshold,
+        other_entity: otherThreshold,
+      },
+      effective_to: draft.effective_to || null,
+    });
+  };
+
+  return (
+    <Panel className="p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
+        <div>
+          <h2 className="font-black">TDS Configuration</h2>
+          <p className="mt-1 text-xs text-slate-500">Host payout TDS rules for Section 194-O with financial year thresholds.</p>
+        </div>
+        <button
+          disabled={saving}
+          onClick={submit}
+          className="rounded-xl bg-charcoal px-5 py-3 text-sm font-black text-white shadow-sm disabled:opacity-60"
+        >
+          {saving ? 'Saving...' : 'Save TDS Configuration'}
+        </button>
       </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <label className="space-y-2">
+          <span className="text-xs font-black uppercase tracking-wide text-slate-500">Status</span>
+          <select
+            value={draft.is_enabled ? 'enabled' : 'disabled'}
+            onChange={(event) => update({ is_enabled: event.target.value === 'enabled' })}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
+          >
+            <option value="enabled">Enabled</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </label>
+        <label className="space-y-2">
+          <span className="text-xs font-black uppercase tracking-wide text-slate-500">Provision Code</span>
+          <input
+            value={draft.provision_code}
+            onChange={(event) => update({ provision_code: event.target.value })}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
+          />
+        </label>
+        <label className="space-y-2">
+          <span className="text-xs font-black uppercase tracking-wide text-slate-500">Calculation Base</span>
+          <input
+            value="Gross Booking Value"
+            disabled
+            className="w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 font-bold text-slate-500"
+          />
+        </label>
+        <label className="space-y-2">
+          <span className="text-xs font-black uppercase tracking-wide text-slate-500">Standard Rate (%)</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={draft.standard_rate}
+            onChange={(event) => update({ standard_rate: event.target.value })}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
+          />
+        </label>
+        <label className="space-y-2">
+          <span className="text-xs font-black uppercase tracking-wide text-slate-500">Missing PAN Rate (%)</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={draft.missing_pan_rate}
+            onChange={(event) => update({ missing_pan_rate: event.target.value })}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
+          />
+        </label>
+        <label className="space-y-2">
+          <span className="text-xs font-black uppercase tracking-wide text-slate-500">Rounding Method</span>
+          <select
+            value={draft.rounding_method}
+            onChange={(event) => update({ rounding_method: event.target.value })}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
+          >
+            <option value="NEAREST_RUPEE">Nearest Rupee</option>
+            <option value="TWO_DECIMAL">Two Decimal</option>
+            <option value="FLOOR">Floor</option>
+            <option value="CEIL">Ceil</option>
+          </select>
+        </label>
+        <label className="space-y-2">
+          <span className="text-xs font-black uppercase tracking-wide text-slate-500">Effective From</span>
+          <input
+            type="date"
+            value={draft.effective_from}
+            onChange={(event) => update({ effective_from: event.target.value })}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
+          />
+        </label>
+        <label className="space-y-2">
+          <span className="text-xs font-black uppercase tracking-wide text-slate-500">Effective To</span>
+          <input
+            type="date"
+            value={draft.effective_to}
+            onChange={(event) => update({ effective_to: event.target.value })}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
+          />
+        </label>
+        <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <input
+            type="checkbox"
+            checked={draft.pan_aadhaar_required}
+            onChange={(event) => update({ pan_aadhaar_required: event.target.checked })}
+            className="h-4 w-4 accent-emerald-700"
+          />
+          <span className="text-sm font-bold">PAN/Aadhaar required for standard TDS rate</span>
+        </label>
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <label className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
+          <span className="text-xs font-black uppercase tracking-wide text-slate-500">Individual / HUF FY Threshold</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={draft.thresholds.individual_huf}
+            onChange={(event) => updateThreshold('individual_huf', event.target.value)}
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
+          />
+          <p className="text-xs text-slate-500">Resident Individual/HUF TDS starts after this financial-year gross value.</p>
+        </label>
+        <label className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
+          <span className="text-xs font-black uppercase tracking-wide text-slate-500">Other Entity FY Threshold</span>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={draft.thresholds.other_entity}
+            onChange={(event) => updateThreshold('other_entity', event.target.value)}
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
+          />
+          <p className="text-xs text-slate-500">Company, LLP, partnership and other entities normally use zero threshold.</p>
+        </label>
+      </div>
+    </Panel>
+  );
+};
+
+const TaxSlabModal = ({ slab, saving, onClose, onSave }) => {
+  const [draft, setDraft] = useState({
+    from_amount: slab?.from_amount ?? '',
+    to_amount: slab?.to_amount ?? '',
+    unlimited: slab?.to_amount === null || slab?.to_amount === undefined,
+    gst_percent: slab?.gst_percent ?? '',
+    is_active: slab?.is_active ?? true,
+  });
+
+  const submit = async (event) => {
+    event.preventDefault();
+    const fromAmount = Number(draft.from_amount);
+    const toAmount = draft.unlimited ? null : Number(draft.to_amount);
+    const gstPercent = Number(draft.gst_percent);
+    if (Number.isNaN(fromAmount) || fromAmount < 0) {
+      window.alert('From Amount must be zero or more.');
+      return;
+    }
+    if (!draft.unlimited && (Number.isNaN(toAmount) || fromAmount >= toAmount)) {
+      window.alert('From Amount must be less than To Amount.');
+      return;
+    }
+    if (Number.isNaN(gstPercent) || gstPercent < 0) {
+      window.alert('GST percentage cannot be negative.');
+      return;
+    }
+    await onSave({
+      from_amount: fromAmount,
+      to_amount: toAmount,
+      gst_percent: gstPercent,
+      is_active: Boolean(draft.is_active),
+    }, slab?.slab_id || null);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-charcoal/50 p-4">
+      <form onSubmit={submit} className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-xl font-black">{slab ? 'Edit Tax Slab' : 'Add Tax Slab'}</h3>
+            <p className="mt-1 text-sm text-slate-500">Configure booking GST amount ranges.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black text-slate-600">Close</button>
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <label className="block">
+            <span className="text-xs font-black uppercase tracking-wide text-slate-500">From Amount</span>
+            <input type="number" min="0" step="0.01" value={draft.from_amount} onChange={(event) => setDraft((current) => ({ ...current, from_amount: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold" required />
+          </label>
+          <label className="block">
+            <span className="text-xs font-black uppercase tracking-wide text-slate-500">To Amount</span>
+            <input type="number" min="0" step="0.01" value={draft.to_amount} disabled={draft.unlimited} onChange={(event) => setDraft((current) => ({ ...current, to_amount: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold disabled:opacity-50" />
+          </label>
+          <label className="block">
+            <span className="text-xs font-black uppercase tracking-wide text-slate-500">GST Percentage</span>
+            <input type="number" min="0" step="0.01" value={draft.gst_percent} onChange={(event) => setDraft((current) => ({ ...current, gst_percent: event.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold" required />
+          </label>
+          <div className="grid gap-2">
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold">
+              <input type="checkbox" checked={draft.unlimited} onChange={(event) => setDraft((current) => ({ ...current, unlimited: event.target.checked, to_amount: event.target.checked ? '' : current.to_amount }))} />
+              Maximum Amount Unlimited
+            </label>
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold">
+              <input type="checkbox" checked={draft.is_active} onChange={(event) => setDraft((current) => ({ ...current, is_active: event.target.checked }))} />
+              Active
+            </label>
+          </div>
+        </div>
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <button type="button" onClick={onClose} className="rounded-xl bg-slate-100 px-5 py-3 text-sm font-black text-slate-700">Cancel</button>
+          <button disabled={saving} type="submit" className="rounded-xl bg-charcoal px-5 py-3 text-sm font-black text-white disabled:opacity-60">{saving ? 'Saving...' : 'Save Tax Slab'}</button>
+        </div>
+      </form>
     </div>
   );
 };

@@ -317,7 +317,7 @@ async def apply_pricing(
         await db.properties.update_one(
             {"property_id": p["property_id"]},
             {"$set": {
-                "price_per_night": new_price,
+                "suggested_price": new_price,
                 "base_price": p["base_price"],
                 "pricing_rules": rules_dict,
                 "rules_status": "active",
@@ -363,7 +363,7 @@ async def toggle_rules_status(
         await db.properties.update_one(
             {"property_id": req.property_id},
             {"$set": {
-                "price_per_night": new_price,
+                "suggested_price": new_price,
                 "rules_status": "stopped",
                 "updated_at": datetime.now(timezone.utc)
             }}
@@ -375,7 +375,7 @@ async def toggle_rules_status(
         await db.properties.update_one(
             {"property_id": req.property_id},
             {"$set": {
-                "price_per_night": new_price,
+                "suggested_price": new_price,
                 "rules_status": "active",
                 "updated_at": datetime.now(timezone.utc)
             }}
@@ -418,7 +418,7 @@ async def toggle_rules_status_batch(
             await db.properties.update_one(
                 {"property_id": p["property_id"]},
                 {"$set": {
-                    "price_per_night": new_price,
+                    "suggested_price": new_price,
                     "rules_status": "stopped",
                     "updated_at": datetime.now(timezone.utc)
                 }}
@@ -430,7 +430,7 @@ async def toggle_rules_status_batch(
             await db.properties.update_one(
                 {"property_id": p["property_id"]},
                 {"$set": {
-                    "price_per_night": new_price,
+                    "suggested_price": new_price,
                     "rules_status": "active",
                     "updated_at": datetime.now(timezone.utc)
                 }}
