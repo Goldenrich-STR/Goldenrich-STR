@@ -203,6 +203,12 @@ def extract_booking_pricing_snapshot(booking: Dict[str, Any]) -> Dict[str, Any]:
         booking.get("customer_final_payable"),
         booking.get("total_amount"),
     )
+    if total_extra_charges == Decimal("0.00") and customer_final != Decimal("0.00"):
+        derived_extra_charges = customer_final - host_actual - gst_amount + discount_amount
+        if derived_extra_charges > Decimal("0.00"):
+            total_extra_charges = derived_extra_charges
+            if not any(value > Decimal("0.00") for value in extra_charges.values()):
+                extra_charges["company_charge"] = derived_extra_charges
     if customer_final == Decimal("0.00"):
         customer_final = host_actual + total_extra_charges + gst_amount - discount_amount
 

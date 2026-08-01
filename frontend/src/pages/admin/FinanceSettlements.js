@@ -37,7 +37,12 @@ const chargeLineItems = (charges = {}) => [
   ['Customer GST', charges.customer_gst],
 ].filter(([, value]) => Number(value || 0) > 0);
 const extraChargeLineItems = (charges = {}) => chargeLineItems(charges).filter(([label]) => label !== 'Customer GST');
-const extraChargeTotal = (charges = {}) => extraChargeLineItems(charges).reduce((total, [, value]) => total + Number(value || 0), 0);
+const extraChargeTotal = (source = {}) => {
+  const explicitTotal = Number(source.total_extra_charges_amount || 0);
+  if (explicitTotal > 0) return explicitTotal;
+  const charges = source.customer_charge_breakdown || source || {};
+  return extraChargeLineItems(charges).reduce((total, [, value]) => total + Number(value || 0), 0);
+};
 const tdsBaseNote = (payout = {}) => (Number(payout.tds_base_amount || 0) > 0 ? 'Host actual value only' : 'No TDS base');
 
 const FinanceSettlements = () => {
@@ -107,7 +112,7 @@ const FinanceSettlements = () => {
     });
     return {
       gross: sum((item) => item.gross_amount),
-      extraCharges: sum((item) => extraChargeTotal(item.customer_charge_breakdown || {})),
+      extraCharges: sum((item) => extraChargeTotal(item)),
       tds: sum((item) => item.tds_amount),
       net: sum((item) => item.net_amount),
       hosts: Array.from(hostMap.values()),
@@ -333,7 +338,7 @@ const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, a
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {payouts.map((payout) => {
-                  const chargesTotal = extraChargeTotal(payout.customer_charge_breakdown);
+                  const chargesTotal = extraChargeTotal(payout);
                   return (
                     <tr key={payout.payout_id}>
                       <td className="px-4 py-3"><p className="font-mono text-xs font-bold">{payout.payout_id}</p><p className="text-xs text-slate-500">Due: {shortDate(payout.settlement_due_at || payout.eligible_at || payout.created_at)}</p></td>
@@ -380,7 +385,7 @@ const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, a
                 ['Broker', `${entityName(sample.broker)} / ${entityCode(sample.broker)}`],
                 ['Employee (RM)', `${entityName(sample.employee)} / ${entityCode(sample.employee)}`],
                 ['Host Actual Value', paiseToMoney(sample.gross_amount || 0)],
-                ['Extra Charges', paiseToMoney(extraChargeTotal(sample.customer_charge_breakdown || {}))],
+                ['Extra Charges', paiseToMoney(extraChargeTotal(sample))],
                 ['TDS', paiseToMoney(sample.tds_amount || 0)],
                 ['Net Payable', paiseToMoney(sample.net_amount || 0)],
                 ['Settlement Due', shortDate(sample.settlement_due_at || sample.eligible_at || sample.created_at)],
