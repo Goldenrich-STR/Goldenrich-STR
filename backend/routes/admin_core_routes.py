@@ -38,6 +38,27 @@ async def require_admin(current_user: dict = Depends(get_current_user)):
     return current_user
 
 
+async def _resolve_assignee_user(db: AsyncIOMotorDatabase, value: Optional[str], role: str):
+    identifier = (value or "").strip()
+    if not identifier:
+        return None
+    query = {"role": role}
+    if role == "broker":
+        query["$or"] = [
+            {"user_id": identifier},
+            {"lg_code": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}},
+            {"employee_code": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}},
+            {"uid": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}},
+        ]
+    else:
+        query["$or"] = [
+            {"user_id": identifier},
+            {"employee_code": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}},
+            {"uid": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}},
+        ]
+    return await db.users.find_one(query, {"_id": 0})
+
+
 class RolePayload(BaseModel):
     role_name: str
     role_key: Optional[str] = None
@@ -2185,21 +2206,39 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
     host = await db.users.find_one({"user_id": host_id, "role": "host"}, {"_id": 0})
     if not host:
         raise HTTPException(status_code=404, detail="Host not found")
-    updates = {"updated_at": _now()}
-    if payload.broker_id:
-        broker = await db.users.find_one({"user_id": payload.broker_id, "role": "broker"}, {"_id": 0})
+    now = _now()
+    set_updates = {"updated_at": now}
+    unset_updates = {}
+    broker_value = (payload.broker_id or "").strip()
+    rm_value = (payload.rm_id or "").strip()
+    if broker_value:
+        broker = await _resolve_assignee_user(db, broker_value, "broker")
         if not broker:
             raise HTTPException(status_code=400, detail="Broker not found")
-        updates["broker_id"] = payload.broker_id
-        updates["lg_code"] = broker.get("lg_code") or broker.get("employee_code") or broker.get("uid")
-    if payload.rm_id:
-        rm = await db.users.find_one({"user_id": payload.rm_id, "role": "employee"}, {"_id": 0})
+        set_updates["broker_id"] = broker["user_id"]
+        set_updates["lg_code"] = broker.get("lg_code") or broker.get("employee_code") or broker.get("uid")
+    else:
+        unset_updates["broker_id"] = ""
+        unset_updates["lg_code"] = ""
+    if rm_value:
+        rm = await _resolve_assignee_user(db, rm_value, "employee")
         if not rm:
             raise HTTPException(status_code=400, detail="RM not found")
-        updates["rm_id"] = payload.rm_id
-    await db.users.update_one({"user_id": host_id}, {"$set": updates})
-    await db.properties.update_many({"owner_id": host_id}, {"$set": {k: v for k, v in updates.items() if k in {"broker_id", "rm_id", "updated_at"}}})
-    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="host_management", action="host_team_assigned", record_id=host_id, old_value={"broker_id": host.get("broker_id"), "rm_id": host.get("rm_id")}, new_value=updates, reason=payload.reason)
+        set_updates["rm_id"] = rm["user_id"]
+    else:
+        unset_updates["rm_id"] = ""
+
+    update_doc = {"$set": set_updates}
+    property_set_updates = {k: v for k, v in set_updates.items() if k in {"broker_id", "rm_id", "updated_at"}}
+    property_update_doc = {"$set": property_set_updates}
+    if unset_updates:
+        update_doc["$unset"] = unset_updates
+        property_update_doc["$unset"] = {k: "" for k in unset_updates if k in {"broker_id", "rm_id"}}
+
+    await db.users.update_one({"user_id": host_id}, update_doc)
+    await db.properties.update_many({"owner_id": host_id}, property_update_doc)
+    audit_new_value = {**set_updates, **{key: None for key in unset_updates}}
+    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="host_management", action="host_team_assigned", record_id=host_id, old_value={"broker_id": host.get("broker_id"), "rm_id": host.get("rm_id")}, new_value=audit_new_value, reason=payload.reason)
     return api_response("Host assignment updated")
 
 
@@ -2372,17 +2411,31 @@ async def assign_property_team(property_id: str, payload: AssignmentPayload, cur
     prop = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
-    updates = {"updated_at": _now()}
-    if payload.broker_id:
-        if not await db.users.find_one({"user_id": payload.broker_id, "role": "broker"}, {"_id": 0}):
+    set_updates = {"updated_at": _now()}
+    unset_updates = {}
+    broker_value = (payload.broker_id or "").strip()
+    rm_value = (payload.rm_id or "").strip()
+    if broker_value:
+        broker = await _resolve_assignee_user(db, broker_value, "broker")
+        if not broker:
             raise HTTPException(status_code=400, detail="Broker not found")
-        updates["broker_id"] = payload.broker_id
-    if payload.rm_id:
-        if not await db.users.find_one({"user_id": payload.rm_id, "role": "employee"}, {"_id": 0}):
+        set_updates["broker_id"] = broker["user_id"]
+    else:
+        unset_updates["broker_id"] = ""
+    if rm_value:
+        rm = await _resolve_assignee_user(db, rm_value, "employee")
+        if not rm:
             raise HTTPException(status_code=400, detail="RM not found")
-        updates["rm_id"] = payload.rm_id
-    await db.properties.update_one({"property_id": property_id}, {"$set": updates})
-    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="property_operations", action="property_team_assigned", record_id=property_id, old_value={"broker_id": prop.get("broker_id"), "rm_id": prop.get("rm_id")}, new_value=updates, reason=payload.reason)
+        set_updates["rm_id"] = rm["user_id"]
+    else:
+        unset_updates["rm_id"] = ""
+
+    update_doc = {"$set": set_updates}
+    if unset_updates:
+        update_doc["$unset"] = unset_updates
+    await db.properties.update_one({"property_id": property_id}, update_doc)
+    audit_new_value = {**set_updates, **{key: None for key in unset_updates}}
+    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="property_operations", action="property_team_assigned", record_id=property_id, old_value={"broker_id": prop.get("broker_id"), "rm_id": prop.get("rm_id")}, new_value=audit_new_value, reason=payload.reason)
     return api_response("Property assignment updated")
 
 
