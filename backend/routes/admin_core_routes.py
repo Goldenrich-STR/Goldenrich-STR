@@ -519,6 +519,7 @@ def _code_from_name(prefix: str, name: str) -> str:
 
 HOST_KYC_DOCUMENTS = [
     ("aadhar_card", "Aadhaar Card", True),
+    ("pan_number", "PAN Card Number", True),
     ("property_proof", "Property Proof", True),
     ("cancelled_cheque", "Cancelled Cheque", True),
     ("shop_act", "Shop Act", True),
@@ -545,6 +546,8 @@ def _normalise_host_kyc(host: dict) -> dict:
         text_value = doc.get("text_value") or doc.get("value") or ""
         if doc_type == "gst_number":
             text_value = text_value or host.get("gst_number") or doc.get("document_url") or ""
+        if doc_type == "pan_number":
+            text_value = text_value or host.get("pan_number") or doc.get("document_url") or ""
         checklist.append({
             "document_type": doc_type,
             "label": label,
@@ -557,7 +560,7 @@ def _normalise_host_kyc(host: dict) -> dict:
             "reviewed_at": doc.get("reviewed_at") or "",
             "uploaded_at": doc.get("uploaded_at") or "",
         })
-    required_docs_ready = all(item["document_url"] and item["status"] == "approved" for item in checklist if item["required"])
+    required_docs_ready = all((item["document_url"] or item["text_value"]) and item["status"] == "approved" for item in checklist if item["required"])
     agreement_ready = bool(host.get("agreement_signature")) and host.get("agreement_status", "pending") == "approved"
     pref = host.get("payout_preference") or {}
     bank_has_details = bool(pref.get("upi_vpa") or (pref.get("bank_account_number") and pref.get("bank_ifsc") and pref.get("bank_account_holder")))

@@ -129,9 +129,24 @@ async def list_my_payouts(
 
 
 from pydantic import BaseModel
+import re
+
+PAN_NOT_APPLICABLE = "NOT_APPLICABLE"
+
+
+def normalize_pan_number(value: Optional[str]) -> str:
+    pan = (value or "").strip().upper().replace(" ", "")
+    if pan in {"NA", "N/A", "NOTAPPLICABLE", "NOT_APPLICABLE", "NOT-APPLICABLE"}:
+        return PAN_NOT_APPLICABLE
+    if not pan:
+        raise HTTPException(400, detail="PAN card number is required")
+    if not re.fullmatch(r"[A-Z]{5}[0-9]{4}[A-Z]", pan):
+        raise HTTPException(400, detail="Invalid PAN card number. Use format ABCDE1234F or select Not Applicable.")
+    return pan
 
 class HostVerificationSubmit(BaseModel):
     aadhar_card: str
+    pan_number: str
     property_proof: str
     cancelled_cheque: str
     society_noc: Optional[str] = None
@@ -158,8 +173,10 @@ async def submit_host_verification(
         )
 
     accepted_at = datetime.now(timezone.utc)
+    pan_number = normalize_pan_number(payload.pan_number)
     docs = [
         {"document_type": "aadhar_card", "document_url": payload.aadhar_card, "status": "pending", "uploaded_at": accepted_at.isoformat()},
+        {"document_type": "pan_number", "text_value": pan_number, "status": "pending", "uploaded_at": accepted_at.isoformat()},
         {"document_type": "property_proof", "document_url": payload.property_proof, "status": "pending", "uploaded_at": accepted_at.isoformat()},
         {"document_type": "cancelled_cheque", "document_url": payload.cancelled_cheque, "status": "pending", "uploaded_at": accepted_at.isoformat()},
         {"document_type": "shop_act", "document_url": payload.shop_act, "status": "pending", "uploaded_at": accepted_at.isoformat()},
@@ -180,6 +197,7 @@ async def submit_host_verification(
                 "agreement_owner_name": payload.agreement_owner_name,
                 "agreement_owner_address": payload.agreement_owner_address,
                 "agreement_signature": payload.agreement_signature,
+                "pan_number": pan_number,
                 "gst_number": payload.gst_number.strip() if payload.gst_number else None,
                 "agreement_signed_at": accepted_at.isoformat(),
                 "verification_terms_accepted": True,
@@ -240,14 +258,19 @@ async def save_draft_document(
         "society": "society_noc",
         "shop_act": "shop_act",
         "gst": "gst_certificate",
-        "gst_number": "gst_number"
+        "gst_number": "gst_number",
+        "pan_number": "pan_number",
+        "pan": "pan_number"
     }
     mapped_type = mapping.get(doc_type, doc_type)
     text_value = (payload.text_value or payload.document_url or "").strip()
-    if mapped_type != "gst_number" and not payload.document_url:
+    text_doc_types = {"gst_number", "pan_number"}
+    if mapped_type not in text_doc_types and not payload.document_url:
         raise HTTPException(400, detail="Document URL is required")
     if mapped_type == "gst_number" and not text_value:
         raise HTTPException(400, detail="GST number is required")
+    if mapped_type == "pan_number":
+        text_value = normalize_pan_number(text_value)
     
     user = await db.users.find_one({"user_id": current_user["user_id"]})
     if not user:
@@ -261,7 +284,7 @@ async def save_draft_document(
     updated = False
     for doc in current_docs:
         if doc.get("document_type") == mapped_type:
-            if mapped_type == "gst_number":
+            if mapped_type in text_doc_types:
                 doc.pop("document_url", None)
                 doc["text_value"] = text_value
             else:
@@ -279,7 +302,7 @@ async def save_draft_document(
             "rejection_reason": None,
             "uploaded_at": accepted_at.isoformat()
         }
-        if mapped_type == "gst_number":
+        if mapped_type in text_doc_types:
             new_doc["text_value"] = text_value
         else:
             new_doc["document_url"] = payload.document_url
@@ -288,6 +311,8 @@ async def save_draft_document(
     update_data = {"kyc_documents": current_docs, "updated_at": accepted_at}
     if mapped_type == "gst_number":
         update_data["gst_number"] = text_value
+    if mapped_type == "pan_number":
+        update_data["pan_number"] = text_value
         
     await db.users.update_one(
         {"user_id": current_user["user_id"]},
@@ -309,7 +334,10 @@ async def delete_rejected_draft_document(
         "cheque": "cancelled_cheque",
         "society": "society_noc",
         "shop_act": "shop_act",
-        "gst": "gst_certificate"
+        "gst": "gst_certificate",
+        "gst_number": "gst_number",
+        "pan_number": "pan_number",
+        "pan": "pan_number"
     }
     mapped_type = mapping.get(document_type, document_type)
     user = await db.users.find_one({"user_id": current_user["user_id"]})
@@ -330,9 +358,15 @@ async def delete_rejected_draft_document(
         doc for doc in current_docs if doc.get("document_type") != mapped_type
     ]
     updated_at = datetime.now(timezone.utc)
+    update_doc = {"$set": {"kyc_documents": remaining_docs, "updated_at": updated_at}}
+    if mapped_type == "gst_number":
+        update_doc["$unset"] = {"gst_number": ""}
+    if mapped_type == "pan_number":
+        update_doc["$unset"] = {"pan_number": ""}
+
     await db.users.update_one(
         {"user_id": current_user["user_id"]},
-        {"$set": {"kyc_documents": remaining_docs, "updated_at": updated_at}}
+        update_doc
     )
     return {"message": "Rejected document removed", "kyc_documents": remaining_docs}
 

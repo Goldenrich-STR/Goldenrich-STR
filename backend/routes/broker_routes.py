@@ -1467,7 +1467,7 @@ class BrokerDraftAgreementUpdate(BaseModel):
     agreement_owner_address: Optional[str] = None
     agreement_signature: Optional[str] = None
 
-from routes.host_account_routes import HostVerificationSubmit
+from routes.host_account_routes import HostVerificationSubmit, normalize_pan_number
 
 @router.get("/owner/{owner_id}/kyc")
 async def get_owner_kyc(
@@ -1480,6 +1480,8 @@ async def get_owner_kyc(
     return {
         "kyc_status": owner.get("kyc_status", "unverified"),
         "kyc_documents": owner.get("kyc_documents") or [],
+        "pan_number": owner.get("pan_number"),
+        "gst_number": owner.get("gst_number"),
         "agreement_owner_name": owner.get("agreement_owner_name"),
         "agreement_owner_address": owner.get("agreement_owner_address"),
         "agreement_signature": owner.get("agreement_signature"),
@@ -1505,14 +1507,19 @@ async def save_owner_draft_document(
         "society": "society_noc",
         "shop_act": "shop_act",
         "gst": "gst_certificate",
-        "gst_number": "gst_number"
+        "gst_number": "gst_number",
+        "pan_number": "pan_number",
+        "pan": "pan_number"
     }
     mapped_type = mapping.get(doc_type, doc_type)
     text_value = (payload.text_value or payload.document_url or "").strip()
-    if mapped_type != "gst_number" and not payload.document_url:
+    text_doc_types = {"gst_number", "pan_number"}
+    if mapped_type not in text_doc_types and not payload.document_url:
         raise HTTPException(400, detail="Document URL is required")
     if mapped_type == "gst_number" and not text_value:
         raise HTTPException(400, detail="GST number is required")
+    if mapped_type == "pan_number":
+        text_value = normalize_pan_number(text_value)
     
     current_docs = owner.get("kyc_documents") or []
     if not isinstance(current_docs, list):
@@ -1521,7 +1528,7 @@ async def save_owner_draft_document(
     updated = False
     for doc in current_docs:
         if doc.get("document_type") == mapped_type:
-            if mapped_type == "gst_number":
+            if mapped_type in text_doc_types:
                 doc.pop("document_url", None)
                 doc["text_value"] = text_value
             else:
@@ -1539,7 +1546,7 @@ async def save_owner_draft_document(
             "rejection_reason": None,
             "uploaded_at": accepted_at.isoformat()
         }
-        if mapped_type == "gst_number":
+        if mapped_type in text_doc_types:
             new_doc["text_value"] = text_value
         else:
             new_doc["document_url"] = payload.document_url
@@ -1548,6 +1555,8 @@ async def save_owner_draft_document(
     update_data = {"kyc_documents": current_docs, "updated_at": accepted_at}
     if mapped_type == "gst_number":
         update_data["gst_number"] = text_value
+    if mapped_type == "pan_number":
+        update_data["pan_number"] = text_value
         
     await db.users.update_one(
         {"user_id": owner_id},
@@ -1570,7 +1579,10 @@ async def delete_owner_rejected_draft_document(
         "cheque": "cancelled_cheque",
         "society": "society_noc",
         "shop_act": "shop_act",
-        "gst": "gst_certificate"
+        "gst": "gst_certificate",
+        "gst_number": "gst_number",
+        "pan_number": "pan_number",
+        "pan": "pan_number"
     }
     mapped_type = mapping.get(document_type, document_type)
     
@@ -1588,9 +1600,15 @@ async def delete_owner_rejected_draft_document(
         doc for doc in current_docs if doc.get("document_type") != mapped_type
     ]
     updated_at = datetime.now(timezone.utc)
+    update_doc = {"$set": {"kyc_documents": remaining_docs, "updated_at": updated_at}}
+    if mapped_type == "gst_number":
+        update_doc["$unset"] = {"gst_number": ""}
+    if mapped_type == "pan_number":
+        update_doc["$unset"] = {"pan_number": ""}
+
     await db.users.update_one(
         {"user_id": owner_id},
-        {"$set": {"kyc_documents": remaining_docs, "updated_at": updated_at}}
+        update_doc
     )
     return {"message": "Rejected document removed", "kyc_documents": remaining_docs}
 
@@ -1637,8 +1655,10 @@ async def submit_owner_verification(
         )
         
     accepted_at = datetime.now(timezone.utc)
+    pan_number = normalize_pan_number(payload.pan_number)
     docs = [
         {"document_type": "aadhar_card", "document_url": payload.aadhar_card, "status": "pending", "uploaded_at": accepted_at.isoformat()},
+        {"document_type": "pan_number", "text_value": pan_number, "status": "pending", "uploaded_at": accepted_at.isoformat()},
         {"document_type": "property_proof", "document_url": payload.property_proof, "status": "pending", "uploaded_at": accepted_at.isoformat()},
         {"document_type": "cancelled_cheque", "document_url": payload.cancelled_cheque, "status": "pending", "uploaded_at": accepted_at.isoformat()},
         {"document_type": "shop_act", "document_url": payload.shop_act, "status": "pending", "uploaded_at": accepted_at.isoformat()},
@@ -1659,6 +1679,7 @@ async def submit_owner_verification(
                 "agreement_owner_name": payload.agreement_owner_name,
                 "agreement_owner_address": payload.agreement_owner_address,
                 "agreement_signature": payload.agreement_signature,
+                "pan_number": pan_number,
                 "gst_number": payload.gst_number.strip() if payload.gst_number else None,
                 "agreement_signed_at": accepted_at.isoformat(),
                 "verification_terms_accepted": True,

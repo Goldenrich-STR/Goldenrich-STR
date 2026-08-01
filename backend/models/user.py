@@ -50,6 +50,7 @@ class User(BaseModel):
     branch_manager_id: Optional[str] = None
     kyc_status: KYCStatus = KYCStatus.UNVERIFIED
     kyc_documents: List[KYCDocument] = []
+    pan_number: Optional[str] = None
     
     # Agreement fields
     agreement_owner_name: Optional[str] = None

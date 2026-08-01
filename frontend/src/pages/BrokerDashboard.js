@@ -3586,6 +3586,7 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
   const [shopAct, setShopAct] = useState('');
   const [gstCertificate, setGstCertificate] = useState('');
   const [gstNumber, setGstNumber] = useState('');
+  const [panNumber, setPanNumber] = useState('');
   const [agreementOwnerName, setAgreementOwnerName] = useState('');
   const [agreementOwnerAddress, setAgreementOwnerAddress] = useState('');
   const [agreementSignature, setAgreementSignature] = useState('');
@@ -3615,7 +3616,10 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
       const society = data.kyc_documents?.find(d => d.document_type === 'society_noc')?.document_url || '';
       const shopActVal = data.kyc_documents?.find(d => d.document_type === 'shop_act')?.document_url || '';
       const gstCert = data.kyc_documents?.find(d => d.document_type === 'gst_certificate')?.document_url || '';
-      const gstNum = data.kyc_documents?.find(d => d.document_type === 'gst_number')?.document_url || '';
+      const gstDoc = data.kyc_documents?.find(d => d.document_type === 'gst_number') || {};
+      const gstNum = gstDoc.text_value || gstDoc.value || gstDoc.document_url || data.gst_number || '';
+      const panDoc = data.kyc_documents?.find(d => d.document_type === 'pan_number') || {};
+      const panNum = panDoc.text_value || panDoc.value || panDoc.document_url || data.pan_number || '';
 
       setAadharCard(aadhar);
       setPropertyProof(prop);
@@ -3624,6 +3628,7 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
       setShopAct(shopActVal);
       setGstCertificate(gstCert);
       setGstNumber(gstNum);
+      setPanNumber(panNum);
 
       setAgreementOwnerName(data.agreement_owner_name || owner.full_name || '');
       setAgreementOwnerAddress(data.agreement_owner_address || '');
@@ -3657,6 +3662,30 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
     } finally {
       setUploadingDocs(prev => ({ ...prev, [docType]: false }));
     }
+  };
+
+  const normalizePanNumber = (value) => value.trim().toUpperCase().replace(/\s+/g, '');
+  const isPanNotApplicable = (value) => ['NA', 'N/A', 'NOTAPPLICABLE', 'NOT_APPLICABLE', 'NOT-APPLICABLE'].includes(normalizePanNumber(value));
+  const getPanSubmitValue = () => isPanNotApplicable(panNumber) ? 'NOT_APPLICABLE' : normalizePanNumber(panNumber);
+  const isValidPanNumber = (value) => isPanNotApplicable(value) || /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(normalizePanNumber(value));
+
+  const savePanNumberDraft = async (nextValue = panNumber) => {
+    const value = isPanNotApplicable(nextValue) ? 'NOT_APPLICABLE' : normalizePanNumber(nextValue);
+    if (!value || !isValidPanNumber(value)) return;
+    try {
+      await accountAPI.saveOwnerDraftDocument(owner.user_id, {
+        document_type: 'pan_number',
+        text_value: value
+      });
+      fetchKycData();
+    } catch (err) {
+      console.error('Failed to save PAN number draft:', err);
+    }
+  };
+
+  const markPanNotApplicable = async () => {
+    setPanNumber('NOT_APPLICABLE');
+    await savePanNumberDraft('NOT_APPLICABLE');
   };
 
   const handleRejectedDocRemove = async (docType) => {
@@ -3793,6 +3822,14 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
       alert('Please upload all mandatory documents and sign the agreement.');
       return;
     }
+    if (!panNumber.trim()) {
+      alert('Please enter PAN Card Number or select Not Applicable.');
+      return;
+    }
+    if (!isValidPanNumber(panNumber)) {
+      alert('Invalid PAN Card Number. Use format ABCDE1234F or select Not Applicable.');
+      return;
+    }
     if (!verificationConsent) {
       alert('Please accept the Terms & Conditions consent.');
       return;
@@ -3800,8 +3837,19 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
 
     setSubmitting(true);
     try {
+      if (gstNumber.trim()) {
+        await accountAPI.saveOwnerDraftDocument(owner.user_id, {
+          document_type: 'gst_number',
+          text_value: gstNumber.trim()
+        });
+      }
+      await accountAPI.saveOwnerDraftDocument(owner.user_id, {
+        document_type: 'pan_number',
+        text_value: getPanSubmitValue()
+      });
       await accountAPI.submitOwnerVerification(owner.user_id, {
         aadhar_card: aadharCard,
+        pan_number: getPanSubmitValue(),
         property_proof: propertyProof,
         cancelled_cheque: cancelledCheque,
         society_noc: societyNoc || null,
@@ -4026,11 +4074,48 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {renderDocCard("01", "Aadhar Card", "Aadhaar Card of the host / property host", "aadhar", aadharCard, "image/*,application/pdf", true, User)}
-              {renderDocCard("02", "Property Proof", "Index 2 / Light Bill / Tax Receipt", "property", propertyProof, "image/*,application/pdf", true, Building2)}
-              {renderDocCard("03", "Cancelled Cheque", "Cancelled cheque for payout verification", "cheque", cancelledCheque, "image/*,application/pdf", true, Landmark)}
-              {renderDocCard("04", "Shop Act", "Shop & Establishment Act certificate", "shop_act", shopAct, "image/*,application/pdf", true, Briefcase)}
-              {renderDocCard("05", "Society NOC", "Society No Objection Certificate (Optional)", "society", societyNoc, "image/*,application/pdf", false, Building2)}
-              {renderDocCard("06", "GST Certificate", "GST registration document (Optional)", "gst", gstCertificate, "image/*,application/pdf", false, FileText)}
+              <div className="bg-white rounded-none border border-sand-200 p-6 shadow-sm flex flex-col justify-between min-h-[18rem] h-auto relative overflow-hidden transition-all duration-300 hover:shadow-premium hover:border-terracotta group">
+                <div className="absolute top-0 left-0 bg-terracotta text-white font-black text-[10px] tracking-wider px-3.5 py-1.5 rounded-none shadow-sm">02</div>
+                <div className="flex flex-col items-center flex-1 w-full">
+                  <div className="w-14 h-14 rounded-none bg-sand-50 border border-sand-200 flex items-center justify-center mb-4 group-hover:bg-terracotta/5 transition-colors">
+                    <FileText className="w-6 h-6 text-terracotta" />
+                  </div>
+                  <h4 className="text-sm font-black text-charcoal text-center mb-1">PAN Card Number <span className="text-red-500 font-bold ml-1">*</span></h4>
+                  <p className="text-[11px] text-charcoal-muted font-bold text-center mb-4 leading-normal max-w-[90%]">Enter host PAN number or mark Not Applicable.</p>
+                  <div className="w-full text-left">
+                    <label className="text-[8px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">PAN Number</label>
+                    <input
+                      type="text"
+                      placeholder="ABCDE1234F"
+                      value={panNumber === 'NOT_APPLICABLE' ? 'Not Applicable' : panNumber}
+                      onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
+                      onBlur={() => savePanNumberDraft()}
+                      className={`w-full px-3 py-2 border rounded-none text-[11px] outline-none font-semibold ${panNumber && !isValidPanNumber(panNumber) ? 'border-red-300 focus:border-red-500' : 'border-sand-200 focus:border-terracotta'}`}
+                    />
+                    {panNumber && !isValidPanNumber(panNumber) && (
+                      <p className="mt-1 text-[9px] font-bold text-red-600">Use ABCDE1234F format or select Not Applicable.</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={markPanNotApplicable}
+                    className="mt-3 w-full border border-sand-200 bg-sand-50 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-charcoal hover:border-terracotta transition-colors"
+                  >
+                    Not Applicable
+                  </button>
+                  {panNumber && isValidPanNumber(panNumber) && (
+                    <span className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-[9px] font-black uppercase tracking-wider">
+                      <Clock className="w-3 h-3" />
+                      Pending
+                    </span>
+                  )}
+                </div>
+              </div>
+              {renderDocCard("03", "Property Proof", "Index 2 / Light Bill / Tax Receipt", "property", propertyProof, "image/*,application/pdf", true, Building2)}
+              {renderDocCard("04", "Cancelled Cheque", "Cancelled cheque for payout verification", "cheque", cancelledCheque, "image/*,application/pdf", true, Landmark)}
+              {renderDocCard("05", "Shop Act", "Shop & Establishment Act certificate", "shop_act", shopAct, "image/*,application/pdf", true, Briefcase)}
+              {renderDocCard("06", "Society NOC", "Society No Objection Certificate (Optional)", "society", societyNoc, "image/*,application/pdf", false, Building2)}
+              {renderDocCard("07", "GST Certificate", "GST registration document (Optional)", "gst", gstCertificate, "image/*,application/pdf", false, FileText)}
             </div>
 
             {/* Host Agreement Section */}

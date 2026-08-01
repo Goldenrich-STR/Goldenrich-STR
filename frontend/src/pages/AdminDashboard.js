@@ -2972,8 +2972,8 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                               </div>
                             )}
                             
-                            {doc.document_type === 'gst_number' ? (
-                              <p className="text-xs font-mono bg-white p-2 rounded-xl border border-gray-100 text-center font-bold text-charcoal">{doc.document_url}</p>
+                            {doc.document_type === 'gst_number' || doc.document_type === 'pan_number' ? (
+                              <p className="text-xs font-mono bg-white p-2 rounded-xl border border-gray-100 text-center font-bold text-charcoal">{doc.text_value || doc.value || doc.document_url}</p>
                             ) : (
                               <a
                                 href={getImageUrl(doc.document_url)}
