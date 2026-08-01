@@ -67,6 +67,29 @@ def test_phase15_rm_broker_management_exposes_enterprise_metrics():
         assert field in routes
 
 
+def test_phase15_rm_scope_derives_brokers_hosts_properties_from_mixed_assignments():
+    repo_root = Path(__file__).resolve().parents[1]
+    routes = (repo_root / "routes" / "employee_routes.py").read_text()
+
+    expected_scope_terms = [
+        "async def _get_rm_identifiers",
+        "async def _get_rm_scope",
+        "direct_hosts",
+        "direct_properties",
+        "derived_broker_ids",
+        "_field_matches_identifiers(\"rm_id\", identifiers)",
+        "\"owner_id\": {\"$in\": direct_host_ids}",
+        "\"broker_id\": {\"$in\": broker_ids}",
+        "\"property_id\": {\"$in\": property_ids}",
+        "\"user_broker_id\": {\"$in\": broker_ids}",
+        "\"user_rm_id\"",
+        "\"assigned_rm_id\"",
+    ]
+
+    for term in expected_scope_terms:
+        assert term in routes
+
+
 def test_phase15_rm_broker_management_ui_uses_host_terminology_and_drilldown_metrics():
     repo_root = Path(__file__).resolve().parents[2]
     page = (repo_root / "frontend" / "src" / "pages" / "EmployeeDashboard.js").read_text()
