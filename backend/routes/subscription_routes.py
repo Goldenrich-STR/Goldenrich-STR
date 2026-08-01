@@ -9,6 +9,7 @@ from services.razorpay_service import razorpay_service
 from datetime import datetime, timedelta, date, timezone
 import logging
 import os
+import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
@@ -108,7 +109,12 @@ def _subscription_coupon_breakdown(plan: dict, coupon: Optional[dict], billing_c
     }
 
 def _normalize(value: Optional[str]) -> Optional[str]:
-    return value.strip().lower() if value else None
+    if value is None:
+        return None
+    text = value.strip().lower()
+    if not text or text in {"all", "global", "all_properties", "all properties", "all subscription plans"}:
+        return None
+    return re.sub(r"[^a-z0-9]+", "", text)
 
 def _sqft_matches(range_text: Optional[str], area_sqft: Optional[float]) -> bool:
     if not range_text or area_sqft is None:
@@ -162,13 +168,13 @@ def _target_matches(
     item_property_type = _normalize(item.get("property_type"))
     item_bhk = _normalize(item.get("bhk_type"))
 
-    if requested_plan_type and item_plan_type and item_plan_type != requested_plan_type:
+    if requested_plan_type and item_plan_type and requested_plan_type not in item_plan_type and item_plan_type not in requested_plan_type:
         return False
-    if requested_category and item_category and item_category != requested_category:
+    if requested_category and item_category and requested_category not in item_category and item_category not in requested_category:
         return False
-    if requested_property_type and item_property_type and item_property_type != requested_property_type:
+    if requested_property_type and item_property_type and requested_property_type not in item_property_type and item_property_type not in requested_property_type:
         return False
-    if requested_bhk and item_bhk and item_bhk != requested_bhk:
+    if requested_bhk and item_bhk and requested_bhk not in item_bhk and item_bhk not in requested_bhk:
         return False
     return _sqft_matches(item.get("sqft_range"), area_sqft)
 

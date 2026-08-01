@@ -8,8 +8,14 @@ import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney }
 const chartColors = ['#D4AF37', '#0B6E4F', '#2563EB', '#DC2626', '#EA580C', '#7C3AED', '#475569'];
 const defaultFilters = { date_range: '', business_division: '', branch: '', franchise: '', city: '', property_category: '', department: '', status: '' };
 
-const Kpi = ({ label, value, icon: Icon, tone = 'gold' }) => (
-  <Panel className="p-4">
+const Kpi = ({ label, value, icon: Icon, tone = 'gold', path, onNavigate }) => (
+  <Panel className={`p-4 transition ${path ? 'cursor-pointer hover:-translate-y-0.5 hover:border-terracotta/60 hover:shadow-elevated' : ''}`}>
+    <button
+      className="w-full text-left"
+      disabled={!path}
+      onClick={() => path && onNavigate(path)}
+      type="button"
+    >
     <div className="flex items-center justify-between gap-3">
       <div>
         <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
@@ -17,6 +23,8 @@ const Kpi = ({ label, value, icon: Icon, tone = 'gold' }) => (
       </div>
       <span className={`rounded-lg p-3 ${tone === 'green' ? 'bg-sage/15 text-sage' : tone === 'blue' ? 'bg-blue-50 text-blue-700' : 'bg-terracotta/15 text-terracotta'}`}><Icon className="h-5 w-5" /></span>
     </div>
+    {path && <p className="mt-3 text-xs font-black uppercase tracking-widest text-terracotta">View Details</p>}
+    </button>
   </Panel>
 );
 
@@ -69,22 +77,43 @@ const ExecutiveDashboard = () => {
 
   const { kpis, pending_actions: pending, charts, recent_activity: activity, quick_actions: quickActions, filters: filterOptions } = state.data;
   const userKpis = [
-    ['Total Users', kpis.users.total, Users], ['Total Hosts', kpis.users.hosts, Users], ['Total Guests', kpis.users.guests, Users], ['Total Employees', kpis.users.employees, Users], ['Total Brokers', kpis.users.brokers, Users],
+    ['Total Users', kpis.users.total, Users, '/admin/users'],
+    ['Total Hosts', kpis.users.hosts, Users, '/admin/hosts'],
+    ['Total Guests', kpis.users.guests, Users, '/admin/users'],
+    ['Total Employees', kpis.users.employees, Users, '/admin/users'],
+    ['Total Brokers', kpis.users.brokers, Users, '/admin/users'],
   ];
   const propertyKpis = [
-    ['Total Properties', kpis.properties.total, Building2], ['Live Properties', kpis.properties.live, Building2], ['Pending Verification', kpis.properties.pending_verification, AlertTriangle], ['Rejected Properties', kpis.properties.rejected, AlertTriangle], ['Inactive Properties', kpis.properties.inactive, Building2],
+    ['Total Properties', kpis.properties.total, Building2, '/admin/properties'],
+    ['Live Properties', kpis.properties.live, Building2, '/admin/properties'],
+    ['Pending Verification', kpis.properties.pending_verification, AlertTriangle, '/admin/properties'],
+    ['Rejected Properties', kpis.properties.rejected, AlertTriangle, '/admin/properties'],
+    ['Inactive Properties', kpis.properties.inactive, Building2, '/admin/properties'],
   ];
   const bookingKpis = [
-    ['Total Bookings', kpis.bookings.total, CalendarCheck], ['Upcoming Bookings', kpis.bookings.upcoming, CalendarCheck], ['Active Stays', kpis.bookings.active_stays, CalendarCheck], ['Completed Bookings', kpis.bookings.completed, CheckCircle2], ['Cancelled Bookings', kpis.bookings.cancelled, AlertTriangle],
+    ['Total Bookings', kpis.bookings.total, CalendarCheck, '/admin/bookings'],
+    ['Upcoming Bookings', kpis.bookings.upcoming, CalendarCheck, '/admin/bookings'],
+    ['Active Stays', kpis.bookings.active_stays, CalendarCheck, '/admin/bookings'],
+    ['Completed Bookings', kpis.bookings.completed, CheckCircle2, '/admin/bookings'],
+    ['Cancelled Bookings', kpis.bookings.cancelled, AlertTriangle, '/admin/bookings'],
   ];
   const financeKpis = [
-    ['Gross Booking Value', formatMoney(kpis.finance.gross_booking_value), IndianRupee], ['Net Collections', formatMoney(kpis.finance.net_collections), IndianRupee], ['Platform Revenue', formatMoney(kpis.finance.platform_revenue), TrendingUp], ['Host Payable', formatMoney(kpis.finance.host_payable), IndianRupee], ['Host Paid', formatMoney(kpis.finance.host_paid), CheckCircle2], ['Pending Payout', formatMoney(kpis.finance.pending_payout), AlertTriangle], ['Tax Liability', formatMoney(kpis.finance.tax_liability), IndianRupee], ['Refund Amount', formatMoney(kpis.finance.refund_amount), IndianRupee], ['Broker Commission', formatMoney(kpis.finance.broker_commission), IndianRupee],
+    ['Gross Booking Value', formatMoney(kpis.finance.gross_booking_value), IndianRupee, '/admin/finance'],
+    ['Net Collections', formatMoney(kpis.finance.net_collections), IndianRupee, '/admin/finance'],
+    ['Platform Revenue', formatMoney(kpis.finance.platform_revenue), TrendingUp, '/admin/finance'],
+    ['Host Payable', formatMoney(kpis.finance.host_payable), IndianRupee, '/admin/finance'],
+    ['Host Paid', formatMoney(kpis.finance.host_paid), CheckCircle2, '/admin/finance'],
+    ['Pending Payout', formatMoney(kpis.finance.pending_payout), AlertTriangle, '/admin/finance'],
+    ['Tax Liability', formatMoney(kpis.finance.tax_liability), IndianRupee, '/admin/finance'],
+    ['Refund Amount', formatMoney(kpis.finance.refund_amount), IndianRupee, '/admin/finance'],
+    ['Broker Commission', formatMoney(kpis.finance.broker_commission), IndianRupee, '/admin/finance'],
   ];
 
   return (
     <div>
       <PageHeader
         title="Executive Dashboard"
+        eyebrow=""
         description="Monitor platform activity, approvals, bookings, property operations, revenue, settlements and team performance from one centralized dashboard."
         action={<button onClick={load} className="inline-flex items-center gap-2 rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white"><RefreshCw className="h-4 w-4" /> Refresh</button>}
       />
@@ -103,19 +132,19 @@ const ExecutiveDashboard = () => {
 
       <section className="space-y-3">
         <h2 className="text-sm font-black uppercase tracking-wider text-slate-500">Users</h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{userKpis.map(([label, value, Icon]) => <Kpi key={label} label={label} value={value} icon={Icon} />)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{userKpis.map(([label, value, Icon, path]) => <Kpi key={label} label={label} value={value} icon={Icon} path={path} onNavigate={navigate} />)}</div>
       </section>
       <section className="mt-6 space-y-3">
         <h2 className="text-sm font-black uppercase tracking-wider text-slate-500">Properties</h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{propertyKpis.map(([label, value, Icon]) => <Kpi key={label} label={label} value={value} icon={Icon} tone="green" />)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{propertyKpis.map(([label, value, Icon, path]) => <Kpi key={label} label={label} value={value} icon={Icon} tone="green" path={path} onNavigate={navigate} />)}</div>
       </section>
       <section className="mt-6 space-y-3">
         <h2 className="text-sm font-black uppercase tracking-wider text-slate-500">Bookings</h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{bookingKpis.map(([label, value, Icon]) => <Kpi key={label} label={label} value={value} icon={Icon} tone="blue" />)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">{bookingKpis.map(([label, value, Icon, path]) => <Kpi key={label} label={label} value={value} icon={Icon} tone="blue" path={path} onNavigate={navigate} />)}</div>
       </section>
       <section className="mt-6 space-y-3">
         <h2 className="text-sm font-black uppercase tracking-wider text-slate-500">Finance</h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{financeKpis.map(([label, value, Icon]) => <Kpi key={label} label={label} value={value} icon={Icon} />)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{financeKpis.map(([label, value, Icon, path]) => <Kpi key={label} label={label} value={value} icon={Icon} path={path} onNavigate={navigate} />)}</div>
       </section>
 
       <section className="mt-6">

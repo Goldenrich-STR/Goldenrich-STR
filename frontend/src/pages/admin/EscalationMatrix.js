@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { BellRing, Edit, History, Plus, Save, Timer, X } from 'lucide-react';
+import { BellRing, Edit, History, Plus, Save, ShieldAlert, Timer, X } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
 
 const tabs = ['Escalation Rules', 'SLA Policies', 'Active Escalations', 'Escalation History', 'Notification Rules'];
 const channels = ['in_app', 'email', 'sms', 'whatsapp', 'push', 'ai_voice_call'];
@@ -206,7 +206,12 @@ const EscalationMatrix = () => {
 
   const changeRuleStatus = async (rule) => {
     const status = rule.status === 'active' ? 'inactive' : 'active';
-    const reason = window.prompt(`Reason for changing ${rule.rule_name} to ${status}`);
+    const reason = await requestReason({
+      title: 'Escalation Rule Status Reason',
+      description: `Changing ${rule.rule_name} to ${status}.`,
+      placeholder: 'Add escalation rule change reason.',
+      minLength: 3,
+    });
     if (!reason) return;
     await adminPhase1API.updateEscalationRuleStatus(rule.rule_id, { status, reason });
     afterSave();
@@ -215,25 +220,55 @@ const EscalationMatrix = () => {
   if (state.loading) return <LoadingState />;
   if (state.error) return <ErrorState message={state.error} />;
 
+  const summaryCards = [
+    { label: 'Active Rules', value: state.rules.filter((rule) => rule.status === 'active').length, icon: BellRing },
+    { label: 'SLA Policies', value: state.policies.length, icon: Timer },
+    { label: 'Open Escalations', value: state.active.length, icon: ShieldAlert },
+    { label: 'Notification Rules', value: state.notificationRules.filter((rule) => rule.status === 'active').length, icon: History },
+  ];
+
   return (
     <div>
       <PageHeader
+        eyebrow=""
         title="Escalation & SLA Matrix"
         description="Define escalation rules separately from reporting managers for overdue verification, support, refund, payout and approval workflows."
         action={<button onClick={() => setModal({ type: 'rule', rule: null })} className="inline-flex items-center gap-2 rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white"><Plus className="h-4 w-4" /> Create Rule</button>}
       />
       {notice && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</div>}
-      <Panel className="mb-4 p-2"><div className="flex gap-2 overflow-x-auto">{tabs.map((tab) => <button key={tab} onClick={() => setActiveTab(tab)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${activeTab === tab ? 'bg-terracotta text-charcoal' : 'bg-slate-100 text-slate-600'}`}>{tab}</button>)}</div></Panel>
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {summaryCards.map(({ label, value, icon: Icon }) => (
+          <Panel key={label} className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-slate-500">{label}</p>
+              <p className="mt-2 text-2xl font-black text-slate-950">{value}</p>
+            </div>
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-terracotta/15 text-terracotta"><Icon className="h-5 w-5" /></span>
+          </Panel>
+        ))}
+      </div>
+      <Panel className="mb-5 overflow-hidden p-0">
+        <div className="flex gap-2 overflow-x-auto border-b border-slate-200 bg-white p-3">
+          {tabs.map((tab) => <button key={tab} onClick={() => setActiveTab(tab)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold transition ${activeTab === tab ? 'bg-charcoal text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{tab}</button>)}
+        </div>
+      </Panel>
 
       {activeTab === 'Escalation Rules' && (
         <Panel className="overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white p-4">
+            <div>
+              <h2 className="font-black text-slate-950">Escalation Rule Directory</h2>
+              <p className="mt-1 text-xs font-semibold text-slate-500">Process ownership, SLA clock and channel routing.</p>
+            </div>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase tracking-widest text-slate-600">{state.rules.length} Rules</span>
+          </div>
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1100px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Rule', 'Process', 'Task', 'Owner', 'SLA', 'Reminder', 'Escalation Path', 'Channels', 'Priority', 'Status', 'Actions'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
-              <tbody className="divide-y divide-slate-100">{state.rules.map((rule) => <tr key={rule.rule_id}><td className="px-4 py-3 font-black">{rule.rule_name}</td><td className="px-4 py-3">{rule.process_name}</td><td className="px-4 py-3">{rule.task_type}</td><td className="px-4 py-3">{rule.primary_owner_role || rule.primary_owner || '-'}</td><td className="px-4 py-3">{rule.sla_duration_hours}h</td><td className="px-4 py-3">{rule.reminder_hours}h</td><td className="px-4 py-3">{[rule.first_escalation, rule.second_escalation, rule.third_escalation, rule.final_escalation].filter(Boolean).join(' -> ')}</td><td className="px-4 py-3">{(rule.notification_channels || []).join(', ')}</td><td className="px-4 py-3 capitalize">{rule.priority}</td><td className="px-4 py-3"><StatusBadge value={rule.status} /></td><td className="px-4 py-3"><div className="flex gap-1"><button onClick={() => setModal({ type: 'rule', rule })} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold">Edit</button><button onClick={() => changeRuleStatus(rule)} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold">{rule.status === 'active' ? 'Disable' : 'Enable'}</button></div></td></tr>)}</tbody>
+              <tbody className="divide-y divide-slate-100">{state.rules.map((rule) => <tr key={rule.rule_id} className="bg-white transition hover:bg-slate-50"><td className="px-4 py-4"><p className="font-black text-slate-950">{rule.rule_name}</p><p className="mt-1 font-mono text-xs text-slate-500">{rule.rule_id}</p></td><td className="px-4 py-4 font-semibold text-slate-700">{rule.process_name}</td><td className="px-4 py-4">{rule.task_type}</td><td className="px-4 py-4"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">{rule.primary_owner_role || rule.primary_owner || '-'}</span></td><td className="px-4 py-4 font-black">{rule.sla_duration_hours}h</td><td className="px-4 py-4">{rule.reminder_hours}h</td><td className="max-w-[280px] px-4 py-4 text-slate-700">{[rule.first_escalation, rule.second_escalation, rule.third_escalation, rule.final_escalation].filter(Boolean).join(' -> ') || '-'}</td><td className="px-4 py-4"><div className="flex max-w-[180px] flex-wrap gap-1">{(rule.notification_channels || []).map((channel) => <span key={channel} className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">{channel.replace(/_/g, ' ')}</span>)}</div></td><td className="px-4 py-4 capitalize"><span className={`rounded-full px-2 py-1 text-xs font-black ${rule.priority === 'critical' || rule.priority === 'high' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>{rule.priority}</span></td><td className="px-4 py-4"><StatusBadge value={rule.status} /></td><td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => setModal({ type: 'rule', rule })} className="rounded-lg bg-charcoal px-3 py-2 text-xs font-bold text-white">Edit</button><button onClick={() => changeRuleStatus(rule)} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">{rule.status === 'active' ? 'Disable' : 'Enable'}</button></div></td></tr>)}</tbody>
             </table>
           </div>
-          <div className="divide-y divide-slate-100 md:hidden">{state.rules.map((rule) => <div key={rule.rule_id} className="p-4"><div className="flex items-start justify-between gap-3"><div className="flex gap-2"><BellRing className="h-4 w-4 text-terracotta" /><div><p className="font-black">{rule.rule_name}</p><p className="text-sm text-slate-500">{rule.task_type}</p></div></div><StatusBadge value={rule.status} /></div><p className="mt-2 text-sm">SLA: {rule.sla_duration_hours}h / Reminder: {rule.reminder_hours}h</p><button onClick={() => setModal({ type: 'rule', rule })} className="mt-3 text-sm font-bold text-terracotta">Edit Rule</button></div>)}</div>
+          <div className="divide-y divide-slate-100 md:hidden">{state.rules.map((rule) => <div key={rule.rule_id} className="p-4"><div className="flex items-start justify-between gap-3"><div className="flex gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-terracotta/15 text-terracotta"><BellRing className="h-4 w-4" /></span><div><p className="font-black text-slate-950">{rule.rule_name}</p><p className="text-sm text-slate-500">{rule.task_type}</p></div></div><StatusBadge value={rule.status} /></div><div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-3 text-sm"><p><span className="block text-xs font-bold uppercase text-slate-500">SLA</span>{rule.sla_duration_hours}h</p><p><span className="block text-xs font-bold uppercase text-slate-500">Reminder</span>{rule.reminder_hours}h</p><p><span className="block text-xs font-bold uppercase text-slate-500">Owner</span>{rule.primary_owner_role || '-'}</p><p><span className="block text-xs font-bold uppercase text-slate-500">Priority</span>{rule.priority}</p></div><button onClick={() => setModal({ type: 'rule', rule })} className="mt-3 rounded-lg bg-charcoal px-3 py-2 text-sm font-bold text-white">Edit Rule</button></div>)}</div>
         </Panel>
       )}
 

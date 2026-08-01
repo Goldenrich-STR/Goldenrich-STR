@@ -65,27 +65,14 @@ async def get_employee_dashboard_stats(
         inactive_brokers = total_brokers - active_brokers
 
         host_cursor = db.users.find(
-            {
-                "role": "host",
-                "$or": [
-                    {"rm_id": rm_id},
-                    {"broker_id": {"$in": my_broker_ids}},
-                ],
-            },
+            {"role": "host", "broker_id": {"$in": my_broker_ids}},
             {"_id": 0, "user_id": 1, "kyc_status": 1}
         )
         my_hosts = await host_cursor.to_list(length=3000)
         my_host_ids = list({host["user_id"] for host in my_hosts if host.get("user_id")})
         pending_host_verification = len([host for host in my_hosts if host.get("kyc_status") not in {"approved", "verified"}])
 
-        property_query = {
-            "$or": [
-                {"rm_id": rm_id},
-                {"employee_id": rm_id},
-                {"broker_id": {"$in": my_broker_ids}},
-                {"owner_id": {"$in": my_host_ids}},
-            ]
-        }
+        property_query = {"broker_id": {"$in": my_broker_ids}}
         properties = await db.properties.find(
             property_query,
             {"_id": 0, "property_id": 1, "status": 1, "rating": 1}
@@ -101,14 +88,14 @@ async def get_employee_dashboard_stats(
         pending_verifications = await db.property_verifications.count_documents({
             "status": VerificationStatus.COMPLETED.value,
             "rm_reviewed": False,
-            "rm_id": rm_id
+            "broker_id": {"$in": my_broker_ids}
         })
         
         # Total properties under review (pending this RM's review)
         pending_reviews = await db.property_verifications.find({
             "status": VerificationStatus.COMPLETED.value,
             "rm_reviewed": False,
-            "rm_id": rm_id
+            "broker_id": {"$in": my_broker_ids}
         }).to_list()
         
         pending_property_ids = list(set([v["property_id"] for v in pending_reviews if "property_id" in v]))
@@ -128,8 +115,6 @@ async def get_employee_dashboard_stats(
 
         booking_query = {
             "$or": [
-                {"rm_id": rm_id},
-                {"employee_id": rm_id},
                 {"broker_id": {"$in": my_broker_ids}},
                 {"host_id": {"$in": my_host_ids}},
                 {"property_id": {"$in": property_ids}},
@@ -183,7 +168,7 @@ async def get_employee_dashboard_stats(
 
         stale_cutoff = now - timedelta(hours=48)
         pending_escalations = await db.property_verifications.count_documents({
-            "rm_id": rm_id,
+            "broker_id": {"$in": my_broker_ids},
             "status": VerificationStatus.COMPLETED.value,
             "rm_reviewed": False,
             "completed_at": {"$lt": stale_cutoff}
@@ -251,11 +236,12 @@ async def get_pending_verifications(
 ):
     """Get all verifications pending RM review."""
     try:
+        broker_ids, _ = await _get_rm_scope(db, current_user["user_id"])
         cursor = db.property_verifications.find(
             {
                 "status": VerificationStatus.COMPLETED.value,
                 "rm_reviewed": False,
-                "rm_id": current_user["user_id"]
+                "broker_id": {"$in": broker_ids}
             },
             {"_id": 0}
         ).sort("completed_at", -1)
@@ -299,11 +285,10 @@ async def get_verification_history(
 ):
     """Get all verifications reviewed by this RM or rejected by admin."""
     try:
-        # Get all verifications where this RM reviewed it or is assigned to it
+        broker_ids, _ = await _get_rm_scope(db, current_user["user_id"])
+        # Get only verifications for brokers assigned to this RM.
         cursor = db.property_verifications.find(
-            {
-                "rm_id": current_user["user_id"]
-            },
+            {"broker_id": {"$in": broker_ids}},
             {"_id": 0}
         ).sort("updated_at", -1)
         
@@ -356,7 +341,8 @@ async def get_verification_details(
                 detail="Verification not found"
             )
         
-        if verification.get("rm_id") != current_user["user_id"]:
+        broker_ids, _ = await _get_rm_scope(db, current_user["user_id"])
+        if verification.get("broker_id") not in broker_ids:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not authorized to view this verification report"
@@ -420,11 +406,13 @@ async def export_verification_report_xlsx(
                 detail="Verification not found"
             )
 
-        if current_user["role"] == UserRole.EMPLOYEE.value and verification.get("rm_id") != current_user["user_id"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not authorized to export this verification report"
-            )
+        if current_user["role"] == UserRole.EMPLOYEE.value:
+            broker_ids, _ = await _get_rm_scope(db, current_user["user_id"])
+            if verification.get("broker_id") not in broker_ids:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You are not authorized to export this verification report"
+                )
         
         # Enrich with property, broker and owner
         property_data = await db.properties.find_one({"property_id": verification["property_id"]}, {"_id": 0})
@@ -604,7 +592,8 @@ async def approve_verification(
                 detail="Verification not found"
             )
             
-        if verification.get("rm_id") != current_user["user_id"]:
+        broker_ids, _ = await _get_rm_scope(db, current_user["user_id"])
+        if verification.get("broker_id") not in broker_ids:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not authorized to approve this verification"
@@ -703,7 +692,8 @@ async def reject_verification(
                 detail="Verification not found"
             )
             
-        if verification.get("rm_id") != current_user["user_id"]:
+        broker_ids, _ = await _get_rm_scope(db, current_user["user_id"])
+        if verification.get("broker_id") not in broker_ids:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not authorized to reject this verification"
@@ -1003,19 +993,14 @@ async def get_broker_portfolio(
 # ========== HOST MANAGEMENT ==========
 
 async def _get_rm_scope(db: AsyncIOMotorDatabase, rm_id: str):
+    """Return only brokers assigned to this RM and the hosts under those brokers."""
     brokers = await db.users.find(
         {"role": "broker", "rm_id": rm_id},
         {"_id": 0, "user_id": 1}
     ).to_list(length=1000)
     broker_ids = [broker["user_id"] for broker in brokers if broker.get("user_id")]
     hosts = await db.users.find(
-        {
-            "role": "host",
-            "$or": [
-                {"rm_id": rm_id},
-                {"broker_id": {"$in": broker_ids}},
-            ],
-        },
+        {"role": "host", "broker_id": {"$in": broker_ids}},
         {"_id": 0, "user_id": 1}
     ).to_list(length=3000)
     host_ids = list({host["user_id"] for host in hosts if host.get("user_id")})
@@ -1027,17 +1012,11 @@ async def get_rm_hosts(
     current_user: dict = Depends(require_employee),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Get all hosts under this RM through direct RM assignment or assigned brokers."""
+    """Get all hosts under this RM's assigned brokers."""
     try:
         broker_ids, _ = await _get_rm_scope(db, current_user["user_id"])
         cursor = db.users.find(
-            {
-                "role": "host",
-                "$or": [
-                    {"rm_id": current_user["user_id"]},
-                    {"broker_id": {"$in": broker_ids}},
-                ],
-            },
+            {"role": "host", "broker_id": {"$in": broker_ids}},
             {"_id": 0, "password_hash": 0}
         ).sort("created_at", -1)
         hosts = await cursor.to_list(length=500)
@@ -1148,14 +1127,7 @@ async def get_rm_host_details(
 
 async def _get_rm_property_query(db: AsyncIOMotorDatabase, rm_id: str):
     broker_ids, host_ids = await _get_rm_scope(db, rm_id)
-    return broker_ids, host_ids, {
-        "$or": [
-            {"rm_id": rm_id},
-            {"employee_id": rm_id},
-            {"broker_id": {"$in": broker_ids}},
-            {"owner_id": {"$in": host_ids}},
-        ]
-    }
+    return broker_ids, host_ids, {"broker_id": {"$in": broker_ids}}
 
 
 def _property_verification_stage(property_doc: dict, verification: Optional[dict]) -> dict:
@@ -1283,8 +1255,6 @@ async def _get_rm_booking_query(db: AsyncIOMotorDatabase, rm_id: str):
     property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
     return broker_ids, host_ids, property_ids, {
         "$or": [
-            {"rm_id": rm_id},
-            {"employee_id": rm_id},
             {"broker_id": {"$in": broker_ids}},
             {"host_id": {"$in": host_ids}},
             {"property_id": {"$in": property_ids}},
@@ -1464,7 +1434,7 @@ async def get_rm_tasks(
         tasks = []
 
         pending_rm_reviews = await db.property_verifications.find(
-            {"rm_id": rm_id, "status": VerificationStatus.COMPLETED.value, "rm_reviewed": False},
+            {"broker_id": {"$in": broker_ids}, "status": VerificationStatus.COMPLETED.value, "rm_reviewed": False},
             {"_id": 0}
         ).sort("completed_at", -1).to_list(length=200)
         for item in pending_rm_reviews:
@@ -1620,8 +1590,6 @@ async def get_rm_analytics_overview(
         bookings = await db.bookings.find(
             {
                 "$or": [
-                    {"rm_id": rm_id},
-                    {"employee_id": rm_id},
                     {"broker_id": {"$in": broker_ids}},
                     {"host_id": {"$in": host_ids}},
                     {"property_id": {"$in": property_ids}},
@@ -1633,7 +1601,6 @@ async def get_rm_analytics_overview(
         verifications = await db.property_verifications.find(
             {
                 "$or": [
-                    {"rm_id": rm_id},
                     {"broker_id": {"$in": broker_ids}},
                     {"property_id": {"$in": property_ids}},
                 ]
@@ -1793,8 +1760,6 @@ async def get_rm_audit_activity(
         bookings = await db.bookings.find(
             {
                 "$or": [
-                    {"rm_id": rm_id},
-                    {"employee_id": rm_id},
                     {"broker_id": {"$in": broker_ids}},
                     {"host_id": {"$in": host_ids}},
                     {"property_id": {"$in": property_ids}},
@@ -1859,7 +1824,7 @@ async def get_properties_not_booked_report(
 
         # Get my hosts
         my_hosts = await db.users.find(
-            {"role": "host", "rm_id": current_user["user_id"]},
+            {"role": "host", "broker_id": {"$in": my_broker_ids}},
             {"user_id": 1}
         ).to_list(length=1000)
         my_host_ids = [h["user_id"] for h in my_hosts]
@@ -1874,10 +1839,7 @@ async def get_properties_not_booked_report(
                 )
             property_query["broker_id"] = broker_id
         else:
-            property_query["$or"] = [
-                {"broker_id": {"$in": my_broker_ids}},
-                {"owner_id": {"$in": my_host_ids}}
-            ]
+            property_query["broker_id"] = {"$in": my_broker_ids}
         
         # Get all matching live properties
         property_cursor = db.properties.find(property_query, {"_id": 0})
@@ -1940,7 +1902,7 @@ async def export_properties_not_booked_csv(
 
         # Get my hosts
         my_hosts = await db.users.find(
-            {"role": "host", "rm_id": current_user["user_id"]},
+            {"role": "host", "broker_id": {"$in": my_broker_ids}},
             {"user_id": 1}
         ).to_list(length=1000)
         my_host_ids = [h["user_id"] for h in my_hosts]
@@ -1955,10 +1917,7 @@ async def export_properties_not_booked_csv(
                 )
             property_query["broker_id"] = broker_id
         else:
-            property_query["$or"] = [
-                {"broker_id": {"$in": my_broker_ids}},
-                {"owner_id": {"$in": my_host_ids}}
-            ]
+            property_query["broker_id"] = {"$in": my_broker_ids}
         
         property_cursor = db.properties.find(property_query, {"_id": 0})
         properties = await property_cursor.to_list(length=500)

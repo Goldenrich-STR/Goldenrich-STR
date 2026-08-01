@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, CreditCard, FileText, PlayCircle, RefreshCcw, Search, TrendingUp, WalletCards } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestReason } from './shared';
 import { AdminAccountTransactionsTab } from '../AdminAccount';
 
 const financeSteps = [
@@ -143,7 +143,7 @@ const FinanceSettlements = () => {
   const initiateRefund = async () => {
     const bookingId = window.prompt('Booking ID for refund');
     if (!bookingId) return;
-    const reason = window.prompt('Refund reason');
+    const reason = await requestReason({ title: 'Refund Reason', description: `Initiating refund for booking ${bookingId}.`, placeholder: 'Add refund reason.', minLength: 3 });
     if (!reason) return;
     const overridePercentRaw = window.prompt('Override percent, blank to use policy');
     const overrideAmountRaw = !overridePercentRaw ? window.prompt('Override amount in INR, blank to use policy') : '';

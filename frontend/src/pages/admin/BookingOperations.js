@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CalendarCheck, CreditCard, Search, XCircle } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestReason } from './shared';
 
 const statusTabs = [
   ['', 'All'],
@@ -42,7 +42,12 @@ const BookingOperations = () => {
   };
 
   const updateStatus = async (booking, payload) => {
-    const reason = window.prompt('Reason for booking update');
+    const reason = await requestReason({
+      title: 'Booking Update Reason',
+      description: 'Booking status changes are audited.',
+      placeholder: 'Explain why this booking is being updated.',
+      minLength: 3,
+    });
     if (!reason) return;
     await adminPhase1API.updateBookingOperationStatus(booking.booking_id, { ...payload, reason });
     if (selected.booking?.booking_id === booking.booking_id) {

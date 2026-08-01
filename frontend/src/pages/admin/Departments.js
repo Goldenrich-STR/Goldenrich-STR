@@ -31,7 +31,9 @@ const Departments = () => {
     const grouped = new Map();
 
     users.forEach((user) => {
-      const name = user.department || user.branch || 'Unassigned';
+      const isAdmin = String(user.role || '').toLowerCase().includes('admin');
+      const isActive = user.is_active !== false && String(user.status || 'active').toLowerCase() !== 'inactive';
+      const name = user.department || (isAdmin ? 'Administration' : user.branch) || 'Unassigned';
       const current = grouped.get(name) || {
         name,
         total: 0,
@@ -43,8 +45,8 @@ const Departments = () => {
       };
 
       current.total += 1;
-      if (String(user.status || '').toLowerCase() === 'active') current.active += 1;
-      if (String(user.role || '').toLowerCase().includes('admin')) current.admins += 1;
+      if (isActive) current.active += 1;
+      if (isAdmin) current.admins += 1;
       if (user.reporting_manager_id || user.manager_id) current.managers += 1;
       current.roles.add(user.role || 'employee');
       current.employees.push(user);
@@ -62,7 +64,7 @@ const Departments = () => {
   const metrics = useMemo(() => ({
     departments: departments.length,
     users: users.length,
-    activeUsers: users.filter((user) => String(user.status || '').toLowerCase() === 'active').length,
+    activeUsers: users.filter((user) => user.is_active !== false && String(user.status || 'active').toLowerCase() !== 'inactive').length,
     admins: users.filter((user) => String(user.role || '').toLowerCase().includes('admin')).length,
   }), [departments.length, users]);
 

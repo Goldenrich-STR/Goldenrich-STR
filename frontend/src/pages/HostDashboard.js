@@ -117,7 +117,8 @@ const HostDashboard = () => {
             const society = user.kyc_documents.find(d => d.document_type === 'society_noc')?.document_url || '';
       const shopActVal = user.kyc_documents.find(d => d.document_type === 'shop_act')?.document_url || '';
       const gstCert = user.kyc_documents.find(d => d.document_type === 'gst_certificate')?.document_url || '';
-      const gstNum = user.kyc_documents.find(d => d.document_type === 'gst_number')?.document_url || '';
+      const gstDoc = user.kyc_documents.find(d => d.document_type === 'gst_number') || {};
+      const gstNum = gstDoc.text_value || gstDoc.value || gstDoc.document_url || user.gst_number || '';
       
       setAadharCard(aadhar);
       setPropertyProof(prop);
@@ -202,6 +203,20 @@ const HostDashboard = () => {
       alert(`Failed to upload ${docType}: ` + (err.response?.data?.detail || err.message));
     } finally {
       setUploadingDocs(prev => ({ ...prev, [docType]: false }));
+    }
+  };
+
+  const saveGstNumberDraft = async () => {
+    const value = gstNumber.trim();
+    if (!value) return;
+    try {
+      await accountAPI.saveDraftDocument({
+        document_type: 'gst_number',
+        text_value: value
+      });
+      await refreshUser();
+    } catch (err) {
+      console.error('Failed to save GST number draft:', err);
     }
   };
 
@@ -360,6 +375,12 @@ const HostDashboard = () => {
     }
     setVerificationSubmitting(true);
     try {
+      if (gstNumber.trim()) {
+        await accountAPI.saveDraftDocument({
+          document_type: 'gst_number',
+          text_value: gstNumber.trim()
+        });
+      }
             await accountAPI.submitHostVerification({
         aadhar_card: aadharCard,
         property_proof: propertyProof,
@@ -442,6 +463,7 @@ const HostDashboard = () => {
                 placeholder="Enter GST Number"
                 value={gstNumber}
                 onChange={(e) => setGstNumber(e.target.value)}
+                onBlur={saveGstNumberDraft}
                 className="w-full px-3 py-2 border border-sand-200 rounded-none text-[11px] outline-none focus:border-terracotta font-semibold"
               />
             </div>
@@ -999,24 +1021,24 @@ const HostDashboard = () => {
             if (filteredProperties.length > 0) {
               return (
                 <div data-testid="properties-list">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
                     {[...filteredProperties]
                       .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
                       .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
                       .map((property) => (
                       <div 
                         key={property.property_id} 
-                        className="bg-white rounded-[1.75rem] p-4 border border-gray-100 shadow-sm hover:shadow-premium transition-all duration-300 flex flex-col h-full group" 
+                        className="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm hover:shadow-premium transition-all duration-300 flex flex-col h-full group" 
                         data-testid={`property-${property.property_id}`}
                       >
-                        <div className="relative overflow-hidden w-full aspect-[16/9] rounded-2xl mb-4 bg-stone">
+                        <div className="relative overflow-hidden w-full aspect-[16/8] rounded-xl mb-3 bg-stone">
                           <img
                             src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                             alt={property.title}
                             className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-charcoal/45 via-transparent to-transparent"></div>
-                          <span className={`absolute top-3 left-3 px-3 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest ${
+                          <span className={`absolute top-2 left-2 px-2.5 py-0.5 rounded-full text-[8px] font-bold tracking-tight uppercase tracking-widest ${
                             isLive(property) ? 'bg-sage text-white' :
                             isPending(property) ? 'bg-amber-500 text-white' :
                             isRejected(property) ? 'bg-red-600 text-white' :
@@ -1024,9 +1046,9 @@ const HostDashboard = () => {
                           }`}>
                             {isRejected(property) ? 'rejected' : (property.status === 'live' && property.is_edited ? 'live (edited)' : property.status.replace('_', ' '))}
                           </span>
-                          <div className="absolute bottom-3 left-3 right-3">
-                            <h3 className="text-lg font-bold text-white line-clamp-1" title={property.title}>{property.title}</h3>
-                            <div className="flex items-center text-white/85 gap-1 mt-1">
+                          <div className="absolute bottom-2 left-2 right-2">
+                            <h3 className="text-sm font-bold text-white line-clamp-1" title={property.title}>{property.title}</h3>
+                            <div className="flex items-center text-white/85 gap-1 mt-0.5">
                               <MapPin className="w-3 h-3" />
                               <span className="text-[10px] font-bold uppercase tracking-widest">{property.city || 'No city'}</span>
                             </div>
@@ -1034,13 +1056,13 @@ const HostDashboard = () => {
                         </div>
                         
                         <div className="flex-1">
-                          <div className="grid grid-cols-3 gap-2 mb-4">
+                          <div className="grid grid-cols-3 gap-1.5 mb-3">
                             {[
                               ['Rating', property.rating_avg || property.rating || '0.0'],
                               ['Reviews', property.rating_count || property.review_count || 0],
                               ['Type', property.bhk_type || property.property_type || 'N/A'],
                             ].map(([label, value]) => (
-                              <div key={label} className="rounded-2xl bg-stone/70 border border-sand-100 px-3 py-2 min-w-0">
+                              <div key={label} className="rounded-xl bg-stone/70 border border-sand-100 px-2 py-1.5 min-w-0">
                                 <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
                                 <p className="text-xs font-bold text-charcoal mt-1 truncate">{value}</p>
                               </div>
@@ -1073,7 +1095,7 @@ const HostDashboard = () => {
                             };
 
                             return (
-                              <div className="mt-3 p-4 bg-stone/80 rounded-2xl border border-sand-100 flex flex-col gap-2 mb-4">
+                              <div className="mt-2 p-3 bg-stone/80 rounded-xl border border-sand-100 flex flex-col gap-1.5 mb-3">
                                 <div className="flex justify-between items-center text-[10px] font-bold">
                                   <span className="uppercase tracking-widest text-charcoal-muted">Sub Plan</span>
                                   <span className="text-terracotta">{plan ? plan.plan_name : (propSub.plan_type || 'N/A').toUpperCase()}</span>
@@ -1099,7 +1121,7 @@ const HostDashboard = () => {
                           })()}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 mt-auto pt-4 border-t border-sand-100">
+                        <div className="grid grid-cols-2 gap-2 mt-auto pt-3 border-t border-sand-100">
                           <button
                             onClick={() => {
                               if (isLive(property)) {
@@ -1108,7 +1130,7 @@ const HostDashboard = () => {
                                 alert('This property is not verified yet. Calendar will be available once the property is live.');
                               }
                             }}
-                            className={`py-3 rounded-xl border border-gray-200 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                            className={`py-2.5 rounded-xl border border-gray-200 text-[9px] font-bold uppercase tracking-widest transition-all ${
                               isLive(property) ? 'hover:border-charcoal' : 'opacity-50 cursor-not-allowed'
                             }`}
                             data-testid={`property-calendar-${property.property_id}`}
@@ -1117,14 +1139,14 @@ const HostDashboard = () => {
                           </button>
                           <button
                             onClick={() => navigate(`/host/list-property?edit=${property.property_id}`)}
-                            className="py-3 rounded-xl bg-charcoal text-white text-[10px] font-bold uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
+                            className="py-2.5 rounded-xl bg-charcoal text-white text-[9px] font-bold uppercase tracking-widest hover:bg-terracotta transition-all shadow-premium"
                           >
                             Manage
                           </button>
                         </div>
                         <button
                           onClick={() => openDeleteModal(property)}
-                          className="mt-3 w-full py-3 rounded-xl border-2 border-red-100 bg-red-50/60 text-red-600 text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 transition-all flex items-center justify-center gap-2"
+                          className="mt-2 w-full py-2.5 rounded-xl border border-red-100 bg-red-50/60 text-red-600 text-[9px] font-bold tracking-tight uppercase tracking-widest hover:bg-red-600 hover:text-white hover:border-red-600 transition-all flex items-center justify-center gap-2"
                           data-testid={`property-delete-${property.property_id}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -1428,6 +1450,7 @@ const HostDashboard = () => {
                          placeholder="Enter GST Number"
                          value={gstNumber}
                          onChange={(e) => setGstNumber(e.target.value)}
+                         onBlur={saveGstNumberDraft}
                          className="w-full px-3 py-1.5 border border-gray-100 rounded-xl text-xs outline-none focus:border-terracotta mb-2"
                        />
                        {gstCertificate && (

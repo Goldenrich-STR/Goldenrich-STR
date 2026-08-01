@@ -14,7 +14,7 @@ import { authAPI } from '../services/api';
 import SEO from '../components/SEO';
 
 
-const safeLoginPath = (value) => value === '/admin/login' ? value : '/login';
+const safeLoginPath = (value) => ['/admin/login', '/md/login'].includes(value) ? value : '/login';
 
 const errorMessage = (error, fallback) => {
   const detail = error?.response?.data?.detail;

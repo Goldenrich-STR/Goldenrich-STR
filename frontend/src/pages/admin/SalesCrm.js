@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { BarChart3, Search, Target, TrendingUp, UserCheck, Users } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
 
 const phaseSteps = [
   ['Step 1', 'CRM Dashboard', 'completed'],
@@ -80,7 +80,7 @@ const SalesCrm = () => {
   const updateLead = async (lead, status) => {
     const notes = window.prompt('Lead notes', lead.notes || '');
     if (notes === null) return;
-    const reason = window.prompt('Reason for lead update');
+    const reason = await requestReason({ title: 'Lead Update Reason', description: `Updating lead ${lead.lead_id || lead.full_name || ''}.`, placeholder: 'Add lead update reason.', minLength: 3 });
     if (!reason) return;
     await adminPhase1API.updateCrmLead(lead.lead_id, { status, notes, reason });
     load();
@@ -98,7 +98,7 @@ const SalesCrm = () => {
     if (rmId === null) return;
     const teamLeaderId = window.prompt(`Team Leader ID\n\n${tlOptions || 'No active team leaders found'}`, lead.team_leader_id || '');
     if (teamLeaderId === null) return;
-    const reason = window.prompt('Assignment reason', 'Lead ownership assigned from CRM admin');
+    const reason = await requestReason({ title: 'Lead Assignment Reason', description: 'Lead ownership assignment will be audited.', defaultValue: 'Lead ownership assigned from CRM admin', placeholder: 'Add assignment reason.', minLength: 3 });
     if (!reason) return;
     await adminPhase1API.assignCrmLead(lead.lead_id, { broker_id: brokerId.trim(), rm_id: rmId.trim(), team_leader_id: teamLeaderId.trim(), reason });
     load();
@@ -113,7 +113,7 @@ const SalesCrm = () => {
     if (followUpStatus === null) return;
     const notes = window.prompt('Follow-up notes', lead.notes || '');
     if (notes === null) return;
-    const reason = window.prompt('Pipeline update reason', 'Sales pipeline follow-up updated');
+    const reason = await requestReason({ title: 'Pipeline Update Reason', description: 'Sales pipeline follow-up will be audited.', defaultValue: 'Sales pipeline follow-up updated', placeholder: 'Add pipeline update reason.', minLength: 3 });
     if (!reason) return;
     await adminPhase1API.updateCrmPipeline(lead.lead_id, { pipeline_stage: stage.trim(), next_follow_up_at: nextFollowUpAt.trim(), follow_up_status: followUpStatus.trim(), notes, reason });
     load();

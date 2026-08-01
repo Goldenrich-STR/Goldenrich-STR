@@ -101,9 +101,27 @@ class ResetPasswordPayload(BaseModel):
     reason: str
 
 
+class ReasonPayload(BaseModel):
+    reason: str
+
+
 class RoleStatusPayload(BaseModel):
     is_active: bool
     reason: str
+
+
+class BulkRoleDeletePayload(BaseModel):
+    role_ids: list[str]
+
+
+class BranchFranchisePayload(BaseModel):
+    name: str
+    code: Optional[str] = ""
+    city: Optional[str] = ""
+    state: Optional[str] = ""
+    manager_id: Optional[str] = ""
+    parent_code: Optional[str] = ""
+    status: str = "active"
 
 
 class ReportingRelationPayload(BaseModel):
@@ -473,6 +491,11 @@ def _validate_password_strength(password: str):
         raise HTTPException(status_code=400, detail="Password must include uppercase, lowercase and number")
 
 
+def _code_from_name(prefix: str, name: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9]+", "-", (name or "").strip()).strip("-").upper()
+    return f"{prefix}-{slug or uuid4().hex[:8].upper()}"
+
+
 HOST_KYC_DOCUMENTS = [
     ("aadhar_card", "Aadhaar Card", True),
     ("property_proof", "Property Proof", True),
@@ -498,12 +521,16 @@ def _normalise_host_kyc(host: dict) -> dict:
     checklist = []
     for doc_type, label, required in HOST_KYC_DOCUMENTS:
         doc = by_type.get(doc_type, {})
+        text_value = doc.get("text_value") or doc.get("value") or ""
+        if doc_type == "gst_number":
+            text_value = text_value or host.get("gst_number") or doc.get("document_url") or ""
         checklist.append({
             "document_type": doc_type,
             "label": label,
             "required": required,
             "document_url": doc.get("document_url") or "",
-            "status": doc.get("status") or ("pending" if doc.get("document_url") else "missing"),
+            "text_value": text_value,
+            "status": doc.get("status") or ("pending" if (doc.get("document_url") or text_value) else "missing"),
             "rejection_reason": doc.get("rejection_reason") or "",
             "reviewed_by": doc.get("reviewed_by") or "",
             "reviewed_at": doc.get("reviewed_at") or "",
@@ -520,7 +547,7 @@ def _normalise_host_kyc(host: dict) -> dict:
             "required_documents_ready": required_docs_ready,
             "agreement_ready": agreement_ready,
             "bank_ready": bank_ready,
-            "ready_for_approval": required_docs_ready and agreement_ready and bank_ready,
+            "ready_for_approval": required_docs_ready,
         },
         "agreement": {
             "owner_name": host.get("agreement_owner_name") or "",
@@ -673,6 +700,9 @@ async def _assert_unique_user_fields(db, *, email: str, phone: str, employee_cod
         employee_match = await db.users.find_one({"employee_code": {"$regex": f"^{re.escape(employee_code)}$", "$options": "i"}}, {"_id": 0})
         if employee_match and employee_match.get("user_id") != user_id:
             raise HTTPException(status_code=400, detail="Employee code already exists")
+        user_id_match = await db.users.find_one({"user_id": {"$regex": f"^{re.escape(employee_code)}$", "$options": "i"}}, {"_id": 0})
+        if user_id_match and user_id_match.get("user_id") != user_id:
+            raise HTTPException(status_code=400, detail="User ID already exists for this code")
 
 
 async def _count(db, collection, query=None):
@@ -979,7 +1009,8 @@ async def export_analytics_csv(
     if module not in module_config:
         raise HTTPException(status_code=400, detail="Invalid export module")
     collection_name, date_field, fields = module_config[module]
-    query = {}
+    query = {"is_deleted": {"$ne": True}}
+    metric_base_query = {"is_deleted": {"$ne": True}}
     created_range = {}
     if date_from:
         created_range["$gte"] = _parse_date_start(date_from)
@@ -1021,7 +1052,8 @@ async def users(
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    query = {}
+    active_record_query = {"is_deleted": {"$ne": True}}
+    query = dict(active_record_query)
     if role and role != "all":
         query["role"] = role
     if status_filter == "inactive":
@@ -1036,11 +1068,171 @@ async def users(
             {"email": {"$regex": search, "$options": "i"}},
             {"phone": {"$regex": search, "$options": "i"}},
             {"user_id": {"$regex": search, "$options": "i"}},
+            {"uid": {"$regex": search, "$options": "i"}},
             {"employee_code": {"$regex": search, "$options": "i"}},
+            {"designation": {"$regex": search, "$options": "i"}},
+            {"department": {"$regex": search, "$options": "i"}},
+            {"business_division": {"$regex": search, "$options": "i"}},
+            {"branch": {"$regex": search, "$options": "i"}},
+            {"franchise": {"$regex": search, "$options": "i"}},
+            {"work_location": {"$regex": search, "$options": "i"}},
+            {"city": {"$regex": search, "$options": "i"}},
+            {"state": {"$regex": search, "$options": "i"}},
+            {"pin_code": {"$regex": search, "$options": "i"}},
+            {"admin_role_key": {"$regex": search, "$options": "i"}},
         ]
     items = await db.users.find(query, {"_id": 0, "password_hash": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
     total = await db.users.count_documents(query)
     return api_response("Users loaded", {"users": items}, {"total": total, "limit": limit, "skip": skip})
+
+
+@router.get("/branch-franchise")
+async def branch_franchise_management(current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    branches = await db.branches.find({}, {"_id": 0}).sort("created_at", -1).to_list(length=500)
+    franchises = await db.franchises.find({}, {"_id": 0}).sort("created_at", -1).to_list(length=500)
+    return api_response(
+        "Branch and franchise records loaded",
+        {"branches": branches, "franchises": franchises},
+        {"branch_count": len(branches), "franchise_count": len(franchises)},
+    )
+
+
+@router.post("/branches", status_code=status.HTTP_201_CREATED)
+async def create_branch(payload: BranchFranchisePayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Branch name is required")
+    code = (payload.code or _code_from_name("BR", name)).strip().upper()
+    if await db.branches.find_one({"code": {"$regex": f"^{re.escape(code)}$", "$options": "i"}}):
+        raise HTTPException(status_code=400, detail="Branch code already exists")
+    doc = {
+        "branch_id": f"branch_{uuid4().hex[:12]}",
+        "name": name,
+        "code": code,
+        "city": payload.city,
+        "state": payload.state,
+        "manager_id": payload.manager_id,
+        "franchise_code": payload.parent_code,
+        "status": payload.status or "active",
+        "created_at": _now(),
+        "updated_at": _now(),
+        "created_by": current_user["user_id"],
+    }
+    await db.branches.insert_one(doc)
+    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="branch_franchise_management", action="branch_created", record_id=code, new_value=doc)
+    return api_response("Branch created", {"branch": doc})
+
+
+@router.post("/franchises", status_code=status.HTTP_201_CREATED)
+async def create_franchise(payload: BranchFranchisePayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Franchise name is required")
+    code = (payload.code or _code_from_name("FR", name)).strip().upper()
+    if await db.franchises.find_one({"code": {"$regex": f"^{re.escape(code)}$", "$options": "i"}}):
+        raise HTTPException(status_code=400, detail="Franchise code already exists")
+    doc = {
+        "franchise_id": f"franchise_{uuid4().hex[:12]}",
+        "name": name,
+        "code": code,
+        "city": payload.city,
+        "state": payload.state,
+        "manager_id": payload.manager_id,
+        "status": payload.status or "active",
+        "created_at": _now(),
+        "updated_at": _now(),
+        "created_by": current_user["user_id"],
+    }
+    await db.franchises.insert_one(doc)
+    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="branch_franchise_management", action="franchise_created", record_id=code, new_value=doc)
+    return api_response("Franchise created", {"franchise": doc})
+
+
+@router.put("/branches/{code}")
+async def update_branch(code: str, payload: BranchFranchisePayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    existing = await db.branches.find_one({"code": {"$regex": f"^{re.escape(code)}$", "$options": "i"}}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Branch name is required")
+    new_code = (payload.code or existing["code"]).strip().upper()
+    if new_code.lower() != existing["code"].lower() and await db.branches.find_one({"code": {"$regex": f"^{re.escape(new_code)}$", "$options": "i"}}):
+        raise HTTPException(status_code=400, detail="Branch code already exists")
+    update = {
+        "name": name,
+        "code": new_code,
+        "city": payload.city,
+        "state": payload.state,
+        "manager_id": payload.manager_id,
+        "franchise_code": payload.parent_code,
+        "status": payload.status or existing.get("status") or "active",
+        "updated_at": _now(),
+        "updated_by": current_user["user_id"],
+    }
+    await db.branches.update_one({"branch_id": existing["branch_id"]}, {"$set": update})
+    if new_code != existing["code"]:
+        await db.users.update_many({"branch": existing["code"]}, {"$set": {"branch": new_code}})
+    doc = {**existing, **update}
+    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="branch_franchise_management", action="branch_updated", record_id=new_code, old_value=existing, new_value=doc)
+    return api_response("Branch updated", {"branch": doc})
+
+
+@router.put("/franchises/{code}")
+async def update_franchise(code: str, payload: BranchFranchisePayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    existing = await db.franchises.find_one({"code": {"$regex": f"^{re.escape(code)}$", "$options": "i"}}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Franchise not found")
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Franchise name is required")
+    new_code = (payload.code or existing["code"]).strip().upper()
+    if new_code.lower() != existing["code"].lower() and await db.franchises.find_one({"code": {"$regex": f"^{re.escape(new_code)}$", "$options": "i"}}):
+        raise HTTPException(status_code=400, detail="Franchise code already exists")
+    update = {
+        "name": name,
+        "code": new_code,
+        "city": payload.city,
+        "state": payload.state,
+        "manager_id": payload.manager_id,
+        "status": payload.status or existing.get("status") or "active",
+        "updated_at": _now(),
+        "updated_by": current_user["user_id"],
+    }
+    await db.franchises.update_one({"franchise_id": existing["franchise_id"]}, {"$set": update})
+    if new_code != existing["code"]:
+        await db.users.update_many({"franchise": existing["code"]}, {"$set": {"franchise": new_code}})
+        await db.branches.update_many({"franchise_code": existing["code"]}, {"$set": {"franchise_code": new_code}})
+    doc = {**existing, **update}
+    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="branch_franchise_management", action="franchise_updated", record_id=new_code, old_value=existing, new_value=doc)
+    return api_response("Franchise updated", {"franchise": doc})
+
+
+@router.post("/branches/{code}/delete")
+async def delete_branch(code: str, payload: ReasonPayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    existing = await db.branches.find_one({"code": {"$regex": f"^{re.escape(code)}$", "$options": "i"}}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Branch not found")
+    assigned_users = await db.users.count_documents({"branch": existing["code"]})
+    if assigned_users:
+        raise HTTPException(status_code=400, detail=f"Branch is assigned to {assigned_users} user(s). Reassign users before deleting.")
+    await db.branches.delete_one({"branch_id": existing["branch_id"]})
+    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="branch_franchise_management", action="branch_deleted", record_id=existing["code"], old_value=existing, reason=payload.reason)
+    return api_response("Branch deleted", {"code": existing["code"]})
+
+
+@router.post("/franchises/{code}/delete")
+async def delete_franchise(code: str, payload: ReasonPayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    existing = await db.franchises.find_one({"code": {"$regex": f"^{re.escape(code)}$", "$options": "i"}}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Franchise not found")
+    assigned_users = await db.users.count_documents({"franchise": existing["code"]})
+    linked_branches = await db.branches.count_documents({"franchise_code": existing["code"]})
+    if assigned_users or linked_branches:
+        raise HTTPException(status_code=400, detail=f"Franchise is linked to {assigned_users} user(s) and {linked_branches} branch(es). Remove links before deleting.")
+    await db.franchises.delete_one({"franchise_id": existing["franchise_id"]})
+    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="branch_franchise_management", action="franchise_deleted", record_id=existing["code"], old_value=existing, reason=payload.reason)
+    return api_response("Franchise deleted", {"code": existing["code"]})
 
 
 @router.post("/users", status_code=status.HTTP_201_CREATED)
@@ -1048,8 +1240,8 @@ async def create_admin_user(payload: AdminUserPayload, current_user: dict = Depe
     allowed_roles = {role.value for role in UserRole}
     if payload.role not in allowed_roles:
         raise HTTPException(status_code=400, detail="Invalid base user role")
-    if payload.role in {"admin", "employee", "broker"} and not payload.employee_code and payload.role != "broker":
-        raise HTTPException(status_code=400, detail="Employee code is required for employee and admin users")
+    if payload.role == "employee" and not payload.employee_code:
+        raise HTTPException(status_code=400, detail="Employee code is required for employee users")
     password = payload.password or "Xspace360@123"
     _validate_password_strength(password)
     await _assert_unique_user_fields(db, email=payload.email, phone=payload.phone, employee_code=payload.employee_code or "")
@@ -1059,9 +1251,17 @@ async def create_admin_user(payload: AdminUserPayload, current_user: dict = Depe
     now = _now()
     stamp = now.strftime("%d%m%Y%H%M%S")
     role = payload.role
-    user_id = f"user_{uuid4().hex[:14]}"
     uid = f"{_role_prefix(role)}-{stamp}"
+    code_as_user_id_roles = {"employee", "broker"}
+    if role in code_as_user_id_roles and payload.employee_code:
+        user_id = payload.employee_code.strip()
+    elif role == "admin":
+        user_id = uid
+    else:
+        user_id = f"user_{uuid4().hex[:14]}"
     doc = payload.model_dump()
+    if role == "admin" and not (doc.get("department") or "").strip():
+        doc["department"] = "Administration"
     doc.update({
         "user_id": user_id,
         "uid": uid,
@@ -1105,6 +1305,8 @@ async def update_admin_user(user_id: str, payload: AdminUserPayload, current_use
     await _assert_unique_user_fields(db, email=payload.email, phone=payload.phone, employee_code=payload.employee_code or "", user_id=user_id)
     updates = payload.model_dump()
     updates.pop("password", None)
+    if payload.role == "admin" and not (updates.get("department") or "").strip():
+        updates["department"] = "Administration"
     updates["updated_at"] = _now()
     updates["is_active"] = payload.employment_status != "inactive"
     await db.users.update_one({"user_id": user_id}, {"$set": updates})
@@ -1217,13 +1419,58 @@ async def update_role_status(role_id: str, payload: RoleStatusPayload, current_u
     return api_response("Role status updated")
 
 
+@router.post("/roles/bulk-delete")
+async def bulk_delete_roles(payload: BulkRoleDeletePayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    role_ids = list(dict.fromkeys([role_id for role_id in payload.role_ids if role_id]))
+    if not role_ids:
+        raise HTTPException(status_code=400, detail="Select at least one role")
+
+    roles_to_delete = await db.roles.find({"role_id": {"$in": role_ids}}, {"_id": 0}).to_list(length=len(role_ids))
+    existing_by_id = {role["role_id"]: role for role in roles_to_delete}
+    missing = [role_id for role_id in role_ids if role_id not in existing_by_id]
+    deleted = []
+    skipped = []
+
+    for role_id in role_ids:
+        existing = existing_by_id.get(role_id)
+        if not existing:
+            skipped.append({"role_id": role_id, "reason": "Role not found"})
+            continue
+
+        role_key = existing.get("role_key")
+        assigned_user = await db.users.find_one({"admin_role_key": role_key}, {"_id": 0, "user_id": 1, "full_name": 1})
+        if assigned_user:
+            skipped.append({
+                "role_id": role_id,
+                "role_name": existing.get("role_name"),
+                "reason": f"Assigned to {assigned_user.get('full_name') or assigned_user.get('user_id')}",
+            })
+            continue
+
+        await db.roles.delete_one({"role_id": role_id})
+        deleted.append({"role_id": role_id, "role_name": existing.get("role_name")})
+        await write_audit_log(
+            db,
+            user_id=current_user["user_id"],
+            role=current_user["role"],
+            module="roles_access_permissions",
+            action="role_deleted",
+            record_id=role_id,
+            old_value=existing,
+            reason="Role bulk deleted from Roles & Permissions",
+        )
+
+    message = f"Deleted {len(deleted)} role(s)"
+    if skipped or missing:
+        message = f"{message}; skipped {len(skipped)} role(s)"
+    return api_response(message, {"deleted": deleted, "skipped": skipped})
+
+
 @router.delete("/roles/{role_id}")
 async def delete_role(role_id: str, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
     existing = await db.roles.find_one({"role_id": role_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Role not found")
-    if existing.get("is_system"):
-        raise HTTPException(status_code=400, detail="System roles cannot be deleted")
 
     role_key = existing.get("role_key")
     assigned_user = await db.users.find_one({"admin_role_key": role_key}, {"_id": 0, "user_id": 1, "full_name": 1})
@@ -1637,7 +1884,8 @@ async def audit_logs(
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    query = {}
+    active_record_query = {"is_deleted": {"$ne": True}}
+    query = dict(active_record_query)
     if module:
         query["module"] = module
     if action:
@@ -1752,14 +2000,76 @@ async def host_management(
             {"user_id": {"$regex": search, "$options": "i"}},
         ]
     hosts = await db.users.find(query, {"_id": 0, "password_hash": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    broker_ids = list({host.get("broker_id") for host in hosts if host.get("broker_id")})
+    rm_ids = list({host.get("rm_id") for host in hosts if host.get("rm_id")})
+    branch_manager_ids = list({host.get("branch_manager_id") for host in hosts if host.get("branch_manager_id")})
+    branch_manager_codes = list({host.get("employee_code") for host in hosts if host.get("employee_code")})
+    brokers = await db.users.find({"user_id": {"$in": broker_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(broker_ids) or 1)
+    rms = await db.users.find({"user_id": {"$in": rm_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(rm_ids) or 1)
+    branch_managers = await db.users.find(
+        {
+            "role": "employee",
+            "admin_role_key": "branch_manager",
+            "$or": [
+                {"user_id": {"$in": branch_manager_ids}},
+                {"employee_code": {"$in": branch_manager_codes}},
+            ],
+        },
+        {"_id": 0, "password_hash": 0},
+    ).to_list(length=(len(branch_manager_ids) + len(branch_manager_codes)) or 1)
+    broker_map = {broker["user_id"]: broker for broker in brokers}
+    rm_map = {rm["user_id"]: rm for rm in rms}
+    branch_manager_map = {manager["user_id"]: manager for manager in branch_managers}
+    branch_manager_code_map = {manager.get("employee_code"): manager for manager in branch_managers if manager.get("employee_code")}
+    enriched_hosts = []
     for host in hosts:
         host_id = host.get("user_id")
+        broker = broker_map.get(host.get("broker_id")) or {}
+        rm = rm_map.get(host.get("rm_id")) or {}
+        branch_manager = branch_manager_map.get(host.get("branch_manager_id")) or branch_manager_code_map.get(host.get("employee_code")) or {}
         host["kyc_verification"] = _normalise_host_kyc(host)
+        host["broker"] = {
+            "user_id": broker.get("user_id") or host.get("broker_id") or "",
+            "full_name": broker.get("full_name") or "",
+            "lg_code": broker.get("lg_code") or broker.get("employee_code") or broker.get("uid") or "",
+            "email": broker.get("email") or "",
+        }
+        host["rm"] = {
+            "user_id": rm.get("user_id") or host.get("rm_id") or "",
+            "full_name": rm.get("full_name") or "",
+            "employee_code": rm.get("employee_code") or rm.get("uid") or "",
+            "designation": rm.get("designation") or "",
+        }
+        host["branch_manager"] = {
+            "user_id": branch_manager.get("user_id") or host.get("branch_manager_id") or "",
+            "full_name": branch_manager.get("full_name") or "",
+            "employee_code": branch_manager.get("employee_code") or host.get("employee_code") or branch_manager.get("uid") or "",
+            "designation": branch_manager.get("designation") or "",
+        }
         host["total_properties"] = await db.properties.count_documents({"owner_id": host_id})
         host["live_properties"] = await db.properties.count_documents({"owner_id": host_id, "status": "live"})
         host["total_bookings"] = await db.bookings.count_documents({"host_id": host_id})
         host["pending_payout"] = await db.payouts.count_documents({"host_id": host_id, "status": {"$nin": ["processed", "paid", "completed"]}})
-    total = await db.users.count_documents(query)
+        host_subscriptions = await db.subscriptions.find(
+            {"user_id": host_id, "is_deleted": {"$ne": True}},
+            {"_id": 0},
+        ).sort("created_at", -1).to_list(length=50)
+        current_subscription = next(
+            (sub for sub in host_subscriptions if sub.get("status") in {"active", "trial"}),
+            host_subscriptions[0] if host_subscriptions else {},
+        )
+        host["subscription_summary"] = {
+            "total": len(host_subscriptions),
+            "trial": len([sub for sub in host_subscriptions if sub.get("status") == "trial"]),
+            "active": len([sub for sub in host_subscriptions if sub.get("status") == "active"]),
+            "expired": len([sub for sub in host_subscriptions if sub.get("status") == "expired"]),
+            "cancelled": len([sub for sub in host_subscriptions if sub.get("status") == "cancelled"]),
+            "current": current_subscription,
+        }
+        if tab != "subscription_status" or host["subscription_summary"]["total"] > 0:
+            enriched_hosts.append(host)
+    hosts = enriched_hosts
+    total = len(hosts) if tab == "subscription_status" else await db.users.count_documents(query)
     return api_response("Hosts loaded", {"hosts": hosts}, {"total": total, "limit": limit, "skip": skip})
 
 
@@ -1881,13 +2191,12 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
         if not broker:
             raise HTTPException(status_code=400, detail="Broker not found")
         updates["broker_id"] = payload.broker_id
-        updates["lg_code"] = broker.get("lg_code") or broker.get("uid")
+        updates["lg_code"] = broker.get("lg_code") or broker.get("employee_code") or broker.get("uid")
     if payload.rm_id:
         rm = await db.users.find_one({"user_id": payload.rm_id, "role": "employee"}, {"_id": 0})
         if not rm:
             raise HTTPException(status_code=400, detail="RM not found")
         updates["rm_id"] = payload.rm_id
-        updates["employee_code"] = rm.get("employee_code")
     await db.users.update_one({"user_id": host_id}, {"$set": updates})
     await db.properties.update_many({"owner_id": host_id}, {"$set": {k: v for k, v in updates.items() if k in {"broker_id", "rm_id", "updated_at"}}})
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="host_management", action="host_team_assigned", record_id=host_id, old_value={"broker_id": host.get("broker_id"), "rm_id": host.get("rm_id")}, new_value=updates, reason=payload.reason)
@@ -1899,6 +2208,10 @@ async def property_operations(
     tab: Optional[str] = "all",
     search: Optional[str] = None,
     category: Optional[str] = None,
+    property_type: Optional[str] = None,
+    host: Optional[str] = None,
+    broker: Optional[str] = None,
+    rm: Optional[str] = None,
     limit: int = 100,
     skip: int = 0,
     current_user: dict = Depends(require_admin),
@@ -1921,22 +2234,109 @@ async def property_operations(
         query["status"] = status_map[tab]
     if category:
         query["category"] = category
+    if property_type:
+        query["property_type"] = property_type
+    and_conditions = []
+    user_filter_ids = {}
+    for filter_key, role in (("host", "host"), ("broker", "broker"), ("rm", "employee")):
+        value = {"host": host, "broker": broker, "rm": rm}[filter_key]
+        if value:
+            user_matches = await db.users.find(
+                {
+                    "role": role,
+                    "$or": [
+                        {"user_id": {"$regex": value, "$options": "i"}},
+                        {"full_name": {"$regex": value, "$options": "i"}},
+                        {"employee_code": {"$regex": value, "$options": "i"}},
+                    ],
+                },
+                {"_id": 0, "user_id": 1},
+            ).to_list(length=100)
+            user_filter_ids[filter_key] = [item["user_id"] for item in user_matches]
+            if not user_filter_ids[filter_key]:
+                return api_response("Properties loaded", {"properties": []}, {"total": 0, "limit": limit, "skip": skip})
+    if user_filter_ids.get("host"):
+        query["owner_id"] = {"$in": user_filter_ids["host"]}
+    if user_filter_ids.get("broker"):
+        assigned_hosts = await db.users.find({"broker_id": {"$in": user_filter_ids["broker"]}}, {"_id": 0, "user_id": 1}).to_list(length=500)
+        assigned_host_ids = [item["user_id"] for item in assigned_hosts]
+        broker_or = [{"broker_id": {"$in": user_filter_ids["broker"]}}]
+        if assigned_host_ids:
+            broker_or.append({"owner_id": {"$in": assigned_host_ids}})
+        and_conditions.append({"$or": broker_or})
+    if user_filter_ids.get("rm"):
+        assigned_hosts = await db.users.find({"rm_id": {"$in": user_filter_ids["rm"]}}, {"_id": 0, "user_id": 1}).to_list(length=500)
+        assigned_host_ids = [item["user_id"] for item in assigned_hosts]
+        rm_or = [{"rm_id": {"$in": user_filter_ids["rm"]}}]
+        if assigned_host_ids:
+            rm_or.append({"owner_id": {"$in": assigned_host_ids}})
+        and_conditions.append({"$or": rm_or})
     if search:
+        matching_users = await db.users.find(
+            {
+                "$or": [
+                    {"full_name": {"$regex": search, "$options": "i"}},
+                    {"user_id": {"$regex": search, "$options": "i"}},
+                    {"employee_code": {"$regex": search, "$options": "i"}},
+                ]
+            },
+            {"_id": 0, "user_id": 1},
+        ).to_list(length=100)
+        matching_user_ids = [item["user_id"] for item in matching_users]
         query["$or"] = [
             {"title": {"$regex": search, "$options": "i"}},
             {"property_id": {"$regex": search, "$options": "i"}},
             {"city": {"$regex": search, "$options": "i"}},
             {"owner_id": {"$regex": search, "$options": "i"}},
+            {"broker_id": {"$regex": search, "$options": "i"}},
+            {"rm_id": {"$regex": search, "$options": "i"}},
+            {"property_type": {"$regex": search, "$options": "i"}},
+            {"bhk_type": {"$regex": search, "$options": "i"}},
         ]
+        if matching_user_ids:
+            matching_assigned_hosts = await db.users.find(
+                {"$or": [{"broker_id": {"$in": matching_user_ids}}, {"rm_id": {"$in": matching_user_ids}}]},
+                {"_id": 0, "user_id": 1},
+            ).to_list(length=500)
+            matching_assigned_host_ids = [item["user_id"] for item in matching_assigned_hosts]
+            query["$or"].extend([
+                {"owner_id": {"$in": matching_user_ids}},
+                {"broker_id": {"$in": matching_user_ids}},
+                {"rm_id": {"$in": matching_user_ids}},
+            ])
+            if matching_assigned_host_ids:
+                query["$or"].append({"owner_id": {"$in": matching_assigned_host_ids}})
+    if and_conditions:
+        query["$and"] = and_conditions
     props = await db.properties.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
     owner_ids = list({p.get("owner_id") for p in props if p.get("owner_id")})
     owners = await db.users.find({"user_id": {"$in": owner_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(owner_ids) or 1)
     owner_map = {u["user_id"]: u for u in owners}
+    team_ids = list({
+        value
+        for p in props
+        for value in (p.get("broker_id"), p.get("rm_id"))
+        if value
+    })
+    team_ids = list(set(team_ids + [
+        value
+        for owner in owners
+        for value in (owner.get("broker_id"), owner.get("rm_id"))
+        if value
+    ]))
+    team_users = await db.users.find({"user_id": {"$in": team_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(team_ids) or 1)
+    team_map = {u["user_id"]: u for u in team_users}
     for prop in props:
         owner = owner_map.get(prop.get("owner_id"), {})
         prop["host_name"] = owner.get("full_name")
         prop["assigned_broker"] = prop.get("broker_id") or owner.get("broker_id")
         prop["assigned_rm"] = prop.get("rm_id") or owner.get("rm_id")
+        broker_user = team_map.get(prop.get("assigned_broker"), {})
+        rm_user = team_map.get(prop.get("assigned_rm"), {})
+        prop["broker_name"] = broker_user.get("full_name")
+        prop["broker_code"] = broker_user.get("employee_code") or prop.get("assigned_broker")
+        prop["rm_name"] = rm_user.get("full_name")
+        prop["rm_code"] = rm_user.get("employee_code") or prop.get("assigned_rm")
         verification = await db.property_verifications.find_one({"property_id": prop.get("property_id")}, {"_id": 0})
         prop["verification"] = verification or {}
         prop["operations_review"] = _normalise_property_review(prop, owner, verification)
@@ -1954,6 +2354,15 @@ async def property_operation_detail(property_id: str, current_user: dict = Depen
     prop["host"] = owner
     prop["assigned_broker"] = prop.get("broker_id") or owner.get("broker_id")
     prop["assigned_rm"] = prop.get("rm_id") or owner.get("rm_id")
+    team_ids = [value for value in (prop.get("assigned_broker"), prop.get("assigned_rm")) if value]
+    team_users = await db.users.find({"user_id": {"$in": team_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(team_ids) or 1)
+    team_map = {u["user_id"]: u for u in team_users}
+    broker_user = team_map.get(prop.get("assigned_broker"), {})
+    rm_user = team_map.get(prop.get("assigned_rm"), {})
+    prop["broker_name"] = broker_user.get("full_name")
+    prop["broker_code"] = broker_user.get("employee_code") or prop.get("assigned_broker")
+    prop["rm_name"] = rm_user.get("full_name")
+    prop["rm_code"] = rm_user.get("employee_code") or prop.get("assigned_rm")
     prop["operations_review"] = _normalise_property_review(prop, owner, verification)
     return api_response("Property operation detail loaded", {"property": prop})
 
@@ -2053,7 +2462,8 @@ async def subscription_management(
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    query = {}
+    active_record_query = {"is_deleted": {"$ne": True}}
+    query = dict(active_record_query)
     if tab in {"trial", "active", "expired", "cancelled"}:
         query["status"] = tab
     elif tab == "expiring_soon":
@@ -2086,11 +2496,11 @@ async def subscription_management(
         sub["payment_reference"] = sub.get("razorpay_subscription_id") or sub.get("razorpay_order_id") or sub.get("upi_transaction_id") or ""
     total = await db.subscriptions.count_documents(query)
     metrics = {
-        "trial": await db.subscriptions.count_documents({"status": "trial"}),
-        "active": await db.subscriptions.count_documents({"status": "active"}),
-        "expired": await db.subscriptions.count_documents({"status": "expired"}),
-        "cancelled": await db.subscriptions.count_documents({"status": "cancelled"}),
-        "revenue": sum(float(item.get("amount") or 0) for item in await db.subscriptions.find({"status": "active"}, {"_id": 0, "amount": 1}).to_list(length=1000)),
+        "trial": await db.subscriptions.count_documents({**active_record_query, "status": "trial"}),
+        "active": await db.subscriptions.count_documents({**active_record_query, "status": "active"}),
+        "expired": await db.subscriptions.count_documents({**active_record_query, "status": "expired"}),
+        "cancelled": await db.subscriptions.count_documents({**active_record_query, "status": "cancelled"}),
+        "revenue": sum(float(item.get("amount") or 0) for item in await db.subscriptions.find({**active_record_query, "status": "active"}, {"_id": 0, "amount": 1}).to_list(length=1000)),
     }
     return api_response("Subscriptions loaded", {"subscriptions": subscriptions, "metrics": metrics}, {"total": total, "limit": limit, "skip": skip})
 
@@ -2120,6 +2530,34 @@ async def update_subscription_status(subscription_id: str, payload: Subscription
         await db.properties.update_one({"property_id": sub["property_id"]}, {"$set": {"subscription_status": payload.status, "updated_at": _now()}})
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="subscription_management", action="subscription_status_changed", record_id=subscription_id, old_value={"status": sub.get("status")}, new_value=updates, reason=payload.reason)
     return api_response("Subscription status updated")
+
+
+async def _delete_cancelled_subscription_record(subscription_id: str, payload: ReasonPayload, current_user: dict, db: AsyncIOMotorDatabase):
+    sub = await db.subscriptions.find_one({"subscription_id": subscription_id, "is_deleted": {"$ne": True}}, {"_id": 0})
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    if sub.get("status") != "cancelled":
+        raise HTTPException(status_code=400, detail="Only cancelled subscriptions can be deleted")
+    updates = {
+        "is_deleted": True,
+        "deleted_at": _now(),
+        "deleted_by": current_user["user_id"],
+        "delete_reason": payload.reason,
+        "updated_at": _now(),
+    }
+    await db.subscriptions.update_one({"subscription_id": subscription_id}, {"$set": updates})
+    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="subscription_management", action="cancelled_subscription_deleted", record_id=subscription_id, old_value=sub, new_value=updates, reason=payload.reason)
+    return api_response("Cancelled subscription deleted")
+
+
+@router.post("/subscriptions/{subscription_id}/delete")
+async def delete_cancelled_subscription(subscription_id: str, payload: ReasonPayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    return await _delete_cancelled_subscription_record(subscription_id, payload, current_user, db)
+
+
+@router.delete("/subscriptions/{subscription_id}")
+async def delete_cancelled_subscription_delete_method(subscription_id: str, payload: ReasonPayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    return await _delete_cancelled_subscription_record(subscription_id, payload, current_user, db)
 
 
 @router.patch("/subscription-plans/{plan_id}/status")

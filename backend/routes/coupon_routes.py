@@ -4,6 +4,7 @@ from typing import List, Optional
 from models.coupon import Coupon, CouponCreate, CouponType
 from middleware.auth_middleware import get_current_user
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/coupons", tags=["Coupons"])
@@ -13,7 +14,12 @@ async def get_db():
     return db_instance
 
 def _normalize(value: Optional[str]) -> Optional[str]:
-    return value.strip().lower() if value else None
+    if value is None:
+        return None
+    text = value.strip().lower()
+    if not text or text in {"all", "global", "all_properties", "all properties", "all subscription plans"}:
+        return None
+    return re.sub(r"[^a-z0-9]+", "", text)
 
 def _sqft_matches(range_text: Optional[str], area_sqft: Optional[float]) -> bool:
     if not range_text or area_sqft is None:
@@ -53,22 +59,27 @@ def _target_matches(
     *,
     plan_type: Optional[str] = None,
     property_category: Optional[str] = None,
+    property_type: Optional[str] = None,
     bhk_type: Optional[str] = None,
     area_sqft: Optional[float] = None,
 ) -> bool:
     requested_plan_type = _normalize(plan_type)
     requested_category = _normalize(property_category)
+    requested_property_type = _normalize(property_type)
     requested_bhk = _normalize(bhk_type)
 
     item_plan_type = _normalize(item.get("plan_type"))
     item_category = _normalize(item.get("property_category"))
+    item_property_type = _normalize(item.get("property_type"))
     item_bhk = _normalize(item.get("bhk_type"))
 
-    if requested_plan_type and item_plan_type and item_plan_type != requested_plan_type:
+    if requested_plan_type and item_plan_type and requested_plan_type not in item_plan_type and item_plan_type not in requested_plan_type:
         return False
-    if requested_category and item_category and item_category != requested_category:
+    if requested_category and item_category and requested_category not in item_category and item_category not in requested_category:
         return False
-    if requested_bhk and item_bhk and item_bhk != requested_bhk:
+    if requested_property_type and item_property_type and requested_property_type not in item_property_type and item_property_type not in requested_property_type:
+        return False
+    if requested_bhk and item_bhk and requested_bhk not in item_bhk and item_bhk not in requested_bhk:
         return False
     return _sqft_matches(item.get("sqft_range"), area_sqft)
 
@@ -109,6 +120,7 @@ async def create_coupon(
             property_id=coupon_data.property_id,
             plan_type=coupon_data.plan_type,
             property_category=coupon_data.property_category,
+            property_type=coupon_data.property_type,
             bhk_type=coupon_data.bhk_type,
             sqft_range=coupon_data.sqft_range,
         )
@@ -183,6 +195,7 @@ async def get_property_coupons(
 async def get_subscription_coupons(
     plan_type: Optional[str] = None,
     property_category: Optional[str] = None,
+    property_type: Optional[str] = None,
     bhk_type: Optional[str] = None,
     area_sqft: Optional[float] = None,
     db: AsyncIOMotorDatabase = Depends(get_db)
@@ -200,6 +213,7 @@ async def get_subscription_coupons(
                 coupon,
                 plan_type=plan_type,
                 property_category=property_category,
+                property_type=property_type,
                 bhk_type=bhk_type,
                 area_sqft=area_sqft,
             )

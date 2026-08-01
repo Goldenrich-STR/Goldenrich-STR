@@ -1,11 +1,30 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Edit, History, Plus, Save, ShieldCheck, Trash2, UserCog, X } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
 
 const scopes = ['self', 'assigned_records', 'direct_reports', 'full_team', 'department', 'branch', 'franchise', 'region', 'state', 'global', 'custom'];
 const deletePolicies = ['protected', 'soft_delete_only', 'deactivatable', 'permanent_delete_allowed'];
 const tabs = ['Roles', 'Permission Matrix', 'User Access', 'Data Scope', 'Protected Accounts', 'Access History'];
+const scopeMeta = {
+  self: 'Only the user-owned records',
+  assigned_records: 'Records directly assigned to this role',
+  direct_reports: 'Direct reporting-line records',
+  full_team: 'Complete team and subordinate scope',
+  department: 'All users and records in department',
+  branch: 'Branch-level operating access',
+  franchise: 'Franchise-level business access',
+  region: 'Regional portfolio access',
+  state: 'State-wide access boundary',
+  global: 'Full platform-wide visibility',
+  custom: 'Custom rule-based data scope',
+};
+const deletePolicyMeta = {
+  protected: 'Cannot be deleted from admin UI',
+  soft_delete_only: 'Can be removed from UI while history remains',
+  deactivatable: 'Can only be deactivated, not removed',
+  permanent_delete_allowed: 'Can be permanently deleted with audit trail',
+};
 
 const emptyRole = {
   role_name: '',
@@ -33,6 +52,119 @@ const Modal = ({ title, children, onClose }) => (
 const inputClass = 'h-10 w-full rounded-lg border border-slate-200 px-3 text-sm';
 const Field = ({ label, children }) => <label className="block"><span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">{label}</span>{children}</label>;
 
+const SearchableSelect = ({ options, value, onChange, placeholder, emptyLabel = 'No records found' }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const selected = options.find((option) => option.value === value);
+  const filtered = query.trim()
+    ? options.filter((option) => `${option.label} ${option.meta || ''}`.toLowerCase().includes(query.trim().toLowerCase()))
+    : options;
+
+  return (
+    <div className="relative">
+      <button
+        className="flex h-11 w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 text-left text-sm font-bold text-slate-900 transition hover:border-slate-300 focus:border-charcoal focus:outline-none"
+        onClick={() => {
+          setQuery('');
+          setOpen((current) => !current);
+        }}
+        type="button"
+      >
+        <span className={selected ? 'truncate' : 'truncate text-slate-400'}>{selected?.label || placeholder}</span>
+        <span className="text-xs text-slate-400">⌄</span>
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 rounded-lg border border-slate-200 bg-white p-2 shadow-elevated">
+          <input
+            autoComplete="off"
+            className="mb-2 h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm outline-none focus:border-charcoal"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search..."
+            spellCheck={false}
+            type="search"
+            value={query}
+          />
+          <div className="max-h-60 overflow-y-auto">
+            {filtered.length ? filtered.map((option) => (
+              <button
+                className={`mb-1 w-full rounded-lg px-3 py-2 text-left text-sm transition ${option.value === value ? 'bg-terracotta text-charcoal' : 'hover:bg-slate-100'}`}
+                key={option.value || 'none'}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                  setQuery('');
+                }}
+                type="button"
+              >
+                <span className="block font-black">{option.label}</span>
+                {option.meta && <span className="block truncate text-xs font-semibold opacity-70">{option.meta}</span>}
+              </button>
+            )) : <p className="px-3 py-2 text-sm font-semibold text-slate-500">{emptyLabel}</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const ProfessionalSelect = ({ options, value, onChange, placeholder, searchPlaceholder }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const selected = options.find((option) => option.value === value);
+  const filtered = query.trim()
+    ? options.filter((option) => `${option.label} ${option.meta || ''}`.toLowerCase().includes(query.trim().toLowerCase()))
+    : options;
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => {
+          setQuery('');
+          setOpen((current) => !current);
+        }}
+        className="flex min-h-[46px] w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm shadow-sm transition hover:border-slate-300 focus:border-charcoal focus:outline-none focus:ring-2 focus:ring-slate-200"
+      >
+        <span>
+          <span className={selected ? 'block font-black text-slate-950' : 'block font-bold text-slate-400'}>{selected?.label || placeholder}</span>
+          {selected?.meta && <span className="mt-0.5 block truncate text-[11px] font-semibold text-slate-500">{selected.meta}</span>}
+        </span>
+        <span className={`text-sm font-black text-slate-400 transition ${open ? 'rotate-180' : ''}`}>⌄</span>
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-[90] rounded-xl border border-slate-200 bg-white p-2 shadow-elevated ring-1 ring-black/5">
+          <input
+            autoComplete="off"
+            className="mb-2 h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold outline-none focus:border-charcoal"
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={searchPlaceholder || 'Search option...'}
+            spellCheck={false}
+            type="search"
+            value={query}
+          />
+          <div className="max-h-64 overflow-y-auto">
+            {filtered.length ? filtered.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                  setQuery('');
+                }}
+                className={`mb-1 w-full rounded-lg border px-3 py-2.5 text-left transition ${option.value === value ? 'border-[#d8b431] bg-[#fff7df]' : 'border-transparent hover:border-slate-200 hover:bg-slate-50'}`}
+              >
+                <span className="block text-sm font-black text-slate-950">{option.label}</span>
+                {option.meta && <span className="mt-0.5 block text-xs font-semibold leading-5 text-slate-500">{option.meta}</span>}
+              </button>
+            )) : <p className="px-3 py-2 text-sm font-semibold text-slate-500">No matching option found</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const groupPermissions = (permissions) => permissions.reduce((acc, item) => {
   acc[item.module] = acc[item.module] || [];
   acc[item.module].push(item);
@@ -44,6 +176,16 @@ const RoleForm = ({ role, permissions, onClose, onSaved }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const grouped = useMemo(() => groupPermissions(permissions), [permissions]);
+  const scopeOptions = scopes.map((scope) => ({
+    value: scope,
+    label: scope.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
+    meta: scopeMeta[scope] || scope,
+  }));
+  const deletePolicyOptions = deletePolicies.map((policy) => ({
+    value: policy,
+    label: policy.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
+    meta: deletePolicyMeta[policy] || policy,
+  }));
 
   const setValue = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const togglePermission = (key) => setForm((current) => ({
@@ -84,8 +226,24 @@ const RoleForm = ({ role, permissions, onClose, onSaved }) => {
         <div className="grid gap-3 md:grid-cols-3">
           <Field label="Role Name"><input className={inputClass} value={form.role_name} onChange={(e) => setValue('role_name', e.target.value)} /></Field>
           <Field label="Role Key"><input className={inputClass} value={form.role_key || ''} onChange={(e) => setValue('role_key', e.target.value)} placeholder="branch_manager" /></Field>
-          <Field label="Data Scope"><select className={inputClass} value={form.data_scope} onChange={(e) => setValue('data_scope', e.target.value)}>{scopes.map((scope) => <option key={scope} value={scope}>{scope.replace(/_/g, ' ')}</option>)}</select></Field>
-          <Field label="Delete Policy"><select className={inputClass} value={form.delete_policy} onChange={(e) => setValue('delete_policy', e.target.value)}>{deletePolicies.map((policy) => <option key={policy} value={policy}>{policy.replace(/_/g, ' ')}</option>)}</select></Field>
+          <Field label="Data Scope">
+            <ProfessionalSelect
+              onChange={(value) => setValue('data_scope', value)}
+              options={scopeOptions}
+              placeholder="Select data scope"
+              searchPlaceholder="Search scope by name..."
+              value={form.data_scope}
+            />
+          </Field>
+          <Field label="Delete Policy">
+            <ProfessionalSelect
+              onChange={(value) => setValue('delete_policy', value)}
+              options={deletePolicyOptions}
+              placeholder="Select delete policy"
+              searchPlaceholder="Search delete policy..."
+              value={form.delete_policy}
+            />
+          </Field>
           <label className="mt-6 flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.is_active} onChange={(e) => setValue('is_active', e.target.checked)} /> Active role</label>
           <Field label="Description"><input className={inputClass} value={form.description || ''} onChange={(e) => setValue('description', e.target.value)} /></Field>
         </div>
@@ -131,6 +289,26 @@ const UserAccessForm = ({ users, roles, permissions, onSaved }) => {
   const [reason, setReason] = useState('');
   const [error, setError] = useState('');
   const selectedUser = users.find((user) => user.user_id === selectedUserId);
+  const grouped = useMemo(() => groupPermissions(permissions), [permissions]);
+  const selectedRole = roles.find((role) => role.role_key === roleKey);
+  const userOptions = users.map((user) => ({
+    value: user.user_id,
+    label: user.full_name || user.email || user.user_id,
+    meta: `${user.role || 'user'} | ${user.email || user.phone || user.user_id}`,
+  }));
+  const roleOptions = [
+    { value: '', label: 'No admin role', meta: 'Remove role key assignment' },
+    ...roles.map((role) => ({
+      value: role.role_key,
+      label: role.role_name || role.role_key,
+      meta: `${role.role_key || 'role'} | ${role.data_scope || 'self'} scope`,
+    })),
+  ];
+  const scopeOptions = scopes.map((item) => ({
+    value: item,
+    label: item.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
+    meta: item,
+  }));
 
   useEffect(() => {
     if (!selectedUser) return;
@@ -140,6 +318,13 @@ const UserAccessForm = ({ users, roles, permissions, onSaved }) => {
   }, [selectedUser]);
 
   const toggle = (key) => setSelectedPermissions((current) => current.includes(key) ? current.filter((item) => item !== key) : [...current, key]);
+  const toggleModule = (modulePermissions) => {
+    const keys = modulePermissions.map((permission) => permission.permission_key);
+    const allSelected = keys.every((key) => selectedPermissions.includes(key));
+    setSelectedPermissions((current) => (
+      allSelected ? current.filter((key) => !keys.includes(key)) : Array.from(new Set([...current, ...keys]))
+    ));
+  };
   const save = async () => {
     setError('');
     if (!selectedUserId || !reason) {
@@ -156,18 +341,68 @@ const UserAccessForm = ({ users, roles, permissions, onSaved }) => {
   };
 
   return (
-    <Panel className="p-4">
-      {error && <div className="mb-3"><ErrorState message={error} /></div>}
-      <div className="grid gap-3 md:grid-cols-4">
-        <Field label="User"><select className={inputClass} value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}><option value="">Select user</option>{users.map((user) => <option key={user.user_id} value={user.user_id}>{user.full_name} ({user.role})</option>)}</select></Field>
-        <Field label="Role"><select className={inputClass} value={roleKey} onChange={(e) => setRoleKey(e.target.value)}><option value="">No admin role</option>{roles.map((role) => <option key={role.role_id} value={role.role_key}>{role.role_name}</option>)}</select></Field>
-        <Field label="Data Scope"><select className={inputClass} value={scope} onChange={(e) => setScope(e.target.value)}>{scopes.map((item) => <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>)}</select></Field>
-        <Field label="Reason"><input className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
+    <Panel className="overflow-hidden">
+      <div className="border-b border-slate-200 p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-base font-black text-slate-950">User Access Assignment</h2>
+            <p className="mt-1 text-sm text-slate-500">Assign role key, data scope and module permissions with audit reason.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Selected</p><p className="font-black">{selectedPermissions.length}</p></div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Modules</p><p className="font-black">{Object.keys(grouped).length}</p></div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Scope</p><p className="font-black capitalize">{scope.replace(/_/g, ' ')}</p></div>
+          </div>
+        </div>
       </div>
-      <div className="mt-4 flex max-h-52 flex-wrap gap-2 overflow-y-auto rounded-lg border border-slate-200 p-3">
-        {permissions.map((permission) => <button key={permission.permission_key} type="button" onClick={() => toggle(permission.permission_key)} className={`rounded-full px-2 py-1 text-xs font-bold ${selectedPermissions.includes(permission.permission_key) ? 'bg-terracotta text-charcoal' : 'bg-slate-100 text-slate-600'}`}>{permission.permission_key}</button>)}
+      <div className="p-4">
+      {error && <div className="mb-4"><ErrorState message={error} /></div>}
+      <div className="grid gap-3 lg:grid-cols-4">
+        <Field label="User"><SearchableSelect emptyLabel="No user found" onChange={setSelectedUserId} options={userOptions} placeholder="Select user" value={selectedUserId} /></Field>
+        <Field label="Role"><SearchableSelect emptyLabel="No role found" onChange={setRoleKey} options={roleOptions} placeholder="Select role" value={roleKey} /></Field>
+        <Field label="Data Scope"><SearchableSelect emptyLabel="No data scope found" onChange={setScope} options={scopeOptions} placeholder="Select data scope" value={scope} /></Field>
+        <Field label="Reason"><input className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why access is being changed" /></Field>
+      </div>
+      {selectedUser && (
+        <div className="mt-4 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm md:grid-cols-3">
+          <p><span className="block text-[10px] font-black uppercase tracking-widest text-slate-500">User</span><span className="font-black">{selectedUser.full_name}</span></p>
+          <p><span className="block text-[10px] font-black uppercase tracking-widest text-slate-500">Current Role</span><span className="font-black capitalize">{selectedUser.role}</span></p>
+          <p><span className="block text-[10px] font-black uppercase tracking-widest text-slate-500">Admin Role</span><span className="font-black">{selectedRole?.role_name || 'No admin role'}</span></p>
+        </div>
+      )}
+      <div className="mt-4 grid max-h-[420px] gap-3 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50 p-3 xl:grid-cols-2">
+        {Object.entries(grouped).map(([module, modulePermissions]) => {
+          const selectedCount = modulePermissions.filter((permission) => selectedPermissions.includes(permission.permission_key)).length;
+          return (
+            <div key={module} className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-black capitalize text-slate-950">{module.replace(/_/g, ' ')}</h3>
+                  <p className="text-xs font-semibold text-slate-500">{selectedCount}/{modulePermissions.length} selected</p>
+                </div>
+                <button type="button" onClick={() => toggleModule(modulePermissions)} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-black text-slate-700 hover:bg-terracotta hover:text-charcoal">Toggle</button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {modulePermissions.map((permission) => {
+                  const selected = selectedPermissions.includes(permission.permission_key);
+                  return (
+                    <button
+                      key={permission.permission_key}
+                      type="button"
+                      onClick={() => toggle(permission.permission_key)}
+                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-black transition ${selected ? 'border-terracotta bg-terracotta text-charcoal' : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-white'}`}
+                    >
+                      {permission.action.replace(/_/g, ' ')}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
       <button onClick={save} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white"><UserCog className="h-4 w-4" /> Assign Access</button>
+      </div>
     </Panel>
   );
 };
@@ -177,6 +412,7 @@ const RolesPermissions = () => {
   const [state, setState] = useState({ loading: true, error: '', roles: [], permissions: [], users: [], protectedUsers: [], history: [] });
   const [modal, setModal] = useState(null);
   const [notice, setNotice] = useState('');
+  const [selectedRoleIds, setSelectedRoleIds] = useState([]);
   const grouped = useMemo(() => groupPermissions(state.permissions), [state.permissions]);
 
   const load = useCallback(async () => {
@@ -198,6 +434,7 @@ const RolesPermissions = () => {
         protectedUsers: protectedRes.data.data.users,
         history: historyRes.data.data.logs,
       });
+      setSelectedRoleIds((current) => current.filter((roleId) => rolesRes.data.data.roles.some((role) => role.role_id === roleId)));
     } catch (error) {
       setState((current) => ({ ...current, loading: false, error: error.response?.data?.detail || 'Failed to load roles' }));
     }
@@ -208,11 +445,17 @@ const RolesPermissions = () => {
   const afterSave = () => {
     setNotice('Roles and permissions updated with audit history');
     setModal(null);
+    setSelectedRoleIds([]);
     load();
   };
 
   const toggleRoleStatus = async (role) => {
-    const reason = window.prompt(`Reason for ${role.is_active ? 'deactivating' : 'activating'} ${role.role_name}`);
+    const reason = await requestReason({
+      title: `${role.is_active ? 'Deactivate' : 'Activate'} Role`,
+      description: `${role.role_name} role status change needs an audit reason.`,
+      placeholder: 'Explain why this role status is changing.',
+      minLength: 3,
+    });
     if (!reason) return;
     try {
       await adminPhase1API.updateRoleStatus(role.role_id, { is_active: !role.is_active, reason });
@@ -223,18 +466,39 @@ const RolesPermissions = () => {
   };
 
   const deleteRole = async (role) => {
-    if (role.is_system) {
-      setNotice('System roles are protected and cannot be deleted.');
-      return;
-    }
-    const confirmed = window.confirm(`Delete role ${role.role_name}? This action cannot be undone.`);
+    const confirmed = window.confirm(`Delete role ${role.role_name}? This action cannot be undone. Assigned roles must be removed from users before deleting.`);
     if (!confirmed) return;
     try {
       await adminPhase1API.deleteRole(role.role_id);
       setNotice('Role deleted and audit history updated');
+      setSelectedRoleIds((current) => current.filter((roleId) => roleId !== role.role_id));
       load();
     } catch (error) {
       setNotice(error.response?.data?.detail || 'Unable to delete role');
+    }
+  };
+
+  const toggleRoleSelection = (roleId) => {
+    setSelectedRoleIds((current) => current.includes(roleId) ? current.filter((item) => item !== roleId) : [...current, roleId]);
+  };
+
+  const toggleSelectAllRoles = () => {
+    setSelectedRoleIds((current) => current.length === state.roles.length ? [] : state.roles.map((role) => role.role_id));
+  };
+
+  const bulkDeleteRoles = async () => {
+    if (!selectedRoleIds.length) return;
+    const confirmed = window.confirm(`Delete ${selectedRoleIds.length} selected role(s)? Assigned roles will be skipped.`);
+    if (!confirmed) return;
+    try {
+      const response = await adminPhase1API.bulkDeleteRoles(selectedRoleIds);
+      const data = response.data?.data || {};
+      const skipped = data.skipped || [];
+      setNotice(skipped.length ? `${response.data?.message || 'Bulk delete completed'}. Skipped: ${skipped.map((item) => item.role_name || item.role_id).join(', ')}` : (response.data?.message || 'Selected roles deleted'));
+      setSelectedRoleIds([]);
+      load();
+    } catch (error) {
+      setNotice(error.response?.data?.detail || 'Unable to delete selected roles');
     }
   };
 
@@ -256,11 +520,39 @@ const RolesPermissions = () => {
       </Panel>
 
       {activeTab === 'Roles' && (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="space-y-4">
+          <Panel className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex items-center gap-2 text-sm font-bold text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={state.roles.length > 0 && selectedRoleIds.length === state.roles.length}
+                  onChange={toggleSelectAllRoles}
+                  className="h-4 w-4 rounded border-slate-300 text-terracotta focus:ring-terracotta"
+                />
+                Select All Roles
+              </label>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{selectedRoleIds.length} selected</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setSelectedRoleIds([])} disabled={!selectedRoleIds.length} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 disabled:opacity-40">Clear</button>
+              <button onClick={bulkDeleteRoles} disabled={!selectedRoleIds.length} className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-xs font-black text-white disabled:opacity-40"><Trash2 className="h-4 w-4" /> Delete Selected</button>
+            </div>
+          </Panel>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {state.roles.map((role) => (
-            <Panel key={role.role_id} className="p-4">
+            <Panel key={role.role_id} className={`p-4 ${selectedRoleIds.includes(role.role_id) ? 'ring-2 ring-terracotta' : ''}`}>
               <div className="flex items-start justify-between gap-2">
-                <div><p className="font-black">{role.role_name}</p><p className="text-xs font-semibold text-slate-500">{role.role_key}</p></div>
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedRoleIds.includes(role.role_id)}
+                    onChange={() => toggleRoleSelection(role.role_id)}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-terracotta focus:ring-terracotta"
+                    aria-label={`Select ${role.role_name}`}
+                  />
+                  <div><p className="font-black">{role.role_name}</p><p className="text-xs font-semibold text-slate-500">{role.role_key}</p></div>
+                </div>
                 <StatusBadge value={role.is_active ? 'active' : 'inactive'} />
               </div>
               <p className="mt-2 text-sm text-slate-600">{role.description}</p>
@@ -273,14 +565,11 @@ const RolesPermissions = () => {
               <div className="mt-4 flex flex-wrap gap-2">
                 <button onClick={() => setModal({ type: 'role', role })} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold"><Edit className="h-3.5 w-3.5" /> Edit</button>
                 <button onClick={() => toggleRoleStatus(role)} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold">{role.is_active ? 'Deactivate' : 'Activate'}</button>
-                {role.is_system ? (
-                  <span className="rounded-lg bg-slate-50 px-2 py-1 text-xs font-bold text-slate-400">Protected</span>
-                ) : (
-                  <button onClick={() => deleteRole(role)} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
-                )}
+                <button onClick={() => deleteRole(role)} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
               </div>
             </Panel>
           ))}
+          </div>
         </div>
       )}
 

@@ -21,6 +21,7 @@ class Coupon(BaseModel):
     property_id: Optional[str] = None
     plan_type: Optional[str] = None
     property_category: Optional[str] = None
+    property_type: Optional[str] = None
     bhk_type: Optional[str] = None
     sqft_range: Optional[str] = None
     is_active: bool = True
@@ -34,5 +35,6 @@ class CouponCreate(BaseModel):
     property_id: Optional[str] = None
     plan_type: Optional[str] = None
     property_category: Optional[str] = None
+    property_type: Optional[str] = None
     bhk_type: Optional[str] = None
     sqft_range: Optional[str] = None

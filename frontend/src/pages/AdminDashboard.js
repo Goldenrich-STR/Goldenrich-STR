@@ -15,6 +15,7 @@ import SearchLogsManagement from '../components/admin/SearchLogsManagement';
 import AICallsManagement from '../components/admin/AICallsManagement';
 import { Phone, Volume2, HelpCircle, Download, UserPlus } from 'lucide-react';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, formatReadableText } from '../lib/displayLabels';
+import { requestReason } from './admin/shared';
 
 const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', required = false, leftIcon, disabled = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -1626,7 +1627,13 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
   };
 
   const handleRejectKYC = async (userId) => {
-    const reason = prompt('Please enter rejection remarks/reason:');
+    const reason = await requestReason({
+      title: 'Reject KYC',
+      description: 'KYC rejection requires clear remarks for audit and user communication.',
+      placeholder: 'Enter rejection remarks/reason.',
+      minLength: 3,
+      confirmLabel: 'Reject KYC',
+    });
     if (reason === null) return; // cancelled
     if (!reason.trim()) {
       alert('Remarks are required to reject KYC.');

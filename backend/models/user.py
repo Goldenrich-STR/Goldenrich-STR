@@ -47,6 +47,7 @@ class User(BaseModel):
     # Host-specific fields
     lg_code: Optional[str] = None  # Broker LG Code
     broker_id: Optional[str] = None  # Assigned broker user_id
+    branch_manager_id: Optional[str] = None
     kyc_status: KYCStatus = KYCStatus.UNVERIFIED
     kyc_documents: List[KYCDocument] = []
     
@@ -127,6 +128,10 @@ class UserResponse(BaseModel):
     full_name: str
     role: UserRole
     city: Optional[str] = None
+    designation: Optional[str] = None
+    department: Optional[str] = None
+    admin_role_key: Optional[str] = None
+    access_scope: Optional[str] = None
     profile_image: Optional[str] = None
     kyc_status: Optional[KYCStatus] = None
     is_active: bool

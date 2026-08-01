@@ -148,16 +148,36 @@ async def get_my_owners(
     """Get all property owners assigned to this broker."""
     try:
         broker_id = current_user["user_id"]
+        broker_profile = await db.users.find_one(
+            {"user_id": broker_id},
+            {"_id": 0, "lg_code": 1, "employee_code": 1, "uid": 1}
+        ) or {}
+        broker_code = (
+            broker_profile.get("lg_code")
+            or broker_profile.get("employee_code")
+            or broker_profile.get("uid")
+            or current_user.get("lg_code")
+            or current_user.get("employee_code")
+            or current_user.get("uid")
+            or broker_id
+        )
         
         cursor = db.users.find(
             {"broker_id": broker_id, "role": "host"},
             {"_id": 0, "password_hash": 0}
         )
         owners = await cursor.to_list(length=200)
+        rm_ids = list({owner.get("rm_id") for owner in owners if owner.get("rm_id")})
+        rms = await db.users.find(
+            {"user_id": {"$in": rm_ids}, "role": "employee"},
+            {"_id": 0, "password_hash": 0}
+        ).to_list(length=len(rm_ids) or 1)
+        rm_map = {rm["user_id"]: rm for rm in rms}
         
         # Get property count for each owner
         for owner in owners:
             owner_id = owner["user_id"]
+            rm = rm_map.get(owner.get("rm_id")) or {}
             property_count = await db.properties.count_documents({"owner_id": owner_id})
             live_property_count = await db.properties.count_documents({"owner_id": owner_id, "status": "live"})
             pending_property_count = await db.properties.count_documents({
@@ -181,9 +201,15 @@ async def get_my_owners(
             owner["pending_properties"] = pending_property_count
             owner["total_bookings"] = booking_count
             owner["revenue_generated"] = revenue_generated
-            owner["broker_lg_code"] = owner.get("lg_code")
-            owner["assigned_rm"] = owner.get("rm_id")
-            owner["assigned_employee"] = owner.get("employee_id") or owner.get("assigned_employee_id")
+            owner["broker_lg_code"] = owner.get("lg_code") or broker_code
+            owner["rm_code"] = owner.get("employee_code") or rm.get("employee_code") or rm.get("uid") or ""
+            owner["assigned_rm"] = rm.get("full_name") or owner.get("rm_id")
+            owner["assigned_employee"] = owner.get("employee_code") or rm.get("employee_code") or owner.get("employee_id") or owner.get("assigned_employee_id")
+            owner["rm"] = {
+                "user_id": rm.get("user_id") or owner.get("rm_id") or "",
+                "full_name": rm.get("full_name") or "",
+                "employee_code": rm.get("employee_code") or owner.get("employee_code") or rm.get("uid") or "",
+            }
         
         return {
             "owners": owners,
@@ -215,6 +241,33 @@ async def get_owner_details(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Owner not found or not assigned to this broker"
             )
+        broker_profile = await db.users.find_one(
+            {"user_id": broker_id},
+            {"_id": 0, "lg_code": 1, "employee_code": 1, "uid": 1}
+        ) or {}
+        rm = {}
+        if owner.get("rm_id"):
+            rm = await db.users.find_one(
+                {"user_id": owner.get("rm_id"), "role": "employee"},
+                {"_id": 0, "password_hash": 0}
+            ) or {}
+        owner["broker_lg_code"] = (
+            owner.get("lg_code")
+            or broker_profile.get("lg_code")
+            or broker_profile.get("employee_code")
+            or broker_profile.get("uid")
+            or current_user.get("lg_code")
+            or current_user.get("employee_code")
+            or current_user.get("uid")
+            or broker_id
+        )
+        owner["rm_code"] = owner.get("employee_code") or rm.get("employee_code") or rm.get("uid") or ""
+        owner["assigned_employee"] = owner.get("employee_code") or rm.get("employee_code") or owner.get("employee_id") or owner.get("assigned_employee_id")
+        owner["rm"] = {
+            "user_id": rm.get("user_id") or owner.get("rm_id") or "",
+            "full_name": rm.get("full_name") or "",
+            "employee_code": rm.get("employee_code") or owner.get("employee_code") or rm.get("uid") or "",
+        }
 
         properties = await db.properties.find({"owner_id": owner_id}, {"_id": 0}).to_list(length=200)
         bookings = await db.bookings.find({"host_id": owner_id}, {"_id": 0}).sort("created_at", -1).to_list(length=100)
@@ -255,7 +308,7 @@ async def get_owner_details(
             "verifications": verifications,
             "audit_events": audit_events,
             "activity_timeline": activity_timeline,
-            "assigned_rm": owner.get("rm_id"),
+            "assigned_rm": owner.get("rm", {}).get("full_name") or owner.get("rm_id"),
             "assigned_admin": owner.get("assigned_admin_id") or owner.get("admin_id")
         }
 
@@ -341,12 +394,26 @@ async def create_broker_property(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Assigned host not found"
             )
+        broker_profile = await db.users.find_one(
+            {"user_id": broker_id},
+            {"_id": 0, "lg_code": 1, "employee_code": 1, "uid": 1}
+        ) or {}
+        broker_code = (
+            owner.get("lg_code")
+            or broker_profile.get("lg_code")
+            or broker_profile.get("employee_code")
+            or broker_profile.get("uid")
+            or current_user.get("lg_code")
+            or current_user.get("employee_code")
+            or current_user.get("uid")
+            or broker_id
+        )
 
         payload = property_data.model_dump(exclude={"owner_id"})
         property_obj = Property(
             owner_id=owner["user_id"],
             broker_id=broker_id,
-            broker_lg_code=current_user.get("lg_code") or owner.get("lg_code"),
+            broker_lg_code=broker_code,
             rm_id=owner.get("rm_id") or current_user.get("rm_id"),
             employee_id=owner.get("employee_id") or owner.get("assigned_employee_id") or current_user.get("employee_id"),
             created_by_role=current_user.get("role"),
@@ -1392,7 +1459,8 @@ async def get_assigned_owner(owner_id: str, broker_id: str, db):
 
 class BrokerDraftDocumentUpload(BaseModel):
     document_type: str
-    document_url: str
+    document_url: Optional[str] = ""
+    text_value: Optional[str] = ""
 
 class BrokerDraftAgreementUpdate(BaseModel):
     agreement_owner_name: Optional[str] = None
@@ -1436,9 +1504,15 @@ async def save_owner_draft_document(
         "cheque": "cancelled_cheque",
         "society": "society_noc",
         "shop_act": "shop_act",
-        "gst": "gst_certificate"
+        "gst": "gst_certificate",
+        "gst_number": "gst_number"
     }
     mapped_type = mapping.get(doc_type, doc_type)
+    text_value = (payload.text_value or payload.document_url or "").strip()
+    if mapped_type != "gst_number" and not payload.document_url:
+        raise HTTPException(400, detail="Document URL is required")
+    if mapped_type == "gst_number" and not text_value:
+        raise HTTPException(400, detail="GST number is required")
     
     current_docs = owner.get("kyc_documents") or []
     if not isinstance(current_docs, list):
@@ -1447,7 +1521,11 @@ async def save_owner_draft_document(
     updated = False
     for doc in current_docs:
         if doc.get("document_type") == mapped_type:
-            doc["document_url"] = payload.document_url
+            if mapped_type == "gst_number":
+                doc.pop("document_url", None)
+                doc["text_value"] = text_value
+            else:
+                doc["document_url"] = payload.document_url
             doc["status"] = "pending"
             doc["rejection_reason"] = None
             doc["uploaded_at"] = accepted_at.isoformat()
@@ -1455,17 +1533,25 @@ async def save_owner_draft_document(
             break
             
     if not updated:
-        current_docs.append({
+        new_doc = {
             "document_type": mapped_type,
-            "document_url": payload.document_url,
             "status": "pending",
             "rejection_reason": None,
             "uploaded_at": accepted_at.isoformat()
-        })
+        }
+        if mapped_type == "gst_number":
+            new_doc["text_value"] = text_value
+        else:
+            new_doc["document_url"] = payload.document_url
+        current_docs.append(new_doc)
+
+    update_data = {"kyc_documents": current_docs, "updated_at": accepted_at}
+    if mapped_type == "gst_number":
+        update_data["gst_number"] = text_value
         
     await db.users.update_one(
         {"user_id": owner_id},
-        {"$set": {"kyc_documents": current_docs, "updated_at": accepted_at}}
+        {"$set": update_data}
     )
     return {"message": "Draft document saved", "kyc_documents": current_docs}
 
@@ -1562,7 +1648,7 @@ async def submit_owner_verification(
     if payload.gst_certificate:
         docs.append({"document_type": "gst_certificate", "document_url": payload.gst_certificate, "status": "pending", "uploaded_at": accepted_at.isoformat()})
     if payload.gst_number:
-        docs.append({"document_type": "gst_number", "document_url": payload.gst_number, "status": "pending", "uploaded_at": accepted_at.isoformat()})
+        docs.append({"document_type": "gst_number", "text_value": payload.gst_number.strip(), "status": "pending", "uploaded_at": accepted_at.isoformat()})
         
     await db.users.update_one(
         {"user_id": owner_id},
@@ -1573,6 +1659,7 @@ async def submit_owner_verification(
                 "agreement_owner_name": payload.agreement_owner_name,
                 "agreement_owner_address": payload.agreement_owner_address,
                 "agreement_signature": payload.agreement_signature,
+                "gst_number": payload.gst_number.strip() if payload.gst_number else None,
                 "agreement_signed_at": accepted_at.isoformat(),
                 "verification_terms_accepted": True,
                 "verification_terms_accepted_at": accepted_at.isoformat(),

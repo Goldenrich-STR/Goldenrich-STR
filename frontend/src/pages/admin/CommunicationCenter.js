@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Bell, Headphones, Mail, MessageSquare, Search, Send, ShieldAlert } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { cmsAPI } from '../../services/api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
 
 const phaseSteps = [
   ['Step 1', 'Communication Overview', 'completed'],
@@ -97,7 +97,7 @@ const CommunicationCenter = () => {
 
   const updateMessage = async (message, status) => {
     if (!message) return;
-    const notes = window.prompt('Admin notes', message.admin_notes || '');
+    const notes = await requestReason({ title: 'Contact Message Notes', description: `Marking message as ${status}.`, defaultValue: message.admin_notes || '', placeholder: 'Add admin notes.', minLength: 1, confirmLabel: 'Save Notes' });
     if (notes === null) return;
     await cmsAPI.updateContactMessage(message._id || message.message_id, { status, admin_notes: notes });
     await load();
@@ -112,7 +112,7 @@ const CommunicationCenter = () => {
     if (!title) return;
     const message = window.prompt('Notification message', 'This is a test notification from Communication Center.');
     if (!message) return;
-    const reason = window.prompt('Reason', 'Admin notification test');
+    const reason = await requestReason({ title: 'Test Notification Reason', description: 'This test notification will be audited.', defaultValue: 'Admin notification test', placeholder: 'Add test reason.', minLength: 3 });
     if (!reason) return;
     await adminPhase1API.sendCommunicationTest({ user_id: userId.trim(), channels: channelsText.split(',').map((item) => item.trim()).filter(Boolean), title, message, reason });
     await load();
@@ -137,7 +137,7 @@ const CommunicationCenter = () => {
 
   const changeRuleStatus = async (rule) => {
     const nextStatus = rule.status === 'active' ? 'inactive' : 'active';
-    const reason = window.prompt('Reason', `${nextStatus === 'active' ? 'Enabled' : 'Disabled'} notification rule`);
+    const reason = await requestReason({ title: 'Notification Rule Reason', description: `Rule will be marked ${nextStatus}.`, defaultValue: `${nextStatus === 'active' ? 'Enabled' : 'Disabled'} notification rule`, placeholder: 'Add rule status reason.', minLength: 3 });
     if (!reason) return;
     await adminPhase1API.updateNotificationRuleStatus(rule.notification_rule_id, { status: nextStatus, reason });
     await load();

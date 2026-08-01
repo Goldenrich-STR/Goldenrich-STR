@@ -29,7 +29,11 @@ class RazorpayService:
     def __init__(self):
         self.key_id = os.getenv("RAZORPAY_KEY_ID", "rzp_test_demo_key")
         self.key_secret = os.getenv("RAZORPAY_KEY_SECRET", "rzp_test_demo_secret")
-        self._is_mock_base = _is_demo_key(self.key_id) or _is_demo_key(self.key_secret)
+        self.payments_are_mock = _env_true(
+            "RAZORPAY_DEMO_MODE",
+            os.getenv("RAZORPAYX_DEMO_MODE", "false"),
+        )
+        self._is_mock_base = self.payments_are_mock or _is_demo_key(self.key_id) or _is_demo_key(self.key_secret)
         self.payouts_are_mock = _env_true("RAZORPAYX_DEMO_MODE", "true")
 
         if self._is_mock_base:

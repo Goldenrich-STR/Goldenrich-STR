@@ -7,6 +7,13 @@ export const adminPhase1API = {
   createUser: (payload) => apiClient.post('/admin/core/users', payload),
   updateUser: (userId, payload) => apiClient.patch(`/admin/core/users/${userId}`, payload),
   deleteUser: (userId) => apiClient.delete(`/admin/core/users/${userId}`),
+  branchFranchise: () => apiClient.get('/admin/core/branch-franchise'),
+  createBranch: (payload) => apiClient.post('/admin/core/branches', payload),
+  createFranchise: (payload) => apiClient.post('/admin/core/franchises', payload),
+  updateBranch: (code, payload) => apiClient.put(`/admin/core/branches/${encodeURIComponent(code)}`, payload),
+  updateFranchise: (code, payload) => apiClient.put(`/admin/core/franchises/${encodeURIComponent(code)}`, payload),
+  deleteBranch: (code, payload) => apiClient.post(`/admin/core/branches/${encodeURIComponent(code)}/delete`, payload),
+  deleteFranchise: (code, payload) => apiClient.post(`/admin/core/franchises/${encodeURIComponent(code)}/delete`, payload),
   updateUserStatus: (userId, payload) => apiClient.patch(`/admin/core/users/${userId}/status`, payload),
   resetUserPassword: (userId, payload) => apiClient.post(`/admin/core/users/${userId}/reset-password`, payload),
   userAuditLogs: (userId) => apiClient.get(`/admin/core/users/${userId}/audit-logs`),
@@ -16,6 +23,7 @@ export const adminPhase1API = {
   updateRole: (roleId, payload) => apiClient.put(`/admin/core/roles/${roleId}`, payload),
   updateRoleStatus: (roleId, payload) => apiClient.patch(`/admin/core/roles/${roleId}/status`, payload),
   deleteRole: (roleId) => apiClient.delete(`/admin/core/roles/${roleId}`),
+  bulkDeleteRoles: (roleIds) => apiClient.post('/admin/core/roles/bulk-delete', { role_ids: roleIds }),
   assignAccess: (userId, payload) => apiClient.post(`/admin/core/users/${userId}/assign-access`, payload),
   protectedAccounts: () => apiClient.get('/admin/core/protected-accounts'),
   accessHistory: () => apiClient.get('/admin/core/access-history'),
@@ -52,12 +60,23 @@ export const adminPhase1API = {
   updatePropertyChecklist: (propertyId, payload) => apiClient.patch(`/admin/core/properties-operations/${propertyId}/checklist`, payload),
   updatePropertyStage: (propertyId, payload) => apiClient.patch(`/admin/core/properties-operations/${propertyId}/stage`, payload),
   updatePropertyOperationStatus: (propertyId, payload) => apiClient.patch(`/admin/core/properties-operations/${propertyId}/status`, payload),
+  deletePropertyOperation: (propertyId, payload) => apiClient.post(`/properties/${propertyId}/delete`, payload),
   subscriptions: (params = {}) => apiClient.get('/admin/core/subscriptions', { params }),
   subscriptionPlans: () => apiClient.get('/admin/core/subscription-plans'),
   createSubscriptionPlan: (payload) => apiClient.post('/subscriptions/admin/plans', null, { params: payload }),
   updateSubscriptionPlan: (planId, payload) => apiClient.put(`/subscriptions/admin/plans/${planId}`, null, { params: payload }),
   deleteSubscriptionPlan: (planId) => apiClient.delete(`/subscriptions/admin/plans/${planId}`),
   updateSubscriptionStatus: (subscriptionId, payload) => apiClient.patch(`/admin/core/subscriptions/${subscriptionId}/status`, payload),
+  deleteSubscription: async (subscriptionId, payload) => {
+    try {
+      return await apiClient.post(`/admin/core/subscriptions/${subscriptionId}/delete`, payload);
+    } catch (error) {
+      if (error.response?.status === 405) {
+        return apiClient.delete(`/admin/core/subscriptions/${subscriptionId}`, { data: payload });
+      }
+      throw error;
+    }
+  },
   updateSubscriptionPlanStatus: (planId, payload) => apiClient.patch(`/admin/core/subscription-plans/${planId}/status`, payload),
   bookingOperations: (params = {}) => apiClient.get('/admin/core/bookings', { params }),
   bookingOperationDetail: (bookingId) => apiClient.get(`/admin/core/bookings/${bookingId}`),

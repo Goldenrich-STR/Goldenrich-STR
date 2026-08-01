@@ -25,6 +25,7 @@ const ReportingHierarchy = lazy(() => import("./pages/admin/ReportingHierarchy")
 const EscalationMatrix = lazy(() => import("./pages/admin/EscalationMatrix"));
 const AuditLogs = lazy(() => import("./pages/admin/AuditLogs"));
 const DepartmentsAdmin = lazy(() => import("./pages/admin/Departments"));
+const BranchFranchiseManagementAdmin = lazy(() => import("./pages/admin/BranchFranchiseManagement"));
 const HostManagementAdmin = lazy(() => import("./pages/admin/HostManagement"));
 const PropertyOperationsAdmin = lazy(() => import("./pages/admin/PropertyOperations"));
 const SubscriptionManagementAdmin = lazy(() => import("./pages/admin/SubscriptionManagement"));
@@ -39,6 +40,7 @@ const ReportsAnalyticsAdmin = lazy(() => import("./pages/admin/ReportsAnalytics"
 const ApprovalCenterAdmin = lazy(() => import("./pages/admin/ApprovalCenter"));
 const BrokerDashboard = lazy(() => import("./pages/BrokerDashboard"));
 const EmployeeDashboard = lazy(() => import("./pages/EmployeeDashboard"));
+const ManagingDirectorDashboard = lazy(() => import("./pages/ManagingDirectorDashboard"));
 const HostPayouts = lazy(() => import("./pages/HostPayouts"));
 const HostBookings = lazy(() => import("./pages/HostBookings"));
 const HostPerformance = lazy(() => import("./pages/HostPerformance"));
@@ -91,6 +93,39 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   );
 };
 
+const MdProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-stone flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-terracotta mx-auto mb-4"></div>
+          <p className="text-charcoal-light">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    const next = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={`/md/login?next=${encodeURIComponent(next)}`} replace />;
+  }
+
+  const mdKey = `${user.admin_role_key || ''} ${user.designation || ''}`.toLowerCase().replace(/[\s-]+/g, '_');
+  if (user.role !== 'admin' || !mdKey.includes('managing_director')) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <>
+      <SEO robots="noindex,nofollow" />
+      {children}
+    </>
+  );
+};
+
 // Role-based redirect
 const RoleBasedRedirect = () => {
   const { user } = useAuth();
@@ -103,6 +138,9 @@ const RoleBasedRedirect = () => {
 
   switch (user.role) {
     case "admin":
+      if (`${user.admin_role_key || ''} ${user.designation || ''}`.toLowerCase().replace(/[\s-]+/g, '_').includes('managing_director')) {
+        return <Navigate to="/md/dashboard" replace />;
+      }
       return <Navigate to="/admin/dashboard" replace />;
     case "host":
       return <Navigate to={hostResumePath || "/host/dashboard"} replace />;
@@ -172,7 +210,8 @@ function AppRoutes() {
   const isAuthRoute = 
     location.pathname === "/login" || 
     location.pathname === "/register" || 
-    location.pathname === "/admin/login";
+    location.pathname === "/admin/login" ||
+    location.pathname === "/md/login";
 
   // Use state.backgroundLocation if navigating via React Router, or default to "/" (LandingPage)
   const backgroundLocation = location.state?.backgroundLocation || (isAuthRoute ? { pathname: "/" } : null);
@@ -188,6 +227,15 @@ function AppRoutes() {
         <Route path="/reset-password" element={<PasswordRecoveryPage mode="reset" />} />
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AuthPage isAdminLogin={true} />} />
+        <Route path="/md/login" element={<AuthPage isAdminLogin={true} isMdLogin={true} />} />
+        <Route
+          path="/md/dashboard"
+          element={
+            <MdProtectedRoute>
+              <ManagingDirectorDashboard />
+            </MdProtectedRoute>
+          }
+        />
         <Route path="/property/:id" element={<PropertyDetail />} />
         <Route path="/support" element={<SupportPage />} />
         <Route path="/about-us" element={<AboutUs />} />
@@ -308,6 +356,7 @@ function AppRoutes() {
           <Route path="escalation-matrix" element={<EscalationMatrix />} />
           <Route path="audit-logs" element={<AuditLogs />} />
           <Route path="departments" element={<DepartmentsAdmin />} />
+          <Route path="branch-franchise" element={<BranchFranchiseManagementAdmin />} />
           <Route path="hosts" element={<HostManagementAdmin />} />
           <Route path="properties" element={<PropertyOperationsAdmin />} />
           <Route path="subscriptions" element={<SubscriptionManagementAdmin />} />
@@ -350,7 +399,7 @@ function AppRoutes() {
       {/* Render AuthPage as a modal overlay on top of the background route */}
       {isAuthRoute && (
         <div className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
-          <AuthPage isAdminLogin={location.pathname.startsWith("/admin")} />
+          <AuthPage isAdminLogin={location.pathname.startsWith("/admin") || location.pathname.startsWith("/md")} isMdLogin={location.pathname.startsWith("/md")} />
         </div>
       )}
     </>

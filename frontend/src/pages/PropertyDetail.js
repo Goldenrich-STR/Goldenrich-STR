@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
@@ -453,8 +453,11 @@ const getYouTubeEmbedUrl = (url) => {
   return '';
 };
 
+const BOOKING_INTENT_KEY = 'xspace360_booking_intent';
+
 const PropertyDetail = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { id } = useParams();
   const { user, logout } = useAuth();
   const [lang, setLang] = useState(() => localStorage.getItem('preferredLanguage') || 'en');
@@ -557,6 +560,23 @@ const PropertyDetail = () => {
     }
   };
 
+  const saveBookingIntent = () => {
+    sessionStorage.setItem(BOOKING_INTENT_KEY, JSON.stringify({
+      property_id: id,
+      path: location.pathname,
+      next: `${location.pathname}${location.search || ''}`,
+      checkIn,
+      checkOut,
+      guests: Number(guests) || 1,
+      childrenGuests,
+      infantGuests,
+      selectedSlot,
+      foodPreference,
+      bookingPaymentType,
+      savedAt: Date.now(),
+    }));
+  };
+
   useEffect(() => {
     setImgIdx(0);
     setChildrenGuests(0);
@@ -577,6 +597,27 @@ const PropertyDetail = () => {
       }))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  useEffect(() => {
+    try {
+      const rawIntent = sessionStorage.getItem(BOOKING_INTENT_KEY);
+      if (!rawIntent) return;
+      const intent = JSON.parse(rawIntent);
+      if (intent?.property_id !== id) return;
+
+      if (intent.checkIn) setCheckIn(intent.checkIn);
+      if (intent.checkOut) setCheckOut(intent.checkOut);
+      if (Number(intent.guests) > 0) setGuests(Number(intent.guests));
+      setChildrenGuests(Math.max(0, Number(intent.childrenGuests) || 0));
+      setInfantGuests(Math.max(0, Number(intent.infantGuests) || 0));
+      if (intent.selectedSlot) setSelectedSlot(intent.selectedSlot);
+      if (intent.foodPreference !== undefined) setFoodPreference(intent.foodPreference);
+      if (intent.bookingPaymentType) setBookingPaymentType(intent.bookingPaymentType);
+      sessionStorage.removeItem(BOOKING_INTENT_KEY);
+    } catch (err) {
+      sessionStorage.removeItem(BOOKING_INTENT_KEY);
+    }
   }, [id]);
 
   const images = useMemo(() => {
@@ -944,7 +985,8 @@ const PropertyDetail = () => {
 
   const handleBookNow = async (e, paymentType = 'full') => {
     if (!user) {
-      navigate('/login');
+      saveBookingIntent();
+      navigate(`/login?next=${encodeURIComponent(location.pathname)}`);
       return;
     }
     if (user.role !== 'guest') {

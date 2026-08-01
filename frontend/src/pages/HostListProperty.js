@@ -1488,6 +1488,7 @@ const HostListProperty = () => {
   );
 
   const processSubscriptionPayment = async (planId, propertyId) => {
+    if (paying) return null;
     const subRes = await subscriptionAPI.subscribe({
       plan_id: planId,
       property_id: propertyId,
@@ -1496,7 +1497,7 @@ const HostListProperty = () => {
     const subOrder = subRes.data;
     const plan = plans.find(p => p.plan_id === planId);
 
-    if (subOrder.is_mock) {
+    if (subOrder.is_mock || String(subOrder.razorpay_order_id || '').startsWith('order_mock_')) {
       await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
       return subOrder;
     }
@@ -1554,28 +1555,9 @@ const HostListProperty = () => {
     }
 
     setError('');
-    setPaying(true);
-    try {
-      let propertyId = createdPropertyId;
-      const payload = { ...buildPropertyPayload(), subscription_id: pricingSummaryPlan.plan_id };
-      if (!propertyId) {
-        const propRes = await propertyAPI.createProperty(payload);
-        propertyId = propRes.data.property_id;
-        setCreatedPropertyId(propertyId);
-      } else {
-        await propertyAPI.updateProperty(propertyId, payload);
-      }
-
-      await processSubscriptionPayment(pricingSummaryPlan.plan_id, propertyId);
-      update({ subscription_plan_id: pricingSummaryPlan.plan_id });
-      setHasActiveSubscription(true);
-      setPricingSummaryPlan(null);
-      setStep((s) => Math.min(s + 1, STEPS.length - 1));
-    } catch (err) {
-      setError(formatError(err, 'Subscription payment failed'));
-    } finally {
-      setPaying(false);
-    }
+    update({ subscription_plan_id: pricingSummaryPlan.plan_id });
+    setPricingSummaryPlan(null);
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
   const submitListing = async () => {
@@ -3168,7 +3150,7 @@ const HostListProperty = () => {
               <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 flex items-start gap-3">
                 <Info className="w-4 h-4 text-emerald-700 mt-0.5 shrink-0" />
                 <p className="text-xs leading-relaxed text-emerald-800 font-semibold">
-                  Review this summary before proceeding. Payment will be completed from the Review & Pay step.
+                  Review this summary before proceeding. Payment will be completed when you submit the listing.
                 </p>
               </div>
             </div>
@@ -3186,15 +3168,15 @@ const HostListProperty = () => {
                 <button
                   type="button"
                   onClick={proceedFromPricingSummary}
-                  disabled={paying || (!!subscriptionCouponCode.trim() && !getSubscriptionBreakdown(pricingSummaryPlan).coupon)}
+                  disabled={!!subscriptionCouponCode.trim() && !getSubscriptionBreakdown(pricingSummaryPlan).coupon}
                   className="flex-1 min-h-[52px] rounded-xl bg-sage-dark text-white font-bold flex flex-col items-center justify-center leading-tight shadow-premium shadow-sage-dark/20 hover:bg-sage-dark/90 disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="pricing-summary-proceed"
                 >
                   <span className="inline-flex items-center gap-2">
-                    {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <LockKeyhole className="w-4 h-4" />}
-                    {paying ? 'Processing Payment...' : 'Proceed to Review & Pay'}
+                    <LockKeyhole className="w-4 h-4" />
+                    Proceed to Review
                   </span>
-                  <span className="text-[10px] font-semibold text-white/80 mt-0.5">Secure & Safe Checkout</span>
+                  <span className="text-[10px] font-semibold text-white/80 mt-0.5">Payment on final submit</span>
                 </button>
               </div>
               <div className="hidden sm:grid grid-cols-3 gap-3 pt-3 mt-3 border-t border-gray-100">

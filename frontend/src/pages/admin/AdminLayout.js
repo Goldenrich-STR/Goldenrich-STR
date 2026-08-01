@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Bell, ChevronDown, ChevronRight, HelpCircle, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Search, User, X } from 'lucide-react';
+import { Bell, ChevronDown, ChevronRight, HelpCircle, LogOut, Mail, Menu, PanelLeftClose, PanelLeftOpen, Phone, Search, ShieldCheck, User, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { adminNavigation } from './adminNavigation';
 
@@ -68,6 +68,7 @@ const AdminLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moduleSearch, setModuleSearch] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState(() =>
     adminNavigation.reduce((acc, item) => {
       if (item.children) {
@@ -101,6 +102,12 @@ const AdminLayout = () => {
     }, { ...openGroups });
   }, [filteredNavigation, moduleSearch, openGroups]);
 
+  useEffect(() => {
+    const clearModuleSearch = () => setModuleSearch('');
+    window.addEventListener('admin:clear-module-search', clearModuleSearch);
+    return () => window.removeEventListener('admin:clear-module-search', clearModuleSearch);
+  }, []);
+
   const toggleGroup = (label) => {
     setOpenGroups((current) => ({ ...current, [label]: !current[label] }));
   };
@@ -110,9 +117,13 @@ const AdminLayout = () => {
       <Search className="h-4 w-4 text-slate-400" />
       <input
         aria-label="Search admin modules"
+        autoComplete="off"
         className="h-7 w-full bg-transparent text-sm outline-none ring-0 focus:ring-0"
+        name="admin-sidebar-module-search"
         onChange={(event) => setModuleSearch(event.target.value)}
         placeholder="Search modules"
+        spellCheck={false}
+        type="search"
         value={moduleSearch}
       />
     </div>
@@ -123,12 +134,8 @@ const AdminLayout = () => {
 
     return (
     <aside className={`flex h-full flex-col border-r border-slate-200 bg-white transition-all duration-200 ${effectiveCollapsed ? 'w-20' : 'w-72'}`}>
-      <div className={`flex h-16 items-center border-b border-slate-200 px-4 ${effectiveCollapsed ? 'justify-center' : 'gap-3'}`}>
-        <img src="/logo.png" alt="X-Space360" className="h-8 w-auto object-contain" />
-        {!effectiveCollapsed && <div>
-          <p className="text-sm font-black text-slate-950">X-Space360</p>
-          <p className="text-[11px] font-semibold text-slate-500">Central Admin</p>
-        </div>}
+      <div className={`flex h-16 items-center border-b border-slate-200 px-4 ${effectiveCollapsed ? 'justify-center' : 'justify-start'}`}>
+        <img src="/logo.png" alt="X-Space360" className="h-9 w-auto object-contain" />
       </div>
       <div className={`${effectiveCollapsed ? 'px-2' : 'px-3'} py-3`}>
         {!effectiveCollapsed && searchInput}
@@ -196,9 +203,13 @@ const AdminLayout = () => {
               <Search className="h-4 w-4 text-slate-400" />
               <input
                 aria-label="Search admin modules"
+                autoComplete="off"
                 className="h-7 w-full bg-transparent text-sm outline-none ring-0 focus:ring-0"
+                name="admin-header-module-search"
                 onChange={(event) => setModuleSearch(event.target.value)}
                 placeholder="Search users, properties, bookings, tickets"
+                spellCheck={false}
+                type="search"
                 value={moduleSearch}
               />
             </div>
@@ -210,7 +221,7 @@ const AdminLayout = () => {
             <button className="rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Help">
               <HelpCircle className="h-5 w-5" />
             </button>
-            <button className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5" onClick={() => navigate('/admin/account')}>
+            <button className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-1.5 hover:bg-slate-50" onClick={() => setProfileOpen(true)}>
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sage text-xs font-black text-white">
                 {user?.full_name?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
               </span>
@@ -236,8 +247,61 @@ const AdminLayout = () => {
           <Outlet />
         </main>
       </div>
+      {profileOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-elevated">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-terracotta">Admin Profile</p>
+                <h2 className="mt-1 text-xl font-black text-slate-950">Profile Information</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setProfileOpen(false)}
+                className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                aria-label="Close admin profile"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-5">
+              <div className="flex items-start gap-4">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-sage text-2xl font-black text-white">
+                  {user?.full_name?.[0]?.toUpperCase() || <User className="h-7 w-7" />}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="break-words text-lg font-black text-slate-950">{user?.full_name || 'Admin'}</h3>
+                  <p className="mt-1 text-sm font-semibold capitalize text-slate-500">{user?.role || 'admin'} Account</p>
+                  <span className="mt-3 inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    Active
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3">
+                <ProfileInfo icon={Mail} label="Email Address" value={user?.email || '-'} />
+                <ProfileInfo icon={Phone} label="Mobile Number" value={user?.phone || '-'} />
+                <ProfileInfo icon={ShieldCheck} label="Access Role" value={user?.role || 'admin'} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+const ProfileInfo = ({ icon: Icon, label, value }) => (
+  <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-600">
+      <Icon className="h-4 w-4" />
+    </span>
+    <div className="min-w-0">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">{label}</p>
+      <p className="mt-1 break-words text-sm font-black text-slate-900">{value}</p>
+    </div>
+  </div>
+);
 
 export default AdminLayout;

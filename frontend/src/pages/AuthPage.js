@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star, Eye, EyeOff, X } from 'lucide-react';
+import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star, Eye, EyeOff, X, Search, ChevronDown, Check } from 'lucide-react';
 import { authAPI, apiClient } from '../services/api';
 import LegalLinks from '../components/LegalLinks';
 import SEO from '../components/SEO';
@@ -9,10 +9,78 @@ import { INDIAN_CITIES } from '../lib/indianCities';
 
 const OTP_VALIDITY_SECONDS = 120;
 
-const AuthPage = ({ isAdminLogin = false }) => {
+const AssignmentSearchSelect = ({ label, value, onChange, options, codeKey, placeholder, emptyLabel }) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const selected = options.find((item) => item?.[codeKey] === value);
+  const displayValue = open ? query : selected ? `${selected[codeKey]} - ${selected.full_name || 'Assigned user'}` : '';
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOptions = normalizedQuery
+    ? options.filter((item) => `${item?.[codeKey] || ''} ${item?.full_name || ''}`.toLowerCase().includes(normalizedQuery))
+    : options;
+
+  return (
+    <div className="space-y-1">
+      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-0.5">{label}</label>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+        <input
+          autoComplete="off"
+          className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-10 pr-10 text-sm font-semibold text-charcoal outline-none transition focus:border-charcoal focus:shadow-sm"
+          onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => {
+            setQuery('');
+            setOpen(true);
+          }}
+          placeholder={placeholder}
+          spellCheck={false}
+          type="search"
+          value={displayValue}
+        />
+        <ChevronDown className={`pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 transition ${open ? 'rotate-180' : ''}`} />
+        {open && (
+          <div className="absolute left-0 right-0 top-full z-[9999] mt-2 max-h-56 overflow-y-auto rounded-2xl border border-gray-200 bg-white p-1.5 shadow-2xl">
+            {filteredOptions.length ? filteredOptions.map((item) => {
+              const code = item?.[codeKey] || '';
+              const isSelected = code === value;
+              return (
+                <button
+                  key={item.user_id || code}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    onChange(code);
+                    setQuery('');
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition ${isSelected ? 'bg-[#f7efd2]' : 'hover:bg-gray-55'}`}
+                >
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-2 truncate text-sm font-extrabold text-charcoal">
+                      <span className="truncate">{code}</span>
+                      {item.assignment_type && <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-700">{String(item.assignment_type).replace('_', ' ')}</span>}
+                    </span>
+                    <span className="block truncate text-xs font-semibold text-gray-500">{item.full_name || 'No name available'}</span>
+                  </span>
+                  {isSelected && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
+                </button>
+              );
+            }) : <p className="px-3 py-3 text-sm font-semibold text-gray-500">{emptyLabel}</p>}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, adminLogin, register, logout } = useAuth();
+  const { login, adminLogin, register, logout, refreshUser } = useAuth();
   const forcedLogoutHandled = useRef(false);
   const cityFieldRef = useRef(null);
   const otpTimerRef = useRef(null);
@@ -51,6 +119,24 @@ const AuthPage = ({ isAdminLogin = false }) => {
   const [availableBrokers, setAvailableBrokers] = useState([]);
   const [availableEmployees, setAvailableEmployees] = useState([]);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
+
+  const getGuestPostAuthPath = () => {
+    try {
+      const rawIntent = sessionStorage.getItem('xspace360_booking_intent');
+      if (rawIntent) {
+        const intent = JSON.parse(rawIntent);
+        if (intent?.path?.startsWith('/property/')) {
+          return intent.next || intent.path;
+        }
+      }
+    } catch (err) {
+      sessionStorage.removeItem('xspace360_booking_intent');
+    }
+    if (requestedNext.startsWith('/property/') || requestedNext.startsWith('/guest/')) {
+      return requestedNext;
+    }
+    return '/guest/browse';
+  };
 
   useEffect(() => {
     if (forceLogin && !forcedLogoutHandled.current) {
@@ -206,7 +292,13 @@ const AuthPage = ({ isAdminLogin = false }) => {
       : await login(loginData.email, loginData.password);
     
     if (result.success) {
-      const userRole = result.user.role;
+      let authenticatedUser = result.user;
+      if (isMdLogin && refreshUser) {
+        const refreshedUser = await refreshUser();
+        authenticatedUser = refreshedUser || result.user;
+      }
+
+      const userRole = authenticatedUser.role;
       if (userRole === 'guest') {
         const pendingProp = sessionStorage.getItem('pending_wishlist_property');
         if (pendingProp) {
@@ -222,13 +314,27 @@ const AuthPage = ({ isAdminLogin = false }) => {
           sessionStorage.removeItem('pending_wishlist_property');
         }
       }
-      if (isAdminLogin && userRole !== 'admin') {
+      const mdKey = [
+        authenticatedUser.admin_role_key,
+        authenticatedUser.designation,
+        authenticatedUser.department,
+      ].filter(Boolean).join(' ').toLowerCase().replace(/[\s-]+/g, '_');
+      const isManagingDirector = userRole === 'admin' && mdKey.includes('managing_director');
+      if (isMdLogin && !isManagingDirector) {
+        logout();
+        setError('Access denied. Only Managing Director account is allowed.');
+        setLoading(false);
+        return;
+      }
+      if (isAdminLogin && !isMdLogin && (userRole !== 'admin' || isManagingDirector)) {
         logout();
         setError('Access denied. Only administrators are allowed.');
         setLoading(false);
         return;
       }
-      if (userRole === 'admin') {
+      if (isManagingDirector) {
+        navigate('/md/dashboard');
+      } else if (userRole === 'admin') {
         navigate('/admin/dashboard');
       } else if (userRole === 'host') {
         const savedResumePath = result.user?.user_id
@@ -244,7 +350,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
       } else if (userRole === 'employee') {
         navigate('/employee/dashboard');
       } else {
-        navigate(requestedNext.startsWith('/guest/') ? requestedNext : '/guest/browse');
+        navigate(getGuestPostAuthPath());
       }
     } else {
       setError(result.error);
@@ -345,7 +451,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
       } else if (userRole === 'broker') {
         navigate('/broker/dashboard');
       } else {
-        navigate(requestedNext || '/guest/browse');
+        navigate(getGuestPostAuthPath());
       }
     } else {
       setError(result.error);
@@ -420,10 +526,10 @@ const AuthPage = ({ isAdminLogin = false }) => {
             {/* Title / Subtext */}
             <div className="mb-6">
               <span className="text-sm font-semibold text-gray-500 block mb-1">
-                {isAdminLogin ? "Admin Console" : "Login/Signup"}
+                {isMdLogin ? "Managing Director" : isAdminLogin ? "Admin Console" : "Login/Signup"}
               </span>
               <h3 className="font-sans font-semibold text-2xl md:text-[28px] text-gray-900 tracking-tight leading-snug">
-                {isAdminLogin ? "Admin Sign In" : "Welcome to X-Space360"}
+                {isMdLogin ? "MD Executive Sign In" : isAdminLogin ? "Admin Sign In" : "Welcome to X-Space360"}
               </h3>
             </div>
 
@@ -464,7 +570,7 @@ const AuthPage = ({ isAdminLogin = false }) => {
                     <label className="block text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Password</label>
                     <button
                       type="button"
-                      onClick={() => navigate(`/forgot-password?login=${encodeURIComponent(isAdminLogin ? '/admin/login' : '/login')}`)}
+                      onClick={() => navigate(`/forgot-password?login=${encodeURIComponent(isMdLogin ? '/md/login' : isAdminLogin ? '/admin/login' : '/login')}`)}
                       className="text-[9px] font-bold text-blue-600 uppercase hover:underline"
                     >
                       Forgot?
@@ -666,35 +772,27 @@ const AuthPage = ({ isAdminLogin = false }) => {
                       </div>
                     </div>
  
-                    {/* Broker/Employee dropdowns for Host role */}
+                    {/* Broker/RM dropdowns for Host role */}
                     {registerData.role === 'host' && (
                       <div className="grid grid-cols-2 gap-3 text-left animate-fade-in">
-                        <div className="space-y-1">
-                          <label className="block text-xs font-semibold text-gray-600 ml-0.5">Broker</label>
-                          <select
-                            value={registerData.lg_code}
-                            onChange={(e) => setRegisterData({ ...registerData, lg_code: e.target.value })}
-                            className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-3 py-3 text-sm font-medium outline-none bg-white"
-                          >
-                            <option value="">Select Broker</option>
-                            {availableBrokers.map(b => (
-                              <option key={b.user_id} value={b.lg_code}>{b.full_name}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide ml-0.5">Employee</label>
-                          <select
-                            value={registerData.employee_code}
-                            onChange={(e) => setRegisterData({ ...registerData, employee_code: e.target.value })}
-                            className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-3 py-3 text-sm font-medium outline-none bg-white"
-                          >
-                            <option value="">Select Employee</option>
-                            {availableEmployees.map(emp => (
-                              <option key={emp.user_id} value={emp.employee_code}>{emp.full_name}</option>
-                            ))}
-                          </select>
-                        </div>
+                        <AssignmentSearchSelect
+                          codeKey="lg_code"
+                          emptyLabel="No broker or RM code found"
+                          label="RM / Broker Code"
+                          onChange={(code) => setRegisterData({ ...registerData, lg_code: code })}
+                          options={availableBrokers}
+                          placeholder="Search broker/RM code or name"
+                          value={registerData.lg_code}
+                        />
+                        <AssignmentSearchSelect
+                          codeKey="employee_code"
+                          emptyLabel="No branch manager code found"
+                          label="Branch Manager Code"
+                          onChange={(code) => setRegisterData({ ...registerData, employee_code: code })}
+                          options={availableEmployees}
+                          placeholder="Search branch manager code or name"
+                          value={registerData.employee_code}
+                        />
                       </div>
                     )}
  

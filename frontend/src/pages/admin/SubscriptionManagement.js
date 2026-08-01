@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, CreditCard, Edit3, PlusCircle, PauseCircle, Search, Trash2, XCircle } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestReason } from './shared';
 
 const tabs = [
   ['all', 'All Subscriptions'],
@@ -40,14 +40,41 @@ const SubscriptionManagement = () => {
   useEffect(() => { load(); }, [load]);
 
   const updateSubscriptionStatus = async (subscription, status) => {
-    const reason = window.prompt(`Reason for marking subscription ${status}`);
+    const reason = await requestReason({
+      title: 'Subscription Status Reason',
+      description: `Marking subscription as ${status}.`,
+      placeholder: 'Add subscription status reason.',
+      minLength: 3,
+    });
     if (!reason) return;
     await adminPhase1API.updateSubscriptionStatus(subscription.subscription_id, { status, reason });
     load();
   };
 
+  const deleteSubscription = async (subscription) => {
+    const reason = await requestReason({
+      title: 'Delete Cancelled Subscription',
+      description: `Deleting cancelled subscription ${subscription.subscription_id}.`,
+      placeholder: 'Add reason for deleting this cancelled subscription.',
+      minLength: 3,
+      confirmLabel: 'Delete Subscription',
+    });
+    if (!reason) return;
+    try {
+      await adminPhase1API.deleteSubscription(subscription.subscription_id, { reason });
+      await load();
+    } catch (error) {
+      alert(error.response?.data?.detail || 'Failed to delete cancelled subscription. Please restart backend and try again.');
+    }
+  };
+
   const updatePlanStatus = async (plan, isActive) => {
-    const reason = window.prompt(`Reason for ${isActive ? 'activating' : 'pausing'} plan`);
+    const reason = await requestReason({
+      title: 'Plan Status Reason',
+      description: `${isActive ? 'Activating' : 'Pausing'} this subscription plan.`,
+      placeholder: 'Add plan status change reason.',
+      minLength: 3,
+    });
     if (!reason) return;
     await adminPhase1API.updateSubscriptionPlanStatus(plan.plan_id, { is_active: isActive, reason });
     load();
@@ -115,7 +142,7 @@ const SubscriptionManagement = () => {
                       <td className="px-4 py-3">{String(subscription.end_date || '-')}</td>
                       <td className="px-4 py-3 font-mono text-xs">{subscription.payment_reference || '-'}</td>
                       <td className="px-4 py-3"><StatusBadge value={subscription.status} /></td>
-                      <td className="px-4 py-3"><SubscriptionActions subscription={subscription} onStatus={updateSubscriptionStatus} /></td>
+                      <td className="px-4 py-3"><SubscriptionActions subscription={subscription} onStatus={updateSubscriptionStatus} onDelete={deleteSubscription} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -129,11 +156,14 @@ const SubscriptionManagement = () => {
   );
 };
 
-const SubscriptionActions = ({ subscription, onStatus }) => (
+const SubscriptionActions = ({ subscription, onStatus, onDelete }) => (
   <div className="flex flex-wrap gap-1">
     <button onClick={() => onStatus(subscription, 'active')} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Active</button>
     <button onClick={() => onStatus(subscription, 'expired')} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700"><PauseCircle className="h-3.5 w-3.5" /> Expire</button>
     <button onClick={() => onStatus(subscription, 'cancelled')} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700"><XCircle className="h-3.5 w-3.5" /> Cancel</button>
+    {subscription.status === 'cancelled' && (
+      <button onClick={() => onDelete(subscription)} className="inline-flex items-center gap-1 rounded-lg bg-red-100 px-2 py-1 text-xs font-bold text-red-800"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
+    )}
   </div>
 );
 

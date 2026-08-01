@@ -39,15 +39,15 @@ const buildTreeRows = (nodes) => {
 };
 
 const NodeCard = ({ node, onManager, onTransfer, onHistory, compact = false }) => (
-  <Panel className="p-4">
+  <Panel className="overflow-hidden p-0 transition hover:-translate-y-0.5 hover:shadow-elevated">
     <div className="mb-3 flex items-start justify-between gap-3">
-      <div className="flex items-center gap-3">
-        <span className="rounded-lg bg-terracotta/15 p-2 text-terracotta"><Network className="h-4 w-4" /></span>
-        <div><p className="font-black">{node.name}</p><p className="text-xs text-slate-500">{node.employee_code || node.user_id}</p></div>
+      <div className="flex items-center gap-3 p-4">
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-terracotta/15 text-terracotta"><Network className="h-4 w-4" /></span>
+        <div><p className="font-black text-slate-950">{node.name}</p><p className="text-xs font-semibold text-slate-500">{node.employee_code || node.user_id}</p></div>
       </div>
-      <StatusBadge value={node.status} />
+      <div className="p-4"><StatusBadge value={node.status} /></div>
     </div>
-    <div className={`grid gap-3 text-sm ${compact ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'}`}>
+    <div className={`grid gap-2 border-y border-slate-100 bg-slate-50/70 p-4 text-sm ${compact ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-3'}`}>
       <p><span className="block text-xs font-bold uppercase text-slate-500">Role</span>{node.role}</p>
       <p><span className="block text-xs font-bold uppercase text-slate-500">Department</span>{node.department || '-'}</p>
       <p><span className="block text-xs font-bold uppercase text-slate-500">Branch</span>{node.branch || '-'}</p>
@@ -55,10 +55,10 @@ const NodeCard = ({ node, onManager, onTransfer, onHistory, compact = false }) =
       <p><span className="block text-xs font-bold uppercase text-slate-500">Direct Reports</span>{node.direct_reports_count}</p>
       <p><span className="block text-xs font-bold uppercase text-slate-500">Escalated Tasks</span>{node.escalated_tasks}</p>
     </div>
-    <div className="mt-4 flex flex-wrap gap-2">
-      <button onClick={() => onManager(node)} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold"><UserCog className="h-3.5 w-3.5" /> Manager</button>
-      <button onClick={() => onTransfer(node)} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold"><ArrowRightLeft className="h-3.5 w-3.5" /> Transfer</button>
-      <button onClick={() => onHistory(node)} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold"><History className="h-3.5 w-3.5" /> History</button>
+    <div className="flex flex-wrap gap-2 p-4">
+      <button onClick={() => onManager(node)} className="inline-flex items-center gap-1 rounded-lg bg-charcoal px-3 py-2 text-xs font-bold text-white"><UserCog className="h-3.5 w-3.5" /> Manager</button>
+      <button onClick={() => onTransfer(node)} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200"><ArrowRightLeft className="h-3.5 w-3.5" /> Transfer</button>
+      <button onClick={() => onHistory(node)} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200"><History className="h-3.5 w-3.5" /> History</button>
     </div>
   </Panel>
 );
@@ -158,6 +158,16 @@ const ReportingHierarchy = () => {
   const managers = useMemo(() => state.nodes.filter((node) => ['admin', 'employee', 'broker'].includes(node.role)), [state.nodes]);
   const treeRows = useMemo(() => buildTreeRows(filteredNodes), [filteredNodes]);
   const unassigned = filteredNodes.filter((node) => node.role !== 'admin' && !node.reports_to);
+  const hierarchyStats = useMemo(() => {
+    const active = filteredNodes.filter((node) => node.status === 'active').length;
+    const assigned = filteredNodes.filter((node) => node.reports_to).length;
+    return [
+      { label: 'Total People', value: filteredNodes.length, icon: Network },
+      { label: 'Assigned', value: assigned, icon: UserCog },
+      { label: 'Unassigned', value: unassigned.length, icon: GitBranch },
+      { label: 'Active', value: active, icon: Building2 },
+    ];
+  }, [filteredNodes, unassigned.length]);
   const grouped = (key) => filteredNodes.reduce((acc, node) => {
     const group = node[key] || 'Unassigned';
     acc[group] = acc[group] || [];
@@ -189,13 +199,24 @@ const ReportingHierarchy = () => {
 
   return (
     <div>
-      <PageHeader title="Reporting Hierarchy" description="Manage reporting relationships independently from escalation ownership, with loop prevention, transfer validation and reporting history preserved." />
+      <PageHeader eyebrow="" title="Reporting Hierarchy" description="Manage reporting relationships independently from escalation ownership, with loop prevention, transfer validation and reporting history preserved." />
       {notice && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</div>}
-      <Panel className="mb-4 p-3">
-        <div className="mb-3 flex gap-2 overflow-x-auto">
-          {views.map((item) => <button key={item} onClick={() => setView(item)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${view === item ? 'bg-terracotta text-charcoal' : 'bg-slate-100 text-slate-600'}`}>{item}</button>)}
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {hierarchyStats.map(({ label, value, icon: Icon }) => (
+          <Panel key={label} className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-slate-500">{label}</p>
+              <p className="mt-2 text-2xl font-black text-slate-950">{value}</p>
+            </div>
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-terracotta/15 text-terracotta"><Icon className="h-5 w-5" /></span>
+          </Panel>
+        ))}
+      </div>
+      <Panel className="mb-5 overflow-hidden p-0">
+        <div className="flex gap-2 overflow-x-auto border-b border-slate-200 bg-white p-3">
+          {views.map((item) => <button key={item} onClick={() => setView(item)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold transition ${view === item ? 'bg-charcoal text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{item}</button>)}
         </div>
-        <div className="grid gap-3 md:grid-cols-[1fr_180px_180px_160px]">
+        <div className="grid gap-3 bg-slate-50/70 p-3 md:grid-cols-[1fr_180px_180px_160px]">
           <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
             <Search className="h-4 w-4 text-slate-400" />
             <input value={search} onChange={(e) => setSearch(e.target.value)} className="h-8 w-full bg-transparent text-sm" placeholder="Search employee, role, branch, department" />
@@ -216,7 +237,7 @@ const ReportingHierarchy = () => {
                 <table className="w-full min-w-[1000px] text-left text-sm">
                   <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Employee', 'Role', 'Department', 'Branch', 'Reports To', 'Direct Reports', 'Status', 'Actions'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
                   <tbody className="divide-y divide-slate-100">
-                    {treeRows.map((node) => <tr key={node.user_id}><td className="px-4 py-3"><div style={{ paddingLeft: `${node.level * 20}px` }} className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-terracotta" /><div><p className="font-black">{node.name}</p><p className="text-xs text-slate-500">{node.employee_code || node.user_id}</p></div></div></td><td className="px-4 py-3 capitalize">{node.role}</td><td className="px-4 py-3">{node.department || '-'}</td><td className="px-4 py-3">{node.branch || '-'}</td><td className="px-4 py-3">{node.reports_to_name || 'Unassigned'}</td><td className="px-4 py-3">{node.direct_reports_count}</td><td className="px-4 py-3"><StatusBadge value={node.status} /></td><td className="px-4 py-3"><div className="flex gap-1"><button onClick={() => setModal({ type: 'manager', node })} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold">Manager</button><button onClick={() => setModal({ type: 'transfer', node })} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold">Transfer</button><button onClick={() => openHistory(node)} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold">History</button></div></td></tr>)}
+                    {treeRows.map((node) => <tr key={node.user_id} className="bg-white transition hover:bg-slate-50"><td className="px-4 py-4"><div style={{ paddingLeft: `${node.level * 20}px` }} className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-terracotta/15 text-terracotta"><GitBranch className="h-4 w-4" /></span><div><p className="font-black text-slate-950">{node.name}</p><p className="text-xs font-semibold text-slate-500">{node.employee_code || node.user_id}</p></div></div></td><td className="px-4 py-4 capitalize"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">{node.role}</span></td><td className="px-4 py-4">{node.department || '-'}</td><td className="px-4 py-4">{node.branch || '-'}</td><td className="px-4 py-4">{node.reports_to_name || 'Unassigned'}</td><td className="px-4 py-4 font-black">{node.direct_reports_count}</td><td className="px-4 py-4"><StatusBadge value={node.status} /></td><td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => setModal({ type: 'manager', node })} className="rounded-lg bg-charcoal px-3 py-2 text-xs font-bold text-white">Manager</button><button onClick={() => setModal({ type: 'transfer', node })} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">Transfer</button><button onClick={() => openHistory(node)} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">History</button></div></td></tr>)}
                   </tbody>
                 </table>
               </div>

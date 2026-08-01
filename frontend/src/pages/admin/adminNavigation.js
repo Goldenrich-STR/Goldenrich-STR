@@ -26,6 +26,7 @@ export const adminNavigation = [
       { label: 'User Directory', path: '/admin/users', icon: Users },
       { label: 'Roles & Permissions', path: '/admin/roles-permissions', icon: ShieldCheck },
       { label: 'Departments', path: '/admin/departments', icon: BriefcaseBusiness },
+      { label: 'Branch & Franchise Management', path: '/admin/branch-franchise', icon: Building2 },
       { label: 'Reporting Hierarchy', path: '/admin/reporting-hierarchy', icon: Network },
       { label: 'Escalation & SLA Matrix', path: '/admin/escalation-matrix', icon: BellRing },
     ],

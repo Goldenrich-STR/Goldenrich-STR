@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, BookOpen, CheckCircle2, Clock, Headphones, Inbox, Search, ShieldAlert } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { cmsAPI, supportTicketAPI } from '../../services/api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
 
 const phaseSteps = [
   ['Step 1', 'Support Overview', 'completed'],
@@ -82,7 +82,7 @@ const SupportTicketManagement = () => {
 
   const updateTicket = async (ticket, status) => {
     if (!ticket) return;
-    const adminResponse = window.prompt('Admin response', ticket.admin_response || '');
+    const adminResponse = await requestReason({ title: 'Ticket Response', description: `Updating ticket ${ticket.ticket_id}.`, defaultValue: ticket.admin_response || '', placeholder: 'Add admin response.', minLength: 1, confirmLabel: 'Save Response' });
     if (adminResponse === null) return;
     const priority = window.prompt('Priority: low, normal, high, urgent', ticket.priority || 'normal');
     if (!priority) return;
@@ -99,7 +99,7 @@ const SupportTicketManagement = () => {
     if (!priority) return;
     const slaDueAt = window.prompt('SLA due date/time (YYYY-MM-DD or YYYY-MM-DDTHH:mm)', ticket.sla_due_at ? String(ticket.sla_due_at).slice(0, 16) : '');
     if (slaDueAt === null) return;
-    const reason = window.prompt('Assignment reason', 'Support ticket ownership assigned');
+    const reason = await requestReason({ title: 'Ticket Assignment Reason', description: `Assigning ticket ${ticket.ticket_id}.`, defaultValue: 'Support ticket ownership assigned', placeholder: 'Add assignment reason.', minLength: 3 });
     if (!reason) return;
     await adminPhase1API.assignSupportTicket(ticket.ticket_id, { assigned_admin_id: assignedAdminId.trim(), priority: priority.trim(), sla_due_at: slaDueAt.trim(), reason });
     await load();
@@ -114,7 +114,7 @@ const SupportTicketManagement = () => {
       window.alert('Invalid JSON. Please fix the support CMS content before saving.');
       return;
     }
-    const reason = window.prompt('Publishing audit reason', 'Support knowledge base / FAQ content updated');
+    const reason = await requestReason({ title: 'Publishing Audit Reason', description: 'Support knowledge base / FAQ content will be updated.', defaultValue: 'Support knowledge base / FAQ content updated', placeholder: 'Add publishing reason.', minLength: 3 });
     if (!reason) return;
     setSavingCms(true);
     try {
@@ -128,7 +128,7 @@ const SupportTicketManagement = () => {
   const toggleSupportContent = async (content) => {
     if (!content) return;
     const nextActive = content.is_active === false;
-    const reason = window.prompt('Publishing audit reason', nextActive ? 'Support content published' : 'Support content unpublished');
+    const reason = await requestReason({ title: 'Support Content Status Reason', description: `Support content will be ${nextActive ? 'published' : 'unpublished'}.`, defaultValue: nextActive ? 'Support content published' : 'Support content unpublished', placeholder: 'Add status reason.', minLength: 3 });
     if (!reason) return;
     await cmsAPI.updateContent(content.content_id, { content_data: content.content_data || {}, is_active: nextActive, reason });
     await load();

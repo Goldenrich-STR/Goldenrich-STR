@@ -78,27 +78,6 @@ async def ensure_default_permissions(db):
                     "updated_at": now,
                 })
 
-    permissions = await db.permissions.find({}, {"_id": 0}).to_list(length=1000)
-    all_permission_keys = [item["permission_key"] for item in permissions]
-    for role_key, role_name, default_scope in STANDARD_ROLES:
-        existing = await db.roles.find_one({"role_key": role_key})
-        if not existing:
-            role_permissions = all_permission_keys if role_key in {"super_admin", "business_admin"} else [
-                key for key in all_permission_keys if key.endswith(".view")
-            ]
-            await db.roles.insert_one({
-                "role_id": f"role_{uuid4().hex[:12]}",
-                "role_key": role_key,
-                "role_name": role_name,
-                "description": f"Standard X-Space360 {role_name} role",
-                "data_scope": default_scope,
-                "permissions": role_permissions,
-                "is_system": True,
-                "is_active": True,
-                "created_at": now,
-                "updated_at": now,
-            })
-
 
 async def user_can(current_user: dict, permission_key: str) -> bool:
     if current_user.get("role") == "admin":

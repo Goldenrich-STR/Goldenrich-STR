@@ -159,17 +159,17 @@ async def submit_host_verification(
 
     accepted_at = datetime.now(timezone.utc)
     docs = [
-        {"document_type": "aadhar_card", "document_url": payload.aadhar_card},
-        {"document_type": "property_proof", "document_url": payload.property_proof},
-        {"document_type": "cancelled_cheque", "document_url": payload.cancelled_cheque},
-        {"document_type": "shop_act", "document_url": payload.shop_act},
+        {"document_type": "aadhar_card", "document_url": payload.aadhar_card, "status": "pending", "uploaded_at": accepted_at.isoformat()},
+        {"document_type": "property_proof", "document_url": payload.property_proof, "status": "pending", "uploaded_at": accepted_at.isoformat()},
+        {"document_type": "cancelled_cheque", "document_url": payload.cancelled_cheque, "status": "pending", "uploaded_at": accepted_at.isoformat()},
+        {"document_type": "shop_act", "document_url": payload.shop_act, "status": "pending", "uploaded_at": accepted_at.isoformat()},
     ]
     if payload.society_noc:
-        docs.append({"document_type": "society_noc", "document_url": payload.society_noc})
+        docs.append({"document_type": "society_noc", "document_url": payload.society_noc, "status": "pending", "uploaded_at": accepted_at.isoformat()})
     if payload.gst_certificate:
-        docs.append({"document_type": "gst_certificate", "document_url": payload.gst_certificate})
+        docs.append({"document_type": "gst_certificate", "document_url": payload.gst_certificate, "status": "pending", "uploaded_at": accepted_at.isoformat()})
     if payload.gst_number:
-        docs.append({"document_type": "gst_number", "document_url": payload.gst_number})
+        docs.append({"document_type": "gst_number", "text_value": payload.gst_number.strip(), "status": "pending", "uploaded_at": accepted_at.isoformat()})
 
     await db.users.update_one(
         {"user_id": current_user["user_id"]},
@@ -180,6 +180,7 @@ async def submit_host_verification(
                 "agreement_owner_name": payload.agreement_owner_name,
                 "agreement_owner_address": payload.agreement_owner_address,
                 "agreement_signature": payload.agreement_signature,
+                "gst_number": payload.gst_number.strip() if payload.gst_number else None,
                 "agreement_signed_at": accepted_at.isoformat(),
                 "verification_terms_accepted": True,
                 "verification_terms_accepted_at": accepted_at.isoformat(),
@@ -219,7 +220,8 @@ async def submit_host_verification(
 
 class HostDraftDocumentUpload(BaseModel):
     document_type: str
-    document_url: str
+    document_url: Optional[str] = ""
+    text_value: Optional[str] = ""
 
 
 @router.patch("/kyc/documents/draft")
@@ -237,9 +239,15 @@ async def save_draft_document(
         "cheque": "cancelled_cheque",
         "society": "society_noc",
         "shop_act": "shop_act",
-        "gst": "gst_certificate"
+        "gst": "gst_certificate",
+        "gst_number": "gst_number"
     }
     mapped_type = mapping.get(doc_type, doc_type)
+    text_value = (payload.text_value or payload.document_url or "").strip()
+    if mapped_type != "gst_number" and not payload.document_url:
+        raise HTTPException(400, detail="Document URL is required")
+    if mapped_type == "gst_number" and not text_value:
+        raise HTTPException(400, detail="GST number is required")
     
     user = await db.users.find_one({"user_id": current_user["user_id"]})
     if not user:
@@ -253,7 +261,11 @@ async def save_draft_document(
     updated = False
     for doc in current_docs:
         if doc.get("document_type") == mapped_type:
-            doc["document_url"] = payload.document_url
+            if mapped_type == "gst_number":
+                doc.pop("document_url", None)
+                doc["text_value"] = text_value
+            else:
+                doc["document_url"] = payload.document_url
             doc["status"] = "pending"
             doc["rejection_reason"] = None
             doc["uploaded_at"] = accepted_at.isoformat()
@@ -261,17 +273,25 @@ async def save_draft_document(
             break
             
     if not updated:
-        current_docs.append({
+        new_doc = {
             "document_type": mapped_type,
-            "document_url": payload.document_url,
             "status": "pending",
             "rejection_reason": None,
             "uploaded_at": accepted_at.isoformat()
-        })
+        }
+        if mapped_type == "gst_number":
+            new_doc["text_value"] = text_value
+        else:
+            new_doc["document_url"] = payload.document_url
+        current_docs.append(new_doc)
+
+    update_data = {"kyc_documents": current_docs, "updated_at": accepted_at}
+    if mapped_type == "gst_number":
+        update_data["gst_number"] = text_value
         
     await db.users.update_one(
         {"user_id": current_user["user_id"]},
-        {"$set": {"kyc_documents": current_docs, "updated_at": accepted_at}}
+        {"$set": update_data}
     )
     return {"message": "Draft document saved", "kyc_documents": current_docs}
 

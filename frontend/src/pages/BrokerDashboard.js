@@ -545,8 +545,13 @@ const MyOwnersSection = () => {
                       <p className="text-sm font-bold text-charcoal mt-1">{owner.broker_lg_code || owner.lg_code || 'Not Assigned'}</p>
                     </div>
                     <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
-                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Assigned RM / Employee</p>
-                      <p className="text-sm font-bold text-charcoal mt-1">{owner.assigned_rm || owner.rm_id || 'No RM'} / {owner.assigned_employee || 'No Employee'}</p>
+                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Employee / RM Code</p>
+                      <p className="text-sm font-bold text-charcoal mt-1 break-words">
+                        {owner.rm?.employee_code || owner.rm_code || owner.employee_code || owner.assigned_employee || 'No RM Code'}
+                      </p>
+                      <p className="text-[10px] font-semibold text-charcoal-muted mt-1 truncate">
+                        {owner.rm?.full_name || owner.assigned_rm || owner.rm_id || 'RM not assigned'}
+                      </p>
                     </div>
                   </div>
 
@@ -672,7 +677,7 @@ const HostDetailsModal = ({ data, loading, formatMoney, onClose }) => {
                 ['Email', owner.email || 'Not available'],
                 ['Mobile', owner.phone || 'Not available'],
                 ['KYC Status', owner.kyc_status || 'Pending'],
-                ['Assigned RM', data?.assigned_rm || owner.rm_id || 'No RM'],
+                ['Employee / RM Code', owner.rm?.employee_code || owner.rm_code || owner.employee_code || data?.assigned_rm || owner.rm_id || 'No RM'],
                 ['Assigned Admin', data?.assigned_admin || 'No Admin'],
                 ['Broker LG Code', owner.lg_code || owner.broker_lg_code || 'Not assigned'],
               ].map(([label, value]) => (

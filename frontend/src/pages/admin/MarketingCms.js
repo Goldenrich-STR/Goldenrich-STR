@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FileText, Megaphone, Percent, Search, ShieldCheck, TrendingUp } from 'lucide-react';
 import { cmsAPI, couponAPI } from '../../services/api';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
 
 const phaseSteps = [
   ['Step 1', 'Marketing/CMS Overview', 'completed'],
@@ -29,8 +29,33 @@ const defaultCouponForm = {
   property_id: '',
   plan_type: '',
   property_category: '',
+  property_type: '',
   bhk_type: '',
   sqft_range: '',
+};
+
+const subscriptionTargetOptions = {
+  propertyCategories: [
+    ['residential', 'Residential'],
+    ['event_venue', 'Event Venue'],
+    ['commercial', 'Commercial'],
+  ],
+  propertyTypes: [
+    ['independent_house', 'Independent House'],
+    ['apartment', 'Apartment'],
+    ['villa', 'Villa'],
+    ['farmhouse', 'Farmhouse'],
+    ['banquet_hall', 'Banquet Hall'],
+    ['resort', 'Resort'],
+    ['coworking', 'Co-working'],
+  ],
+  bhkTypes: [
+    ['1bhk', '1 BHK'],
+    ['2bhk', '2 BHK'],
+    ['3bhk', '3 BHK'],
+    ['4bhk', '4 BHK'],
+    ['4bhk_plus', '4+ BHK'],
+  ],
 };
 
 const MarketingCms = () => {
@@ -109,7 +134,7 @@ const MarketingCms = () => {
       window.alert('Invalid JSON. Please fix the content before saving.');
       return;
     }
-    const reason = window.prompt('Publishing reason', `Updated landing ${selectedLanding.section}`);
+    const reason = await requestReason({ title: 'Publishing Reason', description: `Updating landing ${selectedLanding.section}.`, defaultValue: `Updated landing ${selectedLanding.section}`, placeholder: 'Add publishing reason.', minLength: 3 });
     if (!reason) return;
     setSaving(true);
     try {
@@ -121,7 +146,7 @@ const MarketingCms = () => {
   };
 
   const toggleLandingSection = async (item) => {
-    const reason = window.prompt('Status change reason', `${item.is_active === false ? 'Publish' : 'Unpublish'} landing ${item.section}`);
+    const reason = await requestReason({ title: 'Content Status Reason', description: `${item.is_active === false ? 'Publish' : 'Unpublish'} landing ${item.section}.`, defaultValue: `${item.is_active === false ? 'Publish' : 'Unpublish'} landing ${item.section}`, placeholder: 'Add status change reason.', minLength: 3 });
     if (!reason) return;
     setSaving(true);
     try {
@@ -279,9 +304,26 @@ const OffersManager = ({ coupons, form, setForm, saving, onCreate, onToggle }) =
               <input value={form.property_id} onChange={(event) => updateField('property_id', event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none" placeholder="Property ID" />
             ) : (
               <div className="grid gap-2">
-                <input value={form.plan_type} onChange={(event) => updateField('plan_type', event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none" placeholder="Plan type" />
-                <input value={form.property_category} onChange={(event) => updateField('property_category', event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none" placeholder="Property category" />
-                <input value={form.bhk_type} onChange={(event) => updateField('bhk_type', event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none" placeholder="BHK type" />
+                <select value={form.plan_type} onChange={(event) => updateField('plan_type', event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm">
+                  <option value="">All subscription plans</option>
+                  <option value="1bhk">1 BHK Plans</option>
+                  <option value="2bhk">2 BHK Plans</option>
+                  <option value="3bhk">3 BHK Plans</option>
+                  <option value="4bhk">4 BHK Plans</option>
+                  <option value="4bhk_plus">4+ BHK Plans</option>
+                </select>
+                <select value={form.property_category} onChange={(event) => updateField('property_category', event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm">
+                  <option value="">All property categories</option>
+                  {subscriptionTargetOptions.propertyCategories.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+                <select value={form.property_type} onChange={(event) => updateField('property_type', event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm">
+                  <option value="">All property types</option>
+                  {subscriptionTargetOptions.propertyTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
+                <select value={form.bhk_type} onChange={(event) => updateField('bhk_type', event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm">
+                  <option value="">All BHK configurations</option>
+                  {subscriptionTargetOptions.bhkTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
                 <input value={form.sqft_range} onChange={(event) => updateField('sqft_range', event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none" placeholder="Sqft range" />
               </div>
             )}
@@ -312,7 +354,7 @@ const OffersManager = ({ coupons, form, setForm, saving, onCreate, onToggle }) =
                   <td className="px-4 py-3"><p className="font-black">{coupon.code}</p><p className="font-mono text-xs text-slate-500">{coupon.coupon_id}</p></td>
                   <td className="px-4 py-3 capitalize">{coupon.coupon_type || '-'}</td>
                   <td className="px-4 py-3">{coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : `Rs ${coupon.discount_value}`}</td>
-                  <td className="px-4 py-3 text-xs text-slate-600">{coupon.property_id || coupon.plan_type || coupon.property_category || coupon.bhk_type || coupon.sqft_range || 'Global'}</td>
+                  <td className="px-4 py-3 text-xs text-slate-600">{[coupon.property_id, coupon.plan_type, coupon.property_category, coupon.property_type, coupon.bhk_type, coupon.sqft_range].filter(Boolean).join(' · ') || 'Global'}</td>
                   <td className="px-4 py-3"><StatusBadge value={coupon.is_active === false ? 'inactive' : 'active'} /></td>
                   <td className="px-4 py-3"><button disabled={saving} onClick={() => onToggle(coupon)} className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 disabled:opacity-60">{coupon.is_active === false ? 'Activate' : 'Deactivate'}</button></td>
                 </tr>

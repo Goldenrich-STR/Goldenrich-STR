@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, BellRing, CreditCard, LockKeyhole, Pencil, Plus, Power, Settings, ShieldCheck, Trash2 } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { getApiErrorMessage } from '../../services/api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
+import { PricingEngineTab } from '../AdminAccount';
 
 const phaseSteps = [
   ['Step 1', 'Platform Settings Overview', 'completed'],
@@ -24,6 +25,7 @@ const moduleIcons = {
 
 const tabs = [
   ['overview', 'Overview'],
+  ['pricing', 'Pricing Engine'],
   ['security', 'Security & Access'],
   ['payments', 'Payment, Tax & Commission'],
   ['automation', 'Notifications & Automation'],
@@ -132,7 +134,7 @@ const PlatformSettings = () => {
   const security = data.security_settings || {};
 
   const saveSecuritySetting = async (key, value) => {
-    const reason = window.prompt('Security audit reason', `Updated ${key.replace(/_/g, ' ')}`);
+    const reason = await requestReason({ title: 'Security Audit Reason', description: `Updating ${key.replace(/_/g, ' ')}.`, defaultValue: `Updated ${key.replace(/_/g, ' ')}`, placeholder: 'Add security audit reason.', minLength: 3 });
     if (!reason) return;
     setSavingSecurity(true);
     try {
@@ -145,7 +147,7 @@ const PlatformSettings = () => {
 
   const savePaymentConfig = async (updates) => {
     const current = state.paymentConfig || {};
-    const reason = window.prompt('Configuration audit reason', 'Payment, tax and commission configuration updated');
+    const reason = await requestReason({ title: 'Configuration Audit Reason', description: 'Payment, tax and commission configuration will be updated.', defaultValue: 'Payment, tax and commission configuration updated', placeholder: 'Add configuration audit reason.', minLength: 3 });
     if (!reason) return;
     setSavingPayment(true);
     try {
@@ -216,7 +218,7 @@ const PlatformSettings = () => {
 
   const toggleNotificationRule = async (rule) => {
     const nextStatus = rule.status === 'active' ? 'inactive' : 'active';
-    const reason = window.prompt('Automation audit reason', `Notification rule marked ${nextStatus}`);
+    const reason = await requestReason({ title: 'Automation Audit Reason', description: `Notification rule will be marked ${nextStatus}.`, defaultValue: `Notification rule marked ${nextStatus}`, placeholder: 'Add automation audit reason.', minLength: 3 });
     if (!reason) return;
     await adminPhase1API.updateNotificationRuleStatus(rule.notification_rule_id, { status: nextStatus, reason });
     await load();
@@ -224,7 +226,7 @@ const PlatformSettings = () => {
 
   const saveOperations = async (updates) => {
     const current = state.operations?.settings || data.maintenance_settings || {};
-    const reason = window.prompt('Operations audit reason', 'Backup, maintenance and operational settings updated');
+    const reason = await requestReason({ title: 'Operations Audit Reason', description: 'Backup, maintenance or operational settings will be updated.', defaultValue: 'Backup, maintenance and operational settings updated', placeholder: 'Add operations audit reason.', minLength: 3 });
     if (!reason) return;
     await adminPhase1API.updateOperationalSettings({ ...current, ...updates, reason });
     await load();
@@ -239,7 +241,7 @@ const PlatformSettings = () => {
         </div>
       </Panel>
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} /> : (
-        active === 'security' ? <SecurityAccess settings={security} metrics={metrics} saving={savingSecurity} onSave={saveSecuritySetting} /> : active === 'payments' ? <PaymentTaxCommission paymentConfig={state.paymentConfig} taxCommission={state.taxCommission} bookingTaxSlabs={state.bookingTaxSlabs} tdsConfig={state.tdsConfig} plans={state.subscriptionPlans} saving={savingPayment} savingTds={savingTds} onSave={savePaymentConfig} onSaveTds={saveTdsConfig} onSaveTaxSlab={saveBookingTaxSlab} onToggleTaxSlab={toggleBookingTaxSlab} onDeleteTaxSlab={deleteBookingTaxSlab} /> : active === 'automation' ? <AutomationSettings notificationRules={state.notificationRules} escalationRules={state.escalationRules} activeEscalations={state.activeEscalations} communication={state.communication} onToggleRule={toggleNotificationRule} /> : active === 'operations' ? <OperationalControls data={state.operations} fallbackSettings={data.maintenance_settings} onSave={saveOperations} /> : <div className="space-y-5">
+        active === 'pricing' ? <PricingEngineTab /> : active === 'security' ? <SecurityAccess settings={security} metrics={metrics} saving={savingSecurity} onSave={saveSecuritySetting} /> : active === 'payments' ? <PaymentTaxCommission paymentConfig={state.paymentConfig} taxCommission={state.taxCommission} bookingTaxSlabs={state.bookingTaxSlabs} tdsConfig={state.tdsConfig} plans={state.subscriptionPlans} saving={savingPayment} savingTds={savingTds} onSave={savePaymentConfig} onSaveTds={saveTdsConfig} onSaveTaxSlab={saveBookingTaxSlab} onToggleTaxSlab={toggleBookingTaxSlab} onDeleteTaxSlab={deleteBookingTaxSlab} /> : active === 'automation' ? <AutomationSettings notificationRules={state.notificationRules} escalationRules={state.escalationRules} activeEscalations={state.activeEscalations} communication={state.communication} onToggleRule={toggleNotificationRule} /> : active === 'operations' ? <OperationalControls data={state.operations} fallbackSettings={data.maintenance_settings} onSave={saveOperations} /> : <div className="space-y-5">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
             {[
               ['Active Users', metrics.active_users || 0],

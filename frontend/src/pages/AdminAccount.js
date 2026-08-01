@@ -336,7 +336,7 @@ const BookingFeeSettings = () => {
 
 // ---------------- Dynamic Pricing Engine Tab ----------------
 
-const PricingEngineTab = () => {
+export const PricingEngineTab = () => {
   const [properties, setProperties] = useState([]);
   const [rules, setRules] = useState({
     calculation_mode: 'highest',

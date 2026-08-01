@@ -661,57 +661,71 @@ const VerificationReviewSection = () => {
             {[...verifications]
               .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
               .map((verification) => (
-              <div key={verification.verification_id} className="dashboard-card" data-testid={`verification-${verification.verification_id}`}>
-                <div className="flex flex-col md:flex-row items-start justify-between gap-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:space-x-4 flex-1 w-full">
+              <div key={verification.verification_id} className="bg-white rounded-3xl border border-gray-100 shadow-premium overflow-hidden hover:border-terracotta/40 transition-all" data-testid={`verification-${verification.verification_id}`}>
+                <div className="p-5 grid grid-cols-1 xl:grid-cols-[1fr_1.35fr_auto] gap-5 items-start">
+                  <div className="flex flex-col sm:flex-row items-start gap-4 flex-1 w-full min-w-0">
                     {verification.property_details && (
                       <img
                         src={getImageUrl(verification.property_details.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                         alt={verification.property_details.title}
-                        className="w-24 h-24 rounded-lg object-cover"
+                        className="w-full sm:w-28 h-36 sm:h-28 rounded-2xl object-cover border border-gray-100 bg-stone"
                       />
                     )}
-                    <div className="flex-1">
-                      <h4 className="font-bold text-charcoal text-lg">
+                    <div className="flex-1 min-w-0">
+                      <span className="inline-flex rounded-full bg-amber-50 border border-amber-100 px-3 py-1 text-[9px] font-bold text-amber-700 uppercase tracking-widest mb-2">
+                        Pending RM Review
+                      </span>
+                      <h4 className="font-bold text-charcoal text-lg leading-tight">
                         {verification.property_details?.title || 'Property'}
                       </h4>
                       <p className="text-xs text-charcoal-muted font-mono mt-1">
                         Property ID: {verification.property_id}
                       </p>
-                      <p className="text-sm text-charcoal-light mt-1">
+                      <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest mt-2">
                         {verification.property_details?.city} | {verification.property_details?.bhk_type}
                       </p>
-                      <p className="text-sm text-charcoal-muted mt-2">
+                      <p className="text-xs text-charcoal-muted mt-2 break-words">
                         Broker: {verification.broker_details?.full_name} ({verification.broker_details?.lg_code})
                       </p>
                       
                       {/* Checklist Summary */}
-                      <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="mt-3 flex flex-wrap gap-2 xl:hidden">
                         {Object.entries(verification.checklist || {}).map(([key, value]) => (
-                          <div key={key} className="flex items-center space-x-2 text-xs">
+                          <div key={key} className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-bold ${value ? 'bg-sage/10 border-sage/20 text-sage-dark' : 'bg-red-50 border-red-100 text-red-600'}`}>
                             {value ? (
-                              <CheckCircle className="w-3 h-3 text-green-600" />
+                              <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
                             ) : (
-                              <XCircle className="w-3 h-3 text-red-600" />
+                              <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
                             )}
-                            <span className="text-charcoal-light">{formatDisplayLabel(key)}</span>
+                            <span>{formatDisplayLabel(key)}</span>
                           </div>
                         ))}
                       </div>
 
                       {/* Geo-tagged Photos Count */}
                       {verification.geo_tagged_photos && verification.geo_tagged_photos.length > 0 && (
-                        <p className="text-sm text-sage mt-3">
+                        <p className="text-xs font-bold text-sage-dark mt-3">
                           📸 {verification.geo_tagged_photos.length} geo-tagged photos
                         </p>
                       )}
                     </div>
                   </div>
+
+                  <div className="hidden xl:block">
+                    <div className="grid grid-cols-2 gap-2">
+                      {Object.entries(verification.checklist || {}).map(([key, value]) => (
+                        <div key={key} className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-bold ${value ? 'bg-sage/10 border-sage/20 text-sage-dark' : 'bg-red-50 border-red-100 text-red-600'}`}>
+                          {value ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> : <XCircle className="w-3.5 h-3.5 flex-shrink-0" />}
+                          <span className="truncate">{formatDisplayLabel(key)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   
-                  <div className="flex items-center space-x-2 mt-4 md:mt-0 w-full md:w-auto justify-end">
+                  <div className="flex xl:flex-col items-stretch gap-2 w-full xl:w-36">
                     <button
                       onClick={() => handleOpenDetails(verification)}
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold"
+                      className="flex items-center justify-center gap-2 px-4 py-3 bg-charcoal text-white rounded-xl hover:bg-terracotta transition font-bold text-xs uppercase tracking-widest"
                       data-testid={`view-details-${verification.verification_id}`}
                     >
                       <Eye className="w-4 h-4" />
@@ -766,22 +780,22 @@ const VerificationReviewSection = () => {
         ) : historyVerifications.length > 0 ? (
           <div className="space-y-4" data-testid="verification-history-list">
             {historyVerifications.map((verification) => (
-              <div key={verification.verification_id} className="dashboard-card bg-stone/50 border border-gray-100" data-testid={`history-${verification.verification_id}`}>
-                <div className="flex flex-col md:flex-row items-start justify-between gap-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:space-x-4 flex-1 w-full">
+              <div key={verification.verification_id} className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden hover:border-sand-300 transition" data-testid={`history-${verification.verification_id}`}>
+                <div className="p-4 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-4 items-center">
+                  <div className="flex flex-col sm:flex-row items-start gap-4 flex-1 w-full min-w-0">
                     {verification.property_details && (
                       <img
                         src={getImageUrl(verification.property_details.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded'}
                         alt={verification.property_details.title}
-                        className="w-20 h-20 rounded-lg object-cover border border-gray-100"
+                        className="w-full sm:w-20 h-28 sm:h-20 rounded-2xl object-cover border border-gray-100 bg-stone"
                       />
                     )}
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <h4 className="font-bold text-charcoal text-base">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h4 className="font-bold text-charcoal text-base leading-tight">
                           {verification.property_details?.title || 'Property'}
                         </h4>
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold tracking-tight uppercase tracking-widest ${
+                        <span className={`rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-widest ${
                           verification.status === 'approved' || verification.rm_approved === true ? 'bg-green-100 text-green-800' :
                           verification.status === 'rejected' || verification.rm_approved === false ? 'bg-red-100 text-red-800' :
                           'bg-yellow-100 text-yellow-800'
@@ -792,8 +806,8 @@ const VerificationReviewSection = () => {
                       <p className="text-xs text-charcoal-muted font-mono mt-1">
                         Property ID: {verification.property_id}
                       </p>
-                      <p className="text-xs text-charcoal-light mt-1">
-                        {verification.property_details?.city} | {verification.property_details?.bhk_type}
+                      <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest mt-1">
+                        {verification.property_details?.city || 'No city'} | {formatDisplayLabel(verification.property_details?.bhk_type) || 'No type'}
                       </p>
                       <p className="text-xs text-charcoal-muted mt-2">
                         Broker: {verification.broker_details?.full_name} ({verification.broker_details?.lg_code})
@@ -812,17 +826,17 @@ const VerificationReviewSection = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2 mt-4 md:mt-0 w-full md:w-auto justify-end">
+                  <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
                     <button
                       onClick={() => handleOpenDetails(verification)}
-                      className="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition font-bold text-xs"
+                      className="flex items-center justify-center gap-2 px-3 py-2 bg-charcoal text-white rounded-xl hover:bg-terracotta transition font-bold text-xs"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>View Details</span>
                     </button>
                     <button
                       onClick={() => handleExportReport(verification.verification_id)}
-                      className="flex items-center space-x-2 px-3 py-1.5 bg-gray-50 text-charcoal-light hover:text-charcoal rounded-lg transition font-bold text-xs"
+                      className="flex items-center justify-center gap-2 px-3 py-2 bg-stone text-charcoal-muted hover:text-charcoal rounded-xl transition font-bold text-xs"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>Export</span>
@@ -1611,7 +1625,6 @@ const RMDetailRow = ({ title, meta }) => (
 
 const buildRMHostVerificationStages = (host, properties, verifications, payments = []) => {
   const docs = Array.isArray(host.kyc_documents) ? host.kyc_documents : [];
-  const trackerStages = buildRMHostVerificationStages(host, properties, verifications, payments);
   const hasRejectedDocs = docs.some((doc) => doc.status === 'rejected');
   const hasPendingDocs = docs.some((doc) => !doc.status || doc.status === 'pending');
   const latestVerification = verifications[0] || {};
@@ -1983,6 +1996,7 @@ const RMHostDetailsModal = ({ data, loading, formatMoney, formatDate, onClose })
   const verifications = data?.verifications || [];
   const auditEvents = data?.audit_events || [];
   const docs = Array.isArray(host.kyc_documents) ? host.kyc_documents : [];
+  const trackerStages = buildRMHostVerificationStages(host, properties, verifications, payments);
   const pendingProperties = properties.filter((property) => ['draft', 'pending', 'pending_verification', 'under_review', 'rejected'].includes(property.status || 'draft'));
   const focusedRows = activeView === 'bookings' ? bookings
     : activeView === 'payments' ? payments
@@ -2341,6 +2355,13 @@ const RMPropertyDetailsModal = ({ data, loading, formatMoney, formatDate, onClos
   const auditLogs = data?.audit_logs || [];
   const tracker = property.verification_stage || {};
   const rows = activeView === 'verifications' ? verifications : activeView === 'bookings' ? bookings : auditLogs;
+  const coverImage = getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded';
+  const computedRevenue = bookings.reduce((sum, item) => sum + Number(item.total_amount || 0), 0);
+  const statusTone = property.status === 'live'
+    ? 'bg-sage/10 text-sage-dark border-sage/20'
+    : property.status === 'rejected'
+      ? 'bg-red-50 text-red-600 border-red-100'
+      : 'bg-amber-50 text-amber-700 border-amber-100';
 
   const renderRow = (item, index) => {
     if (activeView === 'verifications') {
@@ -2353,15 +2374,32 @@ const RMPropertyDetailsModal = ({ data, loading, formatMoney, formatDate, onClos
   };
 
   return (
-    <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[220] flex items-center justify-center p-4">
-      <div className="bg-stone rounded-[2rem] max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-elevated border border-gray-100">
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-5 flex items-start justify-between gap-4 z-10">
-          <div>
-            <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-1">Property Details</p>
-            <h3 className="text-2xl font-bold text-charcoal">{property.title || 'Property Profile'}</h3>
-            <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest mt-1">Property ID: {property.property_id || 'N/A'} | Stage: {tracker.current_stage || 'Basic Information'}</p>
+    <div className="fixed inset-0 bg-charcoal/65 backdrop-blur-sm z-[220] flex items-center justify-center p-4">
+      <div className="bg-stone rounded-[1.5rem] max-w-6xl w-full max-h-[92vh] overflow-hidden shadow-elevated border border-white/80">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-5 md:px-7 py-5 flex items-start justify-between gap-4 z-10">
+          <div className="flex items-start gap-4 min-w-0">
+            <img
+              src={coverImage}
+              alt={property.title || 'Property'}
+              className="w-16 h-16 rounded-2xl object-cover border border-gray-100 bg-stone flex-shrink-0"
+            />
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold text-terracotta uppercase tracking-[0.24em] mb-1">Property Workspace</p>
+              <h3 className="text-xl md:text-2xl font-bold text-charcoal truncate">{property.title || 'Property Profile'}</h3>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <span className="rounded-full bg-stone px-3 py-1 text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">
+                  {property.property_id || 'No Property ID'}
+                </span>
+                <span className={`rounded-full border px-3 py-1 text-[9px] font-bold uppercase tracking-widest ${statusTone}`}>
+                  {property.status || 'draft'}
+                </span>
+                <span className="rounded-full bg-sand-100 px-3 py-1 text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">
+                  {tracker.current_stage || 'Basic Information'}
+                </span>
+              </div>
+            </div>
           </div>
-          <button onClick={onClose} className="w-9 h-9 rounded-full bg-stone flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-all">
+          <button onClick={onClose} className="w-10 h-10 rounded-full bg-stone flex items-center justify-center text-charcoal-muted hover:text-terracotta hover:bg-red-50 transition-all flex-shrink-0" aria-label="Close property details">
             <Plus className="w-5 h-5 rotate-45" />
           </button>
         </div>
@@ -2371,26 +2409,48 @@ const RMPropertyDetailsModal = ({ data, loading, formatMoney, formatDate, onClos
         ) : data?.error ? (
           <div className="p-10 text-center text-sm font-bold text-red-600 uppercase tracking-widest">Failed to load property details</div>
         ) : (
-          <div className="p-6 space-y-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-5 md:p-7 space-y-5 overflow-y-auto max-h-[calc(92vh-106px)]">
+            <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1.5fr] gap-5">
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-premium overflow-hidden">
+                <img src={coverImage} alt={property.title || 'Property'} className="h-52 w-full object-cover bg-stone" />
+                <div className="p-5">
+                  <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Assigned Host</p>
+                  <h4 className="text-lg font-bold text-charcoal mt-1">{host.full_name || property.owner_id || 'N/A'}</h4>
+                  <p className="text-xs font-semibold text-charcoal-muted mt-1 break-words">{host.email || 'No email'} | {host.phone || 'No mobile'}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div className="rounded-2xl bg-stone/70 border border-sand-200 px-4 py-3">
+                      <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-widest">Broker</p>
+                      <p className="text-sm font-bold text-charcoal mt-1 break-words">{broker.full_name || property.broker_id || 'N/A'}</p>
+                    </div>
+                    <div className="rounded-2xl bg-stone/70 border border-sand-200 px-4 py-3">
+                      <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-widest">City</p>
+                      <p className="text-sm font-bold text-charcoal mt-1 break-words">{property.city || 'N/A'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 content-start">
               {[
-                ['Host', host.full_name || property.owner_id || 'N/A'],
-                ['Broker', broker.full_name || property.broker_id || 'N/A'],
-                ['Status', property.status || 'draft'],
-                ['Tracker', `${tracker.completed || 0}/${tracker.total || 12}`],
-                ['Category', formatCategoryLabel(property.category) || 'N/A'],
-                ['City', property.city || 'N/A'],
-                ['Bookings', bookings.length],
-                ['Revenue', formatMoney(bookings.reduce((sum, item) => sum + Number(item.total_amount || 0), 0))],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-2xl bg-white border border-gray-100 px-4 py-3">
+                ['Tracker', `${tracker.completed || 0}/${tracker.total || 12}`, 'Current approval progress'],
+                ['Category', formatCategoryLabel(property.category) || 'N/A', formatPropertyTypeLabel(property.property_type) || 'No type'],
+                ['Bookings', bookings.length, 'Bookings linked to this property'],
+                ['Revenue', formatMoney(computedRevenue), 'Collected booking value'],
+                ['Price', formatMoney(property.price_per_night), `${property.pricing_cycle || 'day'} pricing`],
+                ['Guests', property.max_guests || 0, 'Maximum guest capacity'],
+                ['Subscription', property.subscription_status || 'trial', property.subscription_id || 'No subscription id'],
+                ['Updated', formatDate(property.updated_at || property.created_at), 'Last activity date'],
+              ].map(([label, value, helper]) => (
+                <div key={label} className="rounded-2xl bg-white border border-gray-100 px-4 py-4 shadow-sm min-h-[92px]">
                   <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
-                  <p className="text-sm font-bold text-charcoal mt-1 break-words">{value}</p>
+                  <p className="text-base font-bold text-charcoal mt-2 break-words">{value}</p>
+                  <p className="text-[10px] font-semibold text-charcoal-muted mt-1 break-words">{helper}</p>
                 </div>
               ))}
+              </div>
             </div>
 
-            <div className="bg-white rounded-3xl border border-gray-100 p-4">
+            <div className="bg-white rounded-3xl border border-gray-100 p-3 shadow-sm">
               <div className="flex flex-wrap gap-2">
                 {[
                   ['tracker', 'Tracker'],
@@ -2403,7 +2463,7 @@ const RMPropertyDetailsModal = ({ data, loading, formatMoney, formatDate, onClos
                     key={view}
                     type="button"
                     onClick={() => setActiveView(view)}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
+                    className={`px-4 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${
                       activeView === view ? 'bg-charcoal text-white' : 'bg-stone text-charcoal-muted hover:text-charcoal'
                     }`}
                   >
@@ -2414,7 +2474,18 @@ const RMPropertyDetailsModal = ({ data, loading, formatMoney, formatDate, onClos
             </div>
 
             {activeView === 'tracker' ? (
-              <RMPropertyTracker stages={tracker.stages || []} />
+              <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-5">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+                  <div>
+                    <p className="text-[9px] font-bold text-terracotta uppercase tracking-[0.22em]">Approval Sequence</p>
+                    <h4 className="text-lg font-bold text-charcoal mt-1">Property Verification Tracker</h4>
+                  </div>
+                  <span className="rounded-full bg-sage/10 px-4 py-2 text-[10px] font-bold text-sage-dark uppercase tracking-widest">
+                    {tracker.completed || 0} of {tracker.total || 12} completed
+                  </span>
+                </div>
+                <RMPropertyTracker stages={tracker.stages || []} />
+              </div>
             ) : activeView === 'profile' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <RMDetailRow title="Location" meta={`${property.address || 'No address'} | ${property.city || 'No city'} | ${property.state || 'No state'}`} />
