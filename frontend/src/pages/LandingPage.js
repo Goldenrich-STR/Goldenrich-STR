@@ -42,43 +42,47 @@ const homeSchema = {
 const DEFAULT_HERO_SLIDES = [
   {
     src: '/videos/hero/pexels-contact-me-923323219715-262056873-12703092.jpg',
+    mobilePosition: '58% center',
     tag: 'COMMERCIAL SPACES',
     tagColor: 'text-white',
-    titlePrefix: 'Premium Office ',
-    titleHighlight: 'Spaces',
+    titlePrefix: 'Premium Workspaces in ',
+    titleHighlight: 'Nashik',
     highlightColor: 'text-white',
     titleSuffix: '',
     badges: ['15% OFF On Weekday Bookings*']
   },
   {
-    src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg',
-    tag: 'RESIDENTIAL SPACES',
+    src: '/videos/hero/hero-villa-mobile-crop.png',
+    mobilePosition: 'center 58%',
+    tag: 'RESORT VILLAS',
     tagColor: 'text-white',
-    titlePrefix: 'Cozy Luxury ',
-    titleHighlight: 'Homes',
+    titlePrefix: "Luxury Villas in India's ",
+    titleHighlight: 'Wine Capital',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['50% OFF on 2nd Night*']
+    badges: ['30% OFF on Midweek Getaways*']
   },
   {
     src: '/videos/hero/pexels-thevisionaryvows-33485961.jpg',
+    mobilePosition: '58% center',
     tag: 'WEDDING VENUES',
     tagColor: 'text-white',
-    titlePrefix: 'Beautiful Wedding ',
-    titleHighlight: 'Venues',
+    titlePrefix: 'Luxury Weddings, ',
+    titleHighlight: 'Beautiful Memories',
     highlightColor: 'text-white',
     titleSuffix: '',
     badges: ['26% OFF On All Sunday Events']
   },
   {
-    src: '/videos/hero/pexels-roman-odintsov-4870616.jpg',
-    tag: 'RESORT VILLAS',
+    src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg',
+    mobilePosition: 'left center',
+    tag: 'RESIDENTIAL SPACES',
     tagColor: 'text-white',
-    titlePrefix: 'Scenic Resort ',
-    titleHighlight: 'Villas',
+    titlePrefix: 'Experience the ',
+    titleHighlight: 'Comfort of Home',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['30% OFF on Midweek Getaways*']
+    badges: ['50% OFF on 2nd Night*']
   }
 ];
 
@@ -150,25 +154,25 @@ const TRANSLATIONS = {
     terms: 'Terms',
     cookies: 'Cookies',
     precision: '© 2026 X-Space360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.',
-    modalJourney: 'Interactive Host Onboarding Journey',
-    modalTitle: 'How It Works: Step-by-Step',
-    modalDesc: 'X-Space360 provides a fully integrated, premium, physically verified short-term renting system. Click on the steps below to explore our interactive host pipeline.',
-    activeStage: 'Active Stage {stage} of 5',
+    modalJourney: 'Host Onboarding Flow',
+    modalTitle: 'How Hosting Works',
+    modalDesc: 'A simple step-by-step flow for onboarding your property on X-Space360, from account setup to going live.',
+    activeStage: 'Step {stage} of 5',
     rmInspection: 'RM Inspection Scheduled',
     auditProgress: 'Audit In-Progress',
     planTrial: 'Trial Enabled',
     selectedPlan: 'Selected',
     netPayout: 'Net Payout:',
     settled: 'Settled',
-    onboardingGuidelines: 'Interactive Verification Guidelines',
-    guidelineText: 'To ensure maximum trust for premium rentals, every listed space goes through coordinate parsing and Leaflet geofencing validations. When a host submits a property, the verification service assigns a field inspector.',
-    guidelineBullet1: 'Manual GPS validation protects listings from clone fraud.',
-    guidelineBullet2: 'Elite badge triggers a 2.5x increase in discover page visibility.',
-    securePayments: 'Secure Payments & Guarantee',
-    paymentsText: 'We secure host payments using automated checkout locks. When guest initiates a payment:',
-    paymentsBullet1: '10-Minute Lock protects calendar double booking.',
-    paymentsBullet2: 'Dynamic signature key validation guarantees secure transfer protocols.',
-    paymentsBullet3: 'Direct bank settlement transfers funds to your ledger seamlessly.',
+    onboardingGuidelines: 'Verification Standards',
+    guidelineText: 'Every property goes through document checks, listing review, and location verification before it is published on the platform.',
+    guidelineBullet1: 'Keep KYC documents, property photos, and address details ready before you begin.',
+    guidelineBullet2: 'Any address, ownership, or map mismatch may delay approval until corrected.',
+    securePayments: 'Bookings & Payouts',
+    paymentsText: 'Once your property is live, bookings and host settlements follow a clear and secure workflow:',
+    paymentsBullet1: 'Confirmed bookings are recorded instantly with calendar blocking.',
+    paymentsBullet2: 'Guests pay through the platform using secure online payment methods.',
+    paymentsBullet3: 'Payouts are released to the verified host account as per platform settlement timelines.',
     startHostingNow: 'Start Hosting Now',
     goHostDashboard: 'Go to Host Dashboard',
     step: 'Step',
@@ -191,16 +195,16 @@ const TRANSLATIONS = {
     payoutSummary: 'Payout Summary',
     bookingId: 'Booking ID: #7890',
     gstRemittance: 'GST Remittance:',
-    registrationShort: 'Registration',
-    registrationHeading: 'Host Registration & ID Verification',
-    registrationSubtitle: 'Establish absolute safety and trust',
-    registrationParagraph: 'Every host profile is verified through secured credentials to maintain guest safety. The verification process is completely automated and takes less than 5 minutes.',
-    registrationBullet1: 'Government KYC & Aadhaar ID verification support.',
-    registrationBullet2: 'Real-time SMS & WhatsApp onboarding confirmations.',
-    registrationBullet3: 'Seamless account switching between Guest and Host mode in one click.',
-    subscriptionShort: 'Subscription',
-    subscriptionHeading: 'Flexible Subscription Tiers',
-    subscriptionSubtitle: 'Designed to scale with your renting portfolio',
+    registrationShort: 'Account',
+    registrationHeading: 'Create Your Host Account',
+    registrationSubtitle: 'Start with basic details',
+    registrationParagraph: 'Register as a host with your name, mobile number, email address, and business basics so the onboarding process can begin smoothly.',
+    registrationBullet1: 'Sign up using your active mobile number and email address.',
+    registrationBullet2: 'Choose host mode and complete your account profile.',
+    registrationBullet3: 'You can continue onboarding from your dashboard anytime.',
+    subscriptionShort: 'KYC & Docs',
+    subscriptionHeading: 'Complete KYC & Verification',
+    subscriptionSubtitle: 'Submit the required documents',
     subscriptionParagraph: 'Select a subscription plan that fits your business model. Each plan starts with an extensive 3-Month Free Trial. Host registration fee is ₹500 (fully refundable during trial evaluation).',
     subscriptionBullet1: 'Standard Plan: Perfect for single property hosts (basic statistics and ticketer support).',
     subscriptionBullet2: 'Growth Plan: Best for multiple properties (adds priorities and WhatsApp notifications).',
@@ -226,6 +230,68 @@ const TRANSLATIONS = {
     earningsBullet1: 'Secure UPI / Card checkouts with instant calendar blocking.',
     earningsBullet2: '10-minute calendar lock protects against concurrent bookings.',
     earningsBullet3: 'Automated bank payouts with professional tax-compliant invoice logs.',
+    modalJourney: 'Host Onboarding Flow',
+    modalTitle: 'How Hosting Works',
+    modalDesc: 'A simple step-by-step flow for onboarding your property on X-Space360, from account setup to going live.',
+    activeStage: 'Step {stage} of 5',
+    onboardingGuidelines: 'Verification Standards',
+    guidelineText: 'Every property goes through document checks, listing review, and location verification before it is published on the platform.',
+    guidelineBullet1: 'Keep KYC documents, property photos, and address details ready before you begin.',
+    guidelineBullet2: 'Any address, ownership, or map mismatch may delay approval until corrected.',
+    securePayments: 'Bookings & Payouts',
+    paymentsText: 'Once your property is live, bookings and host settlements follow a clear and secure workflow:',
+    paymentsBullet1: 'Confirmed bookings are recorded instantly with calendar blocking.',
+    paymentsBullet2: 'Guests pay through the platform using secure online payment methods.',
+    paymentsBullet3: 'Payouts are released to the verified host account as per platform settlement timelines.',
+    registrationShort: 'Account',
+    registrationHeading: 'Create Your Host Account',
+    registrationSubtitle: 'Start with basic details',
+    registrationParagraph: 'Register as a host with your name, mobile number, email address, and business basics so the onboarding process can begin smoothly.',
+    registrationBullet1: 'Sign up using your active mobile number and email address.',
+    registrationBullet2: 'Choose host mode and complete your account profile.',
+    registrationBullet3: 'You can continue onboarding from your dashboard anytime.',
+    subscriptionShort: 'KYC & Docs',
+    subscriptionHeading: 'Complete KYC & Verification',
+    subscriptionSubtitle: 'Submit the required documents',
+    subscriptionParagraph: 'Upload your KYC and business documents for review so your host profile can be verified before listing goes live.',
+    subscriptionBullet1: 'Add Aadhaar, PAN, address proof, and host account details.',
+    subscriptionBullet2: 'Upload clear and matching documents to avoid delays.',
+    subscriptionBullet3: 'The verification team reviews submitted details before approval.',
+    listingShort: 'Add Property',
+    listingHeading: 'Build Your Property Listing',
+    listingSubtitle: 'Show your space clearly',
+    listingParagraph: 'Add category, location, pricing, amenities, house rules, and high-quality images so guests get a complete view of the property.',
+    listingBullet1: 'Select the right property type and destination.',
+    listingBullet2: 'Add pricing, capacity, amenities, and check-in details.',
+    listingBullet3: 'Upload strong cover images and complete gallery photos.',
+    auditShort: 'Review',
+    auditHeading: 'Internal Review & Quality Check',
+    auditSubtitle: 'Approval before publishing',
+    auditParagraph: 'Our team reviews your property details, documents, and map accuracy to ensure the listing meets platform quality and trust standards.',
+    auditBullet1: 'Listing content and media are checked for clarity and accuracy.',
+    auditBullet2: 'Map location, ownership details, and category fit are reviewed.',
+    auditBullet3: 'Any corrections needed are shared before the property is approved.',
+    earningsShort: 'Go Live',
+    earningsHeading: 'Go Live & Start Receiving Bookings',
+    earningsSubtitle: 'Your listing is now guest-ready',
+    earningsParagraph: 'Once approved, your property becomes visible on the platform and you can start receiving bookings, calendar blocks, and host payouts.',
+    earningsBullet1: 'Approved listings are published on the discover flow.',
+    earningsBullet2: 'Bookings automatically update availability and guest details.',
+    earningsBullet3: 'Host payouts are processed to the verified bank account.',
+    activePlans: 'Verification Status',
+    trialEnabled: 'In Review',
+    standardPlan: 'Host Documents',
+    threeMosFree: '/ profile check',
+    selected: 'Submitted',
+    dynamicListingBuilder: 'Property Details',
+    rmInspectionScheduled: 'Review Queue',
+    rmInspectorName: 'Quality & content review',
+    coordSync: 'Location and listing details check',
+    auditInProgress: 'Under Review',
+    payoutSummary: 'Live Host Status',
+    bookingId: 'Listing Visibility',
+    gstRemittance: 'Bookings & calendar',
+    netPayout: 'Payout setup',
     heroSubTag: 'Short-Term Rentals · India',
     heroTitle: 'Elevated <br /> <span class="text-terracotta italic font-serif">Living</span> & <span class="text-sage font-serif italic">Working</span> Spaces.',
     heroSubtitle: 'Curated residential, commercial, and event venues designed for those who value aesthetics and seamless experiences.',
@@ -690,36 +756,30 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
             style={{ width: `${(activeStep - 1) * 20}%` }}
           ></div>
 
-          <div className="flex overflow-x-auto no-scrollbar md:grid md:grid-cols-5 relative z-10 justify-between gap-4 md:gap-0 pb-2">
+          <div className="flex overflow-x-auto no-scrollbar md:grid md:grid-cols-5 relative z-10 justify-between gap-3 md:gap-3 pb-2">
             {stepsData.map((step) => {
-              const IconComponent = step.icon;
               const isActive = activeStep === step.id;
-              const isCompleted = activeStep > step.id;
               return (
                 <button
                   key={step.id}
                   onClick={() => setActiveStep(step.id)}
-                  className="flex flex-col items-center group focus:outline-none flex-shrink-0 w-20 md:w-auto"
+                  className={`rounded-2xl border p-4 text-left transition flex-shrink-0 w-[152px] md:w-auto ${
+                    isActive
+                      ? 'border-terracotta/30 bg-terracotta/[0.08] shadow-sm'
+                      : 'border-gray-100 bg-white hover:border-terracotta/20 hover:bg-stone/40'
+                  }`}
                 >
-                  <div 
-                    className={`w-16 h-16 rounded-full flex items-center justify-center shadow-premium transition-all duration-500 transform ${
-                      isActive 
-                        ? 'bg-terracotta text-white scale-110 ring-4 ring-terracotta/20 animate-pulse'
-                        : isCompleted
-                        ? 'bg-sage text-white'
-                        : 'bg-white border-2 border-gray-200 text-charcoal hover:border-terracotta/50'
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
+                      isActive ? 'bg-terracotta text-white' : 'bg-stone text-charcoal'
                     }`}
                   >
-                    <IconComponent className="w-6 h-6" />
+                    {step.id}
                   </div>
-                  <span className={`text-[10px] font-bold tracking-tight uppercase tracking-widest mt-3 transition-colors ${
-                    isActive ? 'text-terracotta font-bold tracking-tight' : 'text-charcoal-muted group-hover:text-charcoal'
-                  }`}>
+                  <span className="mt-4 block text-[10px] font-semibold uppercase tracking-[0.22em] text-charcoal-muted">
                     {t('step')} {step.id}
                   </span>
-                  <span className={`text-[9px] font-bold mt-1 text-center hidden sm:inline-block max-w-[90px] truncate ${
-                    isActive ? 'text-terracotta font-bold tracking-tight' : 'text-charcoal-muted/70'
-                  }`}>
+                  <span className="mt-1 block text-sm font-semibold leading-5 text-charcoal">
                     {step.shortTitle}
                   </span>
                 </button>
@@ -1043,6 +1103,155 @@ const NEARBY_DESTINATION_GROUPS = {
     'Pune'
   ]
 };
+
+const createExploreItem = (label, params) => ({ label, params });
+
+const EXPLORE_MENU_TABS = [
+  {
+    key: 'villas',
+    label: 'Villas',
+    columns: [
+      [
+        createExploreItem('Villas in Nashik', { category: 'residential', property_type: 'villa', city: 'Nashik' }),
+        createExploreItem('Villas in Trimbak', { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar' }),
+        createExploreItem('Villas in Igatpuri', { category: 'residential', property_type: 'villa', city: 'Igatpuri' }),
+        createExploreItem('Villas in Bhandardara', { category: 'residential', property_type: 'villa', city: 'Bhandardara' }),
+      ],
+      [
+        createExploreItem('Villas in Karjat', { category: 'residential', property_type: 'villa', city: 'Karjat' }),
+        createExploreItem('Villas in Lonavala', { category: 'residential', property_type: 'villa', city: 'Lonavala' }),
+        createExploreItem('Villas in Alibaug', { category: 'residential', property_type: 'villa', city: 'Alibaug' }),
+        createExploreItem('Villas in Goa', { category: 'residential', property_type: 'villa', city: 'Goa' }),
+      ],
+      [
+        createExploreItem('Luxury Villas in Nashik', { category: 'residential', property_type: 'villa', city: 'Nashik', min_price: '50000' }),
+        createExploreItem('Pool Villas in Trimbak', { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar' }),
+        createExploreItem('Weekend Villas in Igatpuri', { category: 'residential', property_type: 'villa', city: 'Igatpuri' }),
+        createExploreItem('Private Villas in Karjat', { category: 'residential', property_type: 'villa', city: 'Karjat' }),
+      ]
+    ]
+  },
+  {
+    key: 'homestays',
+    label: 'Homestays',
+    columns: [
+      [
+        createExploreItem('Homestays in Nashik', { category: 'residential', city: 'Nashik' }),
+        createExploreItem('Homestays in Pune', { category: 'residential', city: 'Pune' }),
+        createExploreItem('Homestays in Mumbai', { category: 'residential', city: 'Mumbai' }),
+        createExploreItem('Homestays in Goa', { category: 'residential', city: 'Goa' }),
+      ],
+      [
+        createExploreItem('Apartments in Nashik', { category: 'residential', property_type: 'apartment', city: 'Nashik' }),
+        createExploreItem('Studios in Pune', { category: 'residential', property_type: 'studio', city: 'Pune' }),
+        createExploreItem('Farmhouses in Nashik', { category: 'residential', property_type: 'farmhouse', city: 'Nashik' }),
+        createExploreItem('Holiday Homes in Igatpuri', { category: 'residential', city: 'Igatpuri' }),
+      ],
+      [
+        createExploreItem('Family Stays in Trimbak', { category: 'residential', city: 'Trimbakeshwar' }),
+        createExploreItem('Group Stays in Karjat', { category: 'residential', city: 'Karjat' }),
+        createExploreItem('Long Stays in Alibaug', { category: 'residential', city: 'Alibaug' }),
+        createExploreItem('Scenic Homes in Lonavala', { category: 'residential', city: 'Lonavala' }),
+      ]
+    ]
+  },
+  {
+    key: 'resorts',
+    label: 'Resorts',
+    columns: [
+      [
+        createExploreItem('Resorts in Nashik', { category: 'residential', property_type: 'resort', city: 'Nashik' }),
+        createExploreItem('Resorts in Trimbak', { category: 'residential', property_type: 'resort', city: 'Trimbakeshwar' }),
+        createExploreItem('Resorts in Igatpuri', { category: 'residential', property_type: 'resort', city: 'Igatpuri' }),
+        createExploreItem('Resorts in Bhandardara', { category: 'residential', property_type: 'resort', city: 'Bhandardara' }),
+      ],
+      [
+        createExploreItem('Pool Resorts in Nashik', { category: 'residential', property_type: 'resort', city: 'Nashik' }),
+        createExploreItem('Nature Resorts in Karjat', { category: 'residential', property_type: 'resort', city: 'Karjat' }),
+        createExploreItem('Luxury Resorts in Goa', { category: 'residential', property_type: 'resort', city: 'Goa' }),
+        createExploreItem('Weekend Resorts in Lonavala', { category: 'residential', property_type: 'resort', city: 'Lonavala' }),
+      ],
+      [
+        createExploreItem('Group Resorts in Alibaug', { category: 'residential', property_type: 'resort', city: 'Alibaug' }),
+        createExploreItem('Wedding Resorts in Nashik', { category: 'event_venue', property_type: 'resort', city: 'Nashik' }),
+        createExploreItem('Hillside Resorts in Igatpuri', { category: 'residential', property_type: 'resort', city: 'Igatpuri' }),
+        createExploreItem('Retreat Resorts in Trimbak', { category: 'residential', property_type: 'resort', city: 'Trimbakeshwar' }),
+      ]
+    ]
+  },
+  {
+    key: 'weddings',
+    label: 'Wedding Venues',
+    columns: [
+      [
+        createExploreItem('Wedding Venues in Nashik', { category: 'event_venue', city: 'Nashik' }),
+        createExploreItem('Wedding Venues in Pune', { category: 'event_venue', city: 'Pune' }),
+        createExploreItem('Wedding Venues in Mumbai', { category: 'event_venue', city: 'Mumbai' }),
+        createExploreItem('Wedding Venues in Goa', { category: 'event_venue', city: 'Goa' }),
+      ],
+      [
+        createExploreItem('Banquet Halls in Nashik', { category: 'event_venue', property_type: 'banquet_hall', city: 'Nashik' }),
+        createExploreItem('Rooftops in Pune', { category: 'event_venue', property_type: 'rooftop', city: 'Pune' }),
+        createExploreItem('Hotel Ballrooms in Mumbai', { category: 'event_venue', property_type: 'hotel_ballroom', city: 'Mumbai' }),
+        createExploreItem('Resorts & Lawns in Trimbak', { category: 'event_venue', property_type: 'resort', city: 'Trimbakeshwar' }),
+      ],
+      [
+        createExploreItem('Corporate Events in Nashik', { category: 'event_venue', city: 'Nashik' }),
+        createExploreItem('Destination Weddings in Goa', { category: 'event_venue', city: 'Goa' }),
+        createExploreItem('Celebration Venues in Igatpuri', { category: 'event_venue', city: 'Igatpuri' }),
+        createExploreItem('Garden Events in Karjat', { category: 'event_venue', city: 'Karjat' }),
+      ]
+    ]
+  },
+  {
+    key: 'workspaces',
+    label: 'Workspaces',
+    columns: [
+      [
+        createExploreItem('Workspaces in Nashik', { category: 'commercial', city: 'Nashik' }),
+        createExploreItem('Workspaces in Pune', { category: 'commercial', city: 'Pune' }),
+        createExploreItem('Workspaces in Mumbai', { category: 'commercial', city: 'Mumbai' }),
+        createExploreItem('Workspaces in Goa', { category: 'commercial', city: 'Goa' }),
+      ],
+      [
+        createExploreItem('Private Offices in Nashik', { category: 'commercial', property_type: 'private_office', city: 'Nashik' }),
+        createExploreItem('Co-working Desks in Pune', { category: 'commercial', property_type: 'co_working', city: 'Pune' }),
+        createExploreItem('Meeting Rooms in Mumbai', { category: 'commercial', property_type: 'meeting_room', city: 'Mumbai' }),
+        createExploreItem('Team Spaces in Nashik', { category: 'commercial', city: 'Nashik' }),
+      ],
+      [
+        createExploreItem('Office Suites in Trimbak', { category: 'commercial', city: 'Trimbakeshwar' }),
+        createExploreItem('Studios for Creators in Pune', { category: 'commercial', city: 'Pune' }),
+        createExploreItem('Corporate Retreat Spaces in Igatpuri', { category: 'commercial', city: 'Igatpuri' }),
+        createExploreItem('Premium Offices in Nashik', { category: 'commercial', property_type: 'private_office', city: 'Nashik' }),
+      ]
+    ]
+  },
+  {
+    key: 'places',
+    label: 'Places To Visit',
+    columns: [
+      [
+        createExploreItem('Sula Vineyards', { category: 'residential', city: 'Nashik' }),
+        createExploreItem('Trimbakeshwar', { category: 'residential', city: 'Trimbakeshwar' }),
+        createExploreItem('Pandav Leni', { category: 'residential', city: 'Nashik' }),
+        createExploreItem('Gangapur Dam', { category: 'residential', city: 'Nashik' }),
+      ],
+      [
+        createExploreItem('Anjaneri', { category: 'residential', city: 'Nashik' }),
+        createExploreItem('Harihar Fort', { category: 'residential', city: 'Igatpuri' }),
+        createExploreItem('Bhandardara', { category: 'residential', city: 'Bhandardara' }),
+        createExploreItem('Igatpuri', { category: 'residential', city: 'Igatpuri' }),
+      ],
+      [
+        createExploreItem('Karjat', { category: 'residential', city: 'Karjat' }),
+        createExploreItem('Lonavala', { category: 'residential', city: 'Lonavala' }),
+        createExploreItem('Alibaug', { category: 'residential', city: 'Alibaug' }),
+        createExploreItem('Goa', { category: 'residential', city: 'Goa' }),
+      ]
+    ]
+  }
+];
 
 const DESTINATION_SPOT_CATALOG = [
   { name: 'Pune', hub: 'Pune', latitude: 18.5204, longitude: 73.8567, type: 'city' },
@@ -1766,6 +1975,7 @@ const CollectionsSection = ({ navigate }) => {
 const LandingPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const exploreMenuCloseTimerRef = React.useRef(null);
   const handleSignOut = () => {
     logout();
     navigate('/');
@@ -1819,6 +2029,9 @@ const LandingPage = () => {
   const [sliderInteracted, setSliderInteracted] = useState({});
   const [recentlyVisitedProperties, setRecentlyVisitedProperties] = useState(() => getRecentlyVisitedProperties());
   const [isNavScrolled, setIsNavScrolled] = useState(false);
+  const [isExploreMenuOpen, setIsExploreMenuOpen] = useState(false);
+  const [activeExploreTab, setActiveExploreTab] = useState(EXPLORE_MENU_TABS[0]?.key || 'villas');
+  const [isMobileExploreOpen, setIsMobileExploreOpen] = useState(false);
 
   const scrollToSlide = (containerId, index) => {
     const container = document.getElementById(containerId);
@@ -1828,6 +2041,43 @@ const LandingPage = () => {
       container.scrollTo({ left: leftOffset, behavior: 'smooth' });
     }
   };
+
+  const activeExploreMenu = EXPLORE_MENU_TABS.find((tab) => tab.key === activeExploreTab) || EXPLORE_MENU_TABS[0];
+  const activeMobileExploreMenu = EXPLORE_MENU_TABS.find((tab) => tab.key === activeExploreTab) || EXPLORE_MENU_TABS[0];
+
+  const handleExploreNavigate = (params) => {
+    const searchParams = new URLSearchParams();
+    Object.entries(params || {}).forEach(([key, value]) => {
+      if (value) searchParams.set(key, value);
+    });
+    navigate(`/guest/browse?${searchParams.toString()}`);
+    setIsExploreMenuOpen(false);
+  };
+
+  const openExploreMenu = () => {
+    if (exploreMenuCloseTimerRef.current) {
+      clearTimeout(exploreMenuCloseTimerRef.current);
+      exploreMenuCloseTimerRef.current = null;
+    }
+    setIsExploreMenuOpen(true);
+  };
+
+  const closeExploreMenuWithDelay = () => {
+    if (exploreMenuCloseTimerRef.current) {
+      clearTimeout(exploreMenuCloseTimerRef.current);
+    }
+    exploreMenuCloseTimerRef.current = setTimeout(() => {
+      setIsExploreMenuOpen(false);
+    }, 180);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (exploreMenuCloseTimerRef.current) {
+        clearTimeout(exploreMenuCloseTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleSliderScroll = (e, indexSetter) => {
     const container = e.target;
@@ -2380,7 +2630,7 @@ const LandingPage = () => {
         </div>
 
         {/* Center Menu Links (Flat Style) */}
-        <div className={`hidden lg:flex items-center space-x-8 font-sans font-semibold text-[15px] tracking-tight transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
+        <div className={`hidden lg:flex items-center space-x-8 font-sans font-semibold text-[17px] tracking-tight transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
@@ -2411,6 +2661,78 @@ const LandingPage = () => {
           >
             List your Property
           </a>
+          <div
+            className="relative"
+            onMouseEnter={openExploreMenu}
+            onMouseLeave={closeExploreMenuWithDelay}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                if (isExploreMenuOpen) {
+                  setIsExploreMenuOpen(false);
+                } else {
+                  openExploreMenu();
+                }
+              }}
+              className="hover:text-terracotta transition-colors duration-200 flex items-center gap-1"
+            >
+              <span>Explore</span>
+              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExploreMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isExploreMenuOpen && (
+              <div
+                className="absolute left-1/2 -translate-x-1/2 top-full mt-4 w-[860px] rounded-[28px] bg-white border border-gray-200 shadow-elevated ring-1 ring-black/5 px-5 py-4 z-[999] text-gray-900"
+                onMouseEnter={openExploreMenu}
+                onMouseLeave={closeExploreMenuWithDelay}
+              >
+                <div className="flex items-center gap-8 border-b border-gray-200 px-3 pb-4 overflow-x-auto no-scrollbar">
+                  {EXPLORE_MENU_TABS.map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onMouseEnter={() => setActiveExploreTab(tab.key)}
+                      onClick={() => {
+                        openExploreMenu();
+                        setActiveExploreTab(tab.key);
+                      }}
+                      className={`relative whitespace-nowrap text-[15px] font-medium transition-colors duration-200 ${
+                        activeExploreTab === tab.key ? 'text-charcoal' : 'text-gray-500 hover:text-charcoal'
+                      }`}
+                    >
+                      {tab.label}
+                      {activeExploreTab === tab.key && (
+                        <span className="absolute left-0 right-0 -bottom-[17px] h-[2px] bg-charcoal rounded-full" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-3 gap-0 pt-4">
+                  {activeExploreMenu?.columns?.map((column, columnIndex) => (
+                    <div
+                      key={`${activeExploreMenu.key}-column-${columnIndex}`}
+                      className="px-4 first:pl-2 last:pr-2 border-r border-gray-100 last:border-r-0"
+                    >
+                      <div className="flex flex-col space-y-3">
+                        {column.map((item) => (
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => handleExploreNavigate(item.params)}
+                            className="text-left text-[15px] text-gray-500 hover:text-charcoal transition-colors duration-200"
+                          >
+                            {item.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right Side Options */}
@@ -2420,7 +2742,7 @@ const LandingPage = () => {
           {/* Get in Touch Button */}
           <button 
             onClick={() => navigate('/support')}
-            className={`flex items-center gap-2 rounded-full px-5 py-2.5 transition font-sans font-semibold text-[15px] tracking-tight shadow-sm border ${
+            className={`flex items-center gap-2 rounded-full px-5 py-2.5 transition font-sans font-semibold text-[17px] tracking-tight shadow-sm border ${
               isNavScrolled
                 ? 'border-gray-200 text-charcoal hover:bg-gray-50'
                 : 'border-white/40 text-white hover:bg-white/10'
@@ -2476,27 +2798,54 @@ const LandingPage = () => {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] bg-charcoal/95 backdrop-blur-xl flex flex-col pt-6 pb-10 px-6 overflow-y-auto animate-fade-in text-white lg:hidden">
-          <div className="flex justify-between items-center mb-12">
-            <div className="cursor-pointer" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
-              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain logo-white" />
+        <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-[2px] flex lg:hidden animate-fade-in">
+          <div className="w-[76px] bg-[#1f1f1f]" onClick={() => setIsMobileMenuOpen(false)} />
+          <div className="flex-1 max-w-[calc(100vw-76px)] bg-white min-h-full overflow-y-auto">
+            <div className="bg-[#1f1f1f] px-5 pt-5 pb-6 text-white">
+              <div className="flex items-start justify-between">
+                <div className="space-y-5">
+                  <div className="cursor-pointer" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
+                    <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain logo-white" />
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-charcoal">
+                      <User className="w-6 h-6" />
+                    </div>
+                    {!user ? (
+                      <button
+                        onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }}
+                        className="border border-white rounded-xl px-4 py-2 text-sm font-semibold"
+                      >
+                        Login/Sign up
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => { setIsMobileMenuOpen(false); navigate('/dashboard'); }}
+                        className="border border-white rounded-xl px-4 py-2 text-sm font-semibold"
+                      >
+                        Open Dashboard
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <button onClick={() => setIsMobileMenuOpen(false)} className="text-white/80 hover:text-white transition">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
             </div>
-            <button onClick={() => setIsMobileMenuOpen(false)} className="text-white hover:text-terracotta transition p-2 bg-white/10 rounded-full">
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-          
-          <div className="flex flex-col space-y-6 flex-1">
+
+            <div className="px-5 py-5 text-charcoal">
+              <div className="flex flex-col">
             <button
               onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse'); }}
-              className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-white/10"
+              className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
             >
               Discover
             </button>
             {user && user.role === 'guest' && wishlist.length > 0 && (
               <button
                 onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }}
-                className="text-left text-2xl font-bold hover:text-terracotta transition flex items-center justify-between py-2 border-b border-white/10"
+                className="text-left text-[17px] font-medium transition flex items-center justify-between py-4 border-b border-gray-200"
               >
                 <span>Wishlist</span>
                 <Heart className="w-6 h-6 text-red-500 fill-red-500" />
@@ -2504,24 +2853,70 @@ const LandingPage = () => {
             )}
             <button
               onClick={() => { setIsMobileMenuOpen(false); setShowHowItWorksModal(true); }}
-              className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-white/10"
+              className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
             >
               How It Works
             </button>
             <button
               onClick={() => { setIsMobileMenuOpen(false); navigate(user ? '/host/list-property' : '/register?role=host'); }}
-              className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-white/10"
+              className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
             >
               List your Property
             </button>
+            <div className="border-b border-gray-200 py-4">
+              <button
+                type="button"
+                onClick={() => setIsMobileExploreOpen((prev) => !prev)}
+                className="w-full text-left text-[17px] font-medium transition flex items-center justify-between"
+              >
+                <span>Explore</span>
+                <ChevronDown className={`w-5 h-5 transition-transform duration-200 text-gray-500 ${isMobileExploreOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isMobileExploreOpen && (
+                <div className="mt-4 rounded-[20px] bg-[#faf7f2] text-charcoal px-4 py-4 space-y-4 border border-[#eee6d8]">
+                  <div className="flex gap-4 overflow-x-auto no-scrollbar border-b border-[#e9dfcf] pb-3">
+                    {EXPLORE_MENU_TABS.map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setActiveExploreTab(tab.key)}
+                        className={`whitespace-nowrap text-base font-semibold transition ${
+                          activeExploreTab === tab.key ? 'text-charcoal underline underline-offset-8' : 'text-charcoal-muted'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                    {activeMobileExploreMenu?.columns?.flat().map((item) => (
+                      <button
+                        key={`${activeMobileExploreMenu.key}-${item.label}`}
+                        type="button"
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          setIsMobileExploreOpen(false);
+                          handleExploreNavigate(item.params);
+                        }}
+                        className="block w-full text-left text-[15px] text-charcoal hover:text-terracotta transition"
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
             <button
               onClick={() => { setIsMobileMenuOpen(false); navigate('/support'); }}
-              className="text-left text-2xl font-bold text-blue-400 flex items-center gap-2 py-2 border-b border-white/10"
+              className="text-left text-[17px] font-medium flex items-center gap-2 py-4 border-b border-gray-200"
             >
-              <Phone className="w-5 h-5" />
+              <Phone className="w-4.5 h-4.5" />
               <span>Get in Touch</span>
             </button>
-            <div className="py-3 border-b border-white/10 flex flex-col items-start">
+            <div className="py-4 border-b border-gray-200 flex flex-col items-start">
               <LanguageSelector mode="inline" showPropertyTypes />
             </div>
 
@@ -2529,13 +2924,13 @@ const LandingPage = () => {
               <>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); navigate('/dashboard'); }}
-                  className="text-left text-2xl font-bold text-terracotta py-2 border-b border-white/10"
+                  className="text-left text-[17px] font-medium py-4 border-b border-gray-200"
                 >
                   Dashboard
                 </button>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); handleSignOut(); }}
-                  className="mt-8 bg-white/10 hover:bg-white/20 text-white font-bold py-4 rounded-xl text-center transition"
+                  className="mt-6 bg-[#1f1f1f] text-white font-semibold py-4 rounded-xl text-center transition"
                 >
                   Sign Out
                 </button>
@@ -2544,25 +2939,27 @@ const LandingPage = () => {
               <>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }}
-                  className="text-left text-2xl font-bold hover:text-terracotta transition py-2 border-b border-white/10"
+                  className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => { setIsMobileMenuOpen(false); navigate('/register?role=host'); }}
-                  className="mt-8 bg-terracotta hover:bg-terracotta-hover text-white font-bold py-4 rounded-xl text-center shadow-premium transition"
+                  className="mt-6 bg-[#d9b233] hover:bg-[#cda62b] text-white font-semibold py-4 rounded-xl text-center transition"
                 >
                   Become a Host
                 </button>
               </>
             )}
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* ===== PREMIUM SLIDING IMAGE HERO ===== */}
       <section className="relative w-full z-30 bg-white px-0 pt-0 pb-0">
-      <div className="relative h-[62vh] min-h-[560px] max-h-[640px] w-full z-30 overflow-visible bg-white shadow-premium">
+      <div className="relative h-[68vh] min-h-[620px] max-h-[700px] md:h-[62vh] md:min-h-[560px] md:max-h-[640px] w-full z-30 overflow-visible bg-white shadow-premium">
         
         {/* ── Sliding/Fading Background Images ── */}
         {heroSlides.map((slide, index) => (
@@ -2574,7 +2971,7 @@ const LandingPage = () => {
                 ? `url(${slide.src})`
                 : 'none',
               backgroundSize: 'cover',
-              backgroundPosition: 'center',
+              backgroundPosition: slide.mobilePosition || 'center',
               opacity: index === currentHeroSlide ? 1 : 0
             }}
           />
@@ -2583,67 +2980,53 @@ const LandingPage = () => {
         {/* ── 35% dark overlay ── */}
         <div className="absolute inset-0 bg-black/35 z-10 transition-opacity duration-1000" />
 
-        {/* ── Dot Slider Indicators ── */}
-        <div className="hidden absolute bottom-8 left-0 right-0 z-30 flex justify-center items-center space-x-2 md:space-x-3">
-          {heroSlides.map((slide, index) => {
-            return (
-              <button
-                key={index}
-                onClick={() => setCurrentHeroSlide(index)}
-                className={`w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full transition-all duration-300 shadow-sm ${
-                  index === currentHeroSlide 
-                    ? `bg-white scale-125` 
-                    : 'bg-white/50 hover:bg-white'
-                }`}
-              />
-            );
-          })}
-        </div>
-
         {/* ── Hero Content (Centered with Spacing & font-lufga) ── */}
-        <div className="relative z-20 max-w-6xl mx-auto px-6 md:px-12 h-full flex flex-col justify-center items-center text-center pt-32 md:pt-36 pb-10 md:pb-12">
+        <div className="relative z-20 max-w-6xl mx-auto px-4 md:px-12 h-full flex flex-col justify-center md:justify-end items-center text-center pt-24 md:pt-36 pb-5 md:pb-12">
           {(() => {
             const activeHero = heroSlides[currentHeroSlide] || heroSlides[0] || DEFAULT_HERO_SLIDES[0];
             return (
-              <div className="flex flex-col items-center space-y-4 md:space-y-5 w-full animate-fade-in -mt-2 md:mt-10" key={currentHeroSlide}>
-                 <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[54px] font-bold leading-[1.25] text-white drop-shadow-premium font-lufga tracking-tight">
-                   {activeHero.titlePrefix} {activeHero.titleHighlight} {activeHero.titleSuffix}
-                 </h2>
+              <div className="flex flex-col items-center space-y-3 md:space-y-5 w-full animate-fade-in mb-0 md:mb-4 -mt-8 md:mt-0" key={currentHeroSlide}>
+                 <div className="flex items-center justify-center gap-2 md:gap-4 w-full px-1">
+                   <button
+                     type="button"
+                     onClick={() => setCurrentHeroSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
+                     className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-white/25 bg-white/10 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/18 transition shrink-0"
+                     aria-label="Previous hero slide"
+                   >
+                     <ChevronLeft className="w-5 h-5" />
+                   </button>
+
+                   <h2 className="text-[28px] sm:text-4xl md:text-5xl lg:text-[58px] font-medium leading-[1.08] text-white drop-shadow-premium font-lufga tracking-[-0.03em] max-w-[250px] sm:max-w-none">
+                     {activeHero.titlePrefix} {activeHero.titleHighlight} {activeHero.titleSuffix}
+                   </h2>
+
+                   <button
+                     type="button"
+                     onClick={() => setCurrentHeroSlide((prev) => (prev + 1) % heroSlides.length)}
+                     className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-white/25 bg-white/10 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/18 transition shrink-0"
+                     aria-label="Next hero slide"
+                   >
+                     <ChevronRight className="w-5 h-5" />
+                   </button>
+                 </div>
                  
                  {/* Custom Badges / Batches instead of Subtitle */}
-                 <div className="flex flex-wrap justify-center gap-2.5">
+                 <div className="flex flex-wrap justify-center gap-2">
                    {activeHero.badges && activeHero.badges.map((badge, idx) => (
-                     <span key={idx} className="border border-white bg-white/10 backdrop-blur-md rounded-full px-6 py-2 text-white font-bold text-xs md:text-sm drop-shadow-sm select-none">
+                     <span key={idx} className="border border-white bg-white/10 backdrop-blur-md rounded-full px-4 md:px-6 py-2 text-white font-bold text-[11px] md:text-sm drop-shadow-sm select-none">
                        {badge}
                      </span>
                    ))}
                  </div>
 
-                 {/* ── Search Container Embedded Directly inside Hero below Badges ── */}
-                 <div className="flex justify-center items-center space-x-2 md:space-x-3 pt-1 md:pt-2">
-                   {heroSlides.map((slide, index) => {
-                     return (
-                       <button
-                         key={index}
-                         onClick={() => setCurrentHeroSlide(index)}
-                         className={`w-1.5 h-1.5 md:w-2.5 md:h-2.5 rounded-full transition-all duration-300 shadow-sm ${
-                           index === currentHeroSlide
-                             ? `bg-white scale-125`
-                             : 'bg-white/50 hover:bg-white'
-                         }`}
-                       />
-                     );
-                   })}
-                 </div>
-
-                 <div className="w-full mt-6 md:mt-10 relative max-w-5xl text-left">
+                 <div className="w-full mt-3 md:mt-6 relative max-w-5xl text-left">
                     {/* Transparent overlay to close active dropdowns on clicking outside */}
                     {activeDropdown && (
                       <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActiveDropdown(null)} />
                     )}
 
                     {/* Capsule Search Bar */}
-                    <div className="flex flex-col lg:flex-row items-center bg-white rounded-3xl lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-2 lg:p-3 relative z-50">
+                    <div className="flex flex-col lg:flex-row items-stretch lg:items-center bg-white rounded-[30px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-3 lg:p-3 relative z-50">
                         
                         {/* Location */}
                         <div className="relative flex-1 w-full min-w-0">
@@ -2719,9 +3102,9 @@ const LandingPage = () => {
                         </div>
                         <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
                         
-                        <div className="relative flex items-center shrink-0">
+                        <div className="relative flex flex-col lg:flex-row items-stretch lg:items-center shrink-0 w-full lg:w-auto">
                           {/* Check-in */}
-                          <div className="relative flex items-center px-4 lg:px-6 py-3 w-full lg:w-auto hover:bg-stone/50 rounded-full transition duration-200 group shrink-0">
+                          <div className="relative flex items-center px-4 lg:px-6 py-3 w-full lg:w-auto hover:bg-stone/50 rounded-3xl lg:rounded-full transition duration-200 group shrink-0">
                             <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                             <button
                               type="button"
@@ -2755,7 +3138,7 @@ const LandingPage = () => {
                           </div>
                           
                           {/* Check-out */}
-                          <div className="relative flex items-center px-4 lg:px-6 py-3 w-full lg:w-auto hover:bg-stone/50 rounded-full transition duration-200 group shrink-0">
+                          <div className="relative flex items-center px-4 lg:px-6 py-3 w-full lg:w-auto hover:bg-stone/50 rounded-3xl lg:rounded-full transition duration-200 group shrink-0">
                             <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                             <button
                               type="button"
@@ -2789,7 +3172,7 @@ const LandingPage = () => {
                         <div className="relative flex-1 w-full">
                           <div 
                             onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                            className="flex items-center px-4 lg:px-6 py-3 w-full cursor-pointer hover:bg-stone/50 rounded-full transition duration-200 group"
+                            className="flex items-center px-4 lg:px-6 py-3 w-full cursor-pointer hover:bg-stone/50 rounded-3xl lg:rounded-full transition duration-200 group"
                           >
                             <User className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
@@ -2856,7 +3239,7 @@ const LandingPage = () => {
                         </div>
 
                         {/* Search Button */}
-                        <div className="w-full lg:w-auto p-1 shrink-0">
+                        <div className="w-full lg:w-auto p-1 pt-2 lg:pt-1 shrink-0">
                           <button
                             onClick={handleSearch}
                             className="w-full lg:w-auto bg-[#1A1A1A] hover:bg-black text-white font-bold text-xs uppercase tracking-widest px-8 py-4 rounded-2xl lg:rounded-full transition duration-200 shadow-md cursor-pointer"
@@ -2877,7 +3260,7 @@ const LandingPage = () => {
       <ScrollReveal duration="duration-[800ms]">
         <div className="w-full bg-white relative z-20 py-8 md:py-12 border-b border-sand-100">
           <div className="px-4 md:px-[10vw]">
-            <div className="flex items-center justify-between gap-4 mb-6 md:mb-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
               <div className="flex items-baseline gap-2 flex-wrap">
                 <h2 className="font-serif text-2xl md:text-3xl font-bold text-charcoal tracking-tight">Pick a Destination</h2>
                 <button
@@ -2890,6 +3273,10 @@ const LandingPage = () => {
                   {isDetectingNearby ? 'Finding nearby locations...' : 'Show nearby locations'}
                 </button>
               </div>
+              <div className="flex md:hidden items-center gap-3 text-charcoal self-end">
+                <span className="text-[11px] font-semibold text-charcoal-muted">Swipe</span>
+                <ChevronRight className="w-4 h-4" />
+              </div>
               <div className="hidden md:flex items-center gap-3 text-charcoal">
                 <ChevronLeft className="w-5 h-5" />
                 <ChevronRight className="w-5 h-5" />
@@ -2900,7 +3287,7 @@ const LandingPage = () => {
               {CURATED_DESTINATION_ROWS.map((row, rowIndex) => (
                 <div
                   key={`destination-row-${rowIndex}`}
-                  className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-x-4 gap-y-6 md:gap-x-5"
+                  className="flex overflow-x-auto gap-5 pb-2 no-scrollbar md:grid md:grid-cols-4 lg:grid-cols-8 md:gap-x-5 md:gap-y-6 md:overflow-visible md:pb-0"
                 >
                   {row.map((destination) => {
                     const label = destination.name;
@@ -2908,7 +3295,7 @@ const LandingPage = () => {
                       <button
                         key={label}
                         onClick={() => openDestinationProperties(destination)}
-                        className="group flex flex-col items-center gap-2 cursor-pointer min-w-0"
+                        className="group flex flex-col items-center gap-2 cursor-pointer min-w-[112px] md:min-w-0 shrink-0"
                       >
                         <div className="flex h-[104px] md:h-[124px] items-center justify-center transition-transform duration-300 group-hover:-translate-y-1">
                           <DestinationLineIcon label={label} destinationType={destination.type || 'tourist'} />
