@@ -793,15 +793,20 @@ const PropertyDetail = () => {
   const cells = useMemo(() => buildMonthMatrix(calYear, calMonth), [calYear, calMonth]);
   const todayISO = toISO(new Date());
 
-  const openBookingCalendar = (anchor) => {
-    const anchorNode = anchor === 'checkOut' ? checkOutButtonRef.current : checkInButtonRef.current;
+  const updateCalendarPosition = () => {
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-    const popupWidth = viewportWidth >= 768 ? Math.min(360, viewportWidth - 32) : Math.min(Math.max(viewportWidth - 24, 280), 360);
+    const popupWidth = viewportWidth >= 768
+      ? Math.min(440, viewportWidth - 32)
+      : Math.min(Math.max(viewportWidth - 24, 280), 360);
 
-    if (anchorNode && viewportWidth) {
-      const rect = anchorNode.getBoundingClientRect();
+    const checkOutNode = checkOutButtonRef.current;
+    if (checkOutNode && viewportWidth) {
+      const rect = checkOutNode.getBoundingClientRect();
+      const desiredLeft = viewportWidth >= 768
+        ? rect.right - popupWidth
+        : 12;
       const left = viewportWidth >= 768
-        ? Math.max(16, Math.min(rect.right - popupWidth, viewportWidth - popupWidth - 16))
+        ? Math.max(16, Math.min(desiredLeft, viewportWidth - popupWidth - 16))
         : 12;
 
       setBookingCalendarPosition({
@@ -812,7 +817,21 @@ const PropertyDetail = () => {
     } else {
       setBookingCalendarPosition(null);
     }
+  };
 
+  useEffect(() => {
+    if (bookingCalendarOpen) {
+      updateCalendarPosition();
+      window.addEventListener('scroll', updateCalendarPosition, { passive: true });
+      window.addEventListener('resize', updateCalendarPosition);
+      return () => {
+        window.removeEventListener('scroll', updateCalendarPosition);
+        window.removeEventListener('resize', updateCalendarPosition);
+      };
+    }
+  }, [bookingCalendarOpen]);
+
+  const openBookingCalendar = (anchor) => {
     setBookingCalendarAnchor(anchor);
     setBookingCalendarOpen(true);
   };

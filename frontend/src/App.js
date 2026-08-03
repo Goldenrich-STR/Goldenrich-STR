@@ -406,11 +406,188 @@ function AppRoutes() {
   );
 }
 
+const IndependenceDayAnimation = () => {
+  const [flight, setFlight] = React.useState(null);
+
+  const triggerNewFlight = React.useCallback(() => {
+    const paths = [
+      {
+        name: 'bl-tr',
+        rotation: -16,
+        animationName: 'fly-bl-tr'
+      },
+      {
+        name: 'br-tl',
+        rotation: -164,
+        animationName: 'fly-br-tl'
+      },
+      {
+        name: 'tl-br',
+        rotation: 16,
+        animationName: 'fly-tl-br'
+      },
+      {
+        name: 'tr-bl',
+        rotation: 164,
+        animationName: 'fly-tr-bl'
+      },
+      {
+        name: 'l-r',
+        rotation: 0,
+        animationName: 'fly-l-r'
+      },
+      {
+        name: 'r-l',
+        rotation: 180,
+        animationName: 'fly-r-l'
+      }
+    ];
+
+    // Pick a random path
+    const randomPath = paths[Math.floor(Math.random() * paths.length)];
+    setFlight({
+      id: Date.now(),
+      ...randomPath,
+    });
+  }, []);
+
+  React.useEffect(() => {
+    triggerNewFlight();
+    const interval = setInterval(() => {
+      triggerNewFlight();
+    }, 9200);
+    return () => clearInterval(interval);
+  }, [triggerNewFlight]);
+
+  if (!flight) return null;
+
+  return (
+    <div className="pointer-events-none fixed inset-0 overflow-hidden z-[35]" key={flight.id}>
+      <style>{`
+        @keyframes fly-bl-tr {
+          0% {
+            transform: translate3d(-20vw, 85vh, 0) rotate(-16deg);
+          }
+          100% {
+            transform: translate3d(120vw, 15vh, 0) rotate(-16deg);
+          }
+        }
+        @keyframes fly-br-tl {
+          0% {
+            transform: translate3d(120vw, 85vh, 0) rotate(-164deg);
+          }
+          100% {
+            transform: translate3d(-20vw, 15vh, 0) rotate(-164deg);
+          }
+        }
+        @keyframes fly-tl-br {
+          0% {
+            transform: translate3d(-20vw, 15vh, 0) rotate(16deg);
+          }
+          100% {
+            transform: translate3d(120vw, 85vh, 0) rotate(16deg);
+          }
+        }
+        @keyframes fly-tr-bl {
+          0% {
+            transform: translate3d(120vw, 15vh, 0) rotate(164deg);
+          }
+          100% {
+            transform: translate3d(-20vw, 85vh, 0) rotate(164deg);
+          }
+        }
+        @keyframes fly-l-r {
+          0% {
+            transform: translate3d(-20vw, 45vh, 0) rotate(0deg);
+          }
+          100% {
+            transform: translate3d(120vw, 45vh, 0) rotate(0deg);
+          }
+        }
+        @keyframes fly-r-l {
+          0% {
+            transform: translate3d(120vw, 45vh, 0) rotate(180deg);
+          }
+          100% {
+            transform: translate3d(-20vw, 45vh, 0) rotate(180deg);
+          }
+        }
+      `}</style>
+      <div 
+        className="absolute flex flex-col gap-8"
+        style={{
+          animation: `${flight.animationName} 9s linear forwards`,
+          top: 0,
+          left: 0,
+        }}
+      >
+        {/* Jet 1: Saffron */}
+        <div className="relative flex items-center" style={{ transform: 'translateX(0px)', color: '#FF9933' }}>
+          <div 
+            className="absolute right-full h-[18px] w-[600px]" 
+            style={{ 
+              marginRight: '-4px',
+              background: 'radial-gradient(circle, currentColor 22%, transparent 68%) repeat-x',
+              backgroundSize: '13px 13px',
+              backgroundPosition: 'left center',
+              filter: 'blur(0.6px) drop-shadow(0 0 1px currentColor)',
+              WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 12%, rgba(0,0,0,0) 100%)',
+              maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 12%, rgba(0,0,0,0) 100%)',
+            }} 
+          />
+          <svg className="w-8 h-8 fill-[#475569] drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)] rotate-90" viewBox="0 0 100 100">
+            <path d="M50,5 L47,20 L40,22 L47,25 L47,45 L15,65 L46,65 L48,88 L38,92 L50,86 L62,92 L52,88 L54,65 L85,65 L53,45 L53,25 L60,22 L53,20 Z" />
+          </svg>
+        </div>
+        
+        {/* Jet 2: White */}
+        <div className="relative flex items-center" style={{ transform: 'translateX(32px)', color: '#FFFFFF' }}>
+          <div 
+            className="absolute right-full h-[20px] w-[600px]" 
+            style={{ 
+              marginRight: '-4px',
+              background: 'radial-gradient(circle, currentColor 24%, transparent 66%) repeat-x',
+              backgroundSize: '14px 14px',
+              backgroundPosition: 'left center',
+              filter: 'blur(0.8px) drop-shadow(0 0 1px currentColor)',
+              WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 15%, rgba(0,0,0,0) 100%)',
+              maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 15%, rgba(0,0,0,0) 100%)',
+            }} 
+          />
+          <svg className="w-8 h-8 fill-[#475569] drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)] rotate-90" viewBox="0 0 100 100">
+            <path d="M50,5 L47,20 L40,22 L47,25 L47,45 L15,65 L46,65 L48,88 L38,92 L50,86 L62,92 L52,88 L54,65 L85,65 L53,45 L53,25 L60,22 L53,20 Z" />
+          </svg>
+        </div>
+        
+        {/* Jet 3: Green */}
+        <div className="relative flex items-center" style={{ transform: 'translateX(0px)', color: '#128807' }}>
+          <div 
+            className="absolute right-full h-[18px] w-[600px]" 
+            style={{ 
+              marginRight: '-4px',
+              background: 'radial-gradient(circle, currentColor 22%, transparent 68%) repeat-x',
+              backgroundSize: '13px 13px',
+              backgroundPosition: 'left center',
+              filter: 'blur(0.6px) drop-shadow(0 0 1px currentColor)',
+              WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 12%, rgba(0,0,0,0) 100%)',
+              maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 12%, rgba(0,0,0,0) 100%)',
+            }} 
+          />
+          <svg className="w-8 h-8 fill-[#475569] drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)] rotate-90" viewBox="0 0 100 100">
+            <path d="M50,5 L47,20 L40,22 L47,25 L47,45 L15,65 L46,65 L48,88 L38,92 L50,86 L62,92 L52,88 L54,65 L85,65 L53,45 L53,25 L60,22 L53,20 Z" />
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   return (
     <div className="App">
       <AuthProvider>
         <GlobalAlertDialog />
+        <IndependenceDayAnimation />
         <Suspense fallback={<ScreenLoading />}>
           <AppRoutes />
         </Suspense>
