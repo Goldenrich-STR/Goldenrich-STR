@@ -94,7 +94,9 @@ const Departments = () => {
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{metric.label}</p>
                   <p className="mt-2 text-2xl font-black text-slate-950">{metric.value}</p>
                 </div>
-                <Icon className="h-5 w-5 text-terracotta" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 ring-1 ring-blue-100">
+                  <Icon className="h-5 w-5" />
+                </div>
               </div>
             </Panel>
           );

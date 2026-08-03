@@ -14,6 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { accountAPI, bookingAPI, pricingAPI } from '../services/api';
 import CouponManagement from '../components/admin/CouponManagement';
 import { BookingManagement, SubscriptionManagement } from './AdminDashboard';
+import { requestConfirm, showNotice } from './admin/shared';
 
 const fmtINR = (paise) =>
   new Intl.NumberFormat('en-IN', {
@@ -397,10 +398,10 @@ export const PricingEngineTab = () => {
     setSavingRules(true);
     try {
       await pricingAPI.saveRules(rules);
-      alert("Pricing rules saved successfully!");
+      await showNotice({ title: 'Rules Saved', description: 'Pricing rules saved successfully!', eyebrow: 'Completed' });
       await loadData();
     } catch (err) {
-      alert("Failed to save pricing rules.");
+      await showNotice({ title: 'Save Failed', description: 'Failed to save pricing rules.', eyebrow: 'Action Failed' });
     } finally {
       setSavingRules(false);
     }
@@ -408,7 +409,7 @@ export const PricingEngineTab = () => {
 
   const handlePreview = async () => {
     if (selectedProps.length === 0) {
-      alert("Please select at least one property first.");
+      await showNotice({ title: 'Selection Required', description: 'Please select at least one property first.', eyebrow: 'Validation Error' });
       return;
     }
     try {
@@ -425,9 +426,9 @@ export const PricingEngineTab = () => {
         ...p,
         new_price: previewMap[p.property_id] !== undefined ? previewMap[p.property_id] : p.new_price
       })));
-      alert("Price previews generated in the table below!");
+      await showNotice({ title: 'Preview Ready', description: 'Price previews generated in the table below!', eyebrow: 'Completed' });
     } catch (err) {
-      alert("Failed to generate price preview.");
+      await showNotice({ title: 'Preview Failed', description: 'Failed to generate price preview.', eyebrow: 'Action Failed' });
     } finally {
       setLoading(false);
     }
@@ -435,19 +436,19 @@ export const PricingEngineTab = () => {
 
   const handleApply = async () => {
     if (selectedProps.length === 0) {
-      alert("Please select at least one property first.");
+      await showNotice({ title: 'Selection Required', description: 'Please select at least one property first.', eyebrow: 'Validation Error' });
       return;
     }
     setApplying(true);
     try {
       await pricingAPI.saveRules(rules);
       const res = await pricingAPI.applyPricing(selectedProps, rules, targetTypes.length > 0 ? targetTypes : null);
-      alert(res.data.message || "Pricing rules applied and activated successfully!");
+      await showNotice({ title: 'Pricing Applied', description: res.data.message || 'Pricing rules applied and activated successfully!', eyebrow: 'Completed' });
       setSelectedProps([]);
       setTargetTypes([]);
       await loadData();
     } catch (err) {
-      alert("Failed to apply pricing.");
+      await showNotice({ title: 'Apply Failed', description: 'Failed to apply pricing.', eyebrow: 'Action Failed' });
     } finally {
       setApplying(false);
     }
@@ -457,10 +458,10 @@ export const PricingEngineTab = () => {
     try {
       setLoading(true);
       const res = await pricingAPI.toggleRulesStatus(propertyId, status);
-      alert(res.data.message || `Rules status updated to ${status}`);
+      await showNotice({ title: 'Status Updated', description: res.data.message || `Rules status updated to ${status}`, eyebrow: 'Completed' });
       await loadData();
     } catch (err) {
-      alert("Failed to update status.");
+      await showNotice({ title: 'Update Failed', description: 'Failed to update status.', eyebrow: 'Action Failed' });
     } finally {
       setLoading(false);
     }
@@ -470,11 +471,11 @@ export const PricingEngineTab = () => {
     try {
       setLoading(true);
       const res = await pricingAPI.toggleRulesStatusBatch(selectedProps, status);
-      alert(res.data.message || `Successfully batch updated status to ${status}`);
+      await showNotice({ title: 'Batch Update Complete', description: res.data.message || `Successfully batch updated status to ${status}`, eyebrow: 'Completed' });
       setSelectedProps([]);
       await loadData();
     } catch (err) {
-      alert("Failed to batch update status.");
+      await showNotice({ title: 'Batch Update Failed', description: 'Failed to batch update status.', eyebrow: 'Action Failed' });
     } finally {
       setLoading(false);
     }
@@ -485,12 +486,12 @@ export const PricingEngineTab = () => {
     try {
       setLoading(true);
       await pricingAPI.manualOverride(overrideProperty.property_id, Number(overridePrice));
-      alert("Manual override applied successfully (Pricing Rules Stopped)!");
+      await showNotice({ title: 'Override Applied', description: 'Manual override applied successfully (Pricing Rules Stopped)!', eyebrow: 'Completed' });
       setOverrideProperty(null);
       setOverridePrice('');
       await loadData();
     } catch (err) {
-      alert("Failed to apply manual override.");
+      await showNotice({ title: 'Override Failed', description: 'Failed to apply manual override.', eyebrow: 'Action Failed' });
     } finally {
       setLoading(false);
     }
@@ -498,7 +499,7 @@ export const PricingEngineTab = () => {
 
   const handleAddFestival = () => {
     if (!newFestName || !newFestStart || !newFestEnd || !newFestPct) {
-      alert("Please fill in all festival fields.");
+      showNotice({ title: 'Validation Error', description: 'Please fill in all festival fields.', eyebrow: 'Validation Error' });
       return;
     }
     const newFest = {
@@ -590,7 +591,7 @@ export const PricingEngineTab = () => {
         {[
           { label: 'Live Properties', value: totalProperties, color: 'text-charcoal' },
           { label: 'Active Rules Properties', value: activeRulesCount, color: 'text-green-600' },
-          { label: 'Stopped Rules Properties', value: stoppedRulesCount, color: 'text-amber-600' },
+          { label: 'Stopped Rules Properties', value: stoppedRulesCount, color: 'text-[#2563eb]' },
           { label: 'Pending Updates', value: pendingUpdatesCount, color: 'text-red-500' }
         ].map(card => (
           <div key={card.label} className="dashboard-card border border-gray-100 shadow-sm bg-white p-5 rounded-2xl">
@@ -605,7 +606,7 @@ export const PricingEngineTab = () => {
         <button
           onClick={() => setSubTab('rules')}
           className={`px-4 py-2.5 font-bold text-sm tracking-wide transition-all border-b-2 ${
-            subTab === 'rules' ? 'border-terracotta text-terracotta' : 'border-transparent text-charcoal-muted hover:text-charcoal'
+            subTab === 'rules' ? 'border-[#2563eb] text-[#2563eb]' : 'border-transparent text-charcoal-muted hover:text-charcoal'
           }`}
         >
           Rules Configuration
@@ -613,7 +614,7 @@ export const PricingEngineTab = () => {
         <button
           onClick={() => setSubTab('history')}
           className={`px-4 py-2.5 font-bold text-sm tracking-wide transition-all border-b-2 ${
-            subTab === 'history' ? 'border-terracotta text-terracotta' : 'border-transparent text-charcoal-muted hover:text-charcoal'
+            subTab === 'history' ? 'border-[#2563eb] text-[#2563eb]' : 'border-transparent text-charcoal-muted hover:text-charcoal'
           }`}
         >
           Price Change History
@@ -647,7 +648,7 @@ export const PricingEngineTab = () => {
                       <td className="py-3 px-4 whitespace-nowrap">{new Date(item.created_at).toLocaleString('en-IN')}</td>
                       <td className="py-3 px-4 font-bold">{item.property_title}</td>
                       <td className="py-3 px-4 font-mono">₹{item.old_price.toLocaleString('en-IN')}</td>
-                      <td className="py-3 px-4 font-mono text-terracotta font-bold">₹{item.new_price.toLocaleString('en-IN')}</td>
+                      <td className="py-3 px-4 font-mono text-[#2563eb] font-bold">₹{item.new_price.toLocaleString('en-IN')}</td>
                       <td className="py-3 px-4">{item.updated_by}</td>
                       <td className="py-3 px-4 font-semibold text-charcoal-light">{item.reason}</td>
                     </tr>
@@ -676,7 +677,7 @@ export const PricingEngineTab = () => {
             <div className={`dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-6 space-y-6 ${!isRulesPanelEnabled ? 'opacity-40 select-none pointer-events-none' : ''}`}>
               <div className="flex items-center justify-between pb-3 border-b border-gray-100">
                 <h3 className="text-lg font-bold text-charcoal flex items-center gap-2">
-                  <SlidersHorizontal className="w-5 h-5 text-terracotta" />
+                  <SlidersHorizontal className="w-5 h-5 text-[#2563eb]" />
                   <span>Configure Rules</span>
                 </h3>
                 <button
@@ -697,7 +698,7 @@ export const PricingEngineTab = () => {
                         type="checkbox"
                         checked={targetTypes.includes(type.value)}
                         onChange={() => handleTargetTypeChange(type.value)}
-                        className="w-3.5 h-3.5 rounded text-terracotta focus:ring-terracotta border-gray-300"
+                        className="w-3.5 h-3.5 rounded text-[#2563eb] focus:ring-[#93c5fd] border-gray-300"
                       />
                       <span>{type.label}</span>
                     </label>
@@ -720,7 +721,7 @@ export const PricingEngineTab = () => {
                         ...prev,
                         weekend: { ...prev.weekend, is_enabled: e.target.checked }
                       }))}
-                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                      className="w-4 h-4 rounded text-[#2563eb] focus:ring-[#93c5fd]"
                     />
                   </div>
                   {rules.weekend.is_enabled && (
@@ -734,7 +735,7 @@ export const PricingEngineTab = () => {
                             ...prev,
                             weekend: { ...prev.weekend, saturday_pct: e.target.value === "" ? 0 : Number(e.target.value) }
                           }))}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe] font-semibold"
                         />
                       </div>
                       <div>
@@ -746,7 +747,7 @@ export const PricingEngineTab = () => {
                             ...prev,
                             weekend: { ...prev.weekend, sunday_pct: e.target.value === "" ? 0 : Number(e.target.value) }
                           }))}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe] font-semibold"
                         />
                       </div>
                     </div>
@@ -764,7 +765,7 @@ export const PricingEngineTab = () => {
                         ...prev,
                         seasonal: { ...prev.seasonal, is_enabled: e.target.checked }
                       }))}
-                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                      className="w-4 h-4 rounded text-[#2563eb] focus:ring-[#93c5fd]"
                     />
                   </div>
                   {rules.seasonal.is_enabled && (
@@ -778,7 +779,7 @@ export const PricingEngineTab = () => {
                             ...prev,
                             seasonal: { ...prev.seasonal, summer_pct: e.target.value === "" ? 0 : Number(e.target.value) }
                           }))}
-                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe] font-semibold"
                         />
                       </div>
                       <div>
@@ -790,7 +791,7 @@ export const PricingEngineTab = () => {
                             ...prev,
                             seasonal: { ...prev.seasonal, winter_pct: e.target.value === "" ? 0 : Number(e.target.value) }
                           }))}
-                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe] font-semibold"
                         />
                       </div>
                       <div>
@@ -802,7 +803,7 @@ export const PricingEngineTab = () => {
                             ...prev,
                             seasonal: { ...prev.seasonal, monsoon_pct: e.target.value === "" ? 0 : Number(e.target.value) }
                           }))}
-                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                          className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe] font-semibold"
                         />
                       </div>
                     </div>
@@ -820,7 +821,7 @@ export const PricingEngineTab = () => {
                         ...prev,
                         occupancy: { ...prev.occupancy, is_enabled: e.target.checked }
                       }))}
-                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                      className="w-4 h-4 rounded text-[#2563eb] focus:ring-[#93c5fd]"
                     />
                   </div>
                   {rules.occupancy.is_enabled && (
@@ -834,7 +835,7 @@ export const PricingEngineTab = () => {
                             ...prev,
                             occupancy: { ...prev.occupancy, bracket_0_30: e.target.value === "" ? 0 : Number(e.target.value) }
                           }))}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe] font-semibold"
                         />
                       </div>
                       <div>
@@ -846,7 +847,7 @@ export const PricingEngineTab = () => {
                             ...prev,
                             occupancy: { ...prev.occupancy, bracket_31_60: e.target.value === "" ? 0 : Number(e.target.value) }
                           }))}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe] font-semibold"
                         />
                       </div>
                       <div>
@@ -858,7 +859,7 @@ export const PricingEngineTab = () => {
                             ...prev,
                             occupancy: { ...prev.occupancy, bracket_61_80: e.target.value === "" ? 0 : Number(e.target.value) }
                           }))}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe] font-semibold"
                         />
                       </div>
                       <div>
@@ -870,7 +871,7 @@ export const PricingEngineTab = () => {
                             ...prev,
                             occupancy: { ...prev.occupancy, bracket_81_100: e.target.value === "" ? 0 : Number(e.target.value) }
                           }))}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe] font-semibold"
                         />
                       </div>
                     </div>
@@ -888,7 +889,7 @@ export const PricingEngineTab = () => {
                         ...prev,
                         promotional: { ...prev.promotional, is_enabled: e.target.checked }
                       }))}
-                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                      className="w-4 h-4 rounded text-[#2563eb] focus:ring-[#93c5fd]"
                     />
                   </div>
                   {rules.promotional.is_enabled && (
@@ -903,7 +904,7 @@ export const PricingEngineTab = () => {
                             promotional: { ...prev.promotional, campaign_name: e.target.value }
                           }))}
                           placeholder="e.g. Monsoon Sale"
-                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe] font-semibold"
                         />
                       </div>
                       <div>
@@ -915,7 +916,7 @@ export const PricingEngineTab = () => {
                             ...prev,
                             promotional: { ...prev.promotional, pct_change: e.target.value === "" ? 0 : Number(e.target.value) }
                           }))}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-terracotta font-semibold"
+                          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe] font-semibold"
                         />
                       </div>
                     </div>
@@ -933,7 +934,7 @@ export const PricingEngineTab = () => {
                         ...prev,
                         festival: { ...prev.festival, is_enabled: e.target.checked }
                       }))}
-                      className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                      className="w-4 h-4 rounded text-[#2563eb] focus:ring-[#93c5fd]"
                     />
                   </div>
                   {rules.festival.is_enabled && (
@@ -945,20 +946,20 @@ export const PricingEngineTab = () => {
                           placeholder="Festival Name"
                           value={newFestName}
                           onChange={e => setNewFestName(e.target.value)}
-                          className="w-full border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-terracotta"
+                          className="w-full border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe]"
                         />
                         <div className="grid grid-cols-2 gap-2">
                           <input
                             type="date"
                             value={newFestStart}
                             onChange={e => setNewFestStart(e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-terracotta"
+                            className="w-full border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe]"
                           />
                           <input
                             type="date"
                             value={newFestEnd}
                             onChange={e => setNewFestEnd(e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-terracotta"
+                            className="w-full border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe]"
                           />
                         </div>
                         <div className="flex gap-2">
@@ -967,7 +968,7 @@ export const PricingEngineTab = () => {
                             placeholder="Increase %"
                             value={newFestPct}
                             onChange={e => setNewFestPct(e.target.value)}
-                            className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-terracotta"
+                            className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1 text-xs outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe]"
                           />
                           <button
                             onClick={handleAddFestival}
@@ -986,7 +987,7 @@ export const PricingEngineTab = () => {
                               <span className="text-charcoal-muted">{fest.start_date} to {fest.end_date}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-terracotta font-bold">+{fest.increase_pct}%</span>
+                              <span className="font-mono text-[#2563eb] font-bold">+{fest.increase_pct}%</span>
                               <button
                                 onClick={() => handleRemoveFestival(idx)}
                                 className="text-red-500 hover:text-red-700"
@@ -1036,14 +1037,14 @@ export const PricingEngineTab = () => {
                 <button
                   disabled={selectedProps.length === 0}
                   onClick={handlePreview}
-                  className="px-5 py-2.5 rounded-xl border border-terracotta hover:bg-terracotta/5 text-terracotta font-bold text-sm transition disabled:opacity-40"
+                  className="px-5 py-2.5 rounded-xl border border-[#bfdbfe] hover:bg-[#eff6ff] text-[#2563eb] font-bold text-sm transition disabled:opacity-40"
                 >
                   Preview Changes
                 </button>
                 <button
                   disabled={selectedProps.length === 0 || applying}
                   onClick={handleApply}
-                  className="px-5 py-2.5 rounded-xl bg-terracotta hover:bg-terracotta-dark text-white font-bold text-sm transition disabled:opacity-40"
+                  className="px-5 py-2.5 rounded-xl bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold text-sm transition disabled:opacity-40"
                 >
                   {applying ? "Applying..." : "Apply Rules"}
                 </button>
@@ -1062,7 +1063,7 @@ export const PricingEngineTab = () => {
                   onClick={() => setTableTab(tabOpt.id)}
                   className={`px-5 py-3 font-bold text-xs tracking-wider uppercase rounded-xl transition ${
                     tableTab === tabOpt.id
-                      ? 'bg-terracotta text-white shadow-sm'
+                      ? 'bg-[#2563eb] text-white shadow-sm'
                       : 'text-charcoal-muted hover:text-charcoal hover:bg-stone/50'
                   }`}
                 >
@@ -1088,7 +1089,7 @@ export const PricingEngineTab = () => {
                     placeholder="Search property or city..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-2 text-xs font-semibold outline-none focus:border-terracotta"
+                    className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-2 text-xs font-semibold outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe]"
                   />
                 </div>
               </div>
@@ -1102,7 +1103,7 @@ export const PricingEngineTab = () => {
                           type="checkbox"
                           onChange={toggleSelectAll}
                           checked={displayProperties.length > 0 && selectedProps.length === displayProperties.length}
-                          className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                          className="w-4 h-4 rounded text-[#2563eb] focus:ring-[#93c5fd]"
                         />
                       </th>
                       <th className="py-3 px-4">Property Name</th>
@@ -1131,7 +1132,7 @@ export const PricingEngineTab = () => {
                                 type="checkbox"
                                 checked={selectedProps.includes(p.property_id)}
                                 onChange={() => toggleSelectProperty(p.property_id)}
-                                className="w-4 h-4 rounded text-terracotta focus:ring-terracotta"
+                                className="w-4 h-4 rounded text-[#2563eb] focus:ring-[#93c5fd]"
                               />
                             </td>
                             <td className="py-3 px-4 font-bold">
@@ -1140,7 +1141,7 @@ export const PricingEngineTab = () => {
                                 {p.pricing_rules && (
                                   <button
                                     onClick={() => setViewRulesProperty(p)}
-                                    className="p-1 hover:bg-stone rounded-lg text-terracotta transition"
+                                    className="p-1 hover:bg-stone rounded-lg text-[#2563eb] transition"
                                     title="View Configured Rules"
                                   >
                                     <Eye className="w-3.5 h-3.5" />
@@ -1150,12 +1151,12 @@ export const PricingEngineTab = () => {
                             </td>
                             <td className="py-3 px-4 font-semibold">{p.city}</td>
                             <td className="py-3 px-4 text-right font-mono">₹{p.base_price?.toLocaleString('en-IN') || p.price_per_night.toLocaleString('en-IN')}</td>
-                            <td className="py-3 px-4 text-right font-mono font-bold text-terracotta">
+                            <td className="py-3 px-4 text-right font-mono font-bold text-[#2563eb]">
                               ₹{p.price_per_night.toLocaleString('en-IN')}
                             </td>
                             <td className="py-3 px-4 text-center whitespace-nowrap">
                               <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                                isRulesActive ? 'bg-green-100 text-green-800 animate-pulse' : 'bg-amber-100 text-amber-800'
+                                isRulesActive ? 'bg-green-100 text-green-800 animate-pulse' : 'bg-[#eef4ff] text-[#2563eb]'
                               }`}>
                                 {isRulesActive ? 'running' : 'stopped'}
                               </span>
@@ -1186,7 +1187,7 @@ export const PricingEngineTab = () => {
                                   setOverrideProperty(p);
                                   setOverridePrice(p.base_price || p.price_per_night);
                                 }}
-                                className="px-2.5 py-1 rounded-lg border border-amber-200 hover:bg-amber-50 text-amber-700 text-xs font-bold transition"
+                                className="px-2.5 py-1 rounded-lg border border-[#bfdbfe] hover:bg-[#eff6ff] text-[#2563eb] text-xs font-bold transition"
                               >
                                 Override
                               </button>
@@ -1211,7 +1212,7 @@ export const PricingEngineTab = () => {
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-premium animate-slide-up">
             <h3 className="text-xl font-bold tracking-tight text-charcoal mb-2">Manual Price Override</h3>
             <p className="text-xs text-charcoal-muted mb-4">
-              Manually set the Base Price for <span className="font-bold text-charcoal">{overrideProperty.title}</span>. This property's pricing mode will be locked to <span className="font-semibold text-amber-700">manual</span> and active rules will be stopped.
+              Manually set the Base Price for <span className="font-bold text-charcoal">{overrideProperty.title}</span>. This property's pricing mode will be locked to <span className="font-semibold text-[#2563eb]">manual</span> and active rules will be stopped.
             </p>
             <div className="space-y-4">
               <div>
@@ -1220,7 +1221,7 @@ export const PricingEngineTab = () => {
                   type="number"
                   value={overridePrice}
                   onChange={e => setOverridePrice(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-terracotta font-semibold text-charcoal text-sm"
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe] font-semibold text-charcoal text-sm"
                 />
               </div>
               <div className="flex gap-3 pt-3">
@@ -1307,7 +1308,7 @@ export const PricingEngineTab = () => {
           <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl p-8 max-w-lg w-full shadow-premium animate-slide-up space-y-4">
               <h3 className="text-xl font-bold tracking-tight text-charcoal flex items-center gap-2">
-                <Eye className="w-5 h-5 text-terracotta" />
+                <Eye className="w-5 h-5 text-[#2563eb]" />
                 <span>Configured Rules: {viewRulesProperty.title}</span>
               </h3>
 
@@ -1319,7 +1320,7 @@ export const PricingEngineTab = () => {
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-charcoal-muted uppercase block">Current Calculated Rate</span>
-                  <span className="text-lg font-bold font-mono text-terracotta">₹{livePrice.toLocaleString('en-IN')}</span>
+                  <span className="text-lg font-bold font-mono text-[#2563eb]">₹{livePrice.toLocaleString('en-IN')}</span>
                 </div>
               </div>
               
@@ -1453,7 +1454,7 @@ export const PricingEngineTab = () => {
                               <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase block text-center ${badgeColor}`}>
                                 {festStatus}
                               </span>
-                              <span className="font-mono text-terracotta font-bold text-[11px] block">
+                              <span className="font-mono text-[#2563eb] font-bold text-[11px] block">
                                 +₹{((basePrice * (fest.increase_pct || 0)) / 100).toLocaleString('en-IN')} (+{fest.increase_pct}%)
                               </span>
                             </div>
@@ -1486,7 +1487,7 @@ export const PricingEngineTab = () => {
 
 // ---------------- Transactions ----------------
 
-const TransactionsTab = () => {
+const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState({
@@ -1505,7 +1506,7 @@ const TransactionsTab = () => {
   });
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const LIMIT = 10;
+  const LIMIT = limit;
 
   // Custom states for Invoice & Share Actions
   const [selectedInvoiceTxn, setSelectedInvoiceTxn] = useState(null);
@@ -1643,7 +1644,7 @@ const TransactionsTab = () => {
 
   return (
     <div className="space-y-6" data-testid="transactions-tab">
-      <div className="border border-gray-100 shadow-sm rounded-lg bg-white overflow-hidden">
+      {!hideFilters && <div className="border border-gray-100 shadow-sm rounded-lg bg-white overflow-hidden">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 px-5 py-4 border-b border-gray-100 bg-slate-50/70">
           <div className="flex items-start gap-3">
             <span className="w-9 h-9 rounded-lg bg-white border border-gray-100 text-terracotta inline-flex items-center justify-center shadow-sm">
@@ -1774,12 +1775,12 @@ const TransactionsTab = () => {
             </label>
           </div>
         </div>
-      </div>
+      </div>}
 
       <div className="dashboard-card border border-gray-100 shadow-sm rounded-2xl bg-white p-6 overflow-hidden">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-bold text-charcoal" data-testid="transactions-count">
-            {loading ? 'Syncing transactions...' : `${total} Transactions Found`}
+            {loading ? 'Syncing transactions...' : hideFilters ? `Recent ${items.length} Transactions` : `${total} Transactions Found`}
           </p>
         </div>
 
@@ -1938,7 +1939,7 @@ const TransactionsTab = () => {
             </div>
 
             {/* Pagination Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-sand-100 no-print" data-testid="transactions-pagination">
+            {!hideFilters && <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-sand-100 no-print" data-testid="transactions-pagination">
               <p className="text-xs text-charcoal-muted font-semibold">
                 Showing <span className="font-semibold tracking-tight text-charcoal">{(page - 1) * LIMIT + 1}</span> to{' '}
                 <span className="font-semibold tracking-tight text-charcoal">{Math.min(page * LIMIT, total)}</span> of{' '}
@@ -2001,7 +2002,7 @@ const TransactionsTab = () => {
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
-            </div>
+            </div>}
           </>
         )}
       </div>
@@ -2206,7 +2207,7 @@ const EnterprisePayoutsTab = () => {
       await accountAPI.processPayout(pid);
       await load();
     } catch (e) {
-      alert(e?.response?.data?.detail || 'Failed to process payout');
+      await showNotice({ title: 'Payout Failed', description: e?.response?.data?.detail || 'Failed to process payout', eyebrow: 'Action Failed' });
     } finally {
       setBusy(false);
     }
@@ -2216,7 +2217,7 @@ const EnterprisePayoutsTab = () => {
     setBusy(true);
     try {
       const r = await accountAPI.runAutoPayout();
-      alert(`Auto payout completed. Marked eligible: ${r.data.marked_eligible}. Processed: ${r.data.processed}. Failed: ${r.data.failed}.`);
+      await showNotice({ title: 'Auto Payout Complete', description: `Marked eligible: ${r.data.marked_eligible}. Processed: ${r.data.processed}. Failed: ${r.data.failed}.`, eyebrow: 'Completed' });
       await load();
     } finally {
       setBusy(false);
@@ -2224,7 +2225,7 @@ const EnterprisePayoutsTab = () => {
   };
 
   const processAll = async () => {
-    if (!window.confirm('Process all eligible payouts in this cycle?')) return;
+    if (!(await requestConfirm({ title: 'Process Eligible Payouts', description: 'Process all eligible payouts in this cycle?', confirmLabel: 'Process All' }))) return;
     setBusy(true);
     try {
       const r = await accountAPI.processAllEligible();

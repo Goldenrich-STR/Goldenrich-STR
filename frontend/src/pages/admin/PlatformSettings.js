@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Activity, BellRing, CreditCard, LockKeyhole, Pencil, Plus, Power, Settings, ShieldCheck, Trash2 } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { getApiErrorMessage } from '../../services/api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestConfirm, requestInput, requestReason, showNotice } from './shared';
 import { PricingEngineTab } from '../AdminAccount';
 
 const phaseSteps = [
@@ -159,7 +159,13 @@ const PlatformSettings = () => {
   };
 
   const saveBookingTaxSlab = async (payload, slabId = null) => {
-    const reason = window.prompt('Tax slab audit reason', slabId ? 'Booking tax slab updated' : 'Booking tax slab created');
+    const reason = await requestInput({
+      title: 'Tax Slab Audit Reason',
+      description: slabId ? 'Booking tax slab will be updated.' : 'New booking tax slab will be created.',
+      label: 'Reason',
+      defaultValue: slabId ? 'Booking tax slab updated' : 'Booking tax slab created',
+      confirmLabel: 'Save Tax Slab',
+    });
     if (!reason) return;
     setSavingPayment(true);
     try {
@@ -176,15 +182,32 @@ const PlatformSettings = () => {
   };
 
   const saveTdsConfig = async (payload) => {
-    if (payload.is_enabled && !window.confirm('Activate this TDS configuration for future host payout calculations?')) return;
-    const reason = window.prompt('TDS audit reason', 'TDS configuration updated');
+    if (payload.is_enabled) {
+      const confirmed = await requestConfirm({
+        title: 'Activate TDS Configuration',
+        description: 'Activate this TDS configuration for future host payout calculations?',
+        confirmLabel: 'Activate',
+      });
+      if (!confirmed) return;
+    }
+    const reason = await requestInput({
+      title: 'TDS Audit Reason',
+      description: 'TDS configuration changes will be saved in audit history.',
+      label: 'Reason',
+      defaultValue: 'TDS configuration updated',
+      confirmLabel: 'Save TDS Config',
+    });
     if (!reason) return;
     setSavingTds(true);
     try {
       await adminPhase1API.updateTdsConfig({ ...payload, reason });
       await load();
     } catch (error) {
-      window.alert(getApiErrorMessage(error, 'Unable to save TDS configuration. Please check the backend and try again.'));
+      await showNotice({
+        title: 'TDS Save Failed',
+        description: getApiErrorMessage(error, 'Unable to save TDS configuration. Please check the backend and try again.'),
+        eyebrow: 'Action Failed',
+      });
     } finally {
       setSavingTds(false);
     }
@@ -192,7 +215,13 @@ const PlatformSettings = () => {
 
   const toggleBookingTaxSlab = async (slab) => {
     const nextState = !slab.is_active;
-    const reason = window.prompt('Tax slab audit reason', nextState ? 'Booking tax slab enabled' : 'Booking tax slab disabled');
+    const reason = await requestInput({
+      title: 'Tax Slab Audit Reason',
+      description: `Booking tax slab will be ${nextState ? 'enabled' : 'disabled'}.`,
+      label: 'Reason',
+      defaultValue: nextState ? 'Booking tax slab enabled' : 'Booking tax slab disabled',
+      confirmLabel: 'Save Status',
+    });
     if (!reason) return;
     setSavingPayment(true);
     try {
@@ -204,8 +233,20 @@ const PlatformSettings = () => {
   };
 
   const deleteBookingTaxSlab = async (slab) => {
-    if (!window.confirm('Delete this booking tax slab?')) return;
-    const reason = window.prompt('Tax slab audit reason', 'Booking tax slab deleted');
+    const confirmed = await requestConfirm({
+      title: 'Delete Booking Tax Slab',
+      description: 'Delete this booking tax slab? This action will be recorded in audit history.',
+      confirmLabel: 'Delete Slab',
+      tone: 'danger',
+    });
+    if (!confirmed) return;
+    const reason = await requestInput({
+      title: 'Tax Slab Audit Reason',
+      description: 'Add a reason before deleting this tax slab.',
+      label: 'Reason',
+      defaultValue: 'Booking tax slab deleted',
+      confirmLabel: 'Delete Slab',
+    });
     if (!reason) return;
     setSavingPayment(true);
     try {
@@ -284,7 +325,7 @@ const PlatformSettings = () => {
               return (
                 <Panel key={item.key} className="p-4">
                   <div className="mb-4 flex items-center justify-between gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-terracotta/10 text-terracotta"><Icon className="h-5 w-5" /></div>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef4ff] text-[#2563eb]"><Icon className="h-5 w-5" /></div>
                     <StatusBadge value={item.status} />
                   </div>
                   <h3 className="font-black">{item.label}</h3>
@@ -567,7 +608,7 @@ const PaymentTaxCommission = ({
   const saveConfig = () => {
     const error = validateConfig();
     if (error) {
-      window.alert(error);
+      showNotice({ title: 'Validation Error', description: error, eyebrow: 'Validation Error' });
       return;
     }
     const platformFee = draft.charges.platform_fee || {};
@@ -744,21 +785,21 @@ const TdsConfigurationPanel = ({ config, saving, onSave }) => {
     thresholds: { ...current.thresholds, [key]: value },
   }));
 
-  const submit = () => {
+  const submit = async () => {
     const standardRate = Number(draft.standard_rate);
     const missingPanRate = Number(draft.missing_pan_rate);
     const individualThreshold = Number(draft.thresholds.individual_huf);
     const otherThreshold = Number(draft.thresholds.other_entity);
     if (!draft.effective_from) {
-      window.alert('Effective From date is required.');
+      await showNotice({ title: 'Validation Error', description: 'Effective From date is required.', eyebrow: 'Validation Error' });
       return;
     }
     if ([standardRate, missingPanRate, individualThreshold, otherThreshold].some((value) => Number.isNaN(value) || value < 0)) {
-      window.alert('TDS rates and thresholds cannot be negative.');
+      await showNotice({ title: 'Validation Error', description: 'TDS rates and thresholds cannot be negative.', eyebrow: 'Validation Error' });
       return;
     }
     if (draft.effective_to && draft.effective_from > draft.effective_to) {
-      window.alert('Effective To must be after Effective From.');
+      await showNotice({ title: 'Validation Error', description: 'Effective To must be after Effective From.', eyebrow: 'Validation Error' });
       return;
     }
     onSave({
@@ -926,15 +967,15 @@ const TaxSlabModal = ({ slab, saving, onClose, onSave }) => {
     const toAmount = draft.unlimited ? null : Number(draft.to_amount);
     const gstPercent = Number(draft.gst_percent);
     if (Number.isNaN(fromAmount) || fromAmount < 0) {
-      window.alert('From Amount must be zero or more.');
+      await showNotice({ title: 'Validation Error', description: 'From Amount must be zero or more.', eyebrow: 'Validation Error' });
       return;
     }
     if (!draft.unlimited && (Number.isNaN(toAmount) || fromAmount >= toAmount)) {
-      window.alert('From Amount must be less than To Amount.');
+      await showNotice({ title: 'Validation Error', description: 'From Amount must be less than To Amount.', eyebrow: 'Validation Error' });
       return;
     }
     if (Number.isNaN(gstPercent) || gstPercent < 0) {
-      window.alert('GST percentage cannot be negative.');
+      await showNotice({ title: 'Validation Error', description: 'GST percentage cannot be negative.', eyebrow: 'Validation Error' });
       return;
     }
     await onSave({
@@ -1069,14 +1110,42 @@ const OperationalControls = ({ data, fallbackSettings, onSave }) => {
   const readiness = data?.readiness || {};
   const checklist = settings.checklist || [];
   const toggleMaintenance = () => onSave({ maintenance_mode: !settings.maintenance_mode });
-  const updateSchedule = () => {
-    const backupFrequency = window.prompt('Backup frequency: hourly, daily, weekly, monthly', settings.backup_frequency || 'daily');
+  const updateSchedule = async () => {
+    const backupFrequency = await requestInput({
+      title: 'Backup Schedule',
+      description: 'Allowed values: hourly, daily, weekly, monthly.',
+      label: 'Backup Frequency',
+      defaultValue: settings.backup_frequency || 'daily',
+      confirmLabel: 'Continue',
+    });
     if (!backupFrequency) return;
-    const backupOwner = window.prompt('Backup owner', settings.backup_owner || '');
+    const backupOwner = await requestInput({
+      title: 'Backup Schedule',
+      description: 'Enter backup owner name or user ID.',
+      label: 'Backup Owner',
+      defaultValue: settings.backup_owner || '',
+      confirmLabel: 'Continue',
+      allowEmpty: true,
+    });
     if (backupOwner === null) return;
-    const retentionDays = window.prompt('Retention days', settings.retention_days || 30);
+    const retentionDays = await requestInput({
+      title: 'Backup Schedule',
+      description: 'Enter retention period in days.',
+      label: 'Retention Days',
+      defaultValue: String(settings.retention_days || 30),
+      inputType: 'number',
+      confirmLabel: 'Continue',
+    });
     if (retentionDays === null) return;
-    const nextBackupAt = window.prompt('Next backup date/time', settings.next_backup_at || '');
+    const nextBackupAt = await requestInput({
+      title: 'Backup Schedule',
+      description: 'Optional next backup date/time.',
+      label: 'Next Backup At',
+      defaultValue: settings.next_backup_at || '',
+      placeholder: '2026-08-02T02:00',
+      confirmLabel: 'Save Schedule',
+      allowEmpty: true,
+    });
     if (nextBackupAt === null) return;
     onSave({ backup_frequency: backupFrequency, backup_owner: backupOwner, retention_days: Number(retentionDays), next_backup_at: nextBackupAt });
   };
@@ -1109,9 +1178,25 @@ const OperationalControls = ({ data, fallbackSettings, onSave }) => {
           </div>
           <div className="mt-4 space-y-3">
             <button onClick={toggleMaintenance} className={`w-full rounded-lg px-3 py-2 text-sm font-black ${settings.maintenance_mode ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>{settings.maintenance_mode ? 'Turn Maintenance Off' : 'Turn Maintenance On'}</button>
-            <button onClick={() => { const message = window.prompt('Maintenance message', settings.maintenance_message || ''); if (message !== null) onSave({ maintenance_message: message }); }} className="w-full rounded-lg bg-slate-100 px-3 py-2 text-sm font-black text-slate-700">Edit Message</button>
+            <button
+              onClick={async () => {
+                const message = await requestInput({
+                  title: 'Maintenance Message',
+                  description: 'Update the message shown during maintenance mode.',
+                  label: 'Message',
+                  defaultValue: settings.maintenance_message || '',
+                  inputType: 'textarea',
+                  confirmLabel: 'Save Message',
+                  allowEmpty: true,
+                });
+                if (message !== null) onSave({ maintenance_message: message });
+              }}
+              className="w-full rounded-lg bg-slate-100 px-3 py-2 text-sm font-black text-slate-700"
+            >
+              Edit Message
+            </button>
             <button onClick={updateSchedule} className="w-full rounded-lg bg-charcoal px-3 py-2 text-sm font-black text-white">Edit Backup Schedule</button>
-            <button onClick={markBackupComplete} className="w-full rounded-lg bg-terracotta/10 px-3 py-2 text-sm font-black text-charcoal">Mark Backup Verified</button>
+            <button onClick={markBackupComplete} className="w-full rounded-lg bg-[#eef4ff] px-3 py-2 text-sm font-black text-[#2563eb]">Mark Backup Verified</button>
           </div>
           <div className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{settings.maintenance_message || '-'}</div>
         </Panel>
@@ -1160,7 +1245,7 @@ const SettingNumber = ({ label, value, disabled, onSave }) => {
   return (
     <div className="grid gap-3 p-4 text-sm md:grid-cols-[1fr_150px_90px] md:items-center">
       <span className="font-bold">{label}</span>
-      <input type="number" value={draft} onChange={(event) => setDraft(Number(event.target.value))} className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-terracotta" />
+      <input type="number" value={draft} onChange={(event) => setDraft(Number(event.target.value))} className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe]" />
       <button disabled={disabled} onClick={() => onSave(Number(draft))} className="rounded-lg bg-charcoal px-3 py-2 text-xs font-black text-white disabled:opacity-60">Save</button>
     </div>
   );

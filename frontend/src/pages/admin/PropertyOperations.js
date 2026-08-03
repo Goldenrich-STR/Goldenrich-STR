@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, CheckCircle2, ExternalLink, Image, Search, Trash2, UserCog, XCircle } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice } from './shared';
 
 const tabs = [
   ['all', 'All Properties'],
@@ -14,10 +14,10 @@ const tabs = [
 
 const Modal = ({ title, children, onClose }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-    <div className="max-h-[92vh] w-full max-w-7xl overflow-hidden rounded-xl border border-slate-200 bg-white shadow-elevated">
+    <div className="max-h-[92vh] w-full max-w-7xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-elevated">
       <div className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4">
         <h2 className="text-lg font-black text-slate-950">{title}</h2>
-        <button onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Close review">
+        <button onClick={onClose} className="rounded-full p-2 text-slate-500 hover:bg-slate-100" aria-label="Close review">
           <XCircle className="h-5 w-5" />
         </button>
       </div>
@@ -57,9 +57,25 @@ const PropertyOperations = () => {
   }), [state.properties]);
 
   const assignTeam = async (property) => {
-    const broker_id = window.prompt('Broker user ID', property.assigned_broker || '');
+    const broker_id = await requestInput({
+      title: 'Assign Broker',
+      description: `Enter broker user ID for ${property.title || property.property_id}.`,
+      label: 'Broker User ID',
+      defaultValue: property.assigned_broker || '',
+      placeholder: 'e.g. user_broker_propnest',
+      confirmLabel: 'Continue',
+      allowEmpty: true,
+    });
     if (broker_id === null) return;
-    const rm_id = window.prompt('RM employee user ID', property.assigned_rm || '');
+    const rm_id = await requestInput({
+      title: 'Assign RM',
+      description: `Enter RM employee user ID for ${property.title || property.property_id}.`,
+      label: 'RM Employee User ID',
+      defaultValue: property.assigned_rm || '',
+      placeholder: 'e.g. user_employee_propnest',
+      confirmLabel: 'Continue',
+      allowEmpty: true,
+    });
     if (rm_id === null) return;
     const reason = await requestReason({
       title: 'Property Assignment Reason',
@@ -102,7 +118,11 @@ const PropertyOperations = () => {
       }
       load();
     } catch (error) {
-      window.alert(error.response?.data?.detail || 'Failed to delete rejected property');
+      await showNotice({
+        title: 'Delete Failed',
+        description: error.response?.data?.detail || 'Failed to delete rejected property',
+        eyebrow: 'Action Failed',
+      });
     }
   };
 
@@ -164,17 +184,17 @@ const PropertyOperations = () => {
   return (
     <div>
       <PageHeader title="Property Operations" description="Manage property verification workflow from draft to submitted, broker verification, RM verification, admin review and live operations." />
-      <Panel className="mb-4 p-3">
-        <div className="mb-3 flex gap-2 overflow-x-auto">{tabs.map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${tab === id ? 'bg-terracotta text-charcoal' : 'bg-slate-100 text-slate-600'}`}>{label}</button>)}</div>
+      <Panel className="mb-4 p-4">
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1">{tabs.map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${tab === id ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>)}</div>
         <div className="grid gap-3 md:grid-cols-[1fr_220px]">
-          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"><Search className="h-4 w-4 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} className="h-8 w-full bg-transparent text-sm" placeholder="Search property, host, broker, RM, city or type" /></div>
-          <select className="h-10 rounded-lg border border-slate-200 px-3 text-sm" value={category} onChange={(e) => setCategory(e.target.value)}><option value="">All Categories</option><option value="residential">Residential</option><option value="commercial">Commercial</option><option value="event_venue">Event Venue</option></select>
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 shadow-inner"><Search className="h-4 w-4 text-slate-400" /><input value={search} onChange={(e) => setSearch(e.target.value)} className="h-8 w-full bg-transparent text-sm font-medium outline-none" placeholder="Search property, host, broker, RM, city or type" /></div>
+          <select className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm" value={category} onChange={(e) => setCategory(e.target.value)}><option value="">All Categories</option><option value="residential">Residential</option><option value="commercial">Commercial</option><option value="event_venue">Event Venue</option></select>
         </div>
         <div className="mt-3 grid gap-3 md:grid-cols-4">
-          <select className="h-10 rounded-lg border border-slate-200 px-3 text-sm" value={propertyType} onChange={(e) => setPropertyType(e.target.value)}><option value="">All Property Types</option>{filterOptions.propertyTypes.map((item) => <option key={item} value={item}>{String(item).replace(/_/g, ' ')}</option>)}</select>
-          <select className="h-10 rounded-lg border border-slate-200 px-3 text-sm" value={hostFilter} onChange={(e) => setHostFilter(e.target.value)}><option value="">All Hosts</option>{filterOptions.hosts.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-          <select className="h-10 rounded-lg border border-slate-200 px-3 text-sm" value={brokerFilter} onChange={(e) => setBrokerFilter(e.target.value)}><option value="">All Brokers</option>{filterOptions.brokers.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-          <select className="h-10 rounded-lg border border-slate-200 px-3 text-sm" value={rmFilter} onChange={(e) => setRmFilter(e.target.value)}><option value="">All RMs</option>{filterOptions.rms.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+          <select className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm" value={propertyType} onChange={(e) => setPropertyType(e.target.value)}><option value="">All Property Types</option>{filterOptions.propertyTypes.map((item) => <option key={item} value={item}>{String(item).replace(/_/g, ' ')}</option>)}</select>
+          <select className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm" value={hostFilter} onChange={(e) => setHostFilter(e.target.value)}><option value="">All Hosts</option>{filterOptions.hosts.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+          <select className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm" value={brokerFilter} onChange={(e) => setBrokerFilter(e.target.value)}><option value="">All Brokers</option>{filterOptions.brokers.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+          <select className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm" value={rmFilter} onChange={(e) => setRmFilter(e.target.value)}><option value="">All RMs</option>{filterOptions.rms.map((item) => <option key={item} value={item}>{item}</option>)}</select>
         </div>
       </Panel>
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} /> : (
@@ -182,8 +202,8 @@ const PropertyOperations = () => {
         <Panel className="overflow-hidden">
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1200px] text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Property', 'Host Name', 'Property Type', 'Category', 'City', 'Broker Name', 'RM Name', 'Stage', 'Subscription', 'Price', 'Actions'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
-              <tbody className="divide-y divide-slate-100">{state.properties.map((property) => <tr key={property.property_id}><td className="px-4 py-3"><p className="font-black">{property.title}</p><p className="font-mono text-xs text-slate-500">{property.property_id}</p></td><td className="px-4 py-3"><p className="font-bold">{property.host_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.owner_id}</p></td><td className="px-4 py-3 capitalize">{String(property.property_type || property.bhk_type || '-').replace(/_/g, ' ')}</td><td className="px-4 py-3 capitalize">{property.category}</td><td className="px-4 py-3">{property.city}</td><td className="px-4 py-3"><p className="font-bold">{property.broker_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.broker_code || property.assigned_broker || '-'}</p></td><td className="px-4 py-3"><p className="font-bold">{property.rm_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.rm_code || property.assigned_rm || '-'}</p></td><td className="px-4 py-3"><StatusBadge value={property.status} /></td><td className="px-4 py-3">{property.subscription_status || '-'}</td><td className="px-4 py-3">{formatMoney(property.price_per_night || 0)}</td><td className="px-4 py-3"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} /></td></tr>)}</tbody>
+              <thead className="bg-[#f8fafc] text-[11px] uppercase tracking-[0.16em] text-slate-400"><tr>{['Property', 'Host Name', 'Property Type', 'Category', 'City', 'Broker Name', 'RM Name', 'Stage', 'Subscription', 'Price', 'Actions'].map((h) => <th key={h} className="px-4 py-4 font-bold">{h}</th>)}</tr></thead>
+              <tbody className="divide-y divide-slate-100">{state.properties.map((property) => <tr key={property.property_id} className="transition hover:bg-slate-50/70"><td className="px-4 py-4"><p className="font-black">{property.title}</p><p className="font-mono text-xs text-slate-500">{property.property_id}</p></td><td className="px-4 py-4"><p className="font-bold">{property.host_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.owner_id}</p></td><td className="px-4 py-4 capitalize">{String(property.property_type || property.bhk_type || '-').replace(/_/g, ' ')}</td><td className="px-4 py-4 capitalize">{property.category}</td><td className="px-4 py-4">{property.city}</td><td className="px-4 py-4"><p className="font-bold">{property.broker_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.broker_code || property.assigned_broker || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.rm_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.rm_code || property.assigned_rm || '-'}</p></td><td className="px-4 py-4"><StatusBadge value={property.status} /></td><td className="px-4 py-4">{property.subscription_status || '-'}</td><td className="px-4 py-4">{formatMoney(property.price_per_night || 0)}</td><td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} /></td></tr>)}</tbody>
             </table>
           </div>
           <div className="grid gap-3 p-4 md:hidden">{state.properties.map((property) => <Panel key={property.property_id} className="p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-black">{property.title}</p><p className="text-xs text-slate-500">{property.property_id}</p></div><StatusBadge value={property.status} /></div><p className="mt-2 text-sm">{property.city} / {property.category}</p><div className="mt-3"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} /></div></Panel>)}</div>
@@ -203,12 +223,12 @@ const PropertyActions = ({ property, tab, onReview, onAssign, onStatus, onDelete
   const isRejected = tab === 'rejected' || String(property.status || '').toLowerCase() === 'rejected';
   return (
     <div className="flex flex-wrap gap-1.5">
-      <button onClick={() => onReview(property)} className="rounded-lg bg-charcoal px-2 py-1 text-xs font-bold text-white">Review</button>
-      <button onClick={() => onAssign(property)} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold">Assign</button>
-      <button onClick={() => onStatus(property, 'live')} className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">Live</button>
+      <button onClick={() => onReview(property)} className="rounded-xl bg-[#2f6df6] px-2.5 py-1.5 text-xs font-bold text-white">Review</button>
+      <button onClick={() => onAssign(property)} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]">Assign</button>
+      <button onClick={() => onStatus(property, 'live')} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]">Live</button>
       <button onClick={() => onStatus(property, 'rejected')} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700">Reject</button>
       {isRejected && (
-        <button onClick={() => onDelete(property)} className="inline-flex items-center gap-1 rounded-lg bg-red-600 px-2 py-1 text-xs font-bold text-white hover:bg-red-700">
+        <button onClick={() => onDelete(property)} className="inline-flex items-center gap-1 rounded-xl bg-red-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-red-700">
           <Trash2 className="h-3.5 w-3.5" /> Delete
         </button>
       )}
@@ -217,7 +237,7 @@ const PropertyActions = ({ property, tab, onReview, onAssign, onStatus, onDelete
 };
 
 const ReadinessPill = ({ label, ready }) => (
-  <span className={`inline-flex items-center justify-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold ${ready ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
+  <span className={`inline-flex items-center justify-center gap-1 rounded-xl border px-2.5 py-1.5 text-xs font-bold ${ready ? 'border-[#cfe0ff] bg-[#eef5ff] text-[#2f6df6]' : 'border-[#d9e5fb] bg-[#f4f8ff] text-[#5b7ecb]'}`}>
     {ready ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}{label}
   </span>
 );
@@ -226,8 +246,8 @@ const cleanLabel = (value) => String(value || '-').replace(/_/g, ' ');
 const boolLabel = (value) => (value ? 'Yes' : 'No');
 
 const DetailTile = ({ label, value }) => (
-  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-    <span className="block text-xs font-black uppercase tracking-widest text-slate-500">{label}</span>
+  <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+    <span className="block text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</span>
     <span className="mt-2 block break-words text-sm font-black capitalize text-slate-950">{value || '-'}</span>
   </div>
 );
@@ -235,7 +255,7 @@ const DetailTile = ({ label, value }) => (
 const SectionCard = ({ eyebrow, title, children }) => (
   <Panel className="overflow-hidden">
     <div className="border-b border-slate-100 bg-white px-4 py-3">
-      {eyebrow && <p className="text-[10px] font-black uppercase tracking-widest text-terracotta">{eyebrow}</p>}
+      {eyebrow && <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2f6df6]">{eyebrow}</p>}
       <h3 className="mt-1 text-base font-black text-slate-950">{title}</h3>
     </div>
     <div className="p-4">{children}</div>
@@ -250,11 +270,11 @@ const KeyValueGrid = ({ rows, columns = 'md:grid-cols-2' }) => (
 
 const ChipList = ({ items, empty = 'No records added.' }) => {
   const values = Array.isArray(items) ? items.filter(Boolean) : [];
-  if (!values.length) return <p className="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-500">{empty}</p>;
+  if (!values.length) return <p className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">{empty}</p>;
   return (
     <div className="flex flex-wrap gap-2">
       {values.map((item) => (
-        <span key={String(item)} className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-black capitalize text-slate-700">
+        <span key={String(item)} className="rounded-full bg-[#eef5ff] px-3 py-1.5 text-xs font-black capitalize text-[#2f6df6]">
           {cleanLabel(item)}
         </span>
       ))}
@@ -274,7 +294,7 @@ const MediaLinks = ({ property }) => {
   return (
     <div className="mt-3 flex flex-wrap gap-2">
       {links.map(([label, url]) => (
-        <a key={label} href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-200">
+        <a key={label} href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-xl bg-[#eef5ff] px-3 py-2 text-xs font-black text-[#2f6df6] hover:bg-[#dfeaff]">
           <ExternalLink className="h-3.5 w-3.5" /> {label}
         </a>
       ))}
@@ -284,11 +304,11 @@ const MediaLinks = ({ property }) => {
 
 const PackageList = ({ packages }) => {
   const items = Array.isArray(packages) ? packages.filter(Boolean) : [];
-  if (!items.length) return <p className="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-500">No food packages added.</p>;
+  if (!items.length) return <p className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">No food packages added.</p>;
   return (
     <div className="grid gap-3 md:grid-cols-2">
       {items.map((item, index) => (
-        <div key={`${item.name || 'package'}-${index}`} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <div key={`${item.name || 'package'}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
           <p className="text-sm font-black text-slate-950">{item.name || item.title || `Package ${index + 1}`}</p>
           <p className="mt-1 text-sm font-bold text-slate-700">{formatMoney(item.price || item.amount || 0)}</p>
           {(item.items || item.description) && <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">{Array.isArray(item.items) ? item.items.join(', ') : item.description}</p>}
@@ -310,16 +330,16 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal 
   const heroImage = images[0];
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_24px_55px_rgba(15,23,42,0.08)]">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest text-terracotta">Property Review</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2f6df6]">Property Review</p>
             <h2 className="mt-1 text-2xl font-black text-slate-950">{property.title}</h2>
             <p className="mt-1 font-mono text-xs font-bold text-slate-500">{property.property_id}</p>
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge value={property.status} />
-            <button onClick={onClose} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-200">Close</button>
+            <button onClick={onClose} className="rounded-2xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-200">Close</button>
           </div>
         </div>
       </div>
@@ -332,7 +352,7 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal 
                   <img src={heroImage} alt={property.title || 'Property'} className="h-full w-full object-cover" />
                 </a>
               ) : (
-                <div className="flex aspect-[4/3] items-center justify-center bg-amber-50 text-amber-700">
+                <div className="flex aspect-[4/3] items-center justify-center bg-[#eef5ff] text-[#2f6df6]">
                   <Image className="h-8 w-8" />
                 </div>
               )}
@@ -348,7 +368,7 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal 
             <Panel className="p-4">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-terracotta">Operational Snapshot</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#2f6df6]">Operational Snapshot</p>
                   <h3 className="mt-1 text-lg font-black text-slate-950">Property, Team & Subscription</h3>
                 </div>
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{images.length} photos</span>
@@ -435,7 +455,7 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal 
               ['Blocked Dates', (property.blocked_dates || []).length],
             ]} />
             {property.house_rules && (
-              <div className="mt-4 rounded-lg bg-slate-50 p-3">
+              <div className="mt-4 rounded-2xl bg-slate-50 p-3">
                 <p className="text-xs font-black uppercase tracking-widest text-slate-500">House Rules</p>
                 <p className="mt-2 whitespace-pre-wrap text-sm font-semibold leading-6 text-slate-700">{property.house_rules}</p>
               </div>
@@ -444,11 +464,11 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal 
           <div className="space-y-2">
             <p className="text-xs font-black uppercase text-slate-500">Readiness Checklist</p>
             {(review.checklist || []).map((item) => (
-              <div key={item.item_key} className="rounded-lg border border-slate-200 p-3">
+              <div key={item.item_key} className="rounded-2xl border border-slate-200 p-3">
                 <div className="flex items-start justify-between gap-2"><div><p className="text-sm font-black">{item.label}</p><p className="text-xs text-slate-500">{item.details}</p></div><StatusBadge value={item.status} /></div>
                 {item.remarks && <p className="mt-2 text-xs font-semibold text-slate-600">{item.remarks}</p>}
                 <div className="mt-3 flex gap-2">
-                  <button onClick={() => onChecklist(item, 'approved')} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Approve</button>
+                  <button onClick={() => onChecklist(item, 'approved')} className="inline-flex items-center gap-1 rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]"><CheckCircle2 className="h-3.5 w-3.5" /> Approve</button>
                   <button onClick={() => onChecklist(item, 'rejected')} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700"><XCircle className="h-3.5 w-3.5" /> Reject</button>
                 </div>
               </div>
@@ -457,25 +477,25 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal 
           <div className="grid gap-4 xl:grid-cols-2">
             <Panel className="p-4">
               <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500">Broker Checklist</p>
-              <div className="space-y-2">{brokerStages.length ? brokerStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-500">No broker checklist found.</p>}</div>
+              <div className="space-y-2">{brokerStages.length ? brokerStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">No broker checklist found.</p>}</div>
             </Panel>
             <Panel className="p-4">
               <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500">RM Checklist</p>
-              <div className="space-y-2">{rmStages.length ? rmStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-500">No RM checklist found.</p>}</div>
+              <div className="space-y-2">{rmStages.length ? rmStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">No RM checklist found.</p>}</div>
             </Panel>
           </div>
           <div className="space-y-2">
             <p className="text-xs font-black uppercase text-slate-500">Other Workflow Stages</p>
-            {otherStages.length ? otherStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-lg bg-slate-50 p-3 text-sm font-semibold text-slate-500">No additional workflow stages.</p>}
+            {otherStages.length ? otherStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">No additional workflow stages.</p>}
           </div>
           <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
             <button onClick={() => onFinal('under_review')} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-black">Move Under Review</button>
-            <button onClick={() => onFinal('live')} disabled={!review.summary?.ready_for_live} className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black text-white disabled:opacity-40">Publish Live</button>
+            <button onClick={() => onFinal('live')} disabled={!review.summary?.ready_for_live} className="rounded-xl bg-[#2f6df6] px-3 py-2 text-xs font-black text-white disabled:opacity-40">Publish Live</button>
             <button onClick={() => onFinal('rejected')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-black text-white">Reject</button>
           </div>
           <div className="space-y-2">
             <p className="text-xs font-black uppercase text-slate-500">Review History</p>
-            {(review.history || []).slice(0, 6).map((item) => <p key={item.event_id} className="rounded-lg bg-slate-50 p-2 text-xs"><b>{String(item.action || '').replace(/_/g, ' ')}</b> {item.item_key || ''}<span className="block text-slate-500">{item.remarks || '-'} / {item.admin_id || '-'} / {item.created_at || '-'}</span></p>)}
+            {(review.history || []).slice(0, 6).map((item) => <p key={item.event_id} className="rounded-2xl bg-slate-50 p-3 text-xs"><b>{String(item.action || '').replace(/_/g, ' ')}</b> {item.item_key || ''}<span className="block text-slate-500">{item.remarks || '-'} / {item.admin_id || '-'} / {item.created_at || '-'}</span></p>)}
             {!review.history?.length && <p className="text-xs text-slate-500">No review history yet.</p>}
           </div>
         </div>
@@ -485,11 +505,11 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal 
 };
 
 const StageRow = ({ stage, data, onStage }) => (
-  <div className="rounded-lg border border-slate-200 p-3">
+  <div className="rounded-2xl border border-slate-200 p-3">
     <div className="flex items-center justify-between gap-2"><p className="text-sm font-black capitalize">{stage.replace(/_/g, ' ')}</p><StatusBadge value={data?.status || 'pending'} /></div>
     {data?.remarks && <p className="mt-2 text-xs text-slate-500">{data.remarks}</p>}
     <div className="mt-3 flex gap-2">
-      <button onClick={() => onStage(stage, 'approved')} className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">Approve</button>
+      <button onClick={() => onStage(stage, 'approved')} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]">Approve</button>
       <button onClick={() => onStage(stage, 'rejected')} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700">Reject</button>
     </div>
   </div>

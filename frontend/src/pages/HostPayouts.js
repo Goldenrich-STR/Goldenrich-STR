@@ -21,6 +21,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { accountAPI, bookingAPI } from '../services/api';
 import HostSupportWidget from '../components/HostSupportWidget';
+import HostWorkspaceShell from '../components/HostWorkspaceShell';
 
 const fmtINR = (paise) =>
   new Intl.NumberFormat('en-IN', {
@@ -59,7 +60,7 @@ const statusIcon = (status) => {
 
 const HostPayouts = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const [pref, setPref] = useState({
     preferred: 'upi',
@@ -225,68 +226,30 @@ const HostPayouts = () => {
     : (pref.upi_vpa || 'UPI ID not added');
 
   return (
-    <div className="min-h-screen bg-stone" data-testid="host-payouts-page">
-      <header className="header-glass sticky top-0 z-50 px-6 py-4">
-        <div className="w-full flex justify-between items-center">
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => navigate('/')}>
-            <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
-          </div>
-          <div className="flex items-center space-x-6">
-            <nav className="hidden md:flex items-center space-x-6">
-              {[
-                { label: 'DASHBOARD', path: '/host/dashboard' },
-                { label: 'CALENDAR', path: '/host/calendar' },
-                { label: 'PAYOUTS', path: '/host/payouts' },
-                { label: 'BOOKINGS', path: '/host/bookings' },
-                { label: 'PERFORMANCE', path: '/host/performance' }
-              ].map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => navigate(item.path)}
-                  className={`text-[10px] font-bold tracking-[0.2em] transition-colors ${
-                    item.path === '/host/payouts'
-                      ? 'text-terracotta border-b border-terracotta pb-0.5'
-                      : 'text-charcoal-muted hover:text-terracotta'
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </nav>
-            <div className="h-6 w-px bg-sand-200" />
-            <span className="text-xs font-bold text-charcoal-muted hidden sm:inline">
-              Welcome, {user?.full_name?.split(' ')[0]}
-            </span>
-            <button
-              onClick={() => {
-                navigate('/');
-                setTimeout(logout, 50);
-              }}
-              className="text-xs font-bold text-terracotta hover:underline tracking-widest uppercase"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="w-full px-4 md:px-8 lg:px-12 py-8 mx-auto space-y-5">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-bold text-charcoal">Payouts</h1>
-            <p className="text-xs text-charcoal-muted font-semibold mt-1">
-              Track your earnings and payouts from X-Space360 bookings
-            </p>
-          </div>
-          <button
-            onClick={downloadStatement}
-            className="px-5 py-3 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center gap-2 hover:bg-blue-700 transition shadow-sm"
-            data-testid="download-statement-btn"
-          >
-            <Download className="w-4 h-4" />
-            Download Statement
-          </button>
-        </div>
+    <HostWorkspaceShell
+      activePath="/host/payouts"
+      sidebarTitle="Payouts"
+      sidebarDescription="Review net earnings, payout history and settlement preferences without changing your host workflow."
+      heroTitle="Payouts"
+      heroDescription="Track your earnings, statements and payout destination from X-Space360 bookings."
+      heroActions={
+        <button
+          onClick={downloadStatement}
+          className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 text-xs font-bold uppercase tracking-widest text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)] transition hover:bg-black"
+          data-testid="download-statement-btn"
+        >
+          <Download className="h-4 w-4" />
+          Download Statement
+        </button>
+      }
+      sidebarSnapshot={[
+        ['Host', user?.full_name || 'Host'],
+        ['Destination', pref.preferred === 'bank' ? 'bank' : 'upi'],
+        ['Payouts', payouts.length],
+        ['Upcoming', payouts.filter((p) => ['eligible', 'processing', 'needs_destination'].includes(p.status)).length],
+      ]}
+    >
+      <div className="space-y-5" data-testid="host-payouts-page">
 
         <div className="flex gap-7 border-b border-gray-200 bg-white px-3 rounded-t-2xl">
           {[
@@ -413,9 +376,9 @@ const HostPayouts = () => {
             {tab === 'tax' && <SimpleDocumentTab title="Tax Documents" text="TDS and tax documents will appear here once issued by admin." action="Download Statement" onClick={downloadStatement} icon={ShieldCheck} />}
           </>
         )}
-      </main>
+      </div>
       <HostSupportWidget context="payout_issue" />
-    </div>
+    </HostWorkspaceShell>
   );
 };
 
@@ -594,20 +557,6 @@ const PreferencePanel = ({ pref, setPref, masked, save, saving, message, error }
         <input value={pref.bank_ifsc} onChange={(e) => setPref({ ...pref, bank_ifsc: e.target.value.toUpperCase() })} placeholder="IFSC code" className="w-full px-4 py-3 border border-gray-100 rounded-xl text-sm font-semibold outline-none focus:border-terracotta" />
       </div>
     )}
-
-    <div className="grid grid-cols-3 gap-2 mt-4">
-      {['daily', 'weekly', 'monthly'].map((cycle) => (
-        <button
-          key={cycle}
-          onClick={() => setPref({ ...pref, payout_cycle: cycle })}
-          className={`px-2 py-2 rounded-xl border text-xs font-bold capitalize ${
-            pref.payout_cycle === cycle ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-100 text-charcoal'
-          }`}
-        >
-          {cycle}
-        </button>
-      ))}
-    </div>
 
     {message && <p className="mt-3 text-xs font-bold text-emerald-700">{message}</p>}
     {error && <p className="mt-3 text-xs font-bold text-red-700">{error}</p>}

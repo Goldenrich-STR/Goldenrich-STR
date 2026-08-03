@@ -42,7 +42,7 @@ const NodeCard = ({ node, onManager, onTransfer, onHistory, compact = false }) =
   <Panel className="overflow-hidden p-0 transition hover:-translate-y-0.5 hover:shadow-elevated">
     <div className="mb-3 flex items-start justify-between gap-3">
       <div className="flex items-center gap-3 p-4">
-        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-terracotta/15 text-terracotta"><Network className="h-4 w-4" /></span>
+        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef4ff] text-[#2563eb]"><Network className="h-4 w-4" /></span>
         <div><p className="font-black text-slate-950">{node.name}</p><p className="text-xs font-semibold text-slate-500">{node.employee_code || node.user_id}</p></div>
       </div>
       <div className="p-4"><StatusBadge value={node.status} /></div>
@@ -190,7 +190,7 @@ const ReportingHierarchy = () => {
     <div className="space-y-4">
       {Object.entries(grouped(key)).map(([group, nodes]) => (
         <Panel key={group} className="overflow-hidden">
-          <div className="flex items-center gap-2 border-b border-slate-200 p-4"><Icon className="h-4 w-4 text-terracotta" /><h2 className="font-black">{group}</h2><span className="text-sm font-bold text-slate-500">({nodes.length})</span></div>
+          <div className="flex items-center gap-2 border-b border-slate-200 p-4"><Icon className="h-4 w-4 text-[#2563eb]" /><h2 className="font-black">{group}</h2><span className="text-sm font-bold text-slate-500">({nodes.length})</span></div>
           <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">{nodes.map((node) => <NodeCard key={node.user_id} node={node} onManager={(n) => setModal({ type: 'manager', node: n })} onTransfer={(n) => setModal({ type: 'transfer', node: n })} onHistory={openHistory} compact />)}</div>
         </Panel>
       ))}
@@ -208,7 +208,7 @@ const ReportingHierarchy = () => {
               <p className="text-xs font-black uppercase tracking-widest text-slate-500">{label}</p>
               <p className="mt-2 text-2xl font-black text-slate-950">{value}</p>
             </div>
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-terracotta/15 text-terracotta"><Icon className="h-5 w-5" /></span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#eef4ff] text-[#2563eb]"><Icon className="h-5 w-5" /></span>
           </Panel>
         ))}
       </div>
@@ -237,7 +237,7 @@ const ReportingHierarchy = () => {
                 <table className="w-full min-w-[1000px] text-left text-sm">
                   <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Employee', 'Role', 'Department', 'Branch', 'Reports To', 'Direct Reports', 'Status', 'Actions'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
                   <tbody className="divide-y divide-slate-100">
-                    {treeRows.map((node) => <tr key={node.user_id} className="bg-white transition hover:bg-slate-50"><td className="px-4 py-4"><div style={{ paddingLeft: `${node.level * 20}px` }} className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-terracotta/15 text-terracotta"><GitBranch className="h-4 w-4" /></span><div><p className="font-black text-slate-950">{node.name}</p><p className="text-xs font-semibold text-slate-500">{node.employee_code || node.user_id}</p></div></div></td><td className="px-4 py-4 capitalize"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">{node.role}</span></td><td className="px-4 py-4">{node.department || '-'}</td><td className="px-4 py-4">{node.branch || '-'}</td><td className="px-4 py-4">{node.reports_to_name || 'Unassigned'}</td><td className="px-4 py-4 font-black">{node.direct_reports_count}</td><td className="px-4 py-4"><StatusBadge value={node.status} /></td><td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => setModal({ type: 'manager', node })} className="rounded-lg bg-charcoal px-3 py-2 text-xs font-bold text-white">Manager</button><button onClick={() => setModal({ type: 'transfer', node })} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">Transfer</button><button onClick={() => openHistory(node)} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">History</button></div></td></tr>)}
+                    {treeRows.map((node) => <tr key={node.user_id} className="bg-white transition hover:bg-slate-50"><td className="px-4 py-4"><div style={{ paddingLeft: `${node.level * 20}px` }} className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#eef4ff] text-[#2563eb]"><GitBranch className="h-4 w-4" /></span><div><p className="font-black text-slate-950">{node.name}</p><p className="text-xs font-semibold text-slate-500">{node.employee_code || node.user_id}</p></div></div></td><td className="px-4 py-4 capitalize"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">{node.role}</span></td><td className="px-4 py-4">{node.department || '-'}</td><td className="px-4 py-4">{node.branch || '-'}</td><td className="px-4 py-4">{node.reports_to_name || 'Unassigned'}</td><td className="px-4 py-4 font-black">{node.direct_reports_count}</td><td className="px-4 py-4"><StatusBadge value={node.status} /></td><td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => setModal({ type: 'manager', node })} className="rounded-lg bg-charcoal px-3 py-2 text-xs font-bold text-white">Manager</button><button onClick={() => setModal({ type: 'transfer', node })} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">Transfer</button><button onClick={() => openHistory(node)} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">History</button></div></td></tr>)}
                   </tbody>
                 </table>
               </div>

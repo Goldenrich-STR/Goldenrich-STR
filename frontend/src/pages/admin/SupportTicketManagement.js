@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, BookOpen, CheckCircle2, Clock, Headphones, Inbox, Search, ShieldAlert } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { cmsAPI, supportTicketAPI } from '../../services/api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestInput, requestReason, showNotice } from './shared';
 
 const phaseSteps = [
   ['Step 1', 'Support Overview', 'completed'],
@@ -84,7 +84,14 @@ const SupportTicketManagement = () => {
     if (!ticket) return;
     const adminResponse = await requestReason({ title: 'Ticket Response', description: `Updating ticket ${ticket.ticket_id}.`, defaultValue: ticket.admin_response || '', placeholder: 'Add admin response.', minLength: 1, confirmLabel: 'Save Response' });
     if (adminResponse === null) return;
-    const priority = window.prompt('Priority: low, normal, high, urgent', ticket.priority || 'normal');
+    const priority = await requestInput({
+      title: 'Ticket Priority',
+      description: 'Allowed values: low, normal, high, urgent.',
+      label: 'Priority',
+      defaultValue: ticket.priority || 'normal',
+      placeholder: 'normal',
+      confirmLabel: 'Update Ticket',
+    });
     if (!priority) return;
     await supportTicketAPI.updateTicket(ticket.ticket_id, { status, admin_response: adminResponse, priority });
     await load();
@@ -93,11 +100,33 @@ const SupportTicketManagement = () => {
   const assignTicket = async (ticket) => {
     if (!ticket) return;
     const options = state.assignees.map((user) => `${user.user_id} - ${user.full_name || user.email || user.phone || 'Unnamed'}`).join('\n');
-    const assignedAdminId = window.prompt(`Assign to user ID\n\n${options || 'No active support assignees found'}`, ticket.assigned_admin_id || '');
+    const assignedAdminId = await requestInput({
+      title: 'Assign Support Ticket',
+      description: options || 'No active support assignees found.',
+      label: 'Assigned Admin User ID',
+      defaultValue: ticket.assigned_admin_id || '',
+      placeholder: 'Enter user ID from the list above',
+      confirmLabel: 'Continue',
+    });
     if (!assignedAdminId) return;
-    const priority = window.prompt('Priority: low, normal, high, urgent', ticket.priority || 'normal');
+    const priority = await requestInput({
+      title: 'Assign Support Ticket',
+      description: 'Allowed values: low, normal, high, urgent.',
+      label: 'Priority',
+      defaultValue: ticket.priority || 'normal',
+      placeholder: 'normal',
+      confirmLabel: 'Continue',
+    });
     if (!priority) return;
-    const slaDueAt = window.prompt('SLA due date/time (YYYY-MM-DD or YYYY-MM-DDTHH:mm)', ticket.sla_due_at ? String(ticket.sla_due_at).slice(0, 16) : '');
+    const slaDueAt = await requestInput({
+      title: 'Assign Support Ticket',
+      description: 'Optional SLA due date/time: YYYY-MM-DD or YYYY-MM-DDTHH:mm',
+      label: 'SLA Due At',
+      defaultValue: ticket.sla_due_at ? String(ticket.sla_due_at).slice(0, 16) : '',
+      placeholder: '2026-08-01T18:30',
+      confirmLabel: 'Continue',
+      allowEmpty: true,
+    });
     if (slaDueAt === null) return;
     const reason = await requestReason({ title: 'Ticket Assignment Reason', description: `Assigning ticket ${ticket.ticket_id}.`, defaultValue: 'Support ticket ownership assigned', placeholder: 'Add assignment reason.', minLength: 3 });
     if (!reason) return;
@@ -111,7 +140,11 @@ const SupportTicketManagement = () => {
     try {
       parsed = JSON.parse(editorText);
     } catch (error) {
-      window.alert('Invalid JSON. Please fix the support CMS content before saving.');
+      await showNotice({
+        title: 'Invalid JSON',
+        description: 'Please fix the support CMS content before saving.',
+        eyebrow: 'Validation Error',
+      });
       return;
     }
     const reason = await requestReason({ title: 'Publishing Audit Reason', description: 'Support knowledge base / FAQ content will be updated.', defaultValue: 'Support knowledge base / FAQ content updated', placeholder: 'Add publishing reason.', minLength: 3 });
@@ -164,7 +197,7 @@ const SupportTicketManagement = () => {
               ['Urgent', state.metrics.urgent || 0, AlertTriangle],
               ['SLA Risk', state.metrics.sla_risk || 0, ShieldAlert],
               ['KB Sections', state.supportContent.length || 0, BookOpen],
-            ].map(([label, value, Icon]) => <Panel key={label} className="p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-terracotta/10 text-terracotta"><Icon className="h-4 w-4" /></div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
+            ].map(([label, value, Icon]) => <Panel key={label} className="p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-[#eef4ff] text-[#2563eb]"><Icon className="h-4 w-4" /></div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
           </div>
           {active === 'overview' ? <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
             <Panel className="overflow-hidden">

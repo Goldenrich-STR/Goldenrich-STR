@@ -27,7 +27,7 @@ const emptyNotification = {
 
 const Modal = ({ title, children, onClose }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-    <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-lg bg-white shadow-elevated">
+    <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-[28px] bg-white shadow-elevated">
       <div className="flex items-center justify-between border-b border-slate-200 p-4">
         <h2 className="text-lg font-black">{title}</h2>
         <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100" aria-label="Close"><X className="h-5 w-5" /></button>
@@ -42,7 +42,7 @@ const Field = ({ label, children }) => <label className="block"><span className=
 const ToggleList = ({ values, selected, onChange }) => (
   <div className="flex flex-wrap gap-2">
     {values.map((value) => (
-      <button key={value} type="button" onClick={() => onChange(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value])} className={`rounded-full px-3 py-1 text-xs font-bold ${selected.includes(value) ? 'bg-terracotta text-charcoal' : 'bg-slate-100 text-slate-600'}`}>
+      <button key={value} type="button" onClick={() => onChange(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value])} className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${selected.includes(value) ? 'bg-[#e8f0ff] text-[#2f6df6]' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>
         {value.replace(/_/g, ' ')}
       </button>
     ))}
@@ -91,7 +91,7 @@ const RuleForm = ({ rule, onSaved, onCancel }) => {
         <Field label="Auto Action"><input className={inputClass} value={form.auto_action || ''} onChange={(e) => setValue('auto_action', e.target.value)} /></Field>
       </div>
       <Field label="Notification Channels"><ToggleList values={channels} selected={form.notification_channels || []} onChange={(value) => setValue('notification_channels', value)} /></Field>
-      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4"><button onClick={onCancel} className="rounded-lg px-4 py-2 text-sm font-bold text-slate-600">Cancel</button><button onClick={save} className="inline-flex items-center gap-2 rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white"><Save className="h-4 w-4" /> Save Rule</button></div>
+      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4"><button onClick={onCancel} className="rounded-2xl px-4 py-2.5 text-sm font-bold text-slate-600">Cancel</button><button onClick={save} className="inline-flex items-center gap-2 rounded-2xl bg-[#2f6df6] px-4 py-2.5 text-sm font-bold text-white"><Save className="h-4 w-4" /> Save Rule</button></div>
     </div>
   );
 };
@@ -127,7 +127,7 @@ const PolicyForm = ({ policy, onSaved, onCancel }) => {
         <Field label="Breach Priority"><select className={inputClass} value={form.breach_priority} onChange={(e) => setValue('breach_priority', e.target.value)}>{priorities.map((item) => <option key={item} value={item}>{item}</option>)}</select></Field>
         <label className="mt-6 flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={form.business_hours_only} onChange={(e) => setValue('business_hours_only', e.target.checked)} /> Business hours only</label>
       </div>
-      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4"><button onClick={onCancel} className="rounded-lg px-4 py-2 text-sm font-bold text-slate-600">Cancel</button><button onClick={save} className="rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white">Save Policy</button></div>
+      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4"><button onClick={onCancel} className="rounded-2xl px-4 py-2.5 text-sm font-bold text-slate-600">Cancel</button><button onClick={save} className="rounded-2xl bg-[#2f6df6] px-4 py-2.5 text-sm font-bold text-white">Save Policy</button></div>
     </div>
   );
 };
@@ -160,7 +160,7 @@ const NotificationForm = ({ onSaved, onCancel }) => {
       </div>
       <Field label="Channels"><ToggleList values={channels} selected={form.channels} onChange={(value) => setValue('channels', value)} /></Field>
       <Field label="Template"><textarea className="min-h-28 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" value={form.template} onChange={(e) => setValue('template', e.target.value)} /></Field>
-      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4"><button onClick={onCancel} className="rounded-lg px-4 py-2 text-sm font-bold text-slate-600">Cancel</button><button onClick={save} className="rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white">Save Notification Rule</button></div>
+      <div className="flex justify-end gap-2 border-t border-slate-200 pt-4"><button onClick={onCancel} className="rounded-2xl px-4 py-2.5 text-sm font-bold text-slate-600">Cancel</button><button onClick={save} className="rounded-2xl bg-[#2f6df6] px-4 py-2.5 text-sm font-bold text-white">Save Notification Rule</button></div>
     </div>
   );
 };
@@ -233,9 +233,9 @@ const EscalationMatrix = () => {
         eyebrow=""
         title="Escalation & SLA Matrix"
         description="Define escalation rules separately from reporting managers for overdue verification, support, refund, payout and approval workflows."
-        action={<button onClick={() => setModal({ type: 'rule', rule: null })} className="inline-flex items-center gap-2 rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white"><Plus className="h-4 w-4" /> Create Rule</button>}
+        action={<button onClick={() => setModal({ type: 'rule', rule: null })} className="inline-flex items-center gap-2 rounded-2xl bg-[#2f6df6] px-4 py-2.5 text-sm font-bold text-white"><Plus className="h-4 w-4" /> Create Rule</button>}
       />
-      {notice && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</div>}
+      {notice && <div className="mb-4 rounded-2xl border border-[#cfe0ff] bg-[#eef5ff] p-3 text-sm font-bold text-[#2f6df6]">{notice}</div>}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map(({ label, value, icon: Icon }) => (
           <Panel key={label} className="flex items-center justify-between p-4">
@@ -243,13 +243,13 @@ const EscalationMatrix = () => {
               <p className="text-xs font-black uppercase tracking-widest text-slate-500">{label}</p>
               <p className="mt-2 text-2xl font-black text-slate-950">{value}</p>
             </div>
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-terracotta/15 text-terracotta"><Icon className="h-5 w-5" /></span>
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef5ff] text-[#2f6df6]"><Icon className="h-5 w-5" /></span>
           </Panel>
         ))}
       </div>
       <Panel className="mb-5 overflow-hidden p-0">
         <div className="flex gap-2 overflow-x-auto border-b border-slate-200 bg-white p-3">
-          {tabs.map((tab) => <button key={tab} onClick={() => setActiveTab(tab)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold transition ${activeTab === tab ? 'bg-charcoal text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{tab}</button>)}
+          {tabs.map((tab) => <button key={tab} onClick={() => setActiveTab(tab)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${activeTab === tab ? 'bg-[#2f6df6] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{tab}</button>)}
         </div>
       </Panel>
 
@@ -265,31 +265,31 @@ const EscalationMatrix = () => {
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1100px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Rule', 'Process', 'Task', 'Owner', 'SLA', 'Reminder', 'Escalation Path', 'Channels', 'Priority', 'Status', 'Actions'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
-              <tbody className="divide-y divide-slate-100">{state.rules.map((rule) => <tr key={rule.rule_id} className="bg-white transition hover:bg-slate-50"><td className="px-4 py-4"><p className="font-black text-slate-950">{rule.rule_name}</p><p className="mt-1 font-mono text-xs text-slate-500">{rule.rule_id}</p></td><td className="px-4 py-4 font-semibold text-slate-700">{rule.process_name}</td><td className="px-4 py-4">{rule.task_type}</td><td className="px-4 py-4"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">{rule.primary_owner_role || rule.primary_owner || '-'}</span></td><td className="px-4 py-4 font-black">{rule.sla_duration_hours}h</td><td className="px-4 py-4">{rule.reminder_hours}h</td><td className="max-w-[280px] px-4 py-4 text-slate-700">{[rule.first_escalation, rule.second_escalation, rule.third_escalation, rule.final_escalation].filter(Boolean).join(' -> ') || '-'}</td><td className="px-4 py-4"><div className="flex max-w-[180px] flex-wrap gap-1">{(rule.notification_channels || []).map((channel) => <span key={channel} className="rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700">{channel.replace(/_/g, ' ')}</span>)}</div></td><td className="px-4 py-4 capitalize"><span className={`rounded-full px-2 py-1 text-xs font-black ${rule.priority === 'critical' || rule.priority === 'high' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>{rule.priority}</span></td><td className="px-4 py-4"><StatusBadge value={rule.status} /></td><td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => setModal({ type: 'rule', rule })} className="rounded-lg bg-charcoal px-3 py-2 text-xs font-bold text-white">Edit</button><button onClick={() => changeRuleStatus(rule)} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">{rule.status === 'active' ? 'Disable' : 'Enable'}</button></div></td></tr>)}</tbody>
+              <tbody className="divide-y divide-slate-100">{state.rules.map((rule) => <tr key={rule.rule_id} className="bg-white transition hover:bg-slate-50"><td className="px-4 py-4"><p className="font-black text-slate-950">{rule.rule_name}</p><p className="mt-1 font-mono text-xs text-slate-500">{rule.rule_id}</p></td><td className="px-4 py-4 font-semibold text-slate-700">{rule.process_name}</td><td className="px-4 py-4">{rule.task_type}</td><td className="px-4 py-4"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">{rule.primary_owner_role || rule.primary_owner || '-'}</span></td><td className="px-4 py-4 font-black">{rule.sla_duration_hours}h</td><td className="px-4 py-4">{rule.reminder_hours}h</td><td className="max-w-[280px] px-4 py-4 text-slate-700">{[rule.first_escalation, rule.second_escalation, rule.third_escalation, rule.final_escalation].filter(Boolean).join(' -> ') || '-'}</td><td className="px-4 py-4"><div className="flex max-w-[180px] flex-wrap gap-1">{(rule.notification_channels || []).map((channel) => <span key={channel} className="rounded-full bg-[#eef5ff] px-2 py-1 text-[11px] font-bold text-[#2f6df6]">{channel.replace(/_/g, ' ')}</span>)}</div></td><td className="px-4 py-4 capitalize"><span className={`rounded-full px-2 py-1 text-xs font-black ${rule.priority === 'critical' || rule.priority === 'high' ? 'bg-red-50 text-red-700' : 'bg-[#eef5ff] text-[#2f6df6]'}`}>{rule.priority}</span></td><td className="px-4 py-4"><StatusBadge value={rule.status} /></td><td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => setModal({ type: 'rule', rule })} className="rounded-xl bg-[#2f6df6] px-3 py-2 text-xs font-bold text-white">Edit</button><button onClick={() => changeRuleStatus(rule)} className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200">{rule.status === 'active' ? 'Disable' : 'Enable'}</button></div></td></tr>)}</tbody>
             </table>
           </div>
-          <div className="divide-y divide-slate-100 md:hidden">{state.rules.map((rule) => <div key={rule.rule_id} className="p-4"><div className="flex items-start justify-between gap-3"><div className="flex gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-terracotta/15 text-terracotta"><BellRing className="h-4 w-4" /></span><div><p className="font-black text-slate-950">{rule.rule_name}</p><p className="text-sm text-slate-500">{rule.task_type}</p></div></div><StatusBadge value={rule.status} /></div><div className="mt-3 grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-3 text-sm"><p><span className="block text-xs font-bold uppercase text-slate-500">SLA</span>{rule.sla_duration_hours}h</p><p><span className="block text-xs font-bold uppercase text-slate-500">Reminder</span>{rule.reminder_hours}h</p><p><span className="block text-xs font-bold uppercase text-slate-500">Owner</span>{rule.primary_owner_role || '-'}</p><p><span className="block text-xs font-bold uppercase text-slate-500">Priority</span>{rule.priority}</p></div><button onClick={() => setModal({ type: 'rule', rule })} className="mt-3 rounded-lg bg-charcoal px-3 py-2 text-sm font-bold text-white">Edit Rule</button></div>)}</div>
+          <div className="divide-y divide-slate-100 md:hidden">{state.rules.map((rule) => <div key={rule.rule_id} className="p-4"><div className="flex items-start justify-between gap-3"><div className="flex gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#eef5ff] text-[#2f6df6]"><BellRing className="h-4 w-4" /></span><div><p className="font-black text-slate-950">{rule.rule_name}</p><p className="text-sm text-slate-500">{rule.task_type}</p></div></div><StatusBadge value={rule.status} /></div><div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-3 text-sm"><p><span className="block text-xs font-bold uppercase text-slate-500">SLA</span>{rule.sla_duration_hours}h</p><p><span className="block text-xs font-bold uppercase text-slate-500">Reminder</span>{rule.reminder_hours}h</p><p><span className="block text-xs font-bold uppercase text-slate-500">Owner</span>{rule.primary_owner_role || '-'}</p><p><span className="block text-xs font-bold uppercase text-slate-500">Priority</span>{rule.priority}</p></div><button onClick={() => setModal({ type: 'rule', rule })} className="mt-3 rounded-2xl bg-[#2f6df6] px-3 py-2.5 text-sm font-bold text-white">Edit Rule</button></div>)}</div>
         </Panel>
       )}
 
       {activeTab === 'SLA Policies' && (
         <div>
-          <button onClick={() => setModal({ type: 'policy', policy: null })} className="mb-4 inline-flex items-center gap-2 rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white"><Plus className="h-4 w-4" /> Create SLA Policy</button>
+          <button onClick={() => setModal({ type: 'policy', policy: null })} className="mb-4 inline-flex items-center gap-2 rounded-2xl bg-[#2f6df6] px-4 py-2.5 text-sm font-bold text-white"><Plus className="h-4 w-4" /> Create SLA Policy</button>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{state.policies.map((policy) => <Panel key={policy.policy_id} className="p-4"><div className="flex items-start justify-between gap-2"><div><p className="font-black">{policy.policy_name}</p><p className="text-sm text-slate-500">{policy.process_name} / {policy.task_type}</p></div><StatusBadge value={policy.status} /></div><div className="mt-3 grid grid-cols-2 gap-2 text-sm"><p><span className="block text-xs font-bold uppercase text-slate-500">SLA</span>{policy.sla_duration_hours}h</p><p><span className="block text-xs font-bold uppercase text-slate-500">Warning</span>{policy.warning_before_hours}h</p><p><span className="block text-xs font-bold uppercase text-slate-500">Priority</span>{policy.breach_priority}</p><p><span className="block text-xs font-bold uppercase text-slate-500">Hours</span>{policy.business_hours_only ? 'Business only' : 'Calendar'}</p></div><button onClick={() => setModal({ type: 'policy', policy })} className="mt-4 inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold"><Edit className="h-3.5 w-3.5" /> Edit</button></Panel>)}</div>
         </div>
       )}
 
       {activeTab === 'Active Escalations' && (
-        <Panel className="overflow-hidden"><div className="divide-y divide-slate-100">{state.active.length ? state.active.map((item) => <div key={item.instance_id} className="grid gap-3 p-4 md:grid-cols-[1fr_140px_120px_120px] md:items-center"><div className="flex items-start gap-3"><Timer className="mt-1 h-4 w-4 text-terracotta" /><div><p className="font-black">{item.title || item.record_id}</p><p className="text-sm text-slate-500">{item.process_name} / {item.task_type} / Owner: {item.owner || '-'}</p></div></div><StatusBadge value={item.status} /><p className="text-sm font-bold">{item.age_hours || 0}h old</p><p className="text-sm capitalize">{item.priority}</p></div>) : <p className="p-4 text-sm text-slate-500">No active escalations.</p>}</div></Panel>
+        <Panel className="overflow-hidden"><div className="divide-y divide-slate-100">{state.active.length ? state.active.map((item) => <div key={item.instance_id} className="grid gap-3 p-4 md:grid-cols-[1fr_140px_120px_120px] md:items-center"><div className="flex items-start gap-3"><Timer className="mt-1 h-4 w-4 text-[#2f6df6]" /><div><p className="font-black">{item.title || item.record_id}</p><p className="text-sm text-slate-500">{item.process_name} / {item.task_type} / Owner: {item.owner || '-'}</p></div></div><StatusBadge value={item.status} /><p className="text-sm font-bold">{item.age_hours || 0}h old</p><p className="text-sm capitalize">{item.priority}</p></div>) : <p className="p-4 text-sm text-slate-500">No active escalations.</p>}</div></Panel>
       )}
 
       {activeTab === 'Escalation History' && (
-        <Panel className="overflow-hidden"><div className="divide-y divide-slate-100">{[...state.history, ...state.audits].length ? [...state.history, ...state.audits].map((item, index) => <div key={item.instance_id || item.audit_id || index} className="grid gap-3 p-4 md:grid-cols-[1fr_180px_180px] md:items-center"><div className="flex items-start gap-3"><History className="mt-1 h-4 w-4 text-terracotta" /><div><p className="font-black capitalize">{String(item.action || item.task_type || 'Escalation event').replace(/_/g, ' ')}</p><p className="text-sm text-slate-500">{item.record_id || item.user_id || 'system'}</p></div></div><StatusBadge value={item.status || item.module} /><p className="text-xs font-semibold text-slate-500">{String(item.updated_at || item.created_at || '').slice(0, 19)}</p></div>) : <p className="p-4 text-sm text-slate-500">No escalation history yet.</p>}</div></Panel>
+        <Panel className="overflow-hidden"><div className="divide-y divide-slate-100">{[...state.history, ...state.audits].length ? [...state.history, ...state.audits].map((item, index) => <div key={item.instance_id || item.audit_id || index} className="grid gap-3 p-4 md:grid-cols-[1fr_180px_180px] md:items-center"><div className="flex items-start gap-3"><History className="mt-1 h-4 w-4 text-[#2f6df6]" /><div><p className="font-black capitalize">{String(item.action || item.task_type || 'Escalation event').replace(/_/g, ' ')}</p><p className="text-sm text-slate-500">{item.record_id || item.user_id || 'system'}</p></div></div><StatusBadge value={item.status || item.module} /><p className="text-xs font-semibold text-slate-500">{String(item.updated_at || item.created_at || '').slice(0, 19)}</p></div>) : <p className="p-4 text-sm text-slate-500">No escalation history yet.</p>}</div></Panel>
       )}
 
       {activeTab === 'Notification Rules' && (
         <div>
-          <button onClick={() => setModal({ type: 'notification' })} className="mb-4 inline-flex items-center gap-2 rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white"><Plus className="h-4 w-4" /> Create Notification Rule</button>
+          <button onClick={() => setModal({ type: 'notification' })} className="mb-4 inline-flex items-center gap-2 rounded-2xl bg-[#2f6df6] px-4 py-2.5 text-sm font-bold text-white"><Plus className="h-4 w-4" /> Create Notification Rule</button>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{state.notificationRules.map((rule) => <Panel key={rule.notification_rule_id} className="p-4"><div className="flex items-start justify-between gap-2"><div><p className="font-black">{rule.rule_name}</p><p className="text-sm text-slate-500">{rule.event_name}</p></div><StatusBadge value={rule.status} /></div><p className="mt-3 text-sm"><span className="font-bold">Channels:</span> {(rule.channels || []).join(', ')}</p><p className="mt-1 text-sm"><span className="font-bold">Recipients:</span> {(rule.recipient_roles || []).join(', ') || '-'}</p><p className="mt-2 line-clamp-2 text-sm text-slate-500">{rule.template || 'No template'}</p></Panel>)}</div>
         </div>
       )}

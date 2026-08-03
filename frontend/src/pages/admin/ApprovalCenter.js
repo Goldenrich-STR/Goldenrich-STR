@@ -121,7 +121,9 @@ const ApprovalCenter = () => {
                   <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{queue.label}</p>
                   <p className="mt-2 text-2xl font-black text-slate-950">{queue.count}</p>
                 </div>
-                <Icon className="h-5 w-5 text-terracotta" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#eef4ff] text-[#2563eb]">
+                  <Icon className="h-5 w-5" />
+                </div>
               </div>
               <div className="mt-3">
                 <StatusBadge value={queue.status} />
@@ -156,7 +158,7 @@ const ApprovalCenter = () => {
                     <StatusBadge value={row.status} />
                   </td>
                   <td className="px-4 py-3">
-                    <a className="text-sm font-bold text-terracotta hover:underline" href={row.path}>Open</a>
+                    <a className="text-sm font-bold text-[#2563eb] hover:underline" href={row.path}>Open</a>
                   </td>
                 </tr>
               ))}

@@ -56,6 +56,7 @@ import {
   Expand,
 } from 'lucide-react';
 import HostSupportWidget from '../components/HostSupportWidget';
+import HostWorkspaceShell from '../components/HostWorkspaceShell';
 
 const SUBSCRIPTION_UPI = {
   id: 'goldenrich123@idfcbank',
@@ -421,7 +422,7 @@ const TimePicker12h = ({ value, onChange }) => {
   };
 
   return (
-    <div className="inline-flex items-center bg-white border border-gray-200 rounded-xl px-2 py-1.5 shadow-sm hover:border-terracotta/50 focus-within:border-terracotta focus-within:ring-1 focus-within:ring-terracotta/20 transition-all duration-200">
+    <div className="inline-flex items-center rounded-xl border border-gray-200 bg-white px-2 py-1.5 shadow-sm transition-all duration-200 hover:border-slate-400 focus-within:border-slate-500 focus-within:ring-1 focus-within:ring-slate-200">
       <Clock className="w-3.5 h-3.5 text-charcoal-light flex-shrink-0 mr-1" />
       <div className="flex items-center space-x-0.5">
         <select
@@ -554,7 +555,7 @@ const formatError = (error, defaultMsg = 'An error occurred') => {
 
 const HostListProperty = () => {
   const navigate = useNavigate();
-  const { user, logout, refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   
   const location = useLocation();
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -1608,23 +1609,44 @@ const HostListProperty = () => {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-stone">
-        <Header user={user} logout={logout} navigate={navigate} />
-        <div className="max-w-4xl mx-auto px-4 md:px-8 py-12 md:py-16 text-center">
-          <div className="dashboard-card" data-testid="listing-success">
-            <CheckCircle2 className="w-20 h-20 text-sage-dark mx-auto mb-4" />
-            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-charcoal mb-2">Listing submitted!</h2>
-            <p className="text-charcoal-light mb-2">
-              Your property <strong>{form.title}</strong> is now in the verification queue.
+      <HostWorkspaceShell
+        activePath="/host/dashboard"
+        sidebarTitle="Listing Wizard"
+        sidebarDescription="Your property has been submitted successfully and the verification flow has started."
+        heroTitle="Listing submitted"
+        heroDescription="Your host workspace stays synced while the admin team reviews your listing."
+        sidebarSnapshot={[
+          ['Host', user?.full_name || 'Host'],
+          ['Property', form.title || 'New listing'],
+          ['Status', 'Under review'],
+          ['Window', '48 hrs'],
+        ]}
+      >
+        <div className="mx-auto flex w-full max-w-4xl py-6">
+          <div
+            className="w-full rounded-[32px] border border-slate-200 bg-white px-8 py-10 text-center shadow-[0_20px_48px_rgba(15,23,42,0.08)] md:px-12 md:py-14"
+            data-testid="listing-success"
+          >
+            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-950 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.08)]">
+              <CheckCircle2 className="h-10 w-10" />
+            </div>
+            <p className="mb-2 text-[11px] font-black uppercase tracking-[0.26em] text-slate-400">
+              Verification Queue Started
             </p>
-            <p className="text-charcoal-light text-sm mb-6">
-              Our Relationship Manager will visit and review your listing. You'll get a notification
-              when it goes live (typically within 48 hours).
+            <h2 className="mb-3 text-3xl font-black tracking-[-0.05em] text-slate-950 md:text-4xl">
+              Listing submitted!
+            </h2>
+            <p className="mx-auto mb-2 max-w-2xl text-base text-slate-600">
+              Your property <strong className="font-bold text-slate-950">{form.title}</strong> is now in the verification queue.
             </p>
-            <div className="flex gap-3 justify-center">
+            <p className="mx-auto mb-8 max-w-2xl text-sm leading-6 text-slate-500">
+              Our Relationship Manager will review the listing, validate the details and notify you once it goes live.
+              Typical review time is within 48 hours.
+            </p>
+            <div className="flex flex-col justify-center gap-3 sm:flex-row">
               <button
                 onClick={() => navigate('/host/dashboard')}
-                className="btn-primary"
+                className="inline-flex min-h-[52px] items-center justify-center rounded-2xl bg-slate-950 px-6 text-sm font-bold text-white transition hover:bg-black"
                 data-testid="back-to-dashboard"
               >
                 Back to dashboard
@@ -1640,7 +1662,7 @@ const HostListProperty = () => {
                   setPricingSummaryPlan(null);
                   navigate('/host/list-property', { replace: true, state: null });
                 }}
-                className="btn-secondary"
+                className="inline-flex min-h-[52px] items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-6 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
                 data-testid="list-another"
               >
                 List another
@@ -1649,17 +1671,27 @@ const HostListProperty = () => {
           </div>
         </div>
         <HostSupportWidget context="property_listing" />
-      </div>
+      </HostWorkspaceShell>
     );
   }
 
   const currentStep = STEPS[step].key;
 
   return (
-    <div className="min-h-screen bg-stone">
-      <Header user={user} logout={logout} navigate={navigate} />
-
-      <div className="w-full max-w-[1480px] mx-auto px-5 md:px-8 xl:px-12 py-5 md:py-7">
+    <HostWorkspaceShell
+      activePath="/host/dashboard"
+      sidebarTitle="Listing Wizard"
+      sidebarDescription="Create a new property with the same host workspace experience and keep the onboarding flow organized."
+      heroTitle="List your property"
+      heroDescription={`${step + 1} of ${STEPS.length} steps`}
+      sidebarSnapshot={[
+        ['Host', user?.full_name || 'Host'],
+        ['Category', form.category || 'residential'],
+        ['Step', `${step + 1}/${STEPS.length}`],
+        ['Mode', isHostManageMode ? 'manage' : 'new'],
+      ]}
+    >
+      <div className="w-full max-w-[1480px] py-1">
         <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-charcoal mb-1" data-testid="form-title">
           List your property
         </h1>
@@ -1668,7 +1700,7 @@ const HostListProperty = () => {
         </p>
 
         {/* Progress bar */}
-        <div className="flex items-center mb-8 overflow-x-auto" data-testid="step-indicator">
+        <div className="mb-8 flex items-center overflow-x-auto rounded-[28px] border border-slate-200 bg-white px-5 py-5 shadow-[0_16px_36px_rgba(15,23,42,0.04)]" data-testid="step-indicator">
           {STEPS.map((s, idx) => {
             const done = idx < step;
             const active = idx === step;
@@ -1679,21 +1711,21 @@ const HostListProperty = () => {
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
                       done
-                        ? 'bg-sage-dark text-white'
+                        ? 'bg-slate-900 text-white'
                         : active
-                        ? 'bg-terracotta text-white'
-                        : 'bg-sand-200 text-charcoal-light'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-500'
                     }`}
                     data-testid={`step-${s.key}`}
                   >
                     {done ? <Check className="w-4 h-4" /> : idx + 1}
                   </div>
-                  <span className={`ml-2 text-xs hidden md:inline ${active ? 'text-charcoal font-semibold' : 'text-charcoal-light'}`}>
+                  <span className={`ml-2 text-xs hidden md:inline ${active ? 'text-slate-950 font-semibold' : 'text-slate-400'}`}>
                     {s.label}
                   </span>
                 </div>
                 {idx < STEPS.length - 1 && (
-                  <div className={`flex-1 h-0.5 mx-2 ${done ? 'bg-sage-dark' : 'bg-sand-200'}`} />
+                  <div className={`flex-1 h-0.5 mx-2 ${done ? 'bg-slate-900' : 'bg-slate-200'}`} />
                 )}
               </React.Fragment>
             );
@@ -1708,18 +1740,18 @@ const HostListProperty = () => {
         )}
 
         {isHostManageMode && (
-          <div className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700">
             Submitted/live property management is limited to pricing rules, amenities, and photos/media. Other listing fields are locked.
           </div>
         )}
 
-        <div className={`dashboard-card ${isHostManageMode && !canEditCurrentStep ? 'opacity-50 blur-[1px] pointer-events-none select-none' : ''}`}>
+        <div className={`rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_16px_36px_rgba(15,23,42,0.04)] md:p-7 ${isHostManageMode && !canEditCurrentStep ? 'opacity-50 blur-[1px] pointer-events-none select-none' : ''}`}>
           {currentStep === 'basics' && (
             <div className="space-y-4" data-testid="step-basics-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">Tell us about your place</h2>
               <Input label="Title" testid="basics-title" value={form.title} onChange={(v) => update({ title: v })} placeholder="" />
               <div className="-mt-2 mb-2 px-1">
-                <p className="text-xs text-terracotta font-semibold">ex. Cozy 2BHK with a sunset view</p>
+                <p className="text-xs font-semibold text-slate-500">ex. Cozy 2BHK with a sunset view</p>
               </div>
               <Textarea label="Description" testid="basics-description" value={form.description} onChange={(v) => update({ description: v })} placeholder="Describe your space, neighbourhood, what makes it special…" rows={5} />
               <div className="flex justify-end mt-1">
@@ -1727,7 +1759,7 @@ const HostListProperty = () => {
                   type="button"
                   onClick={handleGenerateAIDescription}
                   disabled={generatingDescription}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-terracotta/10 hover:bg-terracotta/20 text-terracotta rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                  className="flex items-center space-x-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 transition-all hover:bg-slate-100 disabled:opacity-50"
                   data-testid="generate-ai-description"
                 >
                   {generatingDescription ? (
@@ -1793,7 +1825,7 @@ const HostListProperty = () => {
                   type="button"
                   onClick={handleGetCurrentLocation}
                   disabled={fetchingLocation}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-terracotta text-white hover:bg-terracotta-dark active:scale-[0.98] rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                  className="flex items-center space-x-1.5 rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-white transition-all active:scale-[0.98] hover:bg-black disabled:opacity-50"
                 >
                   {fetchingLocation ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1860,7 +1892,7 @@ const HostListProperty = () => {
                           const checked = e.target.checked;
                           update({ has_veg: checked, veg_price: checked ? form.veg_price : '' });
                         }}
-                        className="w-4.5 h-4.5 rounded border-gray-300 text-terracotta focus:ring-terracotta cursor-pointer"
+                        className="h-4.5 w-4.5 cursor-pointer rounded border-gray-300 text-slate-900 focus:ring-slate-400"
                       />
                       <span>Vegetarian Available</span>
                     </label>
@@ -1872,7 +1904,7 @@ const HostListProperty = () => {
                           const checked = e.target.checked;
                           update({ has_non_veg: checked, non_veg_price: checked ? form.non_veg_price : '' });
                         }}
-                        className="w-4.5 h-4.5 rounded border-gray-300 text-terracotta focus:ring-terracotta cursor-pointer"
+                        className="h-4.5 w-4.5 cursor-pointer rounded border-gray-300 text-slate-900 focus:ring-slate-400"
                       />
                       <span>Non-Vegetarian Available</span>
                     </label>
@@ -2023,7 +2055,7 @@ const HostListProperty = () => {
                     />
                   </div>
                   {(form.category === 'residential' || form.category === 'commercial') && (
-                    <div className="mt-4 bg-blue-50/50 border border-blue-100 rounded-2xl p-4">
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       <div className="grid grid-cols-1 gap-4">
                         <div className="hidden">
                         <Input
@@ -2172,7 +2204,7 @@ const HostListProperty = () => {
                                   const checked = e.target.checked;
                                   update({ has_veg: checked, veg_price: checked ? form.veg_price : '' });
                                 }}
-                                className="w-4.5 h-4.5 rounded border-gray-300 text-terracotta focus:ring-terracotta cursor-pointer"
+                                className="h-4.5 w-4.5 cursor-pointer rounded border-gray-300 text-slate-900 focus:ring-slate-400"
                               />
                               <span>Vegetarian Food Available</span>
                             </label>
@@ -2184,7 +2216,7 @@ const HostListProperty = () => {
                                   const checked = e.target.checked;
                                   update({ has_non_veg: checked, non_veg_price: checked ? form.non_veg_price : '' });
                                 }}
-                                className="w-4.5 h-4.5 rounded border-gray-300 text-terracotta focus:ring-terracotta cursor-pointer"
+                                className="h-4.5 w-4.5 cursor-pointer rounded border-gray-300 text-slate-900 focus:ring-slate-400"
                               />
                               <span>Non-Vegetarian Food Available</span>
                             </label>
@@ -2332,8 +2364,8 @@ const HostListProperty = () => {
                       onClick={() => !a.custom && toggleAmenity(a.value)}
                       className={`inline-flex items-center gap-2 text-sm px-4 py-2 rounded-full border transition ${
                         active
-                          ? 'bg-terracotta text-white border-terracotta'
-                          : 'bg-white text-charcoal border-gray-200 hover:border-terracotta'
+                          ? 'border-slate-900 bg-slate-900 text-white'
+                          : 'border-gray-200 bg-white text-charcoal hover:border-slate-400'
                       }`}
                       data-testid={`amenity-${a.value}`}
                     >
@@ -2529,7 +2561,7 @@ const HostListProperty = () => {
               </p>
               <div className="flex gap-2 flex-wrap">
                 <label
-                  className={`btn-primary cursor-pointer flex items-center space-x-2 ${uploadingPhoto ? 'opacity-50 pointer-events-none' : ''}`}
+                  className={`inline-flex cursor-pointer items-center space-x-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-black ${uploadingPhoto ? 'opacity-50 pointer-events-none' : ''}`}
                   data-testid="upload-file-btn"
                 >
                   {uploadingPhoto ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -2548,7 +2580,7 @@ const HostListProperty = () => {
                     setError('');
                     setIsImageUrlDialogOpen(true);
                   }}
-                  className="btn-secondary flex items-center space-x-2"
+                  className="inline-flex items-center space-x-2 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
                   data-testid="add-url-btn"
                 >
                   <ImageIcon className="w-4 h-4" />
@@ -2564,7 +2596,7 @@ const HostListProperty = () => {
                         <img src={getImageUrl(url)} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
                         <div className="absolute top-2 left-2 flex flex-col gap-2">
                           {idx === 0 && (
-                            <span className="text-[10px] bg-terracotta text-white px-2 py-0.5 rounded-full font-bold tracking-tight uppercase tracking-widest">
+                            <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight tracking-widest text-white">
                               COVER
                             </span>
                           )}
@@ -2599,7 +2631,7 @@ const HostListProperty = () => {
                             newImages[idx] = `${url}#${e.target.value}`;
                             update({ images: newImages });
                           }}
-                          className="w-full text-xs font-bold text-charcoal bg-white border border-gray-100 rounded-lg p-2 outline-none focus:border-terracotta transition-colors"
+                          className="w-full rounded-lg border border-gray-200 bg-white p-2 text-xs font-bold text-charcoal outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                         >
                           {PHOTO_CATEGORIES.map(cat => (
                             <option key={cat} value={cat}>{cat}</option>
@@ -2646,7 +2678,7 @@ const HostListProperty = () => {
                   <div className="p-8">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.28em] text-terracotta">
+                        <p className="text-[11px] font-black uppercase tracking-[0.28em] text-slate-500">
                           Add Photo By URL
                         </p>
                         <h3 className="mt-2 text-2xl font-black tracking-tight text-charcoal">
@@ -2666,7 +2698,7 @@ const HostListProperty = () => {
                         value={imageUrlDraft}
                         onChange={(e) => setImageUrlDraft(e.target.value)}
                         placeholder="https://example.com/property-photo.jpg"
-                        className="w-full rounded-2xl border border-[#E8D7A8] bg-[#FFFCF4] px-4 py-4 text-sm font-semibold text-charcoal outline-none transition focus:border-terracotta"
+                        className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-charcoal outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                         autoFocus
                       />
                     </div>
@@ -2677,7 +2709,7 @@ const HostListProperty = () => {
                           setIsImageUrlDialogOpen(false);
                           setImageUrlDraft('');
                         }}
-                        className="rounded-full border border-[#E8D7A8] px-5 py-3 text-sm font-black text-charcoal transition hover:bg-stone"
+                        className="rounded-full border border-slate-200 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-100"
                       >
                         Cancel
                       </button>
@@ -2685,7 +2717,7 @@ const HostListProperty = () => {
                         type="button"
                         onClick={handleAddImageUrl}
                         disabled={uploadingPhoto}
-                        className="rounded-full bg-[#8A6A00] px-6 py-3 text-sm font-black text-white transition hover:bg-[#725700] disabled:opacity-60"
+                        className="rounded-full bg-slate-950 px-6 py-3 text-sm font-black text-white transition hover:bg-black disabled:opacity-60"
                       >
                         {uploadingPhoto ? 'Adding...' : 'Add URL'}
                       </button>
@@ -2698,7 +2730,7 @@ const HostListProperty = () => {
               <div className="mt-8 pt-8 border-t border-gray-100 space-y-6">
                 <div>
                   <h3 className="text-lg font-bold text-charcoal flex items-center gap-2">
-                    <Video className="w-5 h-5 text-terracotta" />
+                    <Video className="w-5 h-5 text-slate-700" />
                     Property Video
                   </h3>
                   <p className="text-xs text-charcoal-light mt-1">
@@ -2708,7 +2740,7 @@ const HostListProperty = () => {
 
                 <div className="flex gap-2 flex-wrap items-center">
                   <label
-                    className={`btn-primary cursor-pointer flex items-center space-x-2 ${uploadingVideo ? 'opacity-50 pointer-events-none' : ''}`}
+                    className={`inline-flex cursor-pointer items-center space-x-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-black ${uploadingVideo ? 'opacity-50 pointer-events-none' : ''}`}
                     data-testid="upload-video-btn"
                   >
                     {uploadingVideo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
@@ -2723,7 +2755,7 @@ const HostListProperty = () => {
                   <button
                     type="button"
                     onClick={handlePasteVideoUrl}
-                    className="btn-secondary flex items-center space-x-2"
+                    className="inline-flex items-center space-x-2 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100"
                   >
                     <Play className="w-4 h-4" />
                     <span>Paste Video URL</span>
@@ -2733,7 +2765,7 @@ const HostListProperty = () => {
                 {form.video_url && (
                   <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm flex items-center justify-between max-w-xl animate-in fade-in slide-in-from-bottom-2 duration-200">
                     <div className="flex items-center space-x-3 overflow-hidden">
-                      <div className="w-12 h-12 bg-terracotta/10 rounded-xl flex items-center justify-center text-terracotta flex-shrink-0">
+                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
                         <Video className="w-6 h-6" />
                       </div>
                       <div className="overflow-hidden">
@@ -2761,7 +2793,7 @@ const HostListProperty = () => {
                       value={form.youtube_short_url || ''}
                       onChange={(e) => update({ youtube_short_url: e.target.value })}
                       placeholder="https://www.youtube.com/shorts/..."
-                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all shadow-sm"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none shadow-sm transition-all focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                     />
                   </div>
                   <div>
@@ -2773,7 +2805,7 @@ const HostListProperty = () => {
                       value={form.youtube_long_url || ''}
                       onChange={(e) => update({ youtube_long_url: e.target.value })}
                       placeholder="https://www.youtube.com/watch?v=..."
-                      className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all shadow-sm"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none shadow-sm transition-all focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                     />
                   </div>
                 </div>
@@ -2785,8 +2817,8 @@ const HostListProperty = () => {
             <div className="space-y-4" data-testid="step-subscription-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">Choose your subscription</h2>
               {hasActiveSubscription ? (
-                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 text-center space-y-3">
-                  <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
+                <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
+                  <CheckCircle2 className="mx-auto h-12 w-12 text-slate-900" />
                   <h3 className="font-bold text-charcoal text-lg">Active Subscription Found</h3>
                   <p className="text-sm text-charcoal-light max-w-md mx-auto">
                     This property already has an active subscription. No further payment or plan selection is required. Click <strong>Next</strong> to review and submit your changes.
@@ -2806,7 +2838,7 @@ const HostListProperty = () => {
                           type="button"
                           onClick={() => setPricingSummaryPlan(p)}
                           className={`text-left p-4 rounded-lg border-2 transition ${
-                            active ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 hover:border-terracotta/50'
+                            active ? 'border-slate-900 bg-slate-50' : 'border-gray-100 hover:border-slate-300'
                           }`}
                           data-testid={`plan-${p.plan_id}`}
                         >
@@ -2815,10 +2847,10 @@ const HostListProperty = () => {
                               <h3 className="font-bold text-charcoal">{p.plan_name}</h3>
                               <p className="text-xs text-charcoal-light mt-0.5">{p.description}</p>
                             </div>
-                            {active && <Check className="w-5 h-5 text-terracotta" />}
+                            {active && <Check className="w-5 h-5 text-slate-900" />}
                           </div>
                           <div className="mt-3">
-                            <span className="text-xl font-bold text-terracotta">
+                            <span className="text-xl font-bold text-slate-900">
                               ₹{p.price_monthly?.toLocaleString('en-IN') || '—'}
                             </span>
                             <span className="text-xs text-charcoal-light"> /month</span>
@@ -2930,7 +2962,7 @@ const HostListProperty = () => {
               <button
                 onClick={submitListing}
                 disabled={submitting || paying}
-                className="btn-primary w-full mt-8 flex items-center justify-center space-x-2 disabled:opacity-50"
+                className="mt-8 flex w-full items-center justify-center space-x-2 rounded-2xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-black disabled:opacity-50"
                 data-testid="submit-listing-btn"
               >
                 {submitting || paying ? (
@@ -2947,11 +2979,11 @@ const HostListProperty = () => {
           )}
         </div>
 
-        <div className="flex justify-between items-center mt-6 gap-3">
+        <div className="mt-6 flex items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-[0_16px_36px_rgba(15,23,42,0.04)]">
           <button
             onClick={prev}
             disabled={step === 0}
-            className="btn-secondary flex items-center space-x-2 disabled:opacity-50"
+            className="inline-flex min-h-[48px] items-center space-x-2 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
             data-testid="prev-btn"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -2962,7 +2994,7 @@ const HostListProperty = () => {
               <button
                 onClick={submitListing}
                 disabled={submitting}
-                className="btn-secondary border-sage-dark/30 text-sage-dark hover:bg-emerald-50/50 flex items-center space-x-2 disabled:opacity-50"
+                className="flex items-center space-x-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
                 data-testid="save-manage-changes-btn"
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
@@ -2972,7 +3004,7 @@ const HostListProperty = () => {
             {step < STEPS.length - 1 && (
               <button
                 onClick={next}
-                className="btn-primary flex items-center space-x-2"
+                className="flex min-h-[48px] items-center space-x-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-black"
                 data-testid="next-btn"
               >
                 <span>Next</span>
@@ -2989,11 +3021,11 @@ const HostListProperty = () => {
             <div className="flex-shrink-0 bg-white px-4 pt-4 pb-3 border-b border-gray-100">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
-                  <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700">
+                  <div className="hidden h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-700 sm:flex">
                     <CreditCard className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-terracotta leading-none mb-1.5">Pricing Summary</p>
+                    <p className="mb-1.5 text-[10px] font-bold uppercase leading-none tracking-[0.2em] text-slate-500">Pricing Summary</p>
                     <h3 className="text-xl leading-tight font-bold text-charcoal">{pricingSummaryPlan.plan_name}</h3>
                     {pricingSummaryPlan.description && (
                       <p className="text-xs text-charcoal-light mt-1 leading-relaxed">{pricingSummaryPlan.description}</p>
@@ -3015,7 +3047,7 @@ const HostListProperty = () => {
               <div className="rounded-xl border border-gray-200 bg-white overflow-hidden mb-3">
                 <div className="flex items-center justify-between gap-4 px-3.5 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-700">
                       <CreditCard className="w-4 h-4" />
                     </span>
                     <span className="text-sm font-bold text-charcoal">Plan fee</span>
@@ -3026,7 +3058,7 @@ const HostListProperty = () => {
                 </div>
                 <div className="flex items-center justify-between gap-4 px-3.5 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-700">
                       <CheckCircle2 className="w-4 h-4" />
                     </span>
                     <span className="text-sm font-bold text-charcoal">Premium Service Fee</span>
@@ -3037,7 +3069,7 @@ const HostListProperty = () => {
                 </div>
                 <div className="flex items-center justify-between gap-4 px-3.5 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-700">
                       <BadgePercent className="w-4 h-4" />
                     </span>
                     <span className="text-sm font-bold text-charcoal underline decoration-sand-300 underline-offset-4">
@@ -3050,7 +3082,7 @@ const HostListProperty = () => {
                 </div>
                 <div className="flex items-center justify-between gap-4 px-3.5 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-700">
                       <Home className="w-4 h-4" />
                     </span>
                     <span className="text-sm font-bold text-charcoal">Selected property type</span>
@@ -3060,26 +3092,26 @@ const HostListProperty = () => {
                   </span>
                 </div>
                 {getSubscriptionBreakdown(pricingSummaryPlan).discount > 0 && (
-                  <div className="flex items-center justify-between gap-4 px-3.5 py-3 border-b border-emerald-100 bg-emerald-50">
+                  <div className="flex items-center justify-between gap-4 border-b border-slate-200 bg-slate-50 px-3.5 py-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white">
                         <Tag className="w-4 h-4" />
                       </span>
-                      <span className="text-sm font-bold text-emerald-800">
+                      <span className="text-sm font-bold text-slate-700">
                         Coupon Discount ({getSubscriptionBreakdown(pricingSummaryPlan).coupon?.code})
                       </span>
                     </div>
-                    <span className="text-sm sm:text-base font-bold text-emerald-800 whitespace-nowrap">
+                    <span className="whitespace-nowrap text-sm font-bold text-slate-700 sm:text-base">
                       -₹{formatSubscriptionAmount(getSubscriptionBreakdown(pricingSummaryPlan).discount)}
                     </span>
                   </div>
                 )}
-                <div className="mx-2 my-2 rounded-lg border border-emerald-100 bg-gradient-to-r from-emerald-50 to-white px-3.5 py-3 flex items-center justify-between gap-4">
+                <div className="mx-2 my-2 flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-gradient-to-r from-slate-50 to-white px-3.5 py-3">
                   <div>
                     <p className="text-sm font-bold text-charcoal">Total payable</p>
                     <p className="text-[10px] font-semibold text-charcoal-light mt-0.5">Inclusive of all taxes</p>
                   </div>
-                  <span className="text-xl font-bold text-terracotta whitespace-nowrap">
+                  <span className="whitespace-nowrap text-xl font-bold text-slate-950">
                     ₹{formatSubscriptionAmount(getSubscriptionBreakdown(pricingSummaryPlan).total)}
                   </span>
                 </div>
@@ -3093,9 +3125,9 @@ const HostListProperty = () => {
                   </div>
                   <div className="flex items-center gap-1.5">
                     {getSubscriptionBreakdown(pricingSummaryPlan).coupon && (
-                      <span className="text-[10px] font-bold text-emerald-700">Applied</span>
+                      <span className="text-[10px] font-bold text-slate-600">Applied</span>
                     )}
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-slate-700" />
                   </div>
                 </div>
                 {subscriptionCoupons.length > 0 ? (
@@ -3107,8 +3139,8 @@ const HostListProperty = () => {
                         onClick={() => setSubscriptionCouponCode(coupon.code)}
                         className={`rounded-full border px-3 py-1 text-xs font-bold transition ${
                           subscriptionCouponCode.trim().toUpperCase() === coupon.code
-                            ? 'border-emerald-300 bg-emerald-50 text-emerald-800'
-                            : 'border-gray-200 bg-stone text-charcoal hover:border-terracotta'
+                            ? 'border-slate-900 bg-slate-100 text-slate-900'
+                            : 'border-gray-200 bg-stone text-charcoal hover:border-slate-400'
                         }`}
                       >
                         {coupon.code} · {
@@ -3130,7 +3162,7 @@ const HostListProperty = () => {
                     value={subscriptionCouponCode}
                     onChange={(e) => setSubscriptionCouponCode(e.target.value.toUpperCase())}
                     placeholder="Enter coupon code"
-                    className="min-h-[42px] flex-1 rounded-lg border border-gray-200 px-4 text-sm font-semibold uppercase outline-none focus:border-terracotta"
+                    className="min-h-[42px] flex-1 rounded-lg border border-gray-200 px-4 text-sm font-semibold uppercase outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                   />
                   {subscriptionCouponCode && (
                     <button
@@ -3147,9 +3179,9 @@ const HostListProperty = () => {
                 )}
               </div>
 
-              <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 flex items-start gap-3">
-                <Info className="w-4 h-4 text-emerald-700 mt-0.5 shrink-0" />
-                <p className="text-xs leading-relaxed text-emerald-800 font-semibold">
+              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-700" />
+                <p className="text-xs font-semibold leading-relaxed text-slate-700">
                   Review this summary before proceeding. Payment will be completed when you submit the listing.
                 </p>
               </div>
@@ -3160,7 +3192,7 @@ const HostListProperty = () => {
                 <button
                   type="button"
                   onClick={() => setPricingSummaryPlan(null)}
-                  className="flex-1 min-h-[52px] rounded-xl border border-terracotta/40 bg-white text-terracotta font-bold flex items-center justify-center gap-2 hover:bg-terracotta/5 transition"
+                  className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-700 transition hover:bg-slate-50"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Back
@@ -3169,7 +3201,7 @@ const HostListProperty = () => {
                   type="button"
                   onClick={proceedFromPricingSummary}
                   disabled={!!subscriptionCouponCode.trim() && !getSubscriptionBreakdown(pricingSummaryPlan).coupon}
-                  className="flex-1 min-h-[52px] rounded-xl bg-sage-dark text-white font-bold flex flex-col items-center justify-center leading-tight shadow-premium shadow-sage-dark/20 hover:bg-sage-dark/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex min-h-[52px] flex-1 flex-col items-center justify-center rounded-xl bg-slate-950 font-bold leading-tight text-white shadow-[0_18px_40px_rgba(15,23,42,0.22)] transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
                   data-testid="pricing-summary-proceed"
                 >
                   <span className="inline-flex items-center gap-2">
@@ -3214,11 +3246,11 @@ const HostListProperty = () => {
             <div className="p-6 md:p-8">
               <div className="flex items-start justify-between gap-4 mb-5">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center shrink-0">
-                    <QrCode className="w-6 h-6 text-sage-dark" />
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-100">
+                    <QrCode className="w-6 h-6 text-slate-700" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-terracotta">UPI Payment</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">UPI Payment</p>
                     <h3 className="text-xl font-bold text-charcoal leading-tight">{upiPayment.planName}</h3>
                   </div>
                 </div>
@@ -3244,10 +3276,10 @@ const HostListProperty = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4">
-                    <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Amount payable</p>
-                    <p className="text-3xl font-bold text-sage-dark mt-1">₹{formatSubscriptionAmount(upiPayment.amount)}</p>
-                    <p className="text-xs text-emerald-800 mt-2 leading-relaxed">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-700">Amount payable</p>
+                    <p className="mt-1 text-3xl font-bold text-slate-950">₹{formatSubscriptionAmount(upiPayment.amount)}</p>
+                    <p className="mt-2 text-xs leading-relaxed text-slate-600">
                       QR scan kelyavar UPI app madhe hi amount auto-fill hoil.
                     </p>
                   </div>
@@ -3261,7 +3293,7 @@ const HostListProperty = () => {
                       <button
                         type="button"
                         onClick={() => navigator.clipboard?.writeText(SUBSCRIPTION_UPI.id)}
-                        className="w-10 h-10 rounded-lg border border-gray-200 flex items-center justify-center text-charcoal hover:border-terracotta"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 text-charcoal transition hover:border-slate-400 hover:bg-slate-50"
                         aria-label="Copy UPI ID"
                       >
                         <Copy className="w-4 h-4" />
@@ -3276,7 +3308,7 @@ const HostListProperty = () => {
                       value={upiPayment.utr}
                       onChange={(e) => setUpiPayment((prev) => ({ ...prev, utr: e.target.value.toUpperCase(), error: '' }))}
                       placeholder="Enter UTR after payment"
-                      className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-bold uppercase outline-none focus:border-terracotta"
+                      className="mt-2 w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-bold uppercase outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                       disabled={upiPayment.submitting}
                     />
                   </label>
@@ -3290,7 +3322,7 @@ const HostListProperty = () => {
               <div className="mt-6 flex flex-col sm:flex-row gap-3">
                 <a
                   href={upiPayment.upiUrl}
-                  className="flex-1 min-h-[50px] rounded-xl border border-sage/30 bg-white text-sage-dark font-bold flex items-center justify-center gap-2 hover:bg-emerald-50 transition"
+                  className="flex min-h-[50px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white font-bold text-slate-700 transition hover:bg-slate-50"
                 >
                   <Smartphone className="w-4 h-4" />
                   Open UPI App
@@ -3299,7 +3331,7 @@ const HostListProperty = () => {
                   type="button"
                   onClick={() => upiPayment.onConfirm?.(upiPayment.utr)}
                   disabled={upiPayment.submitting}
-                  className="flex-1 min-h-[50px] rounded-xl bg-sage-dark text-white font-bold flex items-center justify-center gap-2 shadow-premium shadow-sage-dark/20 hover:bg-sage-dark/90 disabled:opacity-50"
+                  className="flex min-h-[50px] flex-1 items-center justify-center gap-2 rounded-xl bg-slate-950 font-bold text-white shadow-[0_18px_40px_rgba(15,23,42,0.22)] transition hover:bg-black disabled:opacity-50"
                 >
                   {upiPayment.submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                   {upiPayment.submitting ? 'Confirming...' : 'Payment Done'}
@@ -3310,27 +3342,9 @@ const HostListProperty = () => {
         </div>
       )}
       <HostSupportWidget context="property_listing" />
-    </div>
+    </HostWorkspaceShell>
   );
 };
-
-const Header = ({ user, logout, navigate }) => (
-  <header className="header-glass px-4 py-4 animate-fade-in">
-    <div className="w-full max-w-[1480px] mx-auto px-1 md:px-2 flex justify-between items-center flex-wrap gap-2">
-      <div className="flex items-center space-x-2">
-        <Building2 className="w-5 h-5 text-terracotta" />
-        <span className="text-lg font-bold text-charcoal tracking-tight">X-Space360</span>
-      </div>
-      <div className="flex items-center space-x-3 text-xs sm:text-sm font-semibold">
-        <button onClick={() => navigate('/host/dashboard')} className="text-charcoal-light hover:text-terracotta font-bold uppercase tracking-wider">
-          Dashboard
-        </button>
-        <span className="text-charcoal-light hidden xs:inline">{user?.full_name?.split(' ')[0]}</span>
-        <button onClick={logout} className="text-terracotta hover:underline font-bold uppercase tracking-wider">Logout</button>
-      </div>
-    </div>
-  </header>
-);
 
 const Input = ({ label, testid, type = 'text', value, onChange, placeholder, disabled }) => (
   <div>

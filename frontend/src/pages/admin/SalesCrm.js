@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { BarChart3, Search, Target, TrendingUp, UserCheck, Users } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestInput, requestReason } from './shared';
 
 const phaseSteps = [
   ['Step 1', 'CRM Dashboard', 'completed'],
@@ -78,7 +78,15 @@ const SalesCrm = () => {
   }, [state.metrics]);
 
   const updateLead = async (lead, status) => {
-    const notes = window.prompt('Lead notes', lead.notes || '');
+    const notes = await requestInput({
+      title: 'Lead Notes',
+      description: `Update notes for ${lead.lead_id || lead.full_name || 'lead'}.`,
+      label: 'Notes',
+      defaultValue: lead.notes || '',
+      inputType: 'textarea',
+      confirmLabel: 'Continue',
+      allowEmpty: true,
+    });
     if (notes === null) return;
     const reason = await requestReason({ title: 'Lead Update Reason', description: `Updating lead ${lead.lead_id || lead.full_name || ''}.`, placeholder: 'Add lead update reason.', minLength: 3 });
     if (!reason) return;
@@ -92,11 +100,32 @@ const SalesCrm = () => {
     const brokerOptions = formatAssigneeOptions(state.assignees.brokers || []);
     const rmOptions = formatAssigneeOptions(state.assignees.relationship_managers || []);
     const tlOptions = formatAssigneeOptions(state.assignees.team_leaders || []);
-    const brokerId = window.prompt(`Broker ID\n\n${brokerOptions || 'No active brokers found'}`, lead.broker_id || '');
+    const brokerId = await requestInput({
+      title: 'Assign Broker',
+      description: brokerOptions || 'No active brokers found',
+      label: 'Broker ID',
+      defaultValue: lead.broker_id || '',
+      confirmLabel: 'Continue',
+      allowEmpty: true,
+    });
     if (brokerId === null) return;
-    const rmId = window.prompt(`Relationship Manager ID\n\n${rmOptions || 'No active employees found'}`, lead.rm_id || '');
+    const rmId = await requestInput({
+      title: 'Assign Relationship Manager',
+      description: rmOptions || 'No active employees found',
+      label: 'Relationship Manager ID',
+      defaultValue: lead.rm_id || '',
+      confirmLabel: 'Continue',
+      allowEmpty: true,
+    });
     if (rmId === null) return;
-    const teamLeaderId = window.prompt(`Team Leader ID\n\n${tlOptions || 'No active team leaders found'}`, lead.team_leader_id || '');
+    const teamLeaderId = await requestInput({
+      title: 'Assign Team Leader',
+      description: tlOptions || 'No active team leaders found',
+      label: 'Team Leader ID',
+      defaultValue: lead.team_leader_id || '',
+      confirmLabel: 'Continue',
+      allowEmpty: true,
+    });
     if (teamLeaderId === null) return;
     const reason = await requestReason({ title: 'Lead Assignment Reason', description: 'Lead ownership assignment will be audited.', defaultValue: 'Lead ownership assigned from CRM admin', placeholder: 'Add assignment reason.', minLength: 3 });
     if (!reason) return;
@@ -105,13 +134,40 @@ const SalesCrm = () => {
   };
 
   const updatePipeline = async (lead) => {
-    const stage = window.prompt(`Pipeline stage\n\n${pipelineStages.map(([id, label]) => `${id} - ${label}`).join('\n')}`, lead.pipeline_stage || lead.status || 'qualified');
+    const stage = await requestInput({
+      title: 'Pipeline Stage',
+      description: pipelineStages.map(([id, label]) => `${id} - ${label}`).join('\n'),
+      label: 'Stage',
+      defaultValue: lead.pipeline_stage || lead.status || 'qualified',
+      confirmLabel: 'Continue',
+    });
     if (stage === null) return;
-    const nextFollowUpAt = window.prompt('Next follow-up date/time (YYYY-MM-DD or YYYY-MM-DDTHH:mm)', lead.next_follow_up_at ? String(lead.next_follow_up_at).slice(0, 16) : '');
+    const nextFollowUpAt = await requestInput({
+      title: 'Next Follow-up',
+      description: 'Optional date/time format: YYYY-MM-DD or YYYY-MM-DDTHH:mm',
+      label: 'Next Follow-up At',
+      defaultValue: lead.next_follow_up_at ? String(lead.next_follow_up_at).slice(0, 16) : '',
+      confirmLabel: 'Continue',
+      allowEmpty: true,
+    });
     if (nextFollowUpAt === null) return;
-    const followUpStatus = window.prompt('Follow-up status', lead.follow_up_status || 'scheduled');
+    const followUpStatus = await requestInput({
+      title: 'Follow-up Status',
+      description: 'Enter follow-up status.',
+      label: 'Follow-up Status',
+      defaultValue: lead.follow_up_status || 'scheduled',
+      confirmLabel: 'Continue',
+    });
     if (followUpStatus === null) return;
-    const notes = window.prompt('Follow-up notes', lead.notes || '');
+    const notes = await requestInput({
+      title: 'Follow-up Notes',
+      description: 'Add notes for this sales follow-up.',
+      label: 'Notes',
+      defaultValue: lead.notes || '',
+      inputType: 'textarea',
+      confirmLabel: 'Continue',
+      allowEmpty: true,
+    });
     if (notes === null) return;
     const reason = await requestReason({ title: 'Pipeline Update Reason', description: 'Sales pipeline follow-up will be audited.', defaultValue: 'Sales pipeline follow-up updated', placeholder: 'Add pipeline update reason.', minLength: 3 });
     if (!reason) return;
@@ -124,23 +180,23 @@ const SalesCrm = () => {
       <PageHeader title="Sales & CRM" description="Manage lead intake, broker ownership, sales pipeline health, follow-up risk and conversion performance." />
       <Panel className="mb-4 p-3">
         <div className="mb-3 flex gap-2 overflow-x-auto">
-          {crmTabs.map(([id, label]) => <button key={id} onClick={() => setActive(id)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${active === id ? 'bg-charcoal text-white' : 'bg-slate-100 text-slate-600'}`}>{label}</button>)}
+          {crmTabs.map(([id, label]) => <button key={id} onClick={() => setActive(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${active === id ? 'bg-[#2f6df6] text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>)}
         </div>
         <div className="mb-3 flex gap-2 overflow-x-auto">
-          {statuses.map(([id, label]) => <button key={label} onClick={() => setStatusFilter(id)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${statusFilter === id ? 'bg-terracotta text-charcoal' : 'bg-slate-100 text-slate-600'}`}>{label}</button>)}
+          {statuses.map(([id, label]) => <button key={label} onClick={() => setStatusFilter(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${statusFilter === id ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>)}
         </div>
         <div className="grid gap-3 lg:grid-cols-[1fr_200px_180px]">
-          <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 shadow-inner">
             <Search className="h-4 w-4 text-slate-400" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full bg-transparent text-sm outline-none" placeholder="Search lead ID, name, phone, email, city or property" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full bg-transparent text-sm font-medium outline-none" placeholder="Search lead ID, name, phone, email, city or property" />
           </div>
-          <select value={propertyType} onChange={(event) => setPropertyType(event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm">
+          <select value={propertyType} onChange={(event) => setPropertyType(event.target.value)} className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm">
             <option value="">All Property Types</option>
             <option value="residential">Residential</option>
             <option value="commercial">Commercial</option>
             <option value="event_venue">Event Venue</option>
           </select>
-          <input value={city} onChange={(event) => setCity(event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none" placeholder="City" />
+          <input value={city} onChange={(event) => setCity(event.target.value)} className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none shadow-sm" placeholder="City" />
         </div>
       </Panel>
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} /> : (
@@ -152,7 +208,7 @@ const SalesCrm = () => {
               ['Contacted', state.metrics.contacted || 0, UserCheck],
               ['Converted', state.metrics.converted || 0, TrendingUp],
               ['Conversion Rate', `${conversionRate}%`, BarChart3],
-            ].map(([label, value, Icon]) => <Panel key={label} className="p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-terracotta/10 text-terracotta"><Icon className="h-4 w-4" /></div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
+            ].map(([label, value, Icon]) => <Panel key={label} className="p-5"><div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef5ff] text-[#2f6df6]"><Icon className="h-5 w-5" /></div><p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p><p className="mt-2 text-[20px] font-black text-slate-950">{value}</p></Panel>)}
           </div>
           {active === 'dashboard' ? <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
             <Panel className="overflow-hidden">
@@ -211,7 +267,7 @@ const LeadDirectory = ({ leads, onUpdate, onAssign, onPipeline }) => (
               </td>
               <td className="px-4 py-3"><p className="font-bold capitalize">{String(lead.pipeline_stage || lead.status || 'new').replace(/_/g, ' ')}</p><p className="text-xs text-slate-500">{lead.next_follow_up_at ? String(lead.next_follow_up_at).slice(0, 16).replace('T', ' ') : 'No follow-up set'}</p><p className="max-w-[220px] truncate text-xs text-slate-400">{lead.notes || '-'}</p></td>
               <td className="px-4 py-3"><StatusBadge value={lead.status} /></td>
-              <td className="px-4 py-3"><div className="flex flex-wrap gap-1"><button onClick={() => onAssign(lead)} className="rounded-lg bg-terracotta/10 px-2 py-1 text-xs font-bold text-charcoal">Assign</button><button onClick={() => onPipeline(lead)} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">Pipeline</button><button onClick={() => onUpdate(lead, 'contacted')} className="rounded-lg bg-blue-50 px-2 py-1 text-xs font-bold text-blue-700">Contacted</button><button onClick={() => onUpdate(lead, 'converted')} className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">Converted</button><button onClick={() => onUpdate(lead, 'lost')} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700">Lost</button></div></td>
+              <td className="px-4 py-3"><div className="flex flex-wrap gap-1.5"><button onClick={() => onAssign(lead)} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]">Assign</button><button onClick={() => onPipeline(lead)} className="rounded-xl bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-700">Pipeline</button><button onClick={() => onUpdate(lead, 'contacted')} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]">Contacted</button><button onClick={() => onUpdate(lead, 'converted')} className="rounded-xl bg-[#2f6df6] px-2.5 py-1.5 text-xs font-bold text-white">Converted</button><button onClick={() => onUpdate(lead, 'lost')} className="rounded-xl bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-700">Lost</button></div></td>
             </tr>
           ))}
         </tbody>
@@ -269,7 +325,7 @@ const PipelineRow = ({ lead, onPipeline }) => (
     <td className="px-4 py-3 capitalize">{String(lead.pipeline_stage || lead.status || 'new').replace(/_/g, ' ')}</td>
     <td className="px-4 py-3">{lead.next_follow_up_at ? String(lead.next_follow_up_at).slice(0, 16).replace('T', ' ') : '-'}</td>
     <td className="px-4 py-3 max-w-[260px] truncate">{lead.notes || '-'}</td>
-    <td className="px-4 py-3"><button onClick={() => onPipeline(lead)} className="rounded-lg bg-charcoal px-3 py-1.5 text-xs font-bold text-white">Update</button></td>
+    <td className="px-4 py-3"><button onClick={() => onPipeline(lead)} className="rounded-xl bg-[#2f6df6] px-3 py-1.5 text-xs font-bold text-white">Update</button></td>
   </tr>
 );
 
@@ -277,11 +333,11 @@ const FollowUpPanel = ({ title, count, leads, onPipeline, tone }) => (
   <Panel className="p-4">
     <div className="mb-3 flex items-center justify-between gap-3">
       <h2 className="font-black">{title}</h2>
-      <span className={`rounded-lg px-2 py-1 text-xs font-black ${tone === 'red' ? 'bg-red-50 text-red-700' : 'bg-blue-50 text-blue-700'}`}>{count}</span>
+      <span className={`rounded-xl px-2.5 py-1.5 text-xs font-black ${tone === 'red' ? 'bg-red-50 text-red-700' : 'bg-[#eef5ff] text-[#2f6df6]'}`}>{count}</span>
     </div>
     <div className="space-y-2">
       {leads.slice(0, 8).map((lead) => (
-        <button key={lead.lead_id} onClick={() => onPipeline(lead)} className="w-full rounded-lg border border-slate-200 bg-slate-50 p-3 text-left text-sm hover:border-terracotta">
+        <button key={lead.lead_id} onClick={() => onPipeline(lead)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-left text-sm transition hover:border-blue-200 hover:bg-white">
           <p className="font-black">{lead.full_name}</p>
           <p className="text-xs text-slate-500">{lead.next_follow_up_at ? String(lead.next_follow_up_at).slice(0, 16).replace('T', ' ') : 'No date'} · {lead.broker?.full_name || lead.rm?.full_name || 'Unassigned'}</p>
         </button>

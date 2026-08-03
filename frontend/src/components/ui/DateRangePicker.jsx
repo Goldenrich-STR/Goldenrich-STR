@@ -42,6 +42,7 @@ export default function DateRangePicker({
   minDate,
   onChange,
   onClose,
+  desktopPosition = null,
 }) {
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const seed = checkIn ? new Date(`${checkIn}T00:00:00`) : new Date();
@@ -56,6 +57,15 @@ export default function DateRangePicker({
 
   const cells = useMemo(() => buildMonthGrid(visibleMonth), [visibleMonth]);
   if (!open) return null;
+
+  const desktopStyle = desktopPosition
+    ? {
+        position: 'fixed',
+        top: `${desktopPosition.top}px`,
+        left: `${desktopPosition.left}px`,
+        width: `${desktopPosition.width}px`,
+      }
+    : undefined;
 
   const applyDate = (iso) => {
     if (!checkIn || anchor === 'checkIn' || (checkIn && checkOut)) {
@@ -73,7 +83,10 @@ export default function DateRangePicker({
   };
 
   return (
-    <div className="fixed inset-x-3 top-24 bottom-6 z-[90] overflow-y-auto rounded-[28px] border border-[#E8E1D6] bg-white p-4 shadow-[0_22px_50px_rgba(15,23,42,0.16)] md:absolute md:inset-x-auto md:bottom-auto md:left-0 md:top-full md:mt-4 md:w-[min(92vw,360px)] md:overflow-visible">
+    <div
+      style={desktopStyle}
+      className="fixed inset-x-3 top-24 bottom-6 z-[90] overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_22px_50px_rgba(15,23,42,0.16)] md:inset-x-auto md:bottom-auto md:w-[min(92vw,360px)] md:overflow-visible"
+    >
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
@@ -83,7 +96,7 @@ export default function DateRangePicker({
           <ChevronLeft className="h-4 w-4" />
         </button>
         <div className="text-center">
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#A18C63]">Select Dates</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-slate-400">Select Dates</p>
           <h4 className="mt-1 text-base font-bold text-charcoal">
             {MONTHS[visibleMonth.getMonth()]} {visibleMonth.getFullYear()}
           </h4>
@@ -119,7 +132,7 @@ export default function DateRangePicker({
               className={[
                 'aspect-square rounded-2xl text-sm font-bold transition',
                 isDisabled ? 'cursor-not-allowed text-gray-300' : 'text-charcoal hover:bg-stone',
-                inRange ? 'bg-[#F8EFD9] text-[#9E6A07]' : '',
+                inRange ? 'bg-slate-100 text-slate-700' : '',
                 isStart || isEnd ? 'bg-[#1B1924] text-white shadow-sm' : '',
               ].join(' ')}
             >
@@ -146,16 +159,9 @@ export default function DateRangePicker({
         <button
           type="button"
           onClick={() => onChange({ checkIn: '', checkOut: '' })}
-          className="flex-1 rounded-full border border-gray-200 px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-charcoal transition hover:bg-stone"
+          className="w-full rounded-full border border-gray-200 px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-charcoal transition hover:bg-stone"
         >
           Clear
-        </button>
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex-1 rounded-full bg-[#1B1924] px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-[#2A2636]"
-        >
-          Done
         </button>
       </div>
     </div>

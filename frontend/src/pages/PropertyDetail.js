@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI } from '../services/api';
@@ -506,6 +506,9 @@ const PropertyDetail = () => {
   });
   const [bookingCalendarOpen, setBookingCalendarOpen] = useState(false);
   const [bookingCalendarAnchor, setBookingCalendarAnchor] = useState('checkIn');
+  const [bookingCalendarPosition, setBookingCalendarPosition] = useState(null);
+  const checkInButtonRef = useRef(null);
+  const checkOutButtonRef = useRef(null);
   const [guests, setGuests] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return Number(params.get('guests')) || 1;
@@ -789,6 +792,30 @@ const PropertyDetail = () => {
 
   const cells = useMemo(() => buildMonthMatrix(calYear, calMonth), [calYear, calMonth]);
   const todayISO = toISO(new Date());
+
+  const openBookingCalendar = (anchor) => {
+    const anchorNode = anchor === 'checkOut' ? checkOutButtonRef.current : checkInButtonRef.current;
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+    const popupWidth = viewportWidth >= 768 ? Math.min(360, viewportWidth - 32) : Math.min(Math.max(viewportWidth - 24, 280), 360);
+
+    if (anchorNode && viewportWidth) {
+      const rect = anchorNode.getBoundingClientRect();
+      const left = viewportWidth >= 768
+        ? Math.max(16, Math.min(rect.right - popupWidth, viewportWidth - popupWidth - 16))
+        : 12;
+
+      setBookingCalendarPosition({
+        top: viewportWidth >= 768 ? rect.bottom + 12 : 96,
+        left,
+        width: popupWidth,
+      });
+    } else {
+      setBookingCalendarPosition(null);
+    }
+
+    setBookingCalendarAnchor(anchor);
+    setBookingCalendarOpen(true);
+  };
 
   const nights = useMemo(() => {
     if (!checkIn || !checkOut) return 0;
@@ -2142,11 +2169,9 @@ const PropertyDetail = () => {
 
               <div className="bg-stone/80 rounded-2xl border border-gray-100 mb-6">
                 <div className="grid grid-cols-2 divide-x divide-sand-200">
-                  <button 
-                    onClick={() => {
-                      setBookingCalendarAnchor('checkIn');
-                      setBookingCalendarOpen(true);
-                    }}
+                  <button
+                    ref={checkInButtonRef}
+                    onClick={() => openBookingCalendar('checkIn')}
                     className="p-4 text-left hover:bg-white transition-colors group rounded-tl-2xl"
                   >
                     <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block group-hover:text-terracotta transition-colors">{t('checkIn')}</label>
@@ -2154,11 +2179,9 @@ const PropertyDetail = () => {
                       {checkIn || 'Select Date'}
                     </div>
                   </button>
-                  <button 
-                    onClick={() => {
-                      setBookingCalendarAnchor('checkOut');
-                      setBookingCalendarOpen(true);
-                    }}
+                  <button
+                    ref={checkOutButtonRef}
+                    onClick={() => openBookingCalendar('checkOut')}
                     className="p-4 text-left hover:bg-white transition-colors group rounded-tr-2xl"
                   >
                     <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block group-hover:text-terracotta transition-colors">{t('checkOut')}</label>
@@ -2167,24 +2190,6 @@ const PropertyDetail = () => {
                     </div>
                   </button>
                 </div>
-                {bookingCalendarOpen && (
-                  <div className="relative">
-                    <div className="absolute left-4 right-4 top-2 z-20">
-                      <DateRangePicker
-                        open={bookingCalendarOpen}
-                        anchor={bookingCalendarAnchor}
-                        checkIn={checkIn}
-                        checkOut={checkOut}
-                        minDate={todayISO}
-                        onChange={({ checkIn: nextCheckIn, checkOut: nextCheckOut }) => {
-                          setCheckIn(nextCheckIn);
-                          setCheckOut(nextCheckOut);
-                        }}
-                        onClose={() => setBookingCalendarOpen(false)}
-                      />
-                    </div>
-                  </div>
-                )}
                 <div className="p-4 border-t border-gray-100 flex flex-col hover:bg-white transition-colors group gap-4 rounded-b-2xl">
                   <div className="flex items-center w-full justify-between">
                     <div className="flex items-center w-full">
@@ -2563,6 +2568,21 @@ const PropertyDetail = () => {
                  </p>
               </div>
             </div>
+            {bookingCalendarOpen && (
+              <DateRangePicker
+                open={bookingCalendarOpen}
+                anchor={bookingCalendarAnchor}
+                checkIn={checkIn}
+                checkOut={checkOut}
+                minDate={todayISO}
+                desktopPosition={bookingCalendarPosition}
+                onChange={({ checkIn: nextCheckIn, checkOut: nextCheckOut }) => {
+                  setCheckIn(nextCheckIn);
+                  setCheckOut(nextCheckOut);
+                }}
+                onClose={() => setBookingCalendarOpen(false)}
+              />
+            )}
           </div>
         </div>
 

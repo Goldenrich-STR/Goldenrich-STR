@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, CreditCard, Edit3, PlusCircle, PauseCircle, Search, Trash2, XCircle } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestConfirm, requestReason, showNotice } from './shared';
 
 const tabs = [
   ['all', 'All Subscriptions'],
@@ -64,7 +64,11 @@ const SubscriptionManagement = () => {
       await adminPhase1API.deleteSubscription(subscription.subscription_id, { reason });
       await load();
     } catch (error) {
-      alert(error.response?.data?.detail || 'Failed to delete cancelled subscription. Please restart backend and try again.');
+      await showNotice({
+        title: 'Delete Failed',
+        description: error.response?.data?.detail || 'Failed to delete cancelled subscription. Please restart backend and try again.',
+        eyebrow: 'Action Failed',
+      });
     }
   };
 
@@ -91,7 +95,12 @@ const SubscriptionManagement = () => {
   };
 
   const deletePlan = async (plan) => {
-    const confirmed = window.confirm(`Delete plan "${plan.plan_name}"? Existing subscriptions will stay unchanged.`);
+    const confirmed = await requestConfirm({
+      title: 'Delete Subscription Plan',
+      description: `Delete plan "${plan.plan_name}"? Existing subscriptions will stay unchanged.`,
+      confirmLabel: 'Delete Plan',
+      tone: 'danger',
+    });
     if (!confirmed) return;
     await adminPhase1API.deleteSubscriptionPlan(plan.plan_id);
     await load();
@@ -104,7 +113,7 @@ const SubscriptionManagement = () => {
       <PageHeader title="Subscription Management" description="Manage host plans, trial, active, expired and cancelled subscriptions with property status sync." />
       <Panel className="mb-4 p-3">
         <div className="mb-3 flex gap-2 overflow-x-auto">
-          {tabs.map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${tab === id ? 'bg-terracotta text-charcoal' : 'bg-slate-100 text-slate-600'}`}>{label}</button>)}
+          {tabs.map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${tab === id ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>)}
         </div>
         <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
           <Search className="h-4 w-4 text-slate-400" />
@@ -158,8 +167,8 @@ const SubscriptionManagement = () => {
 
 const SubscriptionActions = ({ subscription, onStatus, onDelete }) => (
   <div className="flex flex-wrap gap-1">
-    <button onClick={() => onStatus(subscription, 'active')} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700"><CheckCircle2 className="h-3.5 w-3.5" /> Active</button>
-    <button onClick={() => onStatus(subscription, 'expired')} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700"><PauseCircle className="h-3.5 w-3.5" /> Expire</button>
+    <button onClick={() => onStatus(subscription, 'active')} className="inline-flex items-center gap-1 rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]"><CheckCircle2 className="h-3.5 w-3.5" /> Active</button>
+    <button onClick={() => onStatus(subscription, 'expired')} className="inline-flex items-center gap-1 rounded-xl bg-slate-100 px-2.5 py-1.5 text-xs font-bold text-slate-700"><PauseCircle className="h-3.5 w-3.5" /> Expire</button>
     <button onClick={() => onStatus(subscription, 'cancelled')} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700"><XCircle className="h-3.5 w-3.5" /> Cancel</button>
     {subscription.status === 'cancelled' && (
       <button onClick={() => onDelete(subscription)} className="inline-flex items-center gap-1 rounded-lg bg-red-100 px-2 py-1 text-xs font-bold text-red-800"><Trash2 className="h-3.5 w-3.5" /> Delete</button>
@@ -259,7 +268,7 @@ const PlanCatalog = ({ plans, onStatus, onCreate, onUpdate, onDelete }) => {
           <h2 className="font-black">Plan Catalog</h2>
           <p className="text-sm text-slate-500">Create and manage subscription plans shown to hosts.</p>
         </div>
-        <button onClick={() => (showCreate ? cancelEdit() : setShowCreate(true))} className="inline-flex items-center gap-2 rounded-lg bg-charcoal px-3 py-2 text-sm font-black text-white">
+        <button onClick={() => (showCreate ? cancelEdit() : setShowCreate(true))} className="inline-flex items-center gap-2 rounded-2xl bg-[#2f6df6] px-4 py-2.5 text-sm font-black text-white">
           <PlusCircle className="h-4 w-4" /> {showCreate ? 'Close Form' : 'Create Plan'}
         </button>
       </div>
@@ -289,7 +298,7 @@ const PlanCatalog = ({ plans, onStatus, onCreate, onUpdate, onDelete }) => {
             <input value={form.description} onChange={(event) => update('description', event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm" placeholder="Example: Ideal for 1BHK apartments" />
           </Field>
           {error && <p className="text-sm font-bold text-red-700 md:col-span-2 xl:col-span-3">{error}</p>}
-          <button disabled={saving} className="self-end rounded-lg bg-terracotta px-3 py-2 text-sm font-black text-charcoal disabled:opacity-60">{saving ? 'Saving...' : editingPlanId ? 'Update Plan' : 'Save Plan'}</button>
+          <button disabled={saving} className="self-end rounded-2xl bg-[#2f6df6] px-4 py-2.5 text-sm font-black text-white disabled:opacity-60">{saving ? 'Saving...' : editingPlanId ? 'Update Plan' : 'Save Plan'}</button>
         </form>
       )}
     </Panel>
@@ -309,7 +318,7 @@ const PlanCatalog = ({ plans, onStatus, onCreate, onUpdate, onDelete }) => {
         </div>
         <p className="mt-3 text-sm text-slate-600">{plan.description || '-'}</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button onClick={() => onStatus(plan, true)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700"><CreditCard className="h-3.5 w-3.5" /> Activate</button>
+          <button onClick={() => onStatus(plan, true)} className="inline-flex items-center gap-1 rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]"><CreditCard className="h-3.5 w-3.5" /> Activate</button>
           <button onClick={() => onStatus(plan, false)} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold">Pause</button>
           <button onClick={() => startEdit(plan)} className="inline-flex items-center gap-1 rounded-lg bg-sky-50 px-2 py-1 text-xs font-bold text-sky-700"><Edit3 className="h-3.5 w-3.5" /> Edit</button>
           <button onClick={() => onDelete(plan)} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700"><Trash2 className="h-3.5 w-3.5" /> Delete</button>

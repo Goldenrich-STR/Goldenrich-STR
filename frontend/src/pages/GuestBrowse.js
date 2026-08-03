@@ -349,9 +349,6 @@ const GuestBrowse = () => {
       navigate('/login');
       return;
     }
-    if (user.role !== 'guest') {
-      return;
-    }
     setWishlist(prev => {
       let updated;
       if (prev.includes(propertyId)) {
@@ -1353,7 +1350,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
       />
       <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
       
-      <div className="absolute top-4 left-4 flex gap-2">
+      <div className="absolute top-4 left-4 z-20">
          {property.price_per_night >= 50000 ? (
            <div className="bg-black border border-[#D4AF37]/50 px-3.5 py-1.5 rounded-none shadow-md flex items-center gap-1.5">
              <Crown className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
@@ -1362,9 +1359,9 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
              </span>
            </div>
          ) : (
-           <div className="glass px-3 py-1 rounded-full shadow-sm">
+           <div className="glass px-3 py-1 rounded-full shadow-sm bg-white/70 backdrop-blur-md">
               <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal">
-                 {formatCategoryLabel(property.category)}
+                 {formatPropertyTypeLabel(property.property_type) || 'Stay'}
               </span>
            </div>
          )}
@@ -1382,35 +1379,33 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
          >
             <Share2 className="w-3.5 h-3.5 text-charcoal hover:text-green-600" />
          </button>
-         {(!user || user.role === 'guest') && (
-           <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onWishlistToggle(property.property_id);
-              }}
-              className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-subtle hover:bg-white hover:scale-[1.03] transition cursor-pointer"
-              title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
-            >
-              <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'}`} />
-           </button>
-         )}
+         <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onWishlistToggle(property.property_id);
+            }}
+            className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-subtle hover:bg-white hover:scale-[1.03] transition cursor-pointer"
+            title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+          >
+            <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'}`} />
+         </button>
       </div>
 
-      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-        {property.instant_booking && (
-           <div className="bg-amber-500 text-white p-1.5 rounded-lg shadow-premium" title="Instant Booking">
-              <Zap className="w-3.5 h-3.5 fill-current" />
-           </div>
-        )}
-        {property.rating && property.rating > 0 ? (
-          <div className="ml-auto flex items-center text-white space-x-1.5 drop-shadow-subtle">
-             <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-             <span className="text-sm font-bold tracking-tight text-white">{Number(property.rating).toFixed(1)}</span>
-             {property.review_count && property.review_count > 0 ? (
-               <span className="text-[10px] text-white/80 font-bold ml-1">({property.review_count} Reviews)</span>
-             ) : null}
-          </div>
-        ) : null}
+      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center z-20">
+        <div className="flex items-center gap-2">
+          {property.instant_booking && (
+             <div className="bg-amber-500 text-white p-1.5 rounded-lg shadow-premium" title="Instant Booking">
+                <Zap className="w-3.5 h-3.5 fill-current" />
+             </div>
+          )}
+          {property.rating && property.rating > 0 && property.review_count && property.review_count > 0 ? (
+            <div className="flex items-center bg-charcoal/70 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-xs font-bold gap-1 shadow-sm">
+               <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 mr-0.5" />
+               <span>{Number(property.rating).toFixed(1)}</span>
+               <span className="text-[9px] text-white/80 font-normal ml-0.5">({property.review_count})</span>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
     <div className={`p-5 flex flex-col justify-between ${compact ? 'w-full sm:w-2/3 rounded-b-2xl sm:rounded-r-2xl sm:rounded-bl-none' : 'flex-1 rounded-b-2xl'} bg-white`}>

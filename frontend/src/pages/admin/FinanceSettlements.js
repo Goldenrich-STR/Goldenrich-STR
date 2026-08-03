@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, CreditCard, FileText, PlayCircle, RefreshCcw, Search, TrendingUp, WalletCards } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice } from './shared';
 import { AdminAccountTransactionsTab } from '../AdminAccount';
 
 const financeSteps = [
@@ -127,7 +127,7 @@ const FinanceSettlements = () => {
       if (action === 'runAuto') await adminPhase1API.runAutoFinancePayouts();
       await load();
     } catch (error) {
-      window.alert(error.response?.data?.detail || 'Payout action failed');
+      await showNotice({ title: 'Payout Action Failed', description: error.response?.data?.detail || 'Payout action failed', eyebrow: 'Action Failed' });
     } finally {
       setBusy('');
     }
@@ -139,19 +139,43 @@ const FinanceSettlements = () => {
       await adminPhase1API.processFinancePayout(payout.payout_id, { notes: 'Processed from Central Admin finance settlement workspace' });
       await load();
     } catch (error) {
-      window.alert(error.response?.data?.detail || 'Failed to process payout');
+      await showNotice({ title: 'Payout Failed', description: error.response?.data?.detail || 'Failed to process payout', eyebrow: 'Action Failed' });
     } finally {
       setBusy('');
     }
   };
 
   const initiateRefund = async () => {
-    const bookingId = window.prompt('Booking ID for refund');
+    const bookingId = await requestInput({
+      title: 'Initiate Refund',
+      description: 'Enter the booking ID for the refund request.',
+      label: 'Booking ID',
+      placeholder: 'e.g. BKD63900D1B44C49',
+      confirmLabel: 'Continue',
+    });
     if (!bookingId) return;
     const reason = await requestReason({ title: 'Refund Reason', description: `Initiating refund for booking ${bookingId}.`, placeholder: 'Add refund reason.', minLength: 3 });
     if (!reason) return;
-    const overridePercentRaw = window.prompt('Override percent, blank to use policy');
-    const overrideAmountRaw = !overridePercentRaw ? window.prompt('Override amount in INR, blank to use policy') : '';
+    const overridePercentRaw = await requestInput({
+      title: 'Override Percentage',
+      description: 'Leave blank to use the default refund policy.',
+      label: 'Override Percent',
+      placeholder: 'e.g. 35',
+      confirmLabel: 'Continue',
+      inputType: 'number',
+      allowEmpty: true,
+    });
+    if (overridePercentRaw === null) return;
+    const overrideAmountRaw = !String(overridePercentRaw || '').trim() ? await requestInput({
+      title: 'Override Amount',
+      description: 'Optional fixed refund amount in INR. Leave blank to use policy.',
+      label: 'Override Amount (INR)',
+      placeholder: 'e.g. 2500',
+      confirmLabel: 'Continue',
+      inputType: 'number',
+      allowEmpty: true,
+    }) : '';
+    if (overrideAmountRaw === null) return;
     const payload = { reason };
     if (overridePercentRaw) payload.override_percent = Number(overridePercentRaw);
     if (overrideAmountRaw) payload.override_amount = Math.round(Number(overrideAmountRaw) * 100);
@@ -160,22 +184,35 @@ const FinanceSettlements = () => {
       await adminPhase1API.initiateFinanceRefund(bookingId, payload);
       await load();
     } catch (error) {
-      window.alert(error.response?.data?.detail || 'Failed to initiate refund');
+      await showNotice({ title: 'Refund Failed', description: error.response?.data?.detail || 'Failed to initiate refund', eyebrow: 'Action Failed' });
     } finally {
       setBusy('');
     }
   };
 
   const previewRefundPolicy = async () => {
-    const check_in_date = window.prompt('Check-in date YYYY-MM-DD');
+    const check_in_date = await requestInput({
+      title: 'Refund Policy Preview',
+      description: 'Enter the check-in date to preview refund policy.',
+      label: 'Check-in Date',
+      placeholder: 'YYYY-MM-DD',
+      confirmLabel: 'Continue',
+    });
     if (!check_in_date) return;
-    const totalAmount = window.prompt('Total booking amount in INR');
+    const totalAmount = await requestInput({
+      title: 'Refund Policy Preview',
+      description: 'Enter the total booking amount in INR.',
+      label: 'Total Amount (INR)',
+      placeholder: 'e.g. 18500',
+      confirmLabel: 'Preview Policy',
+      inputType: 'number',
+    });
     if (!totalAmount) return;
     try {
       const res = await adminPhase1API.financeRefundPolicyPreview({ check_in_date, total_amount: totalAmount });
       setPolicyPreview(res.data);
     } catch (error) {
-      window.alert(error.response?.data?.detail || 'Failed to preview refund policy');
+      await showNotice({ title: 'Preview Failed', description: error.response?.data?.detail || 'Failed to preview refund policy', eyebrow: 'Action Failed' });
     }
   };
 
@@ -192,32 +229,52 @@ const FinanceSettlements = () => {
       link.remove();
       URL.revokeObjectURL(href);
     } catch (error) {
-      window.alert(error.response?.data?.detail || 'Failed to export finance report');
+      await showNotice({ title: 'Export Failed', description: error.response?.data?.detail || 'Failed to export finance report', eyebrow: 'Action Failed' });
     }
   };
 
   const shareInvoice = async (transaction) => {
-    const channel = window.prompt('Share invoice via whatsapp or email', 'email');
+    const channel = await requestInput({
+      title: 'Share Invoice',
+      description: 'Choose invoice delivery channel.',
+      label: 'Channel',
+      defaultValue: 'email',
+      placeholder: 'email or whatsapp',
+      confirmLabel: 'Share Invoice',
+    });
     if (!channel) return;
     try {
       await adminPhase1API.shareFinanceInvoice(transaction.transaction_id, channel);
-      window.alert('Invoice share request completed');
+      await showNotice({ title: 'Invoice Shared', description: 'Invoice share request completed successfully.', eyebrow: 'Completed' });
     } catch (error) {
-      window.alert(error.response?.data?.detail || 'Failed to share invoice');
+      await showNotice({ title: 'Share Failed', description: error.response?.data?.detail || 'Failed to share invoice', eyebrow: 'Action Failed' });
     }
   };
 
   const savePaymentConfig = async () => {
     const current = state.paymentConfig || {};
-    const platform_fee_percent = window.prompt('Platform fee percent', current.platform_fee_percent ?? 10);
+    const platform_fee_percent = await requestInput({
+      title: 'Platform Fee Configuration',
+      description: 'Update the platform fee percentage.',
+      label: 'Platform Fee Percent',
+      defaultValue: String(current.platform_fee_percent ?? 10),
+      inputType: 'number',
+      confirmLabel: 'Continue',
+    });
     if (platform_fee_percent === null) return;
-    const platform_fee_label = window.prompt('Platform fee label', current.platform_fee_label || 'Premium Service Fee');
+    const platform_fee_label = await requestInput({
+      title: 'Platform Fee Configuration',
+      description: 'Update the label shown for platform fee.',
+      label: 'Platform Fee Label',
+      defaultValue: current.platform_fee_label || 'Premium Service Fee',
+      confirmLabel: 'Save Configuration',
+    });
     if (platform_fee_label === null) return;
     try {
       await adminPhase1API.updatePaymentConfig({ platform_fee_percent: Number(platform_fee_percent), platform_fee_label });
       await load();
     } catch (error) {
-      window.alert(error.response?.data?.detail || 'Failed to update payment config');
+      await showNotice({ title: 'Config Save Failed', description: error.response?.data?.detail || 'Failed to update payment config', eyebrow: 'Action Failed' });
     }
   };
 
@@ -226,27 +283,27 @@ const FinanceSettlements = () => {
       <PageHeader title="Finance & Settlements" description="Central finance overview for revenue, host settlements, refunds, tax liability, broker commission and invoice operations." />
       <Panel className="mb-4 p-3">
         <div className="mb-3 flex gap-2 overflow-x-auto">
-          {workspaceTabs.map(([id, label]) => <button key={id} onClick={() => setActive(id)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${active === id ? 'bg-terracotta text-charcoal' : 'bg-slate-100 text-slate-600'}`}>{label}</button>)}
+          {workspaceTabs.map(([id, label]) => <button key={id} onClick={() => setActive(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${active === id ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>)}
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+        {active !== 'overview' && <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 shadow-inner">
           <Search className="h-4 w-4 text-slate-400" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full bg-transparent text-sm outline-none" placeholder="Search transaction, booking, host, property or payment reference" />
-        </div>
+          <input value={search} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full bg-transparent text-sm font-medium outline-none" placeholder="Search transaction, booking, host, property or payment reference" />
+        </div>}
       </Panel>
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} /> : (
         <div className="space-y-5">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             {cards.map(([label, value, Icon, sub]) => (
-              <Panel key={label} className="p-4">
-                <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-terracotta/10 text-terracotta"><Icon className="h-4 w-4" /></div>
-                <p className="text-xs font-bold uppercase text-slate-500">{label}</p>
-                <p className="mt-1 text-2xl font-black">{value}</p>
+              <Panel key={label} className="p-5">
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef5ff] text-[#2f6df6]"><Icon className="h-5 w-5" /></div>
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
+                <p className="mt-2 text-[18px] font-black text-slate-950 md:text-[20px]">{value}</p>
                 <p className="mt-1 text-xs text-slate-500">{sub}</p>
               </Panel>
             ))}
           </div>
           {active === 'overview' ? <div className="space-y-4">
-            <AdminAccountTransactionsTab />
+            <AdminAccountTransactionsTab hideFilters limit={5} />
             <div className="grid gap-4 lg:grid-cols-2">
               <Panel className="p-4">
                 <h2 className="font-black">Phase 3 Steps</h2>
@@ -278,7 +335,7 @@ const FinanceSettlements = () => {
   );
 };
 
-const Info = ({ label, value }) => <p className="flex justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2"><span className="font-bold text-slate-500">{label}</span><span className="font-black">{value}</span></p>;
+const Info = ({ label, value }) => <p className="flex justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2.5"><span className="font-bold text-slate-500">{label}</span><span className="font-black text-slate-950">{value}</span></p>;
 
 const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, autoStatus, busy, onProcess, onAction }) => {
   const sample = payouts[0] || {};
@@ -291,7 +348,7 @@ const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, a
           ['Extra Charges', paiseToMoney(totals.extraCharges || 0)],
           ['TDS Hold', paiseToMoney(totals.tds || 0)],
           ['Net Host Payable', paiseToMoney(totals.net || 0)],
-        ].map(([label, value]) => <Panel key={label} className="p-4"><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
+        ].map(([label, value]) => <Panel key={label} className="p-5"><p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p><p className="mt-2 text-[20px] font-black text-slate-950">{value}</p></Panel>)}
       </div>
       <Panel className="p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -300,9 +357,9 @@ const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, a
             <p className="text-xs text-slate-500">Sweep completed bookings, process eligible payouts, or run the auto payout engine manually.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button disabled={!!busy} onClick={() => onAction('sweep', 'sweep')} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-black disabled:opacity-50"><RefreshCcw className="h-4 w-4" /> Sweep Eligibility</button>
-            <button disabled={!!busy} onClick={() => onAction('processEligible', 'batch')} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 disabled:opacity-50"><CheckCircle2 className="h-4 w-4" /> Process Eligible</button>
-            <button disabled={!!busy} onClick={() => onAction('runAuto', 'auto')} className="inline-flex items-center gap-1 rounded-lg bg-charcoal px-3 py-2 text-xs font-black text-white disabled:opacity-50"><PlayCircle className="h-4 w-4" /> Run Auto Engine</button>
+            <button disabled={!!busy} onClick={() => onAction('sweep', 'sweep')} className="inline-flex items-center gap-1 rounded-2xl bg-slate-100 px-3.5 py-2.5 text-xs font-black text-slate-700 disabled:opacity-50"><RefreshCcw className="h-4 w-4" /> Sweep Eligibility</button>
+            <button disabled={!!busy} onClick={() => onAction('processEligible', 'batch')} className="inline-flex items-center gap-1 rounded-2xl bg-[#eef5ff] px-3.5 py-2.5 text-xs font-black text-[#2f6df6] disabled:opacity-50"><CheckCircle2 className="h-4 w-4" /> Process Eligible</button>
+            <button disabled={!!busy} onClick={() => onAction('runAuto', 'auto')} className="inline-flex items-center gap-1 rounded-2xl bg-[#2f6df6] px-3.5 py-2.5 text-xs font-black text-white disabled:opacity-50"><PlayCircle className="h-4 w-4" /> Run Auto Engine</button>
           </div>
         </div>
         <div className="mt-4 grid gap-2 text-sm md:grid-cols-6">
@@ -313,7 +370,7 @@ const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, a
           <Info label="Failed" value={autoStatus?.failed || 0} />
           <Info label="Mode" value={autoStatus?.payouts_are_mock ? 'Mock' : 'Live'} />
         </div>
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+        <div className="mt-4 rounded-[22px] border border-[#cfe0ff] bg-[#f5f9ff] p-4 text-sm text-slate-700">
           Host payout uses only the host-entered booking value before customer GST. Customer-side charges are shown separately so finance can track host settlement, platform commission, broker payout, and RM payout clearly.
         </div>
       </Panel>
@@ -321,7 +378,7 @@ const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, a
         <Panel className="overflow-hidden">
           <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
             <div><h2 className="font-black">Host Settlement Queue</h2><p className="text-xs text-slate-500">Booking-wise payout ledger with broker/RM ownership, extra charges, destination and due date.</p></div>
-            <select value={payoutStatus} onChange={(event) => setPayoutStatus(event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm">
+            <select value={payoutStatus} onChange={(event) => setPayoutStatus(event.target.value)} className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm">
               <option value="">All Status</option>
               <option value="pending">Pending</option>
               <option value="eligible">Eligible</option>
@@ -377,7 +434,7 @@ const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, a
           <Panel className="p-4">
             <h2 className="font-black">Sample Payout Invoice Format</h2>
             <p className="mt-1 text-xs text-slate-500">This is the structure finance can use for host, broker, or RM payout invoices.</p>
-            <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 text-xs">
+            <div className="mt-3 overflow-hidden rounded-[22px] border border-slate-200 text-xs">
               {[
                 ['Payout ID', sample.payout_id || 'pyo_SAMPLE'],
                 ['Host', sample.host?.full_name || sample.host_id || 'Host Name'],
@@ -414,7 +471,7 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
           ['Refund Liability', formatMoney(totals.refund)],
           ['Pending Refunds', totals.pending],
           ['Failed Refunds', totals.failed],
-        ].map(([label, value]) => <Panel key={label} className="p-4"><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
+        ].map(([label, value]) => <Panel key={label} className="p-5"><p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p><p className="mt-2 text-[20px] font-black text-slate-950">{value}</p></Panel>)}
       </div>
       <Panel className="p-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -423,8 +480,8 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
             <p className="text-xs text-slate-500">Preview cancellation policy, initiate approved refunds, and track gateway processing status.</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={onPreview} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-black"><FileText className="h-4 w-4" /> Policy Preview</button>
-            <button disabled={busy === 'refund'} onClick={onInitiate} className="inline-flex items-center gap-1 rounded-lg bg-charcoal px-3 py-2 text-xs font-black text-white disabled:opacity-50"><RefreshCcw className="h-4 w-4" /> Initiate Refund</button>
+            <button onClick={onPreview} className="inline-flex items-center gap-1 rounded-2xl bg-slate-100 px-3.5 py-2.5 text-xs font-black text-slate-700"><FileText className="h-4 w-4" /> Policy Preview</button>
+            <button disabled={busy === 'refund'} onClick={onInitiate} className="inline-flex items-center gap-1 rounded-2xl bg-[#2f6df6] px-3.5 py-2.5 text-xs font-black text-white disabled:opacity-50"><RefreshCcw className="h-4 w-4" /> Initiate Refund</button>
           </div>
         </div>
         {policyPreview && (
@@ -439,7 +496,7 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
       <Panel className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-slate-200 p-4 md:flex-row md:items-center md:justify-between">
           <div><h2 className="font-black">Refund Queue</h2><p className="text-xs text-slate-500">Cancellation refunds with guest, host, policy tier, gateway reference and status.</p></div>
-          <select value={refundStatus} onChange={(event) => setRefundStatus(event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm">
+          <select value={refundStatus} onChange={(event) => setRefundStatus(event.target.value)} className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm">
             <option value="">All Status</option>
             <option value="pending">Pending</option>
             <option value="processed">Processed</option>
@@ -484,7 +541,7 @@ const TaxesWorkspace = ({ data }) => {
           ['Subscription GST', formatMoney(summary.subscription_gst || 0)],
           ['Host TDS Hold', formatMoney(summary.tds_hold || 0)],
         ['Total Tax Reserve', formatMoney((summary.booking_gst || 0) + (summary.subscription_gst || 0) + (summary.tds_hold || 0))],
-      ].map(([label, value]) => <Panel key={label} className="p-4"><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
+      ].map(([label, value]) => <Panel key={label} className="p-5"><p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p><p className="mt-2 text-[20px] font-black text-slate-950">{value}</p></Panel>)}
       </div>
       <Panel className="overflow-hidden">
           <div className="border-b border-slate-200 p-4">
@@ -583,7 +640,7 @@ const ReportsConfigWorkspace = ({ transactions, paymentConfig, autoStatus, onExp
         ['Mode', paymentConfig?.is_mock ? 'Mock' : 'Live'],
         ['Platform Fee', `${paymentConfig?.platform_fee_percent ?? '-'}%`],
         ['Payout Batch Limit', autoStatus?.batch_limit || '-'],
-      ].map(([label, value]) => <Panel key={label} className="p-4"><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black capitalize">{value}</p></Panel>)}
+        ].map(([label, value]) => <Panel key={label} className="p-5"><p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p><p className="mt-2 text-[20px] font-black capitalize text-slate-950">{value}</p></Panel>)}
     </div>
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
       <Panel className="overflow-hidden">
@@ -592,7 +649,7 @@ const ReportsConfigWorkspace = ({ transactions, paymentConfig, autoStatus, onExp
             <h2 className="font-black">Invoices & Finance Reports</h2>
             <p className="text-xs text-slate-500">Export ledger CSV and share generated invoice references for finance records.</p>
           </div>
-          <button onClick={onExport} className="rounded-lg bg-charcoal px-3 py-2 text-xs font-black text-white">Export CSV</button>
+          <button onClick={onExport} className="rounded-2xl bg-[#2f6df6] px-3.5 py-2.5 text-xs font-black text-white">Export CSV</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[950px] text-left text-sm">
@@ -606,7 +663,7 @@ const ReportsConfigWorkspace = ({ transactions, paymentConfig, autoStatus, onExp
                   <td className="px-4 py-3">{txn.customer?.full_name || txn.host?.full_name || txn.user_id || txn.host_id || '-'}</td>
                   <td className="px-4 py-3 font-black">{paiseToMoney(txn.amount)}</td>
                   <td className="px-4 py-3"><StatusBadge value={txn.status} /></td>
-                  <td className="px-4 py-3"><button onClick={() => onShare(txn)} className="rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold">Share</button></td>
+                  <td className="px-4 py-3"><button onClick={() => onShare(txn)} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]">Share</button></td>
                 </tr>
               ))}
             </tbody>
@@ -624,7 +681,7 @@ const ReportsConfigWorkspace = ({ transactions, paymentConfig, autoStatus, onExp
             <Info label="Platform Fee Label" value={paymentConfig?.platform_fee_label || '-'} />
             <Info label="Platform Fee Percent" value={`${paymentConfig?.platform_fee_percent ?? '-'}%`} />
           </div>
-          <button onClick={onSavePaymentConfig} className="mt-4 w-full rounded-lg bg-terracotta px-3 py-2 text-xs font-black text-charcoal">Update Payment Fee Config</button>
+          <button onClick={onSavePaymentConfig} className="mt-4 w-full rounded-2xl bg-[#2f6df6] px-3 py-2.5 text-xs font-black text-white">Update Payment Fee Config</button>
         </Panel>
         <Panel className="p-4">
           <h2 className="font-black">Payout Configuration</h2>

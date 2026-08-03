@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Bell, Headphones, Mail, MessageSquare, Search, Send, ShieldAlert } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { cmsAPI } from '../../services/api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestInput, requestReason, showNotice } from './shared';
 
 const phaseSteps = [
   ['Step 1', 'Communication Overview', 'completed'],
@@ -104,13 +104,39 @@ const CommunicationCenter = () => {
   };
 
   const sendTestNotification = async () => {
-    const userId = window.prompt('User ID to send test notification');
+    const userId = await requestInput({
+      title: 'Send Test Notification',
+      description: 'Enter the recipient user ID.',
+      label: 'User ID',
+      placeholder: 'e.g. user_guest_123',
+      confirmLabel: 'Continue',
+    });
     if (!userId) return;
-    const channelsText = window.prompt('Channels (comma separated: in_app,email,sms,whatsapp)', 'in_app,email');
+    const channelsText = await requestInput({
+      title: 'Send Test Notification',
+      description: 'Comma separated channels: in_app, email, sms, whatsapp',
+      label: 'Channels',
+      defaultValue: 'in_app,email',
+      placeholder: 'in_app,email',
+      confirmLabel: 'Continue',
+    });
     if (!channelsText) return;
-    const title = window.prompt('Notification title', 'X-Space360 Test Notification');
+    const title = await requestInput({
+      title: 'Send Test Notification',
+      description: 'Enter the notification title.',
+      label: 'Title',
+      defaultValue: 'X-Space360 Test Notification',
+      confirmLabel: 'Continue',
+    });
     if (!title) return;
-    const message = window.prompt('Notification message', 'This is a test notification from Communication Center.');
+    const message = await requestInput({
+      title: 'Send Test Notification',
+      description: 'Enter the notification message.',
+      label: 'Message',
+      defaultValue: 'This is a test notification from Communication Center.',
+      inputType: 'textarea',
+      confirmLabel: 'Continue',
+    });
     if (!message) return;
     const reason = await requestReason({ title: 'Test Notification Reason', description: 'This test notification will be audited.', defaultValue: 'Admin notification test', placeholder: 'Add test reason.', minLength: 3 });
     if (!reason) return;
@@ -120,7 +146,11 @@ const CommunicationCenter = () => {
 
   const saveRule = async () => {
     if (!ruleForm.rule_name.trim() || !ruleForm.event_name.trim()) {
-      window.alert('Rule name and event name are required.');
+      await showNotice({
+        title: 'Missing Required Fields',
+        description: 'Rule name and event name are required.',
+        eyebrow: 'Validation Error',
+      });
       return;
     }
     const payload = { ...ruleForm, rule_name: ruleForm.rule_name.trim(), event_name: ruleForm.event_name.trim(), template: ruleForm.template.trim() };
@@ -169,7 +199,7 @@ const CommunicationCenter = () => {
               ['Unread In-app', state.metrics.notifications_unread || 0, MessageSquare],
               ['Pending Contacts', state.metrics.contact_messages_pending || 0, Mail],
               ['Open Tickets', state.metrics.support_tickets_open || 0, Headphones],
-            ].map(([label, value, Icon]) => <Panel key={label} className="p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-terracotta/10 text-terracotta"><Icon className="h-4 w-4" /></div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
+            ].map(([label, value, Icon]) => <Panel key={label} className="p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-[#eef4ff] text-[#2563eb]"><Icon className="h-4 w-4" /></div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
           </div>
           {active === 'overview' ? <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-4">

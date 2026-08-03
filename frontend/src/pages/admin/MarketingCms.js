@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FileText, Megaphone, Percent, Search, ShieldCheck, TrendingUp } from 'lucide-react';
 import { cmsAPI, couponAPI } from '../../services/api';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestConfirm, requestReason, showNotice } from './shared';
 
 const phaseSteps = [
   ['Step 1', 'Marketing/CMS Overview', 'completed'],
@@ -56,6 +56,161 @@ const subscriptionTargetOptions = {
     ['4bhk', '4 BHK'],
     ['4bhk_plus', '4+ BHK'],
   ],
+};
+
+const formatFieldLabel = (value) => String(value || '')
+  .replace(/_/g, ' ')
+  .replace(/([a-z])([A-Z])/g, '$1 $2')
+  .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const parseEditorObject = (editorText) => {
+  try {
+    return JSON.parse(editorText || '{}');
+  } catch (error) {
+    return null;
+  }
+};
+
+const updateNestedValue = (source, path, nextValue) => {
+  if (!path.length) return nextValue;
+  const [key, ...rest] = path;
+  if (Array.isArray(source)) {
+    return source.map((item, index) => (index === key ? updateNestedValue(item, rest, nextValue) : item));
+  }
+  return {
+    ...(source || {}),
+    [key]: updateNestedValue(source?.[key], rest, nextValue),
+  };
+};
+
+const removeNestedValue = (source, path) => {
+  if (path.length === 1) {
+    const [key] = path;
+    if (Array.isArray(source)) {
+      return source.filter((_, index) => index !== key);
+    }
+    const next = { ...(source || {}) };
+    delete next[key];
+    return next;
+  }
+  const [key, ...rest] = path;
+  if (Array.isArray(source)) {
+    return source.map((item, index) => (index === key ? removeNestedValue(item, rest) : item));
+  }
+  return {
+    ...(source || {}),
+    [key]: removeNestedValue(source?.[key], rest),
+  };
+};
+
+const addArrayItem = (source, path, template) => {
+  const current = path.reduce((acc, key) => acc?.[key], source);
+  const nextArray = Array.isArray(current) ? [...current, template] : [template];
+  return updateNestedValue(source, path, nextArray);
+};
+
+const coerceValue = (rawValue, templateValue) => {
+  if (typeof templateValue === 'number') return Number(rawValue) || 0;
+  if (typeof templateValue === 'boolean') return Boolean(rawValue);
+  return rawValue;
+};
+
+const FieldRow = ({ label, children, compact = false }) => (
+  <div className={`rounded-xl border border-slate-200 bg-white p-3 ${compact ? '' : 'shadow-sm'}`}>
+    <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{label}</label>
+    {children}
+  </div>
+);
+
+const StructuredFieldEditor = ({ value, path = [], onChange, onRemove, root = false }) => {
+  if (Array.isArray(value)) {
+    const sample = value[0];
+    const newItemTemplate = sample && typeof sample === 'object'
+      ? JSON.parse(JSON.stringify(sample))
+      : '';
+
+    return (
+      <div className="space-y-3">
+        {!root && (
+          <div className="flex items-center justify-between">
+            <h4 className="text-sm font-black text-slate-900">{formatFieldLabel(path[path.length - 1])}</h4>
+            <button type="button" onClick={() => onChange(path, [...value, newItemTemplate])} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700">Add Item</button>
+          </div>
+        )}
+        <div className="space-y-3">
+          {value.map((item, index) => (
+            <div key={`${path.join('.')}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-sm font-bold text-slate-800">{formatFieldLabel(path[path.length - 1] || 'Item')} {index + 1}</p>
+                <button type="button" onClick={() => onRemove(path.concat(index))} className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-600">Remove</button>
+              </div>
+              <StructuredFieldEditor value={item} path={path.concat(index)} onChange={onChange} onRemove={onRemove} />
+            </div>
+          ))}
+          {!value.length && (
+            <button type="button" onClick={() => onChange(path, [newItemTemplate])} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">
+              Add First Item
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (value && typeof value === 'object') {
+    return (
+      <div className="grid gap-3 md:grid-cols-2">
+        {Object.entries(value).map(([key, currentValue]) => (
+          <div key={[...path, key].join('.')} className={currentValue && typeof currentValue === 'object' ? 'md:col-span-2' : ''}>
+            {currentValue && typeof currentValue === 'object' ? (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <h4 className="text-sm font-black text-slate-900">{formatFieldLabel(key)}</h4>
+                  {!Array.isArray(value) && !root && (
+                    <button type="button" onClick={() => onRemove(path.concat(key))} className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-600">Remove</button>
+                  )}
+                </div>
+                <StructuredFieldEditor value={currentValue} path={path.concat(key)} onChange={onChange} onRemove={onRemove} />
+              </div>
+            ) : (
+              <FieldRow label={formatFieldLabel(key)}>
+                {typeof currentValue === 'boolean' ? (
+                  <select
+                    value={currentValue ? 'true' : 'false'}
+                    onChange={(event) => onChange(path.concat(key), event.target.value === 'true')}
+                    className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none"
+                  >
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                  </select>
+                ) : String(currentValue || '').length > 90 ? (
+                  <textarea
+                    value={currentValue ?? ''}
+                    onChange={(event) => onChange(path.concat(key), coerceValue(event.target.value, currentValue))}
+                    className="min-h-[120px] w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none"
+                  />
+                ) : (
+                  <input
+                    value={currentValue ?? ''}
+                    onChange={(event) => onChange(path.concat(key), coerceValue(event.target.value, currentValue))}
+                    className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none"
+                  />
+                )}
+              </FieldRow>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <input
+      value={value ?? ''}
+      onChange={(event) => onChange(path, coerceValue(event.target.value, value))}
+      className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none"
+    />
+  );
 };
 
 const MarketingCms = () => {
@@ -131,7 +286,7 @@ const MarketingCms = () => {
     try {
       parsed = JSON.parse(editorText || '{}');
     } catch (error) {
-      window.alert('Invalid JSON. Please fix the content before saving.');
+      await showNotice({ title: 'Invalid JSON', description: 'Please fix the content before saving.', eyebrow: 'Validation Error' });
       return;
     }
     const reason = await requestReason({ title: 'Publishing Reason', description: `Updating landing ${selectedLanding.section}.`, defaultValue: `Updated landing ${selectedLanding.section}`, placeholder: 'Add publishing reason.', minLength: 3 });
@@ -159,12 +314,12 @@ const MarketingCms = () => {
 
   const createCoupon = async () => {
     if (!couponForm.code.trim()) {
-      window.alert('Coupon code is required.');
+      await showNotice({ title: 'Validation Error', description: 'Coupon code is required.', eyebrow: 'Validation Error' });
       return;
     }
     const value = Number(couponForm.discount_value);
     if (!Number.isFinite(value) || value <= 0) {
-      window.alert('Discount value must be greater than 0.');
+      await showNotice({ title: 'Validation Error', description: 'Discount value must be greater than 0.', eyebrow: 'Validation Error' });
       return;
     }
     setSaving(true);
@@ -179,7 +334,11 @@ const MarketingCms = () => {
   };
 
   const toggleCoupon = async (coupon) => {
-    const confirmed = window.confirm(`${coupon.is_active === false ? 'Activate' : 'Deactivate'} coupon ${coupon.code}?`);
+    const confirmed = await requestConfirm({
+      title: `${coupon.is_active === false ? 'Activate' : 'Deactivate'} Coupon`,
+      description: `${coupon.is_active === false ? 'Activate' : 'Deactivate'} coupon ${coupon.code}?`,
+      confirmLabel: coupon.is_active === false ? 'Activate Coupon' : 'Deactivate Coupon',
+    });
     if (!confirmed) return;
     setSaving(true);
     try {
@@ -189,6 +348,25 @@ const MarketingCms = () => {
       setSaving(false);
     }
   };
+
+  const copyEditorText = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(editorText || '');
+      await showNotice({ title: 'Copied', description: 'Section content copied to clipboard.', eyebrow: 'CMS Editor' });
+    } catch (error) {
+      await showNotice({ title: 'Copy failed', description: 'Unable to copy content right now.', eyebrow: 'CMS Editor' });
+    }
+  }, [editorText]);
+
+  const pasteEditorText = useCallback(async () => {
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      setEditorText(clipboardText || '');
+      await showNotice({ title: 'Pasted', description: 'Clipboard content pasted into editor.', eyebrow: 'CMS Editor' });
+    } catch (error) {
+      await showNotice({ title: 'Paste failed', description: 'Clipboard read was blocked. Use normal paste once in the editor.', eyebrow: 'CMS Editor' });
+    }
+  }, []);
 
   return (
     <div>
@@ -210,9 +388,9 @@ const MarketingCms = () => {
               ['CMS Pages', metrics.pages, ShieldCheck],
               ['Active Coupons', metrics.activeCoupons, Percent],
               ['Inactive Sections', metrics.inactiveContent, TrendingUp],
-            ].map(([label, value, Icon]) => <Panel key={label} className="p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-terracotta/10 text-terracotta"><Icon className="h-4 w-4" /></div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
+            ].map(([label, value, Icon]) => <Panel key={label} className="p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-[#eef4ff] text-[#2563eb]"><Icon className="h-4 w-4" /></div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
           </div>
-          {active === 'overview' ? <Overview content={state.content} coupons={state.coupons} /> : active === 'landing' ? <LandingEditor content={landingContent} selected={selectedLanding} selectedId={selectedId} setSelectedId={setSelectedId} editorText={editorText} setEditorText={setEditorText} saving={saving} onSave={saveLandingSection} onToggle={toggleLandingSection} /> : active === 'offers' ? <OffersManager coupons={state.coupons} form={couponForm} setForm={setCouponForm} saving={saving} onCreate={createCoupon} onToggle={toggleCoupon} /> : active === 'blogSeoLegal' ? <EditorialManager content={editorialContent} selected={selectedLanding} selectedId={selectedId} setSelectedId={setSelectedId} editorText={editorText} setEditorText={setEditorText} saving={saving} onSave={saveLandingSection} onToggle={toggleLandingSection} /> : active === 'publishing' ? <PublishingAudit content={state.content} coupons={state.coupons} audits={state.audits} publicStatus={state.publicStatus} /> : <ContentInventory content={filteredContent} />}
+          {active === 'overview' ? <Overview content={state.content} coupons={state.coupons} /> : active === 'landing' ? <LandingEditor content={landingContent} selected={selectedLanding} selectedId={selectedId} setSelectedId={setSelectedId} editorText={editorText} setEditorText={setEditorText} saving={saving} onSave={saveLandingSection} onToggle={toggleLandingSection} onCopy={copyEditorText} onPaste={pasteEditorText} /> : active === 'offers' ? <OffersManager coupons={state.coupons} form={couponForm} setForm={setCouponForm} saving={saving} onCreate={createCoupon} onToggle={toggleCoupon} /> : active === 'blogSeoLegal' ? <EditorialManager content={editorialContent} selected={selectedLanding} selectedId={selectedId} setSelectedId={setSelectedId} editorText={editorText} setEditorText={setEditorText} saving={saving} onSave={saveLandingSection} onToggle={toggleLandingSection} onCopy={copyEditorText} onPaste={pasteEditorText} /> : active === 'publishing' ? <PublishingAudit content={state.content} coupons={state.coupons} audits={state.audits} publicStatus={state.publicStatus} /> : <ContentInventory content={filteredContent} />}
         </div>
       )}
     </div>
@@ -238,45 +416,76 @@ const Overview = ({ content, coupons }) => (
   </div>
 );
 
-const LandingEditor = ({ content, selected, selectedId, setSelectedId, editorText, setEditorText, saving, onSave, onToggle }) => (
-  <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-    <Panel className="overflow-hidden">
-      <div className="border-b border-slate-200 p-4">
-        <h2 className="font-black">Landing Sections</h2>
-        <p className="text-xs text-slate-500">Select a website landing section to edit its structured content.</p>
-      </div>
-      <div className="max-h-[640px] overflow-y-auto p-3">
-        {content.map((item) => (
-          <button key={item.content_id} onClick={() => setSelectedId(item.content_id)} className={`mb-2 w-full rounded-lg border p-3 text-left text-sm ${selectedId === item.content_id ? 'border-terracotta bg-terracotta/10' : 'border-slate-200 bg-slate-50 hover:border-terracotta'}`}>
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-black capitalize">{String(item.section || '-').replace(/_/g, ' ')}</span>
-              <StatusBadge value={item.is_active === false ? 'inactive' : 'active'} />
-            </div>
-            <p className="mt-1 font-mono text-xs text-slate-500">{item.content_id}</p>
-          </button>
-        ))}
-        {!content.length && <p className="p-3 text-sm text-slate-500">No landing content found.</p>}
-      </div>
-    </Panel>
-    <Panel className="overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
-        <div>
-          <h2 className="font-black">{selected ? String(selected.section || 'Landing Section').replace(/_/g, ' ') : 'Landing Section'}</h2>
-          <p className="text-xs text-slate-500">{selected?.content_type || 'object'} content editor</p>
+const LandingEditor = ({ content, selected, selectedId, setSelectedId, editorText, setEditorText, saving, onSave, onToggle, onCopy, onPaste }) => {
+  const parsed = parseEditorObject(editorText);
+  const handleFieldChange = (path, nextValue) => {
+    if (!parsed) return;
+    const next = updateNestedValue(parsed, path, nextValue);
+    setEditorText(JSON.stringify(next, null, 2));
+  };
+  const handleFieldRemove = (path) => {
+    if (!parsed) return;
+    const next = removeNestedValue(parsed, path);
+    setEditorText(JSON.stringify(next, null, 2));
+  };
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
+      <Panel className="overflow-hidden">
+        <div className="border-b border-slate-200 p-4">
+          <h2 className="font-black">Landing Sections</h2>
+          <p className="text-xs text-slate-500">Select a website landing section to edit its structured content.</p>
         </div>
-        {selected && (
-          <div className="flex gap-2">
-            <button disabled={saving} onClick={() => onToggle(selected)} className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700 disabled:opacity-60">{selected.is_active === false ? 'Publish' : 'Unpublish'}</button>
-            <button disabled={saving} onClick={onSave} className="rounded-lg bg-charcoal px-3 py-2 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Saving...' : 'Save Section'}</button>
+        <div className="max-h-[640px] overflow-y-auto p-3">
+          {content.map((item) => (
+            <button key={item.content_id} onClick={() => setSelectedId(item.content_id)} className={`mb-2 w-full rounded-lg border p-3 text-left text-sm ${selectedId === item.content_id ? 'border-terracotta bg-terracotta/10' : 'border-slate-200 bg-slate-50 hover:border-terracotta'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-black capitalize">{String(item.section || '-').replace(/_/g, ' ')}</span>
+                <StatusBadge value={item.is_active === false ? 'inactive' : 'active'} />
+              </div>
+              <p className="mt-1 font-mono text-xs text-slate-500">{item.content_id}</p>
+            </button>
+          ))}
+          {!content.length && <p className="p-3 text-sm text-slate-500">No landing content found.</p>}
+        </div>
+      </Panel>
+      <Panel className="overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
+          <div>
+            <h2 className="font-black">{selected ? String(selected.section || 'Landing Section').replace(/_/g, ' ') : 'Landing Section'}</h2>
+            <p className="text-xs text-slate-500">{selected?.content_type || 'object'} content editor</p>
           </div>
-        )}
-      </div>
-      <div className="p-4">
-        <textarea value={editorText} onChange={(event) => setEditorText(event.target.value)} spellCheck="false" className="min-h-[520px] w-full resize-y rounded-lg border border-slate-200 bg-slate-950 p-4 font-mono text-sm leading-6 text-slate-50 outline-none focus:border-terracotta" />
-      </div>
-    </Panel>
-  </div>
-);
+          {selected && (
+            <div className="flex flex-wrap gap-2">
+              <button onClick={onCopy} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">Copy</button>
+              <button onClick={onPaste} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">Paste</button>
+              <button disabled={saving} onClick={() => onToggle(selected)} className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700 disabled:opacity-60">{selected.is_active === false ? 'Publish' : 'Unpublish'}</button>
+              <button disabled={saving} onClick={onSave} className="rounded-lg bg-charcoal px-3 py-2 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Saving...' : 'Save Section'}</button>
+            </div>
+          )}
+        </div>
+        <div className="space-y-4 p-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">
+            Field-wise simple editor. Ekek field fill kar, mag direct save kar.
+          </div>
+          {parsed ? (
+            <StructuredFieldEditor value={parsed} root onChange={handleFieldChange} onRemove={handleFieldRemove} />
+          ) : (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              JSON parse hot nahiye. Paste kelela content format check kar.
+            </div>
+          )}
+          <details className="rounded-xl border border-slate-200 bg-white">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-slate-700">Advanced JSON View</summary>
+            <div className="border-t border-slate-200 p-4">
+              <textarea value={editorText} onChange={(event) => setEditorText(event.target.value)} spellCheck="false" className="min-h-[320px] w-full resize-y rounded-xl border border-slate-200 bg-white p-4 font-mono text-sm leading-6 text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+            </div>
+          </details>
+        </div>
+      </Panel>
+    </div>
+  );
+};
 
 const OffersManager = ({ coupons, form, setForm, saving, onCreate, onToggle }) => {
   const bookingCoupons = coupons.filter((coupon) => coupon.coupon_type === 'booking');
@@ -368,7 +577,7 @@ const OffersManager = ({ coupons, form, setForm, saving, onCreate, onToggle }) =
   );
 };
 
-const EditorialManager = ({ content, selected, selectedId, setSelectedId, editorText, setEditorText, saving, onSave, onToggle }) => {
+const EditorialManager = ({ content, selected, selectedId, setSelectedId, editorText, setEditorText, saving, onSave, onToggle, onCopy, onPaste }) => {
   const blog = content.find((item) => item.section === 'blog')?.content_data || {};
   const seo = content.find((item) => item.section === 'seo')?.content_data || {};
   const legal = content.find((item) => item.section === 'legal_terms')?.content_data || {};
@@ -376,6 +585,18 @@ const EditorialManager = ({ content, selected, selectedId, setSelectedId, editor
   const activePosts = blogPosts.filter((post) => post.is_active !== false);
   const missingSeo = ['title', 'description', 'keywords'].filter((field) => !seo[field]);
   const legalReady = ['terms_text', 'privacy_text', 'refund_text'].filter((field) => legal[field]).length;
+  const parsed = parseEditorObject(editorText);
+  const handleFieldChange = (path, nextValue) => {
+    if (!parsed) return;
+    const next = updateNestedValue(parsed, path, nextValue);
+    setEditorText(JSON.stringify(next, null, 2));
+  };
+  const handleFieldRemove = (path) => {
+    if (!parsed) return;
+    const next = removeNestedValue(parsed, path);
+    setEditorText(JSON.stringify(next, null, 2));
+  };
+
   return (
     <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
       <div className="space-y-4">
@@ -413,15 +634,34 @@ const EditorialManager = ({ content, selected, selectedId, setSelectedId, editor
             <h2 className="font-black">{selected ? String(selected.section || 'Editorial Section').replace(/_/g, ' ') : 'Editorial Section'}</h2>
             <p className="text-xs text-slate-500">Structured JSON editor for public website content.</p>
           </div>
-          {selected && (
-            <div className="flex gap-2">
+        {selected && (
+            <div className="flex flex-wrap gap-2">
+              <button onClick={onCopy} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">Copy</button>
+              <button onClick={onPaste} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">Paste</button>
               <button disabled={saving} onClick={() => onToggle(selected)} className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700 disabled:opacity-60">{selected.is_active === false ? 'Publish' : 'Unpublish'}</button>
               <button disabled={saving} onClick={onSave} className="rounded-lg bg-charcoal px-3 py-2 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Saving...' : 'Save Content'}</button>
             </div>
           )}
         </div>
         <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_260px]">
-          <textarea value={editorText} onChange={(event) => setEditorText(event.target.value)} spellCheck="false" className="min-h-[560px] w-full resize-y rounded-lg border border-slate-200 bg-slate-950 p-4 font-mono text-sm leading-6 text-slate-50 outline-none focus:border-terracotta" />
+          <div>
+            <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">
+              Field-wise simple editor. Blog, SEO ani legal content ekek field ne edit kar.
+            </div>
+            {parsed ? (
+              <StructuredFieldEditor value={parsed} root onChange={handleFieldChange} onRemove={handleFieldRemove} />
+            ) : (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                JSON parse hot nahiye. Paste kelela content format check kar.
+              </div>
+            )}
+            <details className="mt-4 rounded-xl border border-slate-200 bg-white">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-slate-700">Advanced JSON View</summary>
+              <div className="border-t border-slate-200 p-4">
+                <textarea value={editorText} onChange={(event) => setEditorText(event.target.value)} spellCheck="false" className="min-h-[320px] w-full resize-y rounded-xl border border-slate-200 bg-white p-4 font-mono text-sm leading-6 text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200" />
+              </div>
+            </details>
+          </div>
           <div className="space-y-3">
             <Panel className="p-3">
               <h3 className="text-sm font-black">SEO Checks</h3>
