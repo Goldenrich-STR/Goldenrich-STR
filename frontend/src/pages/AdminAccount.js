@@ -1608,7 +1608,51 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
     txn.subscription?.property_id ||
     'NA'
   );
+  const formatStayDates = (txn) => {
+    const checkIn = txn.booking?.check_in_date;
+    const checkOut = txn.booking?.check_out_date;
+    if (!checkIn && !checkOut) return 'NA';
+    return `${formatPlanDate(checkIn)} to ${formatPlanDate(checkOut)}`;
+  };
+  const getBookingBreakdown = (txn) => {
+    const breakdown = txn.booking_invoice_breakdown || txn.invoice_breakdown || {};
+    const total = Number(breakdown.total_amount ?? ((txn.amount || 0) / 100));
+    const extraCharges = breakdown.extra_charges || {};
+    const extraTotal = Number(breakdown.extra_charges_total ?? Object.values(extraCharges).reduce((sum, value) => sum + Number(value || 0), 0));
+    const baseAmount = Number(breakdown.base_amount ?? breakdown.gross ?? 0);
+    const gstAmount = Number(breakdown.gst_amount ?? (Number(breakdown.igst || 0) + Number(breakdown.cgst || 0) + Number(breakdown.sgst || 0)));
+    return {
+      baseAmount,
+      extraTotal,
+      extraCharges,
+      igst: Number(breakdown.igst || 0),
+      cgst: Number(breakdown.cgst || 0),
+      sgst: Number(breakdown.sgst || 0),
+      gstAmount,
+      total,
+      taxableAmount: Number(breakdown.taxable_amount ?? Math.max(0, total - gstAmount)),
+    };
+  };
+  const extraChargesTitle = (breakdown) => Object.entries(breakdown.extraCharges || {})
+    .filter(([, value]) => Number(value || 0) > 0)
+    .map(([key, value]) => `${key.replaceAll('_', ' ')}: ${formatMoney(value)}`)
+    .join('\n') || 'No extra charges';
   const getInvoiceBreakdown = (txn) => {
+    if (txn.booking_invoice_breakdown) {
+      const bookingBreakdown = getBookingBreakdown(txn);
+      return {
+        planFee: bookingBreakdown.baseAmount,
+        gross: bookingBreakdown.baseAmount,
+        platformFee: Number(txn.booking_invoice_breakdown.platform_fee || txn.booking_invoice_breakdown.extra_charges?.platform_fee || 0),
+        couponCode: txn.booking_invoice_breakdown.coupon_code || txn.booking?.coupon_code || '',
+        discount: Number(txn.booking_invoice_breakdown.discount_amount || 0),
+        taxableAmount: bookingBreakdown.taxableAmount,
+        igst: bookingBreakdown.igst,
+        cgst: bookingBreakdown.cgst,
+        sgst: bookingBreakdown.sgst,
+        total: bookingBreakdown.total,
+      };
+    }
     if (txn.invoice_breakdown) {
       return {
         planFee: Number(txn.invoice_breakdown.plan_fee || 0),
@@ -1794,6 +1838,99 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
         {!loading && items.length > 0 && (
           <>
             <div className="overflow-x-auto">
+              {filters.type === 'booking_payment' ? (
+              <table className="w-full min-w-[2200px] text-xs text-left border-collapse" data-testid="booking-transactions-table">
+                <thead>
+                  <tr className="border-b border-gray-100 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-stone/50">
+                    {[
+                      'Booking ID',
+                      'Invoice No',
+                      'Booking Date',
+                      'Customer Name',
+                      'Customer GSTIN',
+                      'Property Name',
+                      'Stay Dates',
+                      'Host Name',
+                      'Broker/RM Name',
+                      'Branch Manager',
+                      'Base Amount',
+                      'Extra Charges',
+                      'IGST',
+                      'CGST',
+                      'SGST',
+                      'Total Invoice Value',
+                      'Booking Status',
+                      'Payment Method',
+                      'Payment Confirmation',
+                      'Payment Status',
+                      'Invoice Details',
+                    ].map((header, idx, arr) => (
+                      <th key={header} className={`py-3 px-4 ${idx === 0 ? 'rounded-l-xl' : ''} ${idx === arr.length - 1 ? 'rounded-r-xl text-center no-print' : ''}`}>{header}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-sand-100">
+                  {items.map((t) => {
+                    const breakdown = getBookingBreakdown(t);
+                    const paymentMethod = t.booking?.payment_method || (t.is_mock ? 'Razorpay Test/Mock' : 'Razorpay');
+                    const confirmation = t.razorpay_payment_id || t.upi_transaction_id || t.booking?.razorpay_payment_id || t.booking?.upi_transaction_id || 'Pending';
+                    const brokerName = t.broker?.full_name || t.broker_name || 'NA';
+                    const rmName = t.employee?.full_name || t.employee_name || 'NA';
+                    return (
+                      <tr key={t.transaction_id} className="hover:bg-stone/40 transition text-charcoal" data-testid={`booking-txn-${t.transaction_id}`}>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono font-bold">{t.booking_id || t.booking?.booking_id || 'NA'}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-bold">{t.invoice_no || 'NA'}</td>
+                        <td className="py-4 px-4 whitespace-nowrap">{formatInvoiceDate(t.booking?.created_at || t.created_at)}</td>
+                        <td className="py-4 px-4 min-w-[160px]">
+                          <div className="font-bold text-charcoal text-sm">{t.user?.full_name || 'NA'}</div>
+                          <div className="text-xs text-charcoal-muted mt-0.5">{t.user?.phone || t.user?.email || 'NA'}</div>
+                        </td>
+                        <td className="py-4 px-4 whitespace-nowrap text-charcoal-muted">{t.user?.gst_number || t.user?.gst_no || 'NA'}</td>
+                        <td className="py-4 px-4 min-w-[190px] font-bold">{formatPropertyName(t)}</td>
+                        <td className="py-4 px-4 whitespace-nowrap">{formatStayDates(t)}</td>
+                        <td className="py-4 px-4 min-w-[150px]">
+                          <div className="font-bold text-charcoal text-sm">{t.host?.full_name || 'NA'}</div>
+                          <div className="text-xs text-charcoal-muted mt-0.5">{t.host?.phone || t.host?.email || 'NA'}</div>
+                        </td>
+                        <td className="py-4 px-4 min-w-[180px]">
+                          <div className="font-bold text-charcoal text-sm">{brokerName}</div>
+                          <div className="text-xs text-charcoal-muted mt-0.5">RM: {rmName}</div>
+                        </td>
+                        <td className="py-4 px-4 min-w-[150px]">{t.branch_manager?.full_name || 'NA'}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono">{formatMoney(breakdown.baseAmount)}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono" title={extraChargesTitle(breakdown)}>{formatMoney(breakdown.extraTotal)}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono">{breakdown.igst ? formatMoney(breakdown.igst) : 'NA'}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono">{formatMoney(breakdown.cgst)}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono">{formatMoney(breakdown.sgst)}</td>
+                        <td className="py-4 px-4 whitespace-nowrap text-sm font-bold">{formatMoney(breakdown.total)}</td>
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <span className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide bg-blue-50 text-blue-700">{t.booking?.booking_status || 'NA'}</span>
+                        </td>
+                        <td className="py-4 px-4 whitespace-nowrap">{paymentMethod}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono text-[11px]">{confirmation}</td>
+                        <td className="py-4 px-4 whitespace-nowrap">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${
+                            (t.booking?.payment_status || t.status) === 'paid' || t.status === 'success' ? 'bg-green-100 text-green-700' :
+                            (t.booking?.payment_status || t.status) === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-red-100 text-red-700'
+                          }`}>{t.booking?.payment_status || t.status}</span>
+                        </td>
+                        <td className="py-4 px-4 whitespace-nowrap text-center no-print">
+                          <button
+                            onClick={() => setSelectedInvoiceTxn(t)}
+                            className="px-3 py-2 rounded-lg border border-amber-200 hover:border-amber-400 text-amber-700 hover:bg-amber-50 inline-flex items-center space-x-1.5 transition text-xs font-bold shadow-sm"
+                            title="View & Print Invoice"
+                          >
+                            <FileText className="w-4 h-4 text-terracotta" />
+                            <span>Invoice</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              ) : (
               <table className="w-full text-xs text-left border-collapse" data-testid="transactions-table">
                 <thead>
                   <tr className="border-b border-gray-100 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-stone/50">
@@ -1936,6 +2073,7 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
                   })}
                 </tbody>
               </table>
+              )}
             </div>
 
             {/* Pagination Controls */}
@@ -3504,7 +3642,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
   const property = t.property || {};
   const propertyName = property.title || property.property_name || property.name || t.property_name || property.property_id || 'NA';
   const propertyAddress = [property.address, property.city, property.state, property.pin_code].filter(Boolean).join(', ') || 'NA';
-  const invoiceBreakdown = t.invoice_breakdown || {};
+  const invoiceBreakdown = t.booking_invoice_breakdown || t.invoice_breakdown || {};
   const amountINR = Number(invoiceBreakdown.total_amount ?? ((t.amount || 0) / 100));
   const formatInvoiceMoney = (value) =>
     new Intl.NumberFormat('en-IN', {
@@ -3514,7 +3652,11 @@ const InvoiceModal = ({ transaction, onClose }) => {
       maximumFractionDigits: 2,
     }).format(Number(value || 0));
 
-  const baseAmount = Number(invoiceBreakdown.taxable_amount ?? (amountINR / 1.18));
+  const taxPercent = Number(invoiceBreakdown.tax_percent ?? t.booking?.tax_percent ?? t.booking?.gst_percent ?? t.plan?.tax_percent ?? 18);
+  const splitTaxPercent = taxPercent / 2;
+  const taxPercentLabel = `${taxPercent.toFixed(taxPercent % 1 === 0 ? 0 : 2)}%`;
+  const splitTaxPercentLabel = `${splitTaxPercent.toFixed(splitTaxPercent % 1 === 0 ? 0 : 2)}%`;
+  const baseAmount = Number(invoiceBreakdown.taxable_amount ?? (amountINR / (1 + taxPercent / 100)));
   const planFee = Number(invoiceBreakdown.plan_fee ?? Math.max(0, baseAmount - Number(t.plan?.platform_fee || 0)));
   const platformFee = Number(invoiceBreakdown.platform_fee ?? t.plan?.platform_fee ?? 0);
   const couponCode = invoiceBreakdown.coupon_code || t.subscription?.coupon_code || '';
@@ -3672,7 +3814,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
               <td class="sub-desc">Taxable Amount</td>
               <td class="center mono">998399</td>
               <td class="center"><strong>01</strong></td>
-              <td class="center">18%</td>
+              <td class="center">${taxPercentLabel}</td>
               <td class="right mono">${plainMoney(baseAmount)}</td>
               <td class="center">Nos</td>
               <td></td>
@@ -3681,18 +3823,18 @@ const InvoiceModal = ({ transaction, onClose }) => {
           ` : ''}
           <tr>
             <td></td>
-            <td class="sub-desc">CGST @ 9%</td>
+            <td class="sub-desc">CGST @ ${splitTaxPercentLabel}</td>
             <td></td><td></td>
-            <td class="center">9%</td>
+            <td class="center">${splitTaxPercentLabel}</td>
             <td class="right mono">${plainMoney(cgst)}</td>
             <td></td><td></td>
             <td class="right mono">${plainMoney(cgst)}</td>
           </tr>
           <tr>
             <td></td>
-            <td class="sub-desc">SGST @ 9%</td>
+            <td class="sub-desc">SGST @ ${splitTaxPercentLabel}</td>
             <td></td><td></td>
-            <td class="center">9%</td>
+            <td class="center">${splitTaxPercentLabel}</td>
             <td class="right mono">${plainMoney(sgst)}</td>
             <td></td><td></td>
             <td class="right mono">${plainMoney(sgst)}</td>
@@ -3730,9 +3872,9 @@ const InvoiceModal = ({ transaction, onClose }) => {
           <tr>
             <td class="mono">998399</td>
             <td class="center mono">${plainMoney(baseAmount)}</td>
-            <td class="center"><strong>9%</strong></td>
+            <td class="center"><strong>${splitTaxPercentLabel}</strong></td>
             <td class="center mono"><strong>${plainMoney(cgst)}</strong></td>
-            <td class="center"><strong>9%</strong></td>
+            <td class="center"><strong>${splitTaxPercentLabel}</strong></td>
             <td class="center mono"><strong>${plainMoney(sgst)}</strong></td>
             <td class="center mono"><strong>${plainMoney(totalGst)}</strong></td>
           </tr>
@@ -4161,7 +4303,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
                   </td>
                   <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontFamily: 'monospace' }}>{t.type === 'subscription' ? '' : '998399'}</td>
                   <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontWeight: 'bold' }}>{t.type === 'subscription' ? '' : '01'}</td>
-                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>{t.type === 'subscription' ? '' : '18%'}</td>
+                  <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>{t.type === 'subscription' ? '' : taxPercentLabel}</td>
                   <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top', fontFamily: 'monospace' }}>{t.type === 'subscription' ? planFee.toFixed(2) : baseAmount.toFixed(2)}</td>
                   <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}>{t.type === 'subscription' ? '' : 'Nos'}</td>
                   <td style={{ padding: '8px 4px', borderRight: '1px solid black', verticalAlign: 'top' }}></td>
@@ -4202,7 +4344,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
                       <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>Taxable Amount</td>
                       <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>998399</td>
                       <td style={{ padding: '4px', borderRight: '1px solid black', fontWeight: 'bold' }}>01</td>
-                      <td style={{ padding: '4px', borderRight: '1px solid black' }}>18%</td>
+                      <td style={{ padding: '4px', borderRight: '1px solid black' }}>{taxPercentLabel}</td>
                       <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
                       <td style={{ padding: '4px', borderRight: '1px solid black' }}>Nos</td>
                       <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
@@ -4213,10 +4355,10 @@ const InvoiceModal = ({ transaction, onClose }) => {
                 {/* CGST row */}
                 <tr style={{ borderBottom: '1px solid #ddd', color: '#555' }}>
                   <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
-                  <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>CGST @ 9%</td>
+                  <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>CGST @ {splitTaxPercentLabel}</td>
                   <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
                   <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
-                  <td style={{ padding: '4px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}>{splitTaxPercentLabel}</td>
                   <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
                   <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
                   <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
@@ -4225,10 +4367,10 @@ const InvoiceModal = ({ transaction, onClose }) => {
                 {/* SGST row */}
                 <tr style={{ borderBottom: '1px solid black', color: '#555' }}>
                   <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
-                  <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>SGST @ 9%</td>
+                  <td style={{ padding: '4px 6px', paddingLeft: '24px', borderRight: '1px solid black', textAlign: 'left', fontWeight: 'bold' }}>SGST @ {splitTaxPercentLabel}</td>
                   <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
                   <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
-                  <td style={{ padding: '4px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '4px', borderRight: '1px solid black' }}>{splitTaxPercentLabel}</td>
                   <td style={{ padding: '4px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
                   <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
                   <td style={{ padding: '4px', borderRight: '1px solid black' }}></td>
@@ -4278,9 +4420,9 @@ const InvoiceModal = ({ transaction, onClose }) => {
                 <tr style={{ borderBottom: '1px solid black', fontWeight: 'bold' }}>
                   <td style={{ padding: '7px 6px', borderRight: '1px solid black', textAlign: 'left', fontFamily: 'monospace' }}>998399</td>
                   <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{baseAmount.toFixed(2)}</td>
-                  <td style={{ padding: '7px 6px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black' }}>{splitTaxPercentLabel}</td>
                   <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{cgst.toFixed(2)}</td>
-                  <td style={{ padding: '7px 6px', borderRight: '1px solid black' }}>9%</td>
+                  <td style={{ padding: '7px 6px', borderRight: '1px solid black' }}>{splitTaxPercentLabel}</td>
                   <td style={{ padding: '7px 6px', borderRight: '1px solid black', fontFamily: 'monospace' }}>{sgst.toFixed(2)}</td>
                   <td style={{ padding: '7px 6px', fontFamily: 'monospace' }}>{totalGst.toFixed(2)}</td>
                 </tr>

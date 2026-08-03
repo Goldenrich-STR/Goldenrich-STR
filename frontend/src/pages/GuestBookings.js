@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { bookingAPI, reviewAPI, aiCallAPI } from '../services/api';
+import { downloadCustomerBookingInvoice } from '../utils/bookingInvoice';
 import ReviewModal from '../components/ReviewModal';
 import LegalLinks from '../components/LegalLinks';
 import {
@@ -18,6 +19,7 @@ import {
   ChevronRight,
   Phone,
   Volume2,
+  FileText,
 } from 'lucide-react';
 
 const TABS = [
@@ -501,6 +503,16 @@ const GuestBookings = () => {
                               data-testid={`view-${b.booking_id}`}
                             >
                               View details
+                            </button>
+                          )}
+                          {(b.payment_status === 'paid' || b.booking_status === 'confirmed' || statusKey === 'completed') && (
+                            <button
+                              onClick={() => downloadCustomerBookingInvoice(b, property, user || {})}
+                              className="px-4 py-2.5 bg-white hover:bg-terracotta hover:text-white text-terracotta font-bold tracking-tight text-xs uppercase tracking-widest rounded-xl transition border border-terracotta/30 shadow-sm cursor-pointer flex items-center gap-1.5"
+                              data-testid={`invoice-${b.booking_id}`}
+                            >
+                              <FileText className="w-4 h-4" />
+                              <span>Invoice</span>
                             </button>
                           )}
                           {(isSoftLock || isUpcoming) && (
