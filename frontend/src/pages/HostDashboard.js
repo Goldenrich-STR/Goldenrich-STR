@@ -99,6 +99,15 @@ const HostDashboard = () => {
     shop_act: false
   });
 
+  const profilePrimaryAssignmentType = user?.assignment_primary_type || (user?.broker_id ? 'Broker' : user?.rm_id ? 'RM' : 'Broker / RM');
+  const profileSecondaryAssignmentType = user?.assignment_secondary_type || (user?.broker_id ? 'RM' : user?.branch_manager_id ? 'Branch Manager' : 'Branch Manager / RM');
+  const profilePrimaryAssignmentId = user?.assignment_primary_id || user?.broker_id || user?.rm_id || '';
+  const profileSecondaryAssignmentId = user?.assignment_secondary_id || (user?.broker_id ? user?.rm_id : user?.branch_manager_id) || '';
+  const profilePrimaryAssignmentCode = user?.assignment_primary_code || user?.lg_code || user?.broker_lg_code || user?.rm_code || profilePrimaryAssignmentId || 'Not assigned';
+  const profileSecondaryAssignmentCode = user?.assignment_secondary_code || user?.employee_code || user?.branch_manager_code || profileSecondaryAssignmentId || 'Not assigned';
+  const profilePrimaryAssignmentName = user?.assignment_primary_name || '';
+  const profileSecondaryAssignmentName = user?.assignment_secondary_name || '';
+
   // Canvas drawing states
   const canvasRef = useRef(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -140,6 +149,7 @@ const HostDashboard = () => {
 
   const fetchData = async () => {
     try {
+      await refreshUser();
       const [propRes, subRes, plansRes, configRes, payoutsRes, cmsRes] = await Promise.all([
         propertyAPI.getHostProperties(),
         subscriptionAPI.getUserSubscriptions(),
@@ -1845,73 +1855,56 @@ const HostDashboard = () => {
               </div>
 
               <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">User ID</span>
-                    <span className="text-xs font-mono font-semibold text-charcoal break-all">{user?.user_id || 'N/A'}</span>
+                <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
+                  <div className="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                    <ProfileInfoItem label="User ID" value={user?.user_id || 'N/A'} mono />
+                    <ProfileInfoItem label="System UID / Code" value={user?.uid || 'N/A'} mono />
                   </div>
-                  <div>
-                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">System UID / Code</span>
-                    <span className="text-xs font-semibold text-charcoal break-all">{user?.uid || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Email Address</span>
-                    <span className="text-xs font-semibold text-charcoal break-all">{user?.email || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Phone Number</span>
-                    <span className="text-xs font-semibold text-charcoal break-all">{user?.phone || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">City</span>
-                    <span className="text-xs font-semibold text-charcoal">{user?.city || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">State</span>
-                    <span className="text-xs font-semibold text-charcoal">{user?.state || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Franchise</span>
-                    <span className="text-xs font-semibold text-charcoal">{user?.franchise || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Branch</span>
-                    <span className="text-xs font-semibold text-charcoal">{user?.branch || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Date of Birth</span>
-                    <span className="text-xs font-semibold text-charcoal">{user?.birthdate || 'N/A'}</span>
-                  </div>
-                  <div>
-                    <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">KYC Status</span>
-                    <span className="inline-block mt-0.5 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-stone text-charcoal">
-                      {user?.kyc_status || 'N/A'}
-                    </span>
-                  </div>
-                  {user?.broker_id && (
-                    <div className="col-span-2">
-                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Assigned Broker ID</span>
-                      <span className="text-xs font-mono font-semibold text-charcoal break-all">{user?.broker_id}</span>
+                </div>
+
+                <div className="rounded-2xl border border-gray-100 bg-stone/40 p-4">
+                  <p className="mb-3 text-[9px] font-black uppercase tracking-widest text-terracotta">Contact & Verification</p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <ProfileMiniField label="Email Address" value={user?.email || 'N/A'} />
+                    <ProfileMiniField label="Phone Number" value={user?.phone || 'N/A'} />
+                    <ProfileMiniField label="City" value={user?.city || 'N/A'} />
+                    <div className="rounded-xl border border-gray-100 bg-white px-3 py-2.5">
+                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">KYC Status</span>
+                      <span className="inline-block mt-1 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider bg-stone text-charcoal">
+                        {user?.kyc_status || 'N/A'}
+                      </span>
                     </div>
-                  )}
-                  {user?.lg_code && (
-                    <div>
-                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Broker Code</span>
-                      <span className="text-xs font-mono font-semibold text-charcoal">{user?.lg_code}</span>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-gray-100 bg-white p-4">
+                  <p className="mb-3 text-[9px] font-black uppercase tracking-widest text-terracotta">Assigned Network</p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-gray-100 bg-stone/60 p-4">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Broker / RM Code</span>
+                        <span className="rounded-full border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-emerald-700">
+                          {profilePrimaryAssignmentType}
+                        </span>
+                      </div>
+                      <span className="block text-xs font-mono font-semibold text-charcoal break-all">{profilePrimaryAssignmentCode}</span>
+                      {profilePrimaryAssignmentName && (
+                        <span className="mt-1 block text-[10px] font-bold text-charcoal-muted break-all">{profilePrimaryAssignmentName}</span>
+                      )}
                     </div>
-                  )}
-                  {user?.employee_code && (
-                    <div>
-                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Employee Code</span>
-                      <span className="text-xs font-mono font-semibold text-charcoal">{user?.employee_code}</span>
+                    <div className="rounded-2xl border border-gray-100 bg-stone/60 p-4">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Branch Manager / RM Code</span>
+                        <span className="rounded-full border border-amber-100 bg-amber-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-amber-700">
+                          {profileSecondaryAssignmentType}
+                        </span>
+                      </div>
+                      <span className="block text-xs font-mono font-semibold text-charcoal break-all">{profileSecondaryAssignmentCode}</span>
+                      {profileSecondaryAssignmentName && (
+                        <span className="mt-1 block text-[10px] font-bold text-charcoal-muted break-all">{profileSecondaryAssignmentName}</span>
+                      )}
                     </div>
-                  )}
-                  {user?.rm_id && (
-                    <div className="col-span-2">
-                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Assigned Employee ID</span>
-                      <span className="text-xs font-mono font-semibold text-charcoal break-all">{user?.rm_id}</span>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
@@ -1931,5 +1924,19 @@ const HostDashboard = () => {
     </div>
   );
 };
+
+const ProfileInfoItem = ({ label, value, mono = false }) => (
+  <div className="p-4">
+    <span className="mb-1 block text-[8px] font-bold uppercase tracking-wider text-charcoal-muted">{label}</span>
+    <span className={`block text-xs font-semibold text-charcoal break-all ${mono ? 'font-mono' : ''}`}>{value}</span>
+  </div>
+);
+
+const ProfileMiniField = ({ label, value }) => (
+  <div className="rounded-xl border border-gray-100 bg-white px-3 py-2.5">
+    <span className="mb-1 block text-[8px] font-bold uppercase tracking-wider text-charcoal-muted">{label}</span>
+    <span className="block text-xs font-semibold text-charcoal break-all">{value}</span>
+  </div>
+);
 
 export default HostDashboard;

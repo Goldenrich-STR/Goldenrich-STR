@@ -61,8 +61,8 @@ android {
         }
         release {
             manifestPlaceholders["usesCleartextTraffic"] = "false"
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             if (hasReleaseKeystore) {
                 signingConfig = signingConfigs.getByName("release")
             } else {

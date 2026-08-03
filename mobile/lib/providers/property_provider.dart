@@ -316,6 +316,28 @@ class PropertyProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> confirmSubscriptionPayment({
+    required String subscriptionId,
+    required String razorpayPaymentId,
+    required String razorpayOrderId,
+    required String razorpaySignature,
+  }) async {
+    try {
+      final response = await _apiService.dio.post(
+        '/subscriptions/confirm-subscription',
+        queryParameters: {
+          'subscription_id': subscriptionId,
+          'razorpay_payment_id': razorpayPaymentId,
+          'razorpay_order_id': razorpayOrderId,
+          'razorpay_signature': razorpaySignature,
+        },
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Map<String, dynamic> _unifiedCalendar = {};
   Map<String, dynamic> get unifiedCalendar => _unifiedCalendar;
 

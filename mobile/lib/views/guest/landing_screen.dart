@@ -302,7 +302,8 @@ class _LandingScreenState extends State<LandingScreen> {
       if (raw is! List) return;
       final items = raw
           .whereType<Map>()
-          .map((item) => PropertyModel.fromJson(Map<String, dynamic>.from(item)))
+          .map(
+              (item) => PropertyModel.fromJson(Map<String, dynamic>.from(item)))
           .where((item) => item.propertyId.isNotEmpty)
           .toList();
       if (!mounted) return;
@@ -330,18 +331,17 @@ class _LandingScreenState extends State<LandingScreen> {
                   : item['img']?.toString().isNotEmpty == true
                       ? item['img'].toString()
                       : _defaultBlogCards.first.imageUrl,
-              category:
-                  (item['category']?.toString().trim().isNotEmpty == true)
-                      ? item['category'].toString()
-                      : 'X-Space360 Journal',
+              category: (item['category']?.toString().trim().isNotEmpty == true)
+                  ? item['category'].toString()
+                  : 'X-Space360 Journal',
               title: (item['title']?.toString().trim().isNotEmpty == true)
                   ? item['title'].toString()
                   : 'Untitled',
               excerpt: (item['excerpt']?.toString().trim().isNotEmpty == true)
                   ? item['excerpt'].toString()
-                      : (item['content']?.toString().trim().isNotEmpty == true)
-                          ? item['content'].toString()
-                          : 'Discover more from X-Space360.',
+                  : (item['content']?.toString().trim().isNotEmpty == true)
+                      ? item['content'].toString()
+                      : 'Discover more from X-Space360.',
               content: (item['content']?.toString().trim().isNotEmpty == true)
                   ? item['content'].toString()
                   : (item['excerpt']?.toString().trim().isNotEmpty == true)
@@ -386,14 +386,16 @@ class _LandingScreenState extends State<LandingScreen> {
           SliverToBoxAdapter(
             child: _buildCollections(
               title: 'Villas & Resorts',
-              subtitle: 'Private pool villas, vineyard escapes, and destination-led premium stays.',
+              subtitle:
+                  'Private pool villas, vineyard escapes, and destination-led premium stays.',
               properties: villas.isNotEmpty ? villas : residential,
             ),
           ),
           SliverToBoxAdapter(
             child: _buildCollections(
               title: 'Residential Collection',
-              subtitle: 'Managed homes, elegant apartments, and private family stays.',
+              subtitle:
+                  'Managed homes, elegant apartments, and private family stays.',
               properties: residential.isNotEmpty ? residential : featured,
             ),
           ),
@@ -1207,7 +1209,8 @@ class _LandingScreenState extends State<LandingScreen> {
                           child: Center(
                             child: _DestinationGlyph(
                               type: destination.type,
-                              assetPath: _destinationIconAssets[destination.type],
+                              assetPath:
+                                  _destinationIconAssets[destination.type],
                             ),
                           ),
                         ),
@@ -1984,18 +1987,45 @@ class _PropertyCard extends StatelessWidget {
                   Positioned(
                     top: 12,
                     right: 12,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.90),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.favorite_border_rounded,
-                        color: AppTheme.charcoal,
-                        size: 18,
-                      ),
+                    child: Consumer<PropertyProvider>(
+                      builder: (context, propertyProvider, _) {
+                        final isWishlisted =
+                            propertyProvider.isWishlisted(property.propertyId);
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            propertyProvider
+                                .toggleWishlist(property.propertyId);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  isWishlisted
+                                      ? 'Removed from wishlist.'
+                                      : 'Added to wishlist.',
+                                ),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.90),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isWishlisted
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: isWishlisted
+                                  ? Colors.red.shade600
+                                  : AppTheme.charcoal,
+                              size: 18,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -3080,11 +3110,13 @@ class _DestinationIconPainter extends CustomPainter {
     canvas.scale(scaleX, scaleY);
 
     canvas.drawRRect(
-      RRect.fromRectAndRadius(const Rect.fromLTWH(50, 8, 12, 34), const Radius.circular(6)),
+      RRect.fromRectAndRadius(
+          const Rect.fromLTWH(50, 8, 12, 34), const Radius.circular(6)),
       sandPaint,
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(const Rect.fromLTWH(38, 8, 14, 34), const Radius.circular(7)),
+      RRect.fromRectAndRadius(
+          const Rect.fromLTWH(38, 8, 14, 34), const Radius.circular(7)),
       blushPaint,
     );
 
@@ -3105,7 +3137,8 @@ class _DestinationIconPainter extends CustomPainter {
     }
   }
 
-  void _drawGrapes(Canvas canvas, Paint strokePaint, Paint creamPaint, Paint sandPaint) {
+  void _drawGrapes(
+      Canvas canvas, Paint strokePaint, Paint creamPaint, Paint sandPaint) {
     final stem = Path()
       ..moveTo(27, 17)
       ..quadraticBezierTo(30, 13, 34, 15);
@@ -3125,7 +3158,8 @@ class _DestinationIconPainter extends CustomPainter {
     circle(29, 38, sandPaint);
   }
 
-  void _drawWine(Canvas canvas, Paint strokePaint, Paint creamPaint, Paint fillStrokePaint) {
+  void _drawWine(Canvas canvas, Paint strokePaint, Paint creamPaint,
+      Paint fillStrokePaint) {
     canvas.drawLine(const Offset(21, 46), const Offset(21, 25), strokePaint);
     final glass = Path()
       ..moveTo(16, 25)
@@ -3136,11 +3170,13 @@ class _DestinationIconPainter extends CustomPainter {
     canvas.drawPath(glass, strokePaint);
     canvas.drawLine(const Offset(17, 46), const Offset(25, 46), strokePaint);
     canvas.drawRRect(
-      RRect.fromRectAndRadius(const Rect.fromLTWH(34, 18, 10, 24), const Radius.circular(2.5)),
+      RRect.fromRectAndRadius(
+          const Rect.fromLTWH(34, 18, 10, 24), const Radius.circular(2.5)),
       creamPaint,
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(const Rect.fromLTWH(34, 18, 10, 24), const Radius.circular(2.5)),
+      RRect.fromRectAndRadius(
+          const Rect.fromLTWH(34, 18, 10, 24), const Radius.circular(2.5)),
       strokePaint,
     );
     canvas.drawLine(const Offset(39, 18), const Offset(39, 13), strokePaint);

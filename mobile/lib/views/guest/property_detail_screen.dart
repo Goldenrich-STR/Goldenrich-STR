@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/property_provider.dart';
 import '../../providers/booking_provider.dart';
@@ -57,6 +59,104 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       'https://www.google.com/maps/search/?api=1&query=$query',
     );
     await launchUrl(mapsUri, mode: LaunchMode.externalApplication);
+  }
+
+  String _propertyShareUrl(PropertyModel prop) {
+    return 'https://uat.x-space360.in/property/${Uri.encodeComponent(prop.propertyId)}';
+  }
+
+  String _propertyShareText(PropertyModel prop) {
+    final price = NumberFormat.currency(
+      locale: 'en_IN',
+      symbol: 'Rs ',
+      decimalDigits: 0,
+    ).format(prop.pricePerNight);
+    return 'Check out ${prop.title} in ${prop.city} on X-Space360. Starting from $price/night.\n${_propertyShareUrl(prop)}';
+  }
+
+  Future<void> _copyPropertyLink(PropertyModel prop) async {
+    await Clipboard.setData(ClipboardData(text: _propertyShareUrl(prop)));
+    if (!mounted) return;
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Property link copied.')),
+    );
+  }
+
+  Future<void> _shareProperty(PropertyModel prop) async {
+    await Share.share(
+      _propertyShareText(prop),
+      subject: prop.title,
+    );
+  }
+
+  void _showShareSheet(PropertyModel prop) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTheme.border,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Share property',
+                  style: GoogleFonts.manrope(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.charcoal,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  prop.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    color: AppTheme.charcoalMuted,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                _ShareActionTile(
+                  icon: Icons.ios_share_rounded,
+                  title: 'Share with apps',
+                  subtitle: 'WhatsApp, Instagram, Facebook and more',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _shareProperty(prop);
+                  },
+                ),
+                _ShareActionTile(
+                  icon: Icons.link_rounded,
+                  title: 'Copy link',
+                  subtitle: _propertyShareUrl(prop),
+                  onTap: () => _copyPropertyLink(prop),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _openImageGallery(List<String> images, {int initialIndex = 0}) {
@@ -120,7 +220,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       ...existing.where((entry) {
         return entry is Map<String, dynamic>
             ? entry['property_id'] != property.propertyId
-            : (entry is Map ? entry['property_id'] != property.propertyId : true);
+            : (entry is Map
+                ? entry['property_id'] != property.propertyId
+                : true);
       }),
     ].take(10).toList();
 
@@ -2367,21 +2469,24 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 // Share & Favorite Buttons
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          )
-                        ],
+                    GestureDetector(
+                      onTap: () => _showShareSheet(prop),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            )
+                          ],
+                        ),
+                        child: const Icon(Icons.share_outlined,
+                            color: AppTheme.charcoal, size: 20),
                       ),
-                      child: const Icon(Icons.share_outlined,
-                          color: AppTheme.charcoal, size: 20),
                     ),
                     const SizedBox(width: 12),
                     GestureDetector(
@@ -3772,6 +3877,72 @@ class LaurelWreathPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ShareActionTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _ShareActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: AppTheme.primary, size: 22),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.manrope(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.charcoal,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: AppTheme.charcoalMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                color: AppTheme.charcoalMuted),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _PropertyImageGalleryDialog extends StatefulWidget {

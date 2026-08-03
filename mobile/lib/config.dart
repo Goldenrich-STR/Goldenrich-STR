@@ -36,7 +36,7 @@ class AppConfig {
     return 'http://localhost:8001';
   }
 
-  static const String prodBaseUrl = 'https://www.x-space360.in';
+  static const String prodBaseUrl = 'https://uat.x-space360.in';
 
   /// Whether to use production backend configuration.
   /// Keep this false for local development so the mobile app and website use

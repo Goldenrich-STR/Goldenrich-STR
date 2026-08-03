@@ -1448,12 +1448,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const AppLogo(
-                              height: 28,
-                              tintColor: Colors.black,
-                              framed: false,
-                            ),
-                            const SizedBox(height: 14),
                             Text(
                               eyebrow,
                               style: GoogleFonts.manrope(

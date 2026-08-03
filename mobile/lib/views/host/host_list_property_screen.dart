@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -20,6 +21,7 @@ class HostListPropertyScreen extends StatefulWidget {
 }
 
 class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
+  late final Razorpay _razorpay;
   int _currentStep = 0;
   final _formKey = GlobalKey<FormState>();
   Timer? _draftPersistDebounce;
@@ -151,6 +153,9 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
   String _subscriptionCouponError = '';
   final _subscriptionCouponController = TextEditingController();
   static const double _subscriptionCouponMinTaxableAmount = 10.0;
+  String? _pendingPaymentPropertyId;
+  String? _pendingPaymentSubscriptionId;
+  String? _pendingPaymentOrderId;
 
   final List<Map<String, dynamic>> _stepHeaders = [
     {'title': 'Basics', 'icon': Icons.info_outline},
@@ -372,6 +377,10 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
   @override
   void initState() {
     super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handleRazorpaySuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handleRazorpayError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
 
     if (widget.property != null) {
       final p = widget.property!;
@@ -468,6 +477,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
   void dispose() {
     _persistDraft();
     _draftPersistDebounce?.cancel();
+    _razorpay.clear();
     _titleController.dispose();
     _descController.dispose();
     _areaController.dispose();
@@ -1474,6 +1484,10 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
 
   void _nextStep() {
     if (_validateCurrentStep()) {
+      if (_currentStep == 5) {
+        _submitPropertyListing();
+        return;
+      }
       setState(() {
         _currentStep++;
       });
@@ -2428,11 +2442,31 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
         return;
       }
 
-      final subscriptionId = subResult['subscription_id'] ?? '';
-      final razorpayOrderId = subResult['razorpay_order_id'] ?? '';
-      final finalAmount = (subResult['amount'] ?? (amount * 100)) / 100.0;
+      final subscriptionId = (subResult['subscription_id'] ?? '').toString();
+      final razorpayOrderId = (subResult['razorpay_order_id'] ?? '').toString();
+      final keyId = (subResult['razorpay_key_id'] ?? '').toString();
+      final currency = (subResult['currency'] ?? 'INR').toString();
+      final amountPaise = (subResult['amount'] as num?)?.toInt() ??
+          (subResult['payable_amount'] is num
+              ? ((subResult['payable_amount'] as num).toDouble() * 100).round()
+              : (amount * 100).round());
+      final isMock = subResult['is_mock'] == true;
+      final finalAmount = amountPaise / 100.0;
 
       if (mounted) {
+        if (!isMock && keyId.isNotEmpty && razorpayOrderId.isNotEmpty) {
+          _openRazorpayCheckout(
+            propertyId: propertyId,
+            subscriptionId: subscriptionId,
+            razorpayOrderId: razorpayOrderId,
+            keyId: keyId,
+            currency: currency,
+            planName: planName,
+            amountPaise: amountPaise,
+          );
+          return;
+        }
+
         _showMockPaymentGateway(
           propertyId: propertyId,
           subscriptionId: subscriptionId,
@@ -2449,6 +2483,99 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
         );
       }
     }
+  }
+
+  void _openRazorpayCheckout({
+    required String propertyId,
+    required String subscriptionId,
+    required String razorpayOrderId,
+    required String keyId,
+    required String currency,
+    required String planName,
+    required int amountPaise,
+  }) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.currentUser;
+    _pendingPaymentPropertyId = propertyId;
+    _pendingPaymentSubscriptionId = subscriptionId;
+    _pendingPaymentOrderId = razorpayOrderId;
+
+    final options = {
+      'key': keyId,
+      'amount': amountPaise,
+      'currency': currency,
+      'name': 'X-Space360',
+      'description': '$planName Subscription',
+      'order_id': razorpayOrderId,
+      'prefill': {
+        'contact': user?.phone ?? '',
+        'email': user?.email ?? '',
+        'name': user?.fullName ?? '',
+      },
+      'theme': {'color': '#D9A441'},
+    };
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      _pendingPaymentPropertyId = null;
+      _pendingPaymentSubscriptionId = null;
+      _pendingPaymentOrderId = null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to open Razorpay: $e')),
+      );
+    }
+  }
+
+  void _handleRazorpaySuccess(PaymentSuccessResponse response) {
+    final propertyId = _pendingPaymentPropertyId;
+    final subscriptionId = _pendingPaymentSubscriptionId;
+    final orderId = response.orderId ?? _pendingPaymentOrderId;
+    final paymentId = response.paymentId;
+    final signature = response.signature;
+
+    _pendingPaymentPropertyId = null;
+    _pendingPaymentSubscriptionId = null;
+    _pendingPaymentOrderId = null;
+
+    if (propertyId == null ||
+        subscriptionId == null ||
+        orderId == null ||
+        paymentId == null ||
+        signature == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Payment response was incomplete.')),
+      );
+      return;
+    }
+
+    _confirmLiveSubscriptionPayment(
+      propertyId: propertyId,
+      subscriptionId: subscriptionId,
+      razorpayOrderId: orderId,
+      razorpayPaymentId: paymentId,
+      razorpaySignature: signature,
+    );
+  }
+
+  void _handleRazorpayError(PaymentFailureResponse response) {
+    _pendingPaymentPropertyId = null;
+    _pendingPaymentSubscriptionId = null;
+    _pendingPaymentOrderId = null;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(response.message ?? 'Payment cancelled or failed.'),
+      ),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+            'External wallet selected: ${response.walletName ?? 'wallet'}'),
+      ),
+    );
   }
 
   void _showMockPaymentGateway({
@@ -2655,6 +2782,69 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error completing subscription: $e')),
+        );
+      }
+    }
+  }
+
+  void _confirmLiveSubscriptionPayment({
+    required String propertyId,
+    required String subscriptionId,
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+  }) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: AppTheme.primary),
+      ),
+    );
+
+    try {
+      final propProvider =
+          Provider.of<PropertyProvider>(context, listen: false);
+      final paymentSuccess = await propProvider.confirmSubscriptionPayment(
+        subscriptionId: subscriptionId,
+        razorpayPaymentId: razorpayPaymentId,
+        razorpayOrderId: razorpayOrderId,
+        razorpaySignature: razorpaySignature,
+      );
+
+      if (!paymentSuccess) {
+        if (mounted) Navigator.pop(context);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Payment verification failed on server.')),
+          );
+        }
+        return;
+      }
+
+      final verificationSuccess =
+          await propProvider.submitForVerification(propertyId);
+
+      if (mounted) Navigator.pop(context);
+
+      if (verificationSuccess) {
+        await _clearDraft();
+        if (mounted) {
+          _showFinalSuccessDialog();
+        }
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Payment verified, but verification submission failed.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error verifying payment: $e')),
         );
       }
     }

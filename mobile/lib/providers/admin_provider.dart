@@ -86,6 +86,12 @@ class AdminProvider with ChangeNotifier {
       final response = await _apiService.dio.patch(
         '/admin/users/$userId/status',
         queryParameters: {'is_active': isActive},
+        data: {
+          'is_active': isActive,
+          'reason': isActive
+              ? 'Activated from mobile admin panel'
+              : 'Deactivated from mobile admin panel',
+        },
       );
       if (response.statusCode == 200) {
         final index = _usersList.indexWhere((u) => u['user_id'] == userId);

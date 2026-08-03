@@ -120,6 +120,33 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
   const [availableEmployees, setAvailableEmployees] = useState([]);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
 
+  const selectedHostPrimaryAssignment = useMemo(
+    () => availableBrokers.find((item) => item?.lg_code === registerData.lg_code),
+    [availableBrokers, registerData.lg_code]
+  );
+  const hostSecondaryOptions = useMemo(() => {
+    if (selectedHostPrimaryAssignment?.assignment_type === 'broker') {
+      return availableBrokers.filter((item) => item?.assignment_type === 'rm');
+    }
+    if (selectedHostPrimaryAssignment?.assignment_type === 'rm') {
+      return availableEmployees;
+    }
+    return [];
+  }, [availableBrokers, availableEmployees, selectedHostPrimaryAssignment]);
+  const hostSecondaryCopy = selectedHostPrimaryAssignment?.assignment_type === 'broker'
+    ? {
+      label: 'Branch Manager / RM Code',
+      placeholder: 'Search RM code or name',
+      emptyLabel: 'No RM code found',
+      codeKey: 'lg_code',
+    }
+    : {
+      label: 'Branch Manager / RM Code',
+      placeholder: selectedHostPrimaryAssignment ? 'Search branch manager code or name' : 'Select broker/RM first',
+      emptyLabel: selectedHostPrimaryAssignment ? 'No branch manager code found' : 'Select broker/RM first',
+      codeKey: 'employee_code',
+    };
+
   const getGuestPostAuthPath = () => {
     try {
       const rawIntent = sessionStorage.getItem('xspace360_booking_intent');
@@ -622,7 +649,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                       Login with GRP
                     </button>
 
-                    <div className="mt-4 text-center text-xs font-semibold text-gray-500">
+                    <div className="mt-5 text-center text-sm font-semibold text-gray-600">
                       Don't have an account?{" "}
                       <button
                         type="button"
@@ -632,7 +659,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                           setSuccess('');
                           resetOtpFlow();
                         }}
-                        className="text-blue-600 hover:underline font-extrabold cursor-pointer ml-1 text-xs"
+                        className="text-blue-600 hover:underline font-extrabold cursor-pointer ml-1 text-sm"
                       >
                         Sign Up
                       </button>
@@ -779,18 +806,18 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                           codeKey="lg_code"
                           emptyLabel="No broker or RM code found"
                           label="RM / Broker Code"
-                          onChange={(code) => setRegisterData({ ...registerData, lg_code: code })}
+                          onChange={(code) => setRegisterData({ ...registerData, lg_code: code, employee_code: '' })}
                           options={availableBrokers}
                           placeholder="Search broker/RM code or name"
                           value={registerData.lg_code}
                         />
                         <AssignmentSearchSelect
-                          codeKey="employee_code"
-                          emptyLabel="No branch manager code found"
-                          label="Branch Manager Code"
+                          codeKey={hostSecondaryCopy.codeKey}
+                          emptyLabel={hostSecondaryCopy.emptyLabel}
+                          label={hostSecondaryCopy.label}
                           onChange={(code) => setRegisterData({ ...registerData, employee_code: code })}
-                          options={availableEmployees}
-                          placeholder="Search branch manager code or name"
+                          options={hostSecondaryOptions}
+                          placeholder={hostSecondaryCopy.placeholder}
                           value={registerData.employee_code}
                         />
                       </div>

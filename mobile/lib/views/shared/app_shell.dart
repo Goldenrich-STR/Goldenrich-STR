@@ -75,7 +75,6 @@ class _AppShellState extends State<AppShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final notifications =
           Provider.of<NotificationProvider>(context, listen: false);
-      notifications.requestNotificationPermission();
       notifications.loadUnreadCount();
     });
   }
@@ -867,6 +866,7 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
   String _refundText =
       'Refund timelines depend on cancellation window, booking status, property policy, and payment verification.';
   List<_LegalPolicyItem> _legalPolicies = [];
+  bool _isDeactivating = false;
 
   @override
   void initState() {
@@ -921,8 +921,7 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
       if (_termsText.trim().isNotEmpty)
         _LegalPolicyItem(
           icon: Icons.gavel_outlined,
-          label:
-              (legalTerms['terms_label'] ?? 'Terms & Conditions').toString(),
+          label: (legalTerms['terms_label'] ?? 'Terms & Conditions').toString(),
           title: 'Terms & Conditions',
           content: _termsText,
         ),
@@ -1163,6 +1162,59 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
     );
   }
 
+  bool _canSelfDeactivate(dynamic user) {
+    final role = (user?.role ?? '').toString().toLowerCase();
+    return role == 'host' || role == 'guest';
+  }
+
+  Future<void> _confirmDeactivateAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Deactivate account?'),
+        content: const Text(
+          'Your account will be marked inactive and you will be signed out. You can ask admin to activate it again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Deactivate'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isDeactivating = true);
+    final success = await widget.auth.deactivateAccount();
+    if (!mounted) return;
+    setState(() => _isDeactivating = false);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Account deactivated.')),
+      );
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(widget.auth.lastError ?? 'Unable to deactivate account.'),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final localeProvider = Provider.of<LocaleProvider>(context);
@@ -1323,6 +1375,39 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
           ),
           if (user != null) ...[
             const SizedBox(height: 24),
+            if (_canSelfDeactivate(user)) ...[
+              SizedBox(
+                height: 54,
+                child: OutlinedButton.icon(
+                  onPressed: _isDeactivating ? null : _confirmDeactivateAccount,
+                  icon: _isDeactivating
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.red.shade700,
+                          ),
+                        )
+                      : const Icon(Icons.person_off_outlined),
+                  label: Text(
+                    _isDeactivating ? 'Deactivating...' : 'Deactivate Account',
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red.shade700,
+                    side: BorderSide(color: Colors.red.shade200),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    textStyle: GoogleFonts.manrope(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             SizedBox(
               height: 54,
               child: ElevatedButton(

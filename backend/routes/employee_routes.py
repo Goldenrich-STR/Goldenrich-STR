@@ -64,6 +64,46 @@ async def _get_rm_identifiers(db: AsyncIOMotorDatabase, current_user_or_id):
     return [identifier for identifier in identifiers if identifier]
 
 
+async def _get_employee_profile(db: AsyncIOMotorDatabase, current_user_or_id):
+    if isinstance(current_user_or_id, dict):
+        user_id = current_user_or_id.get("user_id")
+        fallback = current_user_or_id
+    else:
+        user_id = current_user_or_id
+        fallback = {}
+    profile = await db.users.find_one({"user_id": user_id, "role": "employee"}, {"_id": 0})
+    return profile or fallback or {}
+
+
+def _is_branch_manager_profile(profile: dict) -> bool:
+    role_key = str(profile.get("admin_role_key") or profile.get("role_key") or "").strip().lower()
+    designation = str(profile.get("designation") or "").strip().lower()
+    return role_key == "branch_manager" or "branch manager" in designation
+
+
+async def _get_branch_manager_rm_users(db: AsyncIOMotorDatabase, branch_manager_profile: dict):
+    branch_manager_identifiers = await _get_rm_identifiers(db, branch_manager_profile)
+    rm_lookup_or = [
+        *_field_matches_identifiers("reports_to", branch_manager_identifiers),
+        *_field_matches_identifiers("branch_manager_id", branch_manager_identifiers),
+    ]
+    if not rm_lookup_or:
+        return []
+    return await db.users.find(
+        {
+            "role": "employee",
+            "$or": rm_lookup_or,
+            "$and": [{
+                "$or": [
+                    {"admin_role_key": {"$in": ["rm", "relationship_manager"]}},
+                    {"designation": {"$regex": "relationship manager|\\brm\\b", "$options": "i"}},
+                ]
+            }],
+        },
+        {"_id": 0, "user_id": 1, "employee_code": 1, "uid": 1, "rm_id": 1, "full_name": 1, "is_active": 1}
+    ).to_list(length=1000)
+
+
 def _field_matches_identifiers(field, identifiers):
     exact_values = [value for value in identifiers if value]
     regex_values = [
@@ -85,6 +125,29 @@ def _verification_scope_query(broker_ids, property_ids, identifiers):
 
 async def _get_rm_scope(db: AsyncIOMotorDatabase, current_user_or_id):
     """Return brokers and hosts visible to an RM across legacy and current assignment fields."""
+    employee_profile = await _get_employee_profile(db, current_user_or_id)
+    if _is_branch_manager_profile(employee_profile):
+        branch_manager_identifiers = await _get_rm_identifiers(db, employee_profile)
+        rm_users = await _get_branch_manager_rm_users(db, employee_profile)
+
+        all_broker_ids = set()
+        all_host_ids = set()
+        for rm_user in rm_users:
+            broker_ids, host_ids = await _get_rm_scope(db, rm_user)
+            all_broker_ids.update(broker_ids)
+            all_host_ids.update(host_ids)
+
+        direct_bm_host_or = _field_matches_identifiers("branch_manager_id", branch_manager_identifiers)
+        direct_bm_host_or.extend(_field_matches_identifiers("employee_code", branch_manager_identifiers))
+        bm_hosts = await db.users.find(
+            {"role": "host", "$or": direct_bm_host_or},
+            {"_id": 0, "user_id": 1, "broker_id": 1}
+        ).to_list(length=3000)
+        all_host_ids.update(host.get("user_id") for host in bm_hosts if host.get("user_id"))
+        all_broker_ids.update(host.get("broker_id") for host in bm_hosts if host.get("broker_id"))
+
+        return list(all_broker_ids), list(all_host_ids)
+
     identifiers = await _get_rm_identifiers(db, current_user_or_id)
     if not identifiers:
         return [], []
@@ -146,6 +209,9 @@ async def get_employee_dashboard_stats(
     """Get employee dashboard statistics."""
     try:
         rm_id = current_user["user_id"]
+        employee_profile = await _get_employee_profile(db, current_user)
+        is_branch_manager = _is_branch_manager_profile(employee_profile)
+        branch_manager_rms = await _get_branch_manager_rm_users(db, employee_profile) if is_branch_manager else []
         rm_identifiers = await _get_rm_identifiers(db, current_user)
         now = datetime.now(timezone.utc)
         today = date.today()
@@ -282,6 +348,15 @@ async def get_employee_dashboard_stats(
         sla_breaches = pending_escalations
 
         return {
+            "scope": {
+                "type": "branch_manager" if is_branch_manager else "rm",
+                "label": "Branch Manager" if is_branch_manager else "RM",
+            },
+            "rms": {
+                "total": len(branch_manager_rms),
+                "active": len([rm for rm in branch_manager_rms if rm.get("is_active", True)]),
+                "inactive": len([rm for rm in branch_manager_rms if not rm.get("is_active", True)]),
+            },
             "brokers": {
                 "total": total_brokers,
                 "active": active_brokers,
@@ -1121,9 +1196,16 @@ async def get_rm_hosts(
 ):
     """Get all hosts under this RM's assigned brokers."""
     try:
-        broker_ids, _ = await _get_rm_scope(db, current_user["user_id"])
+        broker_ids, scoped_host_ids = await _get_rm_scope(db, current_user["user_id"])
+        host_scope_or = []
+        if broker_ids:
+            host_scope_or.append({"broker_id": {"$in": broker_ids}})
+        if scoped_host_ids:
+            host_scope_or.append({"user_id": {"$in": scoped_host_ids}})
+        if not host_scope_or:
+            return {"hosts": [], "total": 0}
         cursor = db.users.find(
-            {"role": "host", "broker_id": {"$in": broker_ids}},
+            {"role": "host", "$or": host_scope_or},
             {"_id": 0, "password_hash": 0}
         ).sort("created_at", -1)
         hosts = await cursor.to_list(length=500)

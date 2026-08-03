@@ -69,7 +69,17 @@ const EmployeeDashboard = () => {
   };
 
   const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+  const isBranchManager = (stats?.scope?.type === 'branch_manager')
+    || (user?.admin_role_key === 'branch_manager')
+    || String(user?.designation || '').toLowerCase().includes('branch manager');
+  const workspaceLabel = isBranchManager ? 'Branch Manager' : 'RM';
+  const dashboardTitle = isBranchManager ? 'Branch Manager Operations Control Center' : 'RM Operations Control Center';
+  const profileTitle = isBranchManager ? 'Branch Manager Profile' : 'RM Profile';
+  const profileSubtitle = isBranchManager
+    ? 'Assigned oversight across RMs, brokers, hosts, properties, verifications, bookings and performance.'
+    : 'Assigned operations ownership across brokers, hosts, properties, verifications, bookings and performance.';
   const statCards = stats ? [
+    ...(isBranchManager ? [{ label: 'Total Assigned RMs', value: stats.rms?.total || 0, icon: Users, tone: 'sage' }] : []),
     { label: 'Total Assigned Brokers', value: stats.brokers?.total || 0, icon: Users, tone: 'terracotta' },
     { label: 'Active Brokers', value: stats.brokers?.active || 0, icon: CheckCircle, tone: 'sage' },
     { label: 'Inactive Brokers', value: stats.brokers?.inactive || 0, icon: AlertCircle, tone: 'red' },
@@ -107,7 +117,7 @@ const EmployeeDashboard = () => {
             <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain" />
             <span>
               <span className="block text-sm font-black text-charcoal">X-Space360</span>
-              <span className="block text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">RM Control</span>
+              <span className="block text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">{workspaceLabel} Control</span>
             </span>
           </button>
         </div>
@@ -117,8 +127,8 @@ const EmployeeDashboard = () => {
             <Search className="w-4 h-4 text-charcoal-muted" />
             <input
               className="w-full bg-transparent outline-none text-sm text-charcoal placeholder:text-charcoal-muted"
-              placeholder="Search RM modules"
-              aria-label="Search RM modules"
+              placeholder={`Search ${workspaceLabel} modules`}
+              aria-label={`Search ${workspaceLabel} modules`}
             />
           </div>
         </div>
@@ -165,7 +175,7 @@ const EmployeeDashboard = () => {
             <div className="min-w-0">
               <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.22em] mb-1">X-Space360 Relationship Management</p>
               <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-charcoal truncate" data-testid="dashboard-title">
-                RM Operations Control Center
+                {dashboardTitle}
               </h2>
             </div>
             <div className="flex items-center space-x-2 sm:space-x-4">
@@ -183,7 +193,7 @@ const EmployeeDashboard = () => {
                 </div>
                 <span className="text-left">
                   <span className="block text-xs font-bold text-charcoal max-w-40 truncate">{user?.full_name || 'RM User'}</span>
-                  <span className="block text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">RM Profile</span>
+                  <span className="block text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{workspaceLabel} Profile</span>
                 </span>
               </button>
               <button
@@ -226,13 +236,13 @@ const EmployeeDashboard = () => {
           <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-5 md:p-6 mb-8">
             <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6">
               <div>
-                <p className="text-[10px] font-bold text-gold uppercase tracking-[0.22em] mb-2">RM Profile</p>
-                <h3 className="text-xl md:text-2xl font-bold text-charcoal">{user?.full_name || 'Relationship Manager'}</h3>
-                <p className="text-sm text-charcoal-muted mt-2">Assigned operations ownership across brokers, hosts, properties, verifications, bookings and performance.</p>
+                <p className="text-[10px] font-bold text-gold uppercase tracking-[0.22em] mb-2">{profileTitle}</p>
+                <h3 className="text-xl md:text-2xl font-bold text-charcoal">{user?.full_name || workspaceLabel}</h3>
+                <p className="text-sm text-charcoal-muted mt-2">{profileSubtitle}</p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
-                  ['RM ID', user?.user_id || 'N/A'],
+                  [`${workspaceLabel} ID`, user?.user_id || 'N/A'],
                   ['Employee Code', user?.employee_code || user?.uid || 'N/A'],
                   ['Branch', user?.branch || 'N/A'],
                   ['Territory', user?.employee_region || user?.city || 'N/A'],

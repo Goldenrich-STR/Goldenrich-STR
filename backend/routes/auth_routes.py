@@ -717,6 +717,7 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
         # Resolve broker or RM if lg_code is provided for a host
         broker_id = None
         rm_id = None
+        primary_assignment_role = None
         if role_str.lower() == "host" and user_data.lg_code and user_data.lg_code.strip():
             lg_code_clean = user_data.lg_code.strip()
             broker_or_rm = await db.users.find_one({
@@ -747,30 +748,45 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
                     detail="Invalid RM / Broker Code. No broker or RM found with this code."
                 )
             if broker_or_rm.get("role") == "broker":
+                primary_assignment_role = "broker"
                 broker_id = broker_or_rm["user_id"]
                 rm_id = broker_or_rm.get("rm_id")
             else:
+                primary_assignment_role = "rm"
                 rm_id = broker_or_rm["user_id"]
             
-        # Resolve branch manager if employee_code is provided for a host
+        # Resolve the dependent second assignment:
+        # Broker selected first -> second code must be an RM.
+        # RM selected first -> second code must be a Branch Manager.
         branch_manager_id = None
         if role_str.lower() == "host" and user_data.employee_code and user_data.employee_code.strip():
             employee_code_clean = user_data.employee_code.strip()
-            employee = await db.users.find_one({
-                "role": "employee",
-                "admin_role_key": "branch_manager",
-                "$or": [
-                    {"employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
-                    {"uid": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
-                    {"user_id": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
-                ],
-            })
+            expected_admin_keys = (
+                ["rm", "relationship_manager"]
+                if primary_assignment_role == "broker"
+                else ["branch_manager"]
+            )
+            employee = await db.users.find_one(
+                {
+                    "role": "employee",
+                    "admin_role_key": {"$in": expected_admin_keys},
+                    "$or": [
+                        {"employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                        {"uid": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                        {"user_id": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                    ],
+                }
+            )
             if not employee:
+                expected_label = "RM" if primary_assignment_role == "broker" else "Branch Manager"
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid Branch Manager Code. No branch manager found with this code."
+                    detail=f"Invalid {expected_label} Code. No {expected_label.lower()} found with this code."
                 )
-            branch_manager_id = employee["user_id"]
+            if primary_assignment_role == "broker":
+                rm_id = employee["user_id"]
+            else:
+                branch_manager_id = employee["user_id"]
             
         # Link broker to the employee if both are provided during Host registration
         if broker_id and rm_id:
@@ -970,6 +986,54 @@ async def admin_login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends
         )
 
 
+async def _enrich_host_assignment_profile(user: dict, db: AsyncIOMotorDatabase) -> dict:
+    """Attach display-ready assignment codes for host profile screens."""
+    if (user.get("role") or "").lower() != "host":
+        return user
+
+    assignment_ids = [
+        value for value in (user.get("broker_id"), user.get("rm_id"), user.get("branch_manager_id"))
+        if value
+    ]
+    assignees = {}
+    if assignment_ids:
+        rows = await db.users.find(
+            {"user_id": {"$in": list(set(assignment_ids))}},
+            {"_id": 0, "password_hash": 0},
+        ).to_list(length=len(set(assignment_ids)))
+        assignees = {row.get("user_id"): row for row in rows}
+
+    def display_code(row: dict | None, fallback: str | None = None) -> str:
+        if not row:
+            return fallback or ""
+        return row.get("lg_code") or row.get("employee_code") or row.get("uid") or fallback or row.get("user_id") or ""
+
+    def display_name(row: dict | None) -> str:
+        return row.get("full_name") if row else ""
+
+    primary_id = user.get("broker_id") or user.get("rm_id")
+    primary_row = assignees.get(primary_id) if primary_id else None
+    primary_type = "Broker" if user.get("broker_id") else ("RM" if user.get("rm_id") else "Broker / RM")
+    primary_code = user.get("lg_code") or display_code(primary_row, primary_id)
+
+    secondary_id = user.get("rm_id") if user.get("broker_id") else user.get("branch_manager_id")
+    secondary_row = assignees.get(secondary_id) if secondary_id else None
+    secondary_type = "RM" if user.get("broker_id") else ("Branch Manager" if user.get("branch_manager_id") else "Branch Manager / RM")
+    secondary_code = user.get("employee_code") or display_code(secondary_row, secondary_id)
+
+    user.update({
+        "assignment_primary_type": primary_type,
+        "assignment_primary_id": primary_id or "",
+        "assignment_primary_code": primary_code or "Not assigned",
+        "assignment_primary_name": display_name(primary_row),
+        "assignment_secondary_type": secondary_type,
+        "assignment_secondary_id": secondary_id or "",
+        "assignment_secondary_code": secondary_code or "Not assigned",
+        "assignment_secondary_name": display_name(secondary_row),
+    })
+    return user
+
+
 @router.get("/me")
 async def get_current_user_profile(
     current_user: dict = Depends(get_current_user),
@@ -986,7 +1050,41 @@ async def get_current_user_profile(
     for key in ("created_at", "updated_at"):
         if user.get(key):
             user[key] = user[key].isoformat() if hasattr(user[key], "isoformat") else user[key]
+    user = await _enrich_host_assignment_profile(user, db)
     return user
+
+@router.post("/deactivate")
+async def deactivate_current_user(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Allow host and guest users to deactivate their own account."""
+    user = await db.users.find_one(
+        {"user_id": current_user["user_id"]},
+        {"_id": 0, "role": 1, "is_active": 1},
+    )
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if user.get("role") not in {UserRole.HOST.value, UserRole.GUEST.value}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only host and guest accounts can be deactivated from the mobile app",
+        )
+
+    if user.get("is_active") is False:
+        return {"message": "Account is already deactivated", "is_active": False}
+
+    await db.users.update_one(
+        {"user_id": current_user["user_id"]},
+        {"$set": {
+            "is_active": False,
+            "deactivated_at": datetime.now(timezone.utc),
+            "deactivation_source": "mobile_self_service",
+            "updated_at": datetime.now(timezone.utc),
+        }},
+    )
+    return {"message": "Account deactivated successfully", "is_active": False}
 
 @router.post("/claim-promo")
 async def claim_promo(

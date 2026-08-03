@@ -6428,6 +6428,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
                   ),
                 ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isOnline ? Colors.green.shade50 : Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    isOnline ? 'ACTIVE' : 'DEACTIVE',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: isOnline
+                          ? Colors.green.shade700
+                          : Colors.red.shade700,
+                    ),
+                  ),
+                ),
                 // City
                 Container(
                   padding:
