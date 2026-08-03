@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Edit, History, KeyRound, Power, Search, ShieldCheck, Trash2, UserPlus, X } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestConfirm, requestInput, requestReason } from './shared';
 
 const tabs = [
   ['all', 'All Users'], ['guest', 'Guests'], ['host', 'Hosts'], ['employee', 'Employees'], ['broker', 'Brokers'], ['admin', 'Administrators'], ['inactive', 'Inactive Users'],
@@ -41,18 +41,18 @@ const normalizeRolesResponse = (payload) => payload?.data?.roles || payload?.rol
 
 const ModalShell = ({ title, children, onClose }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-    <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-lg bg-white shadow-elevated">
-      <div className="flex items-center justify-between border-b border-slate-200 p-4">
-        <h2 className="text-lg font-black">{title}</h2>
-        <button onClick={onClose} className="rounded-lg p-2 hover:bg-slate-100" aria-label="Close"><X className="h-5 w-5" /></button>
+    <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-[0_30px_80px_rgba(15,23,42,0.18)]">
+      <div className="flex items-center justify-between border-b border-slate-200 p-5">
+        <h2 className="text-xl font-black tracking-[-0.03em] text-slate-950">{title}</h2>
+        <button onClick={onClose} className="rounded-full p-2 hover:bg-slate-100" aria-label="Close"><X className="h-5 w-5" /></button>
       </div>
-      <div className="max-h-[calc(92vh-68px)] overflow-y-auto p-4">{children}</div>
+      <div className="max-h-[calc(92vh-80px)] overflow-y-auto p-5">{children}</div>
     </div>
   </div>
 );
 
-const Field = ({ label, children }) => <label className="block"><span className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">{label}</span>{children}</label>;
-const inputClass = 'h-10 w-full rounded-lg border border-slate-200 px-3 text-sm';
+const Field = ({ label, children }) => <label className="block"><span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</span>{children}</label>;
+const inputClass = 'h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm outline-none';
 
 const userCode = (user) => user.employee_code || user.lg_code || user.uid || user.user_id;
 const primaryUserId = (user) => {
@@ -151,12 +151,12 @@ const SearchableUserSelect = ({ options, value, onChange, placeholder, emptyLabe
         value={displayValue}
       />
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-elevated">
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-elevated">
           {filteredOptions.length ? filteredOptions.map((option) => {
             const code = userCode(option);
             return (
               <button
-                className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-slate-100"
+                className="w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-slate-100"
                 key={option.user_id}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => selectOption(option)}
@@ -204,10 +204,10 @@ const SearchableTextSelect = ({ options, value, onChange, placeholder, emptyLabe
         value={displayValue}
       />
       {open && (
-        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-elevated">
+        <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-50 max-h-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-elevated">
           {filteredOptions.length ? filteredOptions.map((option) => (
             <button
-              className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-slate-100"
+              className="w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-slate-100"
               key={option.value}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => {
@@ -596,14 +596,14 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
               value={form.admin_role_key || ''}
             />
           </Field>
-          <label className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-4 py-3 transition ${form.admin_delete_protected ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'}`}>
+          <label className={`flex cursor-pointer items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition ${form.admin_delete_protected ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'}`}>
             <span>
               <span className="block text-xs font-black uppercase tracking-widest text-slate-500">Protected Account</span>
               <span className="mt-1 block text-sm font-bold text-slate-900">{form.admin_delete_protected ? 'Enabled' : 'Disabled'}</span>
             </span>
             <input
               checked={form.admin_delete_protected}
-              className="h-4 w-4 accent-terracotta"
+              className="h-4 w-4 accent-[#2f6df6]"
               onChange={(e) => setValue('admin_delete_protected', e.target.checked)}
               type="checkbox"
             />
@@ -619,9 +619,9 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
                   key={permission}
                   type="button"
                   onClick={() => togglePermission(permission)}
-                  className={`rounded-lg border px-3 py-2 text-xs font-black transition ${
+                  className={`rounded-2xl border px-3 py-2 text-xs font-black transition ${
                     selected
-                      ? 'border-terracotta bg-terracotta text-charcoal shadow-subtle'
+                      ? 'border-blue-200 bg-[#e8f0ff] text-[#2f6df6] shadow-sm'
                       : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-white'
                   }`}
                 >
@@ -633,16 +633,16 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
         </div>
       </Panel>}
       <div className="sticky bottom-0 flex flex-col gap-2 border-t border-slate-200 bg-white py-3 md:flex-row md:justify-end">
-        <button onClick={onCancel} className="rounded-lg px-4 py-2 text-sm font-bold text-slate-600">Cancel</button>
-        {!initialUser && <button disabled={saving} onClick={() => submit(true)} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold">Create and Create Another</button>}
-        <button disabled={saving} onClick={() => submit(false)} className="rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white">{saving ? 'Saving...' : initialUser ? 'Save Changes' : 'Create User'}</button>
+        <button onClick={onCancel} className="rounded-2xl px-4 py-2.5 text-sm font-bold text-slate-600">Cancel</button>
+        {!initialUser && <button disabled={saving} onClick={() => submit(true)} className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold">Create and Create Another</button>}
+        <button disabled={saving} onClick={() => submit(false)} className="rounded-2xl bg-[#2f6df6] px-4 py-2.5 text-sm font-bold text-white shadow-[0_12px_24px_rgba(47,109,246,0.2)]">{saving ? 'Saving...' : initialUser ? 'Save Changes' : 'Create User'}</button>
       </div>
     </div>
   );
 };
 
 const SmallAction = ({ icon: Icon, label, onClick, tone = 'slate' }) => (
-  <button onClick={onClick} className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-bold ${tone === 'red' ? 'text-red-700 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-100'}`} title={label}>
+  <button onClick={onClick} className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-bold ${tone === 'red' ? 'text-red-700 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-100'}`} title={label}>
     <Icon className="h-3.5 w-3.5" /> {label}
   </button>
 );
@@ -728,7 +728,13 @@ const UserOrganizationManagement = () => {
   };
 
   const resetPassword = async (user) => {
-    const password = window.prompt('Enter new temporary password. Minimum 8 chars, uppercase, lowercase and number.');
+    const password = await requestInput({
+      title: 'Reset Temporary Password',
+      description: 'Enter new temporary password. Minimum 8 chars, uppercase, lowercase and number.',
+      label: 'Temporary Password',
+      inputType: 'password',
+      confirmLabel: 'Continue',
+    });
     if (!password) return;
     const reason = await requestReason({
       title: 'Password Reset Reason',
@@ -763,7 +769,12 @@ const UserOrganizationManagement = () => {
       setNotice('Only inactive users can be deleted. Deactivate the user first.');
       return;
     }
-    const confirmed = window.confirm(`Delete inactive user ${user.full_name || user.email}? This action cannot be undone.`);
+    const confirmed = await requestConfirm({
+      title: 'Delete Inactive User',
+      description: `Delete inactive user ${user.full_name || user.email}? This action cannot be undone.`,
+      confirmLabel: 'Delete User',
+      tone: 'danger',
+    });
     if (!confirmed) return;
     try {
       await adminPhase1API.deleteUser(user.user_id);
@@ -784,20 +795,20 @@ const UserOrganizationManagement = () => {
       <PageHeader
         title="User & Organization Management"
         description="Manage users, employees, brokers, administrators, access, reporting managers, branches and user lifecycle."
-        action={<button onClick={openCreateUserModal} className="inline-flex items-center justify-center gap-2 rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white"><UserPlus className="h-4 w-4" /> Create User</button>}
+        action={<button onClick={openCreateUserModal} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#2f6df6] px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(47,109,246,0.22)] transition hover:bg-[#255fe0]"><UserPlus className="h-4 w-4" /> Create User</button>}
       />
-      {notice && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</div>}
-      <Panel className="mb-4 p-3">
-        <div className="flex gap-2 overflow-x-auto">
+      {notice && <div className="mb-4 rounded-2xl border border-[#cfe0ff] bg-[#eef5ff] p-3 text-sm font-bold text-[#2f6df6]">{notice}</div>}
+      <Panel className="mb-4 p-4">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {tabs.map(([id, label]) => (
-            <button key={id} onClick={() => setTab(id)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${tab === id ? 'bg-terracotta text-charcoal' : 'bg-slate-100 text-slate-600'}`}>{label}</button>
+            <button key={id} onClick={() => setTab(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${tab === id ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>
           ))}
         </div>
-        <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+        <div className="mt-4 flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 shadow-inner">
           <Search className="h-4 w-4 text-slate-400" />
           <input
             autoComplete="off"
-            className="h-8 w-full bg-transparent text-sm"
+            className="h-8 w-full bg-transparent text-sm font-medium outline-none"
             name="admin-user-directory-search"
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name, user ID, email, mobile, employee code"
@@ -811,15 +822,15 @@ const UserOrganizationManagement = () => {
         <Panel className="overflow-hidden">
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[2100px] text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                <tr>{['User', 'Contact', 'Personal', 'Location', 'Role & Code', 'Organization', 'Reporting', 'Access Control', 'Status', 'Dates', 'Actions'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr>
+              <thead className="bg-[#f8fafc] text-[11px] uppercase tracking-[0.16em] text-slate-400">
+                <tr>{['User', 'Contact', 'Personal', 'Location', 'Role & Code', 'Organization', 'Reporting', 'Access Control', 'Status', 'Dates', 'Actions'].map((h) => <th key={h} className="px-4 py-4 font-bold">{h}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {state.users.map((u) => (
-                  <tr key={u.user_id} className="align-top">
-                    <td className="px-4 py-4">
+                  <tr key={u.user_id} className="align-top transition hover:bg-slate-50/70">
+                    <td className="px-4 py-5">
                       <div className="flex min-w-[240px] items-start gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sage text-xs font-black text-white">{u.full_name?.[0] || 'U'}</span>
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#2f6df6] text-xs font-black text-white shadow-sm">{u.full_name?.[0] || 'U'}</span>
                         <div className="min-w-0">
                           <p className="truncate font-black text-slate-950">{u.full_name || '-'}</p>
                           <p className="font-mono text-xs font-semibold text-slate-500">{primaryUserId(u)}</p>
@@ -871,14 +882,14 @@ const UserOrganizationManagement = () => {
                         <DetailLine label="Protected" value={u.admin_delete_protected ? 'Yes' : 'No'} />
                       </div>
                     </td>
-                    <td className="px-4 py-3"><StatusBadge value={u.is_active === false ? 'inactive' : 'active'} /></td>
+                    <td className="px-4 py-4"><StatusBadge value={u.is_active === false ? 'inactive' : 'active'} /></td>
                     <td className="px-4 py-4">
                       <div className="grid min-w-[140px] gap-2">
                         <DetailLine label="Registered" value={formatDate(u.created_at)} />
                         <DetailLine label="Joining" value={formatDate(u.joining_date)} />
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-4">
                       <div className="flex flex-wrap gap-1">
                         <SmallAction icon={Edit} label="Edit" onClick={() => setModal({ type: 'form', user: u })} />
                         <SmallAction icon={ShieldCheck} label="Access" onClick={() => setModal({ type: 'form', user: u })} />
@@ -899,7 +910,7 @@ const UserOrganizationManagement = () => {
             {state.users.map((u) => (
               <div key={u.user_id} className="p-4">
                 <div className="flex justify-between gap-3"><div><p className="font-black">{u.full_name}</p><p className="text-xs text-slate-500">{u.email}</p></div><StatusBadge value={u.is_active === false ? 'inactive' : 'active'} /></div>
-                <div className="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3 text-sm">
+                <div className="mt-3 grid gap-2 rounded-2xl bg-slate-50 p-3 text-sm">
                   <DetailLine label="Role / User ID" value={`${compactRole(u.role)} / ${primaryUserId(u) || '-'}`} capitalize />
                   <DetailLine label="Phone" value={u.phone} />
                   <DetailLine label="Location" value={[u.city, u.state, u.work_location].filter(Boolean).join(' / ')} />
@@ -927,9 +938,9 @@ const UserOrganizationManagement = () => {
       )}
       {modal?.type === 'audit' && (
         <ModalShell title={`Audit History - ${modal.user.full_name}`} onClose={() => setModal(null)}>
-          <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+          <div className="divide-y divide-slate-100 rounded-[24px] border border-slate-200">
             {modal.logs.length ? modal.logs.map((log) => (
-              <div key={log.audit_id} className="p-4">
+              <div key={log.audit_id} className="p-5">
                 <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                   <p className="font-black capitalize">{String(log.action || '').replace(/_/g, ' ')}</p>
                   <StatusBadge value={log.status} />

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Edit, History, Plus, Save, ShieldCheck, Trash2, UserCog, X } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestConfirm, requestReason } from './shared';
 
 const scopes = ['self', 'assigned_records', 'direct_reports', 'full_team', 'department', 'branch', 'franchise', 'region', 'state', 'global', 'custom'];
 const deletePolicies = ['protected', 'soft_delete_only', 'deactivatable', 'permanent_delete_allowed'];
@@ -87,7 +87,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder, emptyLabel = 
           <div className="max-h-60 overflow-y-auto">
             {filtered.length ? filtered.map((option) => (
               <button
-                className={`mb-1 w-full rounded-lg px-3 py-2 text-left text-sm transition ${option.value === value ? 'bg-terracotta text-charcoal' : 'hover:bg-slate-100'}`}
+                className={`mb-1 w-full rounded-lg px-3 py-2 text-left text-sm transition ${option.value === value ? 'bg-[#eef4ff] text-[#2563eb]' : 'hover:bg-slate-100'}`}
                 key={option.value || 'none'}
                 onClick={() => {
                   onChange(option.value);
@@ -152,7 +152,7 @@ const ProfessionalSelect = ({ options, value, onChange, placeholder, searchPlace
                   setOpen(false);
                   setQuery('');
                 }}
-                className={`mb-1 w-full rounded-lg border px-3 py-2.5 text-left transition ${option.value === value ? 'border-[#d8b431] bg-[#fff7df]' : 'border-transparent hover:border-slate-200 hover:bg-slate-50'}`}
+                className={`mb-1 w-full rounded-lg border px-3 py-2.5 text-left transition ${option.value === value ? 'border-[#bfdbfe] bg-[#eef4ff]' : 'border-transparent hover:border-slate-200 hover:bg-slate-50'}`}
               >
                 <span className="block text-sm font-black text-slate-950">{option.label}</span>
                 {option.meta && <span className="mt-0.5 block text-xs font-semibold leading-5 text-slate-500">{option.meta}</span>}
@@ -255,7 +255,7 @@ const RoleForm = ({ role, permissions, onClose, onSaved }) => {
             <div key={module} className="rounded-lg border border-slate-200 p-4">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <h4 className="font-black capitalize">{module.replace(/_/g, ' ')}</h4>
-                <button type="button" onClick={() => toggleModule(modulePermissions)} className="text-xs font-bold text-terracotta">Toggle module</button>
+                <button type="button" onClick={() => toggleModule(modulePermissions)} className="text-xs font-bold text-[#2563eb]">Toggle module</button>
               </div>
               <div className="flex flex-wrap gap-2">
                 {modulePermissions.map((permission) => (
@@ -263,7 +263,7 @@ const RoleForm = ({ role, permissions, onClose, onSaved }) => {
                     key={permission.permission_key}
                     type="button"
                     onClick={() => togglePermission(permission.permission_key)}
-                    className={`rounded-full px-2 py-1 text-xs font-bold ${form.permissions.includes(permission.permission_key) ? 'bg-terracotta text-charcoal' : 'bg-slate-100 text-slate-600'}`}
+                    className={`rounded-full px-2 py-1 text-xs font-bold ${form.permissions.includes(permission.permission_key) ? 'bg-[#eef4ff] text-[#2563eb]' : 'bg-slate-100 text-slate-600'}`}
                   >
                     {permission.action.replace(/_/g, ' ')}
                   </button>
@@ -466,7 +466,12 @@ const RolesPermissions = () => {
   };
 
   const deleteRole = async (role) => {
-    const confirmed = window.confirm(`Delete role ${role.role_name}? This action cannot be undone. Assigned roles must be removed from users before deleting.`);
+    const confirmed = await requestConfirm({
+      title: 'Delete Role',
+      description: `Delete role ${role.role_name}? This action cannot be undone. Assigned roles must be removed from users before deleting.`,
+      confirmLabel: 'Delete Role',
+      tone: 'danger',
+    });
     if (!confirmed) return;
     try {
       await adminPhase1API.deleteRole(role.role_id);
@@ -488,7 +493,12 @@ const RolesPermissions = () => {
 
   const bulkDeleteRoles = async () => {
     if (!selectedRoleIds.length) return;
-    const confirmed = window.confirm(`Delete ${selectedRoleIds.length} selected role(s)? Assigned roles will be skipped.`);
+    const confirmed = await requestConfirm({
+      title: 'Bulk Delete Roles',
+      description: `Delete ${selectedRoleIds.length} selected role(s)? Assigned roles will be skipped.`,
+      confirmLabel: 'Delete Selected',
+      tone: 'danger',
+    });
     if (!confirmed) return;
     try {
       const response = await adminPhase1API.bulkDeleteRoles(selectedRoleIds);
@@ -515,7 +525,7 @@ const RolesPermissions = () => {
       {notice && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</div>}
       <Panel className="mb-4 p-2">
         <div className="flex gap-2 overflow-x-auto">
-          {tabs.map((tab) => <button key={tab} onClick={() => setActiveTab(tab)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${activeTab === tab ? 'bg-terracotta text-charcoal' : 'bg-slate-100 text-slate-600'}`}>{tab}</button>)}
+          {tabs.map((tab) => <button key={tab} onClick={() => setActiveTab(tab)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${activeTab === tab ? 'bg-[#e8f0ff] text-[#2f6df6]' : 'bg-slate-100 text-slate-600'}`}>{tab}</button>)}
         </div>
       </Panel>
 
@@ -528,7 +538,7 @@ const RolesPermissions = () => {
                   type="checkbox"
                   checked={state.roles.length > 0 && selectedRoleIds.length === state.roles.length}
                   onChange={toggleSelectAllRoles}
-                  className="h-4 w-4 rounded border-slate-300 text-terracotta focus:ring-terracotta"
+                  className="h-4 w-4 rounded border-slate-300 text-[#2563eb] focus:ring-[#93c5fd]"
                 />
                 Select All Roles
               </label>
@@ -541,14 +551,14 @@ const RolesPermissions = () => {
           </Panel>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {state.roles.map((role) => (
-            <Panel key={role.role_id} className={`p-4 ${selectedRoleIds.includes(role.role_id) ? 'ring-2 ring-terracotta' : ''}`}>
+            <Panel key={role.role_id} className={`p-4 ${selectedRoleIds.includes(role.role_id) ? 'ring-2 ring-[#93c5fd]' : ''}`}>
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
                     checked={selectedRoleIds.includes(role.role_id)}
                     onChange={() => toggleRoleSelection(role.role_id)}
-                    className="mt-1 h-4 w-4 rounded border-slate-300 text-terracotta focus:ring-terracotta"
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-[#2563eb] focus:ring-[#93c5fd]"
                     aria-label={`Select ${role.role_name}`}
                   />
                   <div><p className="font-black">{role.role_name}</p><p className="text-xs font-semibold text-slate-500">{role.role_key}</p></div>
@@ -579,7 +589,7 @@ const RolesPermissions = () => {
           <div className="grid gap-3 p-4 md:grid-cols-2">
             {Object.entries(grouped).map(([module, permissions]) => (
               <div key={module} className="rounded-lg border border-slate-200 p-4">
-                <div className="mb-3 flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-terracotta" /><h3 className="font-black capitalize">{module.replace(/_/g, ' ')}</h3></div>
+                <div className="mb-3 flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#2563eb]" /><h3 className="font-black capitalize">{module.replace(/_/g, ' ')}</h3></div>
                 <div className="flex flex-wrap gap-2">{permissions.map((permission) => <span key={permission.permission_key} className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600">{permission.action.replace(/_/g, ' ')}</span>)}</div>
               </div>
             ))}
@@ -606,7 +616,7 @@ const RolesPermissions = () => {
       {activeTab === 'Access History' && (
         <Panel className="overflow-hidden">
           <div className="divide-y divide-slate-100">
-            {state.history.length ? state.history.map((log) => <div key={log.audit_id} className="grid gap-3 p-4 md:grid-cols-[1fr_180px_180px] md:items-center"><div className="flex items-start gap-2"><History className="mt-1 h-4 w-4 text-terracotta" /><div><p className="font-black capitalize">{String(log.action || '').replace(/_/g, ' ')}</p><p className="text-sm text-slate-500">{log.user_id} / {log.record_id || 'system'}</p></div></div><StatusBadge value={log.status} /><p className="text-xs font-semibold text-slate-500">{String(log.created_at || '').slice(0, 19)}</p></div>) : <p className="p-4 text-sm text-slate-500">No access history yet.</p>}
+            {state.history.length ? state.history.map((log) => <div key={log.audit_id} className="grid gap-3 p-4 md:grid-cols-[1fr_180px_180px] md:items-center"><div className="flex items-start gap-2"><History className="mt-1 h-4 w-4 text-[#2563eb]" /><div><p className="font-black capitalize">{String(log.action || '').replace(/_/g, ' ')}</p><p className="text-sm text-slate-500">{log.user_id} / {log.record_id || 'system'}</p></div></div><StatusBadge value={log.status} /><p className="text-xs font-semibold text-slate-500">{String(log.created_at || '').slice(0, 19)}</p></div>) : <p className="p-4 text-sm text-slate-500">No access history yet.</p>}
           </div>
         </Panel>
       )}

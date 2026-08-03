@@ -18,6 +18,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import HostSupportWidget from '../components/HostSupportWidget';
+import HostWorkspaceShell from '../components/HostWorkspaceShell';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -57,7 +58,7 @@ function dateInRange(d, startISO, endISO) {
 const HostCalendar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const [properties, setProperties] = useState([]);
   const searchParams = new URLSearchParams(location.search);
@@ -320,83 +321,56 @@ const HostCalendar = () => {
 
   const minDateStr = toISO(new Date());
 
+  const heroActions = (
+    <>
+      <div className="relative">
+        <select
+          value={selectedPropertyId}
+          onChange={(e) => setSelectedPropertyId(e.target.value)}
+          className="min-h-[48px] appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-10 text-sm font-bold text-slate-900 outline-none transition focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+          data-testid="property-selector"
+        >
+          {properties.length === 0 && (
+            <option value="">No properties</option>
+          )}
+          {properties.map((p) => (
+            <option key={p.property_id} value={p.property_id}>
+              {p.title} - {p.city}
+            </option>
+          ))}
+        </select>
+        <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+          <ChevronRight className="h-4 w-4 rotate-90" />
+        </div>
+      </div>
+      <button
+        onClick={handleExportICal}
+        disabled={!selectedPropertyId}
+        className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-slate-200 px-5 text-xs font-bold uppercase tracking-widest text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50"
+        data-testid="export-ical-btn"
+      >
+        <Download className="h-4 w-4" />
+        Export iCal
+      </button>
+    </>
+  );
+
   return (
-    <div className="min-h-screen bg-stone">
-      <header className="header-glass px-4 md:px-6 py-4" data-testid="host-calendar-header">
-        <div className="w-full flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-          <div className="flex items-center justify-between w-full sm:w-auto">
-            <div 
-              className="flex items-center space-x-3 cursor-pointer group" 
-              onClick={() => navigate('/')}
-            >
-              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
-            </div>
-            <button onClick={logout} className="text-terracotta hover:underline text-xs font-bold uppercase tracking-wider sm:hidden">
-              Logout
-            </button>
-          </div>
-          <div className="flex items-center justify-between sm:justify-end space-x-4 w-full sm:w-auto border-t border-sand-100 sm:border-none pt-2 sm:pt-0">
-            <button
-              onClick={() => navigate('/host/dashboard')}
-              className="text-charcoal-light hover:text-terracotta flex items-center space-x-1 text-xs sm:text-sm font-bold uppercase tracking-wider"
-              data-testid="back-to-dashboard-btn"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Dashboard</span>
-            </button>
-            <div className="flex items-center space-x-4">
-              <span className="text-charcoal-light text-xs font-medium">Welcome, {user?.full_name?.split(' ')[0]}</span>
-              <button onClick={logout} className="text-terracotta hover:underline text-xs font-bold uppercase tracking-wider hidden sm:block">
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="w-full px-2 md:px-8 lg:px-12 py-6 md:py-8 mx-auto">
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-2xl md:text-4xl font-semibold tracking-tight text-charcoal" data-testid="calendar-title">
-              Property Calendar
-            </h2>
-            <p className="text-charcoal-light mt-1">
-              Manage availability, block dates, and sync external calendars.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative">
-              <select
-                value={selectedPropertyId}
-                onChange={(e) => setSelectedPropertyId(e.target.value)}
-                className="appearance-none border border-gray-100 rounded-xl px-4 py-2.5 pr-10 bg-white font-bold text-sm text-charcoal outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/20 transition-all shadow-sm cursor-pointer"
-                data-testid="property-selector"
-              >
-                {properties.length === 0 && (
-                  <option value="">No properties</option>
-                )}
-                {properties.map((p) => (
-                  <option key={p.property_id} value={p.property_id}>
-                    {p.title} - {p.city}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-charcoal-light">
-                <ChevronRight className="w-4 h-4 rotate-90" />
-              </div>
-            </div>
-            <button
-              onClick={handleExportICal}
-              disabled={!selectedPropertyId}
-              className="px-5 py-2.5 bg-white border border-gray-100 rounded-xl font-bold text-sm text-charcoal hover:text-terracotta hover:border-terracotta flex items-center justify-center gap-2 transition-all shadow-sm active:scale-98 disabled:opacity-50 disabled:pointer-events-none"
-              data-testid="export-ical-btn"
-            >
-              <Download className="w-4 h-4 text-terracotta" />
-              <span>Export iCal</span>
-            </button>
-          </div>
-        </div>
+    <HostWorkspaceShell
+      activePath="/host/calendar"
+      sidebarTitle="Calendar"
+      sidebarDescription="Manage availability, blocked dates and external calendar syncs without changing host logic."
+      heroTitle="Property Calendar"
+      heroDescription="Manage availability, block dates and sync external calendars."
+      heroActions={heroActions}
+      sidebarSnapshot={[
+        ['Host', user?.full_name || 'Host'],
+        ['Properties', properties.length],
+        ['Month', `${MONTH_NAMES[month - 1]} ${year}`],
+        ['Blocks', allManualBlocks.length],
+      ]}
+    >
+      <div className="space-y-6">
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 mb-4 flex items-start space-x-2" data-testid="calendar-error">
@@ -824,7 +798,7 @@ const HostCalendar = () => {
         )}
       </div>
       <HostSupportWidget context="calendar_issue" />
-    </div>
+    </HostWorkspaceShell>
   );
 };
 

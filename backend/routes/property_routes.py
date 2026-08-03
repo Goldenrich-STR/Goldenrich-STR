@@ -274,6 +274,8 @@ async def search_properties(
             "images": 1,
             "average_rating": 1,
             "reviews_count": 1,
+            "rating": 1,
+            "review_count": 1,
             "has_self_cook": 1,
             "status": 1,
             "subscription_id": 1

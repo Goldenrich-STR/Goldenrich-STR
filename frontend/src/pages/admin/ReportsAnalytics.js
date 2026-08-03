@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { BarChart3, CalendarCheck, FileText, Headphones, Home, TrendingUp, Users } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, showNotice } from './shared';
 
 const fallbackAnalytics = {
   phase_steps: [
@@ -55,7 +55,7 @@ const ReportsAnalytics = () => {
       const response = await adminPhase1API.exportAnalytics({ ...filters, module: moduleName });
       downloadBlob(response.data, `${moduleName}_analytics.csv`);
     } catch (error) {
-      window.alert(error.response?.data?.detail || 'Export failed. Please try after backend restart.');
+      await showNotice({ title: 'Export Failed', description: error.response?.data?.detail || 'Export failed. Please try after backend restart.', eyebrow: 'Action Failed' });
     }
   };
 
@@ -64,7 +64,7 @@ const ReportsAnalytics = () => {
       const response = await adminPhase1API.exportAuditLogs({ date_from: filters.date_from, date_to: filters.date_to, status: filters.status });
       downloadBlob(response.data, 'audit_logs.csv');
     } catch (error) {
-      window.alert(error.response?.data?.detail || 'Audit export failed');
+      await showNotice({ title: 'Audit Export Failed', description: error.response?.data?.detail || 'Audit export failed', eyebrow: 'Action Failed' });
     }
   };
 
@@ -92,7 +92,7 @@ const ReportsAnalytics = () => {
               ['Revenue', formatMoney(kpis.revenue_total || 0), TrendingUp],
               ['Open Support', kpis.support_open || 0, Headphones],
               ['CMS Live', kpis.cms_active_sections || 0, FileText],
-            ].map(([label, value, Icon]) => <Panel key={label} className="p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-terracotta/10 text-terracotta"><Icon className="h-4 w-4" /></div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 break-words text-2xl font-black">{value}</p></Panel>)}
+            ].map(([label, value, Icon]) => <Panel key={label} className="p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-[#eef4ff] text-[#2563eb]"><Icon className="h-4 w-4" /></div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 break-words text-2xl font-black">{value}</p></Panel>)}
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">

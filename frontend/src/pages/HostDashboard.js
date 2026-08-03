@@ -8,6 +8,14 @@ import { NotificationBell } from '../components/NotificationCenter';
 import LegalLinks from '../components/LegalLinks';
 import HostSupportWidget from '../components/HostSupportWidget';
 
+const hostNavigation = [
+  { label: 'Dashboard', group: 'Control', path: '/host/dashboard', icon: Building2 },
+  { label: 'Calendar', group: 'Operations', path: '/host/calendar', icon: Calendar },
+  { label: 'Payouts', group: 'Finance', path: '/host/payouts', icon: IndianRupee },
+  { label: 'Bookings', group: 'Reservations', path: '/host/bookings', icon: FileText },
+  { label: 'Performance', group: 'Insights', path: '/host/performance', icon: Star },
+];
+
 const DEFAULT_HOST_AGREEMENT_TITLE = 'SHORT-TERM RENTAL HOST AGREEMENT';
 const DEFAULT_HOST_AGREEMENT_TEXT = `## SHORT-TERM RENTAL HOST AGREEMENT
 
@@ -782,165 +790,157 @@ const HostDashboard = () => {
   };
 
   const stats = [
-    { label: 'Total Properties', value: properties.length, note: 'All listed spaces', icon: Building2, statusFilter: 'all', tone: 'text-slate-700 bg-slate-50' },
-    { label: 'Active Listings', value: properties.filter(isLive).length, note: 'Available to guests', icon: Eye, statusFilter: 'live', tone: 'text-sage bg-sage/10' },
-    { label: 'Pending Review', value: properties.filter(isPending).length, note: 'Awaiting approval', icon: Calendar, statusFilter: 'pending_verification', tone: 'text-amber-600 bg-amber-50' },
-    { label: 'Rejected Properties', value: properties.filter(isRejected).length, note: 'Needs correction', icon: AlertCircle, statusFilter: 'rejected', tone: 'text-red-600 bg-red-50' },
-    { label: 'Total Earnings', value: formattedEarnings, note: 'Paid payouts', icon: IndianRupee, tone: 'text-emerald-700 bg-emerald-50' },
-    { label: 'Guest Rating', value: averageRating, note: 'Property reviews', icon: Star, action: () => navigate('/host/performance'), tone: 'text-amber-500 bg-amber-50' },
+    { label: 'Total Properties', value: properties.length, note: 'All listed spaces', icon: Building2, statusFilter: 'all', tone: 'text-slate-700 bg-slate-100' },
+    { label: 'Active Listings', value: properties.filter(isLive).length, note: 'Available to guests', icon: Eye, statusFilter: 'live', tone: 'text-slate-700 bg-slate-100' },
+    { label: 'Pending Review', value: properties.filter(isPending).length, note: 'Awaiting approval', icon: Calendar, statusFilter: 'pending_verification', tone: 'text-slate-700 bg-slate-100' },
+    { label: 'Rejected Properties', value: properties.filter(isRejected).length, note: 'Needs correction', icon: AlertCircle, statusFilter: 'rejected', tone: 'text-slate-700 bg-slate-100' },
+    { label: 'Total Earnings', value: formattedEarnings, note: 'Paid payouts', icon: IndianRupee, tone: 'text-slate-700 bg-slate-100' },
+    { label: 'Guest Rating', value: averageRating, note: 'Property reviews', icon: Star, action: () => navigate('/host/performance'), tone: 'text-slate-700 bg-slate-100' },
   ];
 
   return (
-    <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
-      <header className="glass px-4 md:px-8 lg:px-12 py-4 sticky top-0 z-50">
-        <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="w-full md:w-auto flex justify-between items-center shrink-0">
-            <div 
-              className="flex items-center space-x-3 cursor-pointer group" 
-              onClick={() => navigate('/')}
-            >
-              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain" />
-            </div>
-            <div className="flex items-center space-x-3 md:hidden">
-              <NotificationBell />
-              <div 
-                onClick={() => setShowProfileModal(true)}
-                className="w-7 h-7 rounded-full bg-sage flex items-center justify-center text-[10px] font-bold text-white cursor-pointer"
-              >
-                 {user?.full_name?.[0]}
-              </div>
-              <button 
-                onClick={() => {
-                  navigate('/');
-                  setTimeout(() => {
-                    logout();
-                  }, 50);
-                }} 
-                className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-wider hover:underline cursor-pointer"
-              >
-                Sign Out
-              </button>
-            </div>
+    <div className="min-h-screen bg-[#f7f7f5] selection:bg-slate-900 selection:text-white">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 px-4 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur md:px-8 lg:px-12">
+        <div className="flex w-full items-center justify-between gap-3">
+          <div
+            className="flex cursor-pointer items-center space-x-3"
+            onClick={() => navigate('/')}
+          >
+            <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
-          <div className="flex flex-row items-center gap-3 w-full md:w-auto border-t border-sand-100 md:border-none pt-2 md:pt-0 overflow-x-auto md:overflow-visible no-scrollbar shrink-0">
-            <nav className="flex items-center space-x-6 shrink-0">
-               {[
-                 { label: 'DASHBOARD', path: '/host/dashboard' },
-                 { label: 'CALENDAR', path: '/host/calendar' },
-                 { label: 'PAYOUTS', path: '/host/payouts' },
-                 { label: 'BOOKINGS', path: '/host/bookings' },
-                 { label: 'PERFORMANCE', path: '/host/performance' }
-               ].map((item) => (
-                 <button
-                   key={item.label}
-                   onClick={() => navigate(item.path)}
-                   className={`text-[10px] font-bold tracking-tight tracking-[0.2em] transition-colors shrink-0 ${
-                     item.path === '/host/dashboard' 
-                       ? 'text-terracotta border-b-2 border-terracotta pb-0.5' 
-                       : 'text-charcoal-muted hover:text-terracotta'
-                   }`}
-                 >
-                   {item.label}
-                 </button>
-               ))}
-            </nav>
-            <div className="h-6 w-px bg-sand-200 hidden md:block"></div>
-            <div className="hidden md:flex items-center gap-2 md:gap-4 shrink-0">
-              <NotificationBell />
-              <div 
-                onClick={() => setShowProfileModal(true)}
-                className="w-9 h-9 rounded-full bg-[#7A9A85] hover:bg-[#6b8c76] flex items-center justify-center text-xs font-bold text-white cursor-pointer transition-colors shadow-subtle border border-slate-200 shrink-0"
-              >
-                 {user?.profile_image ? (
-                   <img src={getImageUrl(user.profile_image)} alt="Profile" className="w-full h-full rounded-full object-cover" />
-                 ) : (
-                   user?.full_name?.[0]?.toUpperCase()
-                 )}
-              </div>
-              <button 
-                onClick={() => {
-                  navigate('/');
-                  setTimeout(() => {
-                    logout();
-                  }, 50);
-                }} 
-                className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest hover:underline cursor-pointer"
-              >
-                Sign Out
-              </button>
+
+          <div className="flex items-center gap-3 md:gap-6">
+            <NotificationBell />
+            <div
+              onClick={() => setShowProfileModal(true)}
+              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-2xl border border-slate-300 bg-slate-900 text-xs font-black text-white shadow-sm transition-colors hover:bg-black"
+            >
+              {user?.profile_image ? (
+                <img src={getImageUrl(user.profile_image)} alt="Profile" className="h-full w-full rounded-2xl object-cover" />
+              ) : (
+                user?.full_name?.[0]?.toUpperCase()
+              )}
             </div>
+            <button
+              onClick={() => {
+                navigate('/');
+                setTimeout(() => {
+                  logout();
+                }, 50);
+              }}
+              className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 transition hover:text-slate-950"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
       </header>
 
-      <div className="w-full px-4 md:px-8 lg:px-12 py-8 md:py-10 mx-auto">
-        <section className="bg-white border border-gray-100 rounded-[2rem] shadow-sm p-5 md:p-7 mb-8 animate-fade-in">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-6">
-            <div className="max-w-3xl">
-              <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.22em] mb-2">Host Command Center</p>
-              <h2 className="text-2xl md:text-4xl font-bold text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
-                Your Portfolio
-              </h2>
-              <p className="text-sm text-charcoal-muted font-semibold leading-relaxed">
-                Manage listings, subscriptions, calendar readiness, payouts and guest experience from one clean workspace.
+      <div className="mx-auto w-full px-4 py-8 md:px-8 lg:px-12">
+        <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <aside className="h-fit rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_16px_36px_rgba(15,23,42,0.04)] xl:sticky xl:top-28">
+            <div className="border-b border-slate-200 px-2 pb-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Host Panel</p>
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950">Dashboard</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Listings, payouts, bookings, calendar and guest experience in one workspace.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
-              <button
-                onClick={() => navigate('/host/performance')}
-                className="min-h-[48px] rounded-2xl border border-gray-200 px-5 text-xs font-bold uppercase tracking-widest text-charcoal hover:border-terracotta hover:text-terracotta transition inline-flex items-center justify-center gap-2"
-              >
-                <Star className="w-4 h-4" />
-                Ratings
-              </button>
-              <button
-                onClick={handleListPropertyClick}
-                className={`min-h-[48px] rounded-2xl px-6 font-bold uppercase tracking-widest text-xs transition-all inline-flex items-center justify-center gap-2 ${
-                  isLocked 
-                    ? 'bg-sand-200 text-charcoal-muted hover:bg-sand-300' 
-                    : 'bg-charcoal text-white shadow-premium hover:bg-terracotta'
-                }`}
-                data-testid="create-property-btn"
-              >
-                {isLocked ? <Lock className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                List New Property
-              </button>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-6 border-t border-gray-100">
-            {[
-              ['Host', user?.full_name || 'Host'],
-              ['KYC', user?.kyc_status || 'pending'],
-              ['Live Properties', properties.filter(isLive).length],
-              ['Open Payouts', payouts.filter(p => ['eligible', 'processing', 'needs_destination'].includes(p.status)).length],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl bg-stone/70 border border-sand-100 px-4 py-3 min-w-0">
-                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
-                <p className="text-sm font-bold text-charcoal mt-1 truncate capitalize">{value}</p>
+            <div className="mt-5 space-y-2">
+              {hostNavigation.map((item) => (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all ${
+                    item.path === '/host/dashboard'
+                      ? 'bg-slate-900 text-white shadow-[0_12px_24px_rgba(15,23,42,0.14)]'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+                  }`}
+                >
+                  <item.icon className={`h-4 w-4 shrink-0 ${item.path === '/host/dashboard' ? 'text-white' : 'text-slate-700'}`} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-bold leading-5">{item.label}</span>
+                    <span className={`mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.18em] ${item.path === '/host/dashboard' ? 'text-white/65' : 'text-slate-400'}`}>
+                      {item.group}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Account Snapshot</p>
+              <div className="mt-4 space-y-3">
+                {[
+                  ['Host', user?.full_name || 'Host'],
+                  ['KYC', user?.kyc_status || 'pending'],
+                  ['Live Properties', properties.filter(isLive).length],
+                  ['Open Payouts', payouts.filter((p) => ['eligible', 'processing', 'needs_destination'].includes(p.status)).length],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{label}</p>
+                    <p className="mt-1 text-sm font-bold capitalize text-slate-950">{value}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
+            </div>
+          </aside>
+
+          <main className="min-w-0">
+            <section className="mb-8 rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_16px_36px_rgba(15,23,42,0.04)] md:p-8 animate-fade-in">
+              <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+                <div className="max-w-3xl">
+                  <p className="mb-2 text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">X-Space360 Host Workspace</p>
+                  <h2 className="text-[32px] font-black tracking-[-0.05em] text-slate-950 md:text-[42px]" data-testid="dashboard-title">
+                    Your Portfolio
+                  </h2>
+                  <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
+                    Manage listings, subscriptions, calendar readiness, payouts and guest experience from one clean workspace.
+                  </p>
+                </div>
+                <div className="flex w-full flex-col gap-3 sm:flex-row xl:w-auto">
+                  <button
+                    onClick={() => navigate('/host/performance')}
+                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-slate-200 px-5 text-xs font-bold uppercase tracking-widest text-slate-700 transition hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    <Star className="h-4 w-4" />
+                    Ratings
+                  </button>
+                  <button
+                    onClick={handleListPropertyClick}
+                    className={`inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl px-6 text-xs font-bold uppercase tracking-widest transition-all ${
+                      isLocked
+                        ? 'bg-slate-200 text-slate-500 hover:bg-slate-300'
+                        : 'bg-slate-900 text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)] hover:bg-black'
+                    }`}
+                    data-testid="create-property-btn"
+                  >
+                    {isLocked ? <Lock className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                    List New Property
+                  </button>
+                </div>
+              </div>
+            </section>
 
         {/* Verification Status Banner */}
         {user?.kyc_status === 'pending' && (
-          <div className="bg-amber-50 border-l-4 border-amber-500 rounded-2xl p-4 md:p-6 mb-8 shadow-premium animate-fade-in flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="mb-8 flex flex-col gap-4 rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_16px_36px_rgba(15,23,42,0.04)] animate-fade-in sm:flex-row sm:items-center sm:justify-between md:p-6">
             <div className="flex items-center space-x-4">
-              <div className="bg-amber-100 p-3 rounded-xl text-amber-600 shrink-0">
-                <Lock className="w-6 h-6 animate-pulse" />
+              <div className="shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700">
+                <Lock className="h-6 w-6 animate-pulse" />
               </div>
               <div>
-                <h4 className="font-bold tracking-tight text-charcoal tracking-tight text-sm">Host Verification Pending Review</h4>
-                <p className="text-xs text-charcoal-muted mt-1">Your documents are under review. You can list new properties, but guest bookings will remain disabled until approved by the administrator.</p>
+                <h4 className="text-sm font-bold tracking-tight text-charcoal">Host Verification Pending Review</h4>
+                <p className="mt-1 text-xs text-charcoal-muted">Your documents are under review. You can list new properties, but guest bookings will remain disabled until approved by the administrator.</p>
               </div>
             </div>
-            <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest bg-amber-500 text-white px-3 py-1.5 rounded-full self-start sm:self-auto">Under Review</span>
+            <span className="self-start rounded-full bg-slate-900 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white sm:self-auto">Under Review</span>
           </div>
         )}
 
         {user?.kyc_status === 'rejected' && (
-          <div className="bg-red-50 border-l-4 border-red-500 rounded-2xl p-6 mb-8 shadow-premium animate-fade-in flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="mb-8 flex flex-col gap-4 rounded-[28px] border border-red-200 bg-white p-6 shadow-[0_16px_36px_rgba(15,23,42,0.04)] animate-fade-in sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center space-x-4">
               <div className="bg-red-100 p-3 rounded-xl text-red-600">
                 <AlertCircle className="w-6 h-6" />
@@ -977,14 +977,14 @@ const HostDashboard = () => {
                     setCurrentPage(1);
                   }
                 }}
-                className={`bg-white rounded-3xl p-5 border shadow-sm group transition-all duration-300 min-h-[150px] ${
+                className={`bg-white rounded-3xl p-5 border shadow-[0_16px_36px_rgba(15,23,42,0.04)] group transition-all duration-300 min-h-[150px] ${
                   isClickable 
-                    ? 'cursor-pointer hover:border-terracotta hover:-translate-y-0.5 hover:shadow-premium' 
+                    ? 'cursor-pointer hover:border-slate-300 hover:-translate-y-0.5 hover:shadow-[0_22px_48px_rgba(15,23,42,0.06)]' 
                     : ''
                 } ${
                   isActive 
-                    ? 'border-terracotta ring-1 ring-terracotta/20 bg-stone/30' 
-                    : 'border-gray-100'
+                    ? 'border-slate-900 ring-1 ring-slate-900/10 bg-slate-50/70' 
+                    : 'border-slate-200'
                 }`}
                 data-testid={`stat-${idx}`}
               >
@@ -993,7 +993,7 @@ const HostDashboard = () => {
                     <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{stat.label}</p>
                     <p className="text-2xl md:text-3xl font-bold text-charcoal mt-4 break-words">{stat.value}</p>
                   </div>
-                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors ${isActive ? 'bg-terracotta text-white' : stat.tone}`}>
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-colors ${isActive ? 'bg-slate-900 text-white' : stat.tone}`}>
                     <stat.icon className={`w-5 h-5 ${isActive ? 'text-white' : ''}`} />
                   </div>
                 </div>
@@ -1005,10 +1005,10 @@ const HostDashboard = () => {
 
         {/* Properties List */}
         <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
-          <div className="bg-white border border-gray-100 rounded-[2rem] shadow-sm p-4 md:p-5 mb-6">
+          <div className="mb-6 rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_16px_36px_rgba(15,23,42,0.04)] md:p-5">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
-                <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-1">Listing Operations</p>
+                <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Listing Operations</p>
                 <h3 className="text-xl font-bold text-charcoal tracking-tight">
                {filterStatus === 'all' ? 'All Properties' :
                 filterStatus === 'live' ? 'Active Listings' :
@@ -1031,7 +1031,7 @@ const HostDashboard = () => {
                       setCurrentPage(1);
                     }}
                     className={`px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest transition ${
-                      filterStatus === value ? 'bg-charcoal text-white' : 'bg-stone text-charcoal-muted hover:text-charcoal'
+                      filterStatus === value ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-900'
                     }`}
                   >
                     {label}
@@ -1251,6 +1251,8 @@ const HostDashboard = () => {
               </div>
             );
           })()}
+        </div>
+          </main>
         </div>
 
         {deleteModal.isOpen && (

@@ -30,6 +30,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { accountAPI, bookingAPI, propertyAPI, reviewAPI } from '../services/api';
 import HostSupportWidget from '../components/HostSupportWidget';
+import HostWorkspaceShell from '../components/HostWorkspaceShell';
 
 const HostPerformance = () => {
   const navigate = useNavigate();
@@ -264,83 +265,20 @@ const HostPerformance = () => {
   };
 
   return (
-    <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
-      {/* Header matching other Host views */}
-      <header className="header-glass sticky top-0 z-50 px-6 py-4">
-        <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex items-center justify-between w-full md:w-auto">
-            <div 
-              className="flex items-center space-x-3 cursor-pointer group" 
-              onClick={() => navigate('/')}
-            >
-              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
-            </div>
-            <div className="flex items-center space-x-3 md:hidden">
-              <span className="text-xs font-bold text-charcoal-muted">
-                {user?.full_name?.split(' ')[0]}
-              </span>
-              <button 
-                onClick={() => {
-                  navigate('/');
-                  setTimeout(logout, 50);
-                }} 
-                className="text-xs font-bold tracking-tight text-terracotta hover:underline uppercase cursor-pointer"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-row items-center gap-3 w-full md:w-auto border-t border-sand-100 md:border-none pt-2 md:pt-0 overflow-x-auto no-scrollbar">
-            <nav className="flex items-center space-x-6 shrink-0">
-               {[
-                 { label: 'DASHBOARD', path: '/host/dashboard' },
-                 { label: 'CALENDAR', path: '/host/calendar' },
-                 { label: 'PAYOUTS', path: '/host/payouts' },
-                 { label: 'BOOKINGS', path: '/host/bookings' },
-                 { label: 'PERFORMANCE', path: '/host/performance' }
-               ].map((item) => (
-                 <button
-                   key={item.label}
-                   onClick={() => navigate(item.path)}
-                   className={`text-[10px] font-bold tracking-tight tracking-[0.2em] transition-colors shrink-0 ${
-                     item.path === '/host/performance' 
-                       ? 'text-terracotta border-b-2 border-terracotta pb-0.5' 
-                       : 'text-charcoal-muted hover:text-terracotta'
-                   }`}
-                 >
-                   {item.label}
-                 </button>
-               ))}
-            </nav>
-            <div className="h-6 w-px bg-sand-200 hidden md:block"></div>
-            <div className="hidden md:flex items-center gap-2 md:gap-4">
-              <span className="text-xs font-bold text-charcoal-muted">
-                Welcome, {user?.full_name?.split(' ')[0]}
-              </span>
-              <button 
-                onClick={() => {
-                  navigate('/');
-                  setTimeout(logout, 50);
-                }} 
-                className="text-xs font-bold tracking-tight text-terracotta hover:underline tracking-widest uppercase cursor-pointer"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="w-full px-4 md:px-8 lg:px-12 py-10 mx-auto space-y-8">
-        <div>
-          <h2 className="text-2xl md:text-4xl font-bold tracking-tight text-charcoal tracking-tight mb-2">
-            Host Performance Analytics
-          </h2>
-          <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">
-            Detailed insights into your property earnings, occupancy patterns, and guest ratings
-          </p>
-        </div>
+    <HostWorkspaceShell
+      activePath="/host/performance"
+      sidebarTitle="Performance"
+      sidebarDescription="Track occupancy, earnings and guest sentiment from one clean host workspace."
+      heroTitle="Host Performance Analytics"
+      heroDescription="Detailed insights into your property earnings, occupancy patterns and guest ratings."
+      sidebarSnapshot={[
+        ['Host', user?.full_name || 'Host'],
+        ['Properties', properties.length],
+        ['Bookings', bookings.length],
+        ['Reviews', metrics.reviews.length],
+      ]}
+    >
+      <div className="space-y-8">
 
         <div className="bg-white border border-gray-100 rounded-3xl p-3 shadow-sm">
           <div className="flex flex-wrap gap-2">
@@ -353,7 +291,7 @@ const HostPerformance = () => {
                 type="button"
                 onClick={() => setActiveTab(tab)}
                 className={`px-5 py-3 rounded-2xl text-[10px] font-bold uppercase tracking-widest transition ${
-                  activeTab === tab ? 'bg-charcoal text-white' : 'bg-stone text-charcoal-muted hover:text-charcoal'
+                  activeTab === tab ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:text-slate-900'
                 }`}
               >
                 {label}
@@ -363,8 +301,8 @@ const HostPerformance = () => {
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-charcoal-muted">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-t-terracotta border-gray-100 mb-4"></div>
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+            <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900"></div>
             <span className="text-sm font-bold uppercase tracking-wider">Syncing performance charts...</span>
           </div>
         ) : (
@@ -374,11 +312,11 @@ const HostPerformance = () => {
             {/* Metric Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {[
-                { label: 'Monthly Earnings', value: formattedEarnings, sub: 'Lifetime net payouts', icon: IndianRupee, color: 'text-emerald-600 bg-emerald-50' },
+                { label: 'Monthly Earnings', value: formattedEarnings, sub: 'Lifetime net payouts', icon: IndianRupee, color: 'text-blue-600 bg-blue-50' },
                 { label: 'Upcoming Payouts', value: formattedUpcoming, sub: 'Awaiting eligibility cycle', icon: Calendar, color: 'text-blue-600 bg-blue-50' },
-                { label: 'Occupancy Rate', value: `${metrics.occupancyRate}%`, sub: 'Last 30 days average', icon: Percent, color: 'text-terracotta bg-terracotta/5' },
+                { label: 'Occupancy Rate', value: `${metrics.occupancyRate}%`, sub: 'Last 30 days average', icon: Percent, color: 'text-slate-700 bg-slate-100' },
                 { label: 'Cancellation Rate', value: `${metrics.cancellationRate}%`, sub: 'Ratio of cancelled stays', icon: XCircle, color: 'text-red-600 bg-red-50' },
-                { label: 'Guest Rating', value: `${metrics.avgRating} / 5`, sub: `Across all guest reviews`, icon: Star, color: 'text-amber-500 bg-amber-50' }
+                { label: 'Guest Rating', value: `${metrics.avgRating} / 5`, sub: `Across all guest reviews`, icon: Star, color: 'text-slate-700 bg-slate-100' }
               ].map(card => (
                 <div key={card.label} className="bg-white border border-gray-100 shadow-sm p-6 rounded-3xl flex flex-col justify-between hover:shadow-premium transition-shadow duration-300">
                   <div className="flex items-center justify-between">
@@ -412,7 +350,7 @@ const HostPerformance = () => {
                       <YAxis stroke="#888" fontSize={10} tickLine={false} />
                       <Tooltip />
                       <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
-                      <Line type="monotone" dataKey="Bookings" stroke="#006437" strokeWidth={3} activeDot={{ r: 8 }} />
+                      <Line type="monotone" dataKey="Bookings" stroke="#0f172a" strokeWidth={3} activeDot={{ r: 8 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -429,8 +367,8 @@ const HostPerformance = () => {
                     <AreaChart data={occupancyTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorOcc" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#C84E31" stopOpacity={0.4} />
-                          <stop offset="95%" stopColor="#C84E31" stopOpacity={0} />
+                          <stop offset="5%" stopColor="#2563EB" stopOpacity={0.24} />
+                          <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#F1F1F1" />
@@ -438,7 +376,7 @@ const HostPerformance = () => {
                       <YAxis stroke="#888" fontSize={10} tickLine={false} />
                       <Tooltip />
                       <Legend wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
-                      <Area type="monotone" dataKey="Occupancy %" stroke="#C84E31" strokeWidth={3} fillOpacity={1} fill="url(#colorOcc)" />
+                      <Area type="monotone" dataKey="Occupancy %" stroke="#2563EB" strokeWidth={3} fillOpacity={1} fill="url(#colorOcc)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -451,7 +389,7 @@ const HostPerformance = () => {
             <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
               <aside className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm h-fit">
                 <div className="flex items-center gap-2 mb-5">
-                  <Award className="w-4 h-4 text-amber-500" />
+                  <Award className="w-4 h-4 text-blue-600" />
                   <div>
                     <h3 className="text-sm font-bold text-charcoal">Property Wise Ratings</h3>
                     <p className="text-[10px] text-charcoal-muted font-bold uppercase tracking-widest">{metrics.avgRating} average rating</p>
@@ -461,7 +399,7 @@ const HostPerformance = () => {
                   <button
                     type="button"
                     onClick={() => setSelectedPropertyId('all')}
-                    className={`w-full text-left rounded-2xl border px-4 py-3 transition ${selectedPropertyId === 'all' ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 hover:bg-stone'}`}
+                    className={`w-full text-left rounded-2xl border px-4 py-3 transition ${selectedPropertyId === 'all' ? 'border-blue-200 bg-blue-50' : 'border-gray-100 hover:bg-slate-50'}`}
                   >
                     <p className="text-xs font-bold text-charcoal">All Properties</p>
                     <p className="text-[10px] text-charcoal-muted">{metrics.reviews.length} reviews</p>
@@ -471,7 +409,7 @@ const HostPerformance = () => {
                       key={property.property_id}
                       type="button"
                       onClick={() => setSelectedPropertyId(property.property_id)}
-                      className={`w-full text-left rounded-2xl border px-4 py-3 transition ${selectedPropertyId === property.property_id ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 hover:bg-stone'}`}
+                      className={`w-full text-left rounded-2xl border px-4 py-3 transition ${selectedPropertyId === property.property_id ? 'border-blue-200 bg-blue-50' : 'border-gray-100 hover:bg-slate-50'}`}
                     >
                       <p className="text-xs font-bold text-charcoal break-words">{property.title}</p>
                       <p className="text-[10px] text-charcoal-muted">{property.city} | {property.reviews.length} reviews | {property.rating}/5</p>
@@ -486,8 +424,8 @@ const HostPerformance = () => {
                     <h3 className="text-base font-bold text-charcoal">Ratings & Reviews</h3>
                     <p className="text-xs text-charcoal-muted mt-0.5">Review property-wise feedback and reply as host.</p>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-xl text-amber-600 w-fit">
-                    <Star className="w-4 h-4 fill-amber-500" />
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-blue-50 border border-blue-200 rounded-xl text-blue-700 w-fit">
+                    <Star className="w-4 h-4 fill-blue-600" />
                     <span className="text-xs font-bold">{metrics.avgRating} Average Rating</span>
                   </div>
                 </div>
@@ -497,7 +435,7 @@ const HostPerformance = () => {
                 ) : (
                   <div className="grid grid-cols-1 gap-4 mt-5">
                     {filteredReviews.map((rev) => (
-                      <div key={rev.review_id} className="p-5 bg-stone/40 border border-sand-100 rounded-2xl space-y-4">
+                      <div key={rev.review_id} className="p-5 bg-slate-50/70 border border-slate-200 rounded-2xl space-y-4">
                         <div className="flex justify-between items-start gap-3">
                           <div>
                             <span className="font-bold text-charcoal text-sm block">{rev.guest_name}</span>
@@ -507,7 +445,7 @@ const HostPerformance = () => {
                         </div>
                         <div className="flex items-center gap-1">
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={`w-4 h-4 ${i < rev.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-200'}`} />
+                            <Star key={i} className={`w-4 h-4 ${i < rev.rating ? 'text-blue-600 fill-blue-600' : 'text-gray-200'}`} />
                           ))}
                         </div>
                         <p className="text-sm text-charcoal-light leading-relaxed italic">"{rev.comment}"</p>
@@ -531,7 +469,7 @@ const HostPerformance = () => {
                               type="button"
                               onClick={() => submitHostReply(rev.review_id)}
                               disabled={replyingId === rev.review_id}
-                              className="inline-flex items-center gap-2 rounded-xl bg-charcoal px-5 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-terracotta transition disabled:opacity-60"
+                              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-black transition disabled:opacity-60"
                             >
                               <MessageSquare className="w-4 h-4" />
                               {replyingId === rev.review_id ? 'Replying...' : 'Reply to Review'}
@@ -547,9 +485,9 @@ const HostPerformance = () => {
           </div>
           )
         )}
-      </main>
+      </div>
       <HostSupportWidget context="rating_review" />
-    </div>
+    </HostWorkspaceShell>
   );
 };
 

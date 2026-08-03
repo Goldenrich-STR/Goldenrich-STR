@@ -11,22 +11,22 @@ import {
 } from 'lucide-react';
 
 const rmNavigation = [
-  { id: 'overview', label: 'Executive Dashboard', group: 'Control', status: 'Live', icon: BarChart3 },
-  { id: 'brokers', label: 'Broker Management', group: 'CRM', status: 'Live', icon: Users },
-  { id: 'hosts', label: 'Host Management', group: 'CRM', status: 'Next', icon: Briefcase },
-  { id: 'properties', label: 'Property Operations', group: 'Operations', status: 'Next', icon: Building2 },
-  { id: 'verifications', label: 'Verification Center', group: 'Operations', status: 'Live', icon: FileCheck },
-  { id: 'bookings', label: 'Booking Management', group: 'Operations', status: 'Next', icon: FileText },
-  { id: 'tasks', label: 'Tasks & Escalations', group: 'Workflow', status: 'Next', icon: Clock },
-  { id: 'analytics', label: 'Analytics & Reports', group: 'Insights', status: 'Live', icon: TrendingUp },
-  { id: 'audit', label: 'Audit & Activity', group: 'Compliance', status: 'Live', icon: ShieldCheck },
+  { id: 'overview', label: 'Executive Dashboard', group: 'Control', icon: BarChart3 },
+  { id: 'brokers', label: 'Broker Management', group: 'CRM', icon: Users },
+  { id: 'hosts', label: 'Host Management', group: 'CRM', icon: Briefcase },
+  { id: 'properties', label: 'Property Operations', group: 'Operations', icon: Building2 },
+  { id: 'verifications', label: 'Verification Center', group: 'Operations', icon: FileCheck },
+  { id: 'bookings', label: 'Booking Management', group: 'Operations', icon: FileText },
+  { id: 'tasks', label: 'Tasks & Escalations', group: 'Workflow', icon: Clock },
+  { id: 'analytics', label: 'Analytics & Reports', group: 'Insights', icon: TrendingUp },
+  { id: 'audit', label: 'Audit & Activity', group: 'Compliance', icon: ShieldCheck },
 ];
 
 const RMModulePlaceholder = ({ title, description, checkpoints }) => (
   <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium animate-slide-up">
     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
       <div>
-        <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Phase 15 RM Module</p>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">Phase 15 RM Module</p>
         <h3 className="text-2xl font-bold tracking-tight text-charcoal">{title}</h3>
         <p className="text-sm text-charcoal-muted mt-2 max-w-3xl">{description}</p>
       </div>
@@ -93,30 +93,26 @@ const EmployeeDashboard = () => {
   ] : [];
 
   const iconToneClass = {
-    terracotta: 'text-terracotta bg-terracotta/10',
-    sage: 'text-sage-dark bg-sage/10',
-    charcoal: 'text-charcoal bg-stone',
+    terracotta: 'text-slate-700 bg-slate-100',
+    sage: 'text-slate-700 bg-slate-100',
+    charcoal: 'text-slate-700 bg-slate-100',
     red: 'text-red-600 bg-red-50',
   };
 
   return (
     <div className="min-h-screen bg-stone flex">
-      <aside className="hidden xl:flex w-72 shrink-0 bg-white border-r border-gray-100 min-h-screen sticky top-0 flex-col">
-        <div className="px-6 py-5 border-b border-gray-100">
-          <button onClick={() => navigate('/')} className="flex items-center gap-3 text-left">
-            <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain" />
-            <span>
-              <span className="block text-sm font-black text-charcoal">X-Space360</span>
-              <span className="block text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">RM Control</span>
-            </span>
+      <aside className="hidden xl:flex w-72 shrink-0 bg-white border-r border-slate-200/80 min-h-screen sticky top-0 flex-col">
+        <div className="px-6 py-6 border-b border-slate-200/80">
+          <button onClick={() => navigate('/')} className="flex items-center text-left">
+            <img src="/logo.png" alt="X-Space360 Logo" className="h-12 w-auto object-contain" />
           </button>
         </div>
 
-        <div className="p-4 border-b border-gray-100">
-          <div className="rounded-2xl bg-stone border border-sand-200 px-3 py-2 flex items-center gap-2">
-            <Search className="w-4 h-4 text-charcoal-muted" />
+        <div className="px-5 py-4 border-b border-slate-200/80">
+          <div className="rounded-2xl bg-slate-50 border border-slate-200 px-3 py-3 flex items-center gap-2">
+            <Search className="w-4 h-4 text-slate-400" />
             <input
-              className="w-full bg-transparent outline-none text-sm text-charcoal placeholder:text-charcoal-muted"
+              className="w-full bg-transparent outline-none text-sm text-slate-700 placeholder:text-slate-400"
               placeholder="Search RM modules"
               aria-label="Search RM modules"
             />
@@ -128,28 +124,23 @@ const EmployeeDashboard = () => {
             groups[item.group] = [...(groups[item.group] || []), item];
             return groups;
           }, {})).map(([group, items]) => (
-            <div key={group} className="mb-5">
-              <p className="px-3 mb-2 text-[10px] font-bold text-charcoal-muted uppercase tracking-[0.18em]">{group}</p>
+            <div key={group} className="mb-6">
+              <p className="px-3 mb-3 text-[10px] font-bold text-slate-400 uppercase tracking-[0.24em]">{group}</p>
               <div className="space-y-1">
                 {items.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl text-left transition-all ${
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left transition-all ${
                       activeTab === tab.id
-                        ? 'bg-gold text-charcoal shadow-sm'
-                        : 'text-charcoal hover:bg-stone'
+                        ? 'bg-slate-900 text-white shadow-[0_14px_30px_rgba(15,23,42,0.16)]'
+                        : 'text-slate-700 hover:bg-slate-50'
                     }`}
                     data-testid={`tab-${tab.id}`}
                   >
-                    <span className="flex items-center gap-3 min-w-0">
+                    <span className="flex items-center gap-3 min-w-0 flex-1">
                       <tab.icon className="w-4 h-4 shrink-0" />
-                      <span className="text-sm font-bold truncate">{tab.label}</span>
-                    </span>
-                    <span className={`shrink-0 rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-widest ${
-                      tab.status === 'Live' ? 'bg-sage/10 text-sage-dark' : 'bg-sand-100 text-charcoal-muted'
-                    }`}>
-                      {tab.status}
+                      <span className="text-[15px] font-semibold truncate">{tab.label}</span>
                     </span>
                   </button>
                 ))}
@@ -163,7 +154,6 @@ const EmployeeDashboard = () => {
         <header className="header-glass px-4 md:px-8 py-4 sticky top-0 z-40" data-testid="employee-header">
           <div className="flex justify-between items-center gap-4">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.22em] mb-1">X-Space360 Relationship Management</p>
               <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-charcoal truncate" data-testid="dashboard-title">
                 RM Operations Control Center
               </h2>
@@ -226,7 +216,7 @@ const EmployeeDashboard = () => {
           <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-5 md:p-6 mb-8">
             <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-6">
               <div>
-                <p className="text-[10px] font-bold text-gold uppercase tracking-[0.22em] mb-2">RM Profile</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.22em] mb-2">RM Profile</p>
                 <h3 className="text-xl md:text-2xl font-bold text-charcoal">{user?.full_name || 'Relationship Manager'}</h3>
                 <p className="text-sm text-charcoal-muted mt-2">Assigned operations ownership across brokers, hosts, properties, verifications, bookings and performance.</p>
               </div>
@@ -237,7 +227,7 @@ const EmployeeDashboard = () => {
                   ['Branch', user?.branch || 'N/A'],
                   ['Territory', user?.employee_region || user?.city || 'N/A'],
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-2xl bg-stone/70 border border-sand-200 px-3 py-3 min-w-0">
+                  <div key={label} className="rounded-2xl bg-slate-50 border border-slate-200 px-3 py-3 min-w-0">
                     <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>
                     <p className="text-xs font-bold text-charcoal mt-1 truncate">{value}</p>
                   </div>
@@ -273,7 +263,7 @@ const EmployeeDashboard = () => {
 
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-8">
                   <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-5">
-                    <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-3">Broker Health</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3">Broker Health</p>
                     <div className="space-y-3">
                       {[
                         ['Active', stats.brokers?.active || 0],
@@ -288,7 +278,7 @@ const EmployeeDashboard = () => {
                     </div>
                   </div>
                   <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-5">
-                    <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-3">Verification Queue</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3">Verification Queue</p>
                     <div className="space-y-3">
                       {[
                         ['Host KYC Pending', stats.hosts?.pending_verification || 0],
@@ -303,7 +293,7 @@ const EmployeeDashboard = () => {
                     </div>
                   </div>
                   <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-5">
-                    <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-3">Booking Pulse</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-3">Booking Pulse</p>
                     <div className="space-y-3">
                       {[
                         ['Today', stats.bookings?.today || 0],
@@ -321,9 +311,9 @@ const EmployeeDashboard = () => {
 
                 {/* Pending Reviews Alert */}
                 {stats && stats.verifications.pending_review > 0 && (
-                  <div className="dashboard-card bg-yellow-50 border-l-4 border-yellow-500 mb-8" data-testid="pending-alert">
+                  <div className="dashboard-card bg-slate-50 border-l-4 border-slate-900 mb-8" data-testid="pending-alert">
                     <div className="flex items-center space-x-3">
-                      <AlertCircle className="w-6 h-6 text-yellow-600" />
+                      <AlertCircle className="w-6 h-6 text-slate-700" />
                       <div>
                         <p className="font-bold text-charcoal">
                           {stats.verifications.pending_review} Verifications Pending Your Review
@@ -349,7 +339,7 @@ const EmployeeDashboard = () => {
                       className="flex items-center space-x-3 p-4 bg-stone rounded-lg hover:bg-gray-50 transition"
                       data-testid="action-review"
                     >
-                      <FileCheck className="w-6 h-6 text-terracotta" />
+                      <FileCheck className="w-6 h-6 text-slate-700" />
                       <span className="font-semibold text-charcoal">Review Verifications</span>
                     </button>
                     <button
@@ -357,7 +347,7 @@ const EmployeeDashboard = () => {
                       className="flex items-center space-x-3 p-4 bg-stone rounded-lg hover:bg-gray-50 transition"
                       data-testid="action-brokers"
                     >
-                      <Users className="w-6 h-6 text-sage" />
+                      <Users className="w-6 h-6 text-slate-700" />
                       <span className="font-semibold text-charcoal">View Brokers</span>
                     </button>
                     <button
@@ -365,7 +355,7 @@ const EmployeeDashboard = () => {
                       className="flex items-center space-x-3 p-4 bg-stone rounded-lg hover:bg-gray-50 transition"
                       data-testid="action-reports"
                     >
-                      <FileText className="w-6 h-6 text-terracotta" />
+                      <FileText className="w-6 h-6 text-slate-700" />
                       <span className="font-semibold text-charcoal">Generate Reports</span>
                     </button>
                   </div>
@@ -798,7 +788,7 @@ const VerificationReviewSection = () => {
                         <span className={`rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-widest ${
                           verification.status === 'approved' || verification.rm_approved === true ? 'bg-green-100 text-green-800' :
                           verification.status === 'rejected' || verification.rm_approved === false ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
+                          'bg-slate-100 text-slate-700'
                         }`}>
                           {verification.status}
                         </span>
@@ -965,7 +955,7 @@ const VerificationReviewSection = () => {
                     </div>
                     <div>
                       <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Price / Pricing Cycle</p>
-                      <p className="font-bold text-terracotta">
+                      <p className="font-bold text-slate-700">
                         {selectedVerification.property_details.price_per_night !== undefined 
                           ? `₹${selectedVerification.property_details.price_per_night} / ${selectedVerification.property_details.pricing_cycle || 'night'}` 
                           : 'N/A'}
@@ -1089,7 +1079,7 @@ const VerificationReviewSection = () => {
               {/* Broker Remarks */}
               {selectedVerification.broker_remarks && (
                 <div className="p-6 bg-terracotta/5 rounded-2xl border border-terracotta/10">
-                  <h4 className="text-sm font-bold tracking-tight text-terracotta uppercase tracking-widest mb-2">Broker Remarks</h4>
+                  <h4 className="text-sm font-bold tracking-tight text-slate-400 uppercase tracking-widest mb-2">Broker Remarks</h4>
                   <p className="text-charcoal leading-relaxed italic">"{selectedVerification.broker_remarks}"</p>
                 </div>
               )}
@@ -1327,7 +1317,7 @@ const BrokersSection = () => {
   return (
     <div data-testid="brokers-section">
       <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-6 mb-6">
-        <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">RM Broker CRM</p>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">RM Broker CRM</p>
         <h3 className="text-2xl font-bold text-charcoal mb-2">Broker Management</h3>
         <p className="text-charcoal-muted text-sm">Monitor assigned brokers with host, property, booking, revenue, commission and escalation performance.</p>
       </div>
@@ -1366,7 +1356,7 @@ const BrokersSection = () => {
                         className="text-left p-3 bg-stone rounded-2xl hover:bg-gray-50 hover:shadow-sm cursor-pointer transition-all duration-300 border border-transparent hover:border-terracotta/20"
                         title="Click to view assigned Hosts"
                       >
-                        <p className="text-lg font-bold text-terracotta">{broker.stats.hosts || broker.stats.owners}</p>
+                        <p className="text-lg font-bold text-slate-800">{broker.stats.hosts || broker.stats.owners}</p>
                         <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Hosts</p>
                       </div>
                       <div 
@@ -1382,7 +1372,7 @@ const BrokersSection = () => {
                         <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Bookings</p>
                       </div>
                       <div className="text-left p-3 bg-stone rounded-2xl">
-                        <p className="text-lg font-bold text-terracotta">{broker.stats.pending_verifications || 0}</p>
+                        <p className="text-lg font-bold text-slate-800">{broker.stats.pending_verifications || 0}</p>
                         <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Pending</p>
                       </div>
                       <div className="text-left p-3 bg-stone rounded-2xl">
@@ -1470,7 +1460,7 @@ const BrokersSection = () => {
                           <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest ${
                             owner.kyc_status === 'approved' ? 'bg-green-100 text-green-800' :
                             owner.kyc_status === 'rejected' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
+                            'bg-slate-100 text-slate-700'
                           }`}>
                             KYC: {owner.kyc_status || 'pending'}
                           </span>
@@ -1572,7 +1562,7 @@ const BrokersSection = () => {
                           <span className={`px-2.5 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest ${
                             property.status === 'live' ? 'bg-green-100 text-green-800' :
                             property.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                            property.status === 'under_review' ? 'bg-yellow-100 text-yellow-800' :
+                            property.status === 'under_review' ? 'bg-slate-100 text-slate-700' :
                             'bg-gray-100 text-gray-800'
                           }`}>
                             Status: {property.status?.replace('_', ' ') || 'pending'}
@@ -1695,11 +1685,11 @@ const buildRMHostVerificationStages = (host, properties, verifications, payments
 const RMVerificationTracker = ({ stages }) => {
   const statusStyles = {
     completed: 'bg-sage/10 text-sage-dark border-sage/20',
-    pending: 'bg-amber-100 text-amber-700 border-amber-200',
+    pending: 'bg-slate-100 text-slate-700 border-slate-200',
     rejected: 'bg-red-50 text-red-600 border-red-100',
     're-upload required': 'bg-red-50 text-red-600 border-red-100',
     waiting: 'bg-stone text-charcoal-muted border-sand-200',
-    escalated: 'bg-terracotta/10 text-terracotta border-terracotta/20',
+    escalated: 'bg-slate-100 text-slate-700 border-slate-200',
   };
 
   return (
@@ -1709,7 +1699,7 @@ const RMVerificationTracker = ({ stages }) => {
           <h4 className="text-sm font-bold text-charcoal uppercase tracking-widest">Host Verification Tracker</h4>
           <p className="text-xs text-charcoal-muted mt-1">Stage-wise status from host registration to live property readiness.</p>
         </div>
-        <FileCheck className="w-5 h-5 text-terracotta" />
+        <FileCheck className="w-5 h-5 text-slate-700" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         {stages.map((stage, index) => (
@@ -1767,7 +1757,7 @@ const RMDocumentReviewPanel = ({ host, docs, formatDate }) => {
     if (status === 'approved' || status === 'verified') return 'bg-sage/10 text-sage-dark border-sage/20';
     if (status === 'rejected') return 'bg-red-50 text-red-600 border-red-100';
     if (status === 'expired') return 'bg-red-50 text-red-600 border-red-100';
-    return 'bg-amber-100 text-amber-700 border-amber-200';
+    return 'bg-slate-100 text-slate-700 border-slate-200';
   };
 
   return (
@@ -1777,7 +1767,7 @@ const RMDocumentReviewPanel = ({ host, docs, formatDate }) => {
           <h4 className="text-sm font-bold text-charcoal uppercase tracking-widest">Document Verification Review</h4>
           <p className="text-xs text-charcoal-muted mt-1">Preview, download and review host document readiness.</p>
         </div>
-        <FileText className="w-5 h-5 text-terracotta" />
+        <FileText className="w-5 h-5 text-slate-700" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-5">
         {requiredTypes.map(([key, label]) => {
@@ -1880,7 +1870,7 @@ const RMHostsSection = () => {
     <div data-testid="rm-hosts-section" className="animate-slide-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">RM Host CRM</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">RM Host CRM</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Host Management</h3>
           <p className="text-sm text-charcoal-muted mt-2">All hosts under assigned brokers with KYC, property, booking and revenue ownership.</p>
         </div>
@@ -1921,7 +1911,7 @@ const RMHostsSection = () => {
                       <p className="text-xs text-charcoal-muted mt-1">{host.email || 'No email'} | {host.phone || 'No mobile'}</p>
                     </div>
                     <span className={`rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-widest ${
-                      host.kyc_status === 'approved' ? 'bg-sage/10 text-sage-dark' : host.kyc_status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-amber-100 text-amber-700'
+                      host.kyc_status === 'approved' ? 'bg-slate-100 text-slate-700' : host.kyc_status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-700'
                     }`}>
                       KYC: {host.kyc_status || 'pending'}
                     </span>
@@ -2036,7 +2026,7 @@ const RMHostDetailsModal = ({ data, loading, formatMoney, formatDate, onClose })
       <div className="bg-stone rounded-[2rem] max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-elevated border border-gray-100">
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-5 flex items-start justify-between gap-4 z-10">
           <div>
-            <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-1">Host Details</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">Host Details</p>
             <h3 className="text-2xl font-bold text-charcoal">{host.full_name || 'Host Profile'}</h3>
             <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest mt-1">Host ID: {host.user_id || 'N/A'} | Broker: {broker.full_name || host.broker_name || 'Not assigned'}</p>
           </div>
@@ -2129,10 +2119,10 @@ const RMHostDetailsModal = ({ data, loading, formatMoney, formatDate, onClose })
 const RMPropertyTracker = ({ stages = [] }) => {
   const statusStyles = {
     completed: 'bg-sage/10 text-sage-dark border-sage/20',
-    pending: 'bg-amber-100 text-amber-700 border-amber-200',
+    pending: 'bg-slate-100 text-slate-700 border-slate-200',
     rejected: 'bg-red-50 text-red-600 border-red-100',
     waiting: 'bg-stone text-charcoal-muted border-sand-200',
-    escalated: 'bg-terracotta/10 text-terracotta border-terracotta/20',
+    escalated: 'bg-slate-100 text-slate-700 border-slate-200',
   };
 
   return (
@@ -2142,7 +2132,7 @@ const RMPropertyTracker = ({ stages = [] }) => {
           <h4 className="text-sm font-bold text-charcoal uppercase tracking-widest">Property Verification Tracker</h4>
           <p className="text-xs text-charcoal-muted mt-1">Basic information to live property approval sequence.</p>
         </div>
-        <Building2 className="w-5 h-5 text-terracotta" />
+        <Building2 className="w-5 h-5 text-slate-700" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         {stages.map((stage, index) => (
@@ -2213,7 +2203,7 @@ const RMPropertiesSection = () => {
     <div data-testid="rm-properties-section" className="animate-slide-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">RM Property Operations</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">RM Property Operations</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Property Management</h3>
           <p className="text-sm text-charcoal-muted mt-2">RM-scoped property pipeline across assigned brokers and hosts.</p>
         </div>
@@ -2280,7 +2270,7 @@ const RMPropertiesSection = () => {
                       <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">Broker: {property.broker_summary?.full_name || property.broker_id || 'N/A'}</p>
                     </div>
                     <span className={`rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-widest ${
-                      property.status === 'live' ? 'bg-sage/10 text-sage-dark' : property.status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-amber-100 text-amber-700'
+                      property.status === 'live' ? 'bg-slate-100 text-slate-700' : property.status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-slate-100 text-slate-700'
                     }`}>
                       {property.status || 'draft'}
                     </span>
@@ -2361,7 +2351,7 @@ const RMPropertyDetailsModal = ({ data, loading, formatMoney, formatDate, onClos
     ? 'bg-sage/10 text-sage-dark border-sage/20'
     : property.status === 'rejected'
       ? 'bg-red-50 text-red-600 border-red-100'
-      : 'bg-amber-50 text-amber-700 border-amber-100';
+      : 'bg-slate-100 text-slate-700 border-slate-200';
 
   const renderRow = (item, index) => {
     if (activeView === 'verifications') {
@@ -2384,7 +2374,7 @@ const RMPropertyDetailsModal = ({ data, loading, formatMoney, formatDate, onClos
               className="w-16 h-16 rounded-2xl object-cover border border-gray-100 bg-stone flex-shrink-0"
             />
             <div className="min-w-0">
-              <p className="text-[9px] font-bold text-terracotta uppercase tracking-[0.24em] mb-1">Property Workspace</p>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.24em] mb-1">Property Workspace</p>
               <h3 className="text-xl md:text-2xl font-bold text-charcoal truncate">{property.title || 'Property Profile'}</h3>
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 <span className="rounded-full bg-stone px-3 py-1 text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">
@@ -2393,7 +2383,7 @@ const RMPropertyDetailsModal = ({ data, loading, formatMoney, formatDate, onClos
                 <span className={`rounded-full border px-3 py-1 text-[9px] font-bold uppercase tracking-widest ${statusTone}`}>
                   {property.status || 'draft'}
                 </span>
-                <span className="rounded-full bg-sand-100 px-3 py-1 text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">
                   {tracker.current_stage || 'Basic Information'}
                 </span>
               </div>
@@ -2477,7 +2467,7 @@ const RMPropertyDetailsModal = ({ data, loading, formatMoney, formatDate, onClos
               <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-5">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
                   <div>
-                    <p className="text-[9px] font-bold text-terracotta uppercase tracking-[0.22em]">Approval Sequence</p>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.22em]">Approval Sequence</p>
                     <h4 className="text-lg font-bold text-charcoal mt-1">Property Verification Tracker</h4>
                   </div>
                   <span className="rounded-full bg-sage/10 px-4 py-2 text-[10px] font-bold text-sage-dark uppercase tracking-widest">
@@ -2564,7 +2554,7 @@ const RMBookingsSection = () => {
     <div data-testid="rm-bookings-section" className="animate-slide-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">RM Booking Operations</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">RM Booking Operations</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Booking Management</h3>
           <p className="text-sm text-charcoal-muted mt-2">Broker-wise, host-wise and property-wise booking tracking with revenue and occupancy context.</p>
         </div>
@@ -2642,7 +2632,7 @@ const RMBookingsSection = () => {
                       <p className="text-xs font-bold text-charcoal">{formatDate(booking.check_in_date)}</p>
                       <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">to {formatDate(booking.check_out_date)}</p>
                     </td>
-                    <td className="px-5 py-4 text-sm font-bold text-terracotta">{formatMoney(booking.total_amount)}</td>
+                    <td className="px-5 py-4 text-sm font-bold text-slate-800">{formatMoney(booking.total_amount)}</td>
                     <td className="px-5 py-4">
                       <span className="rounded-full bg-stone px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-charcoal-muted">{booking.booking_status || 'pending'}</span>
                     </td>
@@ -2705,7 +2695,7 @@ const RMBookingDetailsModal = ({ data, loading, formatMoney, formatDate, onClose
       <div className="bg-stone rounded-[2rem] max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-elevated border border-gray-100">
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-5 flex items-start justify-between gap-4 z-10">
           <div>
-            <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-1">Booking Details</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">Booking Details</p>
             <h3 className="text-2xl font-bold text-charcoal">{booking.booking_id || 'Booking'}</h3>
             <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest mt-1">{booking.booking_status || 'pending'} | {booking.payment_status || 'pending'}</p>
           </div>
@@ -2809,7 +2799,7 @@ const RMTasksSection = () => {
   const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not available';
   const badgeClass = (value) => {
     if (value === 'within_sla') return 'bg-sage/10 text-sage-dark';
-    if (value === 'at_risk') return 'bg-amber-100 text-amber-700';
+    if (value === 'at_risk') return 'bg-slate-100 text-slate-700';
     if (value === 'breached' || value === 'escalated') return 'bg-red-50 text-red-600';
     return 'bg-stone text-charcoal-muted';
   };
@@ -2820,7 +2810,7 @@ const RMTasksSection = () => {
     <div data-testid="rm-tasks-section" className="animate-slide-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">RM Workflow Engine</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">RM Workflow Engine</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Tasks, Escalations & Notifications</h3>
           <p className="text-sm text-charcoal-muted mt-2">Operational queue for approvals, broker follow-ups, host documents, SLA breaches and RM alerts.</p>
         </div>
@@ -2941,7 +2931,7 @@ const RMAuditActivitySection = () => {
     <div data-testid="rm-audit-activity-section" className="animate-slide-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">RM Compliance Control</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">RM Compliance Control</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Audit & Activity</h3>
           <p className="text-sm text-charcoal-muted mt-2">RM-scoped activity trail for approvals, verification reviews, host documents, properties, bookings and workflow changes.</p>
         </div>
@@ -3061,7 +3051,7 @@ const ReportsSection = () => {
     <div data-testid="reports-section" className="animate-slide-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">RM Analytics Command</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">RM Analytics Command</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">RM Analytics & Reports</h3>
           <p className="text-sm text-charcoal-muted mt-2">Broker, host, property, booking, revenue, commission and SLA performance inside your assigned RM scope.</p>
         </div>
@@ -3193,7 +3183,7 @@ const ReportsSection = () => {
                                 <td className="px-5 py-4 text-sm font-bold text-charcoal">{row.properties}</td>
                                 <td className="px-5 py-4 text-sm font-bold text-sage-dark">{row.live_properties}</td>
                                 <td className="px-5 py-4 text-sm font-bold text-charcoal">{row.bookings}</td>
-                                <td className="px-5 py-4 text-sm font-bold text-terracotta">Rs. {Number(row.revenue || 0).toLocaleString('en-IN')}</td>
+                                <td className="px-5 py-4 text-sm font-bold text-slate-800">Rs. {Number(row.revenue || 0).toLocaleString('en-IN')}</td>
                                 <td className="px-5 py-4 text-sm font-bold text-charcoal">Rs. {Number(row.commission || 0).toLocaleString('en-IN')}</td>
                               </>
                             )}
@@ -3204,7 +3194,7 @@ const ReportsSection = () => {
                                 <td className="px-5 py-4 text-sm font-bold text-charcoal">{row.properties}</td>
                                 <td className="px-5 py-4 text-sm font-bold text-sage-dark">{row.live_properties}</td>
                                 <td className="px-5 py-4 text-sm font-bold text-charcoal">{row.bookings}</td>
-                                <td className="px-5 py-4 text-sm font-bold text-terracotta">Rs. {Number(row.revenue || 0).toLocaleString('en-IN')}</td>
+                                <td className="px-5 py-4 text-sm font-bold text-slate-800">Rs. {Number(row.revenue || 0).toLocaleString('en-IN')}</td>
                               </>
                             )}
                             {activeTable === 'properties' && (
@@ -3215,7 +3205,7 @@ const ReportsSection = () => {
                                 <td className="px-5 py-4 text-xs font-bold text-charcoal-muted">{row.broker_id || 'N/A'}</td>
                                 <td className="px-5 py-4 text-xs font-bold text-charcoal-muted">{row.host_id || 'N/A'}</td>
                                 <td className="px-5 py-4 text-sm font-bold text-charcoal">{row.bookings}</td>
-                                <td className="px-5 py-4 text-sm font-bold text-terracotta">Rs. {Number(row.revenue || 0).toLocaleString('en-IN')}</td>
+                                <td className="px-5 py-4 text-sm font-bold text-slate-800">Rs. {Number(row.revenue || 0).toLocaleString('en-IN')}</td>
                               </>
                             )}
                           </tr>
@@ -3256,7 +3246,7 @@ const ReportsSection = () => {
                       <p className="text-xs text-charcoal-light">{broker.lg_code}</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-lg font-bold text-terracotta">{broker.total_properties}</p>
+                      <p className="text-lg font-bold text-slate-800">{broker.total_properties}</p>
                       <p className="text-xs text-charcoal-light">Total</p>
                     </div>
                     <div className="text-center">
@@ -3264,7 +3254,7 @@ const ReportsSection = () => {
                       <p className="text-xs text-charcoal-light">Live</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-lg font-bold text-yellow-600">{broker.pending_verification}</p>
+                      <p className="text-lg font-bold text-slate-700">{broker.pending_verification}</p>
                       <p className="text-xs text-charcoal-light">Pending</p>
                     </div>
                   </div>

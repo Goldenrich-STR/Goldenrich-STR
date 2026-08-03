@@ -13,23 +13,23 @@ import {
 } from 'lucide-react';
 
 const brokerNavigation = [
-  { id: 'overview', label: 'Command Center', group: 'Control', status: 'Live', icon: Building2 },
-  { id: 'owners', label: 'Host Management', group: 'CRM', status: 'Live', icon: Users },
-  { id: 'properties', label: 'Property CRM', group: 'CRM', status: 'Live', icon: Building2 },
-  { id: 'verifications', label: 'Verification Hub', group: 'Operations', status: 'Live', icon: FileCheck },
-  { id: 'bookings', label: 'Bookings & Reports', group: 'Operations', status: 'Next', icon: FileText },
-  { id: 'leads', label: 'Lead Pipeline', group: 'Sales', status: 'Live', icon: Target },
-  { id: 'commissions', label: 'Commission Ledger', group: 'Finance', status: 'Live', icon: IndianRupee },
-  { id: 'tasks', label: 'Tasks & Escalations', group: 'Operations', status: 'Next', icon: Clock },
-  { id: 'analytics', label: 'Analytics', group: 'Insights', status: 'Next', icon: Target },
-  { id: 'audit', label: 'Activity & Audit', group: 'Compliance', status: 'Next', icon: Briefcase },
+  { id: 'overview', label: 'Command Center', group: 'Control', icon: Building2 },
+  { id: 'owners', label: 'Host Management', group: 'CRM', icon: Users },
+  { id: 'properties', label: 'Property CRM', group: 'CRM', icon: Building2 },
+  { id: 'verifications', label: 'Verification Hub', group: 'Operations', icon: FileCheck },
+  { id: 'bookings', label: 'Bookings & Reports', group: 'Operations', icon: FileText },
+  { id: 'leads', label: 'Lead Pipeline', group: 'Sales', icon: Target },
+  { id: 'commissions', label: 'Commission Ledger', group: 'Finance', icon: IndianRupee },
+  { id: 'tasks', label: 'Tasks & Escalations', group: 'Operations', icon: Clock },
+  { id: 'analytics', label: 'Analytics', group: 'Insights', icon: Target },
+  { id: 'audit', label: 'Activity & Audit', group: 'Compliance', icon: Briefcase },
 ];
 
 const BrokerModulePlaceholder = ({ title, description, checkpoints }) => (
   <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium animate-slide-up">
     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
       <div>
-        <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Phase 12 Broker Module</p>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">Phase 12 Broker Module</p>
         <h3 className="text-2xl font-bold tracking-tight text-charcoal">{title}</h3>
         <p className="text-sm text-charcoal-muted mt-2 max-w-3xl">{description}</p>
       </div>
@@ -40,7 +40,7 @@ const BrokerModulePlaceholder = ({ title, description, checkpoints }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
       {checkpoints.map((item) => (
         <div key={item} className="rounded-2xl border border-sand-200 bg-stone/40 p-5">
-          <CheckCircle2 className="w-5 h-5 text-sage mb-4" />
+          <CheckCircle2 className="w-5 h-5 text-slate-700 mb-4" />
           <p className="text-xs font-bold text-charcoal uppercase tracking-widest">{item}</p>
         </div>
       ))}
@@ -76,34 +76,36 @@ const BrokerDashboard = () => {
       label: 'My Hosts', 
       value: stats.owners.total, 
       icon: Users, 
-      color: 'terracotta'
+      iconClassName: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200'
     },
     { 
       label: 'Total Properties', 
       value: stats.properties.total, 
       icon: Building2, 
-      color: 'sage',
-      subtext: `${stats.properties.live} Live`
+      iconClassName: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
+      subtext: `${stats.properties.live} Live`,
+      subtextClassName: 'border border-slate-200 bg-slate-100 text-slate-700'
     },
     { 
       label: 'Pending Verifications', 
       value: stats.verifications.pending, 
       icon: FileCheck, 
-      color: 'terracotta'
+      iconClassName: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200'
     },
     { 
       label: 'Total Commission', 
       value: `₹${(stats.commission.total / 100).toLocaleString('en-IN')}`, 
       icon: IndianRupee, 
-      color: 'sage',
+      iconClassName: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
+      subtextClassName: 'border border-slate-200 bg-slate-100 text-slate-700',
       subtext: `₹${(stats.commission.paid / 100).toLocaleString('en-IN')} Paid`
     },
   ] : [];
 
   return (
-    <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white">
+    <div className="min-h-screen bg-[#f7f7f5] selection:bg-slate-900 selection:text-white">
       {/* Header */}
-      <header className="glass px-4 md:px-8 lg:px-12 py-4 sticky top-0 z-50">
+      <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 px-4 py-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)] backdrop-blur md:px-8 lg:px-12">
         <div className="w-full flex justify-between items-center gap-2">
           <div 
             className="flex items-center space-x-3 cursor-pointer group" 
@@ -115,7 +117,7 @@ const BrokerDashboard = () => {
             <NotificationBell />
             <div 
               onClick={() => setShowProfileModal(true)}
-              className="w-9 h-9 rounded-full bg-[#7A9A85] hover:bg-[#6b8c76] flex items-center justify-center text-xs font-bold text-white cursor-pointer transition-colors shadow-subtle border border-slate-200 shrink-0"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-slate-300 bg-slate-900 text-xs font-black text-white shadow-sm transition-colors hover:bg-black"
             >
                {user?.profile_image ? (
                  <img src={getImageUrl(user.profile_image)} alt="Profile" className="w-full h-full rounded-full object-cover" />
@@ -130,7 +132,7 @@ const BrokerDashboard = () => {
                   logout();
                 }, 50);
               }}
-              className="flex items-center space-x-1 text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-[0.2em] hover:underline transition-all"
+              className="flex items-center space-x-1 text-[10px] font-bold tracking-tight text-slate-500 uppercase tracking-[0.2em] transition-all hover:text-slate-950"
               data-testid="logout-btn"
             >
               <LogOut className="w-4 h-4" />
@@ -140,49 +142,59 @@ const BrokerDashboard = () => {
         </div>
       </header>
 
-      <div className="w-full px-4 md:px-8 lg:px-12 py-10 mx-auto">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-12 animate-fade-in">
-          <div>
-            <h2 className="text-2xl md:text-4xl font-bold tracking-tight text-charcoal tracking-tight mb-2" data-testid="dashboard-title">
-              Broker Command Center
-            </h2>
-            <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Enterprise workspace for hosts, properties, verifications, leads and commissions</p>
-          </div>
+      <div className="mx-auto w-full px-4 py-8 md:px-8 lg:px-12">
+        <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
+          <aside className="h-fit rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_16px_36px_rgba(15,23,42,0.04)] xl:sticky xl:top-28">
+            <div className="border-b border-slate-200 px-2 pb-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Broker Panel</p>
+              <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950" data-testid="dashboard-title">
+                Dashboard
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">
+                Hosts, properties, verifications, leads and commissions in one workspace.
+              </p>
+            </div>
 
-        </div>
-
-        {/* Enterprise Navigation */}
-        <div className="bg-white border border-gray-100 rounded-3xl p-4 md:p-5 shadow-premium mb-10" data-testid="broker-tabs">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
-            {brokerNavigation.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center justify-between gap-3 px-4 py-4 rounded-2xl font-bold tracking-tight text-left transition-all duration-300 ${
-                activeTab === tab.id
-                  ? 'bg-charcoal text-white shadow-elevated'
-                  : 'bg-white text-charcoal-muted border border-gray-100 hover:border-terracotta'
-              }`}
-              data-testid={`tab-${tab.id}`}
-            >
-              <span className="flex items-center gap-3 min-w-0">
-                <tab.icon className={`w-4 h-4 shrink-0 ${activeTab === tab.id ? 'text-terracotta' : ''}`} />
-                <span className="min-w-0">
-                  <span className="block text-xs uppercase tracking-widest truncate">{tab.label}</span>
-                  <span className={`mt-1 block text-[9px] uppercase tracking-[0.18em] ${activeTab === tab.id ? 'text-white/60' : 'text-charcoal-muted/70'}`}>
-                    {tab.group}
+            <div className="mt-5 space-y-2" data-testid="broker-tabs">
+              {brokerNavigation.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all ${
+                    activeTab === tab.id
+                      ? 'bg-slate-900 text-white shadow-[0_12px_24px_rgba(15,23,42,0.14)]'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+                  }`}
+                  data-testid={`tab-${tab.id}`}
+                >
+                  <span className="flex min-w-0 flex-1 items-center gap-3.5">
+                    <tab.icon className={`h-4 w-4 shrink-0 ${activeTab === tab.id ? 'text-white' : 'text-slate-700'}`} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] font-bold leading-5">{tab.label}</span>
+                      <span className={`mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.18em] ${activeTab === tab.id ? 'text-white/65' : 'text-slate-400'}`}>
+                        {tab.group}
+                      </span>
+                    </span>
                   </span>
-                </span>
-              </span>
-              <span className={`shrink-0 rounded-full px-2 py-1 text-[9px] uppercase tracking-widest ${
-                activeTab === tab.id ? 'bg-white/10 text-white' : tab.status === 'Live' ? 'bg-sage/10 text-sage-dark' : 'bg-sand-100 text-charcoal-muted'
-              }`}>
-                {tab.status}
-              </span>
-            </button>
-            ))}
-          </div>
-        </div>        {/* Tab Content Section */}
+                </button>
+              ))}
+            </div>
+          </aside>
+
+          <main className="min-w-0">
+            <div className="mb-8 rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_16px_36px_rgba(15,23,42,0.04)] md:p-8">
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">X-Space360 Broker Workspace</p>
+              <h1 className="mt-2 text-[32px] font-black tracking-[-0.05em] text-slate-950 md:text-[42px]">
+                {brokerNavigation.find((item) => item.id === activeTab)?.label || 'Dashboard'}
+              </h1>
+              <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
+                {activeTab === 'overview'
+                  ? 'Monitor your broker workflow with a cleaner command center for leads, verifications, portfolio health and commissions.'
+                  : `Manage ${brokerNavigation.find((item) => item.id === activeTab)?.label?.toLowerCase() || 'broker operations'} from a focused workspace.`}
+              </p>
+            </div>
+
+        {/* Tab Content Section */}
         <div className="transition-all duration-500">
           {/* Overview Tab */}
           {activeTab === 'overview' && (
@@ -196,15 +208,15 @@ const BrokerDashboard = () => {
                   {/* Stats Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12" data-testid="stats-grid">
                     {statCards.map((stat, idx) => (
-                      <div key={idx} className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium group hover:border-terracotta transition-all duration-500" data-testid={`stat-card-${idx}`}>
-                        <div className="bg-stone w-12 h-12 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-terracotta/5 transition-colors">
-                           <stat.icon className="w-6 h-6 text-terracotta" />
+                      <div key={idx} className="group rounded-[28px] border border-slate-200 bg-white p-8 shadow-[0_16px_36px_rgba(15,23,42,0.04)] transition-all duration-500 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_22px_48px_rgba(15,23,42,0.06)]" data-testid={`stat-card-${idx}`}>
+                        <div className={`mb-6 flex h-12 w-12 items-center justify-center rounded-2xl ${stat.iconClassName}`}>
+                           <stat.icon className="w-6 h-6" />
                         </div>
-                        <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">{stat.value}</p>
-                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">{stat.label}</p>
+                        <p className="mb-1 text-3xl font-black tracking-[-0.04em] text-slate-950">{stat.value}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">{stat.label}</p>
                         {stat.subtext && (
-                          <div className="mt-4 pt-4 border-t border-sand-100 flex items-center justify-between">
-                             <span className="text-[9px] font-bold tracking-tight text-sage-dark bg-sage/10 px-2 py-0.5 rounded-full">{stat.subtext}</span>
+                          <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-4">
+                             <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest ${stat.subtextClassName || 'border border-slate-200 bg-slate-100 text-slate-700'}`}>{stat.subtext}</span>
                           </div>
                         )}
                       </div>
@@ -213,21 +225,21 @@ const BrokerDashboard = () => {
 
                   {/* Pending Verifications Alert */}
                   {stats && stats.verifications.pending > 0 && (
-                    <div className="bg-white rounded-3xl p-8 border-l-8 border-terracotta shadow-premium mb-12 flex flex-col md:flex-row items-center justify-between gap-6" data-testid="pending-alert">
+                    <div className="mb-12 flex flex-col items-center justify-between gap-6 rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f7f7f5)] p-8 shadow-[0_16px_36px_rgba(15,23,42,0.04)] md:flex-row" data-testid="pending-alert">
                       <div className="flex items-center space-x-6">
-                        <div className="bg-terracotta/10 p-4 rounded-2xl animate-pulse">
-                           <Clock className="w-8 h-8 text-terracotta" />
+                        <div className="rounded-2xl bg-slate-100 p-4 shadow-sm ring-1 ring-slate-200">
+                           <Clock className="w-8 h-8 text-slate-700" />
                         </div>
                         <div>
-                          <p className="text-xl font-bold tracking-tight text-charcoal tracking-tight mb-1">
+                          <p className="mb-1 text-xl font-black tracking-[-0.03em] text-slate-950">
                             {stats.verifications.pending} Physical Inspections Required
                           </p>
-                          <p className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Site visits must be completed for remote RM review</p>
+                          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Site visits must be completed for remote RM review</p>
                         </div>
                       </div>
                       <button
                         onClick={() => setActiveTab('verifications')}
-                        className="btn-premium px-8 py-4 shadow-premium whitespace-nowrap"
+                        className="whitespace-nowrap rounded-2xl bg-slate-900 px-8 py-4 text-xs font-black uppercase tracking-[0.2em] text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)] transition hover:bg-black"
                       >
                         Action Queue
                       </button>
@@ -235,25 +247,25 @@ const BrokerDashboard = () => {
                   )}
 
                   {/* Quick Actions */}
-                  <div className="bg-white border border-gray-100 rounded-3xl p-10 shadow-premium" data-testid="quick-actions">
-                    <h3 className="text-xl font-bold tracking-tight text-charcoal tracking-tight mb-8">System Shortcuts</h3>
+                  <div className="rounded-[28px] border border-slate-200 bg-white p-10 shadow-[0_16px_36px_rgba(15,23,42,0.04)]" data-testid="quick-actions">
+                    <h3 className="mb-8 text-xl font-black tracking-[-0.03em] text-slate-950">System Shortcuts</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {[
-                        { id: 'leads', label: 'GENERATE LEAD', icon: Target, color: 'text-terracotta' },
-                        { id: 'verifications', label: 'SITE INSPECTION', icon: FileCheck, color: 'text-sage' },
-                        { id: 'owners', label: 'HOST MANAGEMENT', icon: Users, color: 'text-charcoal' }
+                        { id: 'leads', label: 'GENERATE LEAD', icon: Target, color: 'text-slate-900' },
+                        { id: 'verifications', label: 'SITE INSPECTION', icon: FileCheck, color: 'text-slate-700' },
+                        { id: 'owners', label: 'HOST MANAGEMENT', icon: Users, color: 'text-slate-900' }
                       ].map(action => (
                         <button
                           key={action.id}
                           onClick={() => setActiveTab(action.id)}
-                          className="flex items-center justify-between p-6 bg-stone/40 border border-sand-200 rounded-3xl hover:bg-white hover:border-terracotta hover:shadow-premium transition-all group"
+                          className="group flex items-center justify-between rounded-3xl border border-slate-200 bg-slate-50/80 p-6 transition-all hover:border-slate-300 hover:bg-white hover:shadow-[0_16px_34px_rgba(15,23,42,0.05)]"
                           data-testid={`action-${action.id}`}
                         >
                           <div className="flex items-center space-x-4">
                              <action.icon className={`w-6 h-6 ${action.color}`} />
-                             <span className="text-[10px] font-bold tracking-tight text-charcoal-muted group-hover:text-charcoal uppercase tracking-[0.2em]">{action.label}</span>
+                             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 group-hover:text-slate-950">{action.label}</span>
                           </div>
-                          <ChevronRight className="w-4 h-4 text-charcoal-muted/30 group-hover:text-terracotta group-hover:translate-x-1 transition-all" />
+                          <ChevronRight className="w-4 h-4 text-slate-300 transition-all group-hover:translate-x-1 group-hover:text-slate-900" />
                         </button>
                       ))}
                     </div>
@@ -294,6 +306,9 @@ const BrokerDashboard = () => {
         {activeTab === 'audit' && (
           <BrokerAnalyticsSection mode="audit" />
         )}
+          </main>
+        </div>
+      </div>
 
         {showProfileModal && (
           <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
@@ -399,7 +414,6 @@ const BrokerDashboard = () => {
             </div>
           </div>
         )}
-      </div>
     </div>
   );
 };
@@ -444,24 +458,24 @@ const MyOwnersSection = () => {
 
   return (
     <div data-testid="owners-section" className="animate-slide-up">
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
+      <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker CRM</p>
-          <h3 className="text-2xl font-bold tracking-tight text-charcoal">Host Management</h3>
-          <p className="text-sm text-charcoal-muted mt-2">Assigned host portfolio with KYC, property, booking, revenue and reporting ownership.</p>
+          <p className="mb-2 text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Broker CRM</p>
+          <h3 className="text-[28px] font-black tracking-[-0.04em] text-slate-950">Host Management</h3>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Assigned host portfolio with KYC, property, booking, revenue and reporting ownership.</p>
         </div>
         <div className="grid grid-cols-3 gap-3 w-full lg:w-auto">
-          <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 shadow-sm">
-            <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Hosts</p>
-            <p className="text-xl font-bold text-charcoal">{owners.length}</p>
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Hosts</p>
+            <p className="text-xl font-black text-slate-950">{owners.length}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 shadow-sm">
-            <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Live Props</p>
-            <p className="text-xl font-bold text-charcoal">{owners.reduce((sum, owner) => sum + Number(owner.live_properties || 0), 0)}</p>
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Live Props</p>
+            <p className="text-xl font-black text-slate-950">{owners.reduce((sum, owner) => sum + Number(owner.live_properties || 0), 0)}</p>
           </div>
-          <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 shadow-sm">
-            <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Bookings</p>
-            <p className="text-xl font-bold text-charcoal">{owners.reduce((sum, owner) => sum + Number(owner.total_bookings || 0), 0)}</p>
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Bookings</p>
+            <p className="text-xl font-black text-slate-950">{owners.reduce((sum, owner) => sum + Number(owner.total_bookings || 0), 0)}</p>
           </div>
         </div>
       </div>
@@ -473,10 +487,10 @@ const MyOwnersSection = () => {
       ) : owners.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6" data-testid="owners-list">
           {owners.map((owner) => (
-            <div key={owner.user_id} className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium hover:border-terracotta transition-all duration-300 group" data-testid={`owner-${owner.user_id}`}>
+            <div key={owner.user_id} className="group rounded-[28px] border border-slate-200 bg-white p-8 shadow-[0_16px_36px_rgba(15,23,42,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_22px_48px_rgba(15,23,42,0.06)]" data-testid={`owner-${owner.user_id}`}>
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
                 <div className="relative flex-shrink-0">
-                   <div className="absolute inset-0 bg-terracotta blur-xl opacity-0 group-hover:opacity-20 transition-opacity"></div>
+                   <div className="absolute inset-0 bg-slate-300 blur-xl opacity-0 transition-opacity group-hover:opacity-20"></div>
                    <img
                      src={owner.profile_image || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e'}
                      alt={owner.full_name}
@@ -486,8 +500,8 @@ const MyOwnersSection = () => {
                 <div className="flex-1 min-w-0 w-full text-center sm:text-left">
                   <div className="flex items-center justify-between flex-wrap gap-2 mb-1">
                     <h4 className="text-lg font-bold tracking-tight text-charcoal truncate">{owner.full_name}</h4>
-                    <span className={`inline-flex px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
-                      owner.kyc_status === 'approved' ? 'bg-sage/10 text-sage-dark' : 'bg-amber-100 text-amber-700'
+                    <span className={`inline-flex rounded-full px-3 py-1 text-[9px] font-bold uppercase tracking-widest ${
+                      owner.kyc_status === 'approved' ? 'border border-slate-200 bg-slate-100 text-slate-700' : 'border border-slate-200 bg-slate-100 text-slate-500'
                     }`}>
                       KYC: {owner.kyc_status}
                     </span>
@@ -526,7 +540,7 @@ const MyOwnersSection = () => {
                         key={label}
                         type="button"
                         onClick={() => openOwnerDetails(owner, focus)}
-                        className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3 text-left hover:border-terracotta hover:bg-terracotta/5 focus:outline-none focus:ring-2 focus:ring-terracotta/30 transition-all"
+                        className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 text-left transition-all hover:border-slate-300 hover:bg-white focus:outline-none focus:ring-2 focus:ring-slate-200"
                         title={`View ${label.toLowerCase()}`}
                       >
                         <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">{label}</p>
@@ -536,15 +550,15 @@ const MyOwnersSection = () => {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-                    <div className="rounded-2xl bg-sage/10 border border-sage/20 px-3 py-3">
-                      <p className="text-[8px] font-bold tracking-tight text-sage-dark uppercase tracking-wider">Revenue Generated</p>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3">
+                      <p className="text-[8px] font-bold uppercase tracking-wider text-slate-500">Revenue Generated</p>
                       <p className="text-sm font-bold text-charcoal mt-1">{formatMoney(owner.revenue_generated)}</p>
                     </div>
-                    <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3">
                       <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Broker LG Code</p>
                       <p className="text-sm font-bold text-charcoal mt-1">{owner.broker_lg_code || owner.lg_code || 'Not Assigned'}</p>
                     </div>
-                    <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3">
                       <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Employee / RM Code</p>
                       <p className="text-sm font-bold text-charcoal mt-1 break-words">
                         {owner.rm?.employee_code || owner.rm_code || owner.employee_code || owner.assigned_employee || 'No RM Code'}
@@ -557,18 +571,18 @@ const MyOwnersSection = () => {
 
                   <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 flex-wrap gap-2">
                     <div className="flex items-center space-x-2">
-                      <span className="inline-flex px-3 py-1 bg-stone text-terracotta text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full border border-gray-100">
+                      <span className="inline-flex rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-slate-700">
                         {owner.property_count || 0} Assets
                       </span>
                       <button
                         onClick={() => setSelectedOwnerKyc(owner)}
-                        className="inline-flex px-3 py-1 border border-terracotta/20 hover:border-terracotta hover:bg-terracotta hover:text-white text-terracotta text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full transition-all"
+                        className="inline-flex rounded-full border border-slate-300 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-slate-700 transition-all hover:border-slate-900 hover:bg-slate-900 hover:text-white"
                       >
                         Documents
                       </button>
                       <button
                         onClick={() => openOwnerDetails(owner)}
-                        className="inline-flex px-3 py-1 border border-sage/20 hover:border-sage hover:bg-sage hover:text-white text-sage-dark text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full transition-all"
+                        className="inline-flex rounded-full border border-slate-300 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-slate-700 transition-all hover:border-slate-900 hover:bg-slate-900 hover:text-white"
                       >
                         View Details
                       </button>
@@ -585,8 +599,8 @@ const MyOwnersSection = () => {
           ))}
         </div>
       ) : (
-        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">
-          <Users className="w-16 h-16 text-sand-200 mx-auto mb-6" />
+        <div className="rounded-[28px] border-2 border-dashed border-slate-200 bg-white py-20 text-center">
+          <Users className="mx-auto mb-6 h-16 w-16 text-slate-300" />
           <h4 className="text-xl font-bold tracking-tight text-charcoal mb-2">No Hosts Assigned</h4>
           <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">You haven't been assigned any property hosts yet.</p>
         </div>
@@ -788,9 +802,9 @@ const DocumentVerificationPanel = ({ owner, formatDate }) => {
   };
 
   const statusClass = (statusValue) => {
-    if (statusValue === 'approved' || statusValue === 'verified') return 'bg-sage/10 text-sage-dark border-sage/20';
+    if (statusValue === 'approved' || statusValue === 'verified') return 'bg-slate-100 text-slate-700 border-slate-200';
     if (statusValue === 'rejected') return 'bg-red-50 text-red-600 border-red-100';
-    if (statusValue === 'pending') return 'bg-amber-100 text-amber-700 border-amber-200';
+    if (statusValue === 'pending') return 'bg-slate-100 text-slate-600 border-slate-200';
     return 'bg-stone text-charcoal-muted border-sand-200';
   };
 
@@ -801,7 +815,7 @@ const DocumentVerificationPanel = ({ owner, formatDate }) => {
           <h4 className="text-sm font-bold text-charcoal uppercase tracking-widest">Document Verification</h4>
           <p className="text-xs text-charcoal-muted mt-1">Document status, version, uploader, reviewer and remarks.</p>
         </div>
-        <FileText className="w-5 h-5 text-terracotta" />
+        <FileText className="w-5 h-5 text-slate-700" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         {documentLabels.map((item) => {
@@ -831,7 +845,7 @@ const DocumentVerificationPanel = ({ owner, formatDate }) => {
                   href={getImageUrl(doc.document_url)}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-4 inline-flex items-center gap-2 rounded-full border border-terracotta/20 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-terracotta hover:bg-terracotta hover:text-white transition-all"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-900 hover:text-white transition-all"
                 >
                   <Eye className="w-3 h-3" />
                   View File
@@ -906,12 +920,12 @@ const buildHostVerificationStages = (owner, properties, verifications, payments 
 
 const VerificationTracker = ({ stages }) => {
   const statusStyles = {
-    completed: 'bg-sage/10 text-sage-dark border-sage/20',
-    pending: 'bg-amber-100 text-amber-700 border-amber-200',
+    completed: 'bg-slate-100 text-slate-700 border-slate-200',
+    pending: 'bg-slate-100 text-slate-600 border-slate-200',
     rejected: 'bg-red-50 text-red-600 border-red-100',
     're-upload required': 'bg-red-50 text-red-600 border-red-100',
     waiting: 'bg-stone text-charcoal-muted border-sand-200',
-    escalated: 'bg-terracotta/10 text-terracotta border-terracotta/20',
+    escalated: 'bg-slate-900/10 text-slate-800 border-slate-300',
   };
 
   return (
@@ -921,7 +935,7 @@ const VerificationTracker = ({ stages }) => {
           <h4 className="text-sm font-bold text-charcoal uppercase tracking-widest">Host Verification Tracker</h4>
           <p className="text-xs text-charcoal-muted mt-1">Stage wise status from registration to live property.</p>
         </div>
-        <FileCheck className="w-5 h-5 text-terracotta" />
+        <FileCheck className="w-5 h-5 text-slate-700" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
         {stages.map((stage, index) => (
@@ -1048,7 +1062,7 @@ const PropertiesSection = () => {
     <div data-testid="properties-section" className="animate-slide-up">
       <div className="mb-8">
         <div>
-          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker Property CRM</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">Broker Property CRM</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Property Listing CRM</h3>
           <p className="text-sm text-charcoal-muted mt-2">Assigned property pipeline with host, pricing, verification and publish readiness context.</p>
         </div>
@@ -1132,8 +1146,8 @@ const PropertiesSection = () => {
                              : '/night'}
                          </span></span>
                          <span className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest ${
-                           property.status === 'live' ? 'bg-sage/10 text-sage-dark' :
-                           property.status === 'pending_verification' ? 'bg-amber-100 text-amber-700' :
+                           property.status === 'live' ? 'bg-slate-100 text-slate-700' :
+                           property.status === 'pending_verification' ? 'bg-slate-100 text-slate-600' :
                            isPropertyRejected(property) ? 'bg-red-100 text-red-700' :
                            'bg-gray-50 text-charcoal-muted'
                          }`}>
@@ -1178,7 +1192,7 @@ const PropertiesSection = () => {
                       <button
                         onClick={() => isPropertyRejected(property) && property.status !== 'draft' ? startPropertyRework(property) : setEditingProperty(property)}
                         disabled={submittingPropertyId === property.property_id}
-                        className="px-6 py-3 bg-amber-100 text-charcoal rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-gold hover:text-white transition-all"
+                        className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-slate-900 hover:text-white transition-all"
                       >
                         {isPropertyRejected(property) && property.status !== 'draft'
                           ? (submittingPropertyId === property.property_id ? 'Starting...' : 'Start Rework')
@@ -1189,7 +1203,7 @@ const PropertiesSection = () => {
                       <button
                         onClick={() => submitDraftForVerification(property)}
                         disabled={submittingPropertyId === property.property_id}
-                        className="px-6 py-3 bg-sage text-white rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-sage-dark transition-all disabled:opacity-50"
+                        className="px-6 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-black transition-all disabled:opacity-50"
                       >
                         {submittingPropertyId === property.property_id ? 'Submitting...' : 'Submit Verification'}
                       </button>
@@ -1657,7 +1671,7 @@ const VerificationsSection = () => {
     <div data-testid="verifications-section" className="animate-slide-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker Property CRM</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">Broker Property CRM</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Verification Tracker</h3>
           <p className="text-sm text-charcoal-muted mt-2">Track broker visit submission, RM review, admin approval and re-verification status.</p>
         </div>
@@ -1721,11 +1735,11 @@ const VerificationsSection = () => {
                           <span
                             className={`px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
                               task.status === 'pending'
-                                ? 'bg-amber-100 text-amber-700'
+                                ? 'bg-slate-100 text-slate-600'
                                 : task.status === 'in_progress'
                                 ? 'bg-blue-100 text-blue-700'
                                 : task.status === 'completed'
-                                ? 'bg-sage/10 text-sage-dark'
+                                ? 'bg-slate-100 text-slate-700'
                                 : 'bg-red-100 text-red-700'
                             }`}
                             data-testid={`task-status-${task.property_id}`}
@@ -1739,8 +1753,8 @@ const VerificationsSection = () => {
                             <span
                               className={`px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
                                 task.rm_approved
-                                  ? 'bg-sage/20 text-sage-dark'
-                                  : 'bg-terracotta/20 text-terracotta'
+                                  ? 'bg-slate-100 text-slate-700'
+                                  : 'bg-slate-900/10 text-slate-800'
                               }`}
                             >
                               RM {task.rm_approved ? 'APPROVED' : 'REJECTED'}
@@ -2463,7 +2477,7 @@ const BookingsReportsSection = () => {
     <div data-testid="broker-bookings-section" className="animate-slide-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker Operations</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">Broker Operations</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Bookings & Reports</h3>
           <p className="text-sm text-charcoal-muted mt-2">Broker-owned bookings with host, guest, property and ownership snapshot visibility.</p>
         </div>
@@ -2587,8 +2601,8 @@ const BrokerTasksSection = () => {
   };
 
   const badgeClass = (statusValue) => {
-    if (statusValue === 'within_sla') return 'bg-sage/10 text-sage-dark';
-    if (statusValue === 'at_risk') return 'bg-amber-100 text-amber-700';
+    if (statusValue === 'within_sla') return 'bg-slate-100 text-slate-700';
+    if (statusValue === 'at_risk') return 'bg-slate-100 text-slate-600';
     if (statusValue === 'breached' || statusValue === 'escalated') return 'bg-red-50 text-red-600';
     return 'bg-stone text-charcoal-muted';
   };
@@ -2598,7 +2612,7 @@ const BrokerTasksSection = () => {
     <div data-testid="broker-tasks-section" className="animate-slide-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker Workflow</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">Broker Workflow</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Tasks & Escalations</h3>
           <p className="text-sm text-charcoal-muted mt-2">Open work queue across verifications, lead follow-ups, support tickets and SLA risk.</p>
         </div>
@@ -2718,7 +2732,7 @@ const BrokerAnalyticsSection = ({ mode }) => {
     return (
       <div data-testid="broker-audit-section" className="animate-slide-up">
         <div className="mb-8">
-          <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker Compliance</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">Broker Compliance</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Activity & Audit</h3>
           <p className="text-sm text-charcoal-muted mt-2">Audit coverage and recent broker-linked activity across Phase 12 modules.</p>
         </div>
@@ -2756,7 +2770,7 @@ const BrokerAnalyticsSection = ({ mode }) => {
   return (
     <div data-testid="broker-analytics-section" className="animate-slide-up">
       <div className="mb-8">
-        <p className="text-[10px] font-bold text-terracotta uppercase tracking-[0.2em] mb-2">Broker Insights</p>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">Broker Insights</p>
         <h3 className="text-2xl font-bold tracking-tight text-charcoal">Analytics</h3>
         <p className="text-sm text-charcoal-muted mt-2">Performance across host acquisition, property activation, bookings, revenue, lead conversion and commissions.</p>
       </div>
@@ -3067,7 +3081,7 @@ const LeadsSection = () => {
                             <span className="uppercase tracking-widest">{lead.city} · {formatPropertyTypeLabel(lead.property_type)}</span>
                          </div>
                          {lead.from_date && lead.to_date && (
-                            <div className="flex items-center space-x-1 text-[9px] font-bold tracking-tight text-sage-dark bg-sage/10 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                            <div className="flex items-center space-x-1 text-[9px] font-bold tracking-tight text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-widest">
                                <span>📅 {(() => {
                                   const fDate = new Date(lead.from_date);
                                   const tDate = new Date(lead.to_date);
@@ -3079,7 +3093,7 @@ const LeadsSection = () => {
                             </div>
                          )}
                          {lead.property_title && (
-                            <div className="flex items-center space-x-1 text-[9px] font-bold tracking-tight text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full uppercase tracking-widest border border-amber-100">
+                            <div className="flex items-center space-x-1 text-[9px] font-bold tracking-tight text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-widest border border-slate-200">
                                <span>🏠 {lead.property_title}</span>
                             </div>
                          )}
@@ -3088,10 +3102,10 @@ const LeadsSection = () => {
                 </div>
                 <div className="flex items-center space-x-4">
                    <span className={`px-4 py-2 text-[9px] font-bold tracking-tight uppercase tracking-[0.1em] rounded-full ${
-                     lead.status === 'converted' ? 'bg-sage/10 text-sage-dark' :
+                     lead.status === 'converted' ? 'bg-slate-100 text-slate-700' :
                      lead.status === 'contacted' ? 'bg-blue-100 text-blue-700' :
                      lead.status === 'lost' ? 'bg-red-50 text-terracotta' :
-                     'bg-amber-100 text-amber-700'
+                     'bg-slate-100 text-slate-600'
                    }`}>
                      {lead.status}
                    </span>
@@ -3152,8 +3166,8 @@ const CommissionsSection = () => {
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium">
-            <div className="w-12 h-12 bg-sage/10 rounded-2xl flex items-center justify-center mb-6">
-               <IndianRupee className="w-6 h-6 text-sage-dark" />
+            <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-6">
+               <IndianRupee className="w-6 h-6 text-slate-700" />
             </div>
             <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">₹{(summary.total_earned / 100).toLocaleString('en-IN')}</p>
             <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Total Revenue</p>
@@ -3166,8 +3180,8 @@ const CommissionsSection = () => {
             <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Settled</p>
           </div>
           <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium">
-            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mb-6">
-               <Clock className="w-6 h-6 text-amber-600" />
+            <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-6">
+               <Clock className="w-6 h-6 text-slate-700" />
             </div>
             <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">₹{(summary.pending / 100).toLocaleString('en-IN')}</p>
             <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Pending Settlement</p>
@@ -3202,7 +3216,7 @@ const CommissionsSection = () => {
                        </td>
                        <td className="px-8 py-6 text-right">
                           <span className={`inline-flex px-4 py-1.5 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
-                             commission.payment_status === 'paid' ? 'bg-sage/10 text-sage-dark' : 'bg-amber-100 text-amber-700'
+                             commission.payment_status === 'paid' ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-600'
                           }`}>
                              {commission.payment_status}
                           </span>
@@ -3937,7 +3951,7 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
                   Rejected
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-[9px] font-black uppercase tracking-wider animate-pulse">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded-full text-[9px] font-black uppercase tracking-wider animate-pulse">
                   <Clock className="w-3 h-3" />
                   Pending
                 </span>
@@ -4048,7 +4062,7 @@ const OwnerVerificationModal = ({ owner, onClose, onSubmitted }) => {
           </div>
           <div className="flex items-center space-x-3">
             <span className={`inline-flex px-3 py-1 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
-              kycStatus === 'approved' ? 'bg-sage/10 text-sage-dark' : 'bg-amber-100 text-amber-700'
+              kycStatus === 'approved' ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-600'
             }`}>
               KYC Status: {kycStatus}
             </span>

@@ -4,7 +4,7 @@ import { adminPhase1API } from '../../services/adminPhase1Api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestReason } from './shared';
 
 const emptyForm = { type: 'branch', name: '', code: '', city: '', state: '', parent_code: '', manager_id: '' };
-const inputClass = 'h-10 w-full rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none focus:border-terracotta focus:ring-2 focus:ring-amber-100';
+const inputClass = 'h-10 w-full rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none focus:border-[#93c5fd] focus:ring-2 focus:ring-[#dbeafe]';
 const makeCode = (prefix, name) => `${prefix}-${String(name || '').trim().replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toUpperCase()}`;
 
 const BranchFranchiseManagement = () => {
@@ -131,7 +131,7 @@ const BranchFranchiseManagement = () => {
       <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
         <Panel className="overflow-hidden">
           <div className="border-b border-slate-100 px-4 py-3">
-            <p className="text-xs font-black uppercase tracking-widest text-terracotta">{editing ? 'Edit Record' : 'Create Record'}</p>
+            <p className="text-xs font-black uppercase tracking-widest text-[#2563eb]">{editing ? 'Edit Record' : 'Create Record'}</p>
             <h2 className="mt-1 text-lg font-black text-slate-950">{editing ? `${editing.type} Setup` : 'Branch / Franchise Setup'}</h2>
           </div>
           <div className="grid gap-3 p-4">
@@ -171,7 +171,7 @@ const BranchFranchiseManagement = () => {
         <Panel className="overflow-hidden">
           <div className="flex flex-col gap-3 border-b border-slate-100 p-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-widest text-terracotta">Directory</p>
+              <p className="text-xs font-black uppercase tracking-widest text-[#2563eb]">Directory</p>
               <h2 className="mt-1 text-lg font-black text-slate-950">Active Branch & Franchise Codes</h2>
             </div>
             <div className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 md:w-80">
@@ -228,7 +228,7 @@ const Field = ({ label, value, onChange, placeholder }) => (
 
 const RecordIcon = ({ type }) => {
   const Icon = type === 'Franchise' ? Building2 : GitBranch;
-  return <Icon className="h-4 w-4 text-terracotta" />;
+  return <Icon className="h-4 w-4 text-[#2563eb]" />;
 };
 
 export default BranchFranchiseManagement;

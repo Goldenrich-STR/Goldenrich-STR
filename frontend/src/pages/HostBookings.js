@@ -23,6 +23,7 @@ import {
   Volume2
 } from 'lucide-react';
 import HostSupportWidget from '../components/HostSupportWidget';
+import HostWorkspaceShell from '../components/HostWorkspaceShell';
 
 const STATUS_BADGE = {
   confirmed: { label: 'Confirmed', cls: 'bg-green-50 text-green-700 border-green-200', Icon: CheckCircle2 },
@@ -50,7 +51,7 @@ const bookingSortTime = (booking) => {
 
 const HostBookings = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -222,94 +223,20 @@ const HostBookings = () => {
   }, [bookings]);
 
   return (
-    <div className="min-h-screen bg-stone">
-      {/* Header matching HostDashboard.js */}
-      <header className="header-glass sticky top-0 z-50 px-4 md:px-6 py-4">
-        <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex items-center justify-between w-full md:w-auto">
-            <div 
-              className="flex items-center space-x-3 cursor-pointer group" 
-              onClick={() => navigate('/')}
-            >
-              <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
-            </div>
-            <div className="flex items-center space-x-3 md:hidden">
-              <span className="text-xs font-bold text-charcoal-muted">
-                {user?.full_name?.split(' ')[0]}
-              </span>
-              <button 
-                onClick={() => {
-                  navigate('/');
-                  setTimeout(() => {
-                    logout();
-                  }, 50);
-                }} 
-                className="text-xs font-bold tracking-tight text-terracotta hover:underline uppercase cursor-pointer"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-row items-center gap-3 w-full md:w-auto border-t border-sand-100 md:border-none pt-2 md:pt-0 overflow-x-auto no-scrollbar">
-            <nav className="flex items-center space-x-6 shrink-0">
-               {[
-                 { label: 'DASHBOARD', path: '/host/dashboard' },
-                 { label: 'CALENDAR', path: '/host/calendar' },
-                 { label: 'PAYOUTS', path: '/host/payouts' },
-                 { label: 'BOOKINGS', path: '/host/bookings' },
-                 { label: 'PERFORMANCE', path: '/host/performance' }
-               ].map((item) => (
-                 <button
-                   key={item.label}
-                   onClick={() => navigate(item.path)}
-                   className={`text-[10px] font-bold tracking-tight tracking-[0.2em] transition-colors shrink-0 ${
-                     item.path === '/host/bookings' 
-                       ? 'text-terracotta border-b-2 border-terracotta pb-0.5' 
-                       : 'text-charcoal-muted hover:text-terracotta'
-                   }`}
-                 >
-                   {item.label}
-                 </button>
-               ))}
-            </nav>
-            <div className="h-6 w-px bg-sand-200 hidden md:block"></div>
-            <div className="hidden md:flex items-center gap-2 md:gap-4">
-              <span className="text-xs font-bold text-charcoal-muted">
-                Welcome, {user?.full_name?.split(' ')[0]}
-              </span>
-              <button 
-                onClick={() => {
-                  navigate('/');
-                  setTimeout(() => {
-                    logout();
-                  }, 50);
-                }} 
-                className="text-xs font-bold tracking-tight text-terracotta hover:underline tracking-widest uppercase cursor-pointer"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <div className="w-full px-4 md:px-8 lg:px-12 py-12 mx-auto">
-        <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
-          <div>
-            <h2 className="text-2xl md:text-4xl font-semibold tracking-tight text-charcoal tracking-tight" data-testid="page-title">
-              Bookings Manager
-            </h2>
-            <p className="text-charcoal-muted text-sm font-medium mt-1">Track reservations, view guests and monitor earnings per property.</p>
-          </div>
-          <button
-            onClick={() => navigate('/host/dashboard')}
-            className="px-5 py-2.5 bg-white border border-gray-100 rounded-xl font-bold text-sm text-charcoal hover:text-terracotta hover:border-terracotta flex items-center justify-center gap-2 transition-all shadow-sm active:scale-[0.98]"
-          >
-            <ArrowLeft className="w-4 h-4 text-terracotta" />
-            <span>Dashboard</span>
-          </button>
-        </div>
+    <HostWorkspaceShell
+      activePath="/host/bookings"
+      sidebarTitle="Bookings"
+      sidebarDescription="Track reservations, guests and booking revenue across every host property from one clean workspace."
+      heroTitle="Bookings Manager"
+      heroDescription="Track reservations, view guests and monitor earnings per property."
+      sidebarSnapshot={[
+        ['Host', user?.full_name || 'Host'],
+        ['Properties', summaryStats.propertiesCount],
+        ['Reservations', summaryStats.totalReservations],
+        ['Confirmed', summaryStats.confirmedStays],
+      ]}
+    >
+      <div className="space-y-8">
 
         {/* Loading and Error States */}
         {error && (
@@ -659,7 +586,7 @@ const HostBookings = () => {
         />
       )}
       <HostSupportWidget context="booking_issue" />
-    </div>
+    </HostWorkspaceShell>
   );
 };
 
