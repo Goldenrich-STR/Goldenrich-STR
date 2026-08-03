@@ -3652,18 +3652,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
       maximumFractionDigits: 2,
     }).format(Number(value || 0));
 
-  const taxPercent = Number(
-    invoiceBreakdown.tax_percent ??
-    t.booking?.tax_percent ??
-    t.booking?.gst_percent ??
-    t.booking?.pricing?.tax_percent ??
-    t.booking?.pricing?.gst_percent ??
-    t.booking?.pricing_snapshot?.tax_percent ??
-    t.booking?.pricing_snapshot?.gst_percent ??
-    t.booking?.pricing_breakdown?.tax_percent ??
-    t.booking?.pricing_breakdown?.gst_percent ??
-    (t.type === 'subscription' ? (t.plan?.tax_percent ?? 18) : 0)
-  );
+  const taxPercent = Number(invoiceBreakdown.tax_percent ?? t.booking?.tax_percent ?? t.booking?.gst_percent ?? t.plan?.tax_percent ?? 18);
   const splitTaxPercent = taxPercent / 2;
   const taxPercentLabel = `${taxPercent.toFixed(taxPercent % 1 === 0 ? 0 : 2)}%`;
   const splitTaxPercentLabel = `${splitTaxPercent.toFixed(splitTaxPercent % 1 === 0 ? 0 : 2)}%`;

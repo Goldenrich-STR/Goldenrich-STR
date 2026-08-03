@@ -146,38 +146,7 @@ def _booking_invoice_breakdown(transaction: dict) -> dict:
     total = _amount_rupees(snapshot.get("customer_final_payable") or booking.get("total_amount") or ((transaction.get("amount") or 0) / 100))
     if total <= 0:
         total = round(taxable + gst_amount, 2)
-    tax_percent_val = (
-        booking.get("tax_percent")
-        if booking.get("tax_percent") is not None
-        else booking.get("gst_percent")
-        if booking.get("gst_percent") is not None
-        else (booking.get("pricing") or {}).get("tax_percent")
-        if isinstance(booking.get("pricing"), dict) and (booking.get("pricing") or {}).get("tax_percent") is not None
-        else (booking.get("pricing") or {}).get("gst_percent")
-        if isinstance(booking.get("pricing"), dict) and (booking.get("pricing") or {}).get("gst_percent") is not None
-        else (booking.get("pricing_snapshot") or {}).get("tax_percent")
-        if isinstance(booking.get("pricing_snapshot"), dict) and (booking.get("pricing_snapshot") or {}).get("tax_percent") is not None
-        else (booking.get("pricing_snapshot") or {}).get("gst_percent")
-        if isinstance(booking.get("pricing_snapshot"), dict) and (booking.get("pricing_snapshot") or {}).get("gst_percent") is not None
-        else (booking.get("pricing_breakdown") or {}).get("tax_percent")
-        if isinstance(booking.get("pricing_breakdown"), dict) and (booking.get("pricing_breakdown") or {}).get("tax_percent") is not None
-        else (booking.get("pricing_breakdown") or {}).get("gst_percent")
-        if isinstance(booking.get("pricing_breakdown"), dict) and (booking.get("pricing_breakdown") or {}).get("gst_percent") is not None
-        else (booking.get("breakdown") or {}).get("tax_percent")
-        if isinstance(booking.get("breakdown"), dict) and (booking.get("breakdown") or {}).get("tax_percent") is not None
-        else (booking.get("breakdown") or {}).get("gst_percent")
-        if isinstance(booking.get("breakdown"), dict) and (booking.get("breakdown") or {}).get("gst_percent") is not None
-        else (booking.get("tax_slab") or {}).get("gst_percent")
-        if isinstance(booking.get("tax_slab"), dict)
-        else None
-    )
-    if tax_percent_val is not None:
-        tax_percent = _amount_rupees(tax_percent_val)
-    elif taxable > 0 and gst_amount > 0:
-        tax_percent = round((gst_amount / taxable) * 100, 2)
-    else:
-        tax_percent = 0.0
-
+    tax_percent = _amount_rupees(booking.get("tax_percent") or booking.get("gst_percent"))
     is_interstate = bool(booking.get("is_interstate") or booking.get("igst_applicable"))
     igst = gst_amount if is_interstate else 0.0
     cgst = 0.0 if is_interstate else round(gst_amount / 2, 2)
