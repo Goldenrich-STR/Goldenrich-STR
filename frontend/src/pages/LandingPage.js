@@ -3236,7 +3236,7 @@ const LandingPage = () => {
                     )}
 
                     {/* Capsule Search Bar */}
-                    <div className="relative z-50 overflow-hidden rounded-[34px] lg:rounded-[44px] p-[1px]">
+                    <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-[44px] p-[1px]">
                       <div
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-0 rounded-[34px] lg:rounded-[44px] opacity-100"
@@ -3255,7 +3255,7 @@ const LandingPage = () => {
                         className="pointer-events-none absolute inset-y-1 right-0 w-36 rounded-full blur-2xl"
                         style={{ background: 'rgba(19,136,8,0.24)' }}
                       />
-                      <div className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[30px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-3 lg:p-3 relative overflow-hidden bg-white">
+                      <div className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[30px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-3 lg:p-3 relative overflow-visible bg-white">
                         <div
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-0 rounded-[30px] lg:rounded-full"
