@@ -125,6 +125,53 @@ def _subscription_invoice_breakdown(transaction: dict) -> dict:
     }
 
 
+def _amount_rupees(value) -> float:
+    try:
+        return round(float(value or 0), 2)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _booking_invoice_breakdown(transaction: dict) -> dict:
+    booking = transaction.get("booking") or {}
+    snapshot = extract_booking_pricing_snapshot(booking)
+    host_actual = _amount_rupees(snapshot.get("host_actual_value"))
+    extra_charges = snapshot.get("extra_charges") or {}
+    extra_total = _amount_rupees(snapshot.get("total_extra_charges"))
+    if extra_total <= 0:
+        extra_total = _amount_rupees(sum(_amount_rupees(value) for value in extra_charges.values()))
+    discount = _amount_rupees(snapshot.get("customer_discount_amount") or booking.get("discount_amount"))
+    taxable = max(0.0, round(host_actual + extra_total - discount, 2))
+    gst_amount = _amount_rupees(snapshot.get("gst_amount") or booking.get("taxes") or booking.get("tax_amount"))
+    total = _amount_rupees(snapshot.get("customer_final_payable") or booking.get("total_amount") or ((transaction.get("amount") or 0) / 100))
+    if total <= 0:
+        total = round(taxable + gst_amount, 2)
+    tax_percent = _amount_rupees(booking.get("tax_percent") or booking.get("gst_percent"))
+    is_interstate = bool(booking.get("is_interstate") or booking.get("igst_applicable"))
+    igst = gst_amount if is_interstate else 0.0
+    cgst = 0.0 if is_interstate else round(gst_amount / 2, 2)
+    sgst = 0.0 if is_interstate else round(gst_amount / 2, 2)
+
+    return {
+        "plan_fee": host_actual,
+        "platform_fee": _amount_rupees(extra_charges.get("platform_fee")),
+        "taxable_before_discount": round(host_actual + extra_total, 2),
+        "base_amount": host_actual,
+        "gross": host_actual,
+        "extra_charges_total": extra_total,
+        "extra_charges": {key: _amount_rupees(value) for key, value in extra_charges.items()},
+        "coupon_code": booking.get("coupon_code") or transaction.get("coupon_code") or "",
+        "discount_amount": discount,
+        "taxable_amount": taxable,
+        "tax_percent": tax_percent,
+        "igst": round(igst, 2),
+        "cgst": cgst,
+        "sgst": sgst,
+        "gst_amount": gst_amount,
+        "total_amount": total,
+    }
+
+
 # --------------- Overview ----------------
 
 @router.get("/overview")
@@ -644,6 +691,70 @@ async def list_transactions(
         # Enrich transactions with invoice, customer, broker, RM and subscription details.
         for t in items:
             t["invoice_no"] = await get_invoice_number(db, t)
+            booking = None
+            if t.get("booking_id"):
+                booking = await db.bookings.find_one(
+                    {"booking_id": t["booking_id"]},
+                    {
+                        "_id": 0,
+                        "booking_id": 1,
+                        "property_id": 1,
+                        "guest_id": 1,
+                        "host_id": 1,
+                        "broker_id": 1,
+                        "broker_lg_code": 1,
+                        "rm_id": 1,
+                        "employee_id": 1,
+                        "employee_code": 1,
+                        "branch_manager_id": 1,
+                        "branch_manager_code": 1,
+                        "check_in_date": 1,
+                        "check_out_date": 1,
+                        "created_at": 1,
+                        "booking_status": 1,
+                        "payment_status": 1,
+                        "payment_method": 1,
+                        "payment_type": 1,
+                        "razorpay_order_id": 1,
+                        "razorpay_payment_id": 1,
+                        "upi_transaction_id": 1,
+                        "base_amount": 1,
+                        "host_amount": 1,
+                        "host_base_amount": 1,
+                        "host_actual_value": 1,
+                        "total_amount": 1,
+                        "paid_amount": 1,
+                        "platform_fee": 1,
+                        "service_fee": 1,
+                        "payment_gateway_charge": 1,
+                        "gateway_charge": 1,
+                        "convenience_fee": 1,
+                        "insurance_fee": 1,
+                        "cleaning_fee": 1,
+                        "extra_guest_fee": 1,
+                        "taxes": 1,
+                        "tax_amount": 1,
+                        "gst_amount": 1,
+                        "tax_percent": 1,
+                        "gst_percent": 1,
+                        "coupon_code": 1,
+                        "discount_amount": 1,
+                        "customer_discount_amount": 1,
+                        "pricing": 1,
+                        "pricing_snapshot": 1,
+                        "pricing_breakdown": 1,
+                        "breakdown": 1,
+                        "extra_charges": 1,
+                        "customer_charge_breakdown": 1,
+                        "charge_breakdown": 1,
+                        "applied_charges": 1,
+                    },
+                )
+                t["booking"] = booking
+                if booking:
+                    t["booking_invoice_breakdown"] = _booking_invoice_breakdown({**t, "booking": booking})
+                    t["invoice_breakdown"] = t["booking_invoice_breakdown"]
+
             subscription = None
             if t.get("subscription_id"):
                 subscription = await db.subscriptions.find_one(
@@ -672,7 +783,7 @@ async def list_transactions(
                     t["invoice_breakdown"] = _subscription_invoice_breakdown(t)
 
             property_info = None
-            property_id = t.get("property_id") or (subscription or {}).get("property_id")
+            property_id = t.get("property_id") or (booking or {}).get("property_id") or (subscription or {}).get("property_id")
             if property_id:
                 property_info = await db.properties.find_one(
                     {"property_id": property_id},
@@ -684,7 +795,15 @@ async def list_transactions(
                         "name": 1,
                         "owner_id": 1,
                         "broker_id": 1,
+                        "assigned_broker_id": 1,
+                        "broker_code": 1,
+                        "lg_code": 1,
                         "rm_id": 1,
+                        "employee_id": 1,
+                        "assigned_employee_id": 1,
+                        "employee_code": 1,
+                        "branch_manager_id": 1,
+                        "branch_manager_code": 1,
                         "address": 1,
                         "city": 1,
                         "state": 1,
@@ -693,7 +812,7 @@ async def list_transactions(
                 )
             t["property"] = property_info
 
-            uid = t.get("user_id") or t.get("host_id") or (subscription or {}).get("user_id")
+            uid = t.get("user_id") or (booking or {}).get("guest_id") or t.get("host_id") or (subscription or {}).get("user_id")
             user_info = None
             if uid:
                 user_info = await db.users.find_one(
@@ -712,6 +831,27 @@ async def list_transactions(
                         "gst_no": 1,
                     },
                 )
+            host_info = None
+            host_id = t.get("host_id") or (booking or {}).get("host_id") or (property_info or {}).get("owner_id")
+            if host_id:
+                host_info = await db.users.find_one(
+                    {"user_id": host_id},
+                    {
+                        "_id": 0,
+                        "user_id": 1,
+                        "full_name": 1,
+                        "email": 1,
+                        "phone": 1,
+                        "lg_code": 1,
+                        "employee_code": 1,
+                        "broker_id": 1,
+                        "rm_id": 1,
+                        "branch_manager_id": 1,
+                        "branch_manager_code": 1,
+                        "gst_number": 1,
+                        "gst_no": 1,
+                    },
+                )
             if not user_info and property_info and property_info.get("owner_id"):
                 user_info = await db.users.find_one(
                     {"user_id": property_info["owner_id"]},
@@ -725,29 +865,68 @@ async def list_transactions(
                         "employee_code": 1,
                         "broker_id": 1,
                         "rm_id": 1,
+                        "branch_manager_id": 1,
+                        "branch_manager_code": 1,
                         "gst_number": 1,
                         "gst_no": 1,
                     },
                 )
             t["user"] = user_info
+            t["host"] = host_info or (user_info if (user_info or {}).get("user_id") == host_id else None)
             broker_info = None
             employee_info = None
-            if user_info or property_info:
-                broker_id = (user_info or {}).get("broker_id") or (property_info or {}).get("broker_id")
-                rm_id = (user_info or {}).get("rm_id") or (property_info or {}).get("rm_id")
+            branch_manager_info = None
+            if user_info or host_info or property_info or booking:
+                broker_id = _first_present(
+                    (booking or {}).get("broker_id"),
+                    (property_info or {}).get("broker_id"),
+                    (property_info or {}).get("assigned_broker_id"),
+                    (host_info or {}).get("broker_id"),
+                    (user_info or {}).get("broker_id"),
+                )
+                broker_code = _first_present(
+                    (booking or {}).get("broker_lg_code"),
+                    (property_info or {}).get("broker_code"),
+                    (property_info or {}).get("lg_code"),
+                    (host_info or {}).get("lg_code"),
+                    (user_info or {}).get("lg_code"),
+                )
+                rm_id = _first_present(
+                    (booking or {}).get("rm_id"),
+                    (booking or {}).get("employee_id"),
+                    (property_info or {}).get("rm_id"),
+                    (property_info or {}).get("employee_id"),
+                    (property_info or {}).get("assigned_employee_id"),
+                    (host_info or {}).get("rm_id"),
+                    (user_info or {}).get("rm_id"),
+                )
+                employee_code = _first_present(
+                    (booking or {}).get("employee_code"),
+                    (property_info or {}).get("employee_code"),
+                    (host_info or {}).get("employee_code"),
+                    (user_info or {}).get("employee_code"),
+                )
+                branch_manager_ref = _first_present(
+                    (booking or {}).get("branch_manager_id"),
+                    (booking or {}).get("branch_manager_code"),
+                    (property_info or {}).get("branch_manager_id"),
+                    (property_info or {}).get("branch_manager_code"),
+                    (host_info or {}).get("branch_manager_id"),
+                    (host_info or {}).get("branch_manager_code"),
+                )
                 if broker_id:
                     broker_info = await db.users.find_one(
                         {"user_id": broker_id, "role": "broker"},
                         {"_id": 0, "user_id": 1, "full_name": 1, "lg_code": 1, "rm_id": 1},
                     )
-                if not broker_info and (user_info or {}).get("lg_code"):
+                if not broker_info and broker_code:
                     broker_info = await db.users.find_one(
-                        {"role": "broker", "lg_code": {"$regex": f"^{re.escape(user_info['lg_code'])}$", "$options": "i"}},
+                        {"role": "broker", "lg_code": {"$regex": f"^{re.escape(str(broker_code))}$", "$options": "i"}},
                         {"_id": 0, "user_id": 1, "full_name": 1, "lg_code": 1, "rm_id": 1},
                     )
-                if (user_info or {}).get("employee_code"):
+                if employee_code:
                     employee_info = await db.users.find_one(
-                        {"role": "employee", "employee_code": {"$regex": f"^{re.escape(user_info['employee_code'])}$", "$options": "i"}},
+                        {"role": "employee", "employee_code": {"$regex": f"^{re.escape(str(employee_code))}$", "$options": "i"}},
                         {"_id": 0, "user_id": 1, "full_name": 1, "employee_code": 1},
                     )
                 if not employee_info and rm_id:
@@ -760,12 +939,14 @@ async def list_transactions(
                         {"user_id": broker_info["rm_id"], "role": "employee"},
                         {"_id": 0, "user_id": 1, "full_name": 1, "employee_code": 1},
                     )
-                if not broker_info and (user_info or {}).get("lg_code"):
-                    broker_info = {"full_name": "NA", "lg_code": user_info.get("lg_code")}
-                if not employee_info and (user_info or {}).get("employee_code"):
-                    employee_info = {"full_name": "NA", "employee_code": user_info.get("employee_code")}
+                branch_manager_info = await _lookup_finance_user_ref(db, branch_manager_ref)
+                if not broker_info and broker_code:
+                    broker_info = {"full_name": "NA", "lg_code": broker_code}
+                if not employee_info and employee_code:
+                    employee_info = {"full_name": "NA", "employee_code": employee_code}
             t["broker"] = broker_info
             t["employee"] = employee_info
+            t["branch_manager"] = branch_manager_info
             
         return {"transactions": items, "total": total, "limit": limit, "skip": skip}
     except Exception as e:

@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 PAN_PATTERN = re.compile(r"^[A-Z]{5}[0-9]{4}[A-Z]$")
 ROUNDING_METHODS = {"NEAREST_RUPEE", "TWO_DECIMAL", "FLOOR", "CEIL"}
 ENTITY_TYPES_WITH_THRESHOLD = {"individual", "huf"}
+TDS_ROLES = {"host", "broker", "employee"}
 TDS_TABLES = [
     "tds_configurations",
     "host_tax_profiles",
@@ -99,6 +100,8 @@ def default_tds_config() -> Dict[str, Any]:
     timestamp = now_iso()
     return {
         "config_id": "tds_default",
+        "role": "host",
+        "role_label": "Host",
         "is_enabled": True,
         "is_current": True,
         "provision_code": "Section 194-O",
@@ -123,6 +126,11 @@ def normalize_tds_config(raw: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
     base = default_tds_config()
     raw = raw or {}
     config = {**base, **raw}
+    role = str(config.get("role") or "host").strip().lower()
+    if role not in TDS_ROLES:
+        role = "host"
+    config["role"] = role
+    config["role_label"] = {"host": "Host", "broker": "Broker", "employee": "Employee"}[role]
     config["is_enabled"] = bool(config.get("is_enabled", True))
     config["is_current"] = bool(config.get("is_current", True))
     config["provision_code"] = str(config.get("provision_code") or "Section 194-O").strip() or "Section 194-O"
@@ -142,7 +150,38 @@ def normalize_tds_config(raw: Optional[Dict[str, Any]] = None) -> Dict[str, Any]
     return config
 
 
-async def get_active_tds_config(db: AsyncIOMotorDatabase, transaction_date: Any = None) -> Dict[str, Any]:
+def _normalize_tds_configurations(raw: Optional[Dict[str, Any]] = None) -> list[Dict[str, Any]]:
+    raw = raw or {}
+    source = raw.get("configurations")
+    if not isinstance(source, list) or not source:
+        source = [{**raw, "role": raw.get("role") or "host"}]
+
+    by_role: Dict[str, Dict[str, Any]] = {}
+    for item in source:
+        if not isinstance(item, dict):
+            continue
+        normalized = normalize_tds_config(item)
+        by_role[normalized["role"]] = normalized
+
+    if "host" not in by_role:
+        by_role["host"] = normalize_tds_config({"role": "host"})
+
+    return [by_role[role] for role in ("host", "broker", "employee") if role in by_role]
+
+
+def _config_for_role(config: Dict[str, Any], role: str = "host") -> Dict[str, Any]:
+    target_role = role if role in TDS_ROLES else "host"
+    configurations = _normalize_tds_configurations(config)
+    for item in configurations:
+        if item.get("role") == target_role:
+            return normalize_tds_config(item)
+    for item in configurations:
+        if item.get("role") == "host":
+            return normalize_tds_config(item)
+    return normalize_tds_config({"role": target_role})
+
+
+async def get_active_tds_config(db: AsyncIOMotorDatabase, transaction_date: Any = None, role: str = "host") -> Dict[str, Any]:
     await ensure_tds_tables(db)
     target = parse_date(transaction_date, today_utc()) or today_utc()
     try:
@@ -152,21 +191,28 @@ async def get_active_tds_config(db: AsyncIOMotorDatabase, transaction_date: Any 
         configs = []
 
     for config in configs:
-        normalized = normalize_tds_config(config)
+        normalized = _config_for_role(config, role)
         start = parse_date(normalized.get("effective_from"), date.min) or date.min
         end = parse_date(normalized.get("effective_to"), date.max) or date.max
         if start <= target <= end:
-            return normalized
-    return normalize_tds_config(configs[0] if configs else None)
+            return {**normalized, "configurations": _normalize_tds_configurations(config)}
+    if configs:
+        selected = _config_for_role(configs[0], role)
+        return {**selected, "configurations": _normalize_tds_configurations(configs[0])}
+    selected = normalize_tds_config({"role": role})
+    return {**selected, "configurations": _normalize_tds_configurations(selected)}
 
 
 async def save_tds_config(db: AsyncIOMotorDatabase, payload: Dict[str, Any], current_user: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     await ensure_tds_tables(db)
-    config = normalize_tds_config(payload)
-    effective_from = parse_date(config.get("effective_from"))
-    effective_to = parse_date(config.get("effective_to"))
-    if effective_to and effective_from and effective_to < effective_from:
-        raise ValueError("Effective To date cannot be before Effective From date")
+    configurations = _normalize_tds_configurations(payload)
+    for item in configurations:
+        effective_from = parse_date(item.get("effective_from"))
+        effective_to = parse_date(item.get("effective_to"))
+        if effective_to and effective_from and effective_to < effective_from:
+            raise ValueError(f"Effective To date cannot be before Effective From date for {item.get('role_label')}")
+    host_config = next((item for item in configurations if item.get("role") == "host"), configurations[0])
+    config = {**host_config, "configurations": configurations}
 
     existing = await db.tds_configurations.find({"is_current": True}, {"_id": 0}).sort("version", -1).to_list(1)
     previous_version = int((existing[0] or {}).get("version") or 0) if existing else 0

@@ -185,7 +185,7 @@ const PlatformSettings = () => {
     if (payload.is_enabled) {
       const confirmed = await requestConfirm({
         title: 'Activate TDS Configuration',
-        description: 'Activate this TDS configuration for future host payout calculations?',
+        description: 'Activate these role-wise TDS configurations for future payout and commission calculations?',
         confirmLabel: 'Activate',
       });
       if (!confirmed) return;
@@ -473,6 +473,8 @@ const currentFyStart = () => {
 };
 
 const buildTdsDraft = (config = {}) => ({
+  role: config.role || 'host',
+  role_label: config.role_label || ({ host: 'Host', broker: 'Broker', employee: 'Employee' }[config.role || 'host'] || 'Host'),
   is_enabled: config.is_enabled !== false,
   provision_code: config.provision_code || 'Section 194-O',
   standard_rate: config.standard_rate ?? 0.10,
@@ -487,6 +489,18 @@ const buildTdsDraft = (config = {}) => ({
   pan_aadhaar_required: config.pan_aadhaar_required !== false,
   missing_pan_rate: config.missing_pan_rate ?? 20,
 });
+
+const tdsRoleOptions = [
+  ['host', 'Host'],
+  ['broker', 'Broker'],
+  ['employee', 'Employee'],
+];
+
+const tdsCalculationBaseLabels = {
+  host: 'Gross Booking Value',
+  broker: 'Broker Commission Value',
+  employee: 'Employee Commission Value',
+};
 
 const buildPaymentDraft = (paymentConfig = {}) => {
   const rawCharges = paymentConfig.charges || {};
@@ -632,7 +646,7 @@ const PaymentTaxCommission = ({
           ['Payment Configuration', `${draft.charges.platform_fee?.value ?? 0}% platform fee`],
           ['Booking GST Slabs', `${bookingTaxSlabs.filter((slab) => slab.is_active !== false).length} active`],
           ['Host Payout Configuration', `${draft.host_payout.platform_commission?.value ?? 0}% commission`],
-          ['TDS Configuration', tdsConfig?.is_enabled === false ? 'Disabled' : `${tdsConfig?.standard_rate ?? 0.10}% ${tdsConfig?.provision_code || 'Section 194-O'}`],
+          ['TDS Configuration', `${tdsConfig?.configurations?.length || 1} role rule(s)`],
           ['Subscription Tax', `${plans.length} plans`],
         ].map(([label, value]) => <Panel key={label} className="p-4"><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-2 break-words text-xl font-black">{value}</p></Panel>)}
       </div>
@@ -773,45 +787,94 @@ const PaymentTaxCommission = ({
 };
 
 const TdsConfigurationPanel = ({ config, saving, onSave }) => {
-  const [draft, setDraft] = useState(() => buildTdsDraft(config || {}));
+  const buildDrafts = (source = {}) => {
+    const configs = Array.isArray(source.configurations) && source.configurations.length
+      ? source.configurations
+      : [source];
+    const byRole = new Map(configs.map((item) => [item.role || 'host', buildTdsDraft(item)]));
+    if (!byRole.has('host')) byRole.set('host', buildTdsDraft({ role: 'host' }));
+    return Array.from(byRole.values());
+  };
+
+  const [drafts, setDrafts] = useState(() => buildDrafts(config || {}));
 
   useEffect(() => {
-    setDraft(buildTdsDraft(config || {}));
+    setDrafts(buildDrafts(config || {}));
   }, [config]);
 
-  const update = (patch) => setDraft((current) => ({ ...current, ...patch }));
-  const updateThreshold = (key, value) => setDraft((current) => ({
-    ...current,
-    thresholds: { ...current.thresholds, [key]: value },
-  }));
+  const updateDraft = (index, patch) => setDrafts((current) => current.map((item, idx) => (
+    idx === index ? { ...item, ...patch } : item
+  )));
+  const updateThreshold = (index, key, value) => setDrafts((current) => current.map((item, idx) => (
+    idx === index ? { ...item, thresholds: { ...item.thresholds, [key]: value } } : item
+  )));
+  const usedRoles = drafts.map((item) => item.role);
+  const nextRole = tdsRoleOptions.find(([role]) => !usedRoles.includes(role))?.[0];
+
+  const addConfiguration = () => {
+    if (!nextRole) {
+      window.alert('TDS configuration is already added for Host, Broker and Employee.');
+      return;
+    }
+    setDrafts((current) => [...current, buildTdsDraft({ role: nextRole })]);
+  };
+
+  const removeConfiguration = (index) => {
+    setDrafts((current) => {
+      const item = current[index];
+      if (item?.role === 'host') {
+        window.alert('Host TDS configuration is required.');
+        return current;
+      }
+      return current.filter((_, idx) => idx !== index);
+    });
+  };
 
   const submit = async () => {
-    const standardRate = Number(draft.standard_rate);
-    const missingPanRate = Number(draft.missing_pan_rate);
-    const individualThreshold = Number(draft.thresholds.individual_huf);
-    const otherThreshold = Number(draft.thresholds.other_entity);
-    if (!draft.effective_from) {
-      await showNotice({ title: 'Validation Error', description: 'Effective From date is required.', eyebrow: 'Validation Error' });
+    try {
+      const seen = new Set();
+      const configurations = drafts.map((draft) => {
+        const standardRate = Number(draft.standard_rate);
+        const missingPanRate = Number(draft.missing_pan_rate);
+        const individualThreshold = Number(draft.thresholds.individual_huf);
+        const otherThreshold = Number(draft.thresholds.other_entity);
+        if (seen.has(draft.role)) {
+          throw new Error('Each role can have only one active TDS configuration.');
+        }
+        seen.add(draft.role);
+        if (!draft.effective_from) {
+          throw new Error('Effective From date is required.');
+        }
+        if ([standardRate, missingPanRate, individualThreshold, otherThreshold].some((value) => Number.isNaN(value) || value < 0)) {
+          throw new Error('TDS rates and thresholds cannot be negative.');
+        }
+        if (draft.effective_to && draft.effective_from > draft.effective_to) {
+          throw new Error('Effective To must be after Effective From.');
+        }
+        return {
+          ...draft,
+          role_label: tdsRoleOptions.find(([role]) => role === draft.role)?.[1] || draft.role,
+          standard_rate: standardRate,
+          missing_pan_rate: missingPanRate,
+          thresholds: {
+            individual_huf: individualThreshold,
+            other_entity: otherThreshold,
+          },
+          effective_to: draft.effective_to || null,
+        };
+      });
+      onSave({
+        ...configurations.find((item) => item.role === 'host'),
+        configurations,
+      });
+    } catch (error) {
+      await showNotice({
+        title: 'Validation Error',
+        description: error.message || 'Unable to save TDS configuration.',
+        eyebrow: 'Validation Error',
+      });
       return;
     }
-    if ([standardRate, missingPanRate, individualThreshold, otherThreshold].some((value) => Number.isNaN(value) || value < 0)) {
-      await showNotice({ title: 'Validation Error', description: 'TDS rates and thresholds cannot be negative.', eyebrow: 'Validation Error' });
-      return;
-    }
-    if (draft.effective_to && draft.effective_from > draft.effective_to) {
-      await showNotice({ title: 'Validation Error', description: 'Effective To must be after Effective From.', eyebrow: 'Validation Error' });
-      return;
-    }
-    onSave({
-      ...draft,
-      standard_rate: standardRate,
-      missing_pan_rate: missingPanRate,
-      thresholds: {
-        individual_huf: individualThreshold,
-        other_entity: otherThreshold,
-      },
-      effective_to: draft.effective_to || null,
-    });
   };
 
   return (
@@ -819,23 +882,73 @@ const TdsConfigurationPanel = ({ config, saving, onSave }) => {
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
         <div>
           <h2 className="font-black">TDS Configuration</h2>
-          <p className="mt-1 text-xs text-slate-500">Host payout TDS rules for Section 194-O with financial year thresholds.</p>
+          <p className="mt-1 text-xs text-slate-500">Role-wise TDS rules for host payouts and broker/employee commission payouts.</p>
         </div>
-        <button
-          disabled={saving}
-          onClick={submit}
-          className="rounded-xl bg-charcoal px-5 py-3 text-sm font-black text-white shadow-sm disabled:opacity-60"
-        >
-          {saving ? 'Saving...' : 'Save TDS Configuration'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            disabled={saving || !nextRole}
+            onClick={addConfiguration}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-3 text-sm font-black text-white shadow-sm disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" /> Add Configuration
+          </button>
+          <button
+            disabled={saving}
+            onClick={submit}
+            className="rounded-xl bg-charcoal px-5 py-3 text-sm font-black text-white shadow-sm disabled:opacity-60"
+          >
+            {saving ? 'Saving...' : 'Save TDS Configuration'}
+          </button>
+        </div>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+      <div className="mt-4 space-y-4">
+        {drafts.map((draft, index) => (
+          <div key={`${draft.role}-${index}`} className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-gold">{draft.role_label || draft.role}</p>
+                <h3 className="text-lg font-black">{draft.role_label || draft.role} TDS Rule</h3>
+              </div>
+              {draft.role !== 'host' && (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => removeConfiguration(index)}
+                  className="inline-flex items-center gap-1 rounded-lg bg-rose-50 px-3 py-2 text-xs font-black text-rose-700 disabled:opacity-60"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Remove
+                </button>
+              )}
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              <label className="space-y-2">
+                <span className="text-xs font-black uppercase tracking-wide text-slate-500">Apply To Role</span>
+                <select
+                  value={draft.role}
+                  disabled={draft.role === 'host'}
+                  onChange={(event) => {
+                    const role = event.target.value;
+                    if (usedRoles.includes(role)) {
+                      window.alert('Configuration already exists for this role.');
+                      return;
+                    }
+                    updateDraft(index, {
+                      role,
+                      role_label: tdsRoleOptions.find(([value]) => value === role)?.[1] || role,
+                    });
+                  }}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold disabled:bg-slate-100 disabled:text-slate-500"
+                >
+                  {tdsRoleOptions.map(([role, label]) => <option key={role} value={role}>{label}</option>)}
+                </select>
+              </label>
         <label className="space-y-2">
           <span className="text-xs font-black uppercase tracking-wide text-slate-500">Status</span>
           <select
             value={draft.is_enabled ? 'enabled' : 'disabled'}
-            onChange={(event) => update({ is_enabled: event.target.value === 'enabled' })}
+            onChange={(event) => updateDraft(index, { is_enabled: event.target.value === 'enabled' })}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
           >
             <option value="enabled">Enabled</option>
@@ -846,14 +959,14 @@ const TdsConfigurationPanel = ({ config, saving, onSave }) => {
           <span className="text-xs font-black uppercase tracking-wide text-slate-500">Provision Code</span>
           <input
             value={draft.provision_code}
-            onChange={(event) => update({ provision_code: event.target.value })}
+            onChange={(event) => updateDraft(index, { provision_code: event.target.value })}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
           />
         </label>
         <label className="space-y-2">
           <span className="text-xs font-black uppercase tracking-wide text-slate-500">Calculation Base</span>
           <input
-            value="Gross Booking Value"
+            value={tdsCalculationBaseLabels[draft.role] || 'Gross Value'}
             disabled
             className="w-full rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 font-bold text-slate-500"
           />
@@ -865,7 +978,7 @@ const TdsConfigurationPanel = ({ config, saving, onSave }) => {
             min="0"
             step="0.01"
             value={draft.standard_rate}
-            onChange={(event) => update({ standard_rate: event.target.value })}
+            onChange={(event) => updateDraft(index, { standard_rate: event.target.value })}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
           />
         </label>
@@ -876,7 +989,7 @@ const TdsConfigurationPanel = ({ config, saving, onSave }) => {
             min="0"
             step="0.01"
             value={draft.missing_pan_rate}
-            onChange={(event) => update({ missing_pan_rate: event.target.value })}
+            onChange={(event) => updateDraft(index, { missing_pan_rate: event.target.value })}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
           />
         </label>
@@ -884,7 +997,7 @@ const TdsConfigurationPanel = ({ config, saving, onSave }) => {
           <span className="text-xs font-black uppercase tracking-wide text-slate-500">Rounding Method</span>
           <select
             value={draft.rounding_method}
-            onChange={(event) => update({ rounding_method: event.target.value })}
+            onChange={(event) => updateDraft(index, { rounding_method: event.target.value })}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
           >
             <option value="NEAREST_RUPEE">Nearest Rupee</option>
@@ -898,7 +1011,7 @@ const TdsConfigurationPanel = ({ config, saving, onSave }) => {
           <input
             type="date"
             value={draft.effective_from}
-            onChange={(event) => update({ effective_from: event.target.value })}
+            onChange={(event) => updateDraft(index, { effective_from: event.target.value })}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
           />
         </label>
@@ -907,7 +1020,7 @@ const TdsConfigurationPanel = ({ config, saving, onSave }) => {
           <input
             type="date"
             value={draft.effective_to}
-            onChange={(event) => update({ effective_to: event.target.value })}
+            onChange={(event) => updateDraft(index, { effective_to: event.target.value })}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
           />
         </label>
@@ -915,12 +1028,12 @@ const TdsConfigurationPanel = ({ config, saving, onSave }) => {
           <input
             type="checkbox"
             checked={draft.pan_aadhaar_required}
-            onChange={(event) => update({ pan_aadhaar_required: event.target.checked })}
+            onChange={(event) => updateDraft(index, { pan_aadhaar_required: event.target.checked })}
             className="h-4 w-4 accent-emerald-700"
           />
           <span className="text-sm font-bold">PAN/Aadhaar required for standard TDS rate</span>
         </label>
-      </div>
+            </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <label className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
@@ -930,7 +1043,7 @@ const TdsConfigurationPanel = ({ config, saving, onSave }) => {
             min="0"
             step="0.01"
             value={draft.thresholds.individual_huf}
-            onChange={(event) => updateThreshold('individual_huf', event.target.value)}
+            onChange={(event) => updateThreshold(index, 'individual_huf', event.target.value)}
             className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
           />
           <p className="text-xs text-slate-500">Resident Individual/HUF TDS starts after this financial-year gross value.</p>
@@ -942,11 +1055,14 @@ const TdsConfigurationPanel = ({ config, saving, onSave }) => {
             min="0"
             step="0.01"
             value={draft.thresholds.other_entity}
-            onChange={(event) => updateThreshold('other_entity', event.target.value)}
+            onChange={(event) => updateThreshold(index, 'other_entity', event.target.value)}
             className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold outline-none focus:border-gold"
           />
           <p className="text-xs text-slate-500">Company, LLP, partnership and other entities normally use zero threshold.</p>
         </label>
+      </div>
+          </div>
+        ))}
       </div>
     </Panel>
   );
