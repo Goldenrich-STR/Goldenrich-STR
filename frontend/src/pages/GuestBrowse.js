@@ -771,7 +771,7 @@ const GuestBrowse = () => {
         <div className="w-full max-w-5xl mx-auto relative z-50">
           <form
             onSubmit={handleSearch}
-            className="flex flex-col lg:flex-row items-center bg-white rounded-2xl lg:rounded-full w-full shadow-elevated border border-gray-100 relative z-50 animate-fade-in"
+            className="flex flex-col lg:flex-row items-center bg-white rounded-2xl lg:rounded-full w-full shadow-elevated border border-gray-100 relative z-50"
           >
               
               {/* Location */}
