@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -44,6 +45,15 @@ export default function DateRangePicker({
   onClose,
   desktopPosition = null,
 }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const seed = checkIn ? new Date(`${checkIn}T00:00:00`) : new Date();
     return new Date(seed.getFullYear(), seed.getMonth(), 1);
@@ -130,7 +140,7 @@ export default function DateRangePicker({
   };
 
 
-  return (
+  const pickerContent = (
     <div
       style={desktopStyle}
       className="fixed inset-x-3 top-24 bottom-6 z-[90] overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_22px_50px_rgba(15,23,42,0.16)] md:absolute md:top-full md:right-0 md:mt-3 md:bottom-auto md:w-[min(92vw,440px)] md:overflow-visible md:rounded-[32px] md:p-8"
@@ -198,4 +208,10 @@ export default function DateRangePicker({
       </div>
     </div>
   );
+
+  if (isMobile) {
+    return createPortal(pickerContent, document.body);
+  }
+
+  return pickerContent;
 }

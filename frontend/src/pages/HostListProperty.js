@@ -531,6 +531,9 @@ const initialForm = {
 
 // Helper to format error details (strings, arrays of validation errors, or objects) into a readable string
 const formatError = (error, defaultMsg = 'An error occurred') => {
+  if (error?.message === 'Network Error') {
+    return 'Unable to reach the upload server. Please check your connection and try again.';
+  }
   if (error.response?.data?.detail) {
     const detail = error.response.data.detail;
     if (typeof detail === 'string') {
@@ -548,6 +551,14 @@ const formatError = (error, defaultMsg = 'An error occurred') => {
   }
   return error.message || defaultMsg;
 };
+
+const canPreviewImageUrl = (url) => new Promise((resolve) => {
+  const image = new Image();
+  image.onload = () => resolve(true);
+  image.onerror = () => resolve(false);
+  image.referrerPolicy = 'no-referrer';
+  image.src = url;
+});
 
 const HostListProperty = () => {
   const navigate = useNavigate();
@@ -1246,7 +1257,7 @@ const HostListProperty = () => {
     }
   };
 
-  const handleAddImageUrl = () => {
+  const handleAddImageUrl = async () => {
     const url = imageUrlDraft.trim();
     if (!url) {
       setError('Please paste an image URL');
@@ -1272,24 +1283,29 @@ const HostListProperty = () => {
     setError('');
     setIsImageUrlDialogOpen(false);
 
-    uploadAPI.uploadImageFromUrl(url)
-      .then((data) => {
-        const hostedUrl = data.url;
-        const hostedPureUrl = hostedUrl.split('#')[0];
-        if (form.images.some(img => img.split('#')[0] === hostedPureUrl)) {
-          setError('This image is already uploaded');
-          return;
-        }
-        update({ images: [...form.images, `${hostedUrl}#Other`], watermark_confirmed: true });
+    try {
+      const data = await uploadAPI.uploadImageFromUrl(url);
+      const hostedUrl = data.url;
+      const hostedPureUrl = hostedUrl.split('#')[0];
+      if (form.images.some(img => img.split('#')[0] === hostedPureUrl)) {
+        setError('This image is already uploaded');
+        return;
+      }
+      update({ images: [...form.images, `${hostedUrl}#Other`], watermark_confirmed: true });
+      setImageUrlDraft('');
+    } catch (err) {
+      const canUseDirectUrl = await canPreviewImageUrl(url);
+      if (canUseDirectUrl) {
+        update({ images: [...form.images, `${url}#Other`], watermark_confirmed: true });
         setImageUrlDraft('');
-      })
-      .catch((err) => {
-        setError(formatError(err, 'Image URL upload failed'));
-        setIsImageUrlDialogOpen(true);
-      })
-      .finally(() => {
-        setUploadingPhoto(false);
-      });
+        setError('');
+        return;
+      }
+      setError(formatError(err, 'Image URL upload failed'));
+      setIsImageUrlDialogOpen(true);
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const removeImage = (idx) => {

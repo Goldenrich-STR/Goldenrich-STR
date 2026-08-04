@@ -13,7 +13,7 @@ from uuid import uuid4
 import logging
 import os
 import ssl
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 from urllib.request import Request, urlopen
 import re
 from services.object_storage import store_upload
@@ -136,8 +136,10 @@ def _download_remote_image(url: str) -> tuple[bytes, str]:
         try:
             html = contents.decode("utf-8", errors="ignore")
             extracted_url = _extract_image_url_from_html(html)
-            if extracted_url and extracted_url != url:
-                return _download_remote_image(extracted_url)
+            if extracted_url:
+                extracted_url = urljoin(url, extracted_url)
+                if extracted_url != url:
+                    return _download_remote_image(extracted_url)
         except Exception as exc:
             logger.warning("Could not extract image URL from HTML page %s: %s", url, exc)
         raise HTTPException(

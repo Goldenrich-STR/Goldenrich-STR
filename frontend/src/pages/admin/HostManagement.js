@@ -15,6 +15,20 @@ const getAssigneeLabel = (user) => {
   return code ? `${name} (${code})` : name;
 };
 
+const getAssigneeOptionLabel = (user) => {
+  const name = user?.full_name || user?.name || user?.email || user?.phone || 'Unnamed';
+  const code = getAssigneeCode(user);
+  return code ? `${code} - ${name}` : name;
+};
+
+const getBranchManagerIdFromHost = (host, branchManagers = []) => {
+  if (host?.branch_manager_id) return host.branch_manager_id;
+  const code = host?.branch_manager?.employee_code || host?.branch_manager_code || host?.employee_code;
+  if (!code) return '';
+  const match = branchManagers.find((manager) => getAssigneeCode(manager) === code || manager.user_id === code);
+  return match?.user_id || code;
+};
+
 const codeText = (value) => value || 'Not assigned';
 const displayDate = (value) => {
   if (!value) return '-';
@@ -136,7 +150,7 @@ const HostManagement = () => {
   const [search, setSearch] = useState('');
   const [state, setState] = useState({ loading: true, error: '', hosts: [] });
   const [selected, setSelected] = useState({ loading: false, host: null, error: '' });
-  const [assignees, setAssignees] = useState({ loading: true, error: '', brokers: [], relationship_managers: [] });
+  const [assignees, setAssignees] = useState({ loading: true, error: '', brokers: [], relationship_managers: [], branch_managers: [] });
   const [assignment, setAssignment] = useState({
     open: false,
     host: null,
@@ -200,9 +214,10 @@ const HostManagement = () => {
         error: '',
         brokers: data.brokers || [],
         relationship_managers: data.relationship_managers || [],
+        branch_managers: data.branch_managers || [],
       });
     } catch (error) {
-      setAssignees({ loading: false, error: error.response?.data?.detail || 'Failed to load brokers and RMs', brokers: [], relationship_managers: [] });
+      setAssignees({ loading: false, error: error.response?.data?.detail || 'Failed to load brokers, RMs and branch managers', brokers: [], relationship_managers: [], branch_managers: [] });
     }
   }, []);
 
@@ -277,11 +292,13 @@ const HostManagement = () => {
   };
 
   const openAssignment = (host) => {
+    const primaryId = host.broker_id || host.rm_id || '';
+    const secondaryId = host.broker_id ? (host.rm_id || '') : getBranchManagerIdFromHost(host, assignees.branch_managers);
     setAssignment({
       open: true,
       host,
-      broker_id: host.broker_id || '',
-      rm_id: host.rm_id || '',
+      broker_id: primaryId,
+      rm_id: secondaryId,
       reason: 'Host team assignment updated from Host Management',
       saving: false,
       error: '',
@@ -386,7 +403,7 @@ const HostManagement = () => {
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                 <AssignmentCard label="Broker / RM Code" type={primaryAssignee.type} name={primaryAssignee.name} code={primaryAssignee.code} fallback={primaryAssignee.fallback} />
-                <AssignmentCard label="Branch Manager Code" type="Branch Manager" name={branchManagerName} code={branchManagerCode} fallback={host.branch_manager_id} />
+                <AssignmentCard label="Branch Manager / RM Code" type="Branch Manager" name={branchManagerName} code={branchManagerCode} fallback={host.branch_manager_id} />
               </div>
               <div className="mt-3 grid grid-cols-4 gap-2 rounded-2xl border border-slate-200 p-3 text-center">
                 <p><span className="block text-[10px] font-black uppercase tracking-widest text-slate-500">Branch</span><span className="mt-1 block truncate text-sm font-black">{host.branch || '-'}</span></p>
@@ -508,6 +525,25 @@ const AssignmentModal = ({ assignees, assignment, onChange, onClose, onSave }) =
   if (!assignment.open) return null;
   const host = assignment.host || {};
   const updateField = (field, value) => onChange((current) => ({ ...current, [field]: value, error: '' }));
+  const primaryOptions = [
+    ...(assignees.brokers || []).map((user) => ({ ...user, assignment_type: 'broker' })),
+    ...(assignees.relationship_managers || []).map((user) => ({ ...user, assignment_type: 'rm' })),
+  ];
+  const selectedPrimary = primaryOptions.find((user) => user.user_id === assignment.broker_id || getAssigneeCode(user) === assignment.broker_id);
+  const secondaryType = selectedPrimary?.assignment_type === 'broker' ? 'rm' : selectedPrimary?.assignment_type === 'rm' ? 'branch_manager' : '';
+  const secondaryOptions = secondaryType === 'rm'
+    ? assignees.relationship_managers || []
+    : secondaryType === 'branch_manager'
+      ? assignees.branch_managers || []
+      : [];
+  const secondaryPlaceholder = secondaryType === 'rm'
+    ? '-- Select RM Code --'
+    : secondaryType === 'branch_manager'
+      ? '-- Select Branch Manager Code --'
+      : '-- Select Broker / RM first --';
+  const handlePrimaryChange = (value) => {
+    onChange((current) => ({ ...current, broker_id: value, rm_id: '', error: '' }));
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -526,35 +562,39 @@ const AssignmentModal = ({ assignees, assignment, onChange, onClose, onSave }) =
 
         <div className="grid gap-4">
           <label className="grid gap-2 text-sm font-bold">
-            Broker
+            Broker / RM Code
             <select
               value={assignment.broker_id}
-              onChange={(event) => updateField('broker_id', event.target.value)}
+              onChange={(event) => handlePrimaryChange(event.target.value)}
               disabled={assignees.loading || assignment.saving}
               className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-[#2f6df6]"
             >
-              <option value="">-- No Broker Assigned --</option>
-              {(assignees.brokers || []).map((broker) => (
-                <option key={broker.user_id} value={broker.user_id}>{getAssigneeLabel(broker)}</option>
+              <option value="">-- No Broker / RM Assigned --</option>
+              {primaryOptions.map((user) => (
+                <option key={`${user.assignment_type}-${user.user_id}`} value={user.user_id}>
+                  {getAssigneeOptionLabel(user)} [{user.assignment_type === 'broker' ? 'Broker' : 'RM'}]
+                </option>
               ))}
             </select>
-            <span className="text-xs font-medium text-slate-500">Current: {host.broker_id || '-'}</span>
+            <span className="text-xs font-medium text-slate-500">Current: {host.broker_id ? (host.broker?.lg_code || host.lg_code || host.broker_id) : (host.rm?.employee_code || host.lg_code || host.rm_id || '-')}</span>
           </label>
 
           <label className="grid gap-2 text-sm font-bold">
-            Relationship Manager (RM)
+            Branch Manager / RM Code
             <select
               value={assignment.rm_id}
               onChange={(event) => updateField('rm_id', event.target.value)}
-              disabled={assignees.loading || assignment.saving}
+              disabled={assignees.loading || assignment.saving || !selectedPrimary}
               className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-[#2f6df6]"
             >
-              <option value="">-- No RM Assigned --</option>
-              {(assignees.relationship_managers || []).map((rm) => (
-                <option key={rm.user_id} value={rm.user_id}>{getAssigneeLabel(rm)}</option>
+              <option value="">{secondaryPlaceholder}</option>
+              {secondaryOptions.map((user) => (
+                <option key={`${secondaryType}-${user.user_id}`} value={user.user_id}>
+                  {getAssigneeOptionLabel(user)} [{secondaryType === 'rm' ? 'RM' : 'Branch Manager'}]
+                </option>
               ))}
             </select>
-            <span className="text-xs font-medium text-slate-500">Current: {host.rm_id || '-'}</span>
+            <span className="text-xs font-medium text-slate-500">Current: {host.broker_id ? (host.rm?.employee_code || host.rm_id || '-') : (host.branch_manager?.employee_code || host.branch_manager_id || host.employee_code || '-')}</span>
           </label>
 
           <label className="grid gap-2 text-sm font-bold">
