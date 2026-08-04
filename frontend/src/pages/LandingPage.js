@@ -1932,7 +1932,7 @@ const CollectionsSection = ({
         <ScrollReveal duration="duration-[800ms]">
           <div className="mb-14">
             <div className="mb-8 flex items-end justify-between gap-4">
-              <h2 className="font-serif text-2xl font-bold tracking-tight text-charcoal md:text-4xl">
+              <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
                 Discover Our Collection
               </h2>
               <div className="hidden items-center gap-3 text-charcoal md:flex">
@@ -2013,7 +2013,7 @@ const CollectionsSection = ({
           <div>
             <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
-                <h3 className="font-serif text-xl font-semibold tracking-tight text-charcoal md:text-[2.1rem]">
+                <h3 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
                   Holiday Getaway
                 </h3>
                 <div className="mt-4 flex flex-wrap items-center gap-5 border-b border-black/10 pb-2 text-sm font-medium text-slate-500">
@@ -2706,9 +2706,9 @@ const LandingPage = () => {
         {/* Header */}
         <div className="flex items-end justify-between mb-6 px-4 md:px-[10vw] w-full">
           <div className="text-left">
-            <h3 className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-charcoal flex items-center gap-2">
+            <h3 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E] flex items-center gap-2">
               <span>{title}</span>
-              <IconComponent className="w-5 h-5 text-charcoal/85 stroke-[2]" />
+              <IconComponent className="w-5 h-5 text-[#1E1E1E]/85 stroke-[2]" />
             </h3>
             <p className="text-gray-550 text-xs md:text-sm font-medium mt-1">{subtitle}</p>
           </div>
@@ -3563,7 +3563,7 @@ const LandingPage = () => {
           <div className="px-4 md:px-[10vw]">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
               <div className="flex items-baseline gap-2 flex-wrap">
-                <h2 className="font-serif text-2xl md:text-3xl font-bold text-charcoal tracking-tight">Pick a Destination</h2>
+                <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">Pick a Destination</h2>
               </div>
               <div className="flex md:hidden items-center gap-3 text-charcoal self-end">
                 <span className="text-[11px] font-semibold text-charcoal-muted">Swipe</span>
@@ -4092,7 +4092,7 @@ const LandingPage = () => {
                     <div className="flex justify-between items-end mb-6">
                       <div>
                         <div className="flex items-center gap-3">
-                          <h3 className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-charcoal">
+                          <h3 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
                             Signature Series
                           </h3>
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black border border-[#D4AF37] text-[9px] font-serif font-bold uppercase tracking-[0.15em] text-[#D4AF37] shadow-lg shrink-0">

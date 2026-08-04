@@ -1136,7 +1136,7 @@ const GuestBrowse = () => {
       {/* Results header */}
       <div className="px-4 md:px-8 py-8 w-full flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-serif font-bold tracking-tight text-charcoal tracking-tight">
+          <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
              {new URLSearchParams(window.location.search).get('signature') === 'true' ? (
                 "Signature Series"
              ) : loading ? t('searching') : (
