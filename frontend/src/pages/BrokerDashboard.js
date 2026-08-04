@@ -1327,9 +1327,9 @@ const BrokerCreatePropertyModal = ({ property = null, onClose, onCreated }) => {
   const update = (patch) => setForm((prev) => ({ ...prev, ...patch }));
   const amenityOptions = ['wifi', 'ac', 'parking', 'kitchen', 'pool', 'gym', 'power_backup', 'security', 'workspace', 'tv'];
   const propertyTypeOptions = {
-    residential: ['apartment', 'villa', 'studio', 'independent_house', 'co_living'],
+    residential: ['apartment', 'villa', 'studio', 'independent_house', 'co_living', 'farmhouse'],
     commercial: ['private_office', 'co_working', 'meeting_room'],
-    event_venue: ['banquet_hall', 'farmhouse', 'rooftop', 'hotel_ballroom', 'resort'],
+    event_venue: ['banquet_hall', 'hotel_ballroom'],
   };
   const bhkOptions = form.category === 'commercial'
     ? ['small', 'medium', 'large', 'extra_large', 'custom']

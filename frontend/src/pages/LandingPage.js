@@ -2072,10 +2072,7 @@ const CollectionsSection = ({
                           }}
                           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                         />
-                        <div className="absolute left-4 top-4 z-10 flex items-center gap-1 rounded-full bg-charcoal/80 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
-                          <Star className="h-3.5 w-3.5 fill-[#f4c542] text-[#f4c542]" />
-                          <span>{item.rating && item.review_count > 0 ? Number(item.rating).toFixed(1) : '4.8'}</span>
-                        </div>
+
                         <button
                           type="button"
                           onClick={(event) => {
@@ -2329,6 +2326,23 @@ const LandingPage = () => {
       return [];
     }
   });
+
+  useEffect(() => {
+    const syncWishlist = () => {
+      try {
+        setWishlist(JSON.parse(localStorage.getItem('guest_wishlist')) || []);
+      } catch (e) {
+        setWishlist([]);
+      }
+    };
+    window.addEventListener('focus', syncWishlist);
+    window.addEventListener('storage', syncWishlist);
+    syncWishlist();
+    return () => {
+      window.removeEventListener('focus', syncWishlist);
+      window.removeEventListener('storage', syncWishlist);
+    };
+  }, []);
 
   const handleWishlistToggle = (propertyId) => {
     if (!user) {
@@ -2748,12 +2762,6 @@ const LandingPage = () => {
                           <Zap className="w-3.5 h-3.5 fill-current" />
                        </div>
                     )}
-                    {item.rating && item.review_count > 0 && (
-                      <div className="flex items-center bg-charcoal/70 backdrop-blur-sm text-white px-2 py-0.5 rounded-full text-[10px] font-bold gap-0.5 shadow-sm">
-                         <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                         <span>{Number(item.rating).toFixed(1)}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -2762,7 +2770,7 @@ const LandingPage = () => {
                     <h4 className="font-semibold text-sm md:text-base text-charcoal line-clamp-1 group-hover/card:text-terracotta transition-colors">
                       {item.title}
                     </h4>
-                    {item.rating && item.review_count > 0 && (
+                    {item.rating > 0 && item.review_count > 0 && (
                       <span className="flex items-center text-xs font-semibold text-charcoal shrink-0">
                         <Star className="w-3.5 h-3.5 text-[#eab308] fill-current mr-1" />
                         {Number(item.rating).toFixed(1)}
@@ -2848,16 +2856,7 @@ const LandingPage = () => {
           >
             Discover
           </a>
-          {user && user.role === 'guest' && wishlist.length > 0 && (
-            <a
-              href="#"
-              onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
-              className="hover:text-terracotta transition-colors duration-200 flex items-center gap-1"
-            >
-              <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 animate-pulse" />
-              <span>Wishlist</span>
-            </a>
-          )}
+
           <button
             onClick={() => setShowHowItWorksModal(true)}
             className="hover:text-terracotta transition-colors duration-200"
@@ -3052,15 +3051,7 @@ const LandingPage = () => {
             >
               Discover
             </button>
-            {user && user.role === 'guest' && wishlist.length > 0 && (
-              <button
-                onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }}
-                className="text-left text-[17px] font-medium transition flex items-center justify-between py-4 border-b border-gray-200"
-              >
-                <span>Wishlist</span>
-                <Heart className="w-6 h-6 text-red-500 fill-red-500" />
-              </button>
-            )}
+
             <button
               onClick={() => { setIsMobileMenuOpen(false); setShowHowItWorksModal(true); }}
               className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
@@ -3647,7 +3638,7 @@ const LandingPage = () => {
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute top-3 left-3 flex gap-2 z-20">
-                        {item.rating && item.review_count > 0 && (
+                        {item.rating > 0 && item.review_count > 0 && (
                           <div className="bg-charcoal/70 text-white rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
                             <span>{Number(item.rating).toFixed(1)}</span>
                             <Star className="w-3.5 h-3.5 text-[#E0A51B] fill-current" />
@@ -4175,7 +4166,7 @@ const LandingPage = () => {
 
                       {/* View All Card at the end */}
                       <div
-                        onClick={() => navigate('/guest/browse?category=Signature')}
+                        onClick={() => navigate('/guest/browse?signature=true')}
                         className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-[#fbfbfa] hover:bg-[#E5DFD9]/60 rounded-3xl overflow-hidden border-2 border-dashed border-gray-200 flex-shrink-0 flex flex-col justify-center items-center p-8 group cursor-pointer transition-all duration-300"
                       >
                         <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300 mb-4 border border-gray-100">
@@ -4242,23 +4233,23 @@ const LandingPage = () => {
                     avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100"
                   }
                 ]).map((item, idx) => (
-                  <div key={idx} className="bg-[#FDFCF8] rounded-3xl p-8 border border-sand-200/80 text-left flex flex-col justify-between transition-all duration-300 min-w-[280px] sm:min-w-[320px] md:min-w-[360px] snap-center flex-1 relative hover:border-terracotta/40 hover:shadow-subtle">
-                    <span className="absolute top-6 right-8 text-6xl font-serif text-terracotta/15 select-none pointer-events-none">“</span>
+                  <div key={idx} className="bg-white rounded-2xl p-6 border border-gray-100 text-left flex flex-col justify-between transition-all duration-300 min-w-[260px] sm:min-w-[300px] md:min-w-[320px] snap-center flex-1 relative hover:border-black/10 hover:shadow-md">
+                    <span className="hidden absolute top-6 right-8 text-6xl font-serif text-terracotta/15 select-none pointer-events-none">“</span>
                     <div>
-                      <div className="flex items-center space-x-1 text-terracotta mb-6">
+                      <div className="flex items-center space-x-1 text-[#d4af37] mb-4">
                         {[...Array(item.stars)].map((_, i) => (
                           <Star key={i} className="w-3.5 h-3.5 fill-current" />
                         ))}
                       </div>
-                      <p className="text-charcoal font-serif italic text-base leading-relaxed mb-8 relative z-10">
+                      <p className="text-slate-650 text-slate-600 text-sm leading-relaxed mb-6 font-medium">
                         "{item.text}"
                       </p>
                     </div>
-                    <div className="flex items-center space-x-4 border-t border-sand-100 pt-4 mt-auto">
-                      <img src={item.avatar} alt={item.author} className="w-10 h-10 rounded-full object-cover" />
+                    <div className="flex items-center space-x-3 border-t border-slate-100 pt-4 mt-auto">
+                      <img src={item.avatar} alt={item.author} className="w-8 h-8 rounded-full object-cover" />
                       <div>
-                        <h4 className="font-bold text-charcoal text-xs tracking-tight">{item.author}</h4>
-                        <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mt-0.5">{item.role}</p>
+                        <h4 className="font-bold text-charcoal text-[11px] tracking-tight">{item.author}</h4>
+                        <p className="text-slate-450 text-slate-400 text-[9px] font-semibold uppercase tracking-wider mt-0.5">{item.role}</p>
                       </div>
                     </div>
                   </div>

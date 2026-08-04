@@ -576,8 +576,6 @@ export const PricingEngineTab = () => {
     { value: 'banquet_hall', label: 'Banquet Hall' },
     { value: 'apartment', label: 'Apartment' },
     { value: 'farmhouse', label: 'Farmhouse' },
-    { value: 'rooftop', label: 'Rooftop' },
-    { value: 'resort', label: 'Resort' },
     { value: 'co_working', label: 'Co-working' }
   ];
 

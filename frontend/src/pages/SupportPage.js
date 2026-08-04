@@ -121,13 +121,30 @@ const SupportPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [supportData, setSupportData] = useState(DEFAULT_SUPPORT_DATA);
   const [faqs, setFaqs] = useState(DEFAULT_FAQS);
-  const [wishlist] = useState(() => {
+  const [wishlist, setWishlist] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('guest_wishlist')) || [];
     } catch (e) {
       return [];
     }
   });
+
+  useEffect(() => {
+    const syncWishlist = () => {
+      try {
+        setWishlist(JSON.parse(localStorage.getItem('guest_wishlist')) || []);
+      } catch (e) {
+        setWishlist([]);
+      }
+    };
+    window.addEventListener('focus', syncWishlist);
+    window.addEventListener('storage', syncWishlist);
+    syncWishlist();
+    return () => {
+      window.removeEventListener('focus', syncWishlist);
+      window.removeEventListener('storage', syncWishlist);
+    };
+  }, []);
   const [loading, setLoading] = useState(true);
 
   // FAQ section ref
@@ -339,16 +356,7 @@ const SupportPage = () => {
           >
             Discover
           </a>
-          {user && user.role === 'guest' && wishlist.length > 0 && (
-            <a
-              href="#"
-              onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
-              className="hover:text-terracotta transition flex items-center space-x-1"
-            >
-              <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
-              <span>Wishlist</span>
-            </a>
-          )}
+
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); navigate('/'); }}
@@ -422,9 +430,7 @@ const SupportPage = () => {
           </div>
           <div className="flex flex-col space-y-6 text-lg font-bold tracking-wide">
             <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/guest/browse'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Discover</a>
-            {user && user.role === 'guest' && wishlist.length > 0 && (
-              <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Wishlist</a>
-            )}
+
             <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Home</a>
             {user ? (
               <>

@@ -93,7 +93,6 @@ const CATEGORY_DATA = {
       { value: 'studio', label: 'Studio' },
       { value: 'independent_house', label: 'Independent House' },
       { value: 'farmhouse', label: 'Farmhouse' },
-      { value: 'resort', label: 'Resort' },
     ],
     bhkTypes: [
       { value: 'studio', label: 'Studio' },
@@ -123,10 +122,7 @@ const CATEGORY_DATA = {
   event_venue: {
     propertyTypes: [
       { value: 'banquet_hall', label: 'Banquet' },
-      { value: 'rooftop', label: 'Rooftop' },
       { value: 'hotel_ballroom', label: 'Hotel Ballroom' },
-      { value: 'garden_lawn', label: 'Garden Lawn' },
-      { value: 'party_plot', label: 'Party Plot' },
     ],
     bhkTypes: [
       { value: 'small_event', label: 'Mini (up to 50 guests)' },

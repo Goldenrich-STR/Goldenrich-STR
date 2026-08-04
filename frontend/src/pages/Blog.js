@@ -122,13 +122,30 @@ const Blog = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cmsContent, setCmsContent] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
-  const [wishlist] = useState(() => {
+  const [wishlist, setWishlist] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('guest_wishlist')) || [];
     } catch (e) {
       return [];
     }
   });
+
+  useEffect(() => {
+    const syncWishlist = () => {
+      try {
+        setWishlist(JSON.parse(localStorage.getItem('guest_wishlist')) || []);
+      } catch (e) {
+        setWishlist([]);
+      }
+    };
+    window.addEventListener('focus', syncWishlist);
+    window.addEventListener('storage', syncWishlist);
+    syncWishlist();
+    return () => {
+      window.removeEventListener('focus', syncWishlist);
+      window.removeEventListener('storage', syncWishlist);
+    };
+  }, []);
   const [footerPopup, setFooterPopup] = useState(null);
 
   useEffect(() => {

@@ -414,7 +414,7 @@ const GuestBookings = () => {
 
                         {(() => {
                           const matchingCall = aiCalls.find(c => c.booking_id === b.booking_id);
-                          if (matchingCall) {
+                          if (false && matchingCall) {
                             return (
                               <div className="mt-3">
                                 <button

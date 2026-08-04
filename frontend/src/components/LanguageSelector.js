@@ -31,14 +31,12 @@ const CATEGORIES = [
   {
     key: 'event_venue',
     title: 'Event Venues',
-    description: 'Banquet halls, lawns & rooftops.',
+    description: 'Banquet halls & hotel ballrooms.',
     icon: PartyPopper,
     color: 'text-gray-900 bg-gray-50 border border-gray-200',
     subtypes: [
       { label: 'Banquet Halls', value: 'banquet_hall' },
-      { label: 'Rooftops', value: 'rooftop' },
-      { label: 'Hotel Ballrooms', value: 'hotel_ballroom' },
-      { label: 'Resorts & Lawns', value: 'resort' }
+      { label: 'Hotel Ballrooms', value: 'hotel_ballroom' }
     ]
   }
 ];

@@ -50,14 +50,11 @@ const PROPERTY_TYPES = [
   { value: 'villa', label: 'Villa' },
   { value: 'studio', label: 'Studio' },
   { value: 'independent_house', label: 'Independent House' },
-  { value: 'co_living', label: 'Co-living' },
   { value: 'private_office', label: 'Private Office' },
   { value: 'co_working', label: 'Co-working' },
   { value: 'meeting_room', label: 'Meeting Room' },
   { value: 'banquet_hall', label: 'Banquet Hall' },
   { value: 'farmhouse', label: 'Farmhouse' },
-  { value: 'resort', label: 'Resort' },
-  { value: 'rooftop', label: 'Rooftop' },
   { value: 'hotel_ballroom', label: 'Hotel Ballroom' },
 ];
 
@@ -341,6 +338,29 @@ const GuestBrowse = () => {
       return [];
     }
   });
+
+  useEffect(() => {
+    const syncWishlist = () => {
+      try {
+        const stored = JSON.parse(localStorage.getItem('guest_wishlist')) || [];
+        setWishlist(stored);
+        if (stored.length === 0) {
+          setShowWishlistOnly(false);
+        }
+      } catch (e) {
+        setWishlist([]);
+        setShowWishlistOnly(false);
+      }
+    };
+    window.addEventListener('focus', syncWishlist);
+    window.addEventListener('storage', syncWishlist);
+    syncWishlist();
+    return () => {
+      window.removeEventListener('focus', syncWishlist);
+      window.removeEventListener('storage', syncWishlist);
+    };
+  }, []);
+
   const [showWishlistOnly, setShowWishlistOnly] = useState(false);
 
   const handleWishlistToggle = (propertyId) => {

@@ -2661,7 +2661,7 @@ const PropertyDetail = () => {
                             {prop.category === 'event_venue' ? '/ day' : prop.category === 'commercial' ? '/ day' : '/ night'}
                           </span>
                         </div>
-                        {prop.rating && (
+                        {prop.rating > 0 && (
                           <div className="flex items-center space-x-1">
                             <Star className="w-3.5 h-3.5 text-amber-500 fill-current" />
                             <span className="text-xs font-bold tracking-tight text-charcoal">{prop.rating.toFixed(1)}</span>
