@@ -46,7 +46,6 @@ const subscriptionTargetOptions = {
     ['villa', 'Villa'],
     ['farmhouse', 'Farmhouse'],
     ['banquet_hall', 'Banquet Hall'],
-    ['resort', 'Resort'],
     ['coworking', 'Co-working'],
   ],
   bhkTypes: [

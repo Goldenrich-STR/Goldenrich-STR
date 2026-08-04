@@ -75,7 +75,7 @@ const FLOWS = {
     ]
   },
   guest_categories: {
-    message: "### **Categories & House Rules**\nWe list three premium categories:\n\n1. **Residential Stays**: Villas, apartments, and farmhouses.\n2. **Commercial Spaces**: Co-working desks, private cabins, and meeting rooms.\n3. **Event Venues**: Open lawns, banquet halls, and rooftops.\n\nChoose below to learn about specific rules:",
+    message: "### **Categories & House Rules**\nWe list three premium categories:\n\n1. **Residential Stays**: Villas, apartments, and farmhouses.\n2. **Commercial Spaces**: Co-working desks, private cabins, and meeting rooms.\n3. **Event Venues**: Open lawns, banquet halls, and garden lawns.\n\nChoose below to learn about specific rules:",
     options: [
       { label: "Rules for Events & Shoots", next: "guest_event_rules", icon: "scale" },
       { label: "Discounts on Workspaces", next: "guest_workspace_discounts", icon: "dollar" },

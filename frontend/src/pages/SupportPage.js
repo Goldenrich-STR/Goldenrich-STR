@@ -121,13 +121,30 @@ const SupportPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [supportData, setSupportData] = useState(DEFAULT_SUPPORT_DATA);
   const [faqs, setFaqs] = useState(DEFAULT_FAQS);
-  const [wishlist] = useState(() => {
+  const [wishlist, setWishlist] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('guest_wishlist')) || [];
     } catch (e) {
       return [];
     }
   });
+
+  useEffect(() => {
+    const syncWishlist = () => {
+      try {
+        setWishlist(JSON.parse(localStorage.getItem('guest_wishlist')) || []);
+      } catch (e) {
+        setWishlist([]);
+      }
+    };
+    window.addEventListener('focus', syncWishlist);
+    window.addEventListener('storage', syncWishlist);
+    syncWishlist();
+    return () => {
+      window.removeEventListener('focus', syncWishlist);
+      window.removeEventListener('storage', syncWishlist);
+    };
+  }, []);
   const [loading, setLoading] = useState(true);
 
   // FAQ section ref
@@ -339,16 +356,7 @@ const SupportPage = () => {
           >
             Discover
           </a>
-          {user && user.role === 'guest' && wishlist.length > 0 && (
-            <a
-              href="#"
-              onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
-              className="hover:text-terracotta transition flex items-center space-x-1"
-            >
-              <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
-              <span>Wishlist</span>
-            </a>
-          )}
+
           <a
             href="#"
             onClick={(e) => { e.preventDefault(); navigate('/'); }}
@@ -422,9 +430,7 @@ const SupportPage = () => {
           </div>
           <div className="flex flex-col space-y-6 text-lg font-bold tracking-wide">
             <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/guest/browse'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Discover</a>
-            {user && user.role === 'guest' && wishlist.length > 0 && (
-              <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Wishlist</a>
-            )}
+
             <a href="#" onClick={(e) => { e.preventDefault(); setIsMobileMenuOpen(false); navigate('/'); }} className="hover:text-terracotta transition py-2 border-b border-white/5">Home</a>
             {user ? (
               <>
@@ -442,11 +448,13 @@ const SupportPage = () => {
       )}
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-[#0b1b2e] via-[#07111e] to-[#101722] text-white py-20 px-6 md:px-12 lg:px-20 overflow-hidden">
+      <section className="relative bg-[#0C121D] text-white py-24 px-6 md:px-12 lg:px-20 overflow-hidden border-b border-[#E0A51B]/20">
         {/* Subtle mesh background grid */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#0F172A] via-[#0F172A]/90 to-[#1E293B]/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0F172A]/10 to-[#0F172A]" />
         <div className="absolute top-1/3 left-1/4 w-[30rem] h-[30rem] bg-terracotta/5 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-[30rem] h-[30rem] bg-[#D4AF37]/5 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-[30rem] h-[30rem] bg-[#E0A51B]/5 rounded-full blur-[120px] pointer-events-none" />
 
         <div className="relative max-w-4xl mx-auto text-center space-y-8 z-10">
           <div className="space-y-4">

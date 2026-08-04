@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { bookingAPI, propertyAPI, couponAPI, loadRazorpaySdk } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { downloadCustomerBookingInvoice, getCustomerBookingAmounts } from '../utils/bookingInvoice';
 import {
   CheckCircle2,
   Building2,
@@ -97,6 +98,7 @@ const BookingConfirmation = () => {
     paymentConfig?.is_mock &&
     paymentConfig?.key_id?.startsWith('rzp_test_') &&
     paymentConfig.key_id !== 'rzp_test_demo_key';
+  const customerAmounts = getCustomerBookingAmounts(booking || {});
 
   const handleRealRazorpay = async () => {
     setPaying(true);
@@ -407,15 +409,11 @@ const BookingConfirmation = () => {
           <div className="bg-stone/50 rounded-2xl p-6 space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Base Amount</span>
-              <span className="text-sm font-bold tracking-tight text-charcoal">₹{booking.base_amount?.toLocaleString('en-IN')}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Service Fee</span>
-              <span className="text-sm font-bold tracking-tight text-charcoal">₹{Math.round(booking.service_fee || 0).toLocaleString('en-IN')}</span>
+              <span className="text-sm font-bold tracking-tight text-charcoal">Rs. {Math.round(customerAmounts.base).toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Taxes & GST</span>
-              <span className="text-sm font-bold tracking-tight text-charcoal">₹{Math.round(booking.taxes || 0).toLocaleString('en-IN')}</span>
+              <span className="text-sm font-bold tracking-tight text-charcoal">Rs. {Math.round(customerAmounts.taxes).toLocaleString('en-IN')}</span>
             </div>
             {booking.coupon_code && (
               <div className="flex justify-between items-center text-emerald-600 font-bold">
@@ -425,7 +423,7 @@ const BookingConfirmation = () => {
             )}
             <div className="border-t border-gray-100 pt-4 flex justify-between items-center">
               <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Total Cost</span>
-              <span className="text-sm font-bold tracking-tight text-charcoal">₹{Math.round(booking.total_amount || 0).toLocaleString('en-IN')}</span>
+              <span className="text-sm font-bold tracking-tight text-charcoal">Rs. {Math.round(customerAmounts.total).toLocaleString('en-IN')}</span>
             </div>
             {booking.payment_type === 'advance' && (
               <>
@@ -447,6 +445,15 @@ const BookingConfirmation = () => {
                 ₹{Math.round(isConfirmed ? (booking.paid_amount || amountToPay) : amountToPay).toLocaleString('en-IN')}
               </span>
             </div>
+            {isConfirmed && (
+              <button
+                onClick={() => downloadCustomerBookingInvoice(booking, property || booking.property || {}, user || {})}
+                className="w-full px-5 py-3 rounded-xl border border-terracotta/30 bg-white text-terracotta hover:bg-terracotta hover:text-white text-xs font-bold uppercase tracking-widest transition-all"
+                data-testid="download-booking-invoice-btn"
+              >
+                Download Invoice
+              </button>
+            )}
             {isConfirmed && booking.payment_type === 'advance' && (booking.total_amount - (booking.paid_amount || amountToPay) > 0) && (
               <div className="border-t border-dashed border-gray-100 pt-2 flex justify-between items-center text-charcoal-muted">
                 <span className="text-[10px] font-bold uppercase tracking-widest">Remaining Balance (Pay at Property)</span>

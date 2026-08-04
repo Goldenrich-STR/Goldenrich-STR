@@ -120,7 +120,7 @@ const TRANSLATIONS = {
     commercial: 'Commercial Spaces',
     commercialSub: 'Premium offices, co-working spaces, and retail.',
     eventVenue: 'Events & Functions',
-    eventVenueSub: 'Banquet halls, rooftops, and celebration venues.',
+    eventVenueSub: 'Banquet halls, garden lawns, and celebration venues.',
     comingSoon: 'New {category} coming soon!',
     topRated: 'Top Rated',
     night: 'night',
@@ -1191,7 +1191,7 @@ const EXPLORE_MENU_TABS = [
       ],
       [
         createExploreItem('Banquet Halls in Nashik', { category: 'event_venue', property_type: 'banquet_hall', city: 'Nashik' }),
-        createExploreItem('Rooftops in Pune', { category: 'event_venue', property_type: 'rooftop', city: 'Pune' }),
+        createExploreItem('Banquet Halls in Pune', { category: 'event_venue', property_type: 'banquet_hall', city: 'Pune' }),
         createExploreItem('Hotel Ballrooms in Mumbai', { category: 'event_venue', property_type: 'hotel_ballroom', city: 'Mumbai' }),
         createExploreItem('Resorts & Lawns in Trimbak', { category: 'event_venue', property_type: 'resort', city: 'Trimbakeshwar' }),
       ],
@@ -1860,111 +1860,287 @@ const STANDARD_FEATURES = [
 /* ====================================================================
    CollectionsSection — Full-bleed, edge-to-edge, Saffron Stay-inspired
    ==================================================================== */
-const CollectionsSection = ({ navigate }) => {
+const CollectionsSection = ({
+  navigate,
+  properties,
+  wishlist,
+  handleWishlistToggle,
+  getImageUrl
+}) => {
   const sliderRef = React.useRef(null);
+  const [activeTab, setActiveTab] = React.useState('All');
+
+  const scrollSlider = (direction, id) => {
+    const container = document.getElementById(id);
+    if (container) {
+      container.scrollBy({ left: direction === 'left' ? -350 : 350, behavior: 'smooth' });
+    }
+  };
+
+  const collectionProperties = React.useMemo(() => {
+    return [
+      ...(properties?.residential || []),
+      ...(properties?.commercial || []),
+      ...(properties?.event_venue || []),
+    ].filter(Boolean);
+  }, [properties]);
+
+  const locationTabs = React.useMemo(() => {
+    const preferred = ['Nashik', 'Pune', 'Goa', 'Mumbai', 'Alibaug'];
+    const present = preferred.filter((city) =>
+      collectionProperties.some((item) => String(item.city || '').trim().toLowerCase() === city.toLowerCase())
+    );
+    return ['All', ...present, 'Discover All'];
+  }, [collectionProperties]);
+
+  const filteredCollections = React.useMemo(() => {
+    if (activeTab === 'All') {
+      return collectionProperties.slice(0, 8);
+    }
+    if (activeTab === 'Discover All') {
+      return collectionProperties.slice(0, 8);
+    }
+    return collectionProperties
+      .filter((item) => String(item.city || '').trim().toLowerCase() === activeTab.toLowerCase())
+      .slice(0, 8);
+  }, [activeTab, collectionProperties]);
 
   const handleCardClick = (col) => {
-    if (col.id === 'hilltop-retreats') {
-      navigate('/guest/browse?signature=true');
+    if (!col?.property_id) {
+      navigate('/guest/browse');
       return;
     }
-    const typeQuery = col.property_type ? `&property_type=${col.property_type}` : '';
-    navigate(`/guest/browse?category=${col.query}${typeQuery}`);
+    navigate(`/property/${col.property_id}`);
   };
 
   const scroll = (dir) => {
     if (sliderRef.current) {
-      sliderRef.current.scrollBy({ left: dir === 'left' ? -320 : 320, behavior: 'smooth' });
+      sliderRef.current.scrollBy({ left: dir === 'left' ? -360 : 360, behavior: 'smooth' });
     }
   };
 
   return (
-    <section className="w-full bg-white pt-10 md:pt-16 pb-4 md:pb-6 overflow-x-hidden">
-      <div className="w-full px-4 md:px-[10vw]">
-        {/* Header */}
+    <section className="relative w-full overflow-hidden bg-white py-12 md:py-20">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-100"
+        style={{
+          background:
+            'radial-gradient(circle at 10% 10%, rgba(255,153,51,0.22), transparent 34%), radial-gradient(circle at 88% 12%, rgba(255,153,51,0.16), transparent 28%), radial-gradient(circle at 14% 88%, rgba(19,136,8,0.18), transparent 32%), radial-gradient(circle at 86% 86%, rgba(19,136,8,0.14), transparent 26%), linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.94) 46%, rgba(248,250,252,0.98) 100%)'
+        }}
+      />
+      <div className="relative w-full px-4 md:px-[10vw]">
         <ScrollReveal duration="duration-[800ms]">
-          <div className="flex items-end justify-between gap-4 mb-8">
-            <h2 className="font-serif text-2xl md:text-3xl font-bold text-charcoal tracking-tight">
-              Discover Our Collection
-            </h2>
-            {/* Nav arrows aligned with content */}
-            <div className="hidden md:flex items-center gap-3 text-charcoal">
-              <button
-                onClick={() => scroll('left')}
-                className="p-2 border border-gray-200 rounded-full hover:bg-gray-50 hover:text-terracotta transition-all duration-300"
-                aria-label="Previous collection"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => scroll('right')}
-                className="p-2 border border-gray-200 rounded-full hover:bg-gray-50 hover:text-terracotta transition-all duration-300"
-                aria-label="Next collection"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+          <div className="mb-14">
+            <div className="mb-8 flex items-end justify-between gap-4">
+              <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
+                Discover Our Collection
+              </h2>
+              <div className="hidden items-center gap-3 text-charcoal md:flex">
+                <button
+                  onClick={() => scroll('left')}
+                  className="rounded-full border border-gray-200 bg-white/90 p-2 backdrop-blur transition-all duration-300 hover:bg-gray-50"
+                  aria-label="Previous collection"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => scroll('right')}
+                  className="rounded-full border border-gray-200 bg-white/90 p-2 backdrop-blur transition-all duration-300 hover:bg-gray-50"
+                  aria-label="Next collection"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          </div>
-        </ScrollReveal>
 
-        {/* Bounded Cards Strip */}
-        <ScrollReveal duration="duration-[1000ms]" delay={150}>
-          <div className="overflow-hidden">
-            <div
-              ref={sliderRef}
-              className="flex overflow-x-auto no-scrollbar gap-5 snap-x scroll-smooth pb-4 justify-start"
-            >
-              {PREMIUM_COLLECTIONS.map((col) => {
-                return (
+            <div className="overflow-hidden">
+              <div
+                ref={sliderRef}
+                className="flex snap-x gap-5 overflow-x-auto pb-4 scroll-smooth no-scrollbar"
+              >
+                {PREMIUM_COLLECTIONS.map((col) => (
                   <div
                     key={col.id}
-                    onClick={() => handleCardClick(col)}
-                    className="relative flex-none snap-start w-[240px] md:w-[300px] aspect-[3/4] overflow-hidden cursor-pointer rounded-2xl group shadow-md hover:shadow-xl transition-all duration-500"
+                    onClick={() => {
+                      if (col.id === 'hilltop-retreats') {
+                        navigate('/guest/browse?signature=true');
+                        return;
+                      }
+                      const typeQuery = col.property_type ? `&property_type=${col.property_type}` : '';
+                      navigate(`/guest/browse?category=${col.query}${typeQuery}`);
+                    }}
+                    className="relative aspect-[3/4] w-[240px] min-w-[240px] snap-start cursor-pointer overflow-hidden rounded-2xl shadow-md transition-all duration-500 hover:shadow-xl md:w-[300px] md:min-w-[300px] group"
                   >
-                    {/* Background Image */}
                     <img
                       src={col.image}
                       alt={col.label}
-                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                     />
-
-                    {/* Gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/10 transition-opacity duration-300 group-hover:opacity-90" />
-
-                    {/* Tag badge */}
-                    <div className="absolute top-4 left-4 z-10">
+                    <div className="absolute left-4 top-4 z-10">
                       {col.tag === 'Signature Series' ? (
-                        <div className="bg-black border border-[#D4AF37]/50 px-3 py-1 rounded-none shadow-md flex items-center gap-1.5">
-                          <Crown className="w-3 h-3 text-[#D4AF37] fill-[#D4AF37]/20" />
-                          <span className="text-[#D4AF37] text-[9px] font-extrabold uppercase tracking-[0.15em] font-serif">
+                        <div className="flex items-center gap-1.5 border border-[#D4AF37]/50 bg-black px-3 py-1 shadow-md">
+                          <Crown className="h-3 w-3 fill-[#D4AF37]/20 text-[#D4AF37]" />
+                          <span className="font-serif text-[9px] font-extrabold uppercase tracking-[0.15em] text-[#D4AF37]">
                             Signature Series
                           </span>
                         </div>
                       ) : (
-                        <span className="bg-white/95 text-charcoal text-[9px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
+                        <span className="rounded-full bg-white/95 px-3 py-1 text-[9px] font-extrabold uppercase tracking-widest text-charcoal shadow-sm">
                           {col.tag}
                         </span>
                       )}
                     </div>
-
-                    {/* Card Content - stable and smooth slide-up */}
-                    <div className="absolute inset-0 p-5 md:p-6 flex flex-col justify-end z-10">
-                      <p className="text-white/60 text-[9px] font-bold uppercase tracking-widest mb-1">Explore</p>
-                      <h3 className="text-white text-lg md:text-xl font-bold leading-snug transition-transform duration-500 group-hover:-translate-y-1">
+                    <div className="absolute inset-0 z-10 flex flex-col justify-end p-5 md:p-6">
+                      <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/60">Explore</p>
+                      <h3 className="text-lg font-bold leading-snug text-white transition-transform duration-500 group-hover:-translate-y-1 md:text-xl">
                         {col.label}
                       </h3>
-                      
-                      {/* Detailed Description */}
-                      <div className="max-h-0 opacity-0 overflow-hidden transition-all duration-500 ease-in-out group-hover:max-h-[120px] group-hover:opacity-100 group-hover:mt-2">
-                        <p className="text-white/80 text-[11px] md:text-xs leading-relaxed">
+                      <div className="max-h-0 overflow-hidden opacity-0 transition-all duration-500 ease-in-out group-hover:mt-2 group-hover:max-h-[120px] group-hover:opacity-100">
+                        <p className="text-[11px] leading-relaxed text-white/80 md:text-xs">
                           {col.detail}
                         </p>
                       </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
+
+        <ScrollReveal duration="duration-[1000ms]" delay={120}>
+          <div>
+            <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h3 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
+                  Holiday Getaway
+                </h3>
+                <div className="mt-4 flex flex-wrap items-center gap-5 border-b border-black/10 pb-2 text-sm font-medium text-slate-500">
+                  {locationTabs.map((tab) => {
+                    const isActive = activeTab === tab;
+                    return (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => {
+                          if (tab === 'Discover All') {
+                            navigate('/guest/browse');
+                            return;
+                          }
+                          setActiveTab(tab);
+                        }}
+                        className={`relative pb-2 transition-colors ${
+                          isActive ? 'text-charcoal' : 'hover:text-charcoal'
+                        }`}
+                      >
+                        {tab}
+                        {isActive ? (
+                          <span className="absolute inset-x-0 -bottom-[9px] h-[2px] rounded-full bg-charcoal" />
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Navigation Arrows */}
+              <div className="hidden md:flex space-x-2 pb-2">
+                <button onClick={() => scrollSlider('left', 'slider-getaway')} className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm bg-white">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button onClick={() => scrollSlider('right', 'slider-getaway')} className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm bg-white">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-hidden">
+            <div
+              id="slider-getaway"
+              className="flex snap-x gap-5 overflow-x-auto pb-5 scroll-smooth no-scrollbar"
+            >
+              {filteredCollections.map((item, index) => {
+                const price = Number(
+                  item.display_price_per_night ??
+                  item.customer_price_per_night ??
+                  item.price_per_night ??
+                  item.price ??
+                  0
+                );
+                return (
+                  <article
+                    key={item.property_id || `${item.title}-${index}`}
+                    className="group flex w-[280px] min-w-[280px] snap-start flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_18px_44px_rgba(15,23,42,0.10)] md:w-[320px] md:min-w-[320px]"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleCardClick(item)}
+                      className="flex h-full flex-col text-left"
+                    >
+                      <div className="relative aspect-[1.14] overflow-hidden">
+                        <img
+                          src={item.img || getImageUrl(item.images?.[0]) || PROPERTY_IMAGE_FALLBACK}
+                          alt={item.title}
+                          loading="lazy"
+                          decoding="async"
+                          onError={({ currentTarget }) => {
+                            currentTarget.onerror = null;
+                            currentTarget.src = PROPERTY_IMAGE_FALLBACK;
+                          }}
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleWishlistToggle(item.property_id);
+                          }}
+                          className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-sm backdrop-blur"
+                          aria-label="Toggle wishlist"
+                        >
+                          <Heart className={`h-5 w-5 ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : 'text-charcoal'}`} />
+                        </button>
+                        <div className="absolute bottom-4 right-0 z-10 rounded-l-xl bg-[#171717] px-3 py-2 text-xs font-semibold text-white shadow-lg">
+                          Best Rated
+                        </div>
+                      </div>
+                      <div className="flex flex-1 flex-col p-5">
+                        <h3 className="line-clamp-1 text-[1.55rem] font-semibold leading-tight text-charcoal md:text-[1.65rem]">
+                          {item.title}
+                        </h3>
+                        <p className="mt-3 flex items-center gap-1 text-sm font-medium text-slate-600">
+                          <MapPin className="h-4 w-4 text-slate-500" />
+                          <span>{item.city || 'Maharashtra'}{item.state ? `, ${item.state}` : ''}</span>
+                        </p>
+                        <p className="mt-3 text-sm text-slate-600">
+                          Upto {item.max_guests || item.guests || 4} Guests
+                          <span className="mx-2 text-slate-300">✦</span>
+                          {item.bedrooms || item.rooms || 1} Rooms
+                          <span className="mx-2 text-slate-300">✦</span>
+                          {item.bathrooms || item.baths || 1} Baths
+                        </p>
+                        <div className="mt-4 border-t border-slate-100 pt-4">
+                          <div className="flex items-end justify-between gap-3">
+                            <div>
+                              <p className="text-3xl font-bold tracking-tight text-charcoal">
+                                ₹{price.toLocaleString('en-IN')}
+                              </p>
+                              <p className="mt-1 text-sm text-slate-500">For Per Night + Taxes</p>
+                            </div>
+                            <span className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-charcoal transition-transform duration-300 group-hover:translate-x-1">
+                              <ArrowRight className="h-5 w-5" />
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </article>
                 );
               })}
             </div>
+          </div>
           </div>
         </ScrollReveal>
       </div>
@@ -1976,11 +2152,20 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const exploreMenuCloseTimerRef = React.useRef(null);
+  const RECENT_LOCATION_STORAGE_KEY = 'xspace_recent_location_searches';
   const handleSignOut = () => {
     logout();
     navigate('/');
   };
   const [locationQuery, setLocationQuery] = useState('');
+  const [recentLocationSearches, setRecentLocationSearches] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('xspace_recent_location_searches') || '[]');
+      return Array.isArray(stored) ? stored.slice(0, 5) : [];
+    } catch (error) {
+      return [];
+    }
+  });
   const [searchCategory, setSearchCategory] = useState('residential');
   const [nearbyHub, setNearbyHub] = useState('Nashik');
   const [isDetectingNearby, setIsDetectingNearby] = useState(false);
@@ -2159,6 +2344,23 @@ const LandingPage = () => {
       return [];
     }
   });
+
+  useEffect(() => {
+    const syncWishlist = () => {
+      try {
+        setWishlist(JSON.parse(localStorage.getItem('guest_wishlist')) || []);
+      } catch (e) {
+        setWishlist([]);
+      }
+    };
+    window.addEventListener('focus', syncWishlist);
+    window.addEventListener('storage', syncWishlist);
+    syncWishlist();
+    return () => {
+      window.removeEventListener('focus', syncWishlist);
+      window.removeEventListener('storage', syncWishlist);
+    };
+  }, []);
 
   const handleWishlistToggle = (propertyId) => {
     if (!user) {
@@ -2400,7 +2602,14 @@ const LandingPage = () => {
   const handleSearch = () => {
     const totalGuests = guestCounts.adults + guestCounts.children;
     const params = new URLSearchParams();
-    if (locationQuery.trim()) params.set('city', locationQuery.trim());
+    if (locationQuery.trim()) {
+      params.set('city', locationQuery.trim());
+      setRecentLocationSearches((current) => {
+        const next = [locationQuery.trim(), ...current.filter((item) => item !== locationQuery.trim())].slice(0, 5);
+        localStorage.setItem(RECENT_LOCATION_STORAGE_KEY, JSON.stringify(next));
+        return next;
+      });
+    }
     if (totalGuests) params.set('guests', String(totalGuests));
     if (dates.checkIn) params.set('checkIn', dates.checkIn);
     if (dates.checkOut) params.set('checkOut', dates.checkOut);
@@ -2425,17 +2634,29 @@ const LandingPage = () => {
     navigate(`/guest/browse?${params.toString()}`);
   };
 
+  const saveRecentLocation = React.useCallback((value) => {
+    const cleaned = String(value || '').trim();
+    if (!cleaned) return;
+    setRecentLocationSearches((current) => {
+      const next = [cleaned, ...current.filter((item) => item !== cleaned)].slice(0, 5);
+      localStorage.setItem(RECENT_LOCATION_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const handleShowNearbyLocations = () => {
     const typedHub = findDestinationHubForQuery(locationQuery);
     if (typedHub) {
       setNearbyHub(typedHub);
       setLocationQuery(typedHub);
+      saveRecentLocation(typedHub);
       return;
     }
 
     if (!navigator.geolocation) {
       setNearbyHub('Nashik');
       setLocationQuery('Nashik');
+      saveRecentLocation('Nashik');
       return;
     }
 
@@ -2449,11 +2670,13 @@ const LandingPage = () => {
         const hub = nearest?.city || 'Nashik';
         setNearbyHub(hub);
         setLocationQuery(hub);
+        saveRecentLocation(hub);
         setIsDetectingNearby(false);
       },
       () => {
         setNearbyHub('Nashik');
         setLocationQuery('Nashik');
+        saveRecentLocation('Nashik');
         setIsDetectingNearby(false);
       },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
@@ -2483,9 +2706,8 @@ const LandingPage = () => {
         {/* Header */}
         <div className="flex items-end justify-between mb-6 px-4 md:px-[10vw] w-full">
           <div className="text-left">
-            <h3 className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-charcoal flex items-center gap-2">
-              <span>{title}</span>
-              <IconComponent className="w-5 h-5 text-charcoal/85 stroke-[2]" />
+            <h3 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
+              {title}
             </h3>
             <p className="text-gray-550 text-xs md:text-sm font-medium mt-1">{subtitle}</p>
           </div>
@@ -2557,12 +2779,6 @@ const LandingPage = () => {
                           <Zap className="w-3.5 h-3.5 fill-current" />
                        </div>
                     )}
-                    {item.rating && item.review_count > 0 && (
-                      <div className="flex items-center bg-charcoal/70 backdrop-blur-sm text-white px-2 py-0.5 rounded-full text-[10px] font-bold gap-0.5 shadow-sm">
-                         <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                         <span>{Number(item.rating).toFixed(1)}</span>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -2571,7 +2787,7 @@ const LandingPage = () => {
                     <h4 className="font-semibold text-sm md:text-base text-charcoal line-clamp-1 group-hover/card:text-terracotta transition-colors">
                       {item.title}
                     </h4>
-                    {item.rating && item.review_count > 0 && (
+                    {item.rating > 0 && item.review_count > 0 && (
                       <span className="flex items-center text-xs font-semibold text-charcoal shrink-0">
                         <Star className="w-3.5 h-3.5 text-[#eab308] fill-current mr-1" />
                         {Number(item.rating).toFixed(1)}
@@ -2657,16 +2873,7 @@ const LandingPage = () => {
           >
             Discover
           </a>
-          {user && user.role === 'guest' && wishlist.length > 0 && (
-            <a
-              href="#"
-              onClick={(e) => { e.preventDefault(); navigate('/guest/browse?wishlist=true'); }}
-              className="hover:text-terracotta transition-colors duration-200 flex items-center gap-1"
-            >
-              <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 animate-pulse" />
-              <span>Wishlist</span>
-            </a>
-          )}
+
           <button
             onClick={() => setShowHowItWorksModal(true)}
             className="hover:text-terracotta transition-colors duration-200"
@@ -2861,15 +3068,7 @@ const LandingPage = () => {
             >
               Discover
             </button>
-            {user && user.role === 'guest' && wishlist.length > 0 && (
-              <button
-                onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=true'); }}
-                className="text-left text-[17px] font-medium transition flex items-center justify-between py-4 border-b border-gray-200"
-              >
-                <span>Wishlist</span>
-                <Heart className="w-6 h-6 text-red-500 fill-red-500" />
-              </button>
-            )}
+
             <button
               onClick={() => { setIsMobileMenuOpen(false); setShowHowItWorksModal(true); }}
               className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
@@ -3045,10 +3244,47 @@ const LandingPage = () => {
                     )}
 
                     {/* Capsule Search Bar */}
-                    <div className="flex flex-col lg:flex-row items-stretch lg:items-center bg-white rounded-[30px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-3 lg:p-3 relative z-50">
+                    <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-[44px] p-[1px]">
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 rounded-[34px] lg:rounded-[44px] opacity-100"
+                        style={{
+                          background:
+                            'linear-gradient(90deg, rgba(255,153,51,0.34) 0%, rgba(255,214,163,0.22) 12%, rgba(255,255,255,0.94) 28%, rgba(255,255,255,0.98) 50%, rgba(255,255,255,0.94) 72%, rgba(179,229,168,0.24) 88%, rgba(19,136,8,0.3) 100%)',
+                        }}
+                      />
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-y-1 left-0 w-36 rounded-full blur-2xl"
+                        style={{ background: 'rgba(255,153,51,0.28)' }}
+                      />
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-y-1 right-0 w-36 rounded-full blur-2xl"
+                        style={{ background: 'rgba(19,136,8,0.24)' }}
+                      />
+                      <div className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[30px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-3 lg:p-3 relative overflow-visible bg-white">
+                        <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 rounded-[30px] lg:rounded-full"
+                        style={{
+                          background:
+                            'linear-gradient(90deg, rgba(255,153,51,0.24) 0%, rgba(255,239,221,0.86) 14%, rgba(255,255,255,0.98) 32%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.98) 68%, rgba(229,246,225,0.86) 86%, rgba(19,136,8,0.22) 100%)',
+                        }}
+                      />
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-y-0 left-4 w-28 rounded-full blur-2xl"
+                        style={{ background: 'rgba(255,153,51,0.22)' }}
+                      />
+                      <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-y-0 right-4 w-28 rounded-full blur-2xl"
+                        style={{ background: 'rgba(19,136,8,0.2)' }}
+                      />
                         
                         {/* Location */}
-                        <div className="relative flex-1 w-full min-w-0">
+                        <div className={`relative flex-1 w-full min-w-0 ${activeDropdown === 'location' ? 'z-[60]' : 'z-[1]'}`}>
                           <div 
                             onClick={() => {
                               setActiveDropdown('location');
@@ -3080,7 +3316,50 @@ const LandingPage = () => {
                           {/* Airbnb-style Suggested Destinations Dropdown */}
                           {activeDropdown === 'location' && (
                             <div className="absolute left-0 top-full mt-3 w-full min-w-[320px] max-w-[380px] bg-white border border-gray-100 rounded-[28px] shadow-elevated z-[60] p-3">
-                              <p className="text-[11px] font-bold tracking-[0.18em] text-gray-400 uppercase mb-3 px-3">Suggested destinations</p>
+                              <div className="space-y-3">
+                                <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleShowNearbyLocations();
+                                      setActiveDropdown(null);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-stone transition"
+                                  >
+                                    <div className="w-11 h-11 rounded-2xl bg-[#F7F4EE] flex items-center justify-center shrink-0">
+                                      <MapPin className="w-5 h-5 text-charcoal" />
+                                    </div>
+                                    <div>
+                                      <p className="text-[11px] font-semibold text-gray-400">Use Current Location</p>
+                                      <p className="text-base font-bold text-charcoal">
+                                        {isDetectingNearby ? 'Finding nearby places...' : 'Near Me'}
+                                      </p>
+                                    </div>
+                                  </button>
+                                  {!!recentLocationSearches.length && (
+                                    <div className="border-t border-gray-100 px-4 py-3">
+                                      <p className="mb-2 text-[11px] font-semibold text-gray-400">Recent Searches</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {recentLocationSearches.map((recent) => (
+                                          <button
+                                            key={recent}
+                                            type="button"
+                                            onClick={() => {
+                                              setLocationQuery(recent);
+                                              saveRecentLocation(recent);
+                                              setActiveDropdown(null);
+                                            }}
+                                            className="rounded-full bg-[#EEF4FF] px-3 py-1.5 text-xs font-bold text-charcoal"
+                                          >
+                                            {recent}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                                <p className="text-[11px] font-bold tracking-[0.18em] text-gray-400 uppercase px-3">Suggested destinations</p>
+                              </div>
                               <div className="space-y-1 max-h-[320px] overflow-y-auto pr-1">
                                 {SUGGESTED_DESTINATIONS.filter(dest => 
                                   !locationQuery || 
@@ -3092,6 +3371,7 @@ const LandingPage = () => {
                                     type="button"
                                     onClick={() => {
                                       setLocationQuery(dest.city);
+                                      saveRecentLocation(dest.city);
                                       setActiveDropdown(null);
                                     }}
                                     className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-stone transition text-left"
@@ -3121,7 +3401,7 @@ const LandingPage = () => {
                         </div>
                         <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
                         
-                        <div className="relative flex flex-col lg:flex-row items-stretch lg:items-center shrink-0 w-full lg:w-auto">
+                        <div className={`relative flex flex-col lg:flex-row items-stretch lg:items-center shrink-0 w-full lg:w-auto ${landingCalendarOpen ? 'z-[60]' : 'z-[1]'}`}>
                           {/* Check-in */}
                           <div className="relative flex items-center px-4 lg:px-6 py-3 w-full lg:w-auto hover:bg-stone/50 rounded-3xl lg:rounded-full transition duration-200 group shrink-0">
                             <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
@@ -3188,7 +3468,7 @@ const LandingPage = () => {
                         <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
 
                         {/* Guests */}
-                        <div className="relative flex-1 w-full">
+                        <div className={`relative flex-1 w-full ${activeDropdown === 'guests' ? 'z-[60]' : 'z-[1]'}`}>
                           <div 
                             onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
                             className="flex items-center px-4 lg:px-6 py-3 w-full cursor-pointer hover:bg-stone/50 rounded-3xl lg:rounded-full transition duration-200 group"
@@ -3258,7 +3538,7 @@ const LandingPage = () => {
                         </div>
 
                         {/* Search Button */}
-                        <div className="w-full lg:w-auto p-1 pt-2 lg:pt-1 shrink-0">
+                        <div className="w-full lg:w-auto p-1 pt-2 lg:pt-1 shrink-0 z-[1]">
                           <button
                             onClick={handleSearch}
                             className="w-full lg:w-auto bg-[#1A1A1A] hover:bg-black text-white font-bold text-xs uppercase tracking-widest px-8 py-4 rounded-2xl lg:rounded-full transition duration-200 shadow-md cursor-pointer"
@@ -3267,6 +3547,7 @@ const LandingPage = () => {
                           </button>
                         </div>
                       </div>
+                    </div>
                   </div>
                  </div>
             );
@@ -3281,16 +3562,7 @@ const LandingPage = () => {
           <div className="px-4 md:px-[10vw]">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
               <div className="flex items-baseline gap-2 flex-wrap">
-                <h2 className="font-serif text-2xl md:text-3xl font-bold text-charcoal tracking-tight">Pick a Destination</h2>
-                <button
-                  type="button"
-                  onClick={handleShowNearbyLocations}
-                  disabled={isDetectingNearby}
-                  className="inline-flex items-center gap-1 text-xs md:text-sm font-semibold text-charcoal-muted hover:text-terracotta transition"
-                >
-                  <MapPin className="w-3.5 h-3.5" />
-                  {isDetectingNearby ? 'Finding nearby locations...' : 'Show nearby locations'}
-                </button>
+                <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">Pick a Destination</h2>
               </div>
               <div className="flex md:hidden items-center gap-3 text-charcoal self-end">
                 <span className="text-[11px] font-semibold text-charcoal-muted">Swipe</span>
@@ -3333,7 +3605,7 @@ const LandingPage = () => {
             <div className="mt-12 md:mt-16 pt-8 md:pt-10 border-t border-sand-200">
               <div className="flex items-end justify-between gap-4 mb-6">
                 <div className="text-left">
-                  <h2 className="font-serif text-2xl md:text-3xl font-bold text-charcoal tracking-tight">Recently Visited</h2>
+                  <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">Recently Visited</h2>
                   <div className="mt-6 inline-flex flex-col items-start">
                     <span className="text-sm md:text-base font-bold text-charcoal">Properties</span>
                     <span className="mt-2 h-[2px] w-full bg-charcoal" />
@@ -3383,7 +3655,7 @@ const LandingPage = () => {
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute top-3 left-3 flex gap-2 z-20">
-                        {item.rating && item.review_count > 0 && (
+                        {item.rating > 0 && item.review_count > 0 && (
                           <div className="bg-charcoal/70 text-white rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
                             <span>{Number(item.rating).toFixed(1)}</span>
                             <Star className="w-3.5 h-3.5 text-[#E0A51B] fill-current" />
@@ -3431,7 +3703,13 @@ const LandingPage = () => {
       <div className="w-full bg-white relative z-20 overflow-x-hidden">
 
         {/* ===== Discover Our Collections — Full Width ===== */}
-        <CollectionsSection navigate={navigate} />
+        <CollectionsSection
+          navigate={navigate}
+          properties={properties}
+          wishlist={wishlist}
+          handleWishlistToggle={handleWishlistToggle}
+          getImageUrl={getImageUrl}
+        />
 
         {/* Property Sliders — also full-width, padded inline */}
         <div className="pb-4 md:pb-16 pt-2 md:pt-4">
@@ -3627,7 +3905,7 @@ const LandingPage = () => {
             {renderPropertySlider(
               'slider-events',
               'Events & Functions',
-              'Banquet halls, rooftops, and celebration venues.',
+              'Banquet halls, garden lawns, and celebration venues.',
               PartyPopper,
               'event_venue',
               properties.event_venue
@@ -3813,7 +4091,7 @@ const LandingPage = () => {
                     <div className="flex justify-between items-end mb-6">
                       <div>
                         <div className="flex items-center gap-3">
-                          <h3 className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-charcoal">
+                          <h3 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
                             Signature Series
                           </h3>
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black border border-[#D4AF37] text-[9px] font-serif font-bold uppercase tracking-[0.15em] text-[#D4AF37] shadow-lg shrink-0">
@@ -3905,7 +4183,7 @@ const LandingPage = () => {
 
                       {/* View All Card at the end */}
                       <div
-                        onClick={() => navigate('/guest/browse?category=Signature')}
+                        onClick={() => navigate('/guest/browse?signature=true')}
                         className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-[#fbfbfa] hover:bg-[#E5DFD9]/60 rounded-3xl overflow-hidden border-2 border-dashed border-gray-200 flex-shrink-0 flex flex-col justify-center items-center p-8 group cursor-pointer transition-all duration-300"
                       >
                         <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-300 mb-4 border border-gray-100">
@@ -3972,23 +4250,23 @@ const LandingPage = () => {
                     avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100"
                   }
                 ]).map((item, idx) => (
-                  <div key={idx} className="bg-[#FDFCF8] rounded-3xl p-8 border border-sand-200/80 text-left flex flex-col justify-between transition-all duration-300 min-w-[280px] sm:min-w-[320px] md:min-w-[360px] snap-center flex-1 relative hover:border-terracotta/40 hover:shadow-subtle">
-                    <span className="absolute top-6 right-8 text-6xl font-serif text-terracotta/15 select-none pointer-events-none">“</span>
+                  <div key={idx} className="bg-white rounded-2xl p-6 border border-gray-100 text-left flex flex-col justify-between transition-all duration-300 min-w-[260px] sm:min-w-[300px] md:min-w-[320px] snap-center flex-1 relative hover:border-black/10 hover:shadow-md">
+                    <span className="hidden absolute top-6 right-8 text-6xl font-serif text-terracotta/15 select-none pointer-events-none">“</span>
                     <div>
-                      <div className="flex items-center space-x-1 text-terracotta mb-6">
+                      <div className="flex items-center space-x-1 text-[#d4af37] mb-4">
                         {[...Array(item.stars)].map((_, i) => (
                           <Star key={i} className="w-3.5 h-3.5 fill-current" />
                         ))}
                       </div>
-                      <p className="text-charcoal font-serif italic text-base leading-relaxed mb-8 relative z-10">
+                      <p className="text-slate-650 text-slate-600 text-sm leading-relaxed mb-6 font-medium">
                         "{item.text}"
                       </p>
                     </div>
-                    <div className="flex items-center space-x-4 border-t border-sand-100 pt-4 mt-auto">
-                      <img src={item.avatar} alt={item.author} className="w-10 h-10 rounded-full object-cover" />
+                    <div className="flex items-center space-x-3 border-t border-slate-100 pt-4 mt-auto">
+                      <img src={item.avatar} alt={item.author} className="w-8 h-8 rounded-full object-cover" />
                       <div>
-                        <h4 className="font-bold text-charcoal text-xs tracking-tight">{item.author}</h4>
-                        <p className="text-gray-500 text-[10px] font-semibold uppercase tracking-wider mt-0.5">{item.role}</p>
+                        <h4 className="font-bold text-charcoal text-[11px] tracking-tight">{item.author}</h4>
+                        <p className="text-slate-450 text-slate-400 text-[9px] font-semibold uppercase tracking-wider mt-0.5">{item.role}</p>
                       </div>
                     </div>
                   </div>

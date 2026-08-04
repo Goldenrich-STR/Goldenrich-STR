@@ -3720,9 +3720,7 @@ const PropertyModeration = () => {
               <option value="meeting_room">Meeting Room</option>
               <option value="banquet_hall">Banquet Hall</option>
               <option value="farmhouse">Farmhouse</option>
-              <option value="rooftop">Rooftop</option>
               <option value="hotel_ballroom">Hotel Ballroom</option>
-              <option value="resort">Resort</option>
             </select>
             <input
               type="date"
@@ -7350,7 +7348,6 @@ const RESIDENTIAL_PLAN_PROPERTY_TYPES = [
   { value: 'independent_house', label: 'Independent House' },
   { value: 'co_living', label: 'Co-living' },
   { value: 'farmhouse', label: 'Farmhouse' },
-  { value: 'resort', label: 'Resort' },
 ];
 
 const RESIDENTIAL_PLAN_BHK_TYPES = [
@@ -7364,10 +7361,7 @@ const RESIDENTIAL_PLAN_BHK_TYPES = [
 
 const EVENT_VENUE_PLAN_PROPERTY_TYPES = [
   { value: 'banquet_hall', label: 'Banquet' },
-  { value: 'rooftop', label: 'Rooftop' },
   { value: 'hotel_ballroom', label: 'Hotel Ballroom' },
-  { value: 'garden_lawn', label: 'Garden Lawn' },
-  { value: 'party_plot', label: 'Party Plot' },
 ];
 
 const formatSubscriptionPlanType = (plan = {}) => {

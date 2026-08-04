@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
 import { organizationSchema } from '../lib/seoSchemas';
+import LegalDocument from '../components/LegalDocument';
 
 const TRANSLATIONS = {
   en: {
@@ -379,9 +380,10 @@ const AboutUs = () => {
       )}
 
       {/* Hero Header Section */}
-      <div className="relative pt-32 pb-20 md:pt-40 md:pb-28 bg-[#0B1522] text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070')] bg-cover bg-center" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0B1522]/60 via-[#0B1522]/90 to-sand-50" />
+      <div className="relative pt-32 pb-24 md:pt-44 md:pb-32 bg-[#0C121D] text-white overflow-hidden border-b border-[#E0A51B]/20">
+        <div className="absolute inset-0 opacity-40 bg-[url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070')] bg-cover bg-center transform scale-105 transition-transform duration-1000" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#0F172A] via-[#0F172A]/90 to-[#1E293B]/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0F172A]/10 to-[#0F172A]" />
         
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-6">
           <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 px-4.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest text-[#E0A51B] animate-pulse">
@@ -407,7 +409,7 @@ const AboutUs = () => {
           <p className="text-charcoal-light leading-relaxed text-base font-medium">
             {t('storyText')}
           </p>
-          <div className="p-6 rounded-3xl bg-white border border-stone shadow-subtle flex items-start gap-4">
+          <div className="p-6 rounded-3xl bg-white border border-sand-200 shadow-premium flex items-start gap-4">
             <Award className="w-10 h-10 text-[#E0A51B] flex-shrink-0" />
             <div>
               <h4 className="font-bold text-charcoal text-sm uppercase tracking-wider mb-1">Golden Rich Financial Group</h4>
@@ -418,9 +420,9 @@ const AboutUs = () => {
           </div>
         </div>
 
-        <div className="space-y-8 bg-stone/50 p-8 rounded-3xl border border-stone">
+        <div className="space-y-8 bg-white p-8 rounded-3xl border border-sand-200 shadow-premium">
           <div className="space-y-3">
-            <h3 className="text-lg font-bold text-charcoal uppercase tracking-widest flex items-center space-x-2">
+            <h3 className="text-base font-black text-charcoal uppercase tracking-widest flex items-center space-x-2.5">
               <span className="w-2.5 h-2.5 rounded-full bg-terracotta" />
               <span>{t('vision')}</span>
             </h3>
@@ -428,9 +430,9 @@ const AboutUs = () => {
               {t('visionText')}
             </p>
           </div>
-          <div className="w-full h-[1px] bg-charcoal/10" />
+          <div className="w-full h-[1px] bg-sand-200" />
           <div className="space-y-3">
-            <h3 className="text-lg font-bold text-charcoal uppercase tracking-widest flex items-center space-x-2">
+            <h3 className="text-base font-black text-charcoal uppercase tracking-widest flex items-center space-x-2.5">
               <span className="w-2.5 h-2.5 rounded-full bg-sage" />
               <span>{t('mission')}</span>
             </h3>
@@ -602,8 +604,8 @@ const AboutUs = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="text-sm text-charcoal-light leading-relaxed whitespace-pre-wrap font-medium">
-              {footerPopup.text}
+            <div className="max-h-[60vh] overflow-y-auto mt-4 pr-1">
+              <LegalDocument text={footerPopup.text} />
             </div>
           </div>
         </div>

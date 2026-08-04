@@ -9,6 +9,7 @@ import apiClient, { getImageUrl } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
+import LegalDocument from '../components/LegalDocument';
 
 const blogSchema = {
   "@context": "https://schema.org",
@@ -121,13 +122,30 @@ const Blog = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cmsContent, setCmsContent] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
-  const [wishlist] = useState(() => {
+  const [wishlist, setWishlist] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('guest_wishlist')) || [];
     } catch (e) {
       return [];
     }
   });
+
+  useEffect(() => {
+    const syncWishlist = () => {
+      try {
+        setWishlist(JSON.parse(localStorage.getItem('guest_wishlist')) || []);
+      } catch (e) {
+        setWishlist([]);
+      }
+    };
+    window.addEventListener('focus', syncWishlist);
+    window.addEventListener('storage', syncWishlist);
+    syncWishlist();
+    return () => {
+      window.removeEventListener('focus', syncWishlist);
+      window.removeEventListener('storage', syncWishlist);
+    };
+  }, []);
   const [footerPopup, setFooterPopup] = useState(null);
 
   useEffect(() => {
@@ -463,12 +481,13 @@ const Blog = () => {
       )}
 
       {/* Hero Header Section */}
-      <div className="relative pt-32 pb-20 md:pt-40 md:pb-28 bg-[#0B1522] text-white overflow-hidden">
+      <div className="relative pt-32 pb-24 md:pt-44 md:pb-32 bg-[#0C121D] text-white overflow-hidden border-b border-[#E0A51B]/20">
         <div
-          className="absolute inset-0 opacity-20 bg-cover bg-center"
+          className="absolute inset-0 opacity-40 bg-cover bg-center transform scale-105 transition-transform duration-1000"
           style={{ backgroundImage: `url(${getImageUrl(blogSettings.page_hero_image_url)})` }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0B1522]/60 via-[#0B1522]/90 to-sand-50" />
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#0F172A] via-[#0F172A]/90 to-[#1E293B]/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0F172A]/10 to-[#0F172A]" />
         
         <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-6">
           <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 px-4.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest text-[#E0A51B] animate-pulse">
@@ -769,8 +788,8 @@ const Blog = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="text-sm text-charcoal-light leading-relaxed whitespace-pre-wrap font-medium">
-              {footerPopup.text}
+            <div className="max-h-[60vh] overflow-y-auto mt-4 pr-1">
+              <LegalDocument text={footerPopup.text} />
             </div>
           </div>
         </div>
