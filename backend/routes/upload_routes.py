@@ -95,6 +95,15 @@ def _normalize_special_image_page_url(url: str) -> str:
             photo_id = slug.rsplit("-", 1)[-1] if "-" in slug else slug
             return f"https://unsplash.com/photos/{photo_id}/download?force=true&w=1600"
 
+    # Google Drive share links format support
+    if "drive.google.com" in host or "docs.google.com" in host:
+        match = re.search(r'/file/d/([a-zA-Z0-9_-]+)', path)
+        if not match:
+            match = re.search(r'id=([a-zA-Z0-9_-]+)', parsed.query)
+        if match:
+            file_id = match.group(1)
+            return f"https://lh3.googleusercontent.com/d/{file_id}"
+
     return url
 
 
@@ -103,16 +112,26 @@ def _download_remote_image(url: str) -> tuple[bytes, str]:
     req = Request(
         url,
         headers={
-            "User-Agent": "X-Space360-ImageFetcher/1.0",
-            "Accept": "image/png,image/jpeg,image/webp,image/gif,image/*;q=0.8,*/*;q=0.5",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
         },
     )
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
-    with urlopen(req, timeout=20, context=ssl_context) as response:
-        content_type = (response.headers.get("Content-Type") or "").lower()
-        contents = response.read()
+    
+    try:
+        with urlopen(req, timeout=20, context=ssl_context) as response:
+            content_type = (response.headers.get("Content-Type") or "").lower()
+            contents = response.read()
+    except Exception as exc:
+        logger.warning("Remote image fetch failed for %s: %s", url, exc)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not fetch image from URL. Web server response: {exc}. Please check link or use 'Upload from device'.",
+        ) from exc
+
     if content_type.startswith("text/html"):
         try:
             html = contents.decode("utf-8", errors="ignore")
@@ -123,7 +142,7 @@ def _download_remote_image(url: str) -> tuple[bytes, str]:
             logger.warning("Could not extract image URL from HTML page %s: %s", url, exc)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The provided page URL does not expose a usable image. Please paste a direct image URL.",
+            detail="The provided web page does not link directly to a raw image file. Please copy direct image link (ending in .jpg/.png) or upload from device.",
         )
     if len(contents) > MAX_BYTES:
         raise HTTPException(
@@ -134,12 +153,12 @@ def _download_remote_image(url: str) -> tuple[bytes, str]:
     if detected is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Remote URL does not point to a supported image format (png, jpg, webp, gif)",
+            detail="Remote URL file format is not supported (allowed: PNG, JPG, WebP, GIF)",
         )
     if content_type and not content_type.startswith("image/"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Remote URL did not return an image",
+            detail="Remote URL did not return an image content type",
         )
     return contents, detected
 
@@ -196,7 +215,16 @@ async def upload_image(
         "properties-original",
         file.content_type,
     )
-    watermarked_contents = apply_image_watermark(contents, detected)
+    
+    # Try watermarking safely; if watermarking fails, fallback to original image contents
+    watermark_applied = False
+    try:
+        watermarked_contents = apply_image_watermark(contents, detected)
+        watermark_applied = True
+    except Exception as wm_err:
+        logger.warning("Watermarking failed on device upload, using original content: %s", wm_err)
+        watermarked_contents = contents
+
     watermarked_object_key = store_upload(
         watermarked_contents,
         watermarked_filename,
@@ -220,7 +248,7 @@ async def upload_image(
         "watermarked_size": len(watermarked_contents),
         "content_type": file.content_type,
         "detected_kind": detected,
-        "watermark_applied": True,
+        "watermark_applied": watermark_applied,
     }
 
 
@@ -230,16 +258,7 @@ async def upload_image_from_url(
     current_user: dict = Depends(get_current_user),
 ):
     """Fetch a remote image, apply the same watermark, and return the hosted URL."""
-    try:
-        contents, detected = _download_remote_image(str(payload.url))
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.warning("Remote image fetch failed for %s: %s", payload.url, exc)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Could not fetch the image from the provided URL",
-        ) from exc
+    contents, detected = _download_remote_image(str(payload.url))
 
     ext = _kind_to_extension(detected)
     original_filename = f"{uuid4().hex}_original.{ext}"
@@ -253,7 +272,16 @@ async def upload_image_from_url(
         "properties-original",
         source_content_type,
     )
-    watermarked_contents = apply_image_watermark(contents, detected)
+    
+    # Try watermarking safely; fallback to original image contents if it fails
+    watermark_applied = False
+    try:
+        watermarked_contents = apply_image_watermark(contents, detected)
+        watermark_applied = True
+    except Exception as wm_err:
+        logger.warning("Watermarking failed on URL upload, using original content: %s", wm_err)
+        watermarked_contents = contents
+
     watermarked_object_key = store_upload(
         watermarked_contents,
         watermarked_filename,
@@ -282,7 +310,7 @@ async def upload_image_from_url(
         "watermarked_size": len(watermarked_contents),
         "content_type": source_content_type,
         "detected_kind": detected,
-        "watermark_applied": True,
+        "watermark_applied": watermark_applied,
     }
 
 ALLOWED_DOC_EXT = {"png", "jpg", "jpeg", "webp", "gif", "pdf"}
