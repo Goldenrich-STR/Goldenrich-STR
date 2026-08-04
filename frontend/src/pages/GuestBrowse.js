@@ -768,10 +768,10 @@ const GuestBrowse = () => {
           <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActiveDropdown(null)} />
         )}
 
-        <div className="w-full max-w-5xl mx-auto relative z-50">
+        <div className="w-full max-w-5xl mx-auto lg:relative z-50">
           <form
             onSubmit={handleSearch}
-            className="flex flex-col lg:flex-row items-center bg-white rounded-2xl lg:rounded-full w-full shadow-elevated border border-gray-100 relative z-50"
+            className="flex flex-col lg:flex-row items-center bg-white rounded-2xl lg:rounded-full w-full shadow-elevated border border-gray-100 lg:relative z-50"
           >
               
               {/* Location */}
@@ -846,7 +846,7 @@ const GuestBrowse = () => {
               <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
               
               {/* Check-in */}
-              <div className={`relative flex items-center px-4 lg:px-6 py-4 w-full lg:w-auto border-b border-gray-100 lg:border-none hover:bg-gray-50 transition group ${activeDropdown === 'dates' && browseCalendarAnchor === 'checkIn' ? 'z-50' : ''}`}>
+              <div className={`flex items-center px-4 lg:px-6 py-4 w-full lg:w-auto border-b border-gray-100 lg:border-none hover:bg-gray-50 transition group lg:relative ${activeDropdown === 'dates' && browseCalendarAnchor === 'checkIn' ? 'z-50' : ''}`}>
                 <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
                 <button
                   type="button"
@@ -882,7 +882,7 @@ const GuestBrowse = () => {
               <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
               
               {/* Check-out */}
-              <div className={`relative flex items-center px-4 lg:px-6 py-4 w-full lg:w-auto border-b border-gray-100 lg:border-none hover:bg-gray-50 transition group ${activeDropdown === 'dates' && browseCalendarAnchor === 'checkOut' ? 'z-50' : ''}`}>
+              <div className={`flex items-center px-4 lg:px-6 py-4 w-full lg:w-auto border-b border-gray-100 lg:border-none hover:bg-gray-50 transition group lg:relative ${activeDropdown === 'dates' && browseCalendarAnchor === 'checkOut' ? 'z-50' : ''}`}>
                 <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
                 <button
                   type="button"
