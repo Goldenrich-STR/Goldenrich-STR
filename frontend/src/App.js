@@ -410,38 +410,20 @@ const IndependenceDayAnimation = () => {
   const [flight, setFlight] = React.useState(null);
 
   const triggerNewFlight = React.useCallback(() => {
-    const paths = [
-      {
-        name: 'bl-tr',
-        rotation: -16,
-        animationName: 'fly-bl-tr'
-      },
-      {
-        name: 'br-tl',
-        rotation: -164,
-        animationName: 'fly-br-tl'
-      },
-      {
-        name: 'tl-br',
-        rotation: 16,
-        animationName: 'fly-tl-br'
-      },
-      {
-        name: 'tr-bl',
-        rotation: 164,
-        animationName: 'fly-tr-bl'
-      },
-      {
-        name: 'l-r',
-        rotation: 0,
-        animationName: 'fly-l-r'
-      },
-      {
-        name: 'r-l',
-        rotation: 180,
-        animationName: 'fly-r-l'
-      }
-    ];
+    const isMobile = window.innerWidth < 768;
+    const paths = isMobile 
+      ? [
+          { name: 'l-r', rotation: 0, animationName: 'fly-l-r' },
+          { name: 'r-l', rotation: 180, animationName: 'fly-r-l' }
+        ]
+      : [
+          { name: 'bl-tr', rotation: -16, animationName: 'fly-bl-tr' },
+          { name: 'br-tl', rotation: -164, animationName: 'fly-br-tl' },
+          { name: 'tl-br', rotation: 16, animationName: 'fly-tl-br' },
+          { name: 'tr-bl', rotation: 164, animationName: 'fly-tr-bl' },
+          { name: 'l-r', rotation: 0, animationName: 'fly-l-r' },
+          { name: 'r-l', rotation: 180, animationName: 'fly-r-l' }
+        ];
 
     // Pick a random path
     const randomPath = paths[Math.floor(Math.random() * paths.length)];
