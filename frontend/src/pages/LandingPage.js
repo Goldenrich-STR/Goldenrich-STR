@@ -1870,6 +1870,13 @@ const CollectionsSection = ({
   const sliderRef = React.useRef(null);
   const [activeTab, setActiveTab] = React.useState('All');
 
+  const scrollSlider = (direction, id) => {
+    const container = document.getElementById(id);
+    if (container) {
+      container.scrollBy({ left: direction === 'left' ? -350 : 350, behavior: 'smooth' });
+    }
+  };
+
   const collectionProperties = React.useMemo(() => {
     return [
       ...(properties?.residential || []),
@@ -2036,10 +2043,21 @@ const CollectionsSection = ({
                   })}
                 </div>
               </div>
+
+              {/* Navigation Arrows */}
+              <div className="hidden md:flex space-x-2 pb-2">
+                <button onClick={() => scrollSlider('left', 'slider-getaway')} className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm bg-white">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button onClick={() => scrollSlider('right', 'slider-getaway')} className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm bg-white">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             <div className="overflow-hidden">
             <div
+              id="slider-getaway"
               className="flex snap-x gap-5 overflow-x-auto pb-5 scroll-smooth no-scrollbar"
             >
               {filteredCollections.map((item, index) => {
