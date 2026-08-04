@@ -3284,7 +3284,7 @@ const LandingPage = () => {
                       />
                         
                         {/* Location */}
-                        <div className="relative flex-1 w-full min-w-0 z-[1]">
+                        <div className={`relative flex-1 w-full min-w-0 ${activeDropdown === 'location' ? 'z-[60]' : 'z-[1]'}`}>
                           <div 
                             onClick={() => {
                               setActiveDropdown('location');
@@ -3401,7 +3401,7 @@ const LandingPage = () => {
                         </div>
                         <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
                         
-                        <div className="relative flex flex-col lg:flex-row items-stretch lg:items-center shrink-0 w-full lg:w-auto z-[1]">
+                        <div className={`relative flex flex-col lg:flex-row items-stretch lg:items-center shrink-0 w-full lg:w-auto ${landingCalendarOpen ? 'z-[60]' : 'z-[1]'}`}>
                           {/* Check-in */}
                           <div className="relative flex items-center px-4 lg:px-6 py-3 w-full lg:w-auto hover:bg-stone/50 rounded-3xl lg:rounded-full transition duration-200 group shrink-0">
                             <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
@@ -3468,7 +3468,7 @@ const LandingPage = () => {
                         <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
 
                         {/* Guests */}
-                        <div className="relative flex-1 w-full z-[1]">
+                        <div className={`relative flex-1 w-full ${activeDropdown === 'guests' ? 'z-[60]' : 'z-[1]'}`}>
                           <div 
                             onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
                             className="flex items-center px-4 lg:px-6 py-3 w-full cursor-pointer hover:bg-stone/50 rounded-3xl lg:rounded-full transition duration-200 group"
