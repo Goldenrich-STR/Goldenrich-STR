@@ -120,7 +120,7 @@ const TRANSLATIONS = {
     commercial: 'Commercial Spaces',
     commercialSub: 'Premium offices, co-working spaces, and retail.',
     eventVenue: 'Events & Functions',
-    eventVenueSub: 'Banquet halls, rooftops, and celebration venues.',
+    eventVenueSub: 'Banquet halls, garden lawns, and celebration venues.',
     comingSoon: 'New {category} coming soon!',
     topRated: 'Top Rated',
     night: 'night',
@@ -1191,7 +1191,7 @@ const EXPLORE_MENU_TABS = [
       ],
       [
         createExploreItem('Banquet Halls in Nashik', { category: 'event_venue', property_type: 'banquet_hall', city: 'Nashik' }),
-        createExploreItem('Rooftops in Pune', { category: 'event_venue', property_type: 'rooftop', city: 'Pune' }),
+        createExploreItem('Banquet Halls in Pune', { category: 'event_venue', property_type: 'banquet_hall', city: 'Pune' }),
         createExploreItem('Hotel Ballrooms in Mumbai', { category: 'event_venue', property_type: 'hotel_ballroom', city: 'Mumbai' }),
         createExploreItem('Resorts & Lawns in Trimbak', { category: 'event_venue', property_type: 'resort', city: 'Trimbakeshwar' }),
       ],
@@ -2706,9 +2706,8 @@ const LandingPage = () => {
         {/* Header */}
         <div className="flex items-end justify-between mb-6 px-4 md:px-[10vw] w-full">
           <div className="text-left">
-            <h3 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E] flex items-center gap-2">
-              <span>{title}</span>
-              <IconComponent className="w-5 h-5 text-[#1E1E1E]/85 stroke-[2]" />
+            <h3 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
+              {title}
             </h3>
             <p className="text-gray-550 text-xs md:text-sm font-medium mt-1">{subtitle}</p>
           </div>
@@ -3906,7 +3905,7 @@ const LandingPage = () => {
             {renderPropertySlider(
               'slider-events',
               'Events & Functions',
-              'Banquet halls, rooftops, and celebration venues.',
+              'Banquet halls, garden lawns, and celebration venues.',
               PartyPopper,
               'event_venue',
               properties.event_venue
