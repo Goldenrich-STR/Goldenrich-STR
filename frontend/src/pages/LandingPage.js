@@ -3215,7 +3215,7 @@ const LandingPage = () => {
                      <ChevronLeft className="w-5 h-5" />
                    </button>
 
-                   <h2 className="font-serif-hero text-[28px] sm:text-4xl md:text-5xl lg:text-[58px] font-semibold leading-[1.08] text-white drop-shadow-premium tracking-[-0.03em] max-w-[250px] sm:max-w-none">
+                   <h2 className="text-[28px] sm:text-4xl md:text-5xl lg:text-[58px] font-medium leading-[1.08] text-white drop-shadow-premium font-lufga tracking-[-0.03em] max-w-[250px] sm:max-w-none">
                      {activeHero.titlePrefix} {activeHero.titleHighlight} {activeHero.titleSuffix}
                    </h2>
 
