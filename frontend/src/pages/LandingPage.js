@@ -3215,7 +3215,7 @@ const LandingPage = () => {
                      <ChevronLeft className="w-5 h-5" />
                    </button>
 
-                   <h2 className="text-[28px] sm:text-4xl md:text-5xl lg:text-[58px] font-medium leading-[1.08] text-white drop-shadow-premium font-lufga tracking-[-0.03em] max-w-[250px] sm:max-w-none">
+                   <h2 className="font-serif-hero text-[28px] sm:text-4xl md:text-5xl lg:text-[58px] font-semibold leading-[1.08] text-white drop-shadow-premium tracking-[-0.03em] max-w-[250px] sm:max-w-none">
                      {activeHero.titlePrefix} {activeHero.titleHighlight} {activeHero.titleSuffix}
                    </h2>
 
@@ -3606,7 +3606,7 @@ const LandingPage = () => {
             <div className="mt-12 md:mt-16 pt-8 md:pt-10 border-t border-sand-200">
               <div className="flex items-end justify-between gap-4 mb-6">
                 <div className="text-left">
-                  <h2 className="font-serif text-2xl md:text-3xl font-bold text-charcoal tracking-tight">Recently Visited</h2>
+                  <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">Recently Visited</h2>
                   <div className="mt-6 inline-flex flex-col items-start">
                     <span className="text-sm md:text-base font-bold text-charcoal">Properties</span>
                     <span className="mt-2 h-[2px] w-full bg-charcoal" />
