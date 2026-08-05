@@ -15,6 +15,7 @@ import { accountAPI, bookingAPI, pricingAPI } from '../services/api';
 import CouponManagement from '../components/admin/CouponManagement';
 import { BookingManagement, SubscriptionManagement } from './AdminDashboard';
 import { requestConfirm, showNotice } from './admin/shared';
+import { buildCustomerBookingInvoiceHtml } from '../utils/bookingInvoice';
 
 const fmtINR = (paise) =>
   new Intl.NumberFormat('en-IN', {
@@ -3681,8 +3682,47 @@ const InvoiceModal = ({ transaction, onClose }) => {
         : t.type === 'refund'
           ? `Accommodation Refund [booking_id: ${t.booking_id || 'NA'}]`
           : 'Platform Service Charges';
+  const buildAdminBookingInvoiceHtml = () => {
+    const booking = t.booking || {};
+    const bookingInvoice = {
+      ...booking,
+      booking_id: t.booking_id || booking.booking_id,
+      invoice_no: t.invoice_no || t.transaction_id,
+      booking_invoice_no: t.invoice_no || t.transaction_id,
+      created_at: booking.created_at || t.created_at,
+      total_amount: amountINR,
+      paid_amount: amountINR,
+      taxes: totalGst,
+      gst_amount: totalGst,
+      tax_amount: totalGst,
+      tax_percent: taxPercent,
+      gst_percent: taxPercent,
+      cgst,
+      sgst,
+      razorpay_payment_id: t.razorpay_payment_id || booking.razorpay_payment_id,
+      upi_transaction_id: t.upi_transaction_id || booking.upi_transaction_id,
+      payment_id: t.razorpay_payment_id || t.upi_transaction_id || t.transaction_id,
+      customer_base_amount: baseAmount,
+    };
+    return buildCustomerBookingInvoiceHtml(bookingInvoice, property, user);
+  };
+  const printHtml = (html, title = 'Tax Invoice') => {
+    const printWindow = window.open('', 'xspace-invoice-print', 'width=1100,height=900');
+    if (!printWindow) {
+      window.print();
+      return false;
+    }
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    return true;
+  };
 
   const handlePrint = () => {
+    if (t.type === 'booking_payment') {
+      printHtml(buildAdminBookingInvoiceHtml(), t.invoice_no || 'Tax Invoice');
+      return;
+    }
     const printWindow = window.open('', 'xspace-invoice-print', 'width=1100,height=900');
     if (!printWindow) {
       window.print();
@@ -4143,6 +4183,39 @@ const InvoiceModal = ({ transaction, onClose }) => {
     `);
     printWindow.document.close();
   };
+
+  if (t.type === 'booking_payment') {
+    const invoiceHtml = buildAdminBookingInvoiceHtml();
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto print:p-0 print:bg-white" data-testid="invoice-modal">
+        <div className="bg-white rounded-xl w-full max-w-5xl border border-gray-100 shadow-elevated p-5 relative">
+          <div className="no-print flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-100">
+            <h2 className="text-lg font-bold text-charcoal">Tax Invoice Details</h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePrint}
+                className="px-4 py-2 bg-emerald-700 text-white rounded-lg text-sm font-semibold hover:bg-emerald-800 transition flex items-center gap-2"
+              >
+                <Printer className="w-4 h-4" />
+                Print / Download PDF
+              </button>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 border border-gray-200 text-charcoal rounded-lg text-sm font-semibold hover:bg-gray-50 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          <iframe
+            title={t.invoice_no || 'Booking invoice'}
+            srcDoc={invoiceHtml}
+            className="w-full h-[78vh] rounded-lg border border-gray-200 bg-white"
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto print:p-0 print:bg-white" data-testid="invoice-modal">
