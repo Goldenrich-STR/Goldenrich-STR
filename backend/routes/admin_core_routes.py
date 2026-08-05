@@ -2264,9 +2264,6 @@ async def property_operations(
         "draft": "draft",
         "submitted": "pending_verification",
         "document_check": "pending_verification",
-        "broker_verification": "pending_verification",
-        "rm_verification": "under_review",
-        "admin_review": "under_review",
         "approved": "live",
         "live": "live",
         "rejected": "rejected",
@@ -2274,6 +2271,36 @@ async def property_operations(
     }
     if tab in status_map:
         query["status"] = status_map[tab]
+    elif tab == "broker_verification":
+        verified_props = await db.property_verifications.find(
+            {"status": {"$in": ["completed", "approved", "rejected"]}},
+            {"property_id": 1}
+        ).to_list(length=10000)
+        verified_prop_ids = [vp["property_id"] for vp in verified_props]
+        query["status"] = {"$in": ["pending_verification", "under_review"]}
+        query["property_id"] = {"$nin": verified_prop_ids}
+    elif tab == "rm_verification":
+        rm_props = await db.property_verifications.find(
+            {
+                "status": "completed",
+                "rm_approved": {"$ne": True}
+            },
+            {"property_id": 1}
+        ).to_list(length=10000)
+        rm_prop_ids = [vp["property_id"] for vp in rm_props]
+        query["status"] = {"$in": ["pending_verification", "under_review"]}
+        query["property_id"] = {"$in": rm_prop_ids}
+    elif tab == "admin_review":
+        admin_props = await db.property_verifications.find(
+            {
+                "rm_approved": True,
+                "admin_reviewed": {"$ne": True}
+            },
+            {"property_id": 1}
+        ).to_list(length=10000)
+        admin_prop_ids = [vp["property_id"] for vp in admin_props]
+        query["status"] = {"$in": ["pending_verification", "under_review"]}
+        query["property_id"] = {"$in": admin_prop_ids}
     if category:
         query["category"] = category
     if property_type:

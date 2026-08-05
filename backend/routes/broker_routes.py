@@ -18,7 +18,9 @@ router = APIRouter(prefix="/broker", tags=["Broker"])
 
 async def require_broker(current_user: dict = Depends(get_current_user)):
     """Dependency to check if user is broker."""
-    if current_user["role"] != UserRole.BROKER.value:
+    role = current_user.get("role")
+    admin_role_key = current_user.get("admin_role_key")
+    if role != UserRole.BROKER.value and not (role == UserRole.EMPLOYEE.value and admin_role_key in ["rm", "relationship_manager"]):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Broker access required"
@@ -28,6 +30,19 @@ async def require_broker(current_user: dict = Depends(get_current_user)):
 async def get_db():
     from server import db_instance
     return db_instance
+
+
+def _get_broker_or_rm_query(current_user: dict, additional_query: dict = None) -> dict:
+    user_id = current_user["user_id"]
+    is_rm = current_user.get("role") == UserRole.EMPLOYEE.value and current_user.get("admin_role_key") in ["rm", "relationship_manager"]
+    q = {}
+    if is_rm:
+        q["rm_id"] = user_id
+    else:
+        q["broker_id"] = user_id
+    if additional_query:
+        q.update(additional_query)
+    return q
 
 # ========== BROKER DASHBOARD ==========
 
@@ -78,33 +93,21 @@ async def get_broker_dashboard_stats(
         broker_id = current_user["user_id"]
         
         # Count assigned owners
-        total_owners = await db.users.count_documents({
-            "broker_id": broker_id,
-            "role": "host"
-        })
+        total_owners = await db.users.count_documents(_get_broker_or_rm_query(current_user, {"role": "host"}))
         
         # Count properties
-        total_properties = await db.properties.count_documents({"broker_id": broker_id})
-        live_properties = await db.properties.count_documents({
-            "broker_id": broker_id,
-            "status": "live"
-        })
+        total_properties = await db.properties.count_documents(_get_broker_or_rm_query(current_user))
+        live_properties = await db.properties.count_documents(_get_broker_or_rm_query(current_user, {"status": "live"}))
         
         # Pending verifications
-        pending_verifications = await db.property_verifications.count_documents({
-            "broker_id": broker_id,
-            "status": {"$in": ["pending", "in_progress"]}
-        })
+        pending_verifications = await db.property_verifications.count_documents(_get_broker_or_rm_query(current_user, {"status": {"$in": ["pending", "in_progress"]}}))
         
         # Leads count
-        total_leads = await db.leads.count_documents({"broker_id": broker_id})
-        converted_leads = await db.leads.count_documents({
-            "broker_id": broker_id,
-            "status": "converted"
-        })
+        total_leads = await db.leads.count_documents(_get_broker_or_rm_query(current_user))
+        converted_leads = await db.leads.count_documents(_get_broker_or_rm_query(current_user, {"status": "converted"}))
         
         # Commission earnings
-        commission_cursor = db.commissions.find({"broker_id": broker_id})
+        commission_cursor = db.commissions.find(_get_broker_or_rm_query(current_user))
         commissions = await commission_cursor.to_list(length=None)
         total_commission = sum(c.get("commission_amount", 0) for c in commissions)
         paid_commission = sum(c.get("commission_amount", 0) for c in commissions if c.get("payment_status") == "paid")
@@ -163,7 +166,7 @@ async def get_my_owners(
         )
         
         cursor = db.users.find(
-            {"broker_id": broker_id, "role": "host"},
+            _get_broker_or_rm_query(current_user, {"role": "host"}),
             {"_id": 0, "password_hash": 0}
         )
         owners = await cursor.to_list(length=200)
@@ -233,7 +236,7 @@ async def get_owner_details(
     try:
         broker_id = current_user["user_id"]
         owner = await db.users.find_one(
-            {"user_id": owner_id, "broker_id": broker_id, "role": "host"},
+            _get_broker_or_rm_query(current_user, {"user_id": owner_id, "role": "host"}),
             {"_id": 0, "password_hash": 0}
         )
         if not owner:
@@ -336,7 +339,7 @@ async def get_broker_properties(
     try:
         broker_id = current_user["user_id"]
         
-        query = {"broker_id": broker_id}
+        query = _get_broker_or_rm_query(current_user)
         if status_filter:
             query["status"] = status_filter
         
@@ -351,7 +354,7 @@ async def get_broker_properties(
                 )
                 property_doc["owner_summary"] = owner or {}
             verification = await db.property_verifications.find_one(
-                {"property_id": property_doc.get("property_id"), "broker_id": broker_id},
+                _get_broker_or_rm_query(current_user, {"property_id": property_doc.get("property_id")}),
                 {"_id": 0},
                 sort=[("created_at", -1)]
             )
@@ -384,9 +387,9 @@ async def create_broker_property(
 ):
     """Create a draft property for a host assigned to this broker."""
     try:
-        broker_id = current_user["user_id"]
+        is_rm = current_user.get("role") == UserRole.EMPLOYEE.value and current_user.get("admin_role_key") in ["rm", "relationship_manager"]
         owner = await db.users.find_one(
-            {"user_id": property_data.owner_id, "broker_id": broker_id, "role": "host"},
+            _get_broker_or_rm_query(current_user, {"user_id": property_data.owner_id, "role": "host"}),
             {"_id": 0, "password_hash": 0}
         )
         if not owner:
@@ -412,13 +415,13 @@ async def create_broker_property(
         payload = property_data.model_dump(exclude={"owner_id"})
         property_obj = Property(
             owner_id=owner["user_id"],
-            broker_id=broker_id,
+            broker_id=None if is_rm else broker_id,
             broker_lg_code=broker_code,
-            rm_id=owner.get("rm_id") or current_user.get("rm_id"),
+            rm_id=broker_id if is_rm else (owner.get("rm_id") or current_user.get("rm_id")),
             employee_id=owner.get("employee_id") or owner.get("assigned_employee_id") or current_user.get("employee_id"),
             created_by_role=current_user.get("role"),
             created_by_user_id=broker_id,
-            managed_by_broker_id=broker_id,
+            managed_by_broker_id=None if is_rm else broker_id,
             **payload
         )
         property_dict = property_obj.model_dump()
@@ -434,7 +437,7 @@ async def create_broker_property(
                 "new_value": {
                     "property_id": property_obj.property_id,
                     "owner_id": owner["user_id"],
-                    "broker_id": broker_id,
+                    "broker_id": None if is_rm else broker_id,
                     "status": property_obj.status.value if hasattr(property_obj.status, "value") else property_obj.status,
                 },
                 "created_at": datetime.now(timezone.utc),
@@ -467,7 +470,7 @@ async def update_broker_property_draft(
     try:
         broker_id = current_user["user_id"]
         existing_property = await db.properties.find_one(
-            {"property_id": property_id, "broker_id": broker_id},
+            _get_broker_or_rm_query(current_user, {"property_id": property_id}),
             {"_id": 0}
         )
         if not existing_property:
@@ -484,7 +487,7 @@ async def update_broker_property_draft(
             )
 
         owner = await db.users.find_one(
-            {"user_id": existing_property.get("owner_id"), "broker_id": broker_id, "role": "host"},
+            _get_broker_or_rm_query(current_user, {"user_id": existing_property.get("owner_id"), "role": "host"}),
             {"_id": 0, "user_id": 1}
         )
         if not owner:
@@ -508,12 +511,12 @@ async def update_broker_property_draft(
         if existing_property.get("status") == "rejected":
             update_data["status"] = "draft"
         await db.properties.update_one(
-            {"property_id": property_id, "broker_id": broker_id},
+            _get_broker_or_rm_query(current_user, {"property_id": property_id}),
             {"$set": update_data}
         )
 
         updated_property = await db.properties.find_one(
-            {"property_id": property_id, "broker_id": broker_id},
+            _get_broker_or_rm_query(current_user, {"property_id": property_id}),
             {"_id": 0}
         )
 
@@ -563,7 +566,7 @@ async def start_broker_property_rework(
     try:
         broker_id = current_user["user_id"]
         property_data = await db.properties.find_one(
-            {"property_id": property_id, "broker_id": broker_id},
+            _get_broker_or_rm_query(current_user, {"property_id": property_id}),
             {"_id": 0}
         )
         if not property_data:
@@ -573,7 +576,7 @@ async def start_broker_property_rework(
             )
 
         verification = await db.property_verifications.find_one(
-            {"property_id": property_id, "broker_id": broker_id},
+            _get_broker_or_rm_query(current_user, {"property_id": property_id}),
             {"_id": 0},
             sort=[("created_at", -1)]
         )
@@ -591,7 +594,7 @@ async def start_broker_property_rework(
 
         now = datetime.now(timezone.utc)
         await db.properties.update_one(
-            {"property_id": property_id, "broker_id": broker_id},
+            _get_broker_or_rm_query(current_user, {"property_id": property_id}),
             {"$set": {
                 "status": "draft",
                 "is_edited": True,
@@ -629,7 +632,7 @@ async def start_broker_property_rework(
             logger.warning(f"Failed to write broker property rework audit: {audit_err}")
 
         updated_property = await db.properties.find_one(
-            {"property_id": property_id, "broker_id": broker_id},
+            _get_broker_or_rm_query(current_user, {"property_id": property_id}),
             {"_id": 0}
         )
         return {
@@ -654,9 +657,9 @@ async def submit_broker_property_for_verification(
 ):
     """Submit a broker-created draft property into the verification queue."""
     try:
-        broker_id = current_user["user_id"]
+        is_rm = current_user.get("role") == UserRole.EMPLOYEE.value and current_user.get("admin_role_key") in ["rm", "relationship_manager"]
         property_data = await db.properties.find_one(
-            {"property_id": property_id, "broker_id": broker_id},
+            _get_broker_or_rm_query(current_user, {"property_id": property_id}),
             {"_id": 0}
         )
         if not property_data:
@@ -680,7 +683,7 @@ async def submit_broker_property_for_verification(
             )
 
         owner = await db.users.find_one(
-            {"user_id": property_data.get("owner_id"), "broker_id": broker_id, "role": "host"},
+            _get_broker_or_rm_query(current_user, {"user_id": property_data.get("owner_id"), "role": "host"}),
             {"_id": 0, "user_id": 1, "rm_id": 1}
         )
         if not owner:
@@ -691,7 +694,7 @@ async def submit_broker_property_for_verification(
 
         now = datetime.now(timezone.utc)
         existing_verification = await db.property_verifications.find_one(
-            {"property_id": property_id, "broker_id": broker_id},
+            _get_broker_or_rm_query(current_user, {"property_id": property_id}),
             {"_id": 0}
         )
         if existing_verification:
@@ -704,7 +707,7 @@ async def submit_broker_property_for_verification(
                     "rm_reviewed": False,
                     "rm_approved": False,
                     "rm_remarks": None,
-                    "rm_id": owner.get("rm_id") or property_data.get("rm_id") or current_user.get("rm_id"),
+                    "rm_id": broker_id if is_rm else (owner.get("rm_id") or property_data.get("rm_id") or current_user.get("rm_id")),
                     "broker_remarks": "Broker submitted draft property for verification",
                     "updated_at": now,
                 }}
@@ -712,10 +715,10 @@ async def submit_broker_property_for_verification(
         else:
             verification = PropertyVerification(
                 property_id=property_id,
-                broker_id=broker_id,
+                broker_id="" if is_rm else broker_id,
                 owner_id=property_data["owner_id"],
                 status=VerificationStatus.PENDING,
-                rm_id=owner.get("rm_id") or property_data.get("rm_id") or current_user.get("rm_id"),
+                rm_id=broker_id if is_rm else (owner.get("rm_id") or property_data.get("rm_id") or current_user.get("rm_id")),
                 broker_remarks="Broker submitted draft property for verification"
             )
             verification_doc = verification.model_dump()
@@ -723,7 +726,7 @@ async def submit_broker_property_for_verification(
             verification_id = verification.verification_id
 
         await db.properties.update_one(
-            {"property_id": property_id, "broker_id": broker_id},
+            _get_broker_or_rm_query(current_user, {"property_id": property_id}),
             {"$set": {
                 "status": "pending_verification",
                 "submitted_at": now,
@@ -1178,6 +1181,7 @@ async def submit_verification(
     """Submit property verification after site visit."""
     try:
         broker_id = current_user["user_id"]
+        is_rm = current_user.get("role") == UserRole.EMPLOYEE.value and current_user.get("admin_role_key") in ["rm", "relationship_manager"]
         
         # Get property
         property_data = await db.properties.find_one({"property_id": property_id})
@@ -1186,7 +1190,9 @@ async def submit_verification(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Property not found"
             )
-        if property_data.get("broker_id") != broker_id:
+        
+        assigned_id = property_data.get("rm_id") if is_rm else property_data.get("broker_id")
+        if assigned_id != broker_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="This property is not assigned to this broker"
@@ -1227,8 +1233,8 @@ async def submit_verification(
                 )
         
         # Resolve RM ID for this verification to keep it private/assigned to the correct employee
-        owner_rm_id = None
-        if property_data and property_data.get("owner_id"):
+        owner_rm_id = broker_id if is_rm else None
+        if not owner_rm_id and property_data and property_data.get("owner_id"):
             owner = await db.users.find_one({"user_id": property_data["owner_id"]})
             if owner:
                 owner_rm_id = owner.get("rm_id")
@@ -1238,15 +1244,14 @@ async def submit_verification(
                 owner_rm_id = broker_user.get("rm_id")
 
         # Check if verification already exists
-        existing = await db.property_verifications.find_one({
-            "property_id": property_id,
-            "broker_id": broker_id
-        })
+        existing = await db.property_verifications.find_one(
+            _get_broker_or_rm_query(current_user, {"property_id": property_id})
+        )
         
         if existing:
             # Update existing verification
             await db.property_verifications.update_one(
-                {"property_id": property_id, "broker_id": broker_id},
+                {"verification_id": existing["verification_id"]},
                 {"$set": {
                     "checklist": verification_data.checklist.model_dump(),
                     "geo_tagged_photos": [p.model_dump() for p in verification_data.geo_tagged_photos],
@@ -1272,7 +1277,7 @@ async def submit_verification(
             # Create new verification
             verification = PropertyVerification(
                 property_id=property_id,
-                broker_id=broker_id,
+                broker_id="" if is_rm else broker_id,
                 owner_id=property_data["owner_id"],
                 checklist=verification_data.checklist,
                 geo_tagged_photos=verification_data.geo_tagged_photos,

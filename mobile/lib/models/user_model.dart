@@ -10,6 +10,7 @@ class UserModel {
   final bool isActive;
   final bool registrationFeePaid;
   final bool isPromoClaimed;
+  final String? adminRoleKey;
 
   UserModel({
     required this.userId,
@@ -23,6 +24,7 @@ class UserModel {
     required this.isActive,
     required this.registrationFeePaid,
     required this.isPromoClaimed,
+    this.adminRoleKey,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class UserModel {
       isActive: json['is_active'] ?? false,
       registrationFeePaid: json['registration_fee_paid'] ?? false,
       isPromoClaimed: json['is_promo_claimed'] ?? false,
+      adminRoleKey: json['admin_role_key'],
     );
   }
 
@@ -54,6 +57,7 @@ class UserModel {
       'is_active': isActive,
       'registration_fee_paid': registrationFeePaid,
       'is_promo_claimed': isPromoClaimed,
+      'admin_role_key': adminRoleKey,
     };
   }
 }

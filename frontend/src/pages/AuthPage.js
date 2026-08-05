@@ -375,7 +375,12 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
       } else if (userRole === 'broker') {
         navigate('/broker/dashboard');
       } else if (userRole === 'employee') {
-        navigate('/employee/dashboard');
+        const adminRole = result.user?.admin_role_key;
+        if (adminRole === 'rm' || adminRole === 'relationship_manager') {
+          navigate('/broker/dashboard');
+        } else {
+          navigate('/employee/dashboard');
+        }
       } else {
         navigate(getGuestPostAuthPath());
       }

@@ -184,23 +184,26 @@ class _AppShellState extends State<AppShell> {
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'employee') {
+        final String? adminRole = user.adminRoleKey;
+        final bool isRm = adminRole == 'rm' || adminRole == 'relationship_manager';
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          const EmployeeDashboardScreen(),
+          isRm ? const BrokerDashboardScreen() : const EmployeeDashboardScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
-        navItems = const [
-          BottomNavigationBarItem(
+        navItems = [
+          const BottomNavigationBarItem(
               icon: Icon(Icons.home_filled), label: 'Homes'),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
               icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.rate_review_outlined), label: 'Reviews'),
-          BottomNavigationBarItem(
+              icon: Icon(isRm ? Icons.dashboard_outlined : Icons.rate_review_outlined),
+              label: isRm ? 'Broker' : 'Reviews'),
+          const BottomNavigationBarItem(
               icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'admin') {
@@ -243,7 +246,7 @@ class _AppShellState extends State<AppShell> {
     }
 
     final bool isHost = user?.role == 'host';
-    final bool isBroker = user?.role == 'broker';
+    final bool isBroker = user?.role == 'broker' || (user?.role == 'employee' && (user?.adminRoleKey == 'rm' || user?.adminRoleKey == 'relationship_manager'));
 
     return Scaffold(
       key: _scaffoldKey,
