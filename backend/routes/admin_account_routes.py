@@ -172,6 +172,134 @@ def _booking_invoice_breakdown(transaction: dict) -> dict:
     }
 
 
+BOOKING_TRANSACTION_PROJECTION = {
+    "_id": 0,
+    "booking_id": 1,
+    "property_id": 1,
+    "guest_id": 1,
+    "host_id": 1,
+    "broker_id": 1,
+    "broker_lg_code": 1,
+    "rm_id": 1,
+    "employee_id": 1,
+    "employee_code": 1,
+    "branch_manager_id": 1,
+    "branch_manager_code": 1,
+    "check_in_date": 1,
+    "check_out_date": 1,
+    "created_at": 1,
+    "booking_status": 1,
+    "payment_status": 1,
+    "payment_method": 1,
+    "payment_type": 1,
+    "razorpay_order_id": 1,
+    "razorpay_payment_id": 1,
+    "upi_transaction_id": 1,
+    "base_amount": 1,
+    "host_amount": 1,
+    "host_base_amount": 1,
+    "host_actual_value": 1,
+    "total_amount": 1,
+    "paid_amount": 1,
+    "platform_fee": 1,
+    "service_fee": 1,
+    "payment_gateway_charge": 1,
+    "gateway_charge": 1,
+    "convenience_fee": 1,
+    "insurance_fee": 1,
+    "cleaning_fee": 1,
+    "extra_guest_fee": 1,
+    "taxes": 1,
+    "tax_amount": 1,
+    "gst_amount": 1,
+    "tax_percent": 1,
+    "gst_percent": 1,
+    "coupon_code": 1,
+    "discount_amount": 1,
+    "customer_discount_amount": 1,
+    "pricing": 1,
+    "pricing_snapshot": 1,
+    "pricing_breakdown": 1,
+    "breakdown": 1,
+    "extra_charges": 1,
+    "customer_charge_breakdown": 1,
+    "charge_breakdown": 1,
+    "applied_charges": 1,
+}
+
+
+async def _find_booking_for_transaction(db: AsyncIOMotorDatabase, t: dict) -> Optional[dict]:
+    """Resolve booking rows even when older ledgers stored an alternate reference."""
+    exact_booking_id = t.get("booking_id")
+    if exact_booking_id:
+        booking = await db.bookings.find_one(
+            {"booking_id": exact_booking_id},
+            BOOKING_TRANSACTION_PROJECTION,
+        )
+        if booking:
+            return booking
+
+    payment_refs = [
+        t.get("razorpay_payment_id"),
+        t.get("upi_transaction_id"),
+    ]
+    order_refs = [t.get("razorpay_order_id")]
+    or_conditions = []
+    for ref in [value for value in payment_refs if value]:
+        or_conditions.extend([
+            {"razorpay_payment_id": ref},
+            {"upi_transaction_id": ref},
+            {"payment_id": ref},
+        ])
+    for ref in [value for value in order_refs if value]:
+        or_conditions.append({"razorpay_order_id": ref})
+
+    if or_conditions:
+        booking = await db.bookings.find_one(
+            {"$or": or_conditions},
+            BOOKING_TRANSACTION_PROJECTION,
+        )
+        if booking:
+            return booking
+
+    amount_rupees = _amount_rupees((t.get("amount") or 0) / 100)
+    if amount_rupees <= 0:
+        return None
+
+    amount_conditions = [
+        {"total_amount": amount_rupees},
+        {"paid_amount": amount_rupees},
+    ]
+    scoped_conditions = [
+        {"guest_id": t.get("user_id")} if t.get("user_id") else None,
+        {"host_id": t.get("host_id")} if t.get("host_id") else None,
+    ]
+    created_at = t.get("created_at")
+    created_filter = {}
+    if isinstance(created_at, datetime):
+        created_filter = {
+            "created_at": {
+                "$gte": created_at - timedelta(days=2),
+                "$lte": created_at + timedelta(days=2),
+            }
+        }
+
+    for scope in [condition for condition in scoped_conditions if condition]:
+        booking = await db.bookings.find_one(
+            {
+                **scope,
+                **created_filter,
+                "$or": amount_conditions,
+                "payment_status": {"$in": ["paid", "partially_paid", "success", "captured", "completed"]},
+            },
+            BOOKING_TRANSACTION_PROJECTION,
+            sort=[("created_at", -1)],
+        )
+        if booking:
+            return booking
+    return None
+
+
 # --------------- Overview ----------------
 
 @router.get("/overview")
@@ -691,69 +819,14 @@ async def list_transactions(
         # Enrich transactions with invoice, customer, broker, RM and subscription details.
         for t in items:
             t["invoice_no"] = await get_invoice_number(db, t)
-            booking = None
-            if t.get("booking_id"):
-                booking = await db.bookings.find_one(
-                    {"booking_id": t["booking_id"]},
-                    {
-                        "_id": 0,
-                        "booking_id": 1,
-                        "property_id": 1,
-                        "guest_id": 1,
-                        "host_id": 1,
-                        "broker_id": 1,
-                        "broker_lg_code": 1,
-                        "rm_id": 1,
-                        "employee_id": 1,
-                        "employee_code": 1,
-                        "branch_manager_id": 1,
-                        "branch_manager_code": 1,
-                        "check_in_date": 1,
-                        "check_out_date": 1,
-                        "created_at": 1,
-                        "booking_status": 1,
-                        "payment_status": 1,
-                        "payment_method": 1,
-                        "payment_type": 1,
-                        "razorpay_order_id": 1,
-                        "razorpay_payment_id": 1,
-                        "upi_transaction_id": 1,
-                        "base_amount": 1,
-                        "host_amount": 1,
-                        "host_base_amount": 1,
-                        "host_actual_value": 1,
-                        "total_amount": 1,
-                        "paid_amount": 1,
-                        "platform_fee": 1,
-                        "service_fee": 1,
-                        "payment_gateway_charge": 1,
-                        "gateway_charge": 1,
-                        "convenience_fee": 1,
-                        "insurance_fee": 1,
-                        "cleaning_fee": 1,
-                        "extra_guest_fee": 1,
-                        "taxes": 1,
-                        "tax_amount": 1,
-                        "gst_amount": 1,
-                        "tax_percent": 1,
-                        "gst_percent": 1,
-                        "coupon_code": 1,
-                        "discount_amount": 1,
-                        "customer_discount_amount": 1,
-                        "pricing": 1,
-                        "pricing_snapshot": 1,
-                        "pricing_breakdown": 1,
-                        "breakdown": 1,
-                        "extra_charges": 1,
-                        "customer_charge_breakdown": 1,
-                        "charge_breakdown": 1,
-                        "applied_charges": 1,
-                    },
-                )
-                t["booking"] = booking
-                if booking:
-                    t["booking_invoice_breakdown"] = _booking_invoice_breakdown({**t, "booking": booking})
-                    t["invoice_breakdown"] = t["booking_invoice_breakdown"]
+            booking = await _find_booking_for_transaction(db, t)
+            t["booking"] = booking
+            if booking:
+                t["booking_id"] = booking.get("booking_id") or t.get("booking_id")
+                t["user_id"] = t.get("user_id") or booking.get("guest_id")
+                t["host_id"] = t.get("host_id") or booking.get("host_id")
+                t["booking_invoice_breakdown"] = _booking_invoice_breakdown({**t, "booking": booking})
+                t["invoice_breakdown"] = t["booking_invoice_breakdown"]
 
             subscription = None
             if t.get("subscription_id"):
@@ -980,6 +1053,15 @@ async def export_transactions_csv(
 
     for t in items:
         t["invoice_no"] = await get_invoice_number(db, t)
+        booking = await _find_booking_for_transaction(db, t)
+        t["booking"] = booking
+        if booking:
+            t["booking_id"] = booking.get("booking_id") or t.get("booking_id")
+            t["user_id"] = t.get("user_id") or booking.get("guest_id")
+            t["host_id"] = t.get("host_id") or booking.get("host_id")
+            t["booking_invoice_breakdown"] = _booking_invoice_breakdown({**t, "booking": booking})
+            t["invoice_breakdown"] = t["booking_invoice_breakdown"]
+
         subscription = None
         if t.get("subscription_id"):
             subscription = await db.subscriptions.find_one(
@@ -1005,10 +1087,11 @@ async def export_transactions_csv(
                 },
             )
         t["plan"] = plan
-        t["invoice_breakdown"] = _subscription_invoice_breakdown(t) if subscription else None
+        if subscription:
+            t["invoice_breakdown"] = _subscription_invoice_breakdown(t)
 
         property_info = None
-        property_id = t.get("property_id") or (subscription or {}).get("property_id")
+        property_id = t.get("property_id") or (booking or {}).get("property_id") or (subscription or {}).get("property_id")
         if property_id:
             property_info = await db.properties.find_one(
                 {"property_id": property_id},
@@ -1149,7 +1232,12 @@ async def export_transactions_csv(
     writer.writeheader()
     for t in items:
         plan = t.get("plan") or {}
-        breakdown = t.get("invoice_breakdown") or _subscription_invoice_breakdown(t)
+        if t.get("invoice_breakdown"):
+            breakdown = t["invoice_breakdown"]
+        elif t.get("booking"):
+            breakdown = _booking_invoice_breakdown(t)
+        else:
+            breakdown = _subscription_invoice_breakdown(t)
         total = breakdown["total_amount"]
         gross = breakdown["plan_fee"] or breakdown["taxable_before_discount"] or breakdown["taxable_amount"]
         platform_fee = breakdown["platform_fee"]

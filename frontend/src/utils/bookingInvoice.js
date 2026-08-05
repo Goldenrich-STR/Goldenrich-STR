@@ -44,7 +44,7 @@ export const getCustomerBookingAmounts = (booking = {}) => {
   return { base, taxes, total, paid };
 };
 
-export const downloadCustomerBookingInvoice = (booking = {}, property = {}, user = {}) => {
+export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, user = {}) => {
   const amounts = getCustomerBookingAmounts(booking);
   const taxPercent = Number(booking.tax_percent ?? booking.gst_percent ?? 0);
   const splitPercent = taxPercent / 2;
@@ -60,7 +60,7 @@ export const downloadCustomerBookingInvoice = (booking = {}, property = {}, user
   const customerEmail = user.email || booking.guest_email || booking.email || 'NA';
   const customerGstin = user.gst_number || user.gst_no || booking.customer_gstin || 'NA';
   const paymentRef = booking.razorpay_payment_id || booking.upi_transaction_id || booking.payment_id || 'NA';
-  const invoiceHtml = `<!doctype html>
+  return `<!doctype html>
 <html>
 <head>
   <meta charset="utf-8" />
@@ -289,6 +289,11 @@ export const downloadCustomerBookingInvoice = (booking = {}, property = {}, user
   </section>
 </body>
 </html>`;
+};
+
+export const downloadCustomerBookingInvoice = (booking = {}, property = {}, user = {}) => {
+  const invoiceNo = booking.invoice_no || booking.booking_invoice_no || booking.booking_id || 'booking-invoice';
+  const invoiceHtml = buildCustomerBookingInvoiceHtml(booking, property, user);
 
   const printWindow = window.open('', 'xspace-booking-invoice', 'width=1100,height=900');
   if (printWindow) {

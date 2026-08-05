@@ -763,6 +763,26 @@ async def _count(db, collection, query=None):
     return await getattr(db, collection).count_documents(query or {})
 
 
+def _money_rupees(value, *, stored_as_paise: bool = False) -> float:
+    try:
+        amount = float(value or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    if stored_as_paise:
+        amount = amount / 100
+    return amount
+
+
+def _booking_platform_fee_rupees(booking: dict) -> float:
+    pricing = booking.get("pricing_breakdown") or {}
+    extra_charges = pricing.get("extra_charges") or booking.get("extra_charges") or {}
+    return _money_rupees(
+        extra_charges.get("platform_fee")
+        or booking.get("platform_fee_amount")
+        or booking.get("service_fee")
+    )
+
+
 @router.post("/bootstrap")
 async def bootstrap_admin_core(current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
     await ensure_default_permissions(db)
@@ -821,31 +841,64 @@ async def executive_dashboard(
     guests = await _count(db, "users", {**user_query, "role": "guest"})
     employees = await _count(db, "users", {**user_query, "role": "employee"})
     brokers = await _count(db, "users", {**user_query, "role": "broker"})
-    properties_total = await _count(db, "properties", property_query)
-    live_properties = await _count(db, "properties", {**property_query, "status": "live"})
-    pending_properties = await _count(db, "properties", {**property_query, "status": {"$in": ["pending_verification", "under_review"]}})
-    rejected_properties = await _count(db, "properties", {**property_query, "status": "rejected"})
-    draft_properties = await _count(db, "properties", {**property_query, "status": "draft"})
+    visible_property_query = {**property_query, "is_deleted": {"$ne": True}}
+    properties_total = await _count(db, "properties", visible_property_query)
+    live_properties = await _count(db, "properties", {**visible_property_query, "status": "live"})
+    pending_properties = await _count(db, "properties", {**visible_property_query, "status": {"$in": ["pending_verification", "under_review"]}})
+    rejected_properties = await _count(db, "properties", {**visible_property_query, "status": "rejected"})
+    draft_properties = await _count(db, "properties", {**visible_property_query, "status": "draft"})
+    inactive_properties = await _count(db, "properties", {**visible_property_query, "status": {"$in": ["inactive", "blocked", "expired"]}})
     bookings_total = await _count(db, "bookings", booking_query)
     upcoming_bookings = await _count(db, "bookings", {"booking_status": {"$in": ["pending", "confirmed"]}})
     active_bookings = await _count(db, "bookings", {"booking_status": "confirmed"})
     completed_bookings = await _count(db, "bookings", {"booking_status": "completed"})
     cancelled_bookings = await _count(db, "bookings", {"booking_status": "cancelled"})
+    paid_booking_query = {
+        "payment_status": {"$in": ["paid", "success", "captured", "completed"]},
+        "booking_status": {"$nin": ["cancelled", "failed"]},
+    }
+    paid_bookings = await db.bookings.find(paid_booking_query, {"_id": 0}).to_list(length=10000)
     transactions = await db.transactions.find({}, {"_id": 0}).to_list(length=10000)
     payouts = await db.payouts.find({}, {"_id": 0}).to_list(length=10000)
     refunds = await db.refunds.find({}, {"_id": 0}).to_list(length=10000)
-    gross = sum(float(t.get("amount", 0) or 0) for t in transactions if t.get("status") in {"success", "completed", "paid"})
-    net_collections = sum(float(t.get("amount", 0) or 0) for t in transactions if t.get("type") in {"booking_payment", "payment"} and t.get("status") in {"success", "completed", "paid"})
-    host_paid = sum(float(p.get("amount", 0) or p.get("payout_amount", 0) or 0) for p in payouts if p.get("status") in {"processed", "paid", "completed"})
-    pending_payout_amount = sum(float(p.get("amount", 0) or p.get("payout_amount", 0) or 0) for p in payouts if p.get("status") not in {"processed", "paid", "completed"})
-    refund_amount = sum(float(r.get("amount", 0) or r.get("refund_amount", 0) or 0) for r in refunds if r.get("status") not in {"failed", "rejected"})
+    gross = sum(_money_rupees(b.get("total_amount")) for b in paid_bookings)
+    net_collections = sum(
+        _money_rupees(t.get("amount"), stored_as_paise=True)
+        for t in transactions
+        if t.get("type") in {"booking_payment", "payment"} and t.get("status") in {"success", "completed", "paid"}
+    ) or gross
+    platform_revenue = sum(_money_rupees(p.get("platform_fee"), stored_as_paise=True) for p in payouts)
+    host_payable = sum(_money_rupees(p.get("net_amount"), stored_as_paise=True) for p in payouts)
+    if not platform_revenue:
+        platform_revenue = sum(_booking_platform_fee_rupees(booking) for booking in paid_bookings)
+    if not host_payable:
+        host_payable = sum(
+            max(
+                0.0,
+                _money_rupees(booking.get("total_amount"))
+                - _money_rupees(booking.get("taxes"))
+                - _booking_platform_fee_rupees(booking),
+            )
+            for booking in paid_bookings
+        )
+    host_paid = sum(
+        _money_rupees(p.get("net_amount") or p.get("amount") or p.get("payout_amount"), stored_as_paise=True)
+        for p in payouts
+        if p.get("status") in {"processed", "paid", "completed"}
+    )
+    pending_payout_amount = sum(
+        _money_rupees(p.get("net_amount") or p.get("amount") or p.get("payout_amount"), stored_as_paise=True)
+        for p in payouts
+        if p.get("status") not in {"processed", "paid", "completed"}
+    )
+    refund_amount = sum(_money_rupees(r.get("refund_amount") or r.get("amount"), stored_as_paise=True) for r in refunds if r.get("status") not in {"failed", "rejected"})
     pending_tickets = await _count(db, "support_tickets", {"status": {"$nin": ["resolved", "closed"]}})
     pending_kyc = await _count(db, "users", {"role": "host", "kyc_status": "pending"})
     pending_refunds = await _count(db, "refunds", {"status": {"$nin": ["processed", "completed", "failed", "rejected"]}})
     pending_payouts = await _count(db, "payouts", {"status": {"$nin": ["processed", "paid", "completed"]}})
     failed_transactions = await _count(db, "transactions", {"status": {"$in": ["failed", "error"]}})
     recent_activity = await db.audit_logs.find({}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(length=10)
-    properties = await db.properties.find(property_query, {"_id": 0}).to_list(length=5000)
+    properties = await db.properties.find(visible_property_query, {"_id": 0}).to_list(length=5000)
     bookings = await db.bookings.find(booking_query, {"_id": 0}).to_list(length=5000)
     booking_tax_liability = sum(
         float(b.get("taxes", 0) or 0)
@@ -870,9 +923,9 @@ async def executive_dashboard(
     data = {
         "kpis": {
             "users": {"total": users_total, "hosts": hosts, "guests": guests, "employees": employees, "brokers": brokers},
-            "properties": {"total": properties_total, "live": live_properties, "pending_verification": pending_properties, "rejected": rejected_properties, "inactive": max(properties_total - live_properties, 0), "draft": draft_properties},
+            "properties": {"total": properties_total, "live": live_properties, "pending_verification": pending_properties, "rejected": rejected_properties, "inactive": inactive_properties, "draft": draft_properties},
             "bookings": {"total": bookings_total, "upcoming": upcoming_bookings, "active_stays": active_bookings, "completed": completed_bookings, "cancelled": cancelled_bookings},
-            "finance": {"gross_booking_value": gross, "net_collections": net_collections or gross, "platform_revenue": round(gross * 0.12, 2), "host_payable": round(gross * 0.88, 2), "host_paid": host_paid, "pending_payout": pending_payout_amount, "tax_liability": round(booking_tax_liability, 2), "refund_amount": refund_amount, "broker_commission": round(gross * 0.02, 2)},
+            "finance": {"gross_booking_value": round(gross, 2), "net_collections": round(net_collections, 2), "platform_revenue": round(platform_revenue, 2), "host_payable": round(host_payable, 2), "host_paid": round(host_paid, 2), "pending_payout": round(pending_payout_amount, 2), "tax_liability": round(booking_tax_liability, 2), "refund_amount": round(refund_amount, 2), "broker_commission": 0},
         },
         "pending_actions": [
             {"key": "host_kyc", "label": "Host KYC Pending", "count": pending_kyc, "sla": "24h", "trend": "stable", "path": "/admin/users"},
