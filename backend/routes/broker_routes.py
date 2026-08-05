@@ -1479,12 +1479,13 @@ async def get_subscription_alerts(
 
 # ========== OWNER KYC MANAGEMENT ==========
 
-async def get_assigned_owner(owner_id: str, broker_id: str, db):
-    owner = await db.users.find_one({"user_id": owner_id, "broker_id": broker_id, "role": "host"})
+async def get_assigned_owner(owner_id: str, current_user: dict, db):
+    query = _get_broker_or_rm_query(current_user, {"user_id": owner_id, "role": "host"})
+    owner = await db.users.find_one(query)
     if not owner:
         raise HTTPException(
             status_code=404,
-            detail="Owner not found or not assigned to this broker"
+            detail="Owner not found or not assigned to this broker/RM"
         )
     return owner
 
@@ -1507,7 +1508,7 @@ async def get_owner_kyc(
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Get KYC details and documents for an assigned owner."""
-    owner = await get_assigned_owner(owner_id, current_user["user_id"], db)
+    owner = await get_assigned_owner(owner_id, current_user, db)
     return {
         "kyc_status": owner.get("kyc_status", "unverified"),
         "kyc_documents": owner.get("kyc_documents") or [],
@@ -1528,7 +1529,7 @@ async def save_owner_draft_document(
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Save a draft KYC document for the assigned owner."""
-    owner = await get_assigned_owner(owner_id, current_user["user_id"], db)
+    owner = await get_assigned_owner(owner_id, current_user, db)
     accepted_at = datetime.now(timezone.utc)
     doc_type = payload.document_type
     mapping = {
@@ -1603,7 +1604,7 @@ async def delete_owner_rejected_draft_document(
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Remove a rejected KYC document so a replacement can be uploaded."""
-    owner = await get_assigned_owner(owner_id, current_user["user_id"], db)
+    owner = await get_assigned_owner(owner_id, current_user, db)
     mapping = {
         "aadhar": "aadhar_card",
         "property": "property_proof",
@@ -1651,7 +1652,7 @@ async def save_owner_draft_agreement(
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Save draft agreement info for the owner."""
-    await get_assigned_owner(owner_id, current_user["user_id"], db)
+    await get_assigned_owner(owner_id, current_user, db)
     accepted_at = datetime.now(timezone.utc)
     update_data = {}
     if payload.agreement_owner_name is not None:
@@ -1678,7 +1679,7 @@ async def submit_owner_verification(
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
     """Submit host verification documents for the owner."""
-    owner = await get_assigned_owner(owner_id, current_user["user_id"], db)
+    owner = await get_assigned_owner(owner_id, current_user, db)
     if not payload.terms_accepted:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -184,11 +184,11 @@ const HostManagement = () => {
       return true;
     };
     return [...(state.hosts || [])].filter(matchesTab).sort((a, b) => {
-      const aDocs = (a.kyc_verification?.checklist || []).filter((doc) => doc.document_url).length;
-      const bDocs = (b.kyc_verification?.checklist || []).filter((doc) => doc.document_url).length;
-      const aPending = a.kyc_status === 'pending' ? 1 : 0;
-      const bPending = b.kyc_status === 'pending' ? 1 : 0;
-      return (bPending - aPending) || (bDocs - aDocs);
+      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+      //
+      //
+      return dateB - dateA;
     });
   }, [state.hosts, tab]);
 
@@ -387,6 +387,11 @@ const HostManagement = () => {
                     <p className="truncate text-lg font-black">{host.full_name}</p>
                     <p className="mt-1 break-all font-mono text-[11px] font-bold text-slate-500">HST - {host.user_id}</p>
                     <p className="mt-1 truncate text-xs font-semibold text-slate-500">{host.phone || '-'} / {host.email || '-'}</p>
+                    {host.created_at && (
+                      <p className="mt-1 text-[10px] font-bold text-slate-400">
+                        Reg: {new Date(host.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <StatusBadge value={host.kyc_status || 'unverified'} />
