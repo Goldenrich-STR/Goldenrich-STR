@@ -113,9 +113,8 @@ const EmployeeDashboard = () => {
     <div className="min-h-screen bg-stone flex">
       <aside className="hidden xl:flex w-72 shrink-0 bg-white border-r border-slate-200/80 min-h-screen sticky top-0 flex-col">
         <div className="px-6 py-5 border-b border-slate-200/80">
-          <button onClick={() => navigate('/')} className="flex items-center gap-3 text-left">
+          <button onClick={() => navigate('/')} className="flex items-center text-left">
             <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain" />
-            <span className="block text-sm font-black text-charcoal tracking-wider">X-Space360</span>
           </button>
         </div>
 
