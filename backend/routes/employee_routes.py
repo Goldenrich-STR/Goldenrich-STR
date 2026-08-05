@@ -237,7 +237,7 @@ async def get_employee_dashboard_stats(
         my_host_ids = list({host["user_id"] for host in my_hosts if host.get("user_id")})
         pending_host_verification = len([host for host in my_hosts if host.get("kyc_status") not in {"approved", "verified"}])
 
-        property_query = {"$or": [{"broker_id": {"$in": my_broker_ids}}, {"owner_id": {"$in": my_host_ids}}, *_field_matches_identifiers("rm_id", rm_identifiers)]}
+        property_query = {"$or": [{"broker_id": {"$in": my_broker_ids}}, {"owner_id": {"$in": my_host_ids}}, *_field_matches_identifiers("rm_id", rm_identifiers), *_field_matches_identifiers("branch_manager_id", rm_identifiers)]}
         properties = await db.properties.find(
             property_query,
             {"_id": 0, "property_id": 1, "status": 1, "rating": 1}
@@ -249,25 +249,35 @@ async def get_employee_dashboard_stats(
         rejected_properties = len([prop for prop in properties if prop.get("status") == "rejected"])
         draft_properties = len([prop for prop in properties if prop.get("status") == "draft"])
         
-        # Pending verifications (all verifications waiting for this RM's review)
+        # Enforce Reviewer Logic for stats counting:
+        if is_branch_manager:
+            review_conditions = [{"branch_manager_id": {"$in": rm_identifiers}}]
+        else:
+            review_conditions = [
+                {"rm_id": {"$in": rm_identifiers}},
+                {"$or": [
+                    {"branch_manager_id": {"$exists": False}},
+                    {"branch_manager_id": None},
+                    {"branch_manager_id": ""}
+                ]}
+            ]
+        
+        review_properties = await db.properties.find(
+            {"$and": [property_query, *review_conditions]},
+            {"_id": 0, "property_id": 1}
+        ).to_list(length=5000)
+        review_property_ids = [p["property_id"] for p in review_properties if p.get("property_id")]
+        
+        # Pending verifications (all verifications waiting for this employee's review)
         pending_verifications = await db.property_verifications.count_documents({
             "status": VerificationStatus.COMPLETED.value,
             "rm_reviewed": False,
-            "broker_id": {"$in": my_broker_ids}
+            "property_id": {"$in": review_property_ids}
         })
-        
-        # Total properties under review (pending this RM's review)
-        pending_reviews = await db.property_verifications.find({
-            "status": VerificationStatus.COMPLETED.value,
-            "rm_reviewed": False,
-            "broker_id": {"$in": my_broker_ids}
-        }).to_list()
-        
-        pending_property_ids = list(set([v["property_id"] for v in pending_reviews if "property_id" in v]))
         
         properties_under_review = await db.properties.count_documents({
             "status": "under_review",
-            "property_id": {"$in": pending_property_ids}
+            "property_id": {"$in": review_property_ids}
         })
         
         expiring_soon_date = (today + timedelta(days=5)).isoformat()
@@ -415,17 +425,34 @@ async def get_pending_verifications(
     current_user: dict = Depends(require_employee),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Get all verifications pending RM review."""
+    """Get all verifications pending RM/BM review."""
     try:
         broker_ids, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
         rm_identifiers = await _get_rm_identifiers(db, current_user)
+        
+        # Enforce Reviewer Logic:
+        profile = await _get_employee_profile(db, current_user)
+        is_bm = _is_branch_manager_profile(profile)
+        if is_bm:
+            review_conditions = [{"branch_manager_id": {"$in": rm_identifiers}}]
+        else:
+            review_conditions = [
+                {"rm_id": {"$in": rm_identifiers}},
+                {"$or": [
+                    {"branch_manager_id": {"$exists": False}},
+                    {"branch_manager_id": None},
+                    {"branch_manager_id": ""}
+                ]}
+            ]
+        
+        property_query = {"$and": [property_query, *review_conditions]}
         properties = await db.properties.find(property_query, {"_id": 0, "property_id": 1}).to_list(length=5000)
         property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
         cursor = db.property_verifications.find(
             {
                 "status": VerificationStatus.COMPLETED.value,
                 "rm_reviewed": False,
-                **_verification_scope_query(broker_ids, property_ids, rm_identifiers),
+                "property_id": {"$in": property_ids}
             },
             {"_id": 0}
         ).sort("completed_at", -1)
@@ -442,12 +469,24 @@ async def get_pending_verifications(
             if property_data:
                 verification["property_details"] = property_data
             
-            # Get broker details
-            broker_data = await db.users.find_one(
-                {"user_id": verification["broker_id"]},
-                {"_id": 0, "full_name": 1, "lg_code": 1, "phone": 1}
-            )
+            # Get broker/RM who did the visit
+            broker_id_to_fetch = verification.get("broker_id")
+            if not broker_id_to_fetch:
+                # If RM submitted visit, their ID is saved as rm_id
+                # (Or if it is under review, let's find the property's RM ID)
+                prop_doc = await db.properties.find_one({"property_id": verification["property_id"]}, {"_id": 0, "rm_id": 1})
+                broker_id_to_fetch = prop_doc.get("rm_id") if prop_doc else None
+
+            broker_data = None
+            if broker_id_to_fetch:
+                broker_data = await db.users.find_one(
+                    {"user_id": broker_id_to_fetch},
+                    {"_id": 0, "full_name": 1, "lg_code": 1, "phone": 1, "employee_code": 1}
+                )
             if broker_data:
+                # Fallback code display if lg_code is missing
+                if not broker_data.get("lg_code"):
+                    broker_data["lg_code"] = broker_data.get("employee_code") or "N/A"
                 verification["broker_details"] = broker_data
         
         return {
@@ -467,15 +506,34 @@ async def get_verification_history(
     current_user: dict = Depends(require_employee),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Get all verifications reviewed by this RM or rejected by admin."""
+    """Get all verifications reviewed by this RM/BM or rejected by admin."""
     try:
         broker_ids, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
         rm_identifiers = await _get_rm_identifiers(db, current_user)
+        
+        # Enforce Reviewer Logic:
+        profile = await _get_employee_profile(db, current_user)
+        is_bm = _is_branch_manager_profile(profile)
+        if is_bm:
+            review_conditions = [{"branch_manager_id": {"$in": rm_identifiers}}]
+        else:
+            review_conditions = [
+                {"rm_id": {"$in": rm_identifiers}},
+                {"$or": [
+                    {"branch_manager_id": {"$exists": False}},
+                    {"branch_manager_id": None},
+                    {"branch_manager_id": ""}
+                ]}
+            ]
+        
+        property_query = {"$and": [property_query, *review_conditions]}
         properties = await db.properties.find(property_query, {"_id": 0, "property_id": 1}).to_list(length=5000)
         property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
-        # Get only verifications for brokers assigned to this RM.
+        
         cursor = db.property_verifications.find(
-            _verification_scope_query(broker_ids, property_ids, rm_identifiers),
+            {
+                "property_id": {"$in": property_ids}
+            },
             {"_id": 0}
         ).sort("updated_at", -1)
         
@@ -490,11 +548,19 @@ async def get_verification_history(
             if property_data:
                 verification["property_details"] = property_data
             
-            broker_data = await db.users.find_one(
-                {"user_id": verification["broker_id"]},
-                {"_id": 0, "full_name": 1, "lg_code": 1, "phone": 1}
-            )
+            broker_id_to_fetch = verification.get("broker_id")
+            if not broker_id_to_fetch:
+                broker_id_to_fetch = property_data.get("rm_id") if property_data else None
+
+            broker_data = None
+            if broker_id_to_fetch:
+                broker_data = await db.users.find_one(
+                    {"user_id": broker_id_to_fetch},
+                    {"_id": 0, "full_name": 1, "lg_code": 1, "phone": 1, "employee_code": 1}
+                )
             if broker_data:
+                if not broker_data.get("lg_code"):
+                    broker_data["lg_code"] = broker_data.get("employee_code") or "N/A"
                 verification["broker_details"] = broker_data
         
         return {
@@ -1318,6 +1384,7 @@ async def _get_rm_property_query(db: AsyncIOMotorDatabase, rm_id: str):
     broker_ids, host_ids = await _get_rm_scope(db, rm_id)
     identifiers = await _get_rm_identifiers(db, rm_id)
     property_or = _field_matches_identifiers("rm_id", identifiers)
+    property_or.extend(_field_matches_identifiers("branch_manager_id", identifiers))
     if broker_ids:
         property_or.append({"broker_id": {"$in": broker_ids}})
     if host_ids:

@@ -147,6 +147,10 @@ const RoleBasedRedirect = () => {
     case "broker":
       return <Navigate to="/broker/dashboard" replace />;
     case "employee":
+      const adminRole = user?.admin_role_key;
+      if (adminRole === 'rm' || adminRole === 'relationship_manager') {
+        return <Navigate to="/broker/dashboard" replace />;
+      }
       return <Navigate to="/employee/dashboard" replace />;
     case "guest":
     default:
@@ -334,7 +338,7 @@ function AppRoutes() {
         <Route
           path="/broker/dashboard"
           element={
-            <ProtectedRoute allowedRoles={["broker"]}>
+            <ProtectedRoute allowedRoles={["broker", "employee"]}>
               <BrokerDashboard />
             </ProtectedRoute>
           }

@@ -41,7 +41,41 @@ async def assign_broker(db: AsyncIOMotorDatabase, property_id: str, city: str) -
             owner = await db.users.find_one({"user_id": property_data["owner_id"]})
         
         if property_data and owner and owner.get("broker_id"):
-            chosen_broker = await db.users.find_one({"user_id": owner["broker_id"], "role": "broker", "is_active": True})
+            identifier = str(owner["broker_id"]).strip()
+            chosen_broker = await db.users.find_one({
+                "$or": [
+                    {"user_id": identifier},
+                    {"lg_code": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}},
+                    {"employee_code": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}},
+                    {"uid": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}},
+                ] if "re" in globals() or "re" in locals() else [
+                    {"user_id": identifier},
+                    {"lg_code": identifier},
+                    {"employee_code": identifier},
+                    {"uid": identifier},
+                ],
+                "$or": [
+                    {"role": "broker"},
+                    {"role": "employee", "admin_role_key": {"$in": ["rm", "relationship_manager"]}}
+                ],
+                "is_active": True
+            })
+            # Import re just in case it is not imported
+            if not chosen_broker:
+                import re
+                chosen_broker = await db.users.find_one({
+                    "$or": [
+                        {"user_id": identifier},
+                        {"lg_code": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}},
+                        {"employee_code": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}},
+                        {"uid": {"$regex": f"^{re.escape(identifier)}$", "$options": "i"}},
+                    ],
+                    "$or": [
+                        {"role": "broker"},
+                        {"role": "employee", "admin_role_key": {"$in": ["rm", "relationship_manager"]}}
+                    ],
+                    "is_active": True
+                })
             if chosen_broker:
                 await db.properties.update_one(
                     {"property_id": property_id},

@@ -51,6 +51,7 @@ const BrokerModulePlaceholder = ({ title, description, checkpoints }) => (
 const BrokerDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const isRm = user?.admin_role_key === 'rm' || user?.admin_role_key === 'relationship_manager';
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -146,7 +147,7 @@ const BrokerDashboard = () => {
         <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
           <aside className="h-fit rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_16px_36px_rgba(15,23,42,0.04)] xl:sticky xl:top-28">
             <div className="border-b border-slate-200 px-2 pb-4">
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Broker Panel</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">{isRm ? 'RM Panel' : 'Broker Panel'}</p>
               <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-slate-950" data-testid="dashboard-title">
                 Dashboard
               </h2>
@@ -156,41 +157,44 @@ const BrokerDashboard = () => {
             </div>
 
             <div className="mt-5 space-y-2" data-testid="broker-tabs">
-              {brokerNavigation.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-slate-900 text-white shadow-[0_12px_24px_rgba(15,23,42,0.14)]'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
-                  }`}
-                  data-testid={`tab-${tab.id}`}
-                >
-                  <span className="flex min-w-0 flex-1 items-center gap-3.5">
-                    <tab.icon className={`h-4 w-4 shrink-0 ${activeTab === tab.id ? 'text-white' : 'text-slate-700'}`} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[15px] font-bold leading-5">{tab.label}</span>
-                      <span className={`mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.18em] ${activeTab === tab.id ? 'text-white/65' : 'text-slate-400'}`}>
-                        {tab.group}
+              {brokerNavigation.map((tab) => {
+                const displayLabel = tab.id === 'verifications' && isRm ? 'RM Checklist' : tab.label;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all ${
+                      activeTab === tab.id
+                        ? 'bg-slate-900 text-white shadow-[0_12px_24px_rgba(15,23,42,0.14)]'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+                    }`}
+                    data-testid={`tab-${tab.id}`}
+                  >
+                    <span className="flex min-w-0 flex-1 items-center gap-3.5">
+                      <tab.icon className={`h-4 w-4 shrink-0 ${activeTab === tab.id ? 'text-white' : 'text-slate-700'}`} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[15px] font-bold leading-5">{displayLabel}</span>
+                        <span className={`mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.18em] ${activeTab === tab.id ? 'text-white/65' : 'text-slate-400'}`}>
+                          {tab.group}
+                        </span>
                       </span>
                     </span>
-                  </span>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           </aside>
 
           <main className="min-w-0">
             <div className="mb-8 rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_16px_36px_rgba(15,23,42,0.04)] md:p-8">
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">X-Space360 Broker Workspace</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">{isRm ? 'X-Space360 RM Workspace' : 'X-Space360 Broker Workspace'}</p>
               <h1 className="mt-2 text-[32px] font-black tracking-[-0.05em] text-slate-950 md:text-[42px]">
-                {brokerNavigation.find((item) => item.id === activeTab)?.label || 'Dashboard'}
+                {activeTab === 'verifications' && isRm ? 'RM Checklist' : (brokerNavigation.find((item) => item.id === activeTab)?.label || 'Dashboard')}
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
                 {activeTab === 'overview'
-                  ? 'Monitor your broker workflow with a cleaner command center for leads, verifications, portfolio health and commissions.'
-                  : `Manage ${brokerNavigation.find((item) => item.id === activeTab)?.label?.toLowerCase() || 'broker operations'} from a focused workspace.`}
+                  ? (isRm ? 'Monitor your RM workflow with a cleaner command center for leads, verifications, portfolio health and commissions.' : 'Monitor your broker workflow with a cleaner command center for leads, verifications, portfolio health and commissions.')
+                  : `Manage ${activeTab === 'verifications' && isRm ? 'RM checklist tasks' : (brokerNavigation.find((item) => item.id === activeTab)?.label?.toLowerCase() || 'operations')} from a focused workspace.`}
               </p>
             </div>
 
@@ -1852,6 +1856,8 @@ const VerificationsSection = () => {
 
 // Modal: broker fills checklist + photos and submits site visit
 const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
+  const { user } = useAuth();
+  const isRm = user?.admin_role_key === 'rm' || user?.admin_role_key === 'relationship_manager';
   const checklistLabels = {
     property_owner_verification: 'Property Host Verification',
     ownership_verification: 'Host Ownership Verification',
@@ -2144,7 +2150,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
           <div>
             <h3 className="text-xl font-bold text-charcoal">
-              Submit Visit — {task.property_details?.title || 'Property'}
+              {isRm ? 'RM Checklist' : 'Submit Visit'} — {task.property_details?.title || 'Property'}
             </h3>
             <p className="text-xs text-charcoal-light font-mono mt-1">Property ID: {task.property_id}</p>
           </div>

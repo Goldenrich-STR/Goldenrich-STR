@@ -37,11 +37,25 @@ def _get_broker_or_rm_query(current_user: dict, additional_query: dict = None) -
     is_rm = current_user.get("role") == UserRole.EMPLOYEE.value and current_user.get("admin_role_key") in ["rm", "relationship_manager"]
     q = {}
     if is_rm:
-        q["rm_id"] = user_id
+        identifiers = {
+            user_id,
+            current_user.get("employee_code"),
+            current_user.get("uid"),
+        }
+        identifiers = [i for i in identifiers if i]
+        conditions = [
+            {"$or": [
+                {"rm_id": {"$in": identifiers}},
+                {"broker_id": {"$in": identifiers}}
+            ]}
+        ]
+        if additional_query:
+            conditions.append(additional_query)
+        q["$and"] = conditions
     else:
         q["broker_id"] = user_id
-    if additional_query:
-        q.update(additional_query)
+        if additional_query:
+            q.update(additional_query)
     return q
 
 # ========== BROKER DASHBOARD ==========
@@ -1122,12 +1136,11 @@ async def get_verification_tasks(
 ):
     """Get all verification tasks for this broker."""
     try:
-        broker_id = current_user["user_id"]
-        
-        query = {"broker_id": broker_id}
+        additional_q = {}
         if status_filter:
-            query["status"] = status_filter.value
+            additional_q["status"] = status_filter.value
         
+        query = _get_broker_or_rm_query(current_user, additional_q)
         cursor = db.property_verifications.find(query, {"_id": 0}).sort("created_at", -1)
         verifications = await cursor.to_list(length=100)
         
@@ -1192,11 +1205,24 @@ async def submit_verification(
             )
         
         assigned_id = property_data.get("rm_id") if is_rm else property_data.get("broker_id")
-        if assigned_id != broker_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="This property is not assigned to this broker"
-            )
+        if is_rm:
+            identifiers = {
+                broker_id,
+                current_user.get("employee_code"),
+                current_user.get("uid"),
+            }
+            identifiers = [i for i in identifiers if i]
+            if assigned_id not in identifiers and property_data.get("broker_id") not in identifiers:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="This property is not assigned to this RM"
+                )
+        else:
+            if assigned_id != broker_id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="This property is not assigned to this broker"
+                )
         if property_data.get("status") not in {"pending_verification", "under_review", "draft", "rejected"}:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
