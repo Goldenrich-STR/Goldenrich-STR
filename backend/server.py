@@ -177,6 +177,9 @@ if "*" in _cors_origins:
     # Browsers block '*' origins when allow_credentials=True.
     # For development, we allow common local origins.
     _cors_origins = [
+        "https://x-space360.in",
+        "https://www.x-space360.in",
+        "https://api.x-space360.in",
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:3002",

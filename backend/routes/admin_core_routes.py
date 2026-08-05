@@ -59,6 +59,36 @@ async def _resolve_assignee_user(db: AsyncIOMotorDatabase, value: Optional[str],
     return await db.users.find_one(query, {"_id": 0})
 
 
+def _is_branch_manager_user(user: Optional[dict]) -> bool:
+    if not user:
+        return False
+    role_key = str(user.get("admin_role_key") or "").lower()
+    designation = str(user.get("designation") or "").lower()
+    base_role = str(user.get("role") or "").lower()
+    return base_role == "employee" and ("branch_manager" in role_key or "branch manager" in designation)
+
+
+def _is_rm_user(user: Optional[dict]) -> bool:
+    if not user:
+        return False
+    role_key = str(user.get("admin_role_key") or "").lower()
+    designation = str(user.get("designation") or "").lower()
+    base_role = str(user.get("role") or "").lower()
+    return base_role == "employee" and not _is_branch_manager_user(user) and (
+        role_key in {"rm", "relationship_manager"} or "relationship" in designation or designation == "rm"
+    )
+
+
+async def _resolve_broker_or_rm(db: AsyncIOMotorDatabase, value: Optional[str]):
+    broker = await _resolve_assignee_user(db, value, "broker")
+    if broker:
+        return broker, "broker"
+    employee = await _resolve_assignee_user(db, value, "employee")
+    if employee and _is_rm_user(employee):
+        return employee, "rm"
+    return None, ""
+
+
 class RolePayload(BaseModel):
     role_name: str
     role_key: Optional[str] = None
@@ -2215,33 +2245,53 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
     broker_value = (payload.broker_id or "").strip()
     rm_value = (payload.rm_id or "").strip()
     if broker_value:
-        broker = await _resolve_assignee_user(db, broker_value, "broker")
-        if not broker:
-            raise HTTPException(status_code=400, detail="Broker not found")
-        set_updates["broker_id"] = broker["user_id"]
-        set_updates["lg_code"] = broker.get("lg_code") or broker.get("employee_code") or broker.get("uid")
+        primary_user, primary_type = await _resolve_broker_or_rm(db, broker_value)
+        if not primary_user:
+            raise HTTPException(status_code=400, detail="Broker / RM code not found")
+        if primary_type == "broker":
+            set_updates["broker_id"] = primary_user["user_id"]
+            set_updates["lg_code"] = primary_user.get("lg_code") or primary_user.get("employee_code") or primary_user.get("uid") or primary_user["user_id"]
+            unset_updates["branch_manager_id"] = ""
+            if rm_value:
+                rm = await _resolve_assignee_user(db, rm_value, "employee")
+                if not rm or not _is_rm_user(rm):
+                    raise HTTPException(status_code=400, detail="RM code not found")
+                set_updates["rm_id"] = rm["user_id"]
+                set_updates["employee_code"] = rm.get("employee_code") or rm.get("uid") or rm["user_id"]
+            else:
+                unset_updates["rm_id"] = ""
+                unset_updates["employee_code"] = ""
+        else:
+            unset_updates["broker_id"] = ""
+            set_updates["rm_id"] = primary_user["user_id"]
+            set_updates["lg_code"] = primary_user.get("employee_code") or primary_user.get("uid") or primary_user["user_id"]
+            if rm_value:
+                branch_manager = await _resolve_assignee_user(db, rm_value, "employee")
+                if not branch_manager or not _is_branch_manager_user(branch_manager):
+                    raise HTTPException(status_code=400, detail="Branch Manager code not found")
+                set_updates["branch_manager_id"] = branch_manager["user_id"]
+                set_updates["employee_code"] = branch_manager.get("employee_code") or branch_manager.get("uid") or branch_manager["user_id"]
+            else:
+                unset_updates["branch_manager_id"] = ""
+                unset_updates["employee_code"] = ""
     else:
         unset_updates["broker_id"] = ""
-        unset_updates["lg_code"] = ""
-    if rm_value:
-        rm = await _resolve_assignee_user(db, rm_value, "employee")
-        if not rm:
-            raise HTTPException(status_code=400, detail="RM not found")
-        set_updates["rm_id"] = rm["user_id"]
-    else:
         unset_updates["rm_id"] = ""
+        unset_updates["branch_manager_id"] = ""
+        unset_updates["lg_code"] = ""
+        unset_updates["employee_code"] = ""
 
     update_doc = {"$set": set_updates}
-    property_set_updates = {k: v for k, v in set_updates.items() if k in {"broker_id", "rm_id", "updated_at"}}
+    property_set_updates = {k: v for k, v in set_updates.items() if k in {"broker_id", "rm_id", "branch_manager_id", "updated_at"}}
     property_update_doc = {"$set": property_set_updates}
     if unset_updates:
         update_doc["$unset"] = unset_updates
-        property_update_doc["$unset"] = {k: "" for k in unset_updates if k in {"broker_id", "rm_id"}}
+        property_update_doc["$unset"] = {k: "" for k in unset_updates if k in {"broker_id", "rm_id", "branch_manager_id"}}
 
     await db.users.update_one({"user_id": host_id}, update_doc)
     await db.properties.update_many({"owner_id": host_id}, property_update_doc)
     audit_new_value = {**set_updates, **{key: None for key in unset_updates}}
-    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="host_management", action="host_team_assigned", record_id=host_id, old_value={"broker_id": host.get("broker_id"), "rm_id": host.get("rm_id")}, new_value=audit_new_value, reason=payload.reason)
+    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="host_management", action="host_team_assigned", record_id=host_id, old_value={"broker_id": host.get("broker_id"), "rm_id": host.get("rm_id"), "branch_manager_id": host.get("branch_manager_id"), "lg_code": host.get("lg_code"), "employee_code": host.get("employee_code")}, new_value=audit_new_value, reason=payload.reason)
     return api_response("Host assignment updated")
 
 
@@ -2911,13 +2961,26 @@ async def crm_assignees(current_user: dict = Depends(require_admin), db: AsyncIO
     employees = await db.users.find(sales_query, {"_id": 0, "password_hash": 0}).sort("full_name", 1).to_list(length=500)
     if not employees:
         employees = await db.users.find({"role": "employee", "is_active": {"$ne": False}}, {"_id": 0, "password_hash": 0}).sort("full_name", 1).to_list(length=500)
+    relationship_managers = [user for user in employees if _is_rm_user(user)]
+    if not relationship_managers:
+        relationship_managers = [user for user in employees if not _is_branch_manager_user(user)]
+    branch_manager_query = {
+        "role": "employee",
+        "is_active": {"$ne": False},
+        "$or": [
+            {"admin_role_key": {"$regex": "branch_manager", "$options": "i"}},
+            {"designation": {"$regex": "branch manager", "$options": "i"}},
+        ],
+    }
+    branch_managers = await db.users.find(branch_manager_query, {"_id": 0, "password_hash": 0}).sort("full_name", 1).to_list(length=500)
     team_leaders = [
         user for user in employees
         if re.search("lead|manager|head|tl", f"{user.get('designation', '')} {user.get('admin_role_key', '')}", re.IGNORECASE)
     ] or employees
     return api_response("CRM assignees loaded", {
         "brokers": [_public_user(user) for user in brokers],
-        "relationship_managers": [_public_user(user) for user in employees],
+        "relationship_managers": [_public_user(user) for user in relationship_managers],
+        "branch_managers": [_public_user(user) for user in branch_managers],
         "team_leaders": [_public_user(user) for user in team_leaders],
     })
 
