@@ -490,6 +490,16 @@ const OffersManager = ({ coupons, form, setForm, saving, onCreate, onToggle }) =
   const bookingCoupons = coupons.filter((coupon) => coupon.coupon_type === 'booking');
   const subscriptionCoupons = coupons.filter((coupon) => coupon.coupon_type === 'subscription');
   const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const updateCouponType = (value) => setForm((current) => ({
+    ...current,
+    coupon_type: value,
+    discount_type: value === 'booking' && current.discount_type === 'target_taxable' ? 'percentage' : current.discount_type,
+  }));
+  const formatDiscount = (coupon) => {
+    if (coupon.discount_type === 'percentage') return `${coupon.discount_value}%`;
+    if (coupon.discount_type === 'target_taxable') return `Final taxable Rs ${coupon.discount_value}`;
+    return `Rs ${coupon.discount_value}`;
+  };
   return (
     <div className="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
       <div className="space-y-4">
@@ -501,10 +511,18 @@ const OffersManager = ({ coupons, form, setForm, saving, onCreate, onToggle }) =
               <select value={form.discount_type} onChange={(event) => updateField('discount_type', event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm">
                 <option value="percentage">Percentage</option>
                 <option value="fixed">Fixed Amount</option>
+                {form.coupon_type === 'subscription' && (
+                  <option value="target_taxable">Final Taxable Amount</option>
+                )}
               </select>
               <input value={form.discount_value} onChange={(event) => updateField('discount_value', event.target.value)} className="h-10 rounded-lg border border-slate-200 px-3 text-sm outline-none" placeholder="Value" type="number" min="1" />
             </div>
-            <select value={form.coupon_type} onChange={(event) => updateField('coupon_type', event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm">
+            {form.discount_type === 'target_taxable' && (
+              <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+                Coupon value will become the final taxable amount. GST is calculated after this amount.
+              </p>
+            )}
+            <select value={form.coupon_type} onChange={(event) => updateCouponType(event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm">
               <option value="booking">Booking Coupon</option>
               <option value="subscription">Subscription Coupon</option>
             </select>
@@ -561,7 +579,7 @@ const OffersManager = ({ coupons, form, setForm, saving, onCreate, onToggle }) =
                 <tr key={coupon.coupon_id || coupon.code}>
                   <td className="px-4 py-3"><p className="font-black">{coupon.code}</p><p className="font-mono text-xs text-slate-500">{coupon.coupon_id}</p></td>
                   <td className="px-4 py-3 capitalize">{coupon.coupon_type || '-'}</td>
-                  <td className="px-4 py-3">{coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : `Rs ${coupon.discount_value}`}</td>
+                  <td className="px-4 py-3">{formatDiscount(coupon)}</td>
                   <td className="px-4 py-3 text-xs text-slate-600">{[coupon.property_id, coupon.plan_type, coupon.property_category, coupon.property_type, coupon.bhk_type, coupon.sqft_range].filter(Boolean).join(' · ') || 'Global'}</td>
                   <td className="px-4 py-3"><StatusBadge value={coupon.is_active === false ? 'inactive' : 'active'} /></td>
                   <td className="px-4 py-3"><button disabled={saving} onClick={() => onToggle(coupon)} className="rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 disabled:opacity-60">{coupon.is_active === false ? 'Activate' : 'Deactivate'}</button></td>
