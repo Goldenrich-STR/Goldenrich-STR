@@ -1192,10 +1192,19 @@ async def approve_property(
             return {"message": "Property is already live", "property_id": property_id}
 
         verification = await db.property_verifications.find_one({"property_id": property_id})
-        if not verification or not verification.get("rm_approved"):
+        if not verification:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Property must be approved by RM before admin final approval",
+                detail="Property verification details not found",
+            )
+        
+        has_bm = bool(verification.get("branch_manager_id") or property_data.get("branch_manager_id"))
+        required_approval = "branch_manager_approved" if has_bm else "rm_approved"
+        
+        if not verification.get(required_approval):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Property must be approved by {'Branch Manager' if has_bm else 'RM'} before admin final approval",
             )
 
         approved_at = datetime.now(timezone.utc)
