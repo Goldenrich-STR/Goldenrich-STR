@@ -18,9 +18,11 @@ const emulatorBackendUrl = isBrowser && window.location.hostname === '10.0.2.2'
 const defaultBackendUrl = process.env.NODE_ENV === 'development'
   ? (emulatorBackendUrl || 'http://localhost:8001')
   : (productionBackendUrl || sameOriginBackendUrl);
-const BACKEND_URL = configuredBackendUrl && !(isBrowser && !isLocalPage && pointsToLocalBackend)
-  ? configuredBackendUrl
-  : defaultBackendUrl;
+const BACKEND_URL = isBrowser && window.location.hostname === '10.0.2.2'
+  ? 'http://10.0.2.2:8001'
+  : (configuredBackendUrl && !(isBrowser && !isLocalPage && pointsToLocalBackend)
+      ? configuredBackendUrl
+      : defaultBackendUrl);
 
 const apiClient = axios.create({
   baseURL: BACKEND_URL,
