@@ -1222,6 +1222,7 @@ class _DocumentVerificationSheetState
   bool _isUploadingGst = false;
 
   final _gstNumberController = TextEditingController();
+  final _panNumberController = TextEditingController();
   final _ownerNameController = TextEditingController();
   final _ownerAddressController = TextEditingController();
 
@@ -1233,6 +1234,7 @@ class _DocumentVerificationSheetState
   @override
   void dispose() {
     _gstNumberController.dispose();
+    _panNumberController.dispose();
     _ownerNameController.dispose();
     _ownerAddressController.dispose();
     super.dispose();
@@ -1809,9 +1811,24 @@ class _DocumentVerificationSheetState
     });
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final pan = _panNumberController.text.trim().toUpperCase();
+    if (pan.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your PAN card number.')),
+      );
+      return;
+    }
+    final RegExp panRegex = RegExp(r'[A-Z]{5}[0-9]{4}[A-Z]');
+    if (!panRegex.hasMatch(pan)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid PAN card number format (e.g. ABCDE1234F).')),
+      );
+      return;
+    }
+
     final payload = <String, dynamic>{
       'aadhar_card': _aadharPath,
-      'pan_number': 'NOT_APPLICABLE',
+      'pan_number': pan,
       'property_proof': _propertyProofPath,
       'cancelled_cheque': _cancelledChequePath,
       'shop_act': _shopActPath,
@@ -2006,6 +2023,43 @@ class _DocumentVerificationSheetState
                       ],
                     ),
                     const SizedBox(height: 16),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: AppTheme.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.stone),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: AppTheme.stone.withOpacity(0.35),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.badge_outlined,
+                                color: AppTheme.charcoalLight, size: 22),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _panNumberController,
+                              textCapitalization: TextCapitalization.characters,
+                              decoration: const InputDecoration(
+                                labelText: 'PAN Card Number *',
+                                hintText: 'Enter PAN (e.g. ABCDE1234F)',
+                                border: InputBorder.none,
+                                isDense: true,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
                     Container(
                       decoration: BoxDecoration(
                         color: AppTheme.white,
