@@ -36,7 +36,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 9, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadAllData();
   }
 
@@ -55,11 +55,6 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
       prov.getPendingReviews(),
       prov.getReviewHistory(),
       prov.getBrokers(),
-      prov.getHosts(),
-      prov.getProperties(),
-      prov.getBookings(),
-      prov.getTasks(),
-      prov.getAuditActivity(),
     ]);
   }
 
@@ -1800,7 +1795,6 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
               // Custom styled tab header
               TabBar(
                 controller: _tabController,
-                isScrollable: true,
                 indicatorColor: AppTheme.primary,
                 labelColor: AppTheme.primary,
                 unselectedLabelColor: AppTheme.charcoalLight,
@@ -1817,23 +1811,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                       icon: Icon(Icons.people_outline, size: 18),
                       text: 'Brokers'),
                   Tab(
-                      icon: Icon(Icons.group_outlined, size: 18),
-                      text: 'Hosts'),
-                  Tab(
-                      icon: Icon(Icons.business_outlined, size: 18),
-                      text: 'Properties'),
-                  Tab(
-                      icon: Icon(Icons.bookmark_outline, size: 18),
-                      text: 'Bookings'),
-                  Tab(
-                      icon: Icon(Icons.check_circle_outline, size: 18),
-                      text: 'Tasks'),
-                  Tab(
                       icon: Icon(Icons.analytics_outlined, size: 18),
                       text: 'Reports'),
-                  Tab(
-                      icon: Icon(Icons.receipt_long_outlined, size: 18),
-                      text: 'Audit'),
                 ],
               ),
             ],
@@ -1849,12 +1828,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                 _buildOverviewTab(prov),
                 _buildPendingTab(prov),
                 _buildBrokersTab(prov),
-                _buildHostsTab(prov),
-                _buildPropertiesTab(prov),
-                _buildBookingsTab(prov),
-                _buildTasksTab(prov),
                 _buildReportsTab(prov),
-                _buildAuditTab(prov),
               ],
             ),
     );

@@ -394,7 +394,7 @@ const BrokerDashboard = () => {
                   )}
                   {user?.lg_code && (
                     <div>
-                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Broker LG Code</span>
+                      <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Broker / RM Code</span>
                       <span className="text-xs font-semibold text-charcoal">{user?.lg_code}</span>
                     </div>
                   )}
@@ -559,16 +559,16 @@ const MyOwnersSection = () => {
                       <p className="text-sm font-bold text-charcoal mt-1">{formatMoney(owner.revenue_generated)}</p>
                     </div>
                     <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3">
-                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Broker LG Code</p>
+                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Broker / RM Code</p>
                       <p className="text-sm font-bold text-charcoal mt-1">{owner.broker_lg_code || owner.lg_code || 'Not Assigned'}</p>
                     </div>
                     <div className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3">
-                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Employee / RM Code</p>
+                      <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Branch Manager / RM Code</p>
                       <p className="text-sm font-bold text-charcoal mt-1 break-words">
-                        {owner.rm?.employee_code || owner.rm_code || owner.employee_code || owner.assigned_employee || 'No RM Code'}
+                        {owner.branch_manager?.employee_code || owner.branch_manager_code || owner.rm?.employee_code || owner.rm_code || owner.assigned_employee || 'No RM Code'}
                       </p>
                       <p className="text-[10px] font-semibold text-charcoal-muted mt-1 truncate">
-                        {owner.rm?.full_name || owner.assigned_rm || owner.rm_id || 'RM not assigned'}
+                        {owner.branch_manager?.full_name || owner.branch_manager_name || owner.rm?.full_name || owner.assigned_rm || owner.rm_id || 'RM not assigned'}
                       </p>
                     </div>
                   </div>
@@ -695,9 +695,9 @@ const HostDetailsModal = ({ data, loading, formatMoney, onClose }) => {
                 ['Email', owner.email || 'Not available'],
                 ['Mobile', owner.phone || 'Not available'],
                 ['KYC Status', owner.kyc_status || 'Pending'],
-                ['Employee / RM Code', owner.rm?.employee_code || owner.rm_code || owner.employee_code || data?.assigned_rm || owner.rm_id || 'No RM'],
+                ['Branch Manager / RM Code', owner.branch_manager?.employee_code || owner.branch_manager_code || owner.rm?.employee_code || owner.rm_code || data?.assigned_rm || owner.rm_id || 'No RM'],
                 ['Assigned Admin', data?.assigned_admin || 'No Admin'],
-                ['Broker LG Code', owner.lg_code || owner.broker_lg_code || 'Not assigned'],
+                ['Broker / RM Code', owner.lg_code || owner.broker_lg_code || 'Not assigned'],
               ].map(([label, value]) => (
                 <div key={label} className="bg-white rounded-2xl border border-gray-100 p-4">
                   <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{label}</p>

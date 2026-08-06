@@ -17,7 +17,6 @@ import 'host_list_property_screen.dart';
 import 'host_calendar_screen.dart';
 import 'host_payouts_screen.dart';
 import 'host_bookings_screen.dart';
-import 'host_performance_screen.dart';
 
 class HostDashboardScreen extends StatefulWidget {
   const HostDashboardScreen({super.key});
@@ -685,11 +684,7 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                             },
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
+                        const SizedBox(width: 10),
                         Expanded(
                           child: _buildActionCard(
                             context: context,
@@ -702,23 +697,6 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                                 MaterialPageRoute(
                                     builder: (context) =>
                                         const HostBookingsScreen()),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildActionCard(
-                            context: context,
-                            icon: Icons.trending_up,
-                            title: 'Performance\nInsights',
-                            color: Colors.purple.shade700,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        HostPerformanceScreen()),
                               );
                             },
                           ),

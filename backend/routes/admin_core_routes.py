@@ -79,6 +79,14 @@ def _is_rm_user(user: Optional[dict]) -> bool:
     )
 
 
+def _team_code(user: Optional[dict], fallback: str = "") -> str:
+    if not user:
+        return fallback or ""
+    if str(user.get("role") or "").lower() == "broker":
+        return user.get("lg_code") or user.get("employee_code") or user.get("uid") or fallback or user.get("user_id") or ""
+    return user.get("employee_code") or user.get("uid") or fallback or user.get("user_id") or ""
+
+
 async def _resolve_broker_or_rm(db: AsyncIOMotorDatabase, value: Optional[str]):
     broker = await _resolve_assignee_user(db, value, "broker")
     if broker:
@@ -2117,13 +2125,10 @@ async def host_management(
         {
             "role": "employee",
             "admin_role_key": "branch_manager",
-            "$or": [
-                {"user_id": {"$in": branch_manager_ids}},
-                {"employee_code": {"$in": branch_manager_codes}},
-            ],
+            "user_id": {"$in": branch_manager_ids},
         },
         {"_id": 0, "password_hash": 0},
-    ).to_list(length=(len(branch_manager_ids) + len(branch_manager_codes)) or 1)
+    ).to_list(length=len(branch_manager_ids) or 1)
     broker_map = {broker["user_id"]: broker for broker in brokers}
     rm_map = {rm["user_id"]: rm for rm in rms}
     branch_manager_map = {manager["user_id"]: manager for manager in branch_managers}
@@ -2490,13 +2495,13 @@ async def property_operations(
     team_ids = list({
         value
         for p in props
-        for value in (p.get("broker_id"), p.get("rm_id"))
+        for value in (p.get("broker_id"), p.get("rm_id"), p.get("branch_manager_id"))
         if value
     })
     team_ids = list(set(team_ids + [
         value
         for owner in owners
-        for value in (owner.get("broker_id"), owner.get("rm_id"))
+        for value in (owner.get("broker_id"), owner.get("rm_id"), owner.get("branch_manager_id"))
         if value
     ]))
     team_users = await db.users.find({"user_id": {"$in": team_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(team_ids) or 1)
@@ -2506,12 +2511,16 @@ async def property_operations(
         prop["host_name"] = owner.get("full_name")
         prop["assigned_broker"] = prop.get("broker_id") or owner.get("broker_id")
         prop["assigned_rm"] = prop.get("rm_id") or owner.get("rm_id")
+        prop["assigned_branch_manager"] = prop.get("branch_manager_id") or owner.get("branch_manager_id")
         broker_user = team_map.get(prop.get("assigned_broker"), {})
         rm_user = team_map.get(prop.get("assigned_rm"), {})
+        branch_manager_user = team_map.get(prop.get("assigned_branch_manager"), {})
         prop["broker_name"] = broker_user.get("full_name")
-        prop["broker_code"] = broker_user.get("employee_code") or prop.get("assigned_broker")
+        prop["broker_code"] = _team_code(broker_user, prop.get("assigned_broker"))
         prop["rm_name"] = rm_user.get("full_name")
-        prop["rm_code"] = rm_user.get("employee_code") or prop.get("assigned_rm")
+        prop["rm_code"] = _team_code(rm_user, prop.get("assigned_rm"))
+        prop["branch_manager_name"] = branch_manager_user.get("full_name")
+        prop["branch_manager_code"] = _team_code(branch_manager_user, prop.get("assigned_branch_manager"))
         verification = await db.property_verifications.find_one({"property_id": prop.get("property_id")}, {"_id": 0})
         prop["verification"] = verification or {}
         prop["operations_review"] = _normalise_property_review(prop, owner, verification)
@@ -2529,15 +2538,19 @@ async def property_operation_detail(property_id: str, current_user: dict = Depen
     prop["host"] = owner
     prop["assigned_broker"] = prop.get("broker_id") or owner.get("broker_id")
     prop["assigned_rm"] = prop.get("rm_id") or owner.get("rm_id")
-    team_ids = [value for value in (prop.get("assigned_broker"), prop.get("assigned_rm")) if value]
+    prop["assigned_branch_manager"] = prop.get("branch_manager_id") or owner.get("branch_manager_id")
+    team_ids = [value for value in (prop.get("assigned_broker"), prop.get("assigned_rm"), prop.get("assigned_branch_manager")) if value]
     team_users = await db.users.find({"user_id": {"$in": team_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(team_ids) or 1)
     team_map = {u["user_id"]: u for u in team_users}
     broker_user = team_map.get(prop.get("assigned_broker"), {})
     rm_user = team_map.get(prop.get("assigned_rm"), {})
     prop["broker_name"] = broker_user.get("full_name")
-    prop["broker_code"] = broker_user.get("employee_code") or prop.get("assigned_broker")
+    prop["broker_code"] = _team_code(broker_user, prop.get("assigned_broker"))
     prop["rm_name"] = rm_user.get("full_name")
-    prop["rm_code"] = rm_user.get("employee_code") or prop.get("assigned_rm")
+    prop["rm_code"] = _team_code(rm_user, prop.get("assigned_rm"))
+    branch_manager_user = team_map.get(prop.get("assigned_branch_manager"), {})
+    prop["branch_manager_name"] = branch_manager_user.get("full_name")
+    prop["branch_manager_code"] = _team_code(branch_manager_user, prop.get("assigned_branch_manager"))
     prop["operations_review"] = _normalise_property_review(prop, owner, verification)
     return api_response("Property operation detail loaded", {"property": prop})
 

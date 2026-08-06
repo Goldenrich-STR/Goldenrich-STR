@@ -375,6 +375,9 @@ const HostManagement = () => {
               : { type: 'RM', name: rmName, code: rmCode || host.lg_code, fallback: host.rm_id };
             const branchManagerName = host.branch_manager?.full_name || host.branch_manager_name;
             const branchManagerCode = host.branch_manager?.employee_code || host.branch_manager_code || host.employee_code;
+            const secondaryAssignee = primaryAssignee.type === 'Broker'
+              ? { type: 'RM', name: rmName, code: rmCode || host.employee_code, fallback: host.rm_id }
+              : { type: 'Branch Manager', name: branchManagerName, code: branchManagerCode, fallback: host.branch_manager_id };
             return (
             <Panel key={host.user_id} className={`overflow-hidden transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_20px_40px_rgba(47,109,246,0.08)] ${selected.host?.user_id === host.user_id ? 'ring-2 ring-[#cfe0ff]' : ''}`}>
               <div className="border-b border-slate-100 bg-white p-4">
@@ -408,7 +411,7 @@ const HostManagement = () => {
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                 <AssignmentCard label="Broker / RM Code" type={primaryAssignee.type} name={primaryAssignee.name} code={primaryAssignee.code} fallback={primaryAssignee.fallback} />
-                <AssignmentCard label="Branch Manager / RM Code" type="Branch Manager" name={branchManagerName} code={branchManagerCode} fallback={host.branch_manager_id} />
+                <AssignmentCard label="Branch Manager / RM Code" type={secondaryAssignee.type} name={secondaryAssignee.name} code={secondaryAssignee.code} fallback={secondaryAssignee.fallback} />
               </div>
               <div className="mt-3 grid grid-cols-4 gap-2 rounded-2xl border border-slate-200 p-3 text-center">
                 <p><span className="block text-[10px] font-black uppercase tracking-widest text-slate-500">Branch</span><span className="mt-1 block truncate text-sm font-black">{host.branch || '-'}</span></p>

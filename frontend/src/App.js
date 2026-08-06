@@ -413,6 +413,9 @@ function AppRoutes() {
 const IndependenceDayAnimation = () => {
   const [flight, setFlight] = React.useState(null);
 
+  const isMobileApp = window.location.search.includes('isMobileApp=true') || 
+                      navigator.userAgent.includes('MobileApp');
+
   const triggerNewFlight = React.useCallback(() => {
     const paths = [
           { name: 'bl-tr', rotation: -16, animationName: 'fly-bl-tr' },
@@ -432,14 +435,15 @@ const IndependenceDayAnimation = () => {
   }, []);
 
   React.useEffect(() => {
+    if (isMobileApp) return;
     triggerNewFlight();
     const interval = setInterval(() => {
       triggerNewFlight();
     }, 9200);
     return () => clearInterval(interval);
-  }, [triggerNewFlight]);
+  }, [triggerNewFlight, isMobileApp]);
 
-  if (!flight) return null;
+  if (isMobileApp || !flight) return null;
 
   return (
     <div className="pointer-events-none fixed inset-0 overflow-hidden z-[35]" key={flight.id}>

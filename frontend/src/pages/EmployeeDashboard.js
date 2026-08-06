@@ -1944,7 +1944,7 @@ const RMHostsSection = () => {
                       ['Pending Properties', host.pending_properties || 0, 'pending_properties'],
                       ['Bookings', host.total_bookings || 0, 'bookings'],
                       ['Revenue', formatMoney(host.revenue_generated), 'payments'],
-                      ['Broker LG', host.broker_lg_code || 'N/A', 'profile'],
+                      ['Broker / RM Code', host.broker_lg_code || host.lg_code || host.rm_code || 'N/A', 'profile'],
                       ['Verification', host.verification_status || 'pending', 'verifications'],
                       ['City', host.city || 'N/A', 'profile'],
                     ].map(([label, value, focus]) => (
@@ -2066,7 +2066,7 @@ const RMHostDetailsModal = ({ data, loading, formatMoney, formatDate, onClose })
                 ['Email', host.email || 'N/A'],
                 ['Mobile', host.phone || 'N/A'],
                 ['KYC Status', host.kyc_status || 'pending'],
-                ['Broker LG Code', broker.lg_code || host.broker_lg_code || host.lg_code || 'N/A'],
+                ['Broker / RM Code', broker.lg_code || host.broker_lg_code || host.lg_code || 'N/A'],
                 ['Properties', properties.length],
                 ['Live Properties', properties.filter((property) => property.status === 'live').length],
                 ['Bookings', bookings.length],
@@ -2114,7 +2114,7 @@ const RMHostDetailsModal = ({ data, loading, formatMoney, formatDate, onClose })
               <RMDocumentReviewPanel host={host} docs={docs} formatDate={formatDate} />
             ) : activeView === 'profile' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <RMDetailRow title="Assigned Broker" meta={`${broker.full_name || host.broker_name || 'Not assigned'} | ${broker.lg_code || host.broker_lg_code || 'No LG code'}`} />
+                <RMDetailRow title="Broker / RM Assignment" meta={`${broker.full_name || host.broker_name || 'Not assigned'} | ${broker.lg_code || host.broker_lg_code || host.lg_code || 'No code'}`} />
                 <RMDetailRow title="Location" meta={`${host.city || 'No city'} | ${host.state || 'No state'} | ${host.branch || 'No branch'}`} />
                 <RMDetailRow title="Status" meta={`${host.is_active === false ? 'Inactive' : 'Active'} | KYC ${host.kyc_status || 'pending'}`} />
                 <RMDetailRow title="Registered" meta={formatDate(host.created_at || host.timestamp)} />
@@ -2736,7 +2736,7 @@ const RMBookingDetailsModal = ({ data, loading, formatMoney, formatDate, onClose
                 ['Property', property.title || booking.property_id || 'N/A'],
                 ['Host', host.full_name || booking.host_id || 'N/A'],
                 ['Broker', broker.full_name || booking.broker_id || 'N/A'],
-                ['Broker LG Code', broker.lg_code || booking.broker_lg_code || 'N/A'],
+                ['Broker / RM Code', broker.lg_code || booking.broker_lg_code || 'N/A'],
                 ['RM', booking.rm_id || booking.employee_id || 'Current RM'],
                 ['Amount', formatMoney(booking.total_amount)],
                 ['Taxes', formatMoney(booking.taxes)],
