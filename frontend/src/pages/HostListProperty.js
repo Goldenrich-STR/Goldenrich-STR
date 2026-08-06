@@ -1765,23 +1765,6 @@ const HostListProperty = () => {
               <div className="-mt-2 mb-2 px-1">
                 <p className="text-xs font-semibold text-slate-500">ex. Cozy 2BHK with a sunset view</p>
               </div>
-              <Textarea label="Description" testid="basics-description" value={form.description} onChange={(v) => update({ description: v })} placeholder="Describe your space, neighbourhood, what makes it special…" rows={5} />
-              <div className="flex justify-end mt-1">
-                <button
-                  type="button"
-                  onClick={handleGenerateAIDescription}
-                  disabled={generatingDescription}
-                  className="flex items-center space-x-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 transition-all hover:bg-slate-100 disabled:opacity-50"
-                  data-testid="generate-ai-description"
-                >
-                  {generatingDescription ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                  ) : (
-                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                  )}
-                  <span>{generatingDescription ? "Generating Description..." : "Generate with AI"}</span>
-                </button>
-              </div>
               <div className={`grid grid-cols-1 ${form.category === 'event_venue' ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-4`}>
                 <Select 
                   label="Category" 
@@ -1825,6 +1808,23 @@ const HostListProperty = () => {
                   onChange={(v) => update({ max_guests: v })}
                   placeholder={form.category === 'event_venue' ? '200' : '6'}
                 />
+              </div>
+              <Textarea label="Description" testid="basics-description" value={form.description} onChange={(v) => update({ description: v })} placeholder="Describe your space, neighbourhood, what makes it special…" rows={5} />
+              <div className="flex justify-end mt-1">
+                <button
+                  type="button"
+                  onClick={handleGenerateAIDescription}
+                  disabled={generatingDescription}
+                  className="flex items-center space-x-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-700 transition-all hover:bg-slate-100 disabled:opacity-50"
+                  data-testid="generate-ai-description"
+                >
+                  {generatingDescription ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  ) : (
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                  )}
+                  <span>{generatingDescription ? "Generating Description..." : "Generate with AI"}</span>
+                </button>
               </div>
             </div>
           )}
