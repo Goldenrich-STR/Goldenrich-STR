@@ -675,7 +675,8 @@ const PropertyDetail = () => {
   const maxGuests = Math.max(1, Number(property?.max_guests) || 6);
   const adultGuests = Number(guests) || 1;
   const chargeableGuests = Math.max(1, adultGuests + childrenGuests);
-  const guestLimit = property?.category === 'event_venue' ? maxGuests : 1000;
+  const hasExtraGuestPrice = Number(property?.extra_guest_price) > 0;
+  const guestLimit = property?.category === 'event_venue' || !hasExtraGuestPrice ? maxGuests : 1000;
   const canAddChargeableGuest = chargeableGuests < guestLimit;
   const includedGuests = Math.max(1, Number(property?.max_guests) || 1);
   const extraGuests = property?.category === 'event_venue' ? 0 : Math.max(0, chargeableGuests - includedGuests);
@@ -700,6 +701,14 @@ const PropertyDetail = () => {
   const updateInfantGuests = (delta) => {
     setInfantGuests((current) => Math.max(0, Math.min(5, current + delta)));
   };
+
+  useEffect(() => {
+    if (!property || hasExtraGuestPrice || property.category === 'event_venue') return;
+    if (chargeableGuests <= maxGuests) return;
+
+    setChildrenGuests(0);
+    setGuests(Math.max(1, maxGuests));
+  }, [property, hasExtraGuestPrice, chargeableGuests, maxGuests]);
 
   const fetchReviews = async () => {
     try {
