@@ -87,6 +87,23 @@ def _team_code(user: Optional[dict], fallback: str = "") -> str:
     return user.get("employee_code") or user.get("uid") or fallback or user.get("user_id") or ""
 
 
+def _assignment_ref(source: Optional[dict], field: str) -> str:
+    if not source:
+        return ""
+    value = source.get(field)
+    return value if value not in (None, "", "-", "NA", "N/A") else ""
+
+
+def _property_team_assignment(prop: dict, owner: Optional[dict]) -> dict:
+    owner_found = bool(owner and owner.get("user_id"))
+    return {
+        "broker": _assignment_ref(owner, "broker_id") if owner_found else _assignment_ref(prop, "broker_id"),
+        "rm": _assignment_ref(owner, "rm_id") if owner_found else _assignment_ref(prop, "rm_id"),
+        "branch_manager": _assignment_ref(owner, "branch_manager_id") if owner_found else _assignment_ref(prop, "branch_manager_id"),
+        "branch_manager_code": _assignment_ref(owner, "branch_manager_code") if owner_found else _assignment_ref(prop, "branch_manager_code"),
+    }
+
+
 async def _resolve_broker_or_rm(db: AsyncIOMotorDatabase, value: Optional[str]):
     broker = await _resolve_assignee_user(db, value, "broker")
     if broker:
@@ -2125,10 +2142,13 @@ async def host_management(
         {
             "role": "employee",
             "admin_role_key": "branch_manager",
-            "user_id": {"$in": branch_manager_ids},
+            "$or": [
+                {"user_id": {"$in": branch_manager_ids}},
+                {"employee_code": {"$in": branch_manager_codes}},
+            ],
         },
         {"_id": 0, "password_hash": 0},
-    ).to_list(length=len(branch_manager_ids) or 1)
+    ).to_list(length=(len(branch_manager_ids) + len(branch_manager_codes)) or 1)
     broker_map = {broker["user_id"]: broker for broker in brokers}
     rm_map = {rm["user_id"]: rm for rm in rms}
     branch_manager_map = {manager["user_id"]: manager for manager in branch_managers}
@@ -2440,17 +2460,17 @@ async def property_operations(
     if user_filter_ids.get("broker"):
         assigned_hosts = await db.users.find({"broker_id": {"$in": user_filter_ids["broker"]}}, {"_id": 0, "user_id": 1}).to_list(length=500)
         assigned_host_ids = [item["user_id"] for item in assigned_hosts]
-        broker_or = [{"broker_id": {"$in": user_filter_ids["broker"]}}]
+        broker_or = []
         if assigned_host_ids:
             broker_or.append({"owner_id": {"$in": assigned_host_ids}})
-        and_conditions.append({"$or": broker_or})
+        and_conditions.append({"$or": broker_or or [{"owner_id": {"$in": []}}]})
     if user_filter_ids.get("rm"):
         assigned_hosts = await db.users.find({"rm_id": {"$in": user_filter_ids["rm"]}}, {"_id": 0, "user_id": 1}).to_list(length=500)
         assigned_host_ids = [item["user_id"] for item in assigned_hosts]
-        rm_or = [{"rm_id": {"$in": user_filter_ids["rm"]}}]
+        rm_or = []
         if assigned_host_ids:
             rm_or.append({"owner_id": {"$in": assigned_host_ids}})
-        and_conditions.append({"$or": rm_or})
+        and_conditions.append({"$or": rm_or or [{"owner_id": {"$in": []}}]})
     if search:
         matching_users = await db.users.find(
             {
@@ -2468,8 +2488,6 @@ async def property_operations(
             {"property_id": {"$regex": search, "$options": "i"}},
             {"city": {"$regex": search, "$options": "i"}},
             {"owner_id": {"$regex": search, "$options": "i"}},
-            {"broker_id": {"$regex": search, "$options": "i"}},
-            {"rm_id": {"$regex": search, "$options": "i"}},
             {"property_type": {"$regex": search, "$options": "i"}},
             {"bhk_type": {"$regex": search, "$options": "i"}},
         ]
@@ -2481,8 +2499,6 @@ async def property_operations(
             matching_assigned_host_ids = [item["user_id"] for item in matching_assigned_hosts]
             query["$or"].extend([
                 {"owner_id": {"$in": matching_user_ids}},
-                {"broker_id": {"$in": matching_user_ids}},
-                {"rm_id": {"$in": matching_user_ids}},
             ])
             if matching_assigned_host_ids:
                 query["$or"].append({"owner_id": {"$in": matching_assigned_host_ids}})
@@ -2508,10 +2524,11 @@ async def property_operations(
     team_map = {u["user_id"]: u for u in team_users}
     for prop in props:
         owner = owner_map.get(prop.get("owner_id"), {})
+        assignment = _property_team_assignment(prop, owner)
         prop["host_name"] = owner.get("full_name")
-        prop["assigned_broker"] = prop.get("broker_id") or owner.get("broker_id")
-        prop["assigned_rm"] = prop.get("rm_id") or owner.get("rm_id")
-        prop["assigned_branch_manager"] = prop.get("branch_manager_id") or owner.get("branch_manager_id")
+        prop["assigned_broker"] = assignment["broker"]
+        prop["assigned_rm"] = assignment["rm"]
+        prop["assigned_branch_manager"] = assignment["branch_manager"]
         broker_user = team_map.get(prop.get("assigned_broker"), {})
         rm_user = team_map.get(prop.get("assigned_rm"), {})
         branch_manager_user = team_map.get(prop.get("assigned_branch_manager"), {})
@@ -2520,7 +2537,7 @@ async def property_operations(
         prop["rm_name"] = rm_user.get("full_name")
         prop["rm_code"] = _team_code(rm_user, prop.get("assigned_rm"))
         prop["branch_manager_name"] = branch_manager_user.get("full_name")
-        prop["branch_manager_code"] = _team_code(branch_manager_user, prop.get("assigned_branch_manager"))
+        prop["branch_manager_code"] = _team_code(branch_manager_user, assignment["branch_manager_code"] or prop.get("assigned_branch_manager"))
         verification = await db.property_verifications.find_one({"property_id": prop.get("property_id")}, {"_id": 0})
         prop["verification"] = verification or {}
         prop["operations_review"] = _normalise_property_review(prop, owner, verification)
@@ -2536,9 +2553,10 @@ async def property_operation_detail(property_id: str, current_user: dict = Depen
     owner = await db.users.find_one({"user_id": prop.get("owner_id")}, {"_id": 0, "password_hash": 0}) or {}
     verification = await db.property_verifications.find_one({"property_id": property_id}, {"_id": 0}) or {}
     prop["host"] = owner
-    prop["assigned_broker"] = prop.get("broker_id") or owner.get("broker_id")
-    prop["assigned_rm"] = prop.get("rm_id") or owner.get("rm_id")
-    prop["assigned_branch_manager"] = prop.get("branch_manager_id") or owner.get("branch_manager_id")
+    assignment = _property_team_assignment(prop, owner)
+    prop["assigned_broker"] = assignment["broker"]
+    prop["assigned_rm"] = assignment["rm"]
+    prop["assigned_branch_manager"] = assignment["branch_manager"]
     team_ids = [value for value in (prop.get("assigned_broker"), prop.get("assigned_rm"), prop.get("assigned_branch_manager")) if value]
     team_users = await db.users.find({"user_id": {"$in": team_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(team_ids) or 1)
     team_map = {u["user_id"]: u for u in team_users}
@@ -2550,7 +2568,7 @@ async def property_operation_detail(property_id: str, current_user: dict = Depen
     prop["rm_code"] = _team_code(rm_user, prop.get("assigned_rm"))
     branch_manager_user = team_map.get(prop.get("assigned_branch_manager"), {})
     prop["branch_manager_name"] = branch_manager_user.get("full_name")
-    prop["branch_manager_code"] = _team_code(branch_manager_user, prop.get("assigned_branch_manager"))
+    prop["branch_manager_code"] = _team_code(branch_manager_user, assignment["branch_manager_code"] or prop.get("assigned_branch_manager"))
     prop["operations_review"] = _normalise_property_review(prop, owner, verification)
     return api_response("Property operation detail loaded", {"property": prop})
 
@@ -2780,12 +2798,14 @@ async def _enrich_bookings(db, bookings: list[dict]) -> list[dict]:
     properties = await db.properties.find({"property_id": {"$in": property_ids}}, {"_id": 0}).to_list(length=len(property_ids) or 1)
     prop_map = {p["property_id"]: p for p in properties}
     broker_ids = [p.get("broker_id") for p in properties if p.get("broker_id")]
-    users = await db.users.find({"user_id": {"$in": list(set(guest_ids + host_ids + broker_ids))}}, {"_id": 0, "password_hash": 0}).to_list(length=len(set(guest_ids + host_ids + broker_ids)) or 1)
+    host_rows = await db.users.find({"user_id": {"$in": host_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(host_ids) or 1)
+    host_broker_ids = [host.get("broker_id") for host in host_rows if host.get("broker_id")]
+    users = await db.users.find({"user_id": {"$in": list(set(guest_ids + host_ids + broker_ids + host_broker_ids))}}, {"_id": 0, "password_hash": 0}).to_list(length=len(set(guest_ids + host_ids + broker_ids + host_broker_ids)) or 1)
     user_map = {u["user_id"]: u for u in users}
     for booking in bookings:
         prop = prop_map.get(booking.get("property_id"), {})
         host = user_map.get(booking.get("host_id"), {})
-        broker_id = prop.get("broker_id") or host.get("broker_id")
+        broker_id = host.get("broker_id") if host.get("user_id") else prop.get("broker_id")
         booking["property"] = prop
         booking["host"] = host
         booking["guest"] = user_map.get(booking.get("guest_id"), {})
