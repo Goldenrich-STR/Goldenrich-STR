@@ -531,6 +531,15 @@ const VerificationReviewSection = () => {
   const [reviewNotice, setReviewNotice] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const canReviewVerification = (verification) => {
+    if (!verification || verification.status === 'approved' || verification.status === 'rejected') {
+      return false;
+    }
+    if (verification.review_stage === 'branch_manager') {
+      return !verification.branch_manager_reviewed;
+    }
+    return !verification.rm_reviewed;
+  };
 
   useEffect(() => {
     fetchPendingVerifications();
@@ -1058,7 +1067,7 @@ const VerificationReviewSection = () => {
                         )}
                       </div>
                       
-                      {!selectedVerification.rm_reviewed && selectedVerification.status !== 'approved' && selectedVerification.status !== 'rejected' && (
+                      {canReviewVerification(selectedVerification) && (
                         <div className="flex space-x-2">
                           <button 
                             onClick={() => {
@@ -1140,7 +1149,7 @@ const VerificationReviewSection = () => {
             </div>
 
              {/* Actions */}
-            {!selectedVerification.rm_reviewed && selectedVerification.status !== 'approved' && selectedVerification.status !== 'rejected' && (
+            {canReviewVerification(selectedVerification) && (
               <div className="flex space-x-4 mt-8 pt-8 border-t border-gray-100">
                 <button 
                   onClick={() => setShowRejectReasonModal(true)}

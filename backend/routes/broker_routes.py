@@ -1326,7 +1326,7 @@ async def submit_verification(
                     detail=f"Photo {index} requires real geo coordinates"
                 )
         
-        # Resolve RM ID for this verification to keep it private/assigned to the correct employee
+        # Resolve review chain from the host registration assignment.
         owner_rm_id = broker_id if is_rm else None
         if not owner_rm_id:
             owner_rm_id = assignment.get("rm_id") or property_data.get("rm_id")
@@ -1334,6 +1334,8 @@ async def submit_verification(
             broker_user = await db.users.find_one({"user_id": broker_id})
             if broker_user:
                 owner_rm_id = broker_user.get("rm_id")
+        owner_branch_manager_id = assignment.get("branch_manager_id") or assignment.get("branch_manager_code") or property_data.get("branch_manager_id")
+        is_rm_to_bm_flow = bool(is_rm and owner_branch_manager_id)
 
         # Check if verification already exists
         existing = await db.property_verifications.find_one(
@@ -1350,11 +1352,16 @@ async def submit_verification(
                     "video_url": verification_data.video_url,
                     "broker_remarks": verification_data.broker_remarks,
                     "status": VerificationStatus.COMPLETED.value,
-                    "rm_reviewed": False,
-                    "rm_approved": None,
+                    "rm_reviewed": True if is_rm_to_bm_flow else False,
+                    "rm_approved": True if is_rm_to_bm_flow else None,
                     "rm_remarks": None,
                     "rm_id": owner_rm_id,
-                    "reviewed_at": None,
+                    "reviewed_at": datetime.now(timezone.utc) if is_rm_to_bm_flow else None,
+                    "branch_manager_id": owner_branch_manager_id,
+                    "branch_manager_reviewed": False,
+                    "branch_manager_approved": None,
+                    "branch_manager_remarks": None,
+                    "branch_manager_reviewed_at": None,
                     "admin_reviewed": False,
                     "admin_approved": False,
                     "admin_remarks": None,
@@ -1380,6 +1387,16 @@ async def submit_verification(
             )
             
             verification_dict = verification.model_dump()
+            verification_dict.update({
+                "rm_reviewed": True if is_rm_to_bm_flow else False,
+                "rm_approved": True if is_rm_to_bm_flow else None,
+                "reviewed_at": datetime.now(timezone.utc) if is_rm_to_bm_flow else None,
+                "branch_manager_id": owner_branch_manager_id,
+                "branch_manager_reviewed": False,
+                "branch_manager_approved": None,
+                "branch_manager_remarks": None,
+                "branch_manager_reviewed_at": None,
+            })
             await db.property_verifications.insert_one(verification_dict)
             verification_id = verification.verification_id
         

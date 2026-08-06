@@ -47,6 +47,13 @@ class PropertyVerification(BaseModel):
     rm_approved: bool = False
     rm_remarks: Optional[str] = None
     rm_id: Optional[str] = None
+
+    # Branch Manager Review
+    branch_manager_reviewed: bool = False
+    branch_manager_approved: Optional[bool] = None
+    branch_manager_remarks: Optional[str] = None
+    branch_manager_id: Optional[str] = None
+    branch_manager_reviewed_at: Optional[datetime] = None
     
     # Status
     status: VerificationStatus = VerificationStatus.PENDING

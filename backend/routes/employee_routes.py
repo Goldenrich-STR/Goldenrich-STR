@@ -123,6 +123,41 @@ def _verification_scope_query(broker_ids, property_ids, identifiers):
     return {"$or": scope_or}
 
 
+def _empty_assignment_query(field):
+    return {"$or": [{field: {"$exists": False}}, {field: None}, {field: ""}]}
+
+
+def _pending_review_query(property_ids, identifiers, is_branch_manager):
+    if is_branch_manager:
+        return {
+            "status": VerificationStatus.COMPLETED.value,
+            "property_id": {"$in": property_ids},
+            "rm_reviewed": True,
+            "rm_approved": True,
+            "branch_manager_reviewed": {"$ne": True},
+            "$or": _field_matches_identifiers("branch_manager_id", identifiers),
+        }
+    return {
+        "status": VerificationStatus.COMPLETED.value,
+        "property_id": {"$in": property_ids},
+        "rm_reviewed": False,
+        "$and": [_empty_assignment_query("branch_manager_id")],
+        "$or": _field_matches_identifiers("rm_id", identifiers),
+    }
+
+
+def _history_review_query(property_ids, identifiers, is_branch_manager):
+    if is_branch_manager:
+        return {
+            "property_id": {"$in": property_ids},
+            "$or": _field_matches_identifiers("branch_manager_id", identifiers),
+        }
+    return {
+        "property_id": {"$in": property_ids},
+        "$or": _field_matches_identifiers("rm_id", identifiers),
+    }
+
+
 async def _get_rm_scope(db: AsyncIOMotorDatabase, current_user_or_id):
     """Return brokers and hosts visible to an RM across legacy and current assignment fields."""
     employee_profile = await _get_employee_profile(db, current_user_or_id)
@@ -249,31 +284,16 @@ async def get_employee_dashboard_stats(
         rejected_properties = len([prop for prop in properties if prop.get("status") == "rejected"])
         draft_properties = len([prop for prop in properties if prop.get("status") == "draft"])
         
-        # Enforce Reviewer Logic for stats counting:
-        if is_branch_manager:
-            review_conditions = [{"branch_manager_id": {"$in": rm_identifiers}}]
-        else:
-            review_conditions = [
-                {"rm_id": {"$in": rm_identifiers}},
-                {"$or": [
-                    {"branch_manager_id": {"$exists": False}},
-                    {"branch_manager_id": None},
-                    {"branch_manager_id": ""}
-                ]}
-            ]
-        
         review_properties = await db.properties.find(
-            {"$and": [property_query, *review_conditions]},
+            property_query,
             {"_id": 0, "property_id": 1}
         ).to_list(length=5000)
         review_property_ids = [p["property_id"] for p in review_properties if p.get("property_id")]
         
         # Pending verifications (all verifications waiting for this employee's review)
-        pending_verifications = await db.property_verifications.count_documents({
-            "status": VerificationStatus.COMPLETED.value,
-            "rm_reviewed": False,
-            "property_id": {"$in": review_property_ids}
-        })
+        pending_verifications = await db.property_verifications.count_documents(
+            _pending_review_query(review_property_ids, rm_identifiers, is_branch_manager)
+        )
         
         properties_under_review = await db.properties.count_documents({
             "status": "under_review",
@@ -430,30 +450,12 @@ async def get_pending_verifications(
         broker_ids, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
         rm_identifiers = await _get_rm_identifiers(db, current_user)
         
-        # Enforce Reviewer Logic:
         profile = await _get_employee_profile(db, current_user)
         is_bm = _is_branch_manager_profile(profile)
-        if is_bm:
-            review_conditions = [{"branch_manager_id": {"$in": rm_identifiers}}]
-        else:
-            review_conditions = [
-                {"rm_id": {"$in": rm_identifiers}},
-                {"$or": [
-                    {"branch_manager_id": {"$exists": False}},
-                    {"branch_manager_id": None},
-                    {"branch_manager_id": ""}
-                ]}
-            ]
-        
-        property_query = {"$and": [property_query, *review_conditions]}
         properties = await db.properties.find(property_query, {"_id": 0, "property_id": 1}).to_list(length=5000)
         property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
         cursor = db.property_verifications.find(
-            {
-                "status": VerificationStatus.COMPLETED.value,
-                "rm_reviewed": False,
-                "property_id": {"$in": property_ids}
-            },
+            _pending_review_query(property_ids, rm_identifiers, is_bm),
             {"_id": 0}
         ).sort("completed_at", -1)
         
@@ -488,6 +490,7 @@ async def get_pending_verifications(
                 if not broker_data.get("lg_code"):
                     broker_data["lg_code"] = broker_data.get("employee_code") or "N/A"
                 verification["broker_details"] = broker_data
+            verification["review_stage"] = "branch_manager" if is_bm else "rm"
         
         return {
             "verifications": verifications,
@@ -511,29 +514,13 @@ async def get_verification_history(
         broker_ids, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
         rm_identifiers = await _get_rm_identifiers(db, current_user)
         
-        # Enforce Reviewer Logic:
         profile = await _get_employee_profile(db, current_user)
         is_bm = _is_branch_manager_profile(profile)
-        if is_bm:
-            review_conditions = [{"branch_manager_id": {"$in": rm_identifiers}}]
-        else:
-            review_conditions = [
-                {"rm_id": {"$in": rm_identifiers}},
-                {"$or": [
-                    {"branch_manager_id": {"$exists": False}},
-                    {"branch_manager_id": None},
-                    {"branch_manager_id": ""}
-                ]}
-            ]
-        
-        property_query = {"$and": [property_query, *review_conditions]}
         properties = await db.properties.find(property_query, {"_id": 0, "property_id": 1}).to_list(length=5000)
         property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
         
         cursor = db.property_verifications.find(
-            {
-                "property_id": {"$in": property_ids}
-            },
+            _history_review_query(property_ids, rm_identifiers, is_bm),
             {"_id": 0}
         ).sort("updated_at", -1)
         
@@ -596,9 +583,15 @@ async def get_verification_details(
         
         broker_ids, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
         rm_identifiers = await _get_rm_identifiers(db, current_user)
+        profile = await _get_employee_profile(db, current_user)
+        is_bm = _is_branch_manager_profile(profile)
         properties = await db.properties.find(property_query, {"_id": 0, "property_id": 1}).to_list(length=5000)
         property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
-        if verification.get("broker_id") not in broker_ids and verification.get("property_id") not in property_ids and verification.get("rm_id") not in rm_identifiers:
+        branch_manager_match = any(
+            verification.get("branch_manager_id") == identifier
+            for identifier in rm_identifiers
+        )
+        if verification.get("broker_id") not in broker_ids and verification.get("property_id") not in property_ids and verification.get("rm_id") not in rm_identifiers and not branch_manager_match:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not authorized to view this verification report"
@@ -624,6 +617,7 @@ async def get_verification_details(
             {"_id": 0, "full_name": 1, "phone": 1, "email": 1}
         )
         verification["owner_details"] = owner_data
+        verification["review_stage"] = "branch_manager" if is_bm else "rm"
         
         return verification
     
@@ -848,28 +842,54 @@ async def approve_verification(
                 detail="Verification not found"
             )
             
-        broker_ids, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
         rm_identifiers = await _get_rm_identifiers(db, current_user)
+        profile = await _get_employee_profile(db, current_user)
+        is_bm = _is_branch_manager_profile(profile)
+        _, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
         properties = await db.properties.find(property_query, {"_id": 0, "property_id": 1}).to_list(length=5000)
         property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
-        if verification.get("broker_id") not in broker_ids and verification.get("property_id") not in property_ids and verification.get("rm_id") not in rm_identifiers:
+        assigned_to_current_stage = (
+            any(verification.get("branch_manager_id") == identifier for identifier in rm_identifiers)
+            if is_bm
+            else verification.get("rm_id") in rm_identifiers
+        )
+        if verification.get("property_id") not in property_ids and not assigned_to_current_stage:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not authorized to approve this verification"
             )
         
-        # Update verification with RM approval
-        await db.property_verifications.update_one(
-            {"verification_id": verification_id},
-            {"$set": {
-                "rm_reviewed": True,
-                "rm_approved": True,
-                "rm_remarks": remarks,
-                "rm_id": current_user["user_id"],
-                "reviewed_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc)
-            }}
-        )
+        now = datetime.now(timezone.utc)
+        if is_bm:
+            if not verification.get("rm_reviewed") or verification.get("rm_approved") is not True:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="RM verification must be completed before Branch Manager approval"
+                )
+            await db.property_verifications.update_one(
+                {"verification_id": verification_id},
+                {"$set": {
+                    "branch_manager_reviewed": True,
+                    "branch_manager_approved": True,
+                    "branch_manager_remarks": remarks,
+                    "branch_manager_id": current_user["user_id"],
+                    "branch_manager_reviewed_at": now,
+                    "reviewed_at": now,
+                    "updated_at": now
+                }}
+            )
+        else:
+            await db.property_verifications.update_one(
+                {"verification_id": verification_id},
+                {"$set": {
+                    "rm_reviewed": True,
+                    "rm_approved": True,
+                    "rm_remarks": remarks,
+                    "rm_id": current_user["user_id"],
+                    "reviewed_at": now,
+                    "updated_at": now
+                }}
+            )
         
         # Property stays in under_review - awaiting admin final approval
         await db.properties.update_one(
@@ -886,7 +906,7 @@ async def approve_verification(
                 user_id=current_user["user_id"],
                 role=current_user.get("role"),
                 module="rm_verification",
-                action="rm_verification_approved",
+                action="branch_manager_verification_approved" if is_bm else "rm_verification_approved",
                 record_id=verification_id,
                 old_value={
                     "rm_reviewed": verification.get("rm_reviewed"),
@@ -895,8 +915,10 @@ async def approve_verification(
                     "property_id": verification.get("property_id"),
                 },
                 new_value={
-                    "rm_reviewed": True,
-                    "rm_approved": True,
+                    "rm_reviewed": True if not is_bm else verification.get("rm_reviewed"),
+                    "rm_approved": True if not is_bm else verification.get("rm_approved"),
+                    "branch_manager_reviewed": True if is_bm else verification.get("branch_manager_reviewed"),
+                    "branch_manager_approved": True if is_bm else verification.get("branch_manager_approved"),
                     "status": VerificationStatus.COMPLETED.value,
                     "property_status": "under_review",
                     "remarks": remarks,
@@ -907,18 +929,20 @@ async def approve_verification(
             logger.warning(f"Failed to write RM approval audit: {audit_err}")
 
         # Notify admins + host
-        try:
-            from services.verification_workflow import on_rm_decision
-            verification_doc = await db.property_verifications.find_one(
-                {"verification_id": verification_id}, {"_id": 0}
-            )
-            asyncio.create_task(on_rm_decision(db, verification_doc, approved=True, remarks=remarks or ""))
-        except Exception as wf_err:
-            logger.warning(f"on_rm_decision (approve) trigger failed: {wf_err}")
+        should_notify_admin = is_bm or not verification.get("branch_manager_id")
+        if should_notify_admin:
+            try:
+                from services.verification_workflow import on_rm_decision
+                verification_doc = await db.property_verifications.find_one(
+                    {"verification_id": verification_id}, {"_id": 0}
+                )
+                asyncio.create_task(on_rm_decision(db, verification_doc, approved=True, remarks=remarks or ""))
+            except Exception as wf_err:
+                logger.warning(f"on_rm_decision (approve) trigger failed: {wf_err}")
 
-        logger.info(f"Verification {verification_id} approved by RM {current_user['user_id']}")
+        logger.info(f"Verification {verification_id} approved by {'BM' if is_bm else 'RM'} {current_user['user_id']}")
         return {
-            "message": "Verification approved. Forwarded to admin for final approval.",
+            "message": "Verification approved. Forwarded to admin for final approval." if should_notify_admin else "Verification approved. Forwarded to Branch Manager for review.",
             "verification_id": verification_id
         }
     
@@ -951,28 +975,49 @@ async def reject_verification(
                 detail="Verification not found"
             )
             
-        broker_ids, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
         rm_identifiers = await _get_rm_identifiers(db, current_user)
+        profile = await _get_employee_profile(db, current_user)
+        is_bm = _is_branch_manager_profile(profile)
+        _, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
         properties = await db.properties.find(property_query, {"_id": 0, "property_id": 1}).to_list(length=5000)
         property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
-        if verification.get("broker_id") not in broker_ids and verification.get("property_id") not in property_ids and verification.get("rm_id") not in rm_identifiers:
+        assigned_to_current_stage = (
+            any(verification.get("branch_manager_id") == identifier for identifier in rm_identifiers)
+            if is_bm
+            else verification.get("rm_id") in rm_identifiers
+        )
+        if verification.get("property_id") not in property_ids and not assigned_to_current_stage:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You are not authorized to reject this verification"
             )
         
-        # Update verification with RM rejection
-        await db.property_verifications.update_one(
-            {"verification_id": verification_id},
-            {"$set": {
+        now = datetime.now(timezone.utc)
+        if is_bm:
+            update_fields = {
+                "branch_manager_reviewed": True,
+                "branch_manager_approved": False,
+                "branch_manager_remarks": reason,
+                "branch_manager_id": current_user["user_id"],
+                "branch_manager_reviewed_at": now,
+                "status": VerificationStatus.REJECTED.value,
+                "reviewed_at": now,
+                "updated_at": now
+            }
+        else:
+            update_fields = {
                 "rm_reviewed": True,
                 "rm_approved": False,
                 "rm_remarks": reason,
                 "rm_id": current_user["user_id"],
                 "status": VerificationStatus.REJECTED.value,
-                "reviewed_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc)
-            }}
+                "reviewed_at": now,
+                "updated_at": now
+            }
+
+        await db.property_verifications.update_one(
+            {"verification_id": verification_id},
+            {"$set": update_fields}
         )
         
         # Update property status back to needs resubmission
@@ -981,7 +1026,7 @@ async def reject_verification(
             {"$set": {
                 "status": "draft",
                 "verification_remarks": reason,
-                "updated_at": datetime.now(timezone.utc)
+                "updated_at": now
             }}
         )
 
@@ -991,25 +1036,25 @@ async def reject_verification(
                 user_id=current_user["user_id"],
                 role=current_user.get("role"),
                 module="rm_verification",
-                action="rm_verification_rejected",
+                action="branch_manager_verification_rejected" if is_bm else "rm_verification_rejected",
                 record_id=verification_id,
                 old_value={
                     "rm_reviewed": verification.get("rm_reviewed"),
                     "rm_approved": verification.get("rm_approved"),
+                    "branch_manager_reviewed": verification.get("branch_manager_reviewed"),
+                    "branch_manager_approved": verification.get("branch_manager_approved"),
                     "status": verification.get("status"),
                     "property_id": verification.get("property_id"),
                 },
                 new_value={
-                    "rm_reviewed": True,
-                    "rm_approved": False,
-                    "status": VerificationStatus.REJECTED.value,
+                    **update_fields,
                     "property_status": "draft",
                     "reason": reason,
                 },
                 reason=reason,
             )
         except Exception as audit_err:
-            logger.warning(f"Failed to write RM rejection audit: {audit_err}")
+            logger.warning(f"Failed to write verification rejection audit: {audit_err}")
 
         # Notify host that the listing needs revision
         try:
@@ -1021,7 +1066,7 @@ async def reject_verification(
         except Exception as wf_err:
             logger.warning(f"on_rm_decision (reject) trigger failed: {wf_err}")
 
-        logger.info(f"Verification {verification_id} rejected by RM {current_user['user_id']}")
+        logger.info(f"Verification {verification_id} rejected by {'BM' if is_bm else 'RM'} {current_user['user_id']}")
         return {
             "message": "Verification rejected. Host will be notified to resubmit.",
             "verification_id": verification_id
