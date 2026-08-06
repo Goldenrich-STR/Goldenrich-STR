@@ -32,6 +32,10 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
   List<dynamic> _leads = [];
   Map<String, dynamic>? _commissionData;
   List<dynamic> _commissions = [];
+  List<dynamic> _bookings = [];
+  List<dynamic> _tasks = [];
+  Map<String, dynamic>? _analyticsData;
+  List<dynamic> _auditLogs = [];
 
   // Lead Form state
   bool _showAddLeadForm = false;
@@ -110,6 +114,27 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
         if (res.statusCode == 200) {
           _commissionData = res.data['summary'];
           _commissions = res.data['commissions'] ?? [];
+        }
+      } else if (_activeTab == 'bookings') {
+        final res = await _apiService.dio.get('/broker/bookings');
+        if (res.statusCode == 200) {
+          _bookings = res.data['bookings'] ?? [];
+        }
+      } else if (_activeTab == 'tasks') {
+        final res = await _apiService.dio.get('/broker/tasks');
+        if (res.statusCode == 200) {
+          _tasks = res.data['tasks'] ?? [];
+          _auditLogs = res.data['activity'] ?? [];
+        }
+      } else if (_activeTab == 'analytics') {
+        final res = await _apiService.dio.get('/broker/analytics');
+        if (res.statusCode == 200) {
+          _analyticsData = res.data['metrics'];
+        }
+      } else if (_activeTab == 'audit') {
+        final res = await _apiService.dio.get('/broker/analytics');
+        if (res.statusCode == 200) {
+          _auditLogs = res.data['audit']?['recent_events'] ?? [];
         }
       }
     } catch (e) {
@@ -288,6 +313,14 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
         return _buildLeadsContent();
       case 'commissions':
         return _buildCommissionsContent();
+      case 'bookings':
+        return _buildBookingsContent();
+      case 'tasks':
+        return _buildTasksContent();
+      case 'analytics':
+        return _buildAnalyticsContent();
+      case 'audit':
+        return _buildAuditContent();
       default:
         return Container();
     }
@@ -1435,6 +1468,243 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // 7. BOOKINGS
+  Widget _buildBookingsContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Bookings & Reports',
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal),
+        ),
+        const SizedBox(height: 16),
+        _bookings.isEmpty
+            ? _buildEmptyState(Icons.book_online_outlined, 'No Bookings',
+                'No bookings are registered under your portfolio.')
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _bookings.length,
+                itemBuilder: (context, idx) {
+                  final booking = _bookings[idx];
+                  final checkIn = booking['check_in_date'] ?? '';
+                  final checkOut = booking['check_out_date'] ?? '';
+                  final totalAmount = booking['total_amount'] ?? 0;
+                  final status = booking['booking_status'] ?? 'pending';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Booking ID: ${booking['booking_id']}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  status.toString().toUpperCase(),
+                                  style: const TextStyle(
+                                    color: AppTheme.primary,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          Text('Property: ${booking['property_summary']?['title'] ?? 'N/A'}'),
+                          const SizedBox(height: 4),
+                          Text('Guest: ${booking['guest_summary']?['full_name'] ?? 'N/A'}'),
+                          const SizedBox(height: 4),
+                          Text('Dates: $checkIn to $checkOut'),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Amount: ₹${(totalAmount / 100).toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              color: AppTheme.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ],
+    );
+  }
+
+  // 8. TASKS
+  Widget _buildTasksContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Tasks & Escalations',
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal),
+        ),
+        const SizedBox(height: 16),
+        _tasks.isEmpty
+            ? _buildEmptyState(Icons.assignment_outlined, 'No Tasks',
+                'No pending tasks assigned.')
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _tasks.length,
+                itemBuilder: (context, idx) {
+                  final task = _tasks[idx];
+                  final type = task['type'] ?? 'task';
+                  final title = task['title'] ?? 'Task';
+                  final status = task['status'] ?? 'pending';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                title,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                status.toString().toUpperCase(),
+                                style: TextStyle(
+                                  color: task['priority'] == 'high' ? Colors.red : Colors.grey,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          Text('Type: $type'),
+                          const SizedBox(height: 4),
+                          Text('SLA Status: ${task['sla_status'] ?? 'normal'}'),
+                          const SizedBox(height: 4),
+                          Text('Age: ${task['age_hours'] ?? 0} hours'),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ],
+    );
+  }
+
+  // 9. ANALYTICS
+  Widget _buildAnalyticsContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Broker Analytics',
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal),
+        ),
+        const SizedBox(height: 16),
+        if (_analyticsData == null)
+          _buildEmptyState(Icons.insert_chart_outlined, 'No Data', 'Analytics data is loading or not available.')
+        else
+          Column(
+            children: [
+              _buildStatsGrid([
+                _buildStatCard('Total Hosts', _analyticsData!['hosts']?.toString() ?? '0', null),
+                _buildStatCard('Total Properties', _analyticsData!['properties']?.toString() ?? '0', '${_analyticsData!['live_properties'] ?? 0} Live'),
+                _buildStatCard('Total Bookings', _analyticsData!['bookings']?.toString() ?? '0', null),
+                _buildStatCard('Total Revenue', '₹${((_analyticsData!['revenue'] ?? 0) / 100).toStringAsFixed(0)}', null),
+              ]),
+              const SizedBox(height: 20),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Performance Highlights', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 12),
+                      Text('Conversion Rate: ${_analyticsData!['lead_conversion_rate'] ?? 0}%'),
+                      const SizedBox(height: 4),
+                      Text('Activation Rate: ${_analyticsData!['property_activation_rate'] ?? 0}%'),
+                      const SizedBox(height: 4),
+                      Text('Pending Verifications: ${_analyticsData!['pending_verifications'] ?? 0}'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  // 10. AUDIT
+  Widget _buildAuditContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Activity & Audit Log',
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal),
+        ),
+        const SizedBox(height: 16),
+        _auditLogs.isEmpty
+            ? _buildEmptyState(Icons.receipt_long_outlined, 'No Activity',
+                'No activity logs recorded.')
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _auditLogs.length,
+                itemBuilder: (context, idx) {
+                  final log = _auditLogs[idx];
+                  final action = log['action'] ?? 'action';
+                  final module = log['module'] ?? 'module';
+                  final createdAt = log['created_at'] ?? 'N/A';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      title: Text(action.toString().replaceAll('_', ' ').toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      subtitle: Text('Module: $module\nTime: $createdAt', style: const TextStyle(fontSize: 10)),
+                      isThreeLine: true,
+                    ),
+                  );
+                },
+              ),
+      ],
     );
   }
 

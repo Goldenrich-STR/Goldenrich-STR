@@ -27,7 +27,6 @@ import 'support_tickets_screen.dart';
 import '../broker/broker_dashboard_screen.dart';
 import '../employee/employee_dashboard_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
-import '../web/website_mirror_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppShell extends StatefulWidget {
@@ -148,7 +147,7 @@ class _AppShellState extends State<AppShell> {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          WebsiteMirrorScreen(),
+          const HostDashboardScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
@@ -168,7 +167,7 @@ class _AppShellState extends State<AppShell> {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          WebsiteMirrorScreen(),
+          const BrokerDashboardScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
@@ -185,30 +184,33 @@ class _AppShellState extends State<AppShell> {
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'employee') {
+        final String? adminRole = user.adminRoleKey;
+        final bool isRm = adminRole == 'rm' || adminRole == 'relationship_manager';
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          WebsiteMirrorScreen(),
+          isRm ? const BrokerDashboardScreen() : const EmployeeDashboardScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
-        navItems = const [
-          BottomNavigationBarItem(
+        navItems = [
+          const BottomNavigationBarItem(
               icon: Icon(Icons.home_filled), label: 'Homes'),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
               icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.rate_review_outlined), label: 'Dashboard'),
-          BottomNavigationBarItem(
+              icon: Icon(isRm ? Icons.dashboard_outlined : Icons.rate_review_outlined),
+              label: isRm ? 'Broker' : 'Reviews'),
+          const BottomNavigationBarItem(
               icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'admin') {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          WebsiteMirrorScreen(),
+          const AdminDashboardScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
@@ -561,6 +563,11 @@ class _BrokerProfileDrawer extends StatelessWidget {
           'icon': Icons.verified_user_outlined,
         },
         {
+          'tab': 'bookings',
+          'label': 'Bookings',
+          'icon': Icons.book_online_outlined,
+        },
+        {
           'tab': 'leads',
           'label': 'Leads',
           'icon': Icons.track_changes_outlined,
@@ -569,6 +576,21 @@ class _BrokerProfileDrawer extends StatelessWidget {
           'tab': 'commissions',
           'label': 'Commissions',
           'icon': Icons.monetization_on_outlined,
+        },
+        {
+          'tab': 'tasks',
+          'label': 'Tasks',
+          'icon': Icons.assignment_outlined,
+        },
+        {
+          'tab': 'analytics',
+          'label': 'Analytics',
+          'icon': Icons.insert_chart_outlined,
+        },
+        {
+          'tab': 'audit',
+          'label': 'Audit',
+          'icon': Icons.receipt_long_outlined,
         },
       ];
 

@@ -684,7 +684,11 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                             },
                           ),
                         ),
-                        const SizedBox(width: 10),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
                         Expanded(
                           child: _buildActionCard(
                             context: context,
@@ -697,6 +701,23 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                                 MaterialPageRoute(
                                     builder: (context) =>
                                         const HostBookingsScreen()),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildActionCard(
+                            context: context,
+                            icon: Icons.trending_up,
+                            title: 'Performance\nInsights',
+                            color: Colors.purple.shade700,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const HostPerformanceScreen()),
                               );
                             },
                           ),
