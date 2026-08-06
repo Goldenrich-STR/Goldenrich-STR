@@ -61,6 +61,7 @@ class Property(BaseModel):
     broker_id: Optional[str] = None
     broker_lg_code: Optional[str] = None
     rm_id: Optional[str] = None
+    branch_manager_id: Optional[str] = None
     employee_id: Optional[str] = None
     created_by_role: Optional[str] = None
     created_by_user_id: Optional[str] = None

@@ -107,14 +107,18 @@ async def create_property(
                 detail="Only hosts can create property listings"
             )
         
-        # Fetch the host's profile to retrieve their registered broker_id (from LG Code registration)
+        # Fetch the host's profile to retrieve their registered broker_id, rm_id, and branch_manager_id
         host_user = await db.users.find_one({"user_id": current_user["user_id"]})
         host_broker_id = host_user.get("broker_id") if host_user else None
+        host_rm_id = host_user.get("rm_id") if host_user else None
+        host_bm_id = host_user.get("branch_manager_id") if host_user else None
         
         # Create property object
         property_obj = Property(
             owner_id=current_user["user_id"],
             broker_id=host_broker_id,
+            rm_id=host_rm_id,
+            branch_manager_id=host_bm_id,
             **property_data.model_dump()
         )
         

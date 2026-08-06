@@ -77,16 +77,18 @@ async def assign_broker(db: AsyncIOMotorDatabase, property_id: str, city: str) -
                     "is_active": True
                 })
             if chosen_broker:
+                owner_rm_id = owner.get("rm_id") or chosen_broker.get("rm_id")
+                owner_bm_id = owner.get("branch_manager_id") or chosen_broker.get("branch_manager_id")
                 await db.properties.update_one(
                     {"property_id": property_id},
-                    {"$set": {"broker_id": chosen_broker["user_id"], "updated_at": datetime.now(timezone.utc)}},
+                    {"$set": {
+                        "broker_id": chosen_broker["user_id"],
+                        "rm_id": owner_rm_id,
+                        "branch_manager_id": owner_bm_id,
+                        "updated_at": datetime.now(timezone.utc)
+                    }},
                 )
                 
-                # Assign to owner's or broker's RM
-                owner_rm_id = owner.get("rm_id")
-                if not owner_rm_id:
-                    owner_rm_id = chosen_broker.get("rm_id")
-                    
                 from models.verification import PropertyVerification, VerificationStatus
                 existing = await db.property_verifications.find_one({"property_id": property_id})
                 if not existing:
@@ -120,6 +122,55 @@ async def assign_broker(db: AsyncIOMotorDatabase, property_id: str, city: str) -
                     )
                 logger.info(f"Host's registered broker {chosen_broker['user_id']} assigned directly to property {property_id} (RM: {owner_rm_id})")
                 return chosen_broker["user_id"]
+
+        elif property_data and owner and owner.get("rm_id"):
+            # Case 2: RM acts as direct verifier/broker (first stage), and Branch Manager acts as supervisor (second stage)
+            chosen_rm_id = owner["rm_id"]
+            chosen_bm_id = owner.get("branch_manager_id")
+            
+            await db.properties.update_one(
+                {"property_id": property_id},
+                {"$set": {
+                    "broker_id": chosen_rm_id,
+                    "rm_id": chosen_rm_id,
+                    "branch_manager_id": chosen_bm_id,
+                    "updated_at": datetime.now(timezone.utc)
+                }},
+            )
+            
+            from models.verification import PropertyVerification, VerificationStatus
+            existing = await db.property_verifications.find_one({"property_id": property_id})
+            if not existing:
+                verification = PropertyVerification(
+                    property_id=property_id,
+                    broker_id=chosen_rm_id,
+                    owner_id=property_data["owner_id"],
+                    status=VerificationStatus.PENDING,
+                    rm_id=chosen_bm_id
+                )
+                await db.property_verifications.insert_one(verification.model_dump())
+            else:
+                await db.property_verifications.update_one(
+                    {"property_id": property_id},
+                    {"$set": {
+                        "broker_id": chosen_rm_id,
+                        "status": VerificationStatus.PENDING.value,
+                        "rm_reviewed": False,
+                        "rm_approved": False,
+                        "rm_remarks": None,
+                        "rm_id": chosen_bm_id,
+                        "reviewed_at": None,
+                        "admin_reviewed": False,
+                        "admin_approved": False,
+                        "admin_remarks": None,
+                        "admin_id": None,
+                        "admin_reviewed_at": None,
+                        "completed_at": None,
+                        "updated_at": datetime.now(timezone.utc)
+                    }}
+                )
+            logger.info(f"Host's registered RM {chosen_rm_id} assigned directly as verifier for property {property_id} (BM: {chosen_bm_id})")
+            return chosen_rm_id
 
         # Fallback to load-balanced city-based auto-assignment
         brokers = await db.users.find(
