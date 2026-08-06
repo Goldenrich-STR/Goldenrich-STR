@@ -19,15 +19,19 @@ class _WebsiteMirrorScreenState extends State<WebsiteMirrorScreen> {
   bool _hasError = false;
   String _errorMessage = '';
 
-  String get _targetUrl => AppConfig.isProduction
-      ? AppConfig.prodBaseUrl
-      : AppConfig.webBaseUrl;
+  String get _targetUrl {
+    final base = AppConfig.isProduction
+        ? AppConfig.prodBaseUrl
+        : AppConfig.webBaseUrl;
+    return base.contains('?') ? '$base&isMobileApp=true' : '$base?isMobileApp=true';
+  }
 
   @override
   void initState() {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setUserAgent('MobileApp/X-Space360')
       ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
