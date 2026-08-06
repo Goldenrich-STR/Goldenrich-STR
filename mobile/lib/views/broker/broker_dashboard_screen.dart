@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart' as dio;
+import 'package:url_launcher/url_launcher.dart';
 import '../../config.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
@@ -604,8 +605,22 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                                     ? Text('Value: $val', style: const TextStyle(fontSize: 12))
                                     : url.toString().isNotEmpty
                                         ? InkWell(
-                                            onTap: () {
-                                              // Open document URL
+                                            onTap: () async {
+                                              String docUrl = url;
+                                              if (docUrl.contains('localhost:8001')) {
+                                                docUrl = docUrl.replaceAll('localhost:8001', ApiService().baseUrl.replaceAll('http://', '').replaceAll('https://', ''));
+                                                if (!docUrl.startsWith('http')) {
+                                                  docUrl = 'http://$docUrl';
+                                                }
+                                              }
+                                              final uri = Uri.parse(docUrl);
+                                              if (await canLaunchUrl(uri)) {
+                                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                              } else {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text('Could not open document link: $docUrl')),
+                                                );
+                                              }
                                             },
                                             child: Text(
                                               'View Uploaded File',
@@ -652,7 +667,23 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                                 const SizedBox(height: 6),
                                 Text('Agreement Owner Address: ${ownerAddress.isNotEmpty ? ownerAddress : "N/A"}'),
                                 const SizedBox(height: 6),
-                                Text('Signature Info: ${signature.isNotEmpty ? signature : "N/A"}'),
+                                if (signature.startsWith('http') || signature.contains('/api/uploads/')) ...[
+                                  const Text('Signature Image:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  const SizedBox(height: 4),
+                                  Image.network(
+                                    signature.contains('localhost:8001')
+                                        ? signature.replaceAll('localhost:8001', ApiService().baseUrl.replaceAll('http://', '').replaceAll('https://', ''))
+                                        : signature.startsWith('http')
+                                            ? signature
+                                            : '${ApiService().baseUrl}$signature',
+                                    height: 80,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        const Text('[Error loading signature image]', style: TextStyle(color: Colors.red, fontSize: 12)),
+                                  ),
+                                ] else ...[
+                                  Text('Signature Info: ${signature.isNotEmpty ? signature : "N/A"}'),
+                                ],
                               ],
                             ),
                           ),
@@ -660,7 +691,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                       ],
                     ),
                   ),
-                  if (isEmployee && host['kyc_status'] != 'approved') ...[
+                  if (host['kyc_status'] != 'approved') ...[
                     const Divider(),
                     Padding(
                       padding: const EdgeInsets.all(16.0),
