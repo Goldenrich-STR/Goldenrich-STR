@@ -1649,10 +1649,13 @@ const BrokerToggle = ({ label, checked, onChange }) => (
 
 // Verifications Section — broker physical-visit queue + submission form
 const VerificationsSection = () => {
+  const { user } = useAuth();
+  const isRm = user?.admin_role_key === 'rm' || user?.admin_role_key === 'relationship_manager';
   const [tasks, setTasks] = useState([]);
   const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
   const [activeTask, setActiveTask] = useState(null);
+  const [activeReviewTask, setActiveReviewTask] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -1835,6 +1838,16 @@ const VerificationsSection = () => {
                         <span>{task.status === 'rejected' || (task.rm_reviewed && !task.rm_approved) ? 'RE-VERIFY' : 'SUBMIT VISIT'}</span>
                       </button>
                     )}
+                    {isRm && task.status === 'completed' && !task.rm_reviewed && (
+                      <button
+                        onClick={() => setActiveReviewTask(task)}
+                        className="btn-premium bg-green-600 hover:bg-green-700 px-8 py-4 shadow-premium whitespace-nowrap"
+                        data-testid={`open-review-${task.property_id}`}
+                      >
+                        <CheckCircle className="w-5 h-5 mr-3 text-white" />
+                        <span className="text-white">REVIEW VISIT</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -1874,7 +1887,178 @@ const VerificationsSection = () => {
           }}
         />
       )}
+
+      {activeReviewTask && (
+        <ReviewVerificationModal
+          task={activeReviewTask}
+          onClose={() => setActiveReviewTask(null)}
+          onReviewed={() => {
+            setActiveReviewTask(null);
+            fetchTasks();
+          }}
+        />
+      )}
     </div>
+  );
+};
+
+// Modal: RM reviews broker's verification submission (Remarks + Checklist + Photos)
+const ReviewVerificationModal = ({ task, onClose, onReviewed }) => {
+  const [remarks, setRemarks] = useState('');
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleApprove = async () => {
+    setSubmitting(true);
+    setError('');
+    try {
+      await verificationAPI.rmApprove(task.verification_id, remarks);
+      alert('Verification approved and forwarded to admin!');
+      onReviewed();
+    } catch (e) {
+      console.error(e);
+      setError(e?.response?.data?.detail || 'Failed to approve verification');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectReason.trim()) {
+      alert('Rejection reason is required');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    try {
+      await verificationAPI.rmReject(task.verification_id, rejectReason);
+      alert('Verification rejected!');
+      onReviewed();
+    } catch (e) {
+      console.error(e);
+      setError(e?.response?.data?.detail || 'Failed to reject verification');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-charcoal">Review Verification Report</h3>
+            <p className="text-xs text-charcoal-light font-mono mt-1">Property: {task.property_details?.title || 'Property'}</p>
+          </div>
+          <button onClick={onClose} className="text-charcoal-light hover:text-charcoal">
+            <XCircle className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          {error && <div className="rounded-xl bg-red-50 border border-red-100 p-3 text-red-600 text-xs font-bold">{error}</div>}
+
+          {/* Checklist filled by broker */}
+          <div>
+            <h4 className="font-bold text-charcoal mb-3 text-sm">Broker Checklist Answers</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {Object.entries(task.checklist || {}).map(([key, val]) => (
+                <div key={key} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl bg-stone/30">
+                  <span className="text-xs font-bold text-charcoal-muted capitalize text-[10px]">{key.replace(/_/g, ' ')}</span>
+                  <span className={`px-2 py-1 text-[10px] font-bold rounded-full ${val ? 'bg-sage/10 text-sage-dark' : 'bg-red-50 text-red-600'}`}>
+                    {val ? '✔ Verified' : '✘ Failed'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Broker Remarks */}
+          {task.broker_remarks && (
+            <div className="p-4 bg-terracotta/5 rounded-2xl border border-terracotta/10">
+              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Broker Remarks</h4>
+              <p className="text-xs text-charcoal italic leading-relaxed">"{task.broker_remarks}"</p>
+            </div>
+          )}
+
+          {/* Geo-tagged Photos */}
+          {task.geo_tagged_photos && task.geo_tagged_photos.length > 0 && (
+            <div>
+              <h4 className="font-bold text-charcoal mb-3 text-sm">Geo-tagged Evidence ({task.geo_tagged_photos.length})</h4>
+              <div className="grid grid-cols-3 gap-3">
+                {task.geo_tagged_photos.map((photo, i) => (
+                  <div key={i} className="group relative aspect-square rounded-xl overflow-hidden bg-gray-50 border border-gray-100 cursor-pointer" onClick={() => window.open(getImageUrl(photo.photo_url || photo.url), '_blank')}>
+                    <img src={getImageUrl(photo.photo_url || photo.url)} alt="Evidence" className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-charcoal/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center p-2 text-[8px] text-white">
+                      <p>Lat: {photo.latitude}</p>
+                      <p>Lng: {photo.longitude}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Video Tour */}
+          {task.video_url && (
+            <div className="p-3 bg-blue-50 rounded-2xl border border-blue-100 text-xs">
+              <span className="font-bold text-blue-800 uppercase block mb-1">Walkthrough Video</span>
+              <a href={task.video_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline">
+                Watch Video walkthrough
+              </a>
+            </div>
+          )}
+
+          {/* Action fields */}
+          {!showRejectModal ? (
+            <div className="space-y-4 pt-4 border-t border-gray-100">
+              <div>
+                <label className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest block mb-2">RM Review Remarks (Optional)</label>
+                <textarea
+                  className="w-full border-2 border-gray-100 rounded-2xl p-4 focus:border-green-500 outline-none transition min-h-[100px] text-xs text-charcoal font-medium"
+                  placeholder="Enter remarks..."
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={() => setShowRejectModal(true)} disabled={submitting} className="flex-1 py-4 bg-red-50 text-red-600 font-bold tracking-tight uppercase tracking-widest rounded-2xl hover:bg-red-100 transition">
+                  Reject
+                </button>
+                <button onClick={handleApprove} disabled={submitting} className="flex-1 py-4 bg-green-600 text-white font-bold tracking-tight uppercase tracking-widest rounded-2xl hover:bg-green-700 shadow-md transition">
+                  {submitting ? 'Approving...' : 'Approve & Forward'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 pt-4 border-t border-gray-100">
+              <div>
+                <label className="text-[10px] font-bold text-red-600 uppercase tracking-widest block mb-2">Reason for Rejection (Required)</label>
+                <textarea
+                  className="w-full border-2 border-red-100 rounded-2xl p-4 focus:border-red-500 outline-none transition min-h-[100px] text-xs text-charcoal font-medium"
+                  placeholder="Enter rejection reason..."
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={() => setShowRejectModal(false)} className="flex-1 py-4 text-charcoal-muted font-bold tracking-tight uppercase tracking-widest hover:text-charcoal transition">
+                  Back
+                </button>
+                <button onClick={handleReject} disabled={submitting} className="flex-1 py-4 bg-red-600 text-white font-bold tracking-tight uppercase tracking-widest rounded-2xl hover:bg-red-700 shadow-md transition">
+                  {submitting ? 'Rejecting...' : 'Confirm Reject'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 };
 
