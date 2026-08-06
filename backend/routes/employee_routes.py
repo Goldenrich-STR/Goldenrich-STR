@@ -530,6 +530,16 @@ async def get_pending_verifications(
             if len(verifications) >= 100:
                 break
         
+        # Deduplicate verifications by property_id, keeping the latest completed
+        seen_properties = set()
+        deduped_verifications = []
+        for v in verifications:
+            p_id = v.get("property_id")
+            if p_id not in seen_properties:
+                seen_properties.add(p_id)
+                deduped_verifications.append(v)
+        verifications = deduped_verifications
+
         return {
             "verifications": verifications,
             "total": len(verifications)
@@ -588,6 +598,16 @@ async def get_verification_history(
                     broker_data["lg_code"] = broker_data.get("employee_code") or "N/A"
                 verification["broker_details"] = broker_data
         
+        # Deduplicate verifications by property_id
+        seen_properties = set()
+        deduped_verifications = []
+        for v in verifications:
+            p_id = v.get("property_id")
+            if p_id not in seen_properties:
+                seen_properties.add(p_id)
+                deduped_verifications.append(v)
+        verifications = deduped_verifications
+
         return {
             "verifications": verifications,
             "total": len(verifications)

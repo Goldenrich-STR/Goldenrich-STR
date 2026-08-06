@@ -1372,7 +1372,7 @@ async def submit_verification(
 
         # Check if verification already exists
         existing = await db.property_verifications.find_one(
-            _get_broker_or_rm_query(current_user, {"property_id": property_id})
+            {"property_id": property_id}
         )
         
         if existing:
@@ -1417,7 +1417,8 @@ async def submit_verification(
                 video_url=verification_data.video_url,
                 broker_remarks=verification_data.broker_remarks,
                 status=VerificationStatus.COMPLETED,
-                rm_id=owner_rm_id
+                rm_id=owner_rm_id,
+                branch_manager_id=owner_branch_manager_id
             )
             
             verification_dict = verification.model_dump()
