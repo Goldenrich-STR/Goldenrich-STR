@@ -117,7 +117,7 @@ class _AppShellState extends State<AppShell> {
         BottomNavigationBarItem(
             icon: Icon(Icons.luggage_outlined), label: 'Trips'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
+            icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
         BottomNavigationBarItem(
             icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
       ];
@@ -139,7 +139,7 @@ class _AppShellState extends State<AppShell> {
           const BottomNavigationBarItem(
               icon: Icon(Icons.luggage_outlined), label: 'Trips'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
+              icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: const Icon(Icons.person_outline_rounded), label: 'Profile'),
         ];
@@ -147,7 +147,7 @@ class _AppShellState extends State<AppShell> {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          const HostDashboardScreen(),
+          const WebsiteMirrorScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
@@ -159,7 +159,7 @@ class _AppShellState extends State<AppShell> {
           BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
+              icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
@@ -167,7 +167,7 @@ class _AppShellState extends State<AppShell> {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          const BrokerDashboardScreen(),
+          const WebsiteMirrorScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
@@ -179,38 +179,35 @@ class _AppShellState extends State<AppShell> {
           BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined), label: 'Broker'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
+              icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'employee') {
-        final String? adminRole = user.adminRoleKey;
-        final bool isRm = adminRole == 'rm' || adminRole == 'relationship_manager';
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          isRm ? const BrokerDashboardScreen() : const EmployeeDashboardScreen(),
+          const WebsiteMirrorScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
-        navItems = [
-          const BottomNavigationBarItem(
+        navItems = const [
+          BottomNavigationBarItem(
               icon: Icon(Icons.home_filled), label: 'Homes'),
-          const BottomNavigationBarItem(
+          BottomNavigationBarItem(
               icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
           BottomNavigationBarItem(
-              icon: Icon(isRm ? Icons.dashboard_outlined : Icons.rate_review_outlined),
-              label: isRm ? 'Broker' : 'Reviews'),
-          const BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
-          const BottomNavigationBarItem(
+              icon: Icon(Icons.rate_review_outlined), label: 'Dashboard'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
+          BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'admin') {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          const AdminDashboardScreen(),
+          const WebsiteMirrorScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
@@ -222,7 +219,7 @@ class _AppShellState extends State<AppShell> {
           BottomNavigationBarItem(
               icon: Icon(Icons.admin_panel_settings_outlined), label: 'Admin'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
+              icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
