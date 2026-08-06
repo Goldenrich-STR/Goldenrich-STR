@@ -32,6 +32,40 @@ async def get_db():
     return db_instance
 
 
+def _clean_identifier(value):
+    return str(value).strip() if value not in (None, "", "-", "NA", "N/A") else ""
+
+
+def _user_identifiers(user: dict) -> list[str]:
+    return [
+        value
+        for value in {
+            _clean_identifier(user.get("user_id")),
+            _clean_identifier(user.get("employee_code")),
+            _clean_identifier(user.get("lg_code")),
+            _clean_identifier(user.get("uid")),
+        }
+        if value
+    ]
+
+
+def _assigned_ref(source: dict | None, field: str) -> str:
+    return _clean_identifier((source or {}).get(field))
+
+
+async def _property_owner_assignment(db: AsyncIOMotorDatabase, property_data: dict) -> tuple[dict, dict]:
+    owner = {}
+    if property_data.get("owner_id"):
+        owner = await db.users.find_one({"user_id": property_data["owner_id"], "role": "host"}, {"_id": 0}) or {}
+    owner_found = bool(owner.get("user_id"))
+    return owner, {
+        "broker_id": _assigned_ref(owner, "broker_id") if owner_found else _assigned_ref(property_data, "broker_id"),
+        "rm_id": _assigned_ref(owner, "rm_id") if owner_found else _assigned_ref(property_data, "rm_id"),
+        "branch_manager_id": _assigned_ref(owner, "branch_manager_id") if owner_found else _assigned_ref(property_data, "branch_manager_id"),
+        "branch_manager_code": _assigned_ref(owner, "branch_manager_code") if owner_found else _assigned_ref(property_data, "branch_manager_code"),
+    }
+
+
 def _get_broker_or_rm_query(current_user: dict, additional_query: dict = None) -> dict:
     user_id = current_user["user_id"]
     is_rm = current_user.get("role") == UserRole.EMPLOYEE.value and current_user.get("admin_role_key") in ["rm", "relationship_manager"]
@@ -232,7 +266,7 @@ async def get_my_owners(
             owner["rm_code"] = _display_code(rm, owner.get("employee_code") or owner.get("rm_id") or "")
             owner["assigned_rm"] = rm.get("full_name") or owner.get("rm_id")
             owner["assigned_employee"] = owner["rm_code"]
-            owner["branch_manager_code"] = _display_code(branch_manager, owner.get("employee_code") or owner.get("branch_manager_id") or "")
+            owner["branch_manager_code"] = _display_code(branch_manager, owner.get("branch_manager_code") or owner.get("branch_manager_id") or "")
             owner["branch_manager_name"] = branch_manager.get("full_name") or owner.get("branch_manager_id") or ""
             owner["rm"] = {
                 "user_id": rm.get("user_id") or owner.get("rm_id") or "",
@@ -303,7 +337,7 @@ async def get_owner_details(
         )
         owner["rm_code"] = _display_code(rm, owner.get("employee_code") or owner.get("rm_id") or "")
         owner["assigned_employee"] = owner["rm_code"]
-        owner["branch_manager_code"] = _display_code(branch_manager, owner.get("employee_code") or owner.get("branch_manager_id") or "")
+        owner["branch_manager_code"] = _display_code(branch_manager, owner.get("branch_manager_code") or owner.get("branch_manager_id") or "")
         owner["branch_manager_name"] = branch_manager.get("full_name") or owner.get("branch_manager_id") or ""
         owner["rm"] = {
             "user_id": rm.get("user_id") or owner.get("rm_id") or "",
@@ -1235,16 +1269,18 @@ async def submit_verification(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Property not found"
             )
+
+        owner_data, assignment = await _property_owner_assignment(db, property_data)
         
-        assigned_id = property_data.get("rm_id") if is_rm else property_data.get("broker_id")
+        assigned_id = assignment.get("rm_id") if is_rm else assignment.get("broker_id")
         if is_rm:
-            identifiers = {
-                broker_id,
-                current_user.get("employee_code"),
-                current_user.get("uid"),
-            }
-            identifiers = [i for i in identifiers if i]
-            if assigned_id not in identifiers and property_data.get("broker_id") not in identifiers:
+            identifiers = _user_identifiers(current_user)
+            assigned_refs = [
+                assignment.get("rm_id"),
+                assignment.get("branch_manager_id"),
+                assignment.get("branch_manager_code"),
+            ]
+            if not any(ref and ref in identifiers for ref in assigned_refs):
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="This property is not assigned to this RM"
@@ -1292,10 +1328,8 @@ async def submit_verification(
         
         # Resolve RM ID for this verification to keep it private/assigned to the correct employee
         owner_rm_id = broker_id if is_rm else None
-        if not owner_rm_id and property_data and property_data.get("owner_id"):
-            owner = await db.users.find_one({"user_id": property_data["owner_id"]})
-            if owner:
-                owner_rm_id = owner.get("rm_id")
+        if not owner_rm_id:
+            owner_rm_id = assignment.get("rm_id") or property_data.get("rm_id")
         if not owner_rm_id:
             broker_user = await db.users.find_one({"user_id": broker_id})
             if broker_user:
@@ -1336,7 +1370,7 @@ async def submit_verification(
             verification = PropertyVerification(
                 property_id=property_id,
                 broker_id="" if is_rm else broker_id,
-                owner_id=property_data["owner_id"],
+                owner_id=(owner_data or {}).get("user_id") or property_data["owner_id"],
                 checklist=verification_data.checklist,
                 geo_tagged_photos=verification_data.geo_tagged_photos,
                 video_url=verification_data.video_url,

@@ -138,7 +138,7 @@ async def _get_rm_scope(db: AsyncIOMotorDatabase, current_user_or_id):
             all_host_ids.update(host_ids)
 
         direct_bm_host_or = _field_matches_identifiers("branch_manager_id", branch_manager_identifiers)
-        direct_bm_host_or.extend(_field_matches_identifiers("employee_code", branch_manager_identifiers))
+        direct_bm_host_or.extend(_field_matches_identifiers("branch_manager_code", branch_manager_identifiers))
         bm_hosts = await db.users.find(
             {"role": "host", "$or": direct_bm_host_or},
             {"_id": 0, "user_id": 1, "broker_id": 1}
