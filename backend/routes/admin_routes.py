@@ -331,35 +331,111 @@ async def create_user(
         # If user is a broker, set their lg_code to their entered code (or fallback to UID)
         lg_code_val = user_data.lg_code if (user_data.role.value == "broker" and user_data.lg_code) else (uid_val if user_data.role.value == "broker" else user_data.lg_code)
 
-        # Resolve broker if lg_code is provided for a host
+        # Resolve broker or RM if lg_code is provided for a host
         broker_id = None
+        rm_id = None
+        primary_assignment_role = None
+        branch_manager_id = None
+        branch_manager_code = None
+        
         if role_str_lower == "host" and user_data.lg_code and user_data.lg_code.strip():
             lg_code_clean = user_data.lg_code.strip()
-            broker = await db.users.find_one({
-                "role": "broker",
-                "lg_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}
+            broker_or_rm = await db.users.find_one({
+                "$or": [
+                    {
+                        "role": "broker",
+                        "$or": [
+                            {"lg_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                            {"employee_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                            {"uid": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                            {"user_id": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                        ],
+                    },
+                    {
+                        "role": "employee",
+                        "$and": [
+                            {
+                                "$or": [
+                                    {"admin_role_key": {"$in": ["rm", "relationship_manager"]}},
+                                    {"designation": {"$regex": "relationship manager|\\brm\\b", "$options": "i"}},
+                                ],
+                            },
+                            {
+                                "$or": [
+                                    {"employee_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                                    {"uid": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                                    {"user_id": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                                ],
+                            },
+                        ],
+                    },
+                ],
             })
-            if not broker:
+            if not broker_or_rm:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid LG Code. No broker found with this code."
+                    detail="Invalid RM / Broker Code. No broker or RM found with this code."
                 )
-            broker_id = broker["user_id"]
+            if broker_or_rm.get("role") == "broker":
+                primary_assignment_role = "broker"
+                broker_id = broker_or_rm["user_id"]
+                rm_id = broker_or_rm.get("rm_id")
+            else:
+                primary_assignment_role = "rm"
+                rm_id = broker_or_rm["user_id"]
             
-        # Resolve employee if employee_code is provided for a host
-        rm_id = None
+        # Resolve the dependent second assignment:
+        # Broker selected first -> second code must be an RM.
+        # RM selected first -> second code must be a Branch Manager.
         if role_str_lower == "host" and user_data.employee_code and user_data.employee_code.strip():
             employee_code_clean = user_data.employee_code.strip()
-            employee = await db.users.find_one({
-                "role": "employee",
-                "employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}
-            })
+            expected_admin_keys = (
+                ["rm", "relationship_manager"]
+                if primary_assignment_role == "broker"
+                else ["branch_manager"]
+            )
+            employee = await db.users.find_one(
+                {
+                    "role": "employee",
+                    "$and": [
+                        {
+                            "$or": [
+                                {"admin_role_key": {"$in": expected_admin_keys}},
+                                {
+                                    "designation": {
+                                        "$regex": "relationship manager|\\brm\\b"
+                                        if primary_assignment_role == "broker"
+                                        else "branch manager",
+                                        "$options": "i",
+                                    }
+                                },
+                            ],
+                        },
+                        {
+                            "$or": [
+                                {"employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                                {"uid": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                                {"user_id": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                            ],
+                        },
+                    ],
+                }
+            )
             if not employee:
+                expected_label = "RM" if primary_assignment_role == "broker" else "Branch Manager"
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid Employee Code. No employee found with this code."
+                    detail=f"Invalid {expected_label} Code. No {expected_label.lower()} found with this code."
                 )
-            rm_id = employee["user_id"]
+            if primary_assignment_role == "broker":
+                rm_id = employee["user_id"]
+            else:
+                branch_manager_id = employee["user_id"]
+                branch_manager_code = employee.get("employee_code") or employee.get("uid") or employee["user_id"]
+            
+        assignment_employee_code = user_data.employee_code.strip() if user_data.employee_code else None
+        if role_str_lower == "host" and primary_assignment_role == "rm":
+            assignment_employee_code = user_data.lg_code.strip() if user_data.lg_code else None
 
         # Link broker to employee if both are provided during Host registration
         if broker_id and rm_id:
@@ -382,9 +458,11 @@ async def create_user(
             "birthdate": user_data.birthdate,
             "uid": uid_val,
             "lg_code": lg_code_val,
-            "employee_code": user_data.employee_code,
+            "employee_code": assignment_employee_code,
             "broker_id": broker_id,
             "rm_id": rm_id,
+            "branch_manager_id": branch_manager_id,
+            "branch_manager_code": branch_manager_code,
             "admin_delete_protected": user_data.admin_delete_protected,
             "admin_scope": user_data.admin_scope,
             "department": user_data.department,
@@ -478,40 +556,119 @@ async def update_user(
         target_role = update_fields.get("role") or user.get("role")
         if target_role and str(target_role).lower() == "host":
             new_lg_code = user_data.lg_code if user_data.lg_code is not None else user.get("lg_code")
+            new_employee_code = user_data.employee_code if user_data.employee_code is not None else user.get("employee_code")
+            
             resolved_broker_id = None
+            resolved_rm_id = None
+            resolved_bm_id = None
+            resolved_bm_code = None
+            primary_assignment_role = None
+            
             if new_lg_code and new_lg_code.strip():
                 lg_code_clean = new_lg_code.strip()
-                broker = await db.users.find_one({
-                    "role": "broker",
-                    "lg_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}
+                broker_or_rm = await db.users.find_one({
+                    "$or": [
+                        {
+                            "role": "broker",
+                            "$or": [
+                                {"lg_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                                {"employee_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                                {"uid": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                                {"user_id": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                            ],
+                        },
+                        {
+                            "role": "employee",
+                            "$and": [
+                                {
+                                    "$or": [
+                                        {"admin_role_key": {"$in": ["rm", "relationship_manager"]}},
+                                        {"designation": {"$regex": "relationship manager|\\brm\\b", "$options": "i"}},
+                                    ],
+                                },
+                                {
+                                    "$or": [
+                                        {"employee_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                                        {"uid": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                                        {"user_id": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                                    ],
+                                },
+                            ],
+                        },
+                    ],
                 })
-                if not broker:
+                if not broker_or_rm:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Invalid LG Code. No broker found with this code."
+                        detail="Invalid RM / Broker Code. No broker or RM found with this code."
                     )
-                resolved_broker_id = broker["user_id"]
-                update_fields["broker_id"] = resolved_broker_id
-                
-            new_employee_code = user_data.employee_code if user_data.employee_code is not None else user.get("employee_code")
-            resolved_rm_id = None
+                if broker_or_rm.get("role") == "broker":
+                    primary_assignment_role = "broker"
+                    resolved_broker_id = broker_or_rm["user_id"]
+                    resolved_rm_id = broker_or_rm.get("rm_id")
+                else:
+                    primary_assignment_role = "rm"
+                    resolved_rm_id = broker_or_rm["user_id"]
+                    
             if new_employee_code and new_employee_code.strip():
                 employee_code_clean = new_employee_code.strip()
-                employee = await db.users.find_one({
-                    "role": "employee",
-                    "employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}
-                })
+                expected_admin_keys = (
+                    ["rm", "relationship_manager"]
+                    if primary_assignment_role == "broker"
+                    else ["branch_manager"]
+                )
+                employee = await db.users.find_one(
+                    {
+                        "role": "employee",
+                        "$and": [
+                            {
+                                "$or": [
+                                    {"admin_role_key": {"$in": expected_admin_keys}},
+                                    {
+                                        "designation": {
+                                            "$regex": "relationship manager|\\brm\\b"
+                                            if primary_assignment_role == "broker"
+                                            else "branch manager",
+                                            "$options": "i",
+                                        }
+                                    },
+                                ],
+                            },
+                            {
+                                "$or": [
+                                    {"employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                                    {"uid": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                                    {"user_id": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                                ],
+                            },
+                        ],
+                    }
+                )
                 if not employee:
+                    expected_label = "RM" if primary_assignment_role == "broker" else "Branch Manager"
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Invalid Employee Code. No employee found with this code."
+                        detail=f"Invalid {expected_label} Code. No {expected_label.lower()} found with this code."
                     )
-                resolved_rm_id = employee["user_id"]
-                update_fields["rm_id"] = resolved_rm_id
-
+                if primary_assignment_role == "broker":
+                    resolved_rm_id = employee["user_id"]
+                else:
+                    resolved_bm_id = employee["user_id"]
+                    resolved_bm_code = employee.get("employee_code") or employee.get("uid") or employee["user_id"]
+            
+            assignment_employee_code = new_employee_code.strip() if new_employee_code else None
+            if primary_assignment_role == "rm":
+                assignment_employee_code = new_lg_code.strip() if new_lg_code else None
+                
+            update_fields["broker_id"] = resolved_broker_id
+            update_fields["rm_id"] = resolved_rm_id
+            update_fields["branch_manager_id"] = resolved_bm_id
+            update_fields["branch_manager_code"] = resolved_bm_code
+            update_fields["employee_code"] = assignment_employee_code
+            
             # Link broker to employee if both are available/resolved
-            broker_to_link = resolved_broker_id or user.get("broker_id")
-            employee_to_link = resolved_rm_id or user.get("rm_id")
+            broker_to_link = resolved_broker_id
+            employee_to_link = resolved_rm_id
             if broker_to_link and employee_to_link:
                 await db.users.update_one(
                     {"user_id": broker_to_link},
