@@ -717,7 +717,7 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                                 context,
                                 MaterialPageRoute(
                                     builder: (context) =>
-                                        const HostPerformanceScreen()),
+                                        HostPerformanceScreen()),
                               );
                             },
                           ),
