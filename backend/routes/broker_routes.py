@@ -401,6 +401,7 @@ async def create_broker_property(
 ):
     """Create a draft property for a host assigned to this broker."""
     try:
+        broker_id = current_user["user_id"]
         is_rm = current_user.get("role") == UserRole.EMPLOYEE.value and current_user.get("admin_role_key") in ["rm", "relationship_manager"]
         owner = await db.users.find_one(
             _get_broker_or_rm_query(current_user, {"user_id": property_data.owner_id, "role": "host"}),
@@ -671,6 +672,7 @@ async def submit_broker_property_for_verification(
 ):
     """Submit a broker-created draft property into the verification queue."""
     try:
+        broker_id = current_user["user_id"]
         is_rm = current_user.get("role") == UserRole.EMPLOYEE.value and current_user.get("admin_role_key") in ["rm", "relationship_manager"]
         property_data = await db.properties.find_one(
             _get_broker_or_rm_query(current_user, {"property_id": property_id}),
