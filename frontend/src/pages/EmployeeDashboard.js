@@ -1760,7 +1760,17 @@ const RMDocumentReviewPanel = ({ host, docs, formatDate }) => {
 
   const findDoc = (key) => allDocs.find((doc) => {
     const type = String(doc.document_type || doc.type || '').toLowerCase();
-    return type === key || type.includes(key.replace('_', ' ')) || type.includes(key);
+    const normalizedKey = key.toLowerCase();
+    if (normalizedKey === 'ownership_documents' && (type === 'property_proof' || type === 'property_documents')) {
+      return true;
+    }
+    if (normalizedKey === 'pan' && type === 'pan_number') {
+      return true;
+    }
+    if (normalizedKey === 'gst' && (type === 'gst_certificate' || type === 'gst_number')) {
+      return true;
+    }
+    return type === normalizedKey || type.includes(normalizedKey.replace('_', ' ')) || type.includes(normalizedKey);
   });
 
   const statusClass = (status) => {

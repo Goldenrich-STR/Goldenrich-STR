@@ -802,7 +802,8 @@ const DocumentVerificationPanel = ({ owner, formatDate }) => {
         uploaded_by: owner.full_name,
       } : null;
     }
-    return docs.find((doc) => doc.document_type === type);
+    const searchType = type === 'pan_card' ? 'pan_number' : type;
+    return docs.find((doc) => doc.document_type === searchType || doc.document_type === type);
   };
 
   const statusClass = (statusValue) => {
