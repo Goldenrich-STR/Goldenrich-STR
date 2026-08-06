@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../../config.dart';
 import '../../providers/auth_provider.dart';
@@ -35,7 +36,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 9, vsync: this);
     _loadAllData();
   }
 
@@ -54,6 +55,11 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
       prov.getPendingReviews(),
       prov.getReviewHistory(),
       prov.getBrokers(),
+      prov.getHosts(),
+      prov.getProperties(),
+      prov.getBookings(),
+      prov.getTasks(),
+      prov.getAuditActivity(),
     ]);
   }
 
@@ -1247,6 +1253,468 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
     );
   }
 
+  void _showHostDocumentsSheet(BuildContext context, Map<String, dynamic> host, bool isEmployee) {
+    final docs = host['kyc_documents'] as List? ?? [];
+    final name = host['full_name'] ?? 'Host';
+    final ownerName = host['agreement_owner_name'] ?? '';
+    final ownerAddress = host['agreement_owner_address'] ?? '';
+    final signature = host['agreement_signature'] ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'KYC Documents: $name',
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.charcoal),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.all(16.0),
+                      children: [
+                        if (docs.isEmpty)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40.0),
+                              child: Text('No documents uploaded yet.'),
+                            ),
+                          )
+                        else
+                          ...docs.map((doc) {
+                            final type = doc['document_type'] ?? 'unknown';
+                            final url = doc['document_url'] ?? '';
+                            final val = doc['text_value'] ?? '';
+                            final status = doc['status'] ?? 'pending';
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ListTile(
+                                leading: const Icon(Icons.description, color: AppTheme.primary),
+                                title: Text(
+                                  type.toString().replaceAll('_', ' ').toUpperCase(),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                                subtitle: val.toString().isNotEmpty
+                                    ? Text('Value: $val', style: const TextStyle(fontSize: 12))
+                                    : url.toString().isNotEmpty
+                                        ? InkWell(
+                                            onTap: () async {
+                                              String docUrl = url;
+                                              if (docUrl.contains('localhost:8001')) {
+                                                docUrl = docUrl.replaceAll('localhost:8001', ApiService().baseUrl.replaceAll('http://', '').replaceAll('https://', ''));
+                                                if (!docUrl.startsWith('http')) {
+                                                  docUrl = 'http://$docUrl';
+                                                }
+                                              }
+                                              final uri = Uri.parse(docUrl);
+                                              if (await canLaunchUrl(uri)) {
+                                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                              } else {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text('Could not open document link: $docUrl')),
+                                                );
+                                              }
+                                            },
+                                            child: Text(
+                                              'View Uploaded File',
+                                              style: TextStyle(
+                                                  color: Colors.blue.shade700,
+                                                  decoration: TextDecoration.underline,
+                                                  fontSize: 12),
+                                            ),
+                                          )
+                                        : const Text('No attachment/value', style: TextStyle(fontSize: 12)),
+                                trailing: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: status == 'approved'
+                                        ? Colors.green.withOpacity(0.1)
+                                        : Colors.amber.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    status.toString().toUpperCase(),
+                                    style: TextStyle(
+                                      color: status == 'approved' ? Colors.green : Colors.amber.shade800,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Host STR Service Agreement',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.charcoal),
+                        ),
+                        const SizedBox(height: 8),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Agreement Owner Name: ${ownerName.isNotEmpty ? ownerName : "N/A"}'),
+                                const SizedBox(height: 6),
+                                Text('Agreement Owner Address: ${ownerAddress.isNotEmpty ? ownerAddress : "N/A"}'),
+                                const SizedBox(height: 6),
+                                if (signature.startsWith('http') || signature.contains('/api/uploads/')) ...[
+                                  const Text('Signature Image:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  const SizedBox(height: 4),
+                                  Image.network(
+                                    signature.contains('localhost:8001')
+                                        ? signature.replaceAll('localhost:8001', ApiService().baseUrl.replaceAll('http://', '').replaceAll('https://', ''))
+                                        : signature.startsWith('http')
+                                            ? signature
+                                            : '${ApiService().baseUrl}$signature',
+                                    height: 80,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        const Text('[Error loading signature image]', style: TextStyle(color: Colors.red, fontSize: 12)),
+                                  ),
+                                ] else ...[
+                                  Text('Signature Info: ${signature.isNotEmpty ? signature : "N/A"}'),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (host['kyc_status'] != 'approved') ...[
+                    const Divider(),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.red),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: () async {
+                                try {
+                                  final res = await ApiService().dio.patch(
+                                    '/hosts/${host['user_id']}/kyc',
+                                    data: {'status': 'rejected', 'remarks': 'Rejected via Mobile app'},
+                                  );
+                                  if (res.statusCode == 200) {
+                                    Navigator.pop(context);
+                                    _loadAllData();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('KYC rejected successfully.')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error rejecting KYC: $e')),
+                                  );
+                                }
+                              },
+                              child: const Text('REJECT KYC', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: () async {
+                                try {
+                                  final res = await ApiService().dio.patch(
+                                    '/hosts/${host['user_id']}/kyc',
+                                    data: {'status': 'approved', 'remarks': 'Approved via Mobile app'},
+                                  );
+                                  if (res.statusCode == 200) {
+                                    Navigator.pop(context);
+                                    _loadAllData();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('KYC approved successfully.')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error approving KYC: $e')),
+                                  );
+                                }
+                              },
+                              child: const Text('APPROVE KYC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Hosts Tab View
+  Widget _buildHostsTab(VerificationProvider prov) {
+    final hosts = prov.hosts;
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            'Host Portfolio Management',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+          ),
+        ),
+        Expanded(
+          child: hosts.isEmpty
+              ? const Center(child: Text('No hosts found.'))
+              : ListView.builder(
+                  itemCount: hosts.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemBuilder: (context, index) {
+                    final host = hosts[index];
+                    final isKycApproved = host['kyc_status'] == 'approved';
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  host['full_name'] ?? 'Host',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isKycApproved ? Colors.green.withOpacity(0.1) : Colors.amber.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'KYC: ${host['kyc_status']?.toString().toUpperCase()}',
+                                    style: TextStyle(
+                                      color: isKycApproved ? Colors.green : Colors.amber.shade800,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text('Email: ${host['email'] ?? 'N/A'}', style: const TextStyle(fontSize: 12)),
+                            Text('Phone: ${host['phone'] ?? 'N/A'}', style: const TextStyle(fontSize: 12)),
+                            const Divider(height: 24),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(Icons.description_outlined, size: 16),
+                                  label: const Text('DOCUMENTS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                  onPressed: () => _showHostDocumentsSheet(context, host, true),
+                                ),
+                                Text(
+                                  'Assets: ${host['total_properties'] ?? 0}',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  // Properties Tab View
+  Widget _buildPropertiesTab(VerificationProvider prov) {
+    final properties = prov.properties;
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            'Property Inventory Oversight',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+          ),
+        ),
+        Expanded(
+          child: properties.isEmpty
+              ? const Center(child: Text('No properties found.'))
+              : ListView.builder(
+                  itemCount: properties.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemBuilder: (context, index) {
+                    final prop = properties[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: Image.network(
+                          AppConfig.resolveImageUrl((prop['images'] as List?)?.firstOrNull),
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.cover,
+                          errorBuilder: (c, e, s) => Container(width: 50, height: 50, color: Colors.grey[200]),
+                        ),
+                        title: Text(prop['title'] ?? 'Property'),
+                        subtitle: Text('${prop['city'] ?? 'N/A'} | ₹${prop['price_per_night'] ?? 0} /night'),
+                        trailing: Text(prop['status']?.toString().toUpperCase() ?? 'DRAFT'),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  // Bookings Tab View
+  Widget _buildBookingsTab(VerificationProvider prov) {
+    final bookings = prov.bookings;
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            'Booking Management Control',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+          ),
+        ),
+        Expanded(
+          child: bookings.isEmpty
+              ? const Center(child: Text('No bookings found.'))
+              : ListView.builder(
+                  itemCount: bookings.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemBuilder: (context, index) {
+                    final booking = bookings[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        title: Text('Booking ID: ${booking['booking_id'] ?? 'N/A'}'),
+                        subtitle: Text('Guest ID: ${booking['guest_id'] ?? 'N/A'}\nDates: ${booking['check_in_date'] ?? 'N/A'} to ${booking['check_out_date'] ?? 'N/A'}'),
+                        trailing: Text(booking['booking_status']?.toString().toUpperCase() ?? 'PENDING'),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  // Tasks Tab View
+  Widget _buildTasksTab(VerificationProvider prov) {
+    final tasks = prov.tasks;
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            'Tasks & Escalations SLA Watch',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+          ),
+        ),
+        Expanded(
+          child: tasks.isEmpty
+              ? const Center(child: Text('No tasks found.'))
+              : ListView.builder(
+                  itemCount: tasks.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemBuilder: (context, index) {
+                    final task = tasks[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        title: Text(task['title'] ?? 'Task'),
+                        subtitle: Text('SLA Status: ${task['sla_status'] ?? 'N/A'} | Age: ${task['age_hours'] ?? 0}h'),
+                        trailing: Text(task['status']?.toString().toUpperCase() ?? 'PENDING'),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  // Audit Tab View
+  Widget _buildAuditTab(VerificationProvider prov) {
+    final auditLogs = prov.auditActivity;
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text(
+            'Audit Log & System Activity',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+          ),
+        ),
+        Expanded(
+          child: auditLogs.isEmpty
+              ? const Center(child: Text('No audit logs found.'))
+              : ListView.builder(
+                  itemCount: auditLogs.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemBuilder: (context, index) {
+                    final log = auditLogs[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        title: Text(log['action']?.toString().replaceAll('_', ' ').toUpperCase() ?? 'ACTION'),
+                        subtitle: Text('Module: ${log['module'] ?? 'N/A'}\nTime: ${log['created_at'] ?? 'N/A'}'),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final prov = Provider.of<VerificationProvider>(context);
@@ -1332,6 +1800,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
               // Custom styled tab header
               TabBar(
                 controller: _tabController,
+                isScrollable: true,
                 indicatorColor: AppTheme.primary,
                 labelColor: AppTheme.primary,
                 unselectedLabelColor: AppTheme.charcoalLight,
@@ -1348,8 +1817,23 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                       icon: Icon(Icons.people_outline, size: 18),
                       text: 'Brokers'),
                   Tab(
+                      icon: Icon(Icons.group_outlined, size: 18),
+                      text: 'Hosts'),
+                  Tab(
+                      icon: Icon(Icons.business_outlined, size: 18),
+                      text: 'Properties'),
+                  Tab(
+                      icon: Icon(Icons.bookmark_outline, size: 18),
+                      text: 'Bookings'),
+                  Tab(
+                      icon: Icon(Icons.check_circle_outline, size: 18),
+                      text: 'Tasks'),
+                  Tab(
                       icon: Icon(Icons.analytics_outlined, size: 18),
                       text: 'Reports'),
+                  Tab(
+                      icon: Icon(Icons.receipt_long_outlined, size: 18),
+                      text: 'Audit'),
                 ],
               ),
             ],
@@ -1365,7 +1849,12 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                 _buildOverviewTab(prov),
                 _buildPendingTab(prov),
                 _buildBrokersTab(prov),
+                _buildHostsTab(prov),
+                _buildPropertiesTab(prov),
+                _buildBookingsTab(prov),
+                _buildTasksTab(prov),
                 _buildReportsTab(prov),
+                _buildAuditTab(prov),
               ],
             ),
     );

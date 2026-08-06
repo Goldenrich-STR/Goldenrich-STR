@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:dio/dio.dart' as dio;
+import 'package:url_launcher/url_launcher.dart';
 import '../../config.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
@@ -32,6 +33,10 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
   List<dynamic> _leads = [];
   Map<String, dynamic>? _commissionData;
   List<dynamic> _commissions = [];
+  List<dynamic> _bookings = [];
+  List<dynamic> _tasks = [];
+  Map<String, dynamic>? _analyticsData;
+  List<dynamic> _auditLogs = [];
 
   // Lead Form state
   bool _showAddLeadForm = false;
@@ -110,6 +115,27 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
         if (res.statusCode == 200) {
           _commissionData = res.data['summary'];
           _commissions = res.data['commissions'] ?? [];
+        }
+      } else if (_activeTab == 'bookings') {
+        final res = await _apiService.dio.get('/broker/bookings');
+        if (res.statusCode == 200) {
+          _bookings = res.data['bookings'] ?? [];
+        }
+      } else if (_activeTab == 'tasks') {
+        final res = await _apiService.dio.get('/broker/tasks');
+        if (res.statusCode == 200) {
+          _tasks = res.data['tasks'] ?? [];
+          _auditLogs = res.data['activity'] ?? [];
+        }
+      } else if (_activeTab == 'analytics') {
+        final res = await _apiService.dio.get('/broker/analytics');
+        if (res.statusCode == 200) {
+          _analyticsData = res.data['metrics'];
+        }
+      } else if (_activeTab == 'audit') {
+        final res = await _apiService.dio.get('/broker/analytics');
+        if (res.statusCode == 200) {
+          _auditLogs = res.data['audit']?['recent_events'] ?? [];
         }
       }
     } catch (e) {
@@ -288,6 +314,14 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
         return _buildLeadsContent();
       case 'commissions':
         return _buildCommissionsContent();
+      case 'bookings':
+        return _buildBookingsContent();
+      case 'tasks':
+        return _buildTasksContent();
+      case 'analytics':
+        return _buildAnalyticsContent();
+      case 'audit':
+        return _buildAuditContent();
       default:
         return Container();
     }
@@ -498,6 +532,241 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
     );
   }
 
+  void _showHostDocumentsSheet(BuildContext context, Map<String, dynamic> host, bool isEmployee) {
+    final docs = host['kyc_documents'] as List? ?? [];
+    final name = host['full_name'] ?? 'Host';
+    final ownerName = host['agreement_owner_name'] ?? '';
+    final ownerAddress = host['agreement_owner_address'] ?? '';
+    final signature = host['agreement_signature'] ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'KYC Documents: $name',
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.charcoal),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.all(16.0),
+                      children: [
+                        if (docs.isEmpty)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40.0),
+                              child: Text('No documents uploaded yet.'),
+                            ),
+                          )
+                        else
+                          ...docs.map((doc) {
+                            final type = doc['document_type'] ?? 'unknown';
+                            final url = doc['document_url'] ?? '';
+                            final val = doc['text_value'] ?? '';
+                            final status = doc['status'] ?? 'pending';
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ListTile(
+                                leading: const Icon(Icons.description, color: AppTheme.primary),
+                                title: Text(
+                                  type.toString().replaceAll('_', ' ').toUpperCase(),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                                subtitle: val.toString().isNotEmpty
+                                    ? Text('Value: $val', style: const TextStyle(fontSize: 12))
+                                    : url.toString().isNotEmpty
+                                        ? InkWell(
+                                            onTap: () async {
+                                              String docUrl = url;
+                                              if (docUrl.contains('localhost:8001')) {
+                                                docUrl = docUrl.replaceAll('localhost:8001', ApiService().baseUrl.replaceAll('http://', '').replaceAll('https://', ''));
+                                                if (!docUrl.startsWith('http')) {
+                                                  docUrl = 'http://$docUrl';
+                                                }
+                                              }
+                                              final uri = Uri.parse(docUrl);
+                                              if (await canLaunchUrl(uri)) {
+                                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                              } else {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text('Could not open document link: $docUrl')),
+                                                );
+                                              }
+                                            },
+                                            child: Text(
+                                              'View Uploaded File',
+                                              style: TextStyle(
+                                                  color: Colors.blue.shade700,
+                                                  decoration: TextDecoration.underline,
+                                                  fontSize: 12),
+                                            ),
+                                          )
+                                        : const Text('No attachment/value', style: TextStyle(fontSize: 12)),
+                                trailing: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: status == 'approved'
+                                        ? Colors.green.withOpacity(0.1)
+                                        : Colors.amber.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    status.toString().toUpperCase(),
+                                    style: TextStyle(
+                                      color: status == 'approved' ? Colors.green : Colors.amber.shade800,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Host STR Service Agreement',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.charcoal),
+                        ),
+                        const SizedBox(height: 8),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Agreement Owner Name: ${ownerName.isNotEmpty ? ownerName : "N/A"}'),
+                                const SizedBox(height: 6),
+                                Text('Agreement Owner Address: ${ownerAddress.isNotEmpty ? ownerAddress : "N/A"}'),
+                                const SizedBox(height: 6),
+                                if (signature.startsWith('http') || signature.contains('/api/uploads/')) ...[
+                                  const Text('Signature Image:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                  const SizedBox(height: 4),
+                                  Image.network(
+                                    signature.contains('localhost:8001')
+                                        ? signature.replaceAll('localhost:8001', ApiService().baseUrl.replaceAll('http://', '').replaceAll('https://', ''))
+                                        : signature.startsWith('http')
+                                            ? signature
+                                            : '${ApiService().baseUrl}$signature',
+                                    height: 80,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) =>
+                                        const Text('[Error loading signature image]', style: TextStyle(color: Colors.red, fontSize: 12)),
+                                  ),
+                                ] else ...[
+                                  Text('Signature Info: ${signature.isNotEmpty ? signature : "N/A"}'),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (host['kyc_status'] != 'approved') ...[
+                    const Divider(),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.red),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: () async {
+                                try {
+                                  final res = await ApiService().dio.patch(
+                                    '/hosts/${host['user_id']}/kyc',
+                                    data: {'status': 'rejected', 'remarks': 'Rejected via Mobile app'},
+                                  );
+                                  if (res.statusCode == 200) {
+                                    Navigator.pop(context);
+                                    _refreshData();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('KYC rejected successfully.')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error rejecting KYC: $e')),
+                                  );
+                                }
+                              },
+                              child: const Text('REJECT KYC', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: () async {
+                                try {
+                                  final res = await ApiService().dio.patch(
+                                    '/hosts/${host['user_id']}/kyc',
+                                    data: {'status': 'approved', 'remarks': 'Approved via Mobile app'},
+                                  );
+                                  if (res.statusCode == 200) {
+                                    Navigator.pop(context);
+                                    _refreshData();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('KYC approved successfully.')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error approving KYC: $e')),
+                                  );
+                                }
+                              },
+                              child: const Text('APPROVE KYC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // 2. MY HOSTS
   Widget _buildOwnersContent() {
     return Column(
@@ -654,24 +923,13 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Row(
+                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.stone,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: AppTheme.border),
-                                ),
-                                child: Text(
-                                  '${owner['property_count'] ?? 0} Assets',
-                                  style: const TextStyle(
-                                      color: AppTheme.primary,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w900),
-                                ),
+                              TextButton.icon(
+                                icon: const Icon(Icons.description_outlined, size: 16),
+                                label: const Text('DOCUMENTS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                onPressed: () => _showHostDocumentsSheet(context, owner, false),
                               ),
                               if (formattedDate.isNotEmpty)
                                 Text('Registered: $formattedDate',
@@ -1435,6 +1693,243 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // 7. BOOKINGS
+  Widget _buildBookingsContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Bookings & Reports',
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal),
+        ),
+        const SizedBox(height: 16),
+        _bookings.isEmpty
+            ? _buildEmptyState(Icons.book_online_outlined, 'No Bookings',
+                'No bookings are registered under your portfolio.')
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _bookings.length,
+                itemBuilder: (context, idx) {
+                  final booking = _bookings[idx];
+                  final checkIn = booking['check_in_date'] ?? '';
+                  final checkOut = booking['check_out_date'] ?? '';
+                  final totalAmount = booking['total_amount'] ?? 0;
+                  final status = booking['booking_status'] ?? 'pending';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Booking ID: ${booking['booking_id']}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  status.toString().toUpperCase(),
+                                  style: const TextStyle(
+                                    color: AppTheme.primary,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          Text('Property: ${booking['property_summary']?['title'] ?? 'N/A'}'),
+                          const SizedBox(height: 4),
+                          Text('Guest: ${booking['guest_summary']?['full_name'] ?? 'N/A'}'),
+                          const SizedBox(height: 4),
+                          Text('Dates: $checkIn to $checkOut'),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Amount: ₹${(totalAmount / 100).toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              color: AppTheme.primary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ],
+    );
+  }
+
+  // 8. TASKS
+  Widget _buildTasksContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Tasks & Escalations',
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal),
+        ),
+        const SizedBox(height: 16),
+        _tasks.isEmpty
+            ? _buildEmptyState(Icons.assignment_outlined, 'No Tasks',
+                'No pending tasks assigned.')
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _tasks.length,
+                itemBuilder: (context, idx) {
+                  final task = _tasks[idx];
+                  final type = task['type'] ?? 'task';
+                  final title = task['title'] ?? 'Task';
+                  final status = task['status'] ?? 'pending';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                title,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                status.toString().toUpperCase(),
+                                style: TextStyle(
+                                  color: task['priority'] == 'high' ? Colors.red : Colors.grey,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          Text('Type: $type'),
+                          const SizedBox(height: 4),
+                          Text('SLA Status: ${task['sla_status'] ?? 'normal'}'),
+                          const SizedBox(height: 4),
+                          Text('Age: ${task['age_hours'] ?? 0} hours'),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ],
+    );
+  }
+
+  // 9. ANALYTICS
+  Widget _buildAnalyticsContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Broker Analytics',
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal),
+        ),
+        const SizedBox(height: 16),
+        if (_analyticsData == null)
+          _buildEmptyState(Icons.insert_chart_outlined, 'No Data', 'Analytics data is loading or not available.')
+        else
+          Column(
+            children: [
+              _buildStatsGrid([
+                _buildStatCard('Total Hosts', _analyticsData!['hosts']?.toString() ?? '0', null),
+                _buildStatCard('Total Properties', _analyticsData!['properties']?.toString() ?? '0', '${_analyticsData!['live_properties'] ?? 0} Live'),
+                _buildStatCard('Total Bookings', _analyticsData!['bookings']?.toString() ?? '0', null),
+                _buildStatCard('Total Revenue', '₹${((_analyticsData!['revenue'] ?? 0) / 100).toStringAsFixed(0)}', null),
+              ]),
+              const SizedBox(height: 20),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Performance Highlights', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 12),
+                      Text('Conversion Rate: ${_analyticsData!['lead_conversion_rate'] ?? 0}%'),
+                      const SizedBox(height: 4),
+                      Text('Activation Rate: ${_analyticsData!['property_activation_rate'] ?? 0}%'),
+                      const SizedBox(height: 4),
+                      Text('Pending Verifications: ${_analyticsData!['pending_verifications'] ?? 0}'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  // 10. AUDIT
+  Widget _buildAuditContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Activity & Audit Log',
+          style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal),
+        ),
+        const SizedBox(height: 16),
+        _auditLogs.isEmpty
+            ? _buildEmptyState(Icons.receipt_long_outlined, 'No Activity',
+                'No activity logs recorded.')
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _auditLogs.length,
+                itemBuilder: (context, idx) {
+                  final log = _auditLogs[idx];
+                  final action = log['action'] ?? 'action';
+                  final module = log['module'] ?? 'module';
+                  final createdAt = log['created_at'] ?? 'N/A';
+
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      title: Text(action.toString().replaceAll('_', ' ').toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                      subtitle: Text('Module: $module\nTime: $createdAt', style: const TextStyle(fontSize: 10)),
+                      isThreeLine: true,
+                    ),
+                  );
+                },
+              ),
+      ],
     );
   }
 

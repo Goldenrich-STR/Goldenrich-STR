@@ -10,6 +10,11 @@ class VerificationProvider with ChangeNotifier {
   Map<String, dynamic> _rmStats = {};
   List<dynamic> _brokers = [];
   List<dynamic> _propertiesNotBooked = [];
+  List<dynamic> _hosts = [];
+  List<dynamic> _properties = [];
+  List<dynamic> _bookings = [];
+  List<dynamic> _tasks = [];
+  List<dynamic> _auditActivity = [];
   bool _isLoading = false;
 
   List<dynamic> get brokerTasks => _brokerTasks;
@@ -19,6 +24,11 @@ class VerificationProvider with ChangeNotifier {
   Map<String, dynamic> get rmStats => _rmStats;
   List<dynamic> get brokers => _brokers;
   List<dynamic> get propertiesNotBooked => _propertiesNotBooked;
+  List<dynamic> get hosts => _hosts;
+  List<dynamic> get properties => _properties;
+  List<dynamic> get bookings => _bookings;
+  List<dynamic> get tasks => _tasks;
+  List<dynamic> get auditActivity => _auditActivity;
   bool get isLoading => _isLoading;
 
   // Broker: Get list of verification tasks
@@ -267,6 +277,91 @@ class VerificationProvider with ChangeNotifier {
       return false;
     } catch (e) {
       return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Employee (RM/BM): Get Hosts list
+  Future<void> getHosts() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio.get('/employee/hosts');
+      if (response.statusCode == 200) {
+        _hosts = response.data['hosts'] ?? [];
+      }
+    } catch (e) {
+      _hosts = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Employee (RM/BM): Get Properties list
+  Future<void> getProperties() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio.get('/employee/properties');
+      if (response.statusCode == 200) {
+        _properties = response.data['properties'] ?? [];
+      }
+    } catch (e) {
+      _properties = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Employee (RM/BM): Get Bookings list
+  Future<void> getBookings() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio.get('/employee/bookings');
+      if (response.statusCode == 200) {
+        _bookings = response.data['bookings'] ?? [];
+      }
+    } catch (e) {
+      _bookings = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Employee (RM/BM): Get Tasks list
+  Future<void> getTasks() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio.get('/employee/tasks');
+      if (response.statusCode == 200) {
+        _tasks = response.data['tasks'] ?? [];
+      }
+    } catch (e) {
+      _tasks = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Employee (RM/BM): Get Audit logs list
+  Future<void> getAuditActivity() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio.get('/employee/audit-activity');
+      if (response.statusCode == 200) {
+        _auditActivity = response.data['activity'] ?? [];
+      }
+    } catch (e) {
+      _auditActivity = [];
     } finally {
       _isLoading = false;
       notifyListeners();

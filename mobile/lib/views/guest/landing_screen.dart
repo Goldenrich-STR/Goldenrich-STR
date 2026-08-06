@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../models/property_model.dart';
 import '../../providers/auth_provider.dart';
@@ -37,6 +38,7 @@ class _LandingScreenState extends State<LandingScreen> {
   int _activeHeroIndex = 0;
   List<PropertyModel> _recentlyVisitedProperties = [];
   List<_BlogData> _blogCards = _defaultBlogCards;
+  String _activeHolidayGetawayCity = 'All';
 
   static const List<_HeroSlide> _heroSlides = [
     _HeroSlide(
@@ -384,6 +386,9 @@ class _LandingScreenState extends State<LandingScreen> {
             child: _buildDiscoverCollectionsSection(),
           ),
           SliverToBoxAdapter(
+            child: _buildHolidayGetawaySection(properties),
+          ),
+          SliverToBoxAdapter(
             child: _buildCollections(
               title: 'Villas & Resorts',
               subtitle:
@@ -431,10 +436,10 @@ class _LandingScreenState extends State<LandingScreen> {
           clipBehavior: Clip.none,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF23211D),
-                borderRadius: BorderRadius.circular(18),
+                color: AppTheme.primary,
+                shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.18),
@@ -443,30 +448,15 @@ class _LandingScreenState extends State<LandingScreen> {
                   ),
                 ],
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.auto_awesome_outlined,
-                    color: Colors.white,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'AI Chat',
-                    style: GoogleFonts.manrope(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
+              child: const Icon(
+                Icons.chat_bubble_outline_rounded,
+                color: Colors.white,
+                size: 24,
               ),
             ),
             Positioned(
-              right: -1,
-              top: -1,
+              right: 1,
+              top: 1,
               child: Container(
                 width: 11,
                 height: 11,
@@ -486,7 +476,7 @@ class _LandingScreenState extends State<LandingScreen> {
   Widget _buildHero(AuthProvider auth) {
     final topPadding = MediaQuery.of(context).padding.top;
     return SizedBox(
-      height: 560 + topPadding,
+      height: 420 + topPadding,
       child: Stack(
         children: [
           PageView.builder(
@@ -1030,6 +1020,101 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
+  Widget _buildHolidayGetawaySection(List<PropertyModel> allProperties) {
+    if (allProperties.isEmpty) return const SizedBox.shrink();
+
+    final preferredCities = ['Nashik', 'Pune', 'Goa', 'Alibaug'];
+    final presentCities = preferredCities.where((city) =>
+      allProperties.any((p) => p.city.trim().toLowerCase() == city.toLowerCase())
+    ).toList();
+    final tabs = ['All', ...presentCities];
+
+    final filtered = _activeHolidayGetawayCity == 'All'
+        ? allProperties.take(8).toList()
+        : allProperties.where((p) => p.city.trim().toLowerCase() == _activeHolidayGetawayCity.toLowerCase()).take(8).toList();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Holiday Getaway',
+            style: GoogleFonts.manrope(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.7,
+              color: AppTheme.charcoal,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: tabs.map((tab) {
+                final isActive = _activeHolidayGetawayCity == tab;
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _activeHolidayGetawayCity = tab;
+                    });
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isActive ? AppTheme.primary : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isActive ? AppTheme.primary : AppTheme.border,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      tab,
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                        color: isActive ? Colors.white : AppTheme.charcoalMuted,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 18),
+          if (filtered.isEmpty)
+            Container(
+              height: 120,
+              alignment: Alignment.center,
+              child: Text(
+                'No properties found in this location.',
+                style: GoogleFonts.manrope(color: AppTheme.charcoalMuted),
+              ),
+            )
+          else
+            SizedBox(
+              height: 330,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: filtered.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                itemBuilder: (context, index) {
+                  final property = filtered[index];
+                  return _PropertyCard(
+                    property: property,
+                    onViewed: _loadRecentlyVisitedProperties,
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPromoSection() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
@@ -1154,14 +1239,6 @@ class _LandingScreenState extends State<LandingScreen> {
                             fontSize: 30,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.charcoal,
-                          ),
-                        ),
-                        Text(
-                          'Show nearby locations',
-                          style: GoogleFonts.manrope(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.charcoalMuted,
                           ),
                         ),
                       ],
@@ -1982,6 +2059,30 @@ class _PropertyCard extends StatelessWidget {
                           ),
                         ],
                       ],
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    right: 54,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () async {
+                        final String shareText = 'Check out ${property.title} in ${property.city} on X-Space360. Starting from Rs ${NumberFormat.currency(locale: 'en_IN', symbol: '', decimalDigits: 0).format(property.pricePerNight).trim()}/night.\nhttps://uat.x-space360.in/property/${Uri.encodeComponent(property.propertyId)}';
+                        await Share.share(shareText, subject: property.title);
+                      },
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.90),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.share_outlined,
+                          color: AppTheme.charcoal,
+                          size: 18,
+                        ),
+                      ),
                     ),
                   ),
                   Positioned(
