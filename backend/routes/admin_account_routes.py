@@ -899,6 +899,7 @@ async def list_transactions(
                     {
                         "_id": 0,
                         "user_id": 1,
+                        "role": 1,
                         "full_name": 1,
                         "email": 1,
                         "phone": 1,
@@ -920,6 +921,7 @@ async def list_transactions(
                     {
                         "_id": 0,
                         "user_id": 1,
+                        "role": 1,
                         "full_name": 1,
                         "email": 1,
                         "phone": 1,
@@ -939,6 +941,7 @@ async def list_transactions(
                     {
                         "_id": 0,
                         "user_id": 1,
+                        "role": 1,
                         "full_name": 1,
                         "email": 1,
                         "phone": 1,
@@ -958,39 +961,39 @@ async def list_transactions(
             employee_info = None
             branch_manager_info = None
             if user_info or host_info or property_info or booking:
+                assignment_host = host_info or (user_info if (user_info or {}).get("role") == "host" else None)
                 broker_id = _first_present(
                     (booking or {}).get("broker_id"),
-                    (property_info or {}).get("broker_id"),
-                    (property_info or {}).get("assigned_broker_id"),
-                    (host_info or {}).get("broker_id"),
-                    (user_info or {}).get("broker_id"),
+                    (assignment_host or {}).get("broker_id"),
+                    None if assignment_host else (property_info or {}).get("broker_id"),
+                    None if assignment_host else (property_info or {}).get("assigned_broker_id"),
+                    None if assignment_host else (user_info or {}).get("broker_id"),
                 )
                 explicit_broker_code = _first_present(
                     (booking or {}).get("broker_lg_code"),
-                    (property_info or {}).get("broker_code"),
-                    (property_info or {}).get("lg_code"),
+                    None if assignment_host else (property_info or {}).get("broker_code"),
+                    None if assignment_host else (property_info or {}).get("lg_code"),
                 )
                 host_broker_code = _first_present(
-                    (host_info or {}).get("lg_code"),
-                    (user_info or {}).get("lg_code"),
+                    (assignment_host or {}).get("lg_code"),
                 )
                 broker_code = explicit_broker_code or (host_broker_code if broker_id else None)
                 rm_id = _first_present(
                     (booking or {}).get("rm_id"),
                     (booking or {}).get("employee_id"),
-                    (property_info or {}).get("rm_id"),
-                    (property_info or {}).get("employee_id"),
-                    (property_info or {}).get("assigned_employee_id"),
-                    (host_info or {}).get("rm_id"),
-                    (user_info or {}).get("rm_id"),
+                    (assignment_host or {}).get("rm_id"),
+                    None if assignment_host else (property_info or {}).get("rm_id"),
+                    None if assignment_host else (property_info or {}).get("employee_id"),
+                    None if assignment_host else (property_info or {}).get("assigned_employee_id"),
+                    None if assignment_host else (user_info or {}).get("rm_id"),
                 )
                 rm_code = _first_present(
                     (booking or {}).get("rm_code"),
                     (booking or {}).get("employee_code"),
-                    (property_info or {}).get("rm_code"),
-                    (property_info or {}).get("employee_code"),
-                    (host_info or {}).get("employee_code"),
-                    (user_info or {}).get("employee_code"),
+                    (assignment_host or {}).get("employee_code"),
+                    None if assignment_host else (property_info or {}).get("rm_code"),
+                    None if assignment_host else (property_info or {}).get("employee_code"),
+                    None if assignment_host else (user_info or {}).get("employee_code"),
                     host_broker_code if not broker_id else None,
                 )
                 employee_code = _first_present(
@@ -999,12 +1002,12 @@ async def list_transactions(
                 branch_manager_ref = _first_present(
                     (booking or {}).get("branch_manager_id"),
                     (booking or {}).get("branch_manager_code"),
-                    (property_info or {}).get("branch_manager_id"),
-                    (property_info or {}).get("branch_manager_code"),
-                    (host_info or {}).get("branch_manager_id"),
-                    (host_info or {}).get("branch_manager_code"),
-                    (user_info or {}).get("branch_manager_id"),
-                    (user_info or {}).get("branch_manager_code"),
+                    (assignment_host or {}).get("branch_manager_id"),
+                    (assignment_host or {}).get("branch_manager_code"),
+                    None if assignment_host else (property_info or {}).get("branch_manager_id"),
+                    None if assignment_host else (property_info or {}).get("branch_manager_code"),
+                    None if assignment_host else (user_info or {}).get("branch_manager_id"),
+                    None if assignment_host else (user_info or {}).get("branch_manager_code"),
                 )
                 if broker_id:
                     broker_info = await db.users.find_one(
@@ -1013,7 +1016,15 @@ async def list_transactions(
                     )
                 if not broker_info and broker_code:
                     broker_info = await db.users.find_one(
-                        {"role": "broker", "lg_code": {"$regex": f"^{re.escape(str(broker_code))}$", "$options": "i"}},
+                        {
+                            "role": "broker",
+                            "$or": [
+                                {"lg_code": {"$regex": f"^{re.escape(str(broker_code))}$", "$options": "i"}},
+                                {"employee_code": {"$regex": f"^{re.escape(str(broker_code))}$", "$options": "i"}},
+                                {"uid": {"$regex": f"^{re.escape(str(broker_code))}$", "$options": "i"}},
+                                {"user_id": {"$regex": f"^{re.escape(str(broker_code))}$", "$options": "i"}},
+                            ],
+                        },
                         {"_id": 0, "user_id": 1, "full_name": 1, "lg_code": 1, "rm_id": 1},
                     )
                 if rm_id:
