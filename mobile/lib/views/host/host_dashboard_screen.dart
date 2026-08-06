@@ -1811,6 +1811,7 @@ class _DocumentVerificationSheetState
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final payload = <String, dynamic>{
       'aadhar_card': _aadharPath,
+      'pan_number': 'NOT_APPLICABLE',
       'property_proof': _propertyProofPath,
       'cancelled_cheque': _cancelledChequePath,
       'shop_act': _shopActPath,
