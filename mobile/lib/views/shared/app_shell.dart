@@ -147,7 +147,7 @@ class _AppShellState extends State<AppShell> {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          const WebsiteMirrorScreen(),
+          WebsiteMirrorScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
@@ -167,7 +167,7 @@ class _AppShellState extends State<AppShell> {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          const WebsiteMirrorScreen(),
+          WebsiteMirrorScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
@@ -187,7 +187,7 @@ class _AppShellState extends State<AppShell> {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          const WebsiteMirrorScreen(),
+          WebsiteMirrorScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
@@ -207,7 +207,7 @@ class _AppShellState extends State<AppShell> {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          const WebsiteMirrorScreen(),
+          WebsiteMirrorScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
