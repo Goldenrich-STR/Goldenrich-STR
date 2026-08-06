@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Building2, Mail, Lock, Phone, User, MapPin, ArrowLeft, ShieldCheck, Star, Eye, EyeOff, X, Search, ChevronDown, Check } from 'lucide-react';
-import { authAPI, apiClient } from '../services/api';
+import { authAPI, apiClient, getApiErrorMessage } from '../services/api';
 import LegalLinks from '../components/LegalLinks';
 import SEO from '../components/SEO';
 import { INDIAN_CITIES } from '../lib/indianCities';
@@ -12,12 +12,15 @@ const OTP_VALIDITY_SECONDS = 120;
 const AssignmentSearchSelect = ({ label, value, onChange, options, codeKey, placeholder, emptyLabel }) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const selected = options.find((item) => item?.[codeKey] === value);
-  const displayValue = open ? query : selected ? `${selected[codeKey]} - ${selected.full_name || 'Assigned user'}` : '';
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find((item) => item?.[codeKey] === value);
+  const displayCode = selected?.[codeKey] ? String(selected[codeKey]) : '';
+  const displayName = selected?.full_name ? String(selected.full_name) : 'Assigned user';
+  const displayValue = open ? query : selected ? `${displayCode} - ${displayName}` : '';
   const normalizedQuery = query.trim().toLowerCase();
   const filteredOptions = normalizedQuery
-    ? options.filter((item) => `${item?.[codeKey] || ''} ${item?.full_name || ''}`.toLowerCase().includes(normalizedQuery))
-    : options;
+    ? safeOptions.filter((item) => `${item?.[codeKey] || ''} ${item?.full_name || ''}`.toLowerCase().includes(normalizedQuery))
+    : safeOptions;
 
   return (
     <div className="space-y-1">
@@ -45,7 +48,7 @@ const AssignmentSearchSelect = ({ label, value, onChange, options, codeKey, plac
         {open && (
           <div className="absolute left-0 right-0 top-full z-[9999] mt-2 max-h-56 overflow-y-auto rounded-2xl border border-gray-200 bg-white p-1.5 shadow-2xl">
             {filteredOptions.length ? filteredOptions.map((item) => {
-              const code = item?.[codeKey] || '';
+              const code = item?.[codeKey] ? String(item[codeKey]) : '';
               const isSelected = code === value;
               return (
                 <button
@@ -64,7 +67,7 @@ const AssignmentSearchSelect = ({ label, value, onChange, options, codeKey, plac
                       <span className="truncate">{code}</span>
                       {item.assignment_type && <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-700">{String(item.assignment_type).replace('_', ' ')}</span>}
                     </span>
-                    <span className="block truncate text-xs font-semibold text-gray-500">{item.full_name || 'No name available'}</span>
+                    <span className="block truncate text-xs font-semibold text-gray-500">{item?.full_name ? String(item.full_name) : 'No name available'}</span>
                   </span>
                   {isSelected && <Check className="h-4 w-4 shrink-0 text-emerald-600" />}
                 </button>
@@ -419,8 +422,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
         startOtpTimer();
       }
     } catch (err) {
-      const detail = err?.response?.data?.detail;
-      setError(detail || 'Failed to send OTP. Please try again in a moment.');
+      setError(getApiErrorMessage(err, 'Failed to send OTP. Please try again in a moment.'));
     }
 
     setLoading(false);
@@ -452,8 +454,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
         handleRegistration();
       }
     } catch (err) {
-      const detail = err?.response?.data?.detail;
-      setError(detail || 'Invalid OTP. Please try again.');
+      setError(getApiErrorMessage(err, 'Invalid OTP. Please try again.'));
       setLoading(false);
     }
   };

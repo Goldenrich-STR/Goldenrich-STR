@@ -97,6 +97,14 @@ def _group_sum(rows, key, amount_key):
         grouped[value] = grouped.get(value, 0) + float(row.get(amount_key) or 0)
     return grouped
 
+
+def _display_code(user: dict | None, fallback: str = "") -> str:
+    if not user:
+        return fallback or ""
+    if user.get("role") == UserRole.BROKER.value:
+        return user.get("lg_code") or user.get("employee_code") or user.get("uid") or fallback or user.get("user_id") or ""
+    return user.get("employee_code") or user.get("uid") or fallback or user.get("user_id") or ""
+
 @router.get("/dashboard/stats")
 async def get_broker_dashboard_stats(
     current_user: dict = Depends(require_broker),
@@ -185,16 +193,18 @@ async def get_my_owners(
         )
         owners = await cursor.to_list(length=200)
         rm_ids = list({owner.get("rm_id") for owner in owners if owner.get("rm_id")})
+        branch_manager_ids = list({owner.get("branch_manager_id") for owner in owners if owner.get("branch_manager_id")})
         rms = await db.users.find(
-            {"user_id": {"$in": rm_ids}, "role": "employee"},
+            {"user_id": {"$in": list(set(rm_ids + branch_manager_ids))}, "role": "employee"},
             {"_id": 0, "password_hash": 0}
-        ).to_list(length=len(rm_ids) or 1)
+        ).to_list(length=len(set(rm_ids + branch_manager_ids)) or 1)
         rm_map = {rm["user_id"]: rm for rm in rms}
         
         # Get property count for each owner
         for owner in owners:
             owner_id = owner["user_id"]
             rm = rm_map.get(owner.get("rm_id")) or {}
+            branch_manager = rm_map.get(owner.get("branch_manager_id")) or {}
             property_count = await db.properties.count_documents({"owner_id": owner_id})
             live_property_count = await db.properties.count_documents({"owner_id": owner_id, "status": "live"})
             pending_property_count = await db.properties.count_documents({
@@ -219,13 +229,20 @@ async def get_my_owners(
             owner["total_bookings"] = booking_count
             owner["revenue_generated"] = revenue_generated
             owner["broker_lg_code"] = owner.get("lg_code") or broker_code
-            owner["rm_code"] = owner.get("employee_code") or rm.get("employee_code") or rm.get("uid") or ""
+            owner["rm_code"] = _display_code(rm, owner.get("employee_code") or owner.get("rm_id") or "")
             owner["assigned_rm"] = rm.get("full_name") or owner.get("rm_id")
-            owner["assigned_employee"] = owner.get("employee_code") or rm.get("employee_code") or owner.get("employee_id") or owner.get("assigned_employee_id")
+            owner["assigned_employee"] = owner["rm_code"]
+            owner["branch_manager_code"] = _display_code(branch_manager, owner.get("employee_code") or owner.get("branch_manager_id") or "")
+            owner["branch_manager_name"] = branch_manager.get("full_name") or owner.get("branch_manager_id") or ""
             owner["rm"] = {
                 "user_id": rm.get("user_id") or owner.get("rm_id") or "",
                 "full_name": rm.get("full_name") or "",
-                "employee_code": rm.get("employee_code") or owner.get("employee_code") or rm.get("uid") or "",
+                "employee_code": _display_code(rm, owner.get("rm_id") or ""),
+            }
+            owner["branch_manager"] = {
+                "user_id": branch_manager.get("user_id") or owner.get("branch_manager_id") or "",
+                "full_name": branch_manager.get("full_name") or "",
+                "employee_code": _display_code(branch_manager, owner.get("branch_manager_id") or ""),
             }
         
         return {
@@ -268,6 +285,12 @@ async def get_owner_details(
                 {"user_id": owner.get("rm_id"), "role": "employee"},
                 {"_id": 0, "password_hash": 0}
             ) or {}
+        branch_manager = {}
+        if owner.get("branch_manager_id"):
+            branch_manager = await db.users.find_one(
+                {"user_id": owner.get("branch_manager_id"), "role": "employee"},
+                {"_id": 0, "password_hash": 0}
+            ) or {}
         owner["broker_lg_code"] = (
             owner.get("lg_code")
             or broker_profile.get("lg_code")
@@ -278,12 +301,19 @@ async def get_owner_details(
             or current_user.get("uid")
             or broker_id
         )
-        owner["rm_code"] = owner.get("employee_code") or rm.get("employee_code") or rm.get("uid") or ""
-        owner["assigned_employee"] = owner.get("employee_code") or rm.get("employee_code") or owner.get("employee_id") or owner.get("assigned_employee_id")
+        owner["rm_code"] = _display_code(rm, owner.get("employee_code") or owner.get("rm_id") or "")
+        owner["assigned_employee"] = owner["rm_code"]
+        owner["branch_manager_code"] = _display_code(branch_manager, owner.get("employee_code") or owner.get("branch_manager_id") or "")
+        owner["branch_manager_name"] = branch_manager.get("full_name") or owner.get("branch_manager_id") or ""
         owner["rm"] = {
             "user_id": rm.get("user_id") or owner.get("rm_id") or "",
             "full_name": rm.get("full_name") or "",
-            "employee_code": rm.get("employee_code") or owner.get("employee_code") or rm.get("uid") or "",
+            "employee_code": _display_code(rm, owner.get("rm_id") or ""),
+        }
+        owner["branch_manager"] = {
+            "user_id": branch_manager.get("user_id") or owner.get("branch_manager_id") or "",
+            "full_name": branch_manager.get("full_name") or "",
+            "employee_code": _display_code(branch_manager, owner.get("branch_manager_id") or ""),
         }
 
         properties = await db.properties.find({"owner_id": owner_id}, {"_id": 0}).to_list(length=200)

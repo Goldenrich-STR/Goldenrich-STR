@@ -34,7 +34,20 @@ export const getApiErrorMessage = (error, fallback = 'Something went wrong') => 
   if (error?.code === 'ECONNABORTED') {
     return 'Request timed out. Please try again.';
   }
-  return error?.response?.data?.detail || error?.message || fallback;
+  const detail = error?.response?.data?.detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        const field = Array.isArray(item?.loc) ? item.loc[item.loc.length - 1] : item?.loc;
+        return [field, item?.msg].filter(Boolean).join(': ') || fallback;
+      })
+      .join(' | ');
+  }
+  if (detail && typeof detail === 'object') {
+    return detail.msg || detail.message || JSON.stringify(detail);
+  }
+  return detail || error?.message || fallback;
 };
 
 export { apiClient };

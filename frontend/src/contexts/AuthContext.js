@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { authAPI, apiClient } from '../services/api';
+import { authAPI, apiClient, getApiErrorMessage } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Login failed:', error);
       return {
         success: false,
-        error: error.response?.data?.detail || 'Login failed',
+        error: getApiErrorMessage(error, 'Login failed'),
       };
     }
   };
@@ -97,7 +97,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Admin login failed:', error);
       return {
         success: false,
-        error: error.response?.data?.detail || 'Admin login failed',
+        error: getApiErrorMessage(error, 'Admin login failed'),
       };
     }
   };
@@ -112,13 +112,24 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('propnest_token', access_token);
       localStorage.setItem('propnest_user', JSON.stringify(newUser));
+      try {
+        const profile = await apiClient.get('/api/auth/me', {
+          headers: { Authorization: `Bearer ${access_token}` },
+          _silentAuth: true,
+        });
+        setUser(profile.data);
+        localStorage.setItem('propnest_user', JSON.stringify(profile.data));
+        return { success: true, user: profile.data };
+      } catch (profileError) {
+        console.warn('Profile refresh after registration failed:', profileError);
+      }
       
       return { success: true, user: newUser };
     } catch (error) {
       console.error('Registration failed:', error);
       return {
         success: false,
-        error: error.response?.data?.detail || 'Registration failed',
+        error: getApiErrorMessage(error, 'Registration failed'),
       };
     }
   };

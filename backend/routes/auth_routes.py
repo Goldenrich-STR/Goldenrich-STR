@@ -636,12 +636,26 @@ async def get_public_brokers_and_employees(db: AsyncIOMotorDatabase = Depends(ge
     ).to_list(length=1000)
 
     rms = await db.users.find(
-        {"role": "employee", "is_active": True, "admin_role_key": {"$in": ["rm", "relationship_manager"]}},
+        {
+            "role": "employee",
+            "is_active": True,
+            "$or": [
+                {"admin_role_key": {"$in": ["rm", "relationship_manager"]}},
+                {"designation": {"$regex": "relationship manager|\\brm\\b", "$options": "i"}},
+            ],
+        },
         {"user_id": 1, "full_name": 1, "employee_code": 1, "uid": 1}
     ).to_list(length=1000)
 
     branch_managers = await db.users.find(
-        {"role": "employee", "is_active": True, "admin_role_key": "branch_manager"},
+        {
+            "role": "employee",
+            "is_active": True,
+            "$or": [
+                {"admin_role_key": "branch_manager"},
+                {"designation": {"$regex": "branch manager", "$options": "i"}},
+            ],
+        },
         {"user_id": 1, "full_name": 1, "employee_code": 1, "uid": 1}
     ).to_list(length=1000)
     
@@ -733,11 +747,20 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
                     },
                     {
                         "role": "employee",
-                        "admin_role_key": {"$in": ["rm", "relationship_manager"]},
-                        "$or": [
-                            {"employee_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
-                            {"uid": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
-                            {"user_id": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                        "$and": [
+                            {
+                                "$or": [
+                                    {"admin_role_key": {"$in": ["rm", "relationship_manager"]}},
+                                    {"designation": {"$regex": "relationship manager|\\brm\\b", "$options": "i"}},
+                                ],
+                            },
+                            {
+                                "$or": [
+                                    {"employee_code": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                                    {"uid": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                                    {"user_id": {"$regex": f"^{lg_code_clean}$", "$options": "i"}},
+                                ],
+                            },
                         ],
                     },
                 ],
@@ -769,11 +792,27 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
             employee = await db.users.find_one(
                 {
                     "role": "employee",
-                    "admin_role_key": {"$in": expected_admin_keys},
-                    "$or": [
-                        {"employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
-                        {"uid": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
-                        {"user_id": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                    "$and": [
+                        {
+                            "$or": [
+                                {"admin_role_key": {"$in": expected_admin_keys}},
+                                {
+                                    "designation": {
+                                        "$regex": "relationship manager|\\brm\\b"
+                                        if primary_assignment_role == "broker"
+                                        else "branch manager",
+                                        "$options": "i",
+                                    }
+                                },
+                            ],
+                        },
+                        {
+                            "$or": [
+                                {"employee_code": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                                {"uid": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                                {"user_id": {"$regex": f"^{employee_code_clean}$", "$options": "i"}},
+                            ],
+                        },
                     ],
                 }
             )
