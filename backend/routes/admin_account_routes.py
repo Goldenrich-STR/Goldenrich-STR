@@ -1012,7 +1012,7 @@ async def list_transactions(
                 if broker_id:
                     broker_info = await db.users.find_one(
                         {"user_id": broker_id, "role": "broker"},
-                        {"_id": 0, "user_id": 1, "full_name": 1, "lg_code": 1, "rm_id": 1},
+                        {"_id": 0, "user_id": 1, "uid": 1, "full_name": 1, "lg_code": 1, "employee_code": 1, "rm_id": 1},
                     )
                 if not broker_info and broker_code:
                     broker_info = await db.users.find_one(
@@ -1025,7 +1025,7 @@ async def list_transactions(
                                 {"user_id": {"$regex": f"^{re.escape(str(broker_code))}$", "$options": "i"}},
                             ],
                         },
-                        {"_id": 0, "user_id": 1, "full_name": 1, "lg_code": 1, "rm_id": 1},
+                        {"_id": 0, "user_id": 1, "uid": 1, "full_name": 1, "lg_code": 1, "employee_code": 1, "rm_id": 1},
                     )
                 if rm_id:
                     employee_info = await db.users.find_one(

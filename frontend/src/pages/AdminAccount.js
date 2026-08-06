@@ -1972,7 +1972,7 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
                       <td className="py-4 px-4 whitespace-nowrap text-xs font-bold">{t.invoice_no || 'NA'}</td>
                       <td className="py-4 px-4 min-w-[150px]">
                         <div className="font-bold text-charcoal text-sm">{t.broker?.full_name || t.broker_name || 'NA'}</div>
-                        <div className="text-xs text-charcoal-muted mt-0.5">LG Code: {t.broker?.lg_code || t.broker_lg_code || 'NA'}</div>
+                        <div className="text-xs text-charcoal-muted mt-0.5">LG Code: {t.broker?.lg_code || t.broker?.employee_code || t.broker?.uid || t.broker?.user_id || t.broker_lg_code || 'NA'}</div>
                       </td>
                       <td className="py-4 px-4 min-w-[150px]">
                         <div className="font-bold text-charcoal text-sm">{t.employee?.full_name || t.employee_name || 'NA'}</div>
