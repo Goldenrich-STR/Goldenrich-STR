@@ -27,6 +27,7 @@ import 'support_tickets_screen.dart';
 import '../broker/broker_dashboard_screen.dart';
 import '../employee/employee_dashboard_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
+import '../web/website_mirror_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class AppShell extends StatefulWidget {
