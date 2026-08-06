@@ -23,7 +23,7 @@ const getAssigneeOptionLabel = (user) => {
 
 const getBranchManagerIdFromHost = (host, branchManagers = []) => {
   if (host?.branch_manager_id) return host.branch_manager_id;
-  const code = host?.branch_manager?.employee_code || host?.branch_manager_code || host?.employee_code;
+  const code = host?.branch_manager?.employee_code || host?.branch_manager_code;
   if (!code) return '';
   const match = branchManagers.find((manager) => getAssigneeCode(manager) === code || manager.user_id === code);
   return match?.user_id || code;
@@ -465,6 +465,8 @@ const KycReviewPanel = ({ selected, onClose, onDoc, onBank, onAgreement, onReupl
   }
   const host = selected.host;
   const kyc = host.kyc_verification || {};
+  const finalApproved = String(host.kyc_status || '').toLowerCase() === 'approved';
+  const finalRejected = String(host.kyc_status || '').toLowerCase() === 'rejected';
   return (
     <Panel className="overflow-hidden xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
       <div className="border-b border-slate-100 bg-slate-50 p-4">
@@ -500,8 +502,8 @@ const KycReviewPanel = ({ selected, onClose, onDoc, onBank, onAgreement, onReupl
           </div>
           <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
             <button onClick={onReupload} className="inline-flex items-center gap-1 rounded-2xl bg-slate-100 px-3 py-2.5 text-xs font-black text-slate-700"><RotateCcw className="h-4 w-4" /> Request Re-upload</button>
-            <button onClick={() => onFinal(host, 'approved')} disabled={!kyc.summary?.ready_for_approval} className="rounded-2xl bg-[#2f6df6] px-3 py-2.5 text-xs font-black text-white disabled:opacity-40">Final Approve</button>
-            <button onClick={() => onFinal(host, 'rejected')} className="rounded-2xl bg-red-600 px-3 py-2.5 text-xs font-black text-white">Final Reject</button>
+            <button onClick={() => onFinal(host, 'approved')} disabled={finalApproved || !kyc.summary?.ready_for_approval} className="rounded-2xl bg-[#2f6df6] px-3 py-2.5 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">Final Approve</button>
+            <button onClick={() => onFinal(host, 'rejected')} disabled={finalRejected} className="rounded-2xl bg-red-600 px-3 py-2.5 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">Final Reject</button>
           </div>
           <div className="space-y-2">
             <p className="text-xs font-black uppercase text-slate-500">Revision History</p>
@@ -599,7 +601,7 @@ const AssignmentModal = ({ assignees, assignment, onChange, onClose, onSave }) =
                 </option>
               ))}
             </select>
-            <span className="text-xs font-medium text-slate-500">Current: {host.broker_id ? (host.rm?.employee_code || host.rm_id || '-') : (host.branch_manager?.employee_code || host.branch_manager_id || host.employee_code || '-')}</span>
+            <span className="text-xs font-medium text-slate-500">Current: {host.broker_id ? (host.rm?.employee_code || host.rm_id || '-') : (host.branch_manager?.employee_code || host.branch_manager_code || host.branch_manager_id || '-')}</span>
           </label>
 
           <label className="grid gap-2 text-sm font-bold">

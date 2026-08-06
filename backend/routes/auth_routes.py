@@ -759,6 +759,7 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
         # Broker selected first -> second code must be an RM.
         # RM selected first -> second code must be a Branch Manager.
         branch_manager_id = None
+        branch_manager_code = None
         if role_str.lower() == "host" and user_data.employee_code and user_data.employee_code.strip():
             employee_code_clean = user_data.employee_code.strip()
             expected_admin_keys = (
@@ -787,7 +788,12 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
                 rm_id = employee["user_id"]
             else:
                 branch_manager_id = employee["user_id"]
+                branch_manager_code = employee.get("employee_code") or employee.get("uid") or employee["user_id"]
             
+        assignment_employee_code = user_data.employee_code.strip() if user_data.employee_code else None
+        if role_str.lower() == "host" and primary_assignment_role == "rm":
+            assignment_employee_code = user_data.lg_code.strip() if user_data.lg_code else None
+
         # Link broker to the employee if both are provided during Host registration
         if broker_id and rm_id:
             await db.users.update_one(
@@ -829,7 +835,8 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
             broker_id=broker_id,
             rm_id=rm_id,
             branch_manager_id=branch_manager_id,
-            employee_code=user_data.employee_code.strip() if user_data.employee_code else None,
+            branch_manager_code=branch_manager_code,
+            employee_code=assignment_employee_code,
             terms_accepted=user_data.terms_accepted,
             is_phone_verified=True  # Assuming OTP was verified before registration
         )

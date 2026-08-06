@@ -2110,7 +2110,7 @@ async def host_management(
     broker_ids = list({host.get("broker_id") for host in hosts if host.get("broker_id")})
     rm_ids = list({host.get("rm_id") for host in hosts if host.get("rm_id")})
     branch_manager_ids = list({host.get("branch_manager_id") for host in hosts if host.get("branch_manager_id")})
-    branch_manager_codes = list({host.get("employee_code") for host in hosts if host.get("employee_code")})
+    branch_manager_codes = list({host.get("branch_manager_code") for host in hosts if host.get("branch_manager_code")})
     brokers = await db.users.find({"user_id": {"$in": broker_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(broker_ids) or 1)
     rms = await db.users.find({"user_id": {"$in": rm_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(rm_ids) or 1)
     branch_managers = await db.users.find(
@@ -2133,7 +2133,7 @@ async def host_management(
         host_id = host.get("user_id")
         broker = broker_map.get(host.get("broker_id")) or {}
         rm = rm_map.get(host.get("rm_id")) or {}
-        branch_manager = branch_manager_map.get(host.get("branch_manager_id")) or branch_manager_code_map.get(host.get("employee_code")) or {}
+        branch_manager = branch_manager_map.get(host.get("branch_manager_id")) or branch_manager_code_map.get(host.get("branch_manager_code")) or {}
         host["kyc_verification"] = _normalise_host_kyc(host)
         host["broker"] = {
             "user_id": broker.get("user_id") or host.get("broker_id") or "",
@@ -2144,13 +2144,13 @@ async def host_management(
         host["rm"] = {
             "user_id": rm.get("user_id") or host.get("rm_id") or "",
             "full_name": rm.get("full_name") or "",
-            "employee_code": rm.get("employee_code") or rm.get("uid") or "",
+            "employee_code": rm.get("employee_code") or host.get("employee_code") or rm.get("uid") or "",
             "designation": rm.get("designation") or "",
         }
         host["branch_manager"] = {
             "user_id": branch_manager.get("user_id") or host.get("branch_manager_id") or "",
             "full_name": branch_manager.get("full_name") or "",
-            "employee_code": branch_manager.get("employee_code") or host.get("employee_code") or branch_manager.get("uid") or "",
+            "employee_code": branch_manager.get("employee_code") or host.get("branch_manager_code") or branch_manager.get("uid") or "",
             "designation": branch_manager.get("designation") or "",
         }
         host["total_properties"] = await db.properties.count_documents({"owner_id": host_id})
@@ -2305,6 +2305,7 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
             set_updates["broker_id"] = primary_user["user_id"]
             set_updates["lg_code"] = primary_user.get("lg_code") or primary_user.get("employee_code") or primary_user.get("uid") or primary_user["user_id"]
             unset_updates["branch_manager_id"] = ""
+            unset_updates["branch_manager_code"] = ""
             if rm_value:
                 rm = await _resolve_assignee_user(db, rm_value, "employee")
                 if not rm or not _is_rm_user(rm):
@@ -2318,28 +2319,30 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
             unset_updates["broker_id"] = ""
             set_updates["rm_id"] = primary_user["user_id"]
             set_updates["lg_code"] = primary_user.get("employee_code") or primary_user.get("uid") or primary_user["user_id"]
+            set_updates["employee_code"] = primary_user.get("employee_code") or primary_user.get("uid") or primary_user["user_id"]
             if rm_value:
                 branch_manager = await _resolve_assignee_user(db, rm_value, "employee")
                 if not branch_manager or not _is_branch_manager_user(branch_manager):
                     raise HTTPException(status_code=400, detail="Branch Manager code not found")
                 set_updates["branch_manager_id"] = branch_manager["user_id"]
-                set_updates["employee_code"] = branch_manager.get("employee_code") or branch_manager.get("uid") or branch_manager["user_id"]
+                set_updates["branch_manager_code"] = branch_manager.get("employee_code") or branch_manager.get("uid") or branch_manager["user_id"]
             else:
                 unset_updates["branch_manager_id"] = ""
-                unset_updates["employee_code"] = ""
+                unset_updates["branch_manager_code"] = ""
     else:
         unset_updates["broker_id"] = ""
         unset_updates["rm_id"] = ""
         unset_updates["branch_manager_id"] = ""
         unset_updates["lg_code"] = ""
         unset_updates["employee_code"] = ""
+        unset_updates["branch_manager_code"] = ""
 
     update_doc = {"$set": set_updates}
-    property_set_updates = {k: v for k, v in set_updates.items() if k in {"broker_id", "rm_id", "branch_manager_id", "updated_at"}}
+    property_set_updates = {k: v for k, v in set_updates.items() if k in {"broker_id", "rm_id", "branch_manager_id", "branch_manager_code", "employee_code", "updated_at"}}
     property_update_doc = {"$set": property_set_updates}
     if unset_updates:
         update_doc["$unset"] = unset_updates
-        property_update_doc["$unset"] = {k: "" for k in unset_updates if k in {"broker_id", "rm_id", "branch_manager_id"}}
+        property_update_doc["$unset"] = {k: "" for k in unset_updates if k in {"broker_id", "rm_id", "branch_manager_id", "branch_manager_code", "employee_code"}}
 
     await db.users.update_one({"user_id": host_id}, update_doc)
     await db.properties.update_many({"owner_id": host_id}, property_update_doc)

@@ -965,13 +965,16 @@ async def list_transactions(
                     (host_info or {}).get("broker_id"),
                     (user_info or {}).get("broker_id"),
                 )
-                broker_code = _first_present(
+                explicit_broker_code = _first_present(
                     (booking or {}).get("broker_lg_code"),
                     (property_info or {}).get("broker_code"),
                     (property_info or {}).get("lg_code"),
+                )
+                host_broker_code = _first_present(
                     (host_info or {}).get("lg_code"),
                     (user_info or {}).get("lg_code"),
                 )
+                broker_code = explicit_broker_code or (host_broker_code if broker_id else None)
                 rm_id = _first_present(
                     (booking or {}).get("rm_id"),
                     (booking or {}).get("employee_id"),
@@ -981,11 +984,17 @@ async def list_transactions(
                     (host_info or {}).get("rm_id"),
                     (user_info or {}).get("rm_id"),
                 )
-                employee_code = _first_present(
+                rm_code = _first_present(
+                    (booking or {}).get("rm_code"),
                     (booking or {}).get("employee_code"),
+                    (property_info or {}).get("rm_code"),
                     (property_info or {}).get("employee_code"),
                     (host_info or {}).get("employee_code"),
                     (user_info or {}).get("employee_code"),
+                    host_broker_code if not broker_id else None,
+                )
+                employee_code = _first_present(
+                    rm_code,
                 )
                 branch_manager_ref = _first_present(
                     (booking or {}).get("branch_manager_id"),
@@ -1007,14 +1016,18 @@ async def list_transactions(
                         {"role": "broker", "lg_code": {"$regex": f"^{re.escape(str(broker_code))}$", "$options": "i"}},
                         {"_id": 0, "user_id": 1, "full_name": 1, "lg_code": 1, "rm_id": 1},
                     )
-                if employee_code:
-                    employee_info = await db.users.find_one(
-                        {"role": "employee", "employee_code": {"$regex": f"^{re.escape(str(employee_code))}$", "$options": "i"}},
-                        {"_id": 0, "user_id": 1, "full_name": 1, "employee_code": 1},
-                    )
-                if not employee_info and rm_id:
+                if rm_id:
                     employee_info = await db.users.find_one(
                         {"user_id": rm_id, "role": "employee"},
+                        {"_id": 0, "user_id": 1, "full_name": 1, "employee_code": 1},
+                    )
+                if not employee_info and employee_code:
+                    employee_info = await db.users.find_one(
+                        {
+                            "role": "employee",
+                            "admin_role_key": {"$in": ["rm", "relationship_manager"]},
+                            "employee_code": {"$regex": f"^{re.escape(str(employee_code))}$", "$options": "i"},
+                        },
                         {"_id": 0, "user_id": 1, "full_name": 1, "employee_code": 1},
                     )
                 if not employee_info and broker_info and broker_info.get("rm_id"):

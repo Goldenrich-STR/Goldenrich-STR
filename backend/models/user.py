@@ -48,6 +48,7 @@ class User(BaseModel):
     lg_code: Optional[str] = None  # Broker LG Code
     broker_id: Optional[str] = None  # Assigned broker user_id
     branch_manager_id: Optional[str] = None
+    branch_manager_code: Optional[str] = None
     kyc_status: KYCStatus = KYCStatus.UNVERIFIED
     kyc_documents: List[KYCDocument] = []
     pan_number: Optional[str] = None
@@ -89,6 +90,7 @@ class UserCreate(BaseModel):
     uid: Optional[str] = None
     lg_code: Optional[str] = None
     employee_code: Optional[str] = None
+    branch_manager_code: Optional[str] = None
     profile_image: Optional[str] = None
     admin_delete_protected: bool = False
     admin_scope: Optional[str] = None
@@ -109,6 +111,7 @@ class UserUpdate(BaseModel):
     birthdate: Optional[str] = None
     lg_code: Optional[str] = None
     employee_code: Optional[str] = None
+    branch_manager_code: Optional[str] = None
     broker_id: Optional[str] = None
     rm_id: Optional[str] = None
     profile_image: Optional[str] = None
