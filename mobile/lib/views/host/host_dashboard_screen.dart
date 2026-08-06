@@ -17,6 +17,7 @@ import 'host_list_property_screen.dart';
 import 'host_calendar_screen.dart';
 import 'host_payouts_screen.dart';
 import 'host_bookings_screen.dart';
+import 'host_performance_screen.dart';
 
 class HostDashboardScreen extends StatefulWidget {
   const HostDashboardScreen({super.key});
