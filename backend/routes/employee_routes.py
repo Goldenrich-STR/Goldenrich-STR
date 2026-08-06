@@ -127,19 +127,31 @@ def _empty_assignment_query(field):
     return {"$or": [{field: {"$exists": False}}, {field: None}, {field: ""}]}
 
 
+def _assigned_ref(source: dict | None, field: str) -> str:
+    value = str((source or {}).get(field) or "").strip()
+    return "" if value in {"-", "NA", "N/A"} else value
+
+
+async def _property_owner_assignment(db: AsyncIOMotorDatabase, property_data: dict) -> tuple[dict, dict]:
+    owner = {}
+    if property_data.get("owner_id"):
+        owner = await db.users.find_one({"user_id": property_data["owner_id"], "role": "host"}, {"_id": 0}) or {}
+    owner_found = bool(owner.get("user_id"))
+    return owner, {
+        "broker_id": _assigned_ref(owner, "broker_id") if owner_found else _assigned_ref(property_data, "broker_id"),
+        "rm_id": _assigned_ref(owner, "rm_id") if owner_found else _assigned_ref(property_data, "rm_id"),
+        "branch_manager_id": _assigned_ref(owner, "branch_manager_id") if owner_found else _assigned_ref(property_data, "branch_manager_id"),
+        "branch_manager_code": _assigned_ref(owner, "branch_manager_code") if owner_found else _assigned_ref(property_data, "branch_manager_code"),
+    }
+
+
 def _pending_review_query(property_ids, identifiers, is_branch_manager):
     if is_branch_manager:
         return {
             "status": VerificationStatus.COMPLETED.value,
             "property_id": {"$in": property_ids},
             "branch_manager_reviewed": {"$ne": True},
-            "$and": [
-                {"$or": _field_matches_identifiers("branch_manager_id", identifiers)},
-                {"$or": [
-                    {"rm_reviewed": True, "rm_approved": True},
-                    {"broker_id": {"$in": [None, ""]}},
-                ]},
-            ],
+            "$or": _field_matches_identifiers("branch_manager_id", identifiers),
         }
     return {
         "status": VerificationStatus.COMPLETED.value,
@@ -466,25 +478,38 @@ async def get_pending_verifications(
             {"_id": 0}
         ).sort("completed_at", -1)
         
-        verifications = await cursor.to_list(length=100)
+        raw_verifications = await cursor.to_list(length=300)
         
         # Enrich with property and broker details
-        for verification in verifications:
+        verifications = []
+        for verification in raw_verifications:
             # Get property details
             property_data = await db.properties.find_one(
                 {"property_id": verification["property_id"]},
-                {"_id": 0, "title": 1, "address": 1, "city": 1, "images": 1, "bhk_type": 1}
+                {"_id": 0, "title": 1, "address": 1, "city": 1, "images": 1, "bhk_type": 1, "owner_id": 1, "broker_id": 1, "rm_id": 1, "branch_manager_id": 1, "branch_manager_code": 1}
             )
             if property_data:
                 verification["property_details"] = property_data
+            owner_data, assignment = await _property_owner_assignment(db, property_data or {})
+            assigned_bm = assignment.get("branch_manager_id") or assignment.get("branch_manager_code")
+            assigned_rm = assignment.get("rm_id")
+            assigned_broker = assignment.get("broker_id")
+            if is_bm:
+                bm_matches = assigned_bm in rm_identifiers or verification.get("branch_manager_id") in rm_identifiers
+                rm_step_done = (
+                    (verification.get("rm_reviewed") and verification.get("rm_approved") is True)
+                    or (not assigned_broker and assigned_rm and verification.get("status") == VerificationStatus.COMPLETED.value)
+                )
+                if not bm_matches or not rm_step_done:
+                    continue
+            else:
+                if assigned_rm not in rm_identifiers or assigned_broker == "":
+                    continue
             
             # Get broker/RM who did the visit
-            broker_id_to_fetch = verification.get("broker_id")
-            if not broker_id_to_fetch:
-                # If RM submitted visit, their ID is saved as rm_id
-                # (Or if it is under review, let's find the property's RM ID)
-                prop_doc = await db.properties.find_one({"property_id": verification["property_id"]}, {"_id": 0, "rm_id": 1})
-                broker_id_to_fetch = prop_doc.get("rm_id") if prop_doc else None
+            broker_id_to_fetch = assigned_broker or ""
+            if is_bm and not assigned_broker:
+                broker_id_to_fetch = assigned_rm or verification.get("rm_id") or ""
 
             broker_data = None
             if broker_id_to_fetch:
@@ -497,7 +522,13 @@ async def get_pending_verifications(
                 if not broker_data.get("lg_code"):
                     broker_data["lg_code"] = broker_data.get("employee_code") or "N/A"
                 verification["broker_details"] = broker_data
+            verification["broker_id"] = assigned_broker or ""
+            verification["rm_id"] = assigned_rm or verification.get("rm_id") or ""
+            verification["branch_manager_id"] = assigned_bm or verification.get("branch_manager_id") or ""
             verification["review_stage"] = "branch_manager" if is_bm else "rm"
+            verifications.append(verification)
+            if len(verifications) >= 100:
+                break
         
         return {
             "verifications": verifications,
@@ -610,16 +641,26 @@ async def get_verification_details(
             {"_id": 0}
         )
         verification["property_details"] = property_data
+        owner_data, assignment = await _property_owner_assignment(db, property_data or {})
+        assigned_broker = assignment.get("broker_id")
+        assigned_rm = assignment.get("rm_id")
+        assigned_bm = assignment.get("branch_manager_id") or assignment.get("branch_manager_code")
+        verification["broker_id"] = assigned_broker or ""
+        verification["rm_id"] = assigned_rm or verification.get("rm_id") or ""
+        verification["branch_manager_id"] = assigned_bm or verification.get("branch_manager_id") or ""
         
         # Get broker details
+        broker_lookup_id = assigned_broker or (assigned_rm if is_bm else verification.get("broker_id"))
         broker_data = await db.users.find_one(
-            {"user_id": verification["broker_id"]},
-            {"_id": 0, "full_name": 1, "lg_code": 1, "phone": 1, "email": 1}
-        )
+            {"user_id": broker_lookup_id},
+            {"_id": 0, "full_name": 1, "lg_code": 1, "phone": 1, "email": 1, "employee_code": 1}
+        ) if broker_lookup_id else None
+        if broker_data and not broker_data.get("lg_code"):
+            broker_data["lg_code"] = broker_data.get("employee_code") or "N/A"
         verification["broker_details"] = broker_data
         
         # Get owner details
-        owner_data = await db.users.find_one(
+        owner_data = owner_data or await db.users.find_one(
             {"user_id": verification["owner_id"]},
             {"_id": 0, "full_name": 1, "phone": 1, "email": 1}
         )
@@ -855,10 +896,14 @@ async def approve_verification(
         _, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
         properties = await db.properties.find(property_query, {"_id": 0, "property_id": 1}).to_list(length=5000)
         property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
+        property_data = await db.properties.find_one({"property_id": verification.get("property_id")}, {"_id": 0}) or {}
+        _, assignment = await _property_owner_assignment(db, property_data)
+        assigned_bm = assignment.get("branch_manager_id") or assignment.get("branch_manager_code") or verification.get("branch_manager_id")
+        assigned_rm = assignment.get("rm_id") or verification.get("rm_id")
         assigned_to_current_stage = (
-            any(verification.get("branch_manager_id") == identifier for identifier in rm_identifiers)
+            any(assigned_bm == identifier for identifier in rm_identifiers)
             if is_bm
-            else verification.get("rm_id") in rm_identifiers
+            else assigned_rm in rm_identifiers
         )
         if verification.get("property_id") not in property_ids and not assigned_to_current_stage:
             raise HTTPException(
@@ -870,7 +915,7 @@ async def approve_verification(
         if is_bm:
             rm_step_completed = (
                 (verification.get("rm_reviewed") and verification.get("rm_approved") is True)
-                or not verification.get("broker_id")
+                or not assignment.get("broker_id")
             )
             if not rm_step_completed:
                 raise HTTPException(
@@ -882,7 +927,7 @@ async def approve_verification(
                 {"$set": {
                     "rm_reviewed": True,
                     "rm_approved": True,
-                    "rm_id": verification.get("rm_id") or verification.get("broker_id") or "",
+                    "rm_id": assigned_rm or verification.get("rm_id") or "",
                     "branch_manager_reviewed": True,
                     "branch_manager_approved": True,
                     "branch_manager_remarks": remarks,
@@ -943,7 +988,7 @@ async def approve_verification(
             logger.warning(f"Failed to write RM approval audit: {audit_err}")
 
         # Notify admins + host
-        should_notify_admin = is_bm or not verification.get("branch_manager_id")
+        should_notify_admin = is_bm or not assigned_bm
         if should_notify_admin:
             try:
                 from services.verification_workflow import on_rm_decision
@@ -995,10 +1040,14 @@ async def reject_verification(
         _, _, property_query = await _get_rm_property_query(db, current_user["user_id"])
         properties = await db.properties.find(property_query, {"_id": 0, "property_id": 1}).to_list(length=5000)
         property_ids = [prop["property_id"] for prop in properties if prop.get("property_id")]
+        property_data = await db.properties.find_one({"property_id": verification.get("property_id")}, {"_id": 0}) or {}
+        _, assignment = await _property_owner_assignment(db, property_data)
+        assigned_bm = assignment.get("branch_manager_id") or assignment.get("branch_manager_code") or verification.get("branch_manager_id")
+        assigned_rm = assignment.get("rm_id") or verification.get("rm_id")
         assigned_to_current_stage = (
-            any(verification.get("branch_manager_id") == identifier for identifier in rm_identifiers)
+            any(assigned_bm == identifier for identifier in rm_identifiers)
             if is_bm
-            else verification.get("rm_id") in rm_identifiers
+            else assigned_rm in rm_identifiers
         )
         if verification.get("property_id") not in property_ids and not assigned_to_current_stage:
             raise HTTPException(

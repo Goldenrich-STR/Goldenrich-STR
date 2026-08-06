@@ -694,7 +694,7 @@ const VerificationReviewSection = () => {
                         {verification.property_details?.city} | {verification.property_details?.bhk_type}
                       </p>
                       <p className="text-xs text-charcoal-muted mt-2 break-words">
-                        Broker: {verification.broker_details?.full_name} ({verification.broker_details?.lg_code})
+                        {verification.broker_id ? 'Broker' : 'RM'}: {verification.broker_details?.full_name} ({verification.broker_details?.lg_code})
                       </p>
                       
                       {/* Checklist Summary */}
@@ -819,7 +819,7 @@ const VerificationReviewSection = () => {
                         {verification.property_details?.city || 'No city'} | {formatDisplayLabel(verification.property_details?.bhk_type) || 'No type'}
                       </p>
                       <p className="text-xs text-charcoal-muted mt-2">
-                        Broker: {verification.broker_details?.full_name} ({verification.broker_details?.lg_code})
+                        {verification.broker_id ? 'Broker' : 'RM'}: {verification.broker_details?.full_name} ({verification.broker_details?.lg_code})
                       </p>
                       
                       {verification.rm_remarks && (
@@ -904,10 +904,10 @@ const VerificationReviewSection = () => {
                   </p>
                 </div>
                 <div className="p-4 bg-stone rounded-2xl">
-                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Assigned Broker</p>
+                  <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">{selectedVerification.broker_id ? 'Assigned Broker' : 'RM Visit By'}</p>
                   <p className="font-bold text-charcoal">{selectedVerification.broker_details?.full_name || 'N/A'}</p>
                   <p className="font-mono text-[10px] text-charcoal-light mt-1 break-all" title={selectedVerification.broker_id || ''}>
-                    ID: {selectedVerification.broker_id || 'N/A'}
+                    ID: {selectedVerification.broker_id || selectedVerification.rm_id || 'N/A'}
                   </p>
                 </div>
                 <div className="p-4 bg-stone rounded-2xl">

@@ -53,6 +53,10 @@ def _assigned_ref(source: dict | None, field: str) -> str:
     return _clean_identifier((source or {}).get(field))
 
 
+def _assigned_to_current_broker(assignment: dict, current_user: dict) -> bool:
+    return assignment.get("broker_id") in _user_identifiers(current_user)
+
+
 async def _property_owner_assignment(db: AsyncIOMotorDatabase, property_data: dict) -> tuple[dict, dict]:
     owner = {}
     if property_data.get("owner_id"):
@@ -1207,11 +1211,24 @@ async def get_verification_tasks(
             additional_q["status"] = status_filter.value
         
         query = _get_broker_or_rm_query(current_user, additional_q)
+        if current_user.get("role") == UserRole.BROKER.value:
+            assigned_hosts = await db.users.find(
+                {"role": "host", "broker_id": {"$in": _user_identifiers(current_user)}},
+                {"_id": 0, "user_id": 1}
+            ).to_list(length=3000)
+            assigned_host_ids = [host["user_id"] for host in assigned_hosts if host.get("user_id")]
+            broker_query_or = [{"broker_id": current_user["user_id"]}]
+            if assigned_host_ids:
+                broker_query_or.append({"owner_id": {"$in": assigned_host_ids}})
+            query = {"$or": broker_query_or}
+            if additional_q:
+                query = {"$and": [query, additional_q]}
         cursor = db.property_verifications.find(query, {"_id": 0}).sort("created_at", -1)
-        verifications = await cursor.to_list(length=100)
+        raw_verifications = await cursor.to_list(length=300)
         
         # Enrich with property details
-        for verification in verifications:
+        verifications = []
+        for verification in raw_verifications:
             property_data = await db.properties.find_one(
                 {"property_id": verification["property_id"]},
                 {"_id": 0}
@@ -1219,12 +1236,25 @@ async def get_verification_tasks(
             if property_data:
                 verification["property_details"] = property_data
             owner_id = verification.get("owner_id") or (property_data or {}).get("owner_id")
+            owner = {}
             if owner_id:
                 owner = await db.users.find_one(
                     {"user_id": owner_id},
-                    {"_id": 0, "user_id": 1, "full_name": 1, "email": 1, "phone": 1, "kyc_status": 1, "rm_id": 1}
-                )
+                    {"_id": 0, "user_id": 1, "full_name": 1, "email": 1, "phone": 1, "kyc_status": 1, "broker_id": 1, "rm_id": 1, "branch_manager_id": 1, "branch_manager_code": 1}
+                ) or {}
                 verification["owner_summary"] = owner or {}
+            _, assignment = await _property_owner_assignment(db, property_data or {})
+            if current_user.get("role") == UserRole.BROKER.value and not _assigned_to_current_broker(assignment, current_user):
+                continue
+            if current_user.get("role") == UserRole.EMPLOYEE.value and current_user.get("admin_role_key") in ["rm", "relationship_manager"]:
+                if assignment.get("rm_id") not in _user_identifiers(current_user):
+                    continue
+            verification["broker_id"] = assignment.get("broker_id") or ("" if current_user.get("role") == UserRole.EMPLOYEE.value else verification.get("broker_id") or "")
+            verification["rm_id"] = assignment.get("rm_id") or verification.get("rm_id") or ""
+            verification["branch_manager_id"] = assignment.get("branch_manager_id") or assignment.get("branch_manager_code") or verification.get("branch_manager_id") or ""
+            verifications.append(verification)
+            if len(verifications) >= 100:
+                break
 
         summary = {
             "total": len(verifications),
@@ -1355,6 +1385,7 @@ async def submit_verification(
                     "video_url": verification_data.video_url,
                     "broker_remarks": verification_data.broker_remarks,
                     "status": VerificationStatus.COMPLETED.value,
+                    "broker_id": "" if is_rm else broker_id,
                     "rm_reviewed": True if is_rm_to_bm_flow else False,
                     "rm_approved": True if is_rm_to_bm_flow else None,
                     "rm_remarks": None,
