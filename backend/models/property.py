@@ -96,6 +96,8 @@ class Property(BaseModel):
     per_person_price: Optional[float] = None
     extra_guest_price: Optional[float] = None
     minimum_stay_days: int = 1
+    check_in_time: Optional[str] = "12:00"
+    check_out_time: Optional[str] = "11:00"
     
     # Amenities
     amenities: List[str] = []
@@ -171,6 +173,8 @@ class PropertyCreate(BaseModel):
     per_person_price: Optional[float] = None
     extra_guest_price: Optional[float] = None
     minimum_stay_days: int = 1
+    check_in_time: Optional[str] = "12:00"
+    check_out_time: Optional[str] = "11:00"
     amenities: List[str] = []
     images: List[str] = []
     video_url: Optional[str] = None
@@ -214,6 +218,8 @@ class PropertyUpdate(BaseModel):
     per_person_price: Optional[float] = None
     extra_guest_price: Optional[float] = None
     minimum_stay_days: Optional[int] = None
+    check_in_time: Optional[str] = None
+    check_out_time: Optional[str] = None
     amenities: Optional[List[str]] = None
     images: Optional[List[str]] = None
     video_url: Optional[str] = None

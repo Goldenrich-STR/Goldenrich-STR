@@ -881,6 +881,12 @@ async def list_transactions(
                         "city": 1,
                         "state": 1,
                         "pin_code": 1,
+                        "amenities": 1,
+                        "check_in_time": 1,
+                        "check_out_time": 1,
+                        "property_type": 1,
+                        "bhk_type": 1,
+                        "room_type": 1,
                     },
                 )
             t["property"] = property_info
@@ -900,6 +906,8 @@ async def list_transactions(
                         "employee_code": 1,
                         "broker_id": 1,
                         "rm_id": 1,
+                        "branch_manager_id": 1,
+                        "branch_manager_code": 1,
                         "gst_number": 1,
                         "gst_no": 1,
                     },
@@ -986,6 +994,8 @@ async def list_transactions(
                     (property_info or {}).get("branch_manager_code"),
                     (host_info or {}).get("branch_manager_id"),
                     (host_info or {}).get("branch_manager_code"),
+                    (user_info or {}).get("branch_manager_id"),
+                    (user_info or {}).get("branch_manager_code"),
                 )
                 if broker_id:
                     broker_info = await db.users.find_one(
@@ -1108,6 +1118,12 @@ async def export_transactions_csv(
                     "city": 1,
                     "state": 1,
                     "pin_code": 1,
+                    "amenities": 1,
+                    "check_in_time": 1,
+                    "check_out_time": 1,
+                    "property_type": 1,
+                    "bhk_type": 1,
+                    "room_type": 1,
                 },
             )
         t["property"] = property_info
@@ -1127,6 +1143,8 @@ async def export_transactions_csv(
                     "employee_code": 1,
                     "broker_id": 1,
                     "rm_id": 1,
+                    "branch_manager_id": 1,
+                    "branch_manager_code": 1,
                     "gst_number": 1,
                     "gst_no": 1,
                 },
@@ -1144,6 +1162,8 @@ async def export_transactions_csv(
                     "employee_code": 1,
                     "broker_id": 1,
                     "rm_id": 1,
+                    "branch_manager_id": 1,
+                    "branch_manager_code": 1,
                     "gst_number": 1,
                     "gst_no": 1,
                 },

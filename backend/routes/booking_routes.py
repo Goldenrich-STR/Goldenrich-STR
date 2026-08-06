@@ -572,7 +572,7 @@ async def confirm_payment(
         )
 
 async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> list:
-    """Embed minimal property info (title, city, images, property_type) into each booking."""
+    """Embed property info needed by booking cards and customer invoices."""
     if not bookings:
         return bookings
     property_ids = list({b.get("property_id") for b in bookings if b.get("property_id")})
@@ -580,7 +580,25 @@ async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> lis
         return bookings
     cursor = db.properties.find(
         {"property_id": {"$in": property_ids}},
-        {"_id": 0, "property_id": 1, "title": 1, "city": 1, "state": 1, "images": 1, "property_type": 1, "category": 1},
+        {
+            "_id": 0,
+            "property_id": 1,
+            "title": 1,
+            "property_name": 1,
+            "name": 1,
+            "address": 1,
+            "city": 1,
+            "state": 1,
+            "pin_code": 1,
+            "images": 1,
+            "property_type": 1,
+            "bhk_type": 1,
+            "room_type": 1,
+            "category": 1,
+            "amenities": 1,
+            "check_in_time": 1,
+            "check_out_time": 1,
+        },
     )
     props = await cursor.to_list(length=len(property_ids))
     by_id = {p["property_id"]: p for p in props}

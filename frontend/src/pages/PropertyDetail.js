@@ -27,6 +27,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   Calendar as CalendarIcon,
+  Clock,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -95,6 +96,24 @@ const AMENITY_LABELS = {
 };
 
 const SITE_URL = 'https://x-space360.in';
+
+const formatListingTime = (value) => {
+  if (!value) return 'Not specified';
+  const raw = String(value).trim();
+  const match = raw.match(/^(\d{1,2}):(\d{2})/);
+  if (!match) return raw;
+  const hours = Number(match[1]);
+  const minutes = match[2];
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  const displayHour = hours % 12 || 12;
+  return `${displayHour}:${minutes} ${suffix}`;
+};
+
+const formatExtraPersonPrice = (value) => {
+  const amount = Number(value || 0);
+  if (!amount) return 'Not specified';
+  return `Rs ${amount.toLocaleString('en-IN')}`;
+};
 
 const toAbsoluteSiteUrl = (value) => {
   if (!value) return null;
@@ -1567,8 +1586,10 @@ const PropertyDetail = () => {
                   { icon: Building2, label: 'Property type', value: propertyType },
                   { icon: Users, label: property.category === 'commercial' ? 'Staff capacity' : 'Guest capacity', value: guestCapacity ? `${guestCapacity} ${property.category === 'commercial' ? 'staff' : 'guests'}` : 'Flexible capacity' },
                   { icon: CalendarIcon, label: 'Minimum stay', value: `${property.minimum_stay_days || 1} ${Number(property.minimum_stay_days || 1) === 1 ? 'night' : 'nights'}` },
+                  { icon: Clock, label: 'Check-in time', value: formatListingTime(property.check_in_time || '12:00') },
+                  { icon: Clock, label: 'Check-out time', value: formatListingTime(property.check_out_time || '11:00') },
                   { icon: CreditCard, label: 'Starting price', value: `Rs ${Number(displayPricePerNight || 0).toLocaleString('en-IN')}` },
-                  { icon: CheckCircle2, label: 'Amenities', value: amenitiesForSeo.length ? amenitiesForSeo.slice(0, 3).map(formatReadableText).join(', ') : 'Amenities available as listed' },
+                  { icon: CheckCircle2, label: 'Extra person price', value: formatExtraPersonPrice(property.extra_guest_price) },
                 ].map((fact) => {
                   const Icon = fact.icon;
                   return (

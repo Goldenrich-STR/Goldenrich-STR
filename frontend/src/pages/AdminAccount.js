@@ -1937,6 +1937,7 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
                     <th className="py-3 px-4">Invoice No</th>
                     <th className="py-3 px-4">Broker</th>
                     <th className="py-3 px-4">Employee (RM)</th>
+                    <th className="py-3 px-4">Branch Manager</th>
                     <th className="py-3 px-4">Host Name</th>
                     <th className="py-3 px-4">Property</th>
                     <th className="py-3 px-4">GST No</th>
@@ -1976,6 +1977,10 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
                       <td className="py-4 px-4 min-w-[150px]">
                         <div className="font-bold text-charcoal text-sm">{t.employee?.full_name || t.employee_name || 'NA'}</div>
                         <div className="text-xs text-charcoal-muted mt-0.5">{t.employee?.employee_code || t.employee_code || 'NA'}</div>
+                      </td>
+                      <td className="py-4 px-4 min-w-[160px]">
+                        <div className="font-bold text-charcoal text-sm">{t.branch_manager?.full_name || 'NA'}</div>
+                        <div className="text-xs text-charcoal-muted mt-0.5">{t.branch_manager?.employee_code || t.branch_manager?.uid || t.branch_manager?.user_id || 'NA'}</div>
                       </td>
                       <td className="py-4 px-4 min-w-[150px]">
                         <div className="font-bold text-charcoal text-sm">{t.user?.full_name || 'NA'}</div>
@@ -3692,13 +3697,8 @@ const InvoiceModal = ({ transaction, onClose }) => {
       created_at: booking.created_at || t.created_at,
       total_amount: amountINR,
       paid_amount: amountINR,
-      taxes: totalGst,
-      gst_amount: totalGst,
-      tax_amount: totalGst,
-      tax_percent: taxPercent,
-      gst_percent: taxPercent,
-      cgst,
-      sgst,
+      total_extra_charges: Math.max(0, amountINR - baseAmount + discountAmount),
+      discount_amount: discountAmount,
       razorpay_payment_id: t.razorpay_payment_id || booking.razorpay_payment_id,
       upi_transaction_id: t.upi_transaction_id || booking.upi_transaction_id,
       payment_id: t.razorpay_payment_id || t.upi_transaction_id || t.transaction_id,
@@ -3720,7 +3720,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
 
   const handlePrint = () => {
     if (t.type === 'booking_payment') {
-      printHtml(buildAdminBookingInvoiceHtml(), t.invoice_no || 'Tax Invoice');
+      printHtml(buildAdminBookingInvoiceHtml(), t.invoice_no || 'Booking Details');
       return;
     }
     const printWindow = window.open('', 'xspace-invoice-print', 'width=1100,height=900');
@@ -4185,12 +4185,26 @@ const InvoiceModal = ({ transaction, onClose }) => {
   };
 
   if (t.type === 'booking_payment') {
-    const invoiceHtml = buildAdminBookingInvoiceHtml();
+    const invoiceHtml = buildCustomerBookingInvoiceHtml({
+      ...(t.booking || {}),
+      booking_id: t.booking_id || t.booking?.booking_id,
+      invoice_no: t.invoice_no || t.transaction_id,
+      booking_invoice_no: t.invoice_no || t.transaction_id,
+      created_at: t.booking?.created_at || t.created_at,
+      total_amount: amountINR,
+      paid_amount: amountINR,
+      total_extra_charges: Math.max(0, amountINR - baseAmount + discountAmount),
+      discount_amount: discountAmount,
+      razorpay_payment_id: t.razorpay_payment_id || t.booking?.razorpay_payment_id,
+      upi_transaction_id: t.upi_transaction_id || t.booking?.upi_transaction_id,
+      payment_id: t.razorpay_payment_id || t.upi_transaction_id || t.transaction_id,
+      customer_base_amount: baseAmount,
+    }, property, user, { hideToolbar: true });
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto print:p-0 print:bg-white" data-testid="invoice-modal">
         <div className="bg-white rounded-xl w-full max-w-5xl border border-gray-100 shadow-elevated p-5 relative">
           <div className="no-print flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-100">
-            <h2 className="text-lg font-bold text-charcoal">Tax Invoice Details</h2>
+            <h2 className="text-lg font-bold text-charcoal">Booking Details</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrint}
