@@ -35,7 +35,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 9, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadAllData();
   }
 
@@ -54,11 +54,6 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
       prov.getPendingReviews(),
       prov.getReviewHistory(),
       prov.getBrokers(),
-      prov.getHosts(),
-      prov.getProperties(),
-      prov.getBookings(),
-      prov.getTasks(),
-      prov.getAuditActivity(),
     ]);
   }
 
@@ -1252,187 +1247,6 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
     );
   }
 
-  // Hosts Tab View
-  Widget _buildHostsTab(VerificationProvider prov) {
-    final hosts = prov.hosts;
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'Host Portfolio Management',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
-          ),
-        ),
-        Expanded(
-          child: hosts.isEmpty
-              ? const Center(child: Text('No hosts found.'))
-              : ListView.builder(
-                  itemCount: hosts.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemBuilder: (context, index) {
-                    final host = hosts[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        title: Text(host['full_name'] ?? 'Host'),
-                        subtitle: Text('Email: ${host['email'] ?? 'N/A'}\nPhone: ${host['phone'] ?? 'N/A'}'),
-                        trailing: Text(host['kyc_status']?.toString().toUpperCase() ?? 'PENDING'),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  // Properties Tab View
-  Widget _buildPropertiesTab(VerificationProvider prov) {
-    final properties = prov.properties;
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'Property Inventory Oversight',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
-          ),
-        ),
-        Expanded(
-          child: properties.isEmpty
-              ? const Center(child: Text('No properties found.'))
-              : ListView.builder(
-                  itemCount: properties.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemBuilder: (context, index) {
-                    final prop = properties[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: Image.network(
-                          AppConfig.resolveImageUrl((prop['images'] as List?)?.firstOrNull),
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                          errorBuilder: (c, e, s) => Container(width: 50, height: 50, color: Colors.grey[200]),
-                        ),
-                        title: Text(prop['title'] ?? 'Property'),
-                        subtitle: Text('${prop['city'] ?? 'N/A'} | ₹${prop['price_per_night'] ?? 0} /night'),
-                        trailing: Text(prop['status']?.toString().toUpperCase() ?? 'DRAFT'),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  // Bookings Tab View
-  Widget _buildBookingsTab(VerificationProvider prov) {
-    final bookings = prov.bookings;
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'Booking Management Control',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
-          ),
-        ),
-        Expanded(
-          child: bookings.isEmpty
-              ? const Center(child: Text('No bookings found.'))
-              : ListView.builder(
-                  itemCount: bookings.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemBuilder: (context, index) {
-                    final booking = bookings[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        title: Text('Booking ID: ${booking['booking_id'] ?? 'N/A'}'),
-                        subtitle: Text('Guest ID: ${booking['guest_id'] ?? 'N/A'}\nDates: ${booking['check_in_date'] ?? 'N/A'} to ${booking['check_out_date'] ?? 'N/A'}'),
-                        trailing: Text(booking['booking_status']?.toString().toUpperCase() ?? 'PENDING'),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  // Tasks Tab View
-  Widget _buildTasksTab(VerificationProvider prov) {
-    final tasks = prov.tasks;
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'Tasks & Escalations SLA Watch',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
-          ),
-        ),
-        Expanded(
-          child: tasks.isEmpty
-              ? const Center(child: Text('No tasks found.'))
-              : ListView.builder(
-                  itemCount: tasks.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemBuilder: (context, index) {
-                    final task = tasks[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        title: Text(task['title'] ?? 'Task'),
-                        subtitle: Text('SLA Status: ${task['sla_status'] ?? 'N/A'} | Age: ${task['age_hours'] ?? 0}h'),
-                        trailing: Text(task['status']?.toString().toUpperCase() ?? 'PENDING'),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  // Audit Tab View
-  Widget _buildAuditTab(VerificationProvider prov) {
-    final auditLogs = prov.auditActivity;
-    return Column(
-      children: [
-        const Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text(
-            'Audit Log & System Activity',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
-          ),
-        ),
-        Expanded(
-          child: auditLogs.isEmpty
-              ? const Center(child: Text('No audit logs found.'))
-              : ListView.builder(
-                  itemCount: auditLogs.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemBuilder: (context, index) {
-                    final log = auditLogs[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        title: Text(log['action']?.toString().replaceAll('_', ' ').toUpperCase() ?? 'ACTION'),
-                        subtitle: Text('Module: ${log['module'] ?? 'N/A'}\nTime: ${log['created_at'] ?? 'N/A'}'),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final prov = Provider.of<VerificationProvider>(context);
@@ -1518,7 +1332,6 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
               // Custom styled tab header
               TabBar(
                 controller: _tabController,
-                isScrollable: true,
                 indicatorColor: AppTheme.primary,
                 labelColor: AppTheme.primary,
                 unselectedLabelColor: AppTheme.charcoalLight,
@@ -1535,23 +1348,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                       icon: Icon(Icons.people_outline, size: 18),
                       text: 'Brokers'),
                   Tab(
-                      icon: Icon(Icons.group_outlined, size: 18),
-                      text: 'Hosts'),
-                  Tab(
-                      icon: Icon(Icons.business_outlined, size: 18),
-                      text: 'Properties'),
-                  Tab(
-                      icon: Icon(Icons.bookmark_outline, size: 18),
-                      text: 'Bookings'),
-                  Tab(
-                      icon: Icon(Icons.check_circle_outline, size: 18),
-                      text: 'Tasks'),
-                  Tab(
                       icon: Icon(Icons.analytics_outlined, size: 18),
                       text: 'Reports'),
-                  Tab(
-                      icon: Icon(Icons.receipt_long_outlined, size: 18),
-                      text: 'Audit'),
                 ],
               ),
             ],
@@ -1567,12 +1365,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                 _buildOverviewTab(prov),
                 _buildPendingTab(prov),
                 _buildBrokersTab(prov),
-                _buildHostsTab(prov),
-                _buildPropertiesTab(prov),
-                _buildBookingsTab(prov),
-                _buildTasksTab(prov),
                 _buildReportsTab(prov),
-                _buildAuditTab(prov),
               ],
             ),
     );

@@ -117,7 +117,7 @@ class _AppShellState extends State<AppShell> {
         BottomNavigationBarItem(
             icon: Icon(Icons.luggage_outlined), label: 'Trips'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
+            icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
         BottomNavigationBarItem(
             icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
       ];
@@ -139,7 +139,7 @@ class _AppShellState extends State<AppShell> {
           const BottomNavigationBarItem(
               icon: Icon(Icons.luggage_outlined), label: 'Trips'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
+              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: const Icon(Icons.person_outline_rounded), label: 'Profile'),
         ];
@@ -159,7 +159,7 @@ class _AppShellState extends State<AppShell> {
           BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
+              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
@@ -179,7 +179,7 @@ class _AppShellState extends State<AppShell> {
           BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined), label: 'Broker'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
+              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
@@ -202,7 +202,7 @@ class _AppShellState extends State<AppShell> {
               icon: Icon(isRm ? Icons.dashboard_outlined : Icons.rate_review_outlined),
               label: isRm ? 'Broker' : 'Reviews'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
+              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
           const BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
@@ -222,7 +222,7 @@ class _AppShellState extends State<AppShell> {
           BottomNavigationBarItem(
               icon: Icon(Icons.admin_panel_settings_outlined), label: 'Admin'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline_rounded), label: 'AI Chat'),
+              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
@@ -563,11 +563,6 @@ class _BrokerProfileDrawer extends StatelessWidget {
           'icon': Icons.verified_user_outlined,
         },
         {
-          'tab': 'bookings',
-          'label': 'Bookings',
-          'icon': Icons.book_online_outlined,
-        },
-        {
           'tab': 'leads',
           'label': 'Leads',
           'icon': Icons.track_changes_outlined,
@@ -576,21 +571,6 @@ class _BrokerProfileDrawer extends StatelessWidget {
           'tab': 'commissions',
           'label': 'Commissions',
           'icon': Icons.monetization_on_outlined,
-        },
-        {
-          'tab': 'tasks',
-          'label': 'Tasks',
-          'icon': Icons.assignment_outlined,
-        },
-        {
-          'tab': 'analytics',
-          'label': 'Analytics',
-          'icon': Icons.insert_chart_outlined,
-        },
-        {
-          'tab': 'audit',
-          'label': 'Audit',
-          'icon': Icons.receipt_long_outlined,
         },
       ];
 

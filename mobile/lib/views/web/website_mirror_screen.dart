@@ -19,33 +19,15 @@ class _WebsiteMirrorScreenState extends State<WebsiteMirrorScreen> {
   bool _hasError = false;
   String _errorMessage = '';
 
-  String get _targetUrl {
-    String base;
-    final apiServiceUrl = ApiService().baseUrl;
-    
-    if (apiServiceUrl.isNotEmpty && !apiServiceUrl.contains('uat.x-space360.in')) {
-      try {
-        final uri = Uri.parse(apiServiceUrl);
-        // Map custom API port 8001/others to frontend port 3000 on same host
-        base = uri.replace(port: 3000).toString().replaceAll(RegExp(r'/$'), '');
-      } catch (_) {
-        base = AppConfig.isProduction ? AppConfig.prodBaseUrl : AppConfig.webBaseUrl;
-      }
-    } else if (AppConfig.isProduction) {
-      base = AppConfig.prodBaseUrl;
-    } else {
-      base = AppConfig.webBaseUrl;
-    }
-    
-    return base.contains('?') ? '$base&isMobileApp=true' : '$base?isMobileApp=true';
-  }
+  String get _targetUrl => AppConfig.isProduction
+      ? AppConfig.prodBaseUrl
+      : AppConfig.webBaseUrl;
 
   @override
   void initState() {
     super.initState();
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setUserAgent('MobileApp/X-Space360')
       ..setBackgroundColor(Colors.white)
       ..setNavigationDelegate(
         NavigationDelegate(
