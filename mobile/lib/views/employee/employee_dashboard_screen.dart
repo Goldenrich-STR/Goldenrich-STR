@@ -1252,6 +1252,211 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
     );
   }
 
+  void _showHostDocumentsSheet(BuildContext context, Map<String, dynamic> host, bool isEmployee) {
+    final docs = host['kyc_documents'] as List? ?? [];
+    final name = host['full_name'] ?? 'Host';
+    final ownerName = host['agreement_owner_name'] ?? '';
+    final ownerAddress = host['agreement_owner_address'] ?? '';
+    final signature = host['agreement_signature'] ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'KYC Documents: $name',
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.charcoal),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.all(16.0),
+                      children: [
+                        if (docs.isEmpty)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40.0),
+                              child: Text('No documents uploaded yet.'),
+                            ),
+                          )
+                        else
+                          ...docs.map((doc) {
+                            final type = doc['document_type'] ?? 'unknown';
+                            final url = doc['document_url'] ?? '';
+                            final val = doc['text_value'] ?? '';
+                            final status = doc['status'] ?? 'pending';
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              child: ListTile(
+                                leading: const Icon(Icons.description, color: AppTheme.primary),
+                                title: Text(
+                                  type.toString().replaceAll('_', ' ').toUpperCase(),
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                                subtitle: val.toString().isNotEmpty
+                                    ? Text('Value: $val', style: const TextStyle(fontSize: 12))
+                                    : url.toString().isNotEmpty
+                                        ? InkWell(
+                                            onTap: () {
+                                              // Open document URL
+                                            },
+                                            child: Text(
+                                              'View Uploaded File',
+                                              style: TextStyle(
+                                                  color: Colors.blue.shade700,
+                                                  decoration: TextDecoration.underline,
+                                                  fontSize: 12),
+                                            ),
+                                          )
+                                        : const Text('No attachment/value', style: TextStyle(fontSize: 12)),
+                                trailing: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: status == 'approved'
+                                        ? Colors.green.withOpacity(0.1)
+                                        : Colors.amber.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    status.toString().toUpperCase(),
+                                    style: TextStyle(
+                                      color: status == 'approved' ? Colors.green : Colors.amber.shade800,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Host STR Service Agreement',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.charcoal),
+                        ),
+                        const SizedBox(height: 8),
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Agreement Owner Name: ${ownerName.isNotEmpty ? ownerName : "N/A"}'),
+                                const SizedBox(height: 6),
+                                Text('Agreement Owner Address: ${ownerAddress.isNotEmpty ? ownerAddress : "N/A"}'),
+                                const SizedBox(height: 6),
+                                Text('Signature Info: ${signature.isNotEmpty ? signature : "N/A"}'),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isEmployee && host['kyc_status'] != 'approved') ...[
+                    const Divider(),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.red),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: () async {
+                                try {
+                                  final res = await ApiService().dio.patch(
+                                    '/hosts/${host['user_id']}/kyc',
+                                    data: {'status': 'rejected', 'remarks': 'Rejected via Mobile app'},
+                                  );
+                                  if (res.statusCode == 200) {
+                                    Navigator.pop(context);
+                                    _loadAllData();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('KYC rejected successfully.')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error rejecting KYC: $e')),
+                                  );
+                                }
+                              },
+                              child: const Text('REJECT KYC', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: () async {
+                                try {
+                                  final res = await ApiService().dio.patch(
+                                    '/hosts/${host['user_id']}/kyc',
+                                    data: {'status': 'approved', 'remarks': 'Approved via Mobile app'},
+                                  );
+                                  if (res.statusCode == 200) {
+                                    Navigator.pop(context);
+                                    _loadAllData();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('KYC approved successfully.')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Error approving KYC: $e')),
+                                  );
+                                }
+                              },
+                              child: const Text('APPROVE KYC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // Hosts Tab View
   Widget _buildHostsTab(VerificationProvider prov) {
     final hosts = prov.hosts;
@@ -1272,12 +1477,58 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemBuilder: (context, index) {
                     final host = hosts[index];
+                    final isKycApproved = host['kyc_status'] == 'approved';
                     return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        title: Text(host['full_name'] ?? 'Host'),
-                        subtitle: Text('Email: ${host['email'] ?? 'N/A'}\nPhone: ${host['phone'] ?? 'N/A'}'),
-                        trailing: Text(host['kyc_status']?.toString().toUpperCase() ?? 'PENDING'),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  host['full_name'] ?? 'Host',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isKycApproved ? Colors.green.withOpacity(0.1) : Colors.amber.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    'KYC: ${host['kyc_status']?.toString().toUpperCase()}',
+                                    style: TextStyle(
+                                      color: isKycApproved ? Colors.green : Colors.amber.shade800,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text('Email: ${host['email'] ?? 'N/A'}', style: const TextStyle(fontSize: 12)),
+                            Text('Phone: ${host['phone'] ?? 'N/A'}', style: const TextStyle(fontSize: 12)),
+                            const Divider(height: 24),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                TextButton.icon(
+                                  icon: const Icon(Icons.description_outlined, size: 16),
+                                  label: const Text('DOCUMENTS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                  onPressed: () => _showHostDocumentsSheet(context, host, true),
+                                ),
+                                Text(
+                                  'Assets: ${host['total_properties'] ?? 0}',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
