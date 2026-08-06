@@ -3291,7 +3291,7 @@ const LandingPage = () => {
                               const el = document.getElementById('landing-destination');
                               if (el) el.focus();
                             }}
-                            className="flex items-center px-4 lg:px-6 py-3 w-full cursor-pointer group rounded-3xl lg:rounded-full hover:bg-stone/50 transition duration-200"
+                            className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full cursor-pointer group rounded-2xl lg:rounded-full hover:bg-stone/50 transition duration-200"
                           >
                             <MapPin className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
@@ -3401,10 +3401,10 @@ const LandingPage = () => {
                         </div>
                         <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
                         
-                        <div className={`relative flex flex-col lg:flex-row items-stretch lg:items-center shrink-0 w-full lg:w-auto ${landingCalendarOpen ? 'z-[60]' : 'z-[1]'}`}>
+                        <div className={`relative flex flex-row items-stretch lg:items-center shrink-0 w-full lg:w-auto ${landingCalendarOpen ? 'z-[60]' : 'z-[1]'}`}>
                           {/* Check-in */}
-                          <div className="relative flex items-center px-4 lg:px-6 py-3 w-full lg:w-auto hover:bg-stone/50 rounded-3xl lg:rounded-full transition duration-200 group shrink-0">
-                            <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
+                          <div className="relative flex-1 flex items-center px-3 lg:px-6 py-2.5 lg:py-3 hover:bg-stone/50 rounded-2xl lg:rounded-full transition duration-200 group shrink-0">
+                            <Calendar className="w-4.5 h-4.5 text-gray-400 mr-2 lg:mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                             <button
                               type="button"
                               onClick={() => {
@@ -3414,7 +3414,7 @@ const LandingPage = () => {
                               className="w-full text-left"
                             >
                               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Check-in</p>
-                              <p className={`font-extrabold text-sm mt-1 leading-none ${dates.checkIn ? 'text-charcoal' : 'text-gray-400'}`}>
+                              <p className={`font-extrabold text-xs lg:text-sm mt-1 leading-none ${dates.checkIn ? 'text-charcoal' : 'text-gray-400'}`}>
                                 {dates.checkIn || 'Select Date'}
                               </p>
                             </button>
@@ -3437,8 +3437,8 @@ const LandingPage = () => {
                           </div>
                           
                           {/* Check-out */}
-                          <div className="relative flex items-center px-4 lg:px-6 py-3 w-full lg:w-auto hover:bg-stone/50 rounded-3xl lg:rounded-full transition duration-200 group shrink-0">
-                            <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
+                          <div className="relative flex-1 flex items-center px-3 lg:px-6 py-2.5 lg:py-3 hover:bg-stone/50 rounded-2xl lg:rounded-full transition duration-200 group shrink-0">
+                            <Calendar className="w-4.5 h-4.5 text-gray-400 mr-2 lg:mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                             <button
                               type="button"
                               onClick={() => {
@@ -3448,7 +3448,7 @@ const LandingPage = () => {
                               className="w-full text-left"
                             >
                               <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Check-out</p>
-                              <p className={`font-extrabold text-sm mt-1 leading-none ${dates.checkOut ? 'text-charcoal' : 'text-gray-400'}`}>
+                              <p className={`font-extrabold text-xs lg:text-sm mt-1 leading-none ${dates.checkOut ? 'text-charcoal' : 'text-gray-400'}`}>
                                 {dates.checkOut || 'Select Date'}
                               </p>
                             </button>
@@ -3471,7 +3471,7 @@ const LandingPage = () => {
                         <div className={`relative flex-1 w-full ${activeDropdown === 'guests' ? 'z-[60]' : 'z-[1]'}`}>
                           <div 
                             onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                            className="flex items-center px-4 lg:px-6 py-3 w-full cursor-pointer hover:bg-stone/50 rounded-3xl lg:rounded-full transition duration-200 group"
+                            className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full cursor-pointer hover:bg-stone/50 rounded-2xl lg:rounded-full transition duration-200 group"
                           >
                             <User className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
@@ -3538,10 +3538,10 @@ const LandingPage = () => {
                         </div>
 
                         {/* Search Button */}
-                        <div className="w-full lg:w-auto p-1 pt-2 lg:pt-1 shrink-0 z-[1]">
+                        <div className="w-full lg:w-auto p-1 pt-1.5 lg:pt-1 shrink-0 z-[1]">
                           <button
                             onClick={handleSearch}
-                            className="w-full lg:w-auto bg-[#1A1A1A] hover:bg-black text-white font-bold text-xs uppercase tracking-widest px-8 py-4 rounded-2xl lg:rounded-full transition duration-200 shadow-md cursor-pointer"
+                            className="w-full lg:w-auto bg-[#1A1A1A] hover:bg-black text-white font-bold text-xs uppercase tracking-widest px-8 py-3 lg:py-4 rounded-2xl lg:rounded-full transition duration-200 shadow-md cursor-pointer"
                           >
                             SEARCH
                           </button>
