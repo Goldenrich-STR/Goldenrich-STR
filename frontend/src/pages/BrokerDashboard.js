@@ -871,9 +871,14 @@ const buildHostVerificationStages = (owner, properties, verifications, payments 
   const hasProperties = properties.length > 0;
   const latestVerification = verifications[0] || {};
   const hasBrokerSubmitted = latestVerification.status === 'completed' || Boolean(latestVerification.completed_at);
-  const rmReviewed = Boolean(latestVerification.rm_reviewed);
+  const hasBranchManager = Boolean(latestVerification.branch_manager_id || owner.branch_manager_id || owner.branch_manager_code);
+  const isRmSubmittedVisit = hasBranchManager && !latestVerification.broker_id && hasBrokerSubmitted;
+  const rmReviewed = Boolean(latestVerification.rm_reviewed) || isRmSubmittedVisit;
   const rmRejected = rmReviewed && latestVerification.rm_approved === false;
-  const rmApproved = rmReviewed && latestVerification.rm_approved === true;
+  const rmApproved = isRmSubmittedVisit || (rmReviewed && latestVerification.rm_approved === true);
+  const branchManagerReviewed = Boolean(latestVerification.branch_manager_reviewed);
+  const branchManagerRejected = branchManagerReviewed && latestVerification.branch_manager_approved === false;
+  const branchManagerApproved = branchManagerReviewed && latestVerification.branch_manager_approved === true;
   const adminReviewed = Boolean(latestVerification.admin_reviewed);
   const adminRejected = adminReviewed && latestVerification.admin_approved === false;
   const adminApproved = adminReviewed && latestVerification.admin_approved === true;
@@ -907,12 +912,17 @@ const buildHostVerificationStages = (owner, properties, verifications, payments 
     },
     {
       label: 'Finance Approval',
-      status: payments.length > 0 ? 'completed' : hasBrokerSubmitted ? 'pending' : 'waiting',
+      status: payments.length > 0 ? 'completed' : (hasBranchManager ? branchManagerApproved : rmApproved) ? 'pending' : 'waiting',
       meta: payments.length > 0 ? `${payments.length} payment records` : 'Payment ledger pending'
     },
+    ...(hasBranchManager ? [{
+      label: 'Branch Manager Review',
+      status: branchManagerRejected ? 'rejected' : branchManagerApproved ? 'completed' : rmApproved ? 'pending' : 'waiting',
+      meta: latestVerification.branch_manager_id || owner.branch_manager_id || owner.branch_manager_code || 'Branch Manager review pending'
+    }] : []),
     {
       label: 'Admin Approval',
-      status: adminRejected ? 'rejected' : adminApproved ? 'completed' : rmApproved ? 'pending' : 'waiting',
+      status: adminRejected ? 'rejected' : adminApproved ? 'completed' : (hasBranchManager ? branchManagerApproved : rmApproved) ? 'pending' : 'waiting',
       meta: latestVerification.admin_id || owner.admin_id || 'Admin review pending'
     },
     {
@@ -1664,7 +1674,10 @@ const VerificationsSection = () => {
   };
 
   const getTrackerStage = (task) => {
+    const isRmSubmittedVisit = task.branch_manager_id && !task.broker_id && task.status === 'completed';
     if (task.admin_reviewed) return task.admin_approved ? 'Admin Approved' : 'Admin Rejected';
+    if (task.branch_manager_reviewed) return task.branch_manager_approved ? 'Branch Manager Approved' : 'Branch Manager Rejected';
+    if (((task.rm_reviewed && task.rm_approved) || isRmSubmittedVisit) && task.branch_manager_id) return 'Branch Manager Review Pending';
     if (task.rm_reviewed) return task.rm_approved ? 'RM Approved' : 'RM Rejected';
     if (task.status === 'completed') return 'RM Review Pending';
     if (task.status === 'in_progress') return 'Visit In Progress';
@@ -1680,10 +1693,11 @@ const VerificationsSection = () => {
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Verification Tracker</h3>
           <p className="text-sm text-charcoal-muted mt-2">Track broker visit submission, RM review, admin approval and re-verification status.</p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full lg:w-auto">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 w-full lg:w-auto">
           {[
             ['Pending Visit', summary.pending_visit || 0],
             ['RM Pending', summary.rm_pending || 0],
+            ['BM Pending', summary.branch_manager_pending || 0],
             ['RM Approved', summary.rm_approved || 0],
             ['Admin Approved', summary.admin_approved || 0],
           ].map(([label, value]) => (
@@ -1713,6 +1727,9 @@ const VerificationsSection = () => {
               .map((task) => {
               const pd = task.property_details || {};
               const owner = task.owner_summary || {};
+              const taskRmSubmittedVisit = task.branch_manager_id && !task.broker_id && task.status === 'completed';
+              const taskRmReviewed = Boolean(task.rm_reviewed) || taskRmSubmittedVisit;
+              const taskRmApproved = taskRmSubmittedVisit || task.rm_approved;
               const isOpen = task.status === 'pending' || task.status === 'in_progress' || task.status === 'rejected' || (task.rm_reviewed && !task.rm_approved);
               return (
                 <div
@@ -1775,14 +1792,20 @@ const VerificationsSection = () => {
                             </span>
                           )}
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mt-4">
                           <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
                             <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">Host</p>
                             <p className="text-xs font-bold text-charcoal mt-1">{owner.full_name || task.owner_id || 'Not assigned'}</p>
                           </div>
                           <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
                             <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">RM Review</p>
-                            <p className="text-xs font-bold text-charcoal mt-1">{task.rm_reviewed ? (task.rm_approved ? 'Approved' : 'Rejected') : 'Pending'}</p>
+                            <p className="text-xs font-bold text-charcoal mt-1">{taskRmReviewed ? (taskRmApproved ? 'Approved' : 'Rejected') : 'Pending'}</p>
+                          </div>
+                          <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
+                            <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">BM Review</p>
+                            <p className="text-xs font-bold text-charcoal mt-1">
+                              {task.branch_manager_id ? (task.branch_manager_reviewed ? (task.branch_manager_approved ? 'Approved' : 'Rejected') : 'Pending') : 'Not required'}
+                            </p>
                           </div>
                           <div className="rounded-2xl bg-stone/50 border border-sand-200 px-3 py-3">
                             <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">Admin Review</p>

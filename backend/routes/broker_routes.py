@@ -1233,6 +1233,9 @@ async def get_verification_tasks(
             "rm_pending": sum(1 for item in verifications if item.get("status") == "completed" and not item.get("rm_reviewed")),
             "rm_approved": sum(1 for item in verifications if item.get("rm_reviewed") and item.get("rm_approved") is True),
             "rm_rejected": sum(1 for item in verifications if item.get("rm_reviewed") and item.get("rm_approved") is False),
+            "branch_manager_pending": sum(1 for item in verifications if item.get("status") == "completed" and item.get("branch_manager_id") and not item.get("branch_manager_reviewed") and ((item.get("rm_reviewed") and item.get("rm_approved") is True) or not item.get("broker_id"))),
+            "branch_manager_approved": sum(1 for item in verifications if item.get("branch_manager_reviewed") and item.get("branch_manager_approved") is True),
+            "branch_manager_rejected": sum(1 for item in verifications if item.get("branch_manager_reviewed") and item.get("branch_manager_approved") is False),
             "admin_approved": sum(1 for item in verifications if item.get("admin_reviewed") and item.get("admin_approved") is True),
             "admin_rejected": sum(1 for item in verifications if item.get("admin_reviewed") and item.get("admin_approved") is False),
         }

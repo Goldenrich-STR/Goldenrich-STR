@@ -711,6 +711,7 @@ def _normalise_property_review(prop: dict, owner: dict | None = None, verificati
             "document_check": stages.get("document_check", {"status": "pending"}),
             "broker_verification": stages.get("broker_verification", {"status": "pending"}),
             "rm_verification": stages.get("rm_verification", {"status": "pending"}),
+            "branch_manager_review": stages.get("branch_manager_review", {"status": "pending"}),
             "admin_review": stages.get("admin_review", {"status": "pending"}),
         },
         "summary": {
@@ -2414,18 +2415,44 @@ async def property_operations(
         rm_props = await db.property_verifications.find(
             {
                 "status": "completed",
-                "rm_approved": {"$ne": True}
+                "rm_reviewed": {"$ne": True},
+                "$or": [
+                    {"branch_manager_id": {"$in": [None, ""]}},
+                    {"branch_manager_id": {"$exists": False}},
+                    {"broker_id": {"$nin": [None, ""]}},
+                ],
             },
             {"property_id": 1}
         ).to_list(length=10000)
         rm_prop_ids = [vp["property_id"] for vp in rm_props]
         query["status"] = {"$in": ["pending_verification", "under_review"]}
         query["property_id"] = {"$in": rm_prop_ids}
+    elif tab == "branch_manager_review":
+        bm_props = await db.property_verifications.find(
+            {
+                "status": "completed",
+                "branch_manager_id": {"$nin": [None, ""]},
+                "branch_manager_reviewed": {"$ne": True},
+                "$or": [
+                    {"rm_reviewed": True, "rm_approved": True},
+                    {"broker_id": {"$in": [None, ""]}},
+                ],
+            },
+            {"property_id": 1}
+        ).to_list(length=10000)
+        bm_prop_ids = [vp["property_id"] for vp in bm_props]
+        query["status"] = {"$in": ["pending_verification", "under_review"]}
+        query["property_id"] = {"$in": bm_prop_ids}
     elif tab == "admin_review":
         admin_props = await db.property_verifications.find(
             {
                 "rm_approved": True,
-                "admin_reviewed": {"$ne": True}
+                "admin_reviewed": {"$ne": True},
+                "$or": [
+                    {"branch_manager_id": {"$in": [None, ""]}},
+                    {"branch_manager_id": {"$exists": False}},
+                    {"branch_manager_reviewed": True, "branch_manager_approved": True},
+                ],
             },
             {"property_id": 1}
         ).to_list(length=10000)
@@ -2629,7 +2656,7 @@ async def update_property_checklist(property_id: str, payload: PropertyChecklist
 
 @router.patch("/properties-operations/{property_id}/stage")
 async def update_property_stage(property_id: str, payload: PropertyStagePayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
-    allowed_stages = {"document_check", "broker_verification", "rm_verification", "admin_review"}
+    allowed_stages = {"document_check", "broker_verification", "rm_verification", "branch_manager_review", "admin_review"}
     if payload.stage not in allowed_stages:
         raise HTTPException(status_code=400, detail="Invalid review stage")
     if payload.status not in {"approved", "rejected", "pending"}:
@@ -2640,7 +2667,7 @@ async def update_property_stage(property_id: str, payload: PropertyStagePayload,
     stage = {"status": payload.status, "remarks": payload.remarks or "", "reviewed_by": current_user["user_id"], "reviewed_at": _now().isoformat()}
     updates = {f"stages.{payload.stage}": stage, "updated_at": _now()}
     property_updates = {"updated_at": _now()}
-    if payload.status == "approved" and payload.stage in {"broker_verification", "rm_verification", "admin_review"}:
+    if payload.status == "approved" and payload.stage in {"broker_verification", "rm_verification", "branch_manager_review", "admin_review"}:
         property_updates["status"] = "under_review"
     if payload.status == "rejected":
         property_updates["status"] = "rejected"

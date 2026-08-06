@@ -7,6 +7,7 @@ const tabs = [
   ['all', 'All Properties'],
   ['broker_verification', 'Broker Verification'],
   ['rm_verification', 'RM Verification'],
+  ['branch_manager_review', 'Branch Manager Review'],
   ['admin_review', 'Admin Review'],
   ['live', 'Live'],
   ['rejected', 'Rejected'],
@@ -326,7 +327,8 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal 
   const stages = review.stages || {};
   const brokerStages = Object.entries(stages).filter(([stage]) => stage.includes('broker'));
   const rmStages = Object.entries(stages).filter(([stage]) => stage.includes('rm'));
-  const otherStages = Object.entries(stages).filter(([stage]) => !stage.includes('broker') && !stage.includes('rm'));
+  const branchManagerStages = Object.entries(stages).filter(([stage]) => stage.includes('branch_manager'));
+  const otherStages = Object.entries(stages).filter(([stage]) => !stage.includes('broker') && !stage.includes('rm') && !stage.includes('branch_manager'));
   const heroImage = images[0];
   return (
     <div className="space-y-5">
@@ -483,6 +485,10 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal 
             <Panel className="p-4">
               <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500">RM Checklist</p>
               <div className="space-y-2">{rmStages.length ? rmStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">No RM checklist found.</p>}</div>
+            </Panel>
+            <Panel className="p-4">
+              <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500">Branch Manager Review</p>
+              <div className="space-y-2">{branchManagerStages.length ? branchManagerStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">No Branch Manager review found.</p>}</div>
             </Panel>
           </div>
           <div className="space-y-2">

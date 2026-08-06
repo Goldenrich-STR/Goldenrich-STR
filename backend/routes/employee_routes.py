@@ -132,16 +132,23 @@ def _pending_review_query(property_ids, identifiers, is_branch_manager):
         return {
             "status": VerificationStatus.COMPLETED.value,
             "property_id": {"$in": property_ids},
-            "rm_reviewed": True,
-            "rm_approved": True,
             "branch_manager_reviewed": {"$ne": True},
-            "$or": _field_matches_identifiers("branch_manager_id", identifiers),
+            "$and": [
+                {"$or": _field_matches_identifiers("branch_manager_id", identifiers)},
+                {"$or": [
+                    {"rm_reviewed": True, "rm_approved": True},
+                    {"broker_id": {"$in": [None, ""]}},
+                ]},
+            ],
         }
     return {
         "status": VerificationStatus.COMPLETED.value,
         "property_id": {"$in": property_ids},
         "rm_reviewed": False,
-        "$and": [_empty_assignment_query("branch_manager_id")],
+        "$and": [
+            _empty_assignment_query("branch_manager_id"),
+            {"broker_id": {"$nin": [None, ""]}},
+        ],
         "$or": _field_matches_identifiers("rm_id", identifiers),
     }
 
@@ -861,7 +868,11 @@ async def approve_verification(
         
         now = datetime.now(timezone.utc)
         if is_bm:
-            if not verification.get("rm_reviewed") or verification.get("rm_approved") is not True:
+            rm_step_completed = (
+                (verification.get("rm_reviewed") and verification.get("rm_approved") is True)
+                or not verification.get("broker_id")
+            )
+            if not rm_step_completed:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="RM verification must be completed before Branch Manager approval"
@@ -869,6 +880,9 @@ async def approve_verification(
             await db.property_verifications.update_one(
                 {"verification_id": verification_id},
                 {"$set": {
+                    "rm_reviewed": True,
+                    "rm_approved": True,
+                    "rm_id": verification.get("rm_id") or verification.get("broker_id") or "",
                     "branch_manager_reviewed": True,
                     "branch_manager_approved": True,
                     "branch_manager_remarks": remarks,
