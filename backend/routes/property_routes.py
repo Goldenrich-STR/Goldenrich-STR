@@ -175,12 +175,33 @@ async def search_properties(
 
         radius_search = latitude is not None and longitude is not None and radius_km is not None
 
-        def city_match_conditions(location: str) -> list:
-            keyword = re.escape(location.strip())
-            return [
-                {"city": {"$regex": keyword, "$options": "i"}},
-                {"state": {"$regex": keyword, "$options": "i"}},
+        def get_location_keywords(location: str) -> list:
+            loc_lower = location.strip().lower()
+            synonym_groups = [
+                {"trimbakeshwar", "trimbak", "trambak", "trimabk", "talwade"},
+                {"nashik", "nasik"},
+                {"kokan", "konkan"},
+                {"lonavala", "lonavla"},
+                {"alibaug", "alibag"},
+                {"mumbai", "bombay"},
+                {"pune", "poona"},
             ]
+            for group in synonym_groups:
+                if any(x in loc_lower for x in group) or any(loc_lower in x for x in group):
+                    return list(group)
+            return [location.strip()]
+
+        def city_match_conditions(location: str) -> list:
+            keywords = get_location_keywords(location)
+            conditions = []
+            for kw in keywords:
+                escaped = re.escape(kw)
+                conditions.extend([
+                    {"city": {"$regex": escaped, "$options": "i"}},
+                    {"state": {"$regex": escaped, "$options": "i"}},
+                    {"address": {"$regex": escaped, "$options": "i"}},
+                ])
+            return conditions
 
         if city and not radius_search:
             query["$or"] = city_match_conditions(city)

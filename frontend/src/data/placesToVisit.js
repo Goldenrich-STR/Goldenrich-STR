@@ -14,7 +14,7 @@ export const PLACES_TO_VISIT = [
       'Sunset Viewing from The Balcony Tasting Room',
       'Luxurious stays at The Source at Sula and Beyond by Sula'
     ],
-    searchQuery: { city: 'Nashik' }
+    searchQuery: { city: 'Nashik', latitude: 19.9975, longitude: 73.6874, radius_km: 10 }
   },
   {
     slug: 'anjaneri',
@@ -31,7 +31,7 @@ export const PLACES_TO_VISIT = [
       'Anjani Mata Temple dedicated to Hanuman\'s mother',
       'Spectacular monsoonal cloud beds and waterfalls'
     ],
-    searchQuery: { city: 'Nashik' }
+    searchQuery: { city: 'Nashik', latitude: 19.9238, longitude: 73.5786, radius_km: 15 }
   },
   {
     slug: 'trimbakeshwar',
@@ -48,7 +48,7 @@ export const PLACES_TO_VISIT = [
       'Exploring Gorakhnath Caves and local spiritual mutts',
       'Scenic drive through the Trimbak mountain range'
     ],
-    searchQuery: { city: 'Trimbakeshwar' }
+    searchQuery: { city: 'Trimbakeshwar', latitude: 19.9380, longitude: 73.5375, radius_km: 10 }
   },
   {
     slug: 'karjat',
@@ -65,7 +65,7 @@ export const PLACES_TO_VISIT = [
       'Visiting the ND Art World Film Studio for set tours',
       'Relaxing at premium farmhouses and private villas'
     ],
-    searchQuery: { city: 'Karjat' }
+    searchQuery: { city: 'Karjat', latitude: 18.9102, longitude: 73.3282, radius_km: 15 }
   },
   {
     slug: 'lonavala',
@@ -82,7 +82,7 @@ export const PLACES_TO_VISIT = [
       'Trekking to Lohagad Fort and Visapur Fort',
       'Buying fresh hot fudges and local Chikki'
     ],
-    searchQuery: { city: 'Lonavala' }
+    searchQuery: { city: 'Lonavala', latitude: 18.7557, longitude: 73.4091, radius_km: 15 }
   },
   {
     slug: 'igatpuri',
@@ -99,7 +99,7 @@ export const PLACES_TO_VISIT = [
       'Tasting local rustic Maharashtrian cuisine',
       'Lakeside stays near Arthur Lake and Upper Vaitarna'
     ],
-    searchQuery: { city: 'Igatpuri' }
+    searchQuery: { city: 'Igatpuri', latitude: 19.6993, longitude: 73.5606, radius_km: 15 }
   },
   {
     slug: 'pandav-leni',
@@ -116,7 +116,7 @@ export const PLACES_TO_VISIT = [
       'Visiting the Dadasaheb Phalke Memorial gardens below',
       'Exploring the nearby Buddha Smarak monument'
     ],
-    searchQuery: { city: 'Nashik' }
+    searchQuery: { city: 'Nashik', latitude: 19.9620, longitude: 73.7482, radius_km: 8 }
   },
   {
     slug: 'gangapur-dam',
@@ -133,7 +133,7 @@ export const PLACES_TO_VISIT = [
       'Stunning sunset views over the tranquil reservoir waters',
       'Close proximity to Nashik\'s top premium vineyards'
     ],
-    searchQuery: { city: 'Nashik' }
+    searchQuery: { city: 'Nashik', latitude: 20.0385, longitude: 73.7144, radius_km: 10 }
   },
   {
     slug: 'harihar-fort',
@@ -150,7 +150,7 @@ export const PLACES_TO_VISIT = [
       'Visiting the Shiva and Hanuman shrines on the peak',
       'Experiencing the thrill of high-altitude rock climbing'
     ],
-    searchQuery: { city: 'Igatpuri' }
+    searchQuery: { city: 'Igatpuri', latitude: 19.9056, longitude: 73.4731, radius_km: 20 }
   },
   {
     slug: 'bhandardara',
@@ -167,7 +167,7 @@ export const PLACES_TO_VISIT = [
       'Experiencing the magical pre-monsoon Fireflies Festival',
       'Taking a boat ride on the tranquil reservoir waters'
     ],
-    searchQuery: { city: 'Bhandardara' }
+    searchQuery: { city: 'Bhandardara', latitude: 19.5398, longitude: 73.7583, radius_km: 15 }
   },
   {
     slug: 'alibaug',
@@ -184,7 +184,7 @@ export const PLACES_TO_VISIT = [
       'Taking a historic boat tour to Murud-Janjira Fort',
       'Enjoying fresh, authentic Konkani fish thali and Solkadhi'
     ],
-    searchQuery: { city: 'Alibaug' }
+    searchQuery: { city: 'Alibaug', latitude: 18.6584, longitude: 72.8777, radius_km: 15 }
   },
   {
     slug: 'goa',
@@ -201,7 +201,7 @@ export const PLACES_TO_VISIT = [
       'Taking a boat cruise on the Mandovi River at sunset',
       'Experiencing the vibrant beach shacks and night markets'
     ],
-    searchQuery: { city: 'Goa' }
+    searchQuery: { city: 'Goa', latitude: 15.2993, longitude: 74.1240, radius_km: 40 }
   }
 ];
 
