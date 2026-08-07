@@ -2067,11 +2067,34 @@ const ReviewVerificationModal = ({ task, onClose, onReviewed }) => {
             <h4 className="font-bold text-charcoal mb-3 text-sm uppercase tracking-widest">Verification Checklist Audit</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {checklistEntries.map(([key, val]) => (
-                <div key={key} className="flex items-center justify-between p-4 border border-gray-100 rounded-2xl bg-white hover:shadow-sm transition">
-                  <span className="text-sm font-bold text-charcoal">{formatDisplayLabel(key)}</span>
-                  <span className={`px-2 py-1 text-[10px] font-bold rounded-full ${val ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
-                    {val ? '✔ Verified' : '✘ Failed'}
-                  </span>
+                <div key={key} className="flex flex-col p-4 border border-gray-100 rounded-2xl bg-white hover:shadow-sm transition">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-bold text-charcoal">{formatDisplayLabel(key)}</span>
+                    <span className={`px-2 py-1 text-[10px] font-bold rounded-full ${val ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                      {val ? '✔ Verified' : '✘ Failed'}
+                    </span>
+                  </div>
+                  <div className="flex space-x-2 mt-2">
+                    <button 
+                      type="button"
+                      onClick={() => alert(`${formatDisplayLabel(key)} marked as approved`)}
+                      className="flex-1 py-2 bg-green-50 text-green-700 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded-xl hover:bg-green-100 transition flex items-center justify-center space-x-1"
+                    >
+                      <CheckCircle className="w-3 h-3" />
+                      <span>Approve</span>
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setRejectReason(`Rejected Point: ${formatDisplayLabel(key).toUpperCase()} - `);
+                        setShowRejectModal(true);
+                      }}
+                      className="flex-1 py-2 bg-red-50 text-red-700 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded-xl hover:bg-red-100 transition flex items-center justify-center space-x-1"
+                    >
+                      <XCircle className="w-3 h-3" />
+                      <span>Reject</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
