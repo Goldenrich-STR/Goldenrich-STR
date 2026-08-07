@@ -1944,30 +1944,132 @@ const ReviewVerificationModal = ({ task, onClose, onReviewed }) => {
     }
   };
 
+  const propertyDetails = task.property_details || {};
+  const propertyImages = Array.isArray(propertyDetails.images) ? propertyDetails.images : [];
+  const checklistEntries = Object.entries(task.checklist || {});
+  const evidencePhotos = Array.isArray(task.geo_tagged_photos) ? task.geo_tagged_photos : [];
+
   return createPortal(
     <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[92vh] overflow-y-auto shadow-xl">
         <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-bold text-charcoal">Review Verification Report</h3>
-            <p className="text-xs text-charcoal-light font-mono mt-1">Property: {task.property_details?.title || 'Property'}</p>
+            <h3 className="text-2xl font-bold tracking-tight text-charcoal">Verification Report</h3>
+            <p className="text-xs text-charcoal-light font-mono mt-1">
+              {propertyDetails.title || 'Property'} {propertyDetails.city ? `| ${propertyDetails.city}` : ''}
+            </p>
           </div>
           <button onClick={onClose} className="text-charcoal-light hover:text-charcoal">
             <XCircle className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-8">
           {error && <div className="rounded-xl bg-red-50 border border-red-100 p-3 text-red-600 text-xs font-bold">{error}</div>}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="p-4 bg-stone rounded-2xl">
+              <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-1">Property Details</p>
+              <p className="font-mono text-xs font-bold text-charcoal break-all">ID: {task.property_id || 'N/A'}</p>
+              <p className="font-mono text-[10px] text-charcoal-light mt-1 break-all">Host: {task.owner_id || propertyDetails.owner_id || 'N/A'}</p>
+            </div>
+            <div className="p-4 bg-stone rounded-2xl">
+              <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-1">{task.broker_id ? 'Site Visit By' : 'RM Visit By'}</p>
+              <p className="font-bold text-charcoal">{task.broker_details?.full_name || task.rm_details?.full_name || 'N/A'}</p>
+              <p className="font-mono text-[10px] text-charcoal-light mt-1 break-all">ID: {task.broker_id || task.rm_id || 'N/A'}</p>
+            </div>
+            <div className="p-4 bg-stone rounded-2xl">
+              <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mb-1">Visit Date</p>
+              <p className="font-bold text-charcoal">
+                {task.completed_at || task.created_at
+                  ? new Date(task.completed_at || task.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                  : 'N/A'}
+              </p>
+            </div>
+          </div>
+
+          <div className="p-5 bg-stone/50 rounded-2xl border border-gray-100/70 space-y-4">
+            <h4 className="text-xs font-bold text-charcoal uppercase tracking-widest border-b border-gray-100 pb-2">Property Specifications & Listing Info</h4>
+            {propertyImages.length > 0 && (
+              <div className="flex gap-3 overflow-x-auto py-1">
+                {propertyImages.map((img, i) => {
+                  const imageUrl = getImageUrl(String(img).split('#')[0]);
+                  return (
+                    <img
+                      key={i}
+                      src={imageUrl}
+                      alt={`Property View ${i + 1}`}
+                      className="w-44 h-28 object-cover rounded-2xl border border-gray-100 shadow-sm cursor-pointer shrink-0"
+                      onClick={() => window.open(imageUrl, '_blank')}
+                    />
+                  );
+                })}
+              </div>
+            )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+              <div>
+                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Property Type</p>
+                <p className="font-bold text-charcoal">{formatPropertyTypeLabel(propertyDetails.property_type) || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Category</p>
+                <p className="font-bold text-charcoal">{formatCategoryLabel(propertyDetails.category) || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">BHK / Config</p>
+                <p className="font-bold text-charcoal">{formatDisplayLabel(propertyDetails.bhk_type) || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Area</p>
+                <p className="font-bold text-charcoal">{propertyDetails.area_sqft ? `${propertyDetails.area_sqft} sqft` : 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Price</p>
+                <p className="font-bold text-charcoal">
+                  {propertyDetails.price_per_night !== undefined ? `Rs. ${Number(propertyDetails.price_per_night || 0).toLocaleString('en-IN')}` : 'N/A'}
+                </p>
+              </div>
+              <div>
+                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Location</p>
+                <p className="font-bold text-charcoal">{propertyDetails.city || 'N/A'}</p>
+              </div>
+            </div>
+            {propertyDetails.description && (
+              <div>
+                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider mb-1">Description</p>
+                <p className="text-xs text-charcoal-light leading-relaxed">{formatReadableText(propertyDetails.description)}</p>
+              </div>
+            )}
+            {propertyDetails.address && (
+              <div>
+                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider mb-1">Full Address</p>
+                <p className="text-xs text-charcoal-light leading-relaxed">
+                  {[propertyDetails.address, propertyDetails.city, propertyDetails.state, propertyDetails.pin_code].filter(Boolean).join(', ')}
+                </p>
+              </div>
+            )}
+            {Array.isArray(propertyDetails.amenities) && propertyDetails.amenities.length > 0 && (
+              <div>
+                <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider mb-2">Amenities</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {propertyDetails.amenities.map((amenity, i) => (
+                    <span key={i} className="px-2 py-1 bg-white border border-gray-100 rounded-lg text-[10px] font-semibold text-charcoal">
+                      {formatDisplayLabel(amenity)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Checklist filled by broker */}
           <div>
-            <h4 className="font-bold text-charcoal mb-3 text-sm">Broker Checklist Answers</h4>
+            <h4 className="font-bold text-charcoal mb-3 text-sm uppercase tracking-widest">Verification Checklist Audit</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {Object.entries(task.checklist || {}).map(([key, val]) => (
-                <div key={key} className="flex items-center justify-between p-3 border border-gray-100 rounded-xl bg-stone/30">
-                  <span className="text-xs font-bold text-charcoal-muted capitalize text-[10px]">{key.replace(/_/g, ' ')}</span>
-                  <span className={`px-2 py-1 text-[10px] font-bold rounded-full ${val ? 'bg-sage/10 text-sage-dark' : 'bg-red-50 text-red-600'}`}>
+              {checklistEntries.map(([key, val]) => (
+                <div key={key} className="flex items-center justify-between p-4 border border-gray-100 rounded-2xl bg-white hover:shadow-sm transition">
+                  <span className="text-sm font-bold text-charcoal">{formatDisplayLabel(key)}</span>
+                  <span className={`px-2 py-1 text-[10px] font-bold rounded-full ${val ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
                     {val ? '✔ Verified' : '✘ Failed'}
                   </span>
                 </div>
@@ -1983,17 +2085,16 @@ const ReviewVerificationModal = ({ task, onClose, onReviewed }) => {
             </div>
           )}
 
-          {/* Geo-tagged Photos */}
-          {task.geo_tagged_photos && task.geo_tagged_photos.length > 0 && (
+          {evidencePhotos.length > 0 && (
             <div>
-              <h4 className="font-bold text-charcoal mb-3 text-sm">Geo-tagged Evidence ({task.geo_tagged_photos.length})</h4>
-              <div className="grid grid-cols-3 gap-3">
-                {task.geo_tagged_photos.map((photo, i) => (
+              <h4 className="font-bold text-charcoal mb-3 text-sm uppercase tracking-widest">Geo-tagged Evidence ({evidencePhotos.length})</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {evidencePhotos.map((photo, i) => (
                   <div key={i} className="group relative aspect-square rounded-xl overflow-hidden bg-gray-50 border border-gray-100 cursor-pointer" onClick={() => window.open(getImageUrl(photo.photo_url || photo.url), '_blank')}>
                     <img src={getImageUrl(photo.photo_url || photo.url)} alt="Evidence" className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-charcoal/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center p-2 text-[8px] text-white">
-                      <p>Lat: {photo.latitude}</p>
-                      <p>Lng: {photo.longitude}</p>
+                      <p>Lat: {photo.latitude || photo.lat}</p>
+                      <p>Lng: {photo.longitude || photo.lng}</p>
                     </div>
                   </div>
                 ))}
