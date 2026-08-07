@@ -157,10 +157,6 @@ def _pending_review_query(property_ids, identifiers, is_branch_manager):
         "status": VerificationStatus.COMPLETED.value,
         "property_id": {"$in": property_ids},
         "rm_reviewed": False,
-        "$and": [
-            _empty_assignment_query("branch_manager_id"),
-            {"broker_id": {"$nin": [None, ""]}},
-        ],
         "$or": _field_matches_identifiers("rm_id", identifiers),
     }
 
@@ -503,7 +499,7 @@ async def get_pending_verifications(
                 if not bm_matches or not rm_step_done:
                     continue
             else:
-                if assigned_rm not in rm_identifiers or assigned_broker == "":
+                if assigned_rm not in rm_identifiers:
                     continue
             
             # Get broker/RM who did the visit

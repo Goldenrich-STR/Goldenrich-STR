@@ -535,9 +535,11 @@ const VerificationReviewSection = () => {
     if (!verification || verification.status === 'approved' || verification.status === 'rejected') {
       return false;
     }
+    // If it's branch_manager stage, check BM review
     if (verification.review_stage === 'branch_manager') {
       return !verification.branch_manager_reviewed;
     }
+    // For RM stage (whether 1st or 2nd verification level), allow RM review if not yet reviewed by RM
     return !verification.rm_reviewed;
   };
 
