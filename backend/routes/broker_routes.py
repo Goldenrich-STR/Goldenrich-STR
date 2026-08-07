@@ -96,6 +96,31 @@ def _get_broker_or_rm_query(current_user: dict, additional_query: dict = None) -
             q.update(additional_query)
     return q
 
+
+async def _assigned_host_ids_for_current_user(db: AsyncIOMotorDatabase, current_user: dict) -> list[str]:
+    owners = await db.users.find(
+        _get_broker_or_rm_query(current_user, {"role": "host"}),
+        {"_id": 0, "user_id": 1}
+    ).to_list(length=3000)
+    return [owner["user_id"] for owner in owners if owner.get("user_id")]
+
+
+async def _assigned_property_query(db: AsyncIOMotorDatabase, current_user: dict, additional_query: dict | None = None) -> dict:
+    host_ids = await _assigned_host_ids_for_current_user(db, current_user)
+    identifiers = _user_identifiers(current_user)
+    assignment_or = []
+    if host_ids:
+        assignment_or.append({"owner_id": {"$in": host_ids}})
+    assignment_or.extend([
+        {"broker_id": {"$in": identifiers}},
+        {"rm_id": {"$in": identifiers}},
+        {"branch_manager_id": {"$in": identifiers}},
+    ])
+    query = {"$or": assignment_or} if assignment_or else {"property_id": {"$exists": False}}
+    if additional_query:
+        query = {"$and": [query, additional_query]}
+    return query
+
 # ========== BROKER DASHBOARD ==========
 
 def _parse_dt(value):
@@ -154,13 +179,14 @@ async def get_broker_dashboard_stats(
         
         # Count assigned owners
         total_owners = await db.users.count_documents(_get_broker_or_rm_query(current_user, {"role": "host"}))
+        assigned_property_query = await _assigned_property_query(db, current_user)
         
         # Count properties
-        total_properties = await db.properties.count_documents(_get_broker_or_rm_query(current_user))
-        live_properties = await db.properties.count_documents(_get_broker_or_rm_query(current_user, {"status": "live"}))
+        total_properties = await db.properties.count_documents(assigned_property_query)
+        live_properties = await db.properties.count_documents(await _assigned_property_query(db, current_user, {"status": "live"}))
         
         # Pending verifications
-        pending_verifications = await db.property_verifications.count_documents(_get_broker_or_rm_query(current_user, {"status": {"$in": ["pending", "in_progress"]}}))
+        pending_verifications = await db.property_verifications.count_documents(await _assigned_property_query(db, current_user, {"status": {"$in": ["pending", "in_progress"]}}))
         
         # Leads count
         total_leads = await db.leads.count_documents(_get_broker_or_rm_query(current_user))
@@ -419,11 +445,9 @@ async def get_broker_properties(
 ):
     """Get all properties under this broker."""
     try:
-        broker_id = current_user["user_id"]
-        
-        query = _get_broker_or_rm_query(current_user)
+        query = await _assigned_property_query(db, current_user)
         if status_filter:
-            query["status"] = status_filter
+            query = {"$and": [query, {"status": status_filter}]}
         
         cursor = db.properties.find(query, {"_id": 0})
         properties = await cursor.to_list(length=200)
@@ -435,11 +459,7 @@ async def get_broker_properties(
                     {"_id": 0, "user_id": 1, "full_name": 1, "email": 1, "phone": 1, "kyc_status": 1, "rm_id": 1}
                 )
                 property_doc["owner_summary"] = owner or {}
-            verification = await db.property_verifications.find_one(
-                _get_broker_or_rm_query(current_user, {"property_id": property_doc.get("property_id")}),
-                {"_id": 0},
-                sort=[("created_at", -1)]
-            )
+            verification = await db.property_verifications.find_one({"property_id": property_doc.get("property_id")}, {"_id": 0}, sort=[("created_at", -1)])
             property_doc["verification_summary"] = {
                 "status": verification.get("status") if verification else "not_started",
                 "rm_reviewed": verification.get("rm_reviewed") if verification else False,
