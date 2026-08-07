@@ -14,6 +14,7 @@ const HostDashboard = lazy(() => import("./pages/HostDashboard"));
 const HostCalendar = lazy(() => import("./pages/HostCalendar"));
 const HostListProperty = lazy(() => import("./pages/HostListProperty"));
 const PropertyDetail = lazy(() => import("./pages/PropertyDetail"));
+const PlaceDetails = lazy(() => import("./pages/PlaceDetails"));
 const BookingConfirmation = lazy(() => import("./pages/BookingConfirmation"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminAccount = lazy(() => import("./pages/AdminAccount"));
@@ -232,8 +233,7 @@ function AppRoutes() {
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
         <Route path="/admin/login" element={<AuthPage isAdminLogin={true} />} />
         <Route path="/md/login" element={<AuthPage isAdminLogin={true} isMdLogin={true} />} />
-        <Route
-          path="/md/dashboard"
+        <Route path="/md/dashboard"
           element={
             <MdProtectedRoute>
               <ManagingDirectorDashboard />
@@ -241,6 +241,7 @@ function AppRoutes() {
           }
         />
         <Route path="/property/:id" element={<PropertyDetail />} />
+        <Route path="/places/:slug" element={<PlaceDetails />} />
         <Route path="/support" element={<SupportPage />} />
         <Route path="/about-us" element={<AboutUs />} />
         <Route path="/blog" element={<Blog />} />
