@@ -180,9 +180,6 @@ async def search_properties(
             return [
                 {"city": {"$regex": keyword, "$options": "i"}},
                 {"state": {"$regex": keyword, "$options": "i"}},
-                {"title": {"$regex": keyword, "$options": "i"}},
-                {"address": {"$regex": keyword, "$options": "i"}},
-                {"nearby_places": {"$regex": keyword, "$options": "i"}},
             ]
 
         if city and not radius_search:
