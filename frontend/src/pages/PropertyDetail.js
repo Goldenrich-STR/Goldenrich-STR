@@ -1263,11 +1263,7 @@ const PropertyDetail = () => {
   const bedroomLabel = getBhkTypeLabel(property.category, property.bhk_type || property.bedrooms, property.max_guests);
   const guestCapacity = Number(property.guestCapacity || property.max_guests || property.maxGuests || 0);
   const propertyTypeValue = `${property.property_type || property.propertyType || property.type || ''}`.toLowerCase();
-  const isSignatureSeries = Number(property.price_per_night || property.price || 0) >= 50000 && (
-    propertyTypeValue.includes('villa') ||
-    propertyTypeValue.includes('resort') ||
-    property.category === 'residential'
-  );
+  const isSignatureSeries = Number(property.price_per_night || property.price || 0) >= 50000 && propertyTypeValue === 'villa';
   const seoImages = images
     .map((img) => toAbsoluteSiteUrl(img))
     .filter(Boolean);

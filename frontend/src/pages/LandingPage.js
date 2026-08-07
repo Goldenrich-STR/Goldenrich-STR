@@ -2174,7 +2174,7 @@ const LandingPage = () => {
     return all.filter(item => {
       const type = (item.property_type || item.type || '').toLowerCase();
       const price = item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0;
-      return (type.includes('villa') || type.includes('resort')) && price >= 50000;
+       return type === 'villa' && price >= 50000;
     });
   }, [properties]);
   const [loading, setLoading] = useState(true);

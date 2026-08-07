@@ -1388,7 +1388,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
       <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
       
       <div className="absolute top-4 left-4 z-20">
-         {property.price_per_night >= 50000 ? (
+         {String(property.property_type || '').toLowerCase() === 'villa' && property.price_per_night >= 50000 ? (
            <div className="bg-black border border-[#D4AF37]/50 px-3.5 py-1.5 rounded-none shadow-md flex items-center gap-1.5">
              <Crown className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
              <span className="text-[#D4AF37] text-[10px] font-extrabold uppercase tracking-[0.2em] font-serif">
