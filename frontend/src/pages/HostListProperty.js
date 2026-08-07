@@ -779,7 +779,7 @@ const HostListProperty = () => {
   }, [form.images]);
 
   const update = (patch) => setForm((f) => ({ ...f, ...patch }));
-  const isHostManageMode = !!editPropertyId && HOST_MANAGE_EDITABLE_STATUSES.includes(editingPropertyStatus);
+  const isHostManageMode = !!editPropertyId && HOST_MANAGE_EDITABLE_STATUSES.includes(editingPropertyStatus) && user?.role !== 'admin';
   const firstManageStep = 0;
   const lastManageStep = STEPS.length - 1;
   const canEditCurrentStep = !isHostManageMode || HOST_MANAGE_EDITABLE_STEP_KEYS.includes(STEPS[step]?.key);
@@ -1112,7 +1112,7 @@ const HostListProperty = () => {
         return 'Duplicate images detected. Please remove them.';
       }
     }
-    if (k === 'subscription' && !form.subscription_plan_id && !hasActiveSubscription) {
+    if (k === 'subscription' && !form.subscription_plan_id && !hasActiveSubscription && user?.role !== 'admin') {
       return 'Select a subscription plan';
     }
     return '';
@@ -1577,6 +1577,21 @@ const HostListProperty = () => {
     setSubmitting(true);
     setError('');
     try {
+      if (user?.role === 'admin') {
+        const targetId = editPropertyId || createdPropertyId;
+        if (targetId) {
+          await propertyAPI.updateProperty(targetId, buildPropertyPayload());
+        } else {
+          await propertyAPI.createProperty(buildPropertyPayload());
+        }
+        localStorage.removeItem(`list_property_form_${draftStorageId}`);
+        localStorage.removeItem(`list_property_step_${draftStorageId}`);
+        localStorage.removeItem(hostResumePathKey);
+        alert('Property details updated successfully.');
+        navigate('/admin/properties');
+        return;
+      }
+
       if (isHostManageMode) {
         await propertyAPI.updateProperty(editPropertyId, buildHostManagePayload());
         localStorage.removeItem(`list_property_form_${draftStorageId}`);
@@ -2984,7 +2999,8 @@ const HostListProperty = () => {
                 )}
                 <span>
                   {paying ? 'Processing payment…' :
-                   submitting ? 'Submitting…' : 'Submit listing'}
+                   submitting ? (user?.role === 'admin' ? 'Saving…' : 'Submitting…') :
+                   user?.role === 'admin' ? 'Save changes' : 'Submit listing'}
                 </span>
               </button>
             </div>

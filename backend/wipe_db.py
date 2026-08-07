@@ -62,8 +62,7 @@ async def wipe_and_reset():
     await _ensure_seeded_support_content(db)
 
     logger.info("Seeding Subscription Plans...")
-    from seed_subscription_plans import seed_plans
-    # Run seed_plans using the active db adapter
+    # Run seeding using the active db adapter
     # To prevent it from closing our pool or connecting again, we can just run its inner logic:
     from datetime import datetime
     plans = [

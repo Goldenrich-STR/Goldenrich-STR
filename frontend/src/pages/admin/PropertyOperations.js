@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AlertCircle, CheckCircle2, ExternalLink, Image, Search, Trash2, UserCog, XCircle } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice } from './shared';
@@ -28,6 +29,7 @@ const Modal = ({ title, children, onClose }) => (
 );
 
 const PropertyOperations = () => {
+  const navigate = useNavigate();
   const [tab, setTab] = useState('all');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
@@ -144,6 +146,10 @@ const PropertyOperations = () => {
     load();
   };
 
+  const editProperty = (property) => {
+    navigate(`/host/list-property?edit=${property.property_id}`);
+  };
+
   const updateChecklist = async (item, status) => {
     const remarks = await requestReason({
       title: `Checklist Remarks`,
@@ -204,27 +210,28 @@ const PropertyOperations = () => {
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1200px] text-left text-sm">
               <thead className="bg-[#f8fafc] text-[11px] uppercase tracking-[0.16em] text-slate-400"><tr>{['Property', 'Host Name', 'Property Type', 'Category', 'City', 'Broker Name', 'RM Name', 'Branch Manager', 'Stage', 'Subscription', 'Price', 'Actions'].map((h) => <th key={h} className="px-4 py-4 font-bold">{h}</th>)}</tr></thead>
-              <tbody className="divide-y divide-slate-100">{state.properties.map((property) => <tr key={property.property_id} className="transition hover:bg-slate-50/70"><td className="px-4 py-4"><p className="font-black">{property.title}</p><p className="font-mono text-xs text-slate-500">{property.property_id}</p></td><td className="px-4 py-4"><p className="font-bold">{property.host_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.owner_id}</p></td><td className="px-4 py-4 capitalize">{String(property.property_type || property.bhk_type || '-').replace(/_/g, ' ')}</td><td className="px-4 py-4 capitalize">{property.category}</td><td className="px-4 py-4">{property.city}</td><td className="px-4 py-4"><p className="font-bold">{property.broker_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.broker_code || property.assigned_broker || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.rm_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.rm_code || property.assigned_rm || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.branch_manager_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.branch_manager_code || property.assigned_branch_manager || '-'}</p></td><td className="px-4 py-4"><StatusBadge value={property.status} /></td><td className="px-4 py-4">{property.subscription_status || '-'}</td><td className="px-4 py-4">{formatMoney(property.price_per_night || 0)}</td><td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} /></td></tr>)}</tbody>
+              <tbody className="divide-y divide-slate-100">{state.properties.map((property) => <tr key={property.property_id} className="transition hover:bg-slate-50/70"><td className="px-4 py-4"><p className="font-black">{property.title}</p><p className="font-mono text-xs text-slate-500">{property.property_id}</p></td><td className="px-4 py-4"><p className="font-bold">{property.host_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.owner_id}</p></td><td className="px-4 py-4 capitalize">{String(property.property_type || property.bhk_type || '-').replace(/_/g, ' ')}</td><td className="px-4 py-4 capitalize">{property.category}</td><td className="px-4 py-4">{property.city}</td><td className="px-4 py-4"><p className="font-bold">{property.broker_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.broker_code || property.assigned_broker || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.rm_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.rm_code || property.assigned_rm || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.branch_manager_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.branch_manager_code || property.assigned_branch_manager || '-'}</p></td><td className="px-4 py-4"><StatusBadge value={property.status} /></td><td className="px-4 py-4">{property.subscription_status || '-'}</td><td className="px-4 py-4">{formatMoney(property.price_per_night || 0)}</td><td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} /></td></tr>)}</tbody>
             </table>
           </div>
-          <div className="grid gap-3 p-4 md:hidden">{state.properties.map((property) => <Panel key={property.property_id} className="p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-black">{property.title}</p><p className="text-xs text-slate-500">{property.property_id}</p></div><StatusBadge value={property.status} /></div><p className="mt-2 text-sm">{property.city} / {property.category}</p><div className="mt-3 grid gap-1 text-xs text-slate-500"><p><b>Broker:</b> {property.broker_name || '-'} / {property.broker_code || '-'}</p><p><b>RM:</b> {property.rm_name || '-'} / {property.rm_code || '-'}</p><p><b>BM:</b> {property.branch_manager_name || '-'} / {property.branch_manager_code || '-'}</p></div><div className="mt-3"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} /></div></Panel>)}</div>
+          <div className="grid gap-3 p-4 md:hidden">{state.properties.map((property) => <Panel key={property.property_id} className="p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-black">{property.title}</p><p className="text-xs text-slate-500">{property.property_id}</p></div><StatusBadge value={property.status} /></div><p className="mt-2 text-sm">{property.city} / {property.category}</p><div className="mt-3 grid gap-1 text-xs text-slate-500"><p><b>Broker:</b> {property.broker_name || '-'} / {property.broker_code || '-'}</p><p><b>RM:</b> {property.rm_name || '-'} / {property.rm_code || '-'}</p><p><b>BM:</b> {property.branch_manager_name || '-'} / {property.branch_manager_code || '-'}</p></div><div className="mt-3"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} /></div></Panel>)}</div>
         </Panel>
         </div>
       )}
       {selected.property && (
         <Modal title="Property Verification Review" onClose={() => setSelected({ loading: false, property: null, error: '' })}>
-          <PropertyReviewPanel selected={selected} onClose={() => setSelected({ loading: false, property: null, error: '' })} onChecklist={updateChecklist} onStage={updateStage} onFinal={finalStatus} />
+          <PropertyReviewPanel selected={selected} onClose={() => setSelected({ loading: false, property: null, error: '' })} onChecklist={updateChecklist} onStage={updateStage} onFinal={finalStatus} onEdit={editProperty} />
         </Modal>
       )}
     </div>
   );
 };
 
-const PropertyActions = ({ property, tab, onReview, onAssign, onStatus, onDelete }) => {
+const PropertyActions = ({ property, tab, onReview, onAssign, onStatus, onDelete, onEdit }) => {
   const isRejected = tab === 'rejected' || String(property.status || '').toLowerCase() === 'rejected';
   return (
     <div className="flex flex-wrap gap-1.5">
       <button onClick={() => onReview(property)} className="rounded-xl bg-[#2f6df6] px-2.5 py-1.5 text-xs font-bold text-white">Review</button>
+      <button onClick={() => onEdit(property)} className="rounded-xl bg-amber-500 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-amber-600">Edit</button>
       <button onClick={() => onAssign(property)} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]">Assign</button>
       <button onClick={() => onStatus(property, 'live')} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]">Live</button>
       <button onClick={() => onStatus(property, 'rejected')} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700">Reject</button>
@@ -319,7 +326,7 @@ const PackageList = ({ packages }) => {
   );
 };
 
-const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal }) => {
+const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal, onEdit }) => {
   if (!selected.property) return null;
   const property = selected.property;
   const review = property.operations_review || {};
@@ -341,6 +348,7 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal 
           </div>
           <div className="flex items-center gap-2">
             <StatusBadge value={property.status} />
+            <button onClick={() => onEdit(property)} className="rounded-2xl bg-amber-500 px-3 py-2 text-xs font-black text-white hover:bg-amber-600">Edit Details</button>
             <button onClick={onClose} className="rounded-2xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-200">Close</button>
           </div>
         </div>

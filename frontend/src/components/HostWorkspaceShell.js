@@ -67,6 +67,20 @@ const HostWorkspaceShell = ({
             </div>
 
             <div className="mt-5 space-y-2">
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => navigate('/admin/properties')}
+                  className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition-all bg-[#eef5ff] text-[#2f6df6] hover:bg-[#dfeaff] mb-3"
+                >
+                  <Building2 className="h-4 w-4 shrink-0 text-[#2f6df6]" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-bold leading-5">Admin Properties</span>
+                    <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.18em] text-[#5b7ecb]">
+                      Property Operations
+                    </span>
+                  </span>
+                </button>
+              )}
               {hostNavigation.map((item) => (
                 <button
                   key={item.path}
