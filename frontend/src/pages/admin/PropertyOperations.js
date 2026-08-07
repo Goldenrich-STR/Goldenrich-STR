@@ -330,6 +330,7 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal,
   if (!selected.property) return null;
   const property = selected.property;
   const review = property.operations_review || {};
+  const isLive = property.status === 'live';
   const images = property.images || [];
   const stages = review.stages || {};
   const brokerStages = Object.entries(stages).filter(([stage]) => stage.includes('broker'));
@@ -505,7 +506,7 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal,
           </div>
           <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
             <button onClick={() => onFinal('under_review')} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-black">Move Under Review</button>
-            <button onClick={() => onFinal('live')} disabled={!review.summary?.ready_for_live} className="rounded-xl bg-[#2f6df6] px-3 py-2 text-xs font-black text-white disabled:opacity-40">Publish Live</button>
+            <button onClick={() => onFinal('live')} disabled={isLive || !review.summary?.ready_for_live} className="rounded-xl bg-[#2f6df6] px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{isLive ? 'Already Live' : 'Publish Live'}</button>
             <button onClick={() => onFinal('rejected')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-black text-white">Reject</button>
           </div>
           <div className="space-y-2">
@@ -519,15 +520,19 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal,
   );
 };
 
-const StageRow = ({ stage, data, onStage }) => (
-  <div className="rounded-2xl border border-slate-200 p-3">
-    <div className="flex items-center justify-between gap-2"><p className="text-sm font-black capitalize">{stage.replace(/_/g, ' ')}</p><StatusBadge value={data?.status || 'pending'} /></div>
-    {data?.remarks && <p className="mt-2 text-xs text-slate-500">{data.remarks}</p>}
-    <div className="mt-3 flex gap-2">
-      <button onClick={() => onStage(stage, 'approved')} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]">Approve</button>
-      <button onClick={() => onStage(stage, 'rejected')} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700">Reject</button>
+const StageRow = ({ stage, data, onStage }) => {
+  const status = data?.status || 'pending';
+  const isClosed = status === 'approved' || status === 'rejected';
+  return (
+    <div className="rounded-2xl border border-slate-200 p-3">
+      <div className="flex items-center justify-between gap-2"><p className="text-sm font-black capitalize">{stage.replace(/_/g, ' ')}</p><StatusBadge value={status} /></div>
+      {data?.remarks && <p className="mt-2 text-xs text-slate-500">{data.remarks}</p>}
+      <div className="mt-3 flex gap-2">
+        <button disabled={isClosed} onClick={() => onStage(stage, 'approved')} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6] disabled:cursor-not-allowed disabled:opacity-40">Approve</button>
+        <button disabled={isClosed} onClick={() => onStage(stage, 'rejected')} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-40">Reject</button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default PropertyOperations;

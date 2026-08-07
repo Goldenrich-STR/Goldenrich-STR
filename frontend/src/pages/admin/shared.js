@@ -20,6 +20,8 @@ export const StatusBadge = ({ value }) => {
   const key = String(value || 'unknown').toLowerCase();
   const tone = key.includes('active') || key.includes('approved') || key.includes('success') || key.includes('live')
     ? 'bg-[#eef5ff] text-[#2f6df6] border-[#cfe0ff]'
+    : key.includes('not_required') || key.includes('not required')
+      ? 'bg-slate-50 text-slate-500 border-slate-200'
     : key.includes('pending') || key.includes('due')
       ? 'bg-[#f4f8ff] text-[#5b7ecb] border-[#d9e5fb]'
       : key.includes('reject') || key.includes('critical') || key.includes('inactive')

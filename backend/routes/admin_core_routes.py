@@ -671,6 +671,9 @@ def _normalise_property_review(prop: dict, owner: dict | None = None, verificati
     owner = owner or {}
     verification = verification or {}
     manual = verification.get("checklist") or {}
+    assignment = _property_team_assignment(prop, owner)
+    host_kyc = _normalise_host_kyc(owner) if owner else {"summary": {"required_documents_ready": False}}
+    documents_approved = owner.get("kyc_status") == "approved" or bool(host_kyc.get("summary", {}).get("required_documents_ready"))
     checklist = []
     for key, label, fields in PROPERTY_REVIEW_ITEMS:
         if key == "photos":
@@ -683,8 +686,8 @@ def _normalise_property_review(prop: dict, owner: dict | None = None, verificati
             auto_ready = owner.get("kyc_status") == "approved"
             details = owner.get("kyc_status") or "unknown"
         elif key == "assignment":
-            auto_ready = bool(prop.get("broker_id") or owner.get("broker_id")) and bool(prop.get("rm_id") or owner.get("rm_id"))
-            details = f"Broker: {prop.get('broker_id') or owner.get('broker_id') or '-'} / RM: {prop.get('rm_id') or owner.get('rm_id') or '-'}"
+            auto_ready = bool(assignment["rm"]) and bool(assignment["broker"] or assignment["branch_manager"])
+            details = f"Broker: {assignment['broker'] or '-'} / RM: {assignment['rm'] or '-'} / BM: {assignment['branch_manager'] or assignment['branch_manager_code'] or '-'}"
         elif key == "amenities":
             auto_ready = bool(prop.get("amenities"))
             details = f"{len(prop.get('amenities') or [])} amenities"
@@ -705,14 +708,44 @@ def _normalise_property_review(prop: dict, owner: dict | None = None, verificati
         })
     approved_required = all(item["status"] == "approved" for item in checklist)
     stages = verification.get("stages") or {}
+
+    def stage_value(key: str, status_value: str, remarks: str = "") -> dict:
+        saved = stages.get(key) or {}
+        if saved.get("status") in {"approved", "rejected"}:
+            return saved
+        return {
+            "status": status_value,
+            "remarks": saved.get("remarks") or remarks,
+            "reviewed_by": saved.get("reviewed_by") or "",
+            "reviewed_at": saved.get("reviewed_at") or "",
+        }
+
+    has_broker_step = bool(assignment["broker"])
+    broker_completed = bool(verification.get("broker_id")) and (
+        verification.get("status") in {"completed", "approved", "rejected"} or bool(verification.get("completed_at"))
+    )
+    rm_approved = verification.get("rm_reviewed") and verification.get("rm_approved") is True
+    rm_rejected = verification.get("rm_reviewed") and verification.get("rm_approved") is False
+    rm_first_completed = not has_broker_step and (
+        verification.get("status") in {"completed", "approved", "rejected"} or bool(verification.get("completed_at"))
+    )
+    bm_approved = verification.get("branch_manager_reviewed") and verification.get("branch_manager_approved") is True
+    bm_rejected = verification.get("branch_manager_reviewed") and verification.get("branch_manager_approved") is False
+    admin_approved = prop.get("status") == "live" or (verification.get("admin_reviewed") and verification.get("admin_approved") is True)
+    admin_rejected = verification.get("admin_reviewed") and verification.get("admin_approved") is False
+    document_status = "approved" if documents_approved else "pending"
+    broker_status = "not_required" if not has_broker_step else "approved" if broker_completed else "pending"
+    rm_status = "rejected" if rm_rejected else "approved" if rm_approved or rm_first_completed else "pending"
+    bm_status = "rejected" if bm_rejected else "approved" if bm_approved else "pending"
+    admin_status = "rejected" if admin_rejected else "approved" if admin_approved else "pending"
     return {
         "checklist": checklist,
         "stages": {
-            "document_check": stages.get("document_check", {"status": "pending"}),
-            "broker_verification": stages.get("broker_verification", {"status": "pending"}),
-            "rm_verification": stages.get("rm_verification", {"status": "pending"}),
-            "branch_manager_review": stages.get("branch_manager_review", {"status": "pending"}),
-            "admin_review": stages.get("admin_review", {"status": "pending"}),
+            "document_check": stage_value("document_check", document_status),
+            "broker_verification": stage_value("broker_verification", broker_status, "No broker step required" if not has_broker_step else ""),
+            "rm_verification": stage_value("rm_verification", rm_status),
+            "branch_manager_review": stage_value("branch_manager_review", bm_status, "No Branch Manager assigned" if not (assignment["branch_manager"] or assignment["branch_manager_code"]) else ""),
+            "admin_review": stage_value("admin_review", admin_status),
         },
         "summary": {
             "ready_for_live": approved_required and prop.get("status") in {"under_review", "pending_verification", "live"},
@@ -1377,7 +1410,8 @@ async def create_admin_user(payload: AdminUserPayload, current_user: dict = Depe
         raise HTTPException(status_code=400, detail="Employee code is required for employee users")
     password = payload.password or "Xspace360@123"
     _validate_password_strength(password)
-    await _assert_unique_user_fields(db, email=payload.email, phone=payload.phone, employee_code=payload.employee_code or "")
+    unique_employee_code = (payload.employee_code or "") if payload.role in {"employee", "broker"} else ""
+    await _assert_unique_user_fields(db, email=payload.email, phone=payload.phone, employee_code=unique_employee_code)
 
     from utils.auth import hash_password
 
@@ -2404,45 +2438,11 @@ async def property_operations(
     if tab in status_map:
         query["status"] = status_map[tab]
     elif tab == "broker_verification":
-        verified_props = await db.property_verifications.find(
-            {"status": {"$in": ["completed", "approved", "rejected"]}},
-            {"property_id": 1}
-        ).to_list(length=10000)
-        verified_prop_ids = [vp["property_id"] for vp in verified_props]
         query["status"] = {"$in": ["pending_verification", "under_review"]}
-        query["property_id"] = {"$nin": verified_prop_ids}
     elif tab == "rm_verification":
-        rm_props = await db.property_verifications.find(
-            {
-                "status": "completed",
-                "rm_reviewed": {"$ne": True},
-                "$or": [
-                    {"branch_manager_id": {"$in": [None, ""]}},
-                    {"branch_manager_id": {"$exists": False}},
-                    {"broker_id": {"$nin": [None, ""]}},
-                ],
-            },
-            {"property_id": 1}
-        ).to_list(length=10000)
-        rm_prop_ids = [vp["property_id"] for vp in rm_props]
         query["status"] = {"$in": ["pending_verification", "under_review"]}
-        query["property_id"] = {"$in": rm_prop_ids}
     elif tab == "branch_manager_review":
-        bm_props = await db.property_verifications.find(
-            {
-                "status": "completed",
-                "branch_manager_id": {"$nin": [None, ""]},
-                "branch_manager_reviewed": {"$ne": True},
-                "$or": [
-                    {"rm_reviewed": True, "rm_approved": True},
-                    {"broker_id": {"$in": [None, ""]}},
-                ],
-            },
-            {"property_id": 1}
-        ).to_list(length=10000)
-        bm_prop_ids = [vp["property_id"] for vp in bm_props]
         query["status"] = {"$in": ["pending_verification", "under_review"]}
-        query["property_id"] = {"$in": bm_prop_ids}
     elif tab == "admin_review":
         admin_props = await db.property_verifications.find(
             {
@@ -2568,7 +2568,38 @@ async def property_operations(
         verification = await db.property_verifications.find_one({"property_id": prop.get("property_id")}, {"_id": 0})
         prop["verification"] = verification or {}
         prop["operations_review"] = _normalise_property_review(prop, owner, verification)
-    total = await db.properties.count_documents(query)
+    if tab in {"broker_verification", "rm_verification", "branch_manager_review"}:
+        filtered_props = []
+        for prop in props:
+            assignment = {
+                "broker": prop.get("assigned_broker") or "",
+                "rm": prop.get("assigned_rm") or "",
+                "branch_manager": prop.get("assigned_branch_manager") or prop.get("branch_manager_code") or "",
+            }
+            verification = prop.get("verification") or {}
+            verification_status = verification.get("status")
+            has_completed_visit = verification_status in {"completed", "approved", "rejected"} or bool(verification.get("completed_at"))
+            is_pending_property = prop.get("status") in {"pending_verification", "under_review"}
+            if tab == "broker_verification":
+                if is_pending_property and assignment["broker"] and not has_completed_visit:
+                    filtered_props.append(prop)
+            elif tab == "rm_verification":
+                broker_to_rm_pending = assignment["broker"] and has_completed_visit and not verification.get("rm_reviewed")
+                rm_first_pending = not assignment["broker"] and assignment["rm"] and is_pending_property and not (
+                    verification.get("rm_reviewed") and verification.get("rm_approved") is True
+                )
+                if broker_to_rm_pending or rm_first_pending:
+                    filtered_props.append(prop)
+            elif tab == "branch_manager_review":
+                rm_completed = (
+                    verification.get("rm_reviewed") and verification.get("rm_approved") is True
+                ) or (
+                    not assignment["broker"] and verification_status == "completed"
+                )
+                if assignment["branch_manager"] and rm_completed and not verification.get("branch_manager_reviewed"):
+                    filtered_props.append(prop)
+        props = filtered_props
+    total = len(props) if tab in {"broker_verification", "rm_verification", "branch_manager_review"} else await db.properties.count_documents(query)
     return api_response("Properties loaded", {"properties": props}, {"total": total, "limit": limit, "skip": skip})
 
 
