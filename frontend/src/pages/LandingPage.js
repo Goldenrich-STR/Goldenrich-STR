@@ -1154,30 +1154,7 @@ const EXPLORE_MENU_TABS = [
         createExploreItem('Scenic Homes in Lonavala', { category: 'residential', city: 'Lonavala' }),
       ]
     ]
-  },
-  {
-    key: 'resorts',
-    label: 'Resorts',
-    columns: [
-      [
-        createExploreItem('Resorts in Nashik', { category: 'residential', property_type: 'resort', city: 'Nashik' }),
-        createExploreItem('Resorts in Trimbak', { category: 'residential', property_type: 'resort', city: 'Trimbakeshwar' }),
-        createExploreItem('Resorts in Igatpuri', { category: 'residential', property_type: 'resort', city: 'Igatpuri' }),
-        createExploreItem('Resorts in Bhandardara', { category: 'residential', property_type: 'resort', city: 'Bhandardara' }),
-      ],
-      [
-        createExploreItem('Pool Resorts in Nashik', { category: 'residential', property_type: 'resort', city: 'Nashik' }),
-        createExploreItem('Nature Resorts in Karjat', { category: 'residential', property_type: 'resort', city: 'Karjat' }),
-        createExploreItem('Luxury Resorts in Goa', { category: 'residential', property_type: 'resort', city: 'Goa' }),
-        createExploreItem('Weekend Resorts in Lonavala', { category: 'residential', property_type: 'resort', city: 'Lonavala' }),
-      ],
-      [
-        createExploreItem('Group Resorts in Alibaug', { category: 'residential', property_type: 'resort', city: 'Alibaug' }),
-        createExploreItem('Wedding Resorts in Nashik', { category: 'event_venue', property_type: 'resort', city: 'Nashik' }),
-        createExploreItem('Hillside Resorts in Igatpuri', { category: 'residential', property_type: 'resort', city: 'Igatpuri' }),
-        createExploreItem('Retreat Resorts in Trimbak', { category: 'residential', property_type: 'resort', city: 'Trimbakeshwar' }),
-      ]
-    ]
+
   },
   {
     key: 'weddings',
