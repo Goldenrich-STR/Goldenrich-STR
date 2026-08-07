@@ -6,7 +6,14 @@ import { ArrowLeft, MapPin, Calendar, Star, Map } from 'lucide-react';
 import SEO from '../components/SEO';
 
 const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80';
-const getImageUrl = (url) => url ? (url.startsWith('http') ? url : `${process.env.REACT_APP_API_URL || 'http://localhost:8001'}${url}`) : PROPERTY_IMAGE_FALLBACK;
+const getImageUrl = (url) => {
+  if (!url) return PROPERTY_IMAGE_FALLBACK;
+  if (url.startsWith('http')) {
+    // Proxy external images to bypass hotlink protection (403 forbidden)
+    return `https://images.weserv.nl/?url=${encodeURIComponent(url)}`;
+  }
+  return `${process.env.REACT_APP_API_URL || 'http://localhost:8001'}${url}`;
+};
 
 const PlaceDetails = () => {
   const { slug } = useParams();
@@ -56,7 +63,7 @@ const PlaceDetails = () => {
       <div className="relative h-[60vh] min-h-[400px] w-full bg-charcoal flex items-end pb-12">
         <div className="absolute inset-0">
           <img 
-            src={place.heroImage} 
+            src={getImageUrl(place.heroImage)} 
             alt={place.title} 
             className="w-full h-full object-cover opacity-60"
           />
