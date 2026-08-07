@@ -185,6 +185,10 @@ async def search_properties(
                 {"alibaug", "alibag"},
                 {"mumbai", "bombay"},
                 {"pune", "poona"},
+                {"sula", "vineyards"},
+                {"gangapur", "dam"},
+                {"harihar", "fort", "harshagad"},
+                {"mahabaleshwar", "mahableshwar"},
             ]
             for group in synonym_groups:
                 if any(x in loc_lower for x in group) or any(loc_lower in x for x in group):
