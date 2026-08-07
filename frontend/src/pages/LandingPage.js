@@ -1154,30 +1154,7 @@ const EXPLORE_MENU_TABS = [
         createExploreItem('Scenic Homes in Lonavala', { category: 'residential', city: 'Lonavala' }),
       ]
     ]
-  },
-  {
-    key: 'resorts',
-    label: 'Resorts',
-    columns: [
-      [
-        createExploreItem('Resorts in Nashik', { category: 'residential', property_type: 'resort', city: 'Nashik' }),
-        createExploreItem('Resorts in Trimbak', { category: 'residential', property_type: 'resort', city: 'Trimbakeshwar' }),
-        createExploreItem('Resorts in Igatpuri', { category: 'residential', property_type: 'resort', city: 'Igatpuri' }),
-        createExploreItem('Resorts in Bhandardara', { category: 'residential', property_type: 'resort', city: 'Bhandardara' }),
-      ],
-      [
-        createExploreItem('Pool Resorts in Nashik', { category: 'residential', property_type: 'resort', city: 'Nashik' }),
-        createExploreItem('Nature Resorts in Karjat', { category: 'residential', property_type: 'resort', city: 'Karjat' }),
-        createExploreItem('Luxury Resorts in Goa', { category: 'residential', property_type: 'resort', city: 'Goa' }),
-        createExploreItem('Weekend Resorts in Lonavala', { category: 'residential', property_type: 'resort', city: 'Lonavala' }),
-      ],
-      [
-        createExploreItem('Group Resorts in Alibaug', { category: 'residential', property_type: 'resort', city: 'Alibaug' }),
-        createExploreItem('Wedding Resorts in Nashik', { category: 'event_venue', property_type: 'resort', city: 'Nashik' }),
-        createExploreItem('Hillside Resorts in Igatpuri', { category: 'residential', property_type: 'resort', city: 'Igatpuri' }),
-        createExploreItem('Retreat Resorts in Trimbak', { category: 'residential', property_type: 'resort', city: 'Trimbakeshwar' }),
-      ]
-    ]
+
   },
   {
     key: 'weddings',
@@ -1232,22 +1209,22 @@ const EXPLORE_MENU_TABS = [
     label: 'Places To Visit',
     columns: [
       [
-        createExploreItem('Sula Vineyards', { category: 'residential', city: 'Nashik' }),
-        createExploreItem('Trimbakeshwar', { category: 'residential', city: 'Trimbakeshwar' }),
-        createExploreItem('Pandav Leni', { category: 'residential', city: 'Nashik' }),
-        createExploreItem('Gangapur Dam', { category: 'residential', city: 'Nashik' }),
+        createExploreItem('Sula Vineyards', { path: '/places/sula-vineyards' }),
+        createExploreItem('Trimbakeshwar', { path: '/places/trimbakeshwar' }),
+        createExploreItem('Pandav Leni', { path: '/places/pandav-leni' }),
+        createExploreItem('Gangapur Dam', { path: '/places/gangapur-dam' }),
       ],
       [
-        createExploreItem('Anjaneri', { category: 'residential', city: 'Nashik' }),
-        createExploreItem('Harihar Fort', { category: 'residential', city: 'Igatpuri' }),
-        createExploreItem('Bhandardara', { category: 'residential', city: 'Bhandardara' }),
-        createExploreItem('Igatpuri', { category: 'residential', city: 'Igatpuri' }),
+        createExploreItem('Anjaneri', { path: '/places/anjaneri' }),
+        createExploreItem('Harihar Fort', { path: '/places/harihar-fort' }),
+        createExploreItem('Bhandardara', { path: '/places/bhandardara' }),
+        createExploreItem('Igatpuri', { path: '/places/igatpuri' }),
       ],
       [
-        createExploreItem('Karjat', { category: 'residential', city: 'Karjat' }),
-        createExploreItem('Lonavala', { category: 'residential', city: 'Lonavala' }),
-        createExploreItem('Alibaug', { category: 'residential', city: 'Alibaug' }),
-        createExploreItem('Goa', { category: 'residential', city: 'Goa' }),
+        createExploreItem('Karjat', { path: '/places/karjat' }),
+        createExploreItem('Lonavala', { path: '/places/lonavala' }),
+        createExploreItem('Alibaug', { path: '/places/alibaug' }),
+        createExploreItem('Goa', { path: '/places/goa' }),
       ]
     ]
   }
@@ -2231,6 +2208,11 @@ const LandingPage = () => {
   const activeMobileExploreMenu = EXPLORE_MENU_TABS.find((tab) => tab.key === activeExploreTab) || EXPLORE_MENU_TABS[0];
 
   const handleExploreNavigate = (params) => {
+    if (params && params.path) {
+      navigate(params.path);
+      setIsExploreMenuOpen(false);
+      return;
+    }
     const searchParams = new URLSearchParams();
     Object.entries(params || {}).forEach(([key, value]) => {
       if (value) searchParams.set(key, value);
