@@ -1455,7 +1455,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
         <h3 className="text-lg font-bold tracking-tight text-charcoal mb-1 group-hover:text-terracotta transition-colors line-clamp-1">{property.title}</h3>
         <div className="flex items-center text-charcoal-muted mb-3">
           <MapPin className="w-3.5 h-3.5 mr-1.5 text-sage" />
-          <span className="text-xs font-semibold">{property.city}, {property.state}</span>
+          <span className="text-xs font-semibold">{property.city}{property.state ? `, ${property.state}` : ''}</span>
         </div>
         
         {/* Additional Property Info */}
