@@ -28,7 +28,8 @@ UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXT = {"png", "jpg", "jpeg", "webp", "gif"}
-MAX_BYTES = 8 * 1024 * 1024  # 8 MB
+MAX_IMAGE_UPLOAD_MB = int(os.getenv("MAX_IMAGE_UPLOAD_MB", "25"))
+MAX_BYTES = MAX_IMAGE_UPLOAD_MB * 1024 * 1024
 
 
 class ImageUrlPayload(BaseModel):

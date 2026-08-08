@@ -45,6 +45,8 @@ import {
   Plus
 } from 'lucide-react';
 
+const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?auto=format&fit=crop&q=80&w=1400';
+
 const AMENITY_ICONS = {
   wifi: Wifi,
   ac: Wind,
@@ -660,16 +662,45 @@ const PropertyDetail = () => {
     return unique;
   }, [property?.images]);
 
+  const resolvedImages = useMemo(() => {
+    return images
+      .map((img) => {
+        const [url, cat] = img.split('#');
+        return {
+          raw: img,
+          url,
+          category: cat || 'Other',
+          src: getImageUrl(url) || PROPERTY_IMAGE_FALLBACK,
+        };
+      })
+      .filter((img) => Boolean(img.src));
+  }, [images]);
+
+  const mainImage = resolvedImages[imgIdx] || resolvedImages[0] || {
+    src: PROPERTY_IMAGE_FALLBACK,
+    category: 'Other',
+  };
+
   const groupedImages = useMemo(() => {
     const groups = {};
-    images.forEach(img => {
-      const [url, cat] = img.split('#');
-      const category = cat || 'Other';
-      if (!groups[category]) groups[category] = [];
-      groups[category].push(url);
+    resolvedImages.forEach(img => {
+      if (!groups[img.category]) groups[img.category] = [];
+      groups[img.category].push(img.src);
     });
     return groups;
-  }, [images]);
+  }, [resolvedImages]);
+
+  useEffect(() => {
+    if (!mainImage?.src) return;
+    const link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = mainImage.src;
+    document.head.appendChild(link);
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, [mainImage?.src]);
 
   const allCategories = Object.keys(groupedImages);
   const maxGuests = Math.max(1, Number(property?.max_guests) || 6);
@@ -1466,24 +1497,32 @@ const PropertyDetail = () => {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 rounded-3xl overflow-hidden shadow-elevated bg-white p-2">
             <div className="lg:col-span-2 lg:row-span-2 relative overflow-hidden group/main">
               <img
-                src={getImageUrl(images[imgIdx].split('#')[0])}
+                src={mainImage.src}
                 alt={property.title}
                 className="w-full h-80 lg:h-[32rem] object-cover transition-transform duration-1000 group-hover/main:scale-105"
                 data-testid="gallery-main-image"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                onError={(event) => {
+                  event.currentTarget.onerror = null;
+                  event.currentTarget.src = PROPERTY_IMAGE_FALLBACK;
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover/main:opacity-100 transition-opacity duration-500"></div>
               
-              {images.length > 1 && (
+              {resolvedImages.length > 1 && (
                 <div className="absolute inset-0 flex items-center justify-between px-6 opacity-0 group-hover/main:opacity-100 transition-opacity duration-300">
                   <button
-                    onClick={() => setImgIdx((i) => (i - 1 + images.length) % images.length)}
+                    onClick={() => setImgIdx((i) => (i - 1 + resolvedImages.length) % resolvedImages.length)}
                     className="w-12 h-12 glass flex items-center justify-center rounded-full hover:bg-white transition-all shadow-premium"
                     data-testid="gallery-prev"
                   >
                     <ChevronLeft className="w-6 h-6 text-charcoal" />
                   </button>
                   <button
-                    onClick={() => setImgIdx((i) => (i + 1) % images.length)}
+                    onClick={() => setImgIdx((i) => (i + 1) % resolvedImages.length)}
                     className="w-12 h-12 glass flex items-center justify-center rounded-full hover:bg-white transition-all shadow-premium"
                     data-testid="gallery-next"
                   >
@@ -1494,17 +1533,28 @@ const PropertyDetail = () => {
               
               <div className="absolute bottom-6 right-6 glass px-4 py-2 rounded-full border border-white/30 shadow-premium">
                  <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">
-                    {imgIdx + 1} / {images.length} {t('photos')}
+                    {imgIdx + 1} / {resolvedImages.length || 1} {t('photos')}
                  </span>
               </div>
             </div>
-            {images.slice(1, 5).map((src, i) => (
+            {resolvedImages.slice(1, 5).map((img, i) => (
               <button
-                key={src + i}
+                key={img.src + i}
                 onClick={() => setImgIdx(i + 1)}
                 className="hidden lg:block relative overflow-hidden group/thumb"
               >
-                <img src={getImageUrl(src.split('#')[0])} alt="" className="w-full h-[15.7rem] object-cover transition-transform duration-700 group-hover/thumb:scale-110" />
+                <img
+                  src={img.src}
+                  alt=""
+                  className="w-full h-[15.7rem] object-cover transition-transform duration-700 group-hover/thumb:scale-110"
+                  loading="lazy"
+                  decoding="async"
+                  sizes="25vw"
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = PROPERTY_IMAGE_FALLBACK;
+                  }}
+                />
                 <div className="absolute inset-0 bg-charcoal/20 opacity-0 group-hover/thumb:opacity-100 transition-opacity"></div>
               </button>
             ))}
@@ -2740,7 +2790,17 @@ const PropertyDetail = () => {
                   className="flex flex-col items-center space-y-3 min-w-[100px] group"
                 >
                   <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-transparent group-hover:border-terracotta transition-all shadow-sm">
-                    <img src={getImageUrl(groupedImages[cat][0])} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={groupedImages[cat][0]}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = PROPERTY_IMAGE_FALLBACK;
+                      }}
+                    />
                   </div>
                   <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest group-hover:text-charcoal">{cat}</span>
                 </button>
@@ -2760,9 +2820,16 @@ const PropertyDetail = () => {
                   {groupedImages[cat].map((url, idx) => (
                     <div key={url + idx} className="rounded-3xl overflow-hidden shadow-premium group/img">
                       <img 
-                        src={getImageUrl(url)} 
+                        src={url} 
                         alt="" 
                         className="w-full h-[30rem] object-cover transition-transform duration-1000 group-hover/img:scale-105" 
+                        loading="lazy"
+                        decoding="async"
+                        sizes="(min-width: 768px) 50vw, 100vw"
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = PROPERTY_IMAGE_FALLBACK;
+                        }}
                       />
                     </div>
                   ))}

@@ -122,8 +122,8 @@ const compressImageForUpload = (file) => {
     return Promise.resolve(file);
   }
 
-  const maxBytes = 2 * 1024 * 1024;
-  const maxDimension = 1800;
+  const maxBytes = 3.5 * 1024 * 1024;
+  const maxDimension = 2400;
   if (file.size <= maxBytes) {
     return Promise.resolve(file);
   }
@@ -159,7 +159,7 @@ const compressImageForUpload = (file) => {
             resolve(new File([blob], safeName, { type: 'image/jpeg', lastModified: Date.now() }));
           },
           'image/jpeg',
-          0.82
+          0.9
         );
       };
       image.src = reader.result;
