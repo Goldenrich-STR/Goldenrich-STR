@@ -1733,7 +1733,7 @@ const VerificationsSection = () => {
               const taskRmSubmittedVisit = task.branch_manager_id && !task.broker_id && task.status === 'completed';
               const taskRmReviewed = Boolean(task.rm_reviewed) || taskRmSubmittedVisit;
               const taskRmApproved = taskRmSubmittedVisit || task.rm_approved;
-              const isOpen = task.status === 'pending' || task.status === 'in_progress' || task.status === 'rejected' || (task.rm_reviewed && !task.rm_approved);
+              const isOpen = !taskRmApproved && (task.status === 'pending' || task.status === 'in_progress' || task.status === 'rejected' || (task.rm_reviewed && !task.rm_approved));
               return (
                 <div
                   key={task.verification_id}

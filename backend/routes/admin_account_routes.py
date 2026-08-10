@@ -132,6 +132,10 @@ def _amount_rupees(value) -> float:
         return 0.0
 
 
+def _paise_to_rupees(value) -> float:
+    return _amount_rupees((value or 0) / 100)
+
+
 def _booking_invoice_breakdown(transaction: dict) -> dict:
     booking = transaction.get("booking") or {}
     snapshot = extract_booking_pricing_snapshot(booking)
@@ -175,6 +179,7 @@ def _booking_invoice_breakdown(transaction: dict) -> dict:
 BOOKING_TRANSACTION_PROJECTION = {
     "_id": 0,
     "booking_id": 1,
+    "property": 1,
     "property_id": 1,
     "guest_id": 1,
     "host_id": 1,
@@ -187,6 +192,7 @@ BOOKING_TRANSACTION_PROJECTION = {
     "branch_manager_code": 1,
     "check_in_date": 1,
     "check_out_date": 1,
+    "number_of_guests": 1,
     "created_at": 1,
     "booking_status": 1,
     "payment_status": 1,
@@ -238,10 +244,19 @@ async def _find_booking_for_transaction(db: AsyncIOMotorDatabase, t: dict) -> Op
         )
         if booking:
             return booking
+        booking = await db.bookings.find_one(
+            {"booking_id": {"$regex": f"{re.escape(str(exact_booking_id))}$", "$options": "i"}},
+            BOOKING_TRANSACTION_PROJECTION,
+            sort=[("created_at", -1)],
+        )
+        if booking:
+            return booking
 
     payment_refs = [
         t.get("razorpay_payment_id"),
         t.get("upi_transaction_id"),
+        t.get("payment_id"),
+        t.get("payment_reference"),
     ]
     order_refs = [t.get("razorpay_order_id")]
     or_conditions = []
@@ -820,13 +835,71 @@ async def list_transactions(
         for t in items:
             t["invoice_no"] = await get_invoice_number(db, t)
             booking = await _find_booking_for_transaction(db, t)
+            payout = None
             t["booking"] = booking
             if booking:
                 t["booking_id"] = booking.get("booking_id") or t.get("booking_id")
                 t["user_id"] = t.get("user_id") or booking.get("guest_id")
                 t["host_id"] = t.get("host_id") or booking.get("host_id")
+                t["property_id"] = t.get("property_id") or booking.get("property_id")
                 t["booking_invoice_breakdown"] = _booking_invoice_breakdown({**t, "booking": booking})
                 t["invoice_breakdown"] = t["booking_invoice_breakdown"]
+            elif t.get("booking_id"):
+                payout = await db.payouts.find_one(
+                    {"booking_id": t["booking_id"]},
+                    {
+                        "_id": 0,
+                        "booking_id": 1,
+                        "property_id": 1,
+                        "host_id": 1,
+                        "guest_id": 1,
+                        "user_id": 1,
+                        "gross_amount": 1,
+                        "net_amount": 1,
+                        "platform_fee": 1,
+                        "gateway_charge": 1,
+                        "company_charge": 1,
+                        "insurance_fee": 1,
+                        "total_extra_charges_amount": 1,
+                        "customer_final_payable_amount": 1,
+                        "customer_charge_breakdown": 1,
+                        "created_at": 1,
+                    },
+                )
+                if payout:
+                    t["payout"] = payout
+                    total_amount = _paise_to_rupees(payout.get("customer_final_payable_amount") or t.get("amount"))
+                    host_actual = _paise_to_rupees(payout.get("gross_amount")) or total_amount
+                    total_extra = _paise_to_rupees(payout.get("total_extra_charges_amount"))
+                    charge_breakdown = {
+                        key: _paise_to_rupees(value)
+                        for key, value in (payout.get("customer_charge_breakdown") or {}).items()
+                    }
+                    if total_extra <= 0 and charge_breakdown:
+                        total_extra = _amount_rupees(sum(charge_breakdown.values()))
+                    booking = {
+                        "booking_id": t.get("booking_id"),
+                        "property_id": payout.get("property_id"),
+                        "guest_id": payout.get("guest_id") or payout.get("user_id") or t.get("user_id"),
+                        "host_id": payout.get("host_id") or t.get("host_id"),
+                        "created_at": t.get("created_at") or payout.get("created_at"),
+                        "booking_status": "Booking Confirmed",
+                        "payment_status": "Paid" if t.get("status") == TransactionStatus.SUCCESS.value else t.get("status"),
+                        "payment_method": "Online Payment",
+                        "razorpay_payment_id": t.get("razorpay_payment_id"),
+                        "upi_transaction_id": t.get("upi_transaction_id"),
+                        "host_actual_value": host_actual,
+                        "total_extra_charges": total_extra,
+                        "customer_charge_breakdown": charge_breakdown,
+                        "total_amount": total_amount,
+                        "paid_amount": total_amount,
+                    }
+                    t["booking"] = booking
+                    t["user_id"] = t.get("user_id") or booking.get("guest_id")
+                    t["host_id"] = t.get("host_id") or booking.get("host_id")
+                    t["property_id"] = t.get("property_id") or booking.get("property_id")
+                    t["booking_invoice_breakdown"] = _booking_invoice_breakdown({**t, "booking": booking})
+                    t["invoice_breakdown"] = t["booking_invoice_breakdown"]
 
             subscription = None
             if t.get("subscription_id"):
@@ -857,6 +930,8 @@ async def list_transactions(
 
             property_info = None
             property_id = t.get("property_id") or (booking or {}).get("property_id") or (subscription or {}).get("property_id")
+            if booking and isinstance(booking.get("property"), dict):
+                property_info = booking["property"]
             if property_id:
                 property_info = await db.properties.find_one(
                     {"property_id": property_id},
@@ -882,13 +957,14 @@ async def list_transactions(
                         "state": 1,
                         "pin_code": 1,
                         "amenities": 1,
+                        "top_amenities": 1,
                         "check_in_time": 1,
                         "check_out_time": 1,
                         "property_type": 1,
                         "bhk_type": 1,
                         "room_type": 1,
                     },
-                )
+                ) or property_info
             t["property"] = property_info
 
             uid = t.get("user_id") or (booking or {}).get("guest_id") or t.get("host_id") or (subscription or {}).get("user_id")
@@ -1143,6 +1219,7 @@ async def export_transactions_csv(
                     "state": 1,
                     "pin_code": 1,
                     "amenities": 1,
+                    "top_amenities": 1,
                     "check_in_time": 1,
                     "check_out_time": 1,
                     "property_type": 1,

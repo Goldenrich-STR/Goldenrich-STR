@@ -148,8 +148,9 @@ async def _property_owner_assignment(db: AsyncIOMotorDatabase, property_data: di
 def _pending_review_query(property_ids, identifiers, is_branch_manager):
     if is_branch_manager:
         return {
-            "status": VerificationStatus.COMPLETED.value,
             "property_id": {"$in": property_ids},
+            "rm_reviewed": True,
+            "rm_approved": True,
             "branch_manager_reviewed": {"$ne": True},
             "$or": _field_matches_identifiers("branch_manager_id", identifiers),
         }
@@ -941,6 +942,7 @@ async def approve_verification(
             await db.property_verifications.update_one(
                 {"verification_id": verification_id},
                 {"$set": {
+                    "status": VerificationStatus.COMPLETED.value,
                     "rm_reviewed": True,
                     "rm_approved": True,
                     "rm_id": assigned_rm or verification.get("rm_id") or "",
@@ -957,6 +959,7 @@ async def approve_verification(
             await db.property_verifications.update_one(
                 {"verification_id": verification_id},
                 {"$set": {
+                    "status": VerificationStatus.COMPLETED.value,
                     "rm_reviewed": True,
                     "rm_approved": True,
                     "rm_remarks": remarks,

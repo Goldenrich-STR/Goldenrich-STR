@@ -36,10 +36,15 @@ const formatTime = (value) => {
 };
 
 const formatReadableText = (value) => {
-  const text = String(value || '').trim();
+  const rawValue = typeof value === 'object' && value !== null
+    ? value.label || value.name || value.title || value.amenity || value.value || value.key
+    : value;
+  const text = String(rawValue || '').trim();
   if (!text) return '';
-  return text
-    .replace(/[_-]+/g, ' ')
+  const normalized = text.includes(' ')
+    ? text.replace(/_+/g, ' ')
+    : text.replace(/[_-]+/g, ' ');
+  return normalized
     .replace(/\s+/g, ' ')
     .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase());
@@ -123,42 +128,71 @@ export const getCustomerBookingAmounts = (booking = {}) => {
 export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, user = {}, options = {}) => {
   const amounts = getCustomerBookingAmounts(booking);
   const bookingId = booking.booking_id || booking.id || 'NA';
-  const invoiceNo = booking.invoice_no || booking.booking_invoice_no || booking.transaction_id || bookingId;
-  const propertyName = property.title || property.property_name || property.name || booking.property?.title || booking.property_name || 'Property';
-  const propertyAddress = [property.address, property.city, property.state, property.pin_code].filter(Boolean).join(', ') || booking.property_address || 'NA';
-  const customerName = user.full_name || booking.customer_name || booking.guest_name || 'Customer';
-  const customerPhone = user.phone || booking.guest_phone || booking.phone || 'NA';
-  const customerEmail = user.email || booking.guest_email || booking.email || 'NA';
-  const customerAddress = [user.address, user.city, user.state, user.pin_code].filter(Boolean).join(', ') || booking.guest_address || booking.customer_address || 'NA';
-  const customerGst = user.gst_number || user.gst_no || booking.guest_gst_number || booking.customer_gst_number || 'NA';
-  const ownerName = property.host?.full_name || property.owner_name || booking.host_name || booking.property?.host?.full_name || 'Property Owner';
-  const ownerPhone = property.contact_phone || property.phone || booking.host_phone || '9225586001';
-  const ownerEmail = property.host?.email || property.owner_email || booking.host_email || 'NA';
-  const ownerGst = property.gst_number || property.host?.gst_number || booking.host_gst_number || 'NA';
+  const invoiceNo = booking.invoice_no || booking.booking_invoice_no || booking.transaction_id || (bookingId !== 'NA' ? `STRC/26-27/${String(bookingId).slice(-5)}` : 'NA');
+  const invoiceDate = formatDate(booking.created_at || new Date());
+  const bookedOnDateTime = formatDateTime(booking.created_at || new Date());
+
+  const propObj = booking.property || property || {};
+  const propertyName = propObj.title || propObj.property_name || propObj.name || booking.property_name || propObj.property_id || booking.property_id || 'NA';
+  const propertyAddress = [propObj.address, propObj.city, propObj.state, propObj.pin_code].filter(Boolean).join(', ') || booking.property_address || 'NA';
+  
+  const userObj = user || booking.user || booking.guest || {};
+  const customerName = userObj.full_name || userObj.name || booking.customer_name || booking.guest_name || 'Guest';
+  const customerPhone = userObj.phone || userObj.mobile || booking.guest_phone || booking.customer_phone || booking.phone || 'NA';
+  const customerEmail = userObj.email || booking.guest_email || booking.customer_email || booking.email || 'NA';
+  const customerGst = userObj.gst_number || userObj.gst_no || booking.guest_gst_number || booking.customer_gst_number || booking.gst_number || '';
+  const roomType = propObj.room_type || propObj.bhk_type || propObj.property_type || booking.room_type || booking.property_type || 'Standard';
+
+  const hostObj = propObj.host || property.host || booking.host || {};
+  const ownerName = hostObj.full_name || hostObj.name || propObj.owner_name || booking.host_name || booking.owner_name || 'Property Owner';
+  const ownerPhone = hostObj.phone || propObj.contact_phone || propObj.phone || booking.host_phone || 'NA';
+
   const checkIn = booking.check_in_date || booking.check_in || booking.start_date;
   const checkOut = booking.check_out_date || booking.check_out || booking.end_date;
-  const checkInTime = property.check_in_time || booking.property?.check_in_time || booking.check_in_time || '12:00';
-  const checkOutTime = property.check_out_time || booking.property?.check_out_time || booking.check_out_time || '11:00';
-  const checkInDisplay = [formatDate(checkIn), formatTime(checkInTime)].filter(Boolean).join(' ');
-  const checkOutDisplay = [formatDate(checkOut), formatTime(checkOutTime)].filter(Boolean).join(' ');
-  const nights = booking.nights || daysBetween(checkIn, checkOut);
+  const checkInTime = propObj.check_in_time || booking.check_in_time || '12:00 PM';
+  const checkOutTime = propObj.check_out_time || booking.check_out_time || '11:00 AM';
+  const checkInDisplay = checkIn ? `${formatDate(checkIn)} ${checkInTime.includes('AM') || checkInTime.includes('PM') ? checkInTime : formatTime(checkInTime)}` : 'NA';
+  const checkOutDisplay = checkOut ? `${formatDate(checkOut)} ${checkOutTime.includes('AM') || checkOutTime.includes('PM') ? checkOutTime : formatTime(checkOutTime)}` : 'NA';
+
+  const nights = booking.nights || (checkIn && checkOut ? daysBetween(checkIn, checkOut) : 1);
   const guestCount = booking.number_of_guests || booking.guests || booking.guest_count || 'NA';
-  const roomType = property.room_type || property.bhk_type || property.property_type || booking.room_type || booking.property_type || 'Standard';
-  const paymentRef = booking.razorpay_payment_id || booking.upi_transaction_id || booking.payment_id || 'NA';
+  const paymentRef = booking.razorpay_payment_id || booking.upi_transaction_id || booking.payment_id || booking.transaction_id || 'NA';
   const paymentMode = booking.payment_method || (booking.upi_transaction_id ? 'UPI' : 'Online Payment');
+
   const amenities = [
-    ...asArray(property.amenities),
-    ...asArray(property.top_amenities),
+    ...asArray(propObj.amenities),
+    ...asArray(propObj.top_amenities),
     ...asArray(booking.amenities),
   ];
   const uniqueAmenities = [...new Set(amenities.map(formatReadableText).filter(Boolean))].slice(0, 8);
-  const displayAmenities = uniqueAmenities.length ? uniqueAmenities : ['Amenities as listed by host'];
+  const displayAmenities = uniqueAmenities.length ? uniqueAmenities : ['Property Amenities as per listing'];
+
   const taxAmount = Math.max(0, amounts.extraCharges);
   const cgst = taxAmount / 2;
   const sgst = taxAmount / 2;
   const taxableValue = Math.max(0, amounts.paid - taxAmount);
-  const accommodationDescription = `Accommodation / Property Booking - ${propertyName}<br />Stay: ${escapeHtml(nights)} Night(s) | Room: ${escapeHtml(roomType)}`;
-  const importantConditionsHtml = importantConditions.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+  const accommodationDescription = `Accommodation / Property Booking – ${propertyName}<br />Stay: ${escapeHtml(nights)} Night | Room: ${escapeHtml(roomType)}`;
+
+  const termsList = [
+    'This ticket is booked through X-Space360.',
+    'Carry any valid photo ID during check-in. Modification and cancellation are subject to the refund policy below.',
+    'Local destination check-in and check-out timings are maintained by the property.',
+    'Additional services, damages, penalties, or property-level charges may be collected directly by the property, if applicable.',
+    'Cancellation, modification, and refund charges are subject to the respective Host\'s policy.',
+    'Quote your X-Space360 Booking ID for all booking-related communication.',
+    'X-Space360 is not liable for cancellations or delays caused by Force Majeure events.',
+    'Refunds will be processed only after confirmation from the respective Property Host.',
+    'Refund timelines depend on banks and payment gateways.',
+    'Your X-Space360 Booking ID is the official booking confirmation.',
+    'Carry a digital or printed copy of your Booking Confirmation during check-in.',
+    'A valid Government-issued Photo ID is mandatory for all guests at check-in.',
+    'Additional charges (Security Deposit, Extra Guest Fees, Parking, etc.) must be paid directly to the Host, if applicable.',
+    'Guests must comply with the property\'s House Rules, Check-in/Check-out timings, and Occupancy Policy.',
+    'Any complaint must be reported to X-Space360 within 24 hours of check-in.',
+    'X-Space360 acts only as a booking platform; the Host is responsible for the property and services.',
+    'X-Space360 reserves the right to cancel bookings involving fraud, misuse, or policy violations.',
+    'By confirming the booking, the Guest agrees to the X-Space360 Terms & Conditions, Refund Policy, and Privacy Policy.',
+  ];
 
   return `<!doctype html>
 <html>
@@ -170,52 +204,57 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
     @page { size: A4 portrait; margin: 8mm; }
     * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     html, body { margin: 0; padding: 0; width: 210mm; min-height: 297mm; background: #fff; color: #000; font-family: Arial, Helvetica, sans-serif; }
-    body { font-size: 10px; line-height: 1.28; }
+    body { font-size: 10px; line-height: 1.25; }
     .toolbar { width: 190mm; max-width: calc(100vw - 28px); margin: 12px auto; display: ${options.hideToolbar ? 'none' : 'flex'}; justify-content: flex-end; gap: 10px; }
     .toolbar button { border: 1px solid #d8dee8; border-radius: 8px; background: #fff; padding: 10px 14px; font-weight: 800; cursor: pointer; }
     .toolbar .print { background: #007a4d; color: #fff; border-color: #007a4d; }
-    .invoice-page { width: 190mm; max-width: calc(100vw - 28px); margin: 0 auto 20px; background: #fff; }
-    .invoice { border: 1.5px solid #000; background: #fff; color: #000; }
-    .title { text-align: center; font-size: 13px; font-weight: 800; padding: 5px 0; border-bottom: 0.75px solid #444; letter-spacing: .2px; }
+    .invoice-page { width: 190mm; min-width: 190mm; margin: 0 auto 20px; background: #fff; }
+    .invoice { border: 1px solid #000; background: #fff; color: #000; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; border-spacing: 0; }
-    td, th { border: 0.75px solid #444; padding: 5px 6px; vertical-align: top; overflow-wrap: anywhere; color: #000; }
-    th { background: #f7f7f7; font-size: 9px; text-align: center; vertical-align: middle; }
-    .no-top td, .no-top th { border-top: 0; }
-    .company-cell, .invoice-cell, .party-cell { width: 50%; }
-    .company-cell { font-size: 9px; line-height: 1.22; }
-    .company-name { font-size: 13px; font-weight: 800; line-height: 1.16; }
-    .invoice-cell { padding: 0; }
-    .invoice-cell table, .invoice-cell td { border-top: 0; border-right: 0; border-bottom: 0.75px solid #444; border-left: 0.75px solid #444; }
-    .invoice-cell td { width: 50%; height: 29px; font-size: 9px; line-height: 1.2; }
-    .invoice-cell .booking-box { height: 74px; font-weight: 700; }
-    .field-label { display: block; color: #555; font-size: 8px; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
-    .confirmed { font-size: 12px; font-weight: 800; }
-    .party-cell { height: 108px; font-size: 9px; line-height: 1.32; }
-    .section-heading { text-align: center; font-weight: 800; font-size: 11px; padding: 5px; background: #fbfbfb; }
-    .details-table td { height: 27px; font-size: 9px; vertical-align: middle; }
-    .details-table .label { width: 16%; font-weight: 800; background: #fbfbfb; }
-    .details-table .value { width: 34%; font-weight: 600; }
-    .details-table .wide-value { width: 84%; }
-    .amenities { padding: 7px 10px; font-size: 9px; line-height: 1.35; min-height: 34px; }
-    .amenities span { display: inline-block; margin-right: 16px; white-space: nowrap; }
-    .price-table th { font-size: 9px; padding: 6px; }
-    .price-table td { font-size: 9.5px; padding: 6px; }
-    .price-table .desc { width: 68%; }
-    .price-table .amount { width: 32%; text-align: right; font-family: Consolas, 'Courier New', monospace; }
-    .price-table .total td { font-weight: 800; background: #fbfbfb; }
-    .paid-row td, .words-row td { font-size: 9.5px; padding: 7px 9px; }
-    .terms { padding: 8px 11px 10px; font-size: 8.3px; line-height: 1.25; }
-    .terms ol { margin: 5px 0 0; padding-left: 17px; }
-    .terms li { margin-bottom: 2px; }
-    .mono { font-family: Consolas, 'Courier New', monospace; }
-    .right { text-align: right; }
-    .center { text-align: center; }
-    .bold { font-weight: 800; }
+    td, th { border: 1px solid #000; padding: 4px 6px; vertical-align: top; overflow-wrap: anywhere; color: #000; }
+    th { background: #fff; font-size: 9px; text-align: left; vertical-align: middle; font-weight: 800; }
+    
+    .header-table td { border: none; border-bottom: 1px solid #000; }
+    .header-table td.company-cell { width: 50%; border-right: 1px solid #000; padding: 6px; font-size: 8.5px; line-height: 1.25; }
+    .header-table td.invoice-cell { width: 50%; padding: 6px; font-size: 8.5px; line-height: 1.35; }
+    .logo-img { width: 140px; height: 38px; object-fit: contain; object-position: left center; display: block; margin-bottom: 4px; }
+    .company-title { font-size: 11px; font-weight: 800; line-height: 1.15; margin-bottom: 2px; }
+
+    .section-title { font-weight: 900; font-size: 9.5px; padding: 5px 6px; border-bottom: 1px solid #000; background: #fff; text-transform: uppercase; }
+    
+    .party-table td { border: none; border-bottom: 1px solid #000; width: 50%; padding: 6px; font-size: 8.5px; line-height: 1.35; }
+    .party-table td.party-left { border-right: 1px solid #000; }
+
+    .details-table td { border: none; border-bottom: 1px solid #000; font-size: 8.5px; vertical-align: middle; padding: 5px 6px; }
+    .details-table td.label { width: 50%; font-weight: 900; border-right: 1px solid #000; }
+    .details-table td.value { width: 50%; font-weight: 500; }
+
+    .amenities-container { border-bottom: 1px solid #000; padding: 6px 8px; font-size: 8.5px; line-height: 1.35; }
+    .amenities-container div { margin-bottom: 2px; }
+
+    .price-title { font-weight: 900; font-size: 9.5px; padding: 5px 6px; border-bottom: 1px solid #000; text-transform: lowercase; }
+    .price-title::first-letter { text-transform: uppercase; }
+
+    .price-table td, .price-table th { border: none; border-bottom: 1px solid #000; font-size: 8.5px; padding: 5px 6px; }
+    .price-table th.desc, .price-table td.desc { width: 50%; border-right: 1px solid #000; }
+    .price-table th.amount, .price-table td.amount { width: 50%; text-align: left; }
+    .price-table tr:last-child td { border-bottom: 1px solid #000; }
+    .price-table tr.total td { font-weight: 900; }
+
+    .summary-table td, .terms-table td { border-left: 0; border-right: 0; border-top: 0; border-bottom: 1px solid #000; }
+    .terms-table tr:last-child td { border-bottom: 0; }
+    .summary-table td { font-size: 8.8px; padding: 8px 9px; }
+    .terms-heading { font-weight: 900; font-size: 9px; text-transform: uppercase; padding: 8px 9px; }
+    .terms { font-size: 8px; line-height: 1.45; padding: 0; }
+    .terms ol { margin: 0; padding-left: 14px; }
+    .terms li { margin-bottom: 4px; }
+    .bold { font-weight: 900; }
+
     @media print {
       html, body { margin: 0 !important; padding: 0 !important; width: 210mm !important; min-height: 297mm !important; background: #fff !important; }
       .toolbar { display: none; }
       .invoice-page { width: 190mm !important; max-width: none !important; margin: 0 auto !important; }
-      .invoice { border: 1.5px solid #000 !important; }
+      .invoice { border: 1px solid #000 !important; }
       table, tr, td, th { break-inside: avoid; page-break-inside: avoid; }
     }
   </style>
@@ -227,135 +266,144 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
   </div>`}
   <main class="invoice-page">
     <section class="invoice">
-      <div class="title">TAX INVOICE</div>
-      <table>
+      <table class="header-table">
         <tbody>
           <tr>
-            <td class="company-cell" rowspan="2">
-              <div class="company-name">X-SPACE360</div>
-              <div class="bold">(Golden Rich Financial &amp; Real Estate Solutions Pvt. Ltd.)</div>
+            <td class="company-cell">
+              <img src="/logo.png" alt="X-Space360 Logo" class="logo-img" />
+              <div class="company-title">Golden Rich Financial &amp; Real Estate Solutions Pvt. Ltd.</div>
               Office No-804, Royal Avaan Avenue, Opp. Bhosla School Gate,<br />
-              Jehan Circle, Gangapur Road, Nashik-422013<br />
+              Jehan Circle, Gangapur Road Nashik-422013<br />
               <span class="bold">GSTIN/UIN:</span> 27AAKCG1285C1ZP<br />
-              <span class="bold">State Name:</span> Maharashtra, Code : 27<br />
-              <span class="bold">Contact:</span> 9225586001<br />
+              <span class="bold">State Name :</span> Maharashtra, Code : 27<br />
+              <span class="bold">Contact :</span> 9225586001<br />
               <span class="bold">Mail:</span> finance.director@goldenrichproperties.com
             </td>
             <td class="invoice-cell">
-              <table>
-                <tbody>
-                  <tr>
-                    <td><span class="field-label">Invoice No.</span><strong>${escapeHtml(invoiceNo)}</strong></td>
-                    <td><span class="field-label">Invoice Date</span><strong>${escapeHtml(formatDate(booking.created_at || new Date()))}</strong></td>
-                  </tr>
-                  <tr>
-                    <td><span class="field-label">Mode / Terms of Payment</span><strong>${escapeHtml(paymentMode)}</strong></td>
-                    <td><span class="field-label">Reference No.</span><strong>${escapeHtml(paymentRef)}</strong></td>
-                  </tr>
-                </tbody>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td class="invoice-cell booking-box">
-              <div class="confirmed">Booking Confirmed</div>
-              Booking ID: <strong>${escapeHtml(bookingId)}</strong><br />
-              Payment Ref.: <strong>${escapeHtml(paymentRef)}</strong><br />
-              Booked on: <strong>${escapeHtml(formatDateTime(booking.created_at))}</strong>
+              Invoice No. : ${escapeHtml(invoiceNo)}<br />
+              Invoice Date: ${escapeHtml(invoiceDate)}<br />
+              <div style="border-top: 1px solid #000; margin: 4px -6px 0 -6px; padding-top: 4px; padding-left: 6px; padding-right: 6px;">
+                <strong>Booking Confirmed</strong><br />
+                Booking ID: ${escapeHtml(bookingId)}<br />
+                Payment Ref.: ${escapeHtml(paymentRef)}<br />
+                Booked on &ndash; ${escapeHtml(bookedOnDateTime)}
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
 
-      <table class="no-top">
+      <div class="section-title">BOOKING DETAILS</div>
+
+      <table class="party-table">
         <tbody>
           <tr>
-            <td class="party-cell">
+            <td class="party-left">
               <strong>Property Owner Details:</strong><br />
               ${escapeHtml(ownerName)}<br />
               Property: ${escapeHtml(propertyName)}<br />
               ${escapeHtml(propertyAddress)}<br />
-              Contact No. ${escapeHtml(ownerPhone)}<br />
-              Email: ${escapeHtml(ownerEmail)}<br />
-              GSTIN: ${escapeHtml(ownerGst)}
+              Contact No. ${escapeHtml(ownerPhone)}
             </td>
-            <td class="party-cell">
+            <td>
               <strong>Guest Name:</strong><br />
               ${escapeHtml(customerName)}<br />
-              Address: ${escapeHtml(customerAddress)}<br />
               Contact No. ${escapeHtml(customerPhone)}<br />
               Email: ${escapeHtml(customerEmail)}<br />
-              GSTIN: ${escapeHtml(customerGst)}
+              GSTIN: ${customerGst ? escapeHtml(customerGst) : '27XXXXXXXXXXXXX [Optional]'}<br />
+              Property / Hotel- ${escapeHtml(propertyName)}<br />
+              Booking Status - Booking Confirmed<br />
+              Room Type - ${escapeHtml(roomType)}
             </td>
           </tr>
         </tbody>
       </table>
 
-      <div class="section-heading">BUYER / BOOKING DETAILS</div>
-      <table class="details-table no-top">
+      <table class="details-table">
         <tbody>
           <tr>
-            <td class="label">Guest Name</td><td class="value">${escapeHtml(customerName)}</td>
-            <td class="label">Booking Status</td><td class="value">Booking Confirmed</td>
+            <td class="label">Check-in</td>
+            <td class="value">${escapeHtml(checkInDisplay)}</td>
           </tr>
           <tr>
-            <td class="label">Guest Mobile</td><td class="value">${escapeHtml(customerPhone)}</td>
-            <td class="label">Guest Email</td><td class="value">${escapeHtml(customerEmail)}</td>
+            <td class="label">Check-out</td>
+            <td class="value">${escapeHtml(checkOutDisplay)}</td>
           </tr>
           <tr>
-            <td class="label">Property / Hotel</td><td class="value">${escapeHtml(propertyName)}</td>
-            <td class="label">Room Type</td><td class="value">${escapeHtml(roomType)}</td>
+            <td class="label">Stay</td>
+            <td class="value">${escapeHtml(nights)} Night(s)</td>
           </tr>
           <tr>
-            <td class="label">Property Address</td><td class="value wide-value" colspan="3">${escapeHtml(propertyAddress)}</td>
+            <td class="label">No of Guest</td>
+            <td class="value">${escapeHtml(guestCount)}</td>
           </tr>
           <tr>
-            <td class="label">Check-in</td><td class="value">${escapeHtml(checkInDisplay)}</td>
-            <td class="label">Check-out</td><td class="value">${escapeHtml(checkOutDisplay)}</td>
-          </tr>
-          <tr>
-            <td class="label">Stay</td><td class="value">${escapeHtml(nights)} Night(s)</td>
-            <td class="label">Payment Mode / Status</td><td class="value">${escapeHtml(paymentMode)} / ${escapeHtml(booking.payment_status || 'Paid')}</td>
-          </tr>
-          <tr>
-            <td class="label">No. of Guest</td><td class="value">${escapeHtml(guestCount)}</td>
-            <td class="label">Contact Number</td><td class="value">${escapeHtml(ownerPhone)}</td>
+            <td class="label">Payment Mode / Status</td>
+            <td class="value">${escapeHtml(paymentMode)} / ${escapeHtml(booking.payment_status || 'Paid')}</td>
           </tr>
         </tbody>
       </table>
 
-      <div class="section-heading">PROPERTY AMENITIES</div>
-      <div class="amenities">${displayAmenities.map((item) => `<span>• ${escapeHtml(item)}</span>`).join('')}</div>
+      <div class="section-title">PROPERTY AMENITIES</div>
+      <div class="amenities-container">${displayAmenities.map((item) => `<div>- ${escapeHtml(item)}</div>`).join('')}</div>
 
-      <div class="section-heading">Price Summary</div>
-      <table class="price-table no-top">
-        <thead><tr><th class="desc">Description</th><th class="amount">Amount (Rs.)</th></tr></thead>
+      <div class="price-title">Price summary</div>
+      <table class="price-table">
+        <thead>
+          <tr>
+            <th class="desc">Description</th>
+            <th class="amount">Amount (Rs.)</th>
+          </tr>
+        </thead>
         <tbody>
-          <tr><td>${accommodationDescription}</td><td class="amount">${plainMoney(amounts.base || taxableValue)}</td></tr>
-          <tr><td>Taxable Value</td><td class="amount">${plainMoney(taxableValue || amounts.base)}</td></tr>
-          <tr><td>CGST</td><td class="amount">${plainMoney(cgst)}</td></tr>
-          <tr><td>SGST</td><td class="amount">${plainMoney(sgst)}</td></tr>
-          ${amounts.discount > 0 ? `<tr><td>Discounts</td><td class="amount">-${plainMoney(amounts.discount)}</td></tr>` : ''}
-          <tr class="total"><td>Total Price</td><td class="amount">${plainMoney(amounts.paid)}</td></tr>
+          <tr>
+            <td class="desc">${accommodationDescription}</td>
+            <td class="amount">${plainMoney(taxableValue || amounts.base)}</td>
+          </tr>
+          <tr>
+            <td class="desc">Discount</td>
+            <td class="amount">${plainMoney(amounts.discount)}</td>
+          </tr>
+          <tr>
+            <td class="desc">Taxable Value</td>
+            <td class="amount">${plainMoney(taxableValue || amounts.base)}</td>
+          </tr>
+          <tr>
+            <td class="desc">CGST</td>
+            <td class="amount">${plainMoney(cgst)}</td>
+          </tr>
+          <tr>
+            <td class="desc">SGST</td>
+            <td class="amount">${plainMoney(sgst)}</td>
+          </tr>
+          <tr class="total">
+            <td class="desc">Total Price</td>
+            <td class="amount">${plainMoney(amounts.paid)}</td>
+          </tr>
         </tbody>
       </table>
-      <table class="no-top">
+
+      <table class="summary-table">
         <tbody>
-          <tr class="paid-row"><td>Amount Paid by ${escapeHtml(paymentMode)}:</td><td class="right mono bold">Rs. ${plainMoney(amounts.paid)}</td></tr>
-          <tr class="words-row"><td colspan="2"><strong>Amount in Words:</strong> Indian Rupees ${escapeHtml(numberToWords(amounts.paid))} Only</td></tr>
+          <tr><td><strong>Amount Paid by ${escapeHtml(paymentMode)}:</strong> Rs. ${plainMoney(amounts.paid)}</td></tr>
+          <tr><td><strong>Amount in Words:</strong> Indian Rupees ${escapeHtml(numberToWords(amounts.paid))} Only</td></tr>
         </tbody>
       </table>
 
-      <div class="section-heading">TERMS &amp; CONDITIONS</div>
-      <div class="terms">
-        <ol>
-          <li>This ticket is booked through X-Space360.</li>
-          <li>Carry any valid photo ID during check-in. Modification and cancellation are subject to the refund policy below.</li>
-          <li>Local destination check-in and check-out timings are maintained by the property.</li>
-          <li>Additional services, damages, penalties, or property-level charges may be collected directly by the property, if applicable.</li>
-          ${importantConditionsHtml}
-        </ol>
-      </div>
+      <table class="terms-table">
+        <tbody>
+          <tr><td class="terms-heading">TERMS &amp; CONDITIONS</td></tr>
+          <tr>
+            <td>
+              <div class="terms">
+                <ol>
+                  ${termsList.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
+                </ol>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </section>
   </main>
 </body>

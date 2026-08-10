@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -1598,12 +1598,21 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
     const label = txn.plan?.bhk_type || txn.plan?.plan_type || txn.subscription?.plan_type || txn.type || '';
     return label ? label.replaceAll('_', ' ').toUpperCase() : 'NA';
   };
+  const cleanDisplayValue = (value) => {
+    const text = String(value || '').trim();
+    return text && !['NA', 'N/A', 'NULL', 'NONE', '-'].includes(text.toUpperCase()) ? text : '';
+  };
   const formatPropertyName = (txn) => (
     txn.property?.title ||
     txn.property?.property_name ||
     txn.property?.name ||
+    txn.booking?.property?.title ||
+    txn.booking?.property?.property_name ||
+    txn.booking?.property?.name ||
     txn.property_name ||
     txn.property?.property_id ||
+    txn.property_id ||
+    txn.booking?.property_id ||
     txn.subscription?.property_id ||
     'NA'
   );
@@ -1873,8 +1882,9 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
                     const breakdown = getBookingBreakdown(t);
                     const paymentMethod = t.booking?.payment_method || (t.is_mock ? 'Razorpay Test/Mock' : 'Razorpay');
                     const confirmation = t.razorpay_payment_id || t.upi_transaction_id || t.booking?.razorpay_payment_id || t.booking?.upi_transaction_id || 'Pending';
-                    const brokerName = t.broker?.full_name || t.broker_name || 'NA';
-                    const rmName = t.employee?.full_name || t.employee_name || 'NA';
+                    const brokerName = cleanDisplayValue(t.broker?.full_name) || cleanDisplayValue(t.broker_name);
+                    const rmName = cleanDisplayValue(t.employee?.full_name) || cleanDisplayValue(t.employee_name);
+                    const brokerRmPrimary = brokerName || rmName || 'NA';
                     return (
                       <tr key={t.transaction_id} className="hover:bg-stone/40 transition text-charcoal" data-testid={`booking-txn-${t.transaction_id}`}>
                         <td className="py-4 px-4 whitespace-nowrap font-mono font-bold">{t.booking_id || t.booking?.booking_id || 'NA'}</td>
@@ -1892,10 +1902,12 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
                           <div className="text-xs text-charcoal-muted mt-0.5">{t.host?.phone || t.host?.email || 'NA'}</div>
                         </td>
                         <td className="py-4 px-4 min-w-[180px]">
-                          <div className="font-bold text-charcoal text-sm">{brokerName}</div>
-                          <div className="text-xs text-charcoal-muted mt-0.5">RM: {rmName}</div>
+                          <div className="font-bold text-charcoal text-sm">{brokerRmPrimary}</div>
+                          {rmName && rmName !== brokerRmPrimary && (
+                            <div className="text-xs text-charcoal-muted mt-0.5">RM: {rmName}</div>
+                          )}
                         </td>
-                        <td className="py-4 px-4 min-w-[150px]">{t.branch_manager?.full_name || 'NA'}</td>
+                        <td className="py-4 px-4 min-w-[150px] font-bold">{t.branch_manager?.full_name || 'NA'}</td>
                         <td className="py-4 px-4 whitespace-nowrap font-mono">{formatMoney(breakdown.baseAmount)}</td>
                         <td className="py-4 px-4 whitespace-nowrap font-mono" title={extraChargesTitle(breakdown)}>{formatMoney(breakdown.extraTotal)}</td>
                         <td className="py-4 px-4 whitespace-nowrap font-mono">{breakdown.igst ? formatMoney(breakdown.igst) : 'NA'}</td>
@@ -3642,10 +3654,12 @@ const TopHostsTab = () => {
 
 const InvoiceModal = ({ transaction, onClose }) => {
   const t = transaction;
+  const bookingInvoiceFrameRef = useRef(null);
   const user = t.user || {};
   const property = t.property || {};
-  const propertyName = property.title || property.property_name || property.name || t.property_name || property.property_id || 'NA';
-  const propertyAddress = [property.address, property.city, property.state, property.pin_code].filter(Boolean).join(', ') || 'NA';
+  const bookingProperty = t.booking?.property || {};
+  const propertyName = property.title || property.property_name || property.name || bookingProperty.title || bookingProperty.property_name || bookingProperty.name || t.property_name || property.property_id || t.booking?.property_id || 'NA';
+  const propertyAddress = [property.address, property.city, property.state, property.pin_code].filter(Boolean).join(', ') || [bookingProperty.address, bookingProperty.city, bookingProperty.state, bookingProperty.pin_code].filter(Boolean).join(', ') || 'NA';
   const invoiceBreakdown = t.booking_invoice_breakdown || t.invoice_breakdown || {};
   const amountINR = Number(invoiceBreakdown.total_amount ?? ((t.amount || 0) / 100));
   const formatInvoiceMoney = (value) =>
@@ -3720,7 +3734,13 @@ const InvoiceModal = ({ transaction, onClose }) => {
 
   const handlePrint = () => {
     if (t.type === 'booking_payment') {
-      printHtml(buildAdminBookingInvoiceHtml(), t.invoice_no || 'Booking Details');
+      const frameWindow = bookingInvoiceFrameRef.current?.contentWindow;
+      if (frameWindow) {
+        frameWindow.focus();
+        frameWindow.print();
+      } else {
+        window.print();
+      }
       return;
     }
     const printWindow = window.open('', 'xspace-invoice-print', 'width=1100,height=900');
@@ -4185,26 +4205,37 @@ const InvoiceModal = ({ transaction, onClose }) => {
   };
 
   if (t.type === 'booking_payment') {
+    const bookingObj = t.booking || {};
+    const effectiveProperty = {
+      ...(bookingObj.property || {}),
+      ...(property || {}),
+      property_id: property.property_id || bookingObj.property?.property_id || bookingObj.property_id || t.property_id,
+      host: t.host || bookingObj.property?.host || property.host,
+    };
+    const effectiveUser = bookingObj.user || bookingObj.guest || user || {};
+
     const invoiceHtml = buildCustomerBookingInvoiceHtml({
-      ...(t.booking || {}),
-      booking_id: t.booking_id || t.booking?.booking_id,
+      ...bookingObj,
+      booking_id: t.booking_id || bookingObj.booking_id,
       invoice_no: t.invoice_no || t.transaction_id,
       booking_invoice_no: t.invoice_no || t.transaction_id,
-      created_at: t.booking?.created_at || t.created_at,
+      created_at: bookingObj.created_at || t.created_at,
       total_amount: amountINR,
       paid_amount: amountINR,
       total_extra_charges: Math.max(0, amountINR - baseAmount + discountAmount),
       discount_amount: discountAmount,
-      razorpay_payment_id: t.razorpay_payment_id || t.booking?.razorpay_payment_id,
-      upi_transaction_id: t.upi_transaction_id || t.booking?.upi_transaction_id,
+      razorpay_payment_id: t.razorpay_payment_id || bookingObj.razorpay_payment_id,
+      upi_transaction_id: t.upi_transaction_id || bookingObj.upi_transaction_id,
       payment_id: t.razorpay_payment_id || t.upi_transaction_id || t.transaction_id,
       customer_base_amount: baseAmount,
-    }, property, user, { hideToolbar: true });
+      property: effectiveProperty,
+      user: effectiveUser,
+    }, effectiveProperty, effectiveUser, { hideToolbar: true });
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto print:p-0 print:bg-white" data-testid="invoice-modal">
-        <div className="bg-white rounded-xl w-full max-w-5xl border border-gray-100 shadow-elevated p-5 relative">
+        <div className="bg-white rounded-xl w-full max-w-6xl border border-gray-100 shadow-elevated p-5 relative">
           <div className="no-print flex items-center justify-between gap-3 mb-4 pb-4 border-b border-gray-100">
-            <h2 className="text-lg font-bold text-charcoal">Booking Details</h2>
+            <h2 className="text-lg font-bold text-charcoal">Tax Invoice Preview</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrint}
@@ -4222,6 +4253,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
             </div>
           </div>
           <iframe
+            ref={bookingInvoiceFrameRef}
             title={t.invoice_no || 'Booking invoice'}
             srcDoc={invoiceHtml}
             className="w-full h-[78vh] rounded-lg border border-gray-200 bg-white"
