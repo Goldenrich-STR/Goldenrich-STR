@@ -476,7 +476,13 @@ const HostBookings = () => {
                                           <span className="text-xs font-bold text-charcoal">
                                             {b.check_in_date} to {b.check_out_date}
                                           </span>
-                                          <span className="text-[10px] text-charcoal-muted block">({numNights} night{numNights === 1 ? '' : 's'})</span>
+                                          <span className="text-[10px] text-charcoal-muted block">
+                                            ({numNights} {
+                                              b.property?.category === 'commercial' || b.property?.category === 'event_venue'
+                                                ? `day${numNights === 1 ? '' : 's'}`
+                                                : `night${numNights === 1 ? '' : 's'}`
+                                            })
+                                          </span>
                                         </div>
                                       </div>
 

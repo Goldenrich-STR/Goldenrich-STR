@@ -232,7 +232,7 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
         <div class="label">Address:</div><div>${escapeHtml(propertyAddress)}</div>
         <div class="label">Check-In:</div><div><strong>${escapeHtml(checkInDisplay)}</strong>${checkInTime ? ' <span class="muted">(Local destination timings are mentioned)</span>' : ''}</div>
         <div class="label">Check-Out:</div><div><strong>${escapeHtml(checkOutDisplay)}</strong>${checkOutTime ? ' <span class="muted">(Local destination timings are mentioned)</span>' : ''}</div>
-        <div class="label">Stay:</div><div><strong>${escapeHtml(nights)} Night(s)</strong></div>
+        <div class="label">Stay:</div><div><strong>${escapeHtml(nights)} ${property.category === 'commercial' || property.category === 'event_venue' ? 'Day(s)' : 'Night(s)'}</strong></div>
         <div class="label">Guest Name:</div><div class="value">${escapeHtml(customerName)}</div>
       </div>
     </section>

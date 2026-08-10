@@ -418,7 +418,13 @@ const IndependenceDayAnimation = () => {
                       navigator.userAgent.includes('MobileApp');
 
   const triggerNewFlight = React.useCallback(() => {
-    const paths = [
+    const isMobile = window.innerWidth < 768;
+    const paths = isMobile
+      ? [
+          { name: 'l-r', rotation: 0, animationName: 'fly-l-r' },
+          { name: 'r-l', rotation: 180, animationName: 'fly-r-l' }
+        ]
+      : [
           { name: 'bl-tr', rotation: -16, animationName: 'fly-bl-tr' },
           { name: 'br-tl', rotation: -164, animationName: 'fly-br-tl' },
           { name: 'tl-br', rotation: 16, animationName: 'fly-tl-br' },
@@ -432,6 +438,7 @@ const IndependenceDayAnimation = () => {
     setFlight({
       id: Date.now(),
       ...randomPath,
+      duration: isMobile ? '5.5s' : '9s'
     });
   }, []);
 
@@ -501,7 +508,7 @@ const IndependenceDayAnimation = () => {
       <div 
         className="absolute flex flex-col gap-8"
         style={{
-          animation: `${flight.animationName} 9s linear forwards`,
+          animation: `${flight.animationName} ${flight.duration} linear forwards`,
           top: 0,
           left: 0,
         }}
@@ -509,15 +516,12 @@ const IndependenceDayAnimation = () => {
         {/* Jet 1: Saffron */}
         <div className="relative flex items-center" style={{ transform: 'translateX(0px)', color: '#FF9933' }}>
           <div 
-            className="absolute right-full h-[18px] w-[600px]" 
+            className="absolute right-full h-[14px] w-[800px]" 
             style={{ 
               marginRight: '-4px',
-              background: 'radial-gradient(circle, currentColor 22%, transparent 68%) repeat-x',
-              backgroundSize: '13px 13px',
-              backgroundPosition: 'left center',
-              filter: 'blur(0.6px) drop-shadow(0 0 1px currentColor)',
-              WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 12%, rgba(0,0,0,0) 100%)',
-              maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 12%, rgba(0,0,0,0) 100%)',
+              background: 'linear-gradient(to left, currentColor 0%, transparent 100%)',
+              filter: 'blur(5px) opacity(0.85)',
+              borderRadius: '7px',
             }} 
           />
           <svg className="w-8 h-8 fill-[#475569] drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)] rotate-90" viewBox="0 0 100 100">
@@ -528,15 +532,12 @@ const IndependenceDayAnimation = () => {
         {/* Jet 2: White */}
         <div className="relative flex items-center" style={{ transform: 'translateX(32px)', color: '#FFFFFF' }}>
           <div 
-            className="absolute right-full h-[20px] w-[600px]" 
+            className="absolute right-full h-[16px] w-[800px]" 
             style={{ 
               marginRight: '-4px',
-              background: 'radial-gradient(circle, currentColor 24%, transparent 66%) repeat-x',
-              backgroundSize: '14px 14px',
-              backgroundPosition: 'left center',
-              filter: 'blur(0.8px) drop-shadow(0 0 1px currentColor)',
-              WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 15%, rgba(0,0,0,0) 100%)',
-              maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 15%, rgba(0,0,0,0) 100%)',
+              background: 'linear-gradient(to left, currentColor 0%, transparent 100%)',
+              filter: 'blur(6px) opacity(0.9)',
+              borderRadius: '8px',
             }} 
           />
           <svg className="w-8 h-8 fill-[#475569] drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)] rotate-90" viewBox="0 0 100 100">
@@ -547,15 +548,12 @@ const IndependenceDayAnimation = () => {
         {/* Jet 3: Green */}
         <div className="relative flex items-center" style={{ transform: 'translateX(0px)', color: '#128807' }}>
           <div 
-            className="absolute right-full h-[18px] w-[600px]" 
+            className="absolute right-full h-[14px] w-[800px]" 
             style={{ 
               marginRight: '-4px',
-              background: 'radial-gradient(circle, currentColor 22%, transparent 68%) repeat-x',
-              backgroundSize: '13px 13px',
-              backgroundPosition: 'left center',
-              filter: 'blur(0.6px) drop-shadow(0 0 1px currentColor)',
-              WebkitMaskImage: 'linear-gradient(to left, rgba(0,0,0,1) 12%, rgba(0,0,0,0) 100%)',
-              maskImage: 'linear-gradient(to left, rgba(0,0,0,1) 12%, rgba(0,0,0,0) 100%)',
+              background: 'linear-gradient(to left, currentColor 0%, transparent 100%)',
+              filter: 'blur(5px) opacity(0.85)',
+              borderRadius: '7px',
             }} 
           />
           <svg className="w-8 h-8 fill-[#475569] drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)] rotate-90" viewBox="0 0 100 100">

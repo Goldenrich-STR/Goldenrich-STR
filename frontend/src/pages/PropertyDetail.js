@@ -676,7 +676,7 @@ const PropertyDetail = () => {
   const adultGuests = Number(guests) || 1;
   const chargeableGuests = Math.max(1, adultGuests + childrenGuests);
   const hasExtraGuestPrice = Number(property?.extra_guest_price) > 0;
-  const guestLimit = property?.category === 'event_venue' || !hasExtraGuestPrice ? maxGuests : 1000;
+  const guestLimit = property?.category === 'event_venue' || property?.category === 'commercial' || !hasExtraGuestPrice ? maxGuests : 1000;
   const canAddChargeableGuest = chargeableGuests < guestLimit;
   const includedGuests = Math.max(1, Number(property?.max_guests) || 1);
   const extraGuests = property?.category === 'event_venue' ? 0 : Math.max(0, chargeableGuests - includedGuests);
@@ -1065,6 +1065,14 @@ const PropertyDetail = () => {
     }
     if (user.role !== 'guest') {
       setBookingError('Only guests can make bookings. Please log in with a guest account.');
+      return;
+    }
+    if (property?.category === 'commercial' && Number(guests) > maxGuests) {
+      setBookingError(`Total staff count cannot exceed the maximum capacity of ${maxGuests} staff`);
+      return;
+    }
+    if (property?.category === 'residential' && chargeableGuests > maxGuests && !hasExtraGuestPrice) {
+      setBookingError(`Guest count cannot exceed the maximum capacity of ${maxGuests} guests`);
       return;
     }
     if (!checkIn || !checkOut) {
@@ -1590,7 +1598,7 @@ const PropertyDetail = () => {
                   { icon: MapPin, label: 'Location', value: `${propertyCity}${property.state ? `, ${property.state}` : ''}` },
                   { icon: Building2, label: 'Property type', value: propertyType },
                   { icon: Users, label: property.category === 'commercial' ? 'Staff capacity' : 'Guest capacity', value: guestCapacity ? `${guestCapacity} ${property.category === 'commercial' ? 'staff' : 'guests'}` : 'Flexible capacity' },
-                  { icon: CalendarIcon, label: 'Minimum stay', value: `${property.minimum_stay_days || 1} ${Number(property.minimum_stay_days || 1) === 1 ? 'night' : 'nights'}` },
+                  { icon: CalendarIcon, label: 'Minimum stay', value: `${property.minimum_stay_days || 1} ${property.category === 'commercial' || property.category === 'event_venue' ? (Number(property.minimum_stay_days || 1) === 1 ? 'day' : 'days') : (Number(property.minimum_stay_days || 1) === 1 ? 'night' : 'nights')}` },
                   { icon: Clock, label: 'Check-in time', value: formatListingTime(property.check_in_time || '12:00') },
                   { icon: Clock, label: 'Check-out time', value: formatListingTime(property.check_out_time || '11:00') },
                   { icon: CreditCard, label: 'Starting price', value: `Rs ${Number(displayPricePerNight || 0).toLocaleString('en-IN')}` },
@@ -2814,7 +2822,7 @@ const PropertyDetail = () => {
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div className="bg-stone/50 p-4 rounded-xl border border-sand-100">
                   <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Duration</p>
-                  <p className="font-bold tracking-tight text-charcoal">{nights} Day{nights > 1 ? 's' : ''}</p>
+                  <p className="font-bold tracking-tight text-charcoal">{nights} {property.category === 'commercial' || property.category === 'event_venue' ? `Day${nights > 1 ? 's' : ''}` : `Night${nights > 1 ? 's' : ''}`}</p>
                 </div>
                 <div className="bg-stone/50 p-4 rounded-xl border border-sand-100">
                   <p className="text-[8px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Dates</p>
