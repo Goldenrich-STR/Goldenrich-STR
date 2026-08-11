@@ -36,12 +36,12 @@ class AppConfig {
     return 'http://localhost:8001';
   }
 
-  static const String prodBaseUrl = 'https://uat.x-space360.in';
+  static const String prodBaseUrl = 'https://api.x-space360.in';
 
   /// Whether to use production backend configuration.
   /// Keep this false for local development so the mobile app and website use
   /// the same localhost backend/database.
-  static const bool isProduction = false;
+  static const bool isProduction = true;
 
   /// Default currency symbol for pricing views.
   static const String currencySymbol = '₹';
