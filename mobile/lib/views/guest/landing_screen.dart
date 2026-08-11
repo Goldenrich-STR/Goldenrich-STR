@@ -2067,7 +2067,7 @@ class _PropertyCard extends StatelessWidget {
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () async {
-                        final String shareText = 'Check out ${property.title} in ${property.city} on X-Space360. Starting from Rs ${NumberFormat.currency(locale: 'en_IN', symbol: '', decimalDigits: 0).format(property.pricePerNight).trim()}/night.\nhttps://uat.x-space360.in/property/${Uri.encodeComponent(property.propertyId)}';
+                        final String shareText = 'Check out ${property.title} in ${property.city} on X-Space360. Starting from Rs ${NumberFormat.currency(locale: 'en_IN', symbol: '', decimalDigits: 0).format(property.pricePerNight).trim()}/night.\nhttps://x-space360.in/property/${Uri.encodeComponent(property.propertyId)}';
                         await Share.share(shareText, subject: property.title);
                       },
                       child: Container(

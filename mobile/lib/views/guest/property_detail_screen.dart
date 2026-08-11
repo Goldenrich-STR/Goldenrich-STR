@@ -62,7 +62,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   String _propertyShareUrl(PropertyModel prop) {
-    return 'https://uat.x-space360.in/property/${Uri.encodeComponent(prop.propertyId)}';
+    return 'https://x-space360.in/property/${Uri.encodeComponent(prop.propertyId)}';
   }
 
   String _propertyShareText(PropertyModel prop) {

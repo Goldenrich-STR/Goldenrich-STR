@@ -24,7 +24,7 @@ val hasReleaseKeystore = keystorePropertiesFile.exists() &&
     releaseStoreFile?.exists() == true
 
 android {
-    namespace = "com.goldenrich.str.goldenrich_str_mobile"
+    namespace = "com.xspace360.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -35,7 +35,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.goldenrich.str.goldenrich_str_mobile"
+        applicationId = "com.xspace360.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

@@ -1,4 +1,4 @@
-package com.goldenrich.str.goldenrich_str_mobile
+package com.xspace360.app
 
 import io.flutter.embedding.android.FlutterActivity
 
