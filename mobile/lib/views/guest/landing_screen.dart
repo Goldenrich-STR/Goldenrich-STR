@@ -94,14 +94,6 @@ class _LandingScreenState extends State<LandingScreen> {
     _DestinationData('Anjaneri', 'anjaneri'),
     _DestinationData('Harihar Fort', 'harihar_fort'),
     _DestinationData('Bhandardara', 'bhandardara'),
-    _DestinationData('Mumbai', 'mumbai'),
-    _DestinationData('Pune', 'pune'),
-    _DestinationData('Karjat', 'karjat'),
-    _DestinationData('Alibaug', 'alibaug'),
-    _DestinationData('Goa', 'goa'),
-    _DestinationData('Lonavala', 'lonavala'),
-    _DestinationData('Mahabaleshwar', 'mahabaleshwar'),
-    _DestinationData('Kokan', 'kokan'),
   ];
 
   static const List<_TestimonialData> _testimonials = [
@@ -1023,7 +1015,7 @@ class _LandingScreenState extends State<LandingScreen> {
   Widget _buildHolidayGetawaySection(List<PropertyModel> allProperties) {
     if (allProperties.isEmpty) return const SizedBox.shrink();
 
-    final preferredCities = ['Nashik', 'Pune', 'Goa', 'Alibaug'];
+    final preferredCities = ['Nashik', 'Trimbakeshwar', 'Igatpuri', 'Bhandardara'];
     final presentCities = preferredCities.where((city) =>
       allProperties.any((p) => p.city.trim().toLowerCase() == city.toLowerCase())
     ).toList();
