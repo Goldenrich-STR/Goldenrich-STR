@@ -125,13 +125,13 @@ function priceIcon(price, active) {
 }
 
 function getCustomerNightlyPrice(property) {
-  return Number(
-    property?.display_price_per_night
-    ?? property?.customer_price_per_night
-    ?? property?.price_per_night
-    ?? property?.price
-    ?? 0
-  );
+    return Math.round(Number(
+      property?.display_price_per_night
+      ?? property?.customer_price_per_night
+      ?? property?.price_per_night
+      ?? property?.price
+      ?? 0
+    ));
 }
 
 // Centers the map on bounds of properties

@@ -114,7 +114,14 @@ const formatListingTime = (value) => {
 const formatExtraPersonPrice = (value) => {
   const amount = Number(value || 0);
   if (!amount) return 'Not specified';
-  return `Rs ${amount.toLocaleString('en-IN')}`;
+  const displayAmount = amount >= 500 ? Math.round(amount / 100) * 100 : Math.round(amount);
+  return `Rs ${displayAmount.toLocaleString('en-IN')}`;
+};
+
+const normalizeListedExtraGuestPrice = (value) => {
+  const amount = Number(value || 0);
+  if (!amount) return 0;
+  return amount >= 500 ? Math.round(amount / 100) * 100 : Math.round(amount);
 };
 
 const toAbsoluteSiteUrl = (value) => {
@@ -706,7 +713,8 @@ const PropertyDetail = () => {
   const maxGuests = Math.max(1, Number(property?.max_guests) || 6);
   const adultGuests = Number(guests) || 1;
   const chargeableGuests = Math.max(1, adultGuests + childrenGuests);
-  const hasExtraGuestPrice = Number(property?.extra_guest_price) > 0;
+  const listedExtraGuestPrice = normalizeListedExtraGuestPrice(property?.extra_guest_price);
+  const hasExtraGuestPrice = listedExtraGuestPrice > 0;
   const guestLimit = property?.category === 'event_venue' || property?.category === 'commercial' || !hasExtraGuestPrice ? maxGuests : 1000;
   const canAddChargeableGuest = chargeableGuests < guestLimit;
   const includedGuests = Math.max(1, Number(property?.max_guests) || 1);
@@ -910,7 +918,7 @@ const PropertyDetail = () => {
   }, [checkIn, checkOut, property?.category]);
 
   const perPersonTotal = (Number(property?.per_person_price) || 0) * chargeableGuests * nights;
-  const extraGuestTotal = (Number(property?.extra_guest_price) || 0) * extraGuests * nights;
+  const extraGuestTotal = listedExtraGuestPrice * extraGuests * nights;
 
   const baseAmount = useMemo(() => {
     let amt = (property?.price_per_night || 0) * nights;
@@ -1003,6 +1011,8 @@ const PropertyDetail = () => {
     ? readPercent(parsedPolicies?.advance, 50)
     : 50;
   const finalNightlyPrice = quoteNumber(bookingQuote?.final_nightly_price, displayPricePerNight);
+  const roundedDisplayPricePerNight = Math.round(displayPricePerNight || 0);
+  const roundedPerPersonPrice = Math.round(Number(property?.per_person_price || 0));
   const nightlySubtotal = Math.round(finalNightlyPrice * nights);
   const quotedExtraGuestTotal = quoteNumber(bookingQuote?.host_extra_guest_fee ?? bookingQuote?.extra_guest_fee, extraGuestTotal);
   const bookingSubtotal = quoteNumber(bookingQuote?.subtotal_before_discount, nightlySubtotal + quotedExtraGuestTotal);
@@ -1651,7 +1661,7 @@ const PropertyDetail = () => {
                   { icon: CalendarIcon, label: 'Minimum stay', value: `${property.minimum_stay_days || 1} ${property.category === 'commercial' || property.category === 'event_venue' ? (Number(property.minimum_stay_days || 1) === 1 ? 'day' : 'days') : (Number(property.minimum_stay_days || 1) === 1 ? 'night' : 'nights')}` },
                   { icon: Clock, label: 'Check-in time', value: formatListingTime(property.check_in_time || '12:00') },
                   { icon: Clock, label: 'Check-out time', value: formatListingTime(property.check_out_time || '11:00') },
-                  { icon: CreditCard, label: 'Starting price', value: `Rs ${Number(displayPricePerNight || 0).toLocaleString('en-IN')}` },
+                  { icon: CreditCard, label: 'Starting price', value: `Rs ${roundedDisplayPricePerNight.toLocaleString('en-IN')}` },
                   { icon: CheckCircle2, label: 'Extra person price', value: formatExtraPersonPrice(property.extra_guest_price) },
                 ].map((fact) => {
                   const Icon = fact.icon;
@@ -2241,7 +2251,7 @@ const PropertyDetail = () => {
                   {property.category === 'event_venue' ? (
                     <>
                       <span className="text-3xl font-bold tracking-tight text-charcoal tracking-tight">
-                        ₹{displayPricePerNight.toLocaleString('en-IN') || 0}
+                        ₹{roundedDisplayPricePerNight.toLocaleString('en-IN')}
                       </span>
                       <span className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest ml-1">
                         / day venue rent
@@ -2250,7 +2260,7 @@ const PropertyDetail = () => {
                   ) : (
                     <>
                       <span className="text-3xl font-bold tracking-tight text-charcoal tracking-tight">
-                        ₹{pricingDisplayMode === 'per_person' ? Number(property.per_person_price || 0).toLocaleString('en-IN') : displayPricePerNight.toLocaleString('en-IN') || 0}
+                        ₹{pricingDisplayMode === 'per_person' ? roundedPerPersonPrice.toLocaleString('en-IN') : roundedDisplayPricePerNight.toLocaleString('en-IN')}
                       </span>
                       <span className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest ml-1">
                         {pricingDisplayMode === 'per_person'
@@ -2560,18 +2570,18 @@ const PropertyDetail = () => {
                       <span className="text-sm font-bold tracking-tight text-charcoal">₹{Math.round(nightlySubtotal).toLocaleString('en-IN')}</span>
                     </div>
                     )}
-                    {pricingDisplayMode === 'per_person' && Number(property.per_person_price) > 0 && (
+                    {pricingDisplayMode === 'per_person' && Number(property?.per_person_price || 0) > 0 && (
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
-                          ₹{Number(property.per_person_price).toLocaleString('en-IN')} × {chargeableGuests} {property.category === 'commercial' ? 'staff' : 'guests'} × {nights} {property.category === 'commercial' ? 'day' : 'night'}{nights !== 1 ? 's' : ''}
+                          ₹{roundedPerPersonPrice.toLocaleString('en-IN')} × {chargeableGuests} {property.category === 'commercial' ? 'staff' : 'guests'} × {nights} {property.category === 'commercial' ? 'day' : 'night'}{nights !== 1 ? 's' : ''}
                         </span>
                         <span className="text-sm font-bold tracking-tight text-charcoal">₹{perPersonTotal.toLocaleString('en-IN')}</span>
                       </div>
                     )}
-                    {extraGuests > 0 && Number(property.extra_guest_price) > 0 && (
+                    {extraGuests > 0 && listedExtraGuestPrice > 0 && (
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-terracotta underline decoration-sand-300 underline-offset-4">
-                          Extra {property.category === 'commercial' ? 'staff' : 'guests'}: ₹{Number(property.extra_guest_price).toLocaleString('en-IN')} × {extraGuests} × {nights} {property.category === 'commercial' ? 'day' : 'night'}{nights !== 1 ? 's' : ''}
+                          Extra {property.category === 'commercial' ? 'staff' : 'guests'}: ₹{listedExtraGuestPrice.toLocaleString('en-IN')} × {extraGuests} × {nights} {property.category === 'commercial' ? 'day' : 'night'}{nights !== 1 ? 's' : ''}
                         </span>
                         <span className="text-sm font-bold tracking-tight text-terracotta">₹{quotedExtraGuestTotal.toLocaleString('en-IN')}</span>
                       </div>
@@ -2987,7 +2997,7 @@ const PropertyDetail = () => {
         <div>
           <div className="flex items-baseline">
             <span className="text-xl font-bold tracking-tight text-charcoal">
-              ₹{canShowBookingAmount ? amountDueNow.toLocaleString('en-IN') : (displayPricePerNight.toLocaleString('en-IN') || 0)}
+              ₹{canShowBookingAmount ? amountDueNow.toLocaleString('en-IN') : (roundedDisplayPricePerNight.toLocaleString('en-IN'))}
             </span>
             <span className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider ml-1">
               {canShowBookingAmount ? ` / ${property.category === 'event_venue' && bookingPaymentType === 'advance' ? 'advance' : 'total'}` : (property.category === 'event_venue' ? '/ day' : '/ night')}
@@ -3036,3 +3046,6 @@ const PropertyDetail = () => {
 };
 
 export default PropertyDetail;
+
+
+

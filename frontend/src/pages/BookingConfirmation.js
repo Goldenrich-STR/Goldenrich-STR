@@ -99,6 +99,9 @@ const BookingConfirmation = () => {
     paymentConfig?.key_id?.startsWith('rzp_test_') &&
     paymentConfig.key_id !== 'rzp_test_demo_key';
   const customerAmounts = getCustomerBookingAmounts(booking || {});
+  const payableTotal = Number(customerAmounts.paid || amountToPay || 0);
+  const taxableBookingAmount = Number(customerAmounts.taxable || Math.max(0, payableTotal - Number(customerAmounts.taxes || 0)));
+  const bookingTaxes = Number(customerAmounts.taxes || Math.max(0, payableTotal - taxableBookingAmount));
 
   const handleRealRazorpay = async () => {
     setPaying(true);
@@ -408,12 +411,12 @@ const BookingConfirmation = () => {
           
           <div className="bg-stone/50 rounded-2xl p-6 space-y-4">
             <div className="flex justify-between items-center">
-              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Base Amount</span>
-              <span className="text-sm font-bold tracking-tight text-charcoal">Rs. {Math.round(customerAmounts.base).toLocaleString('en-IN')}</span>
+              <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Booking Amount</span>
+              <span className="text-sm font-bold tracking-tight text-charcoal">Rs. {Math.round(taxableBookingAmount).toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Taxes & GST</span>
-              <span className="text-sm font-bold tracking-tight text-charcoal">Rs. {Math.round(customerAmounts.taxes).toLocaleString('en-IN')}</span>
+              <span className="text-sm font-bold tracking-tight text-charcoal">Rs. {Math.round(bookingTaxes).toLocaleString('en-IN')}</span>
             </div>
             {booking.coupon_code && (
               <div className="flex justify-between items-center text-emerald-600 font-bold">
@@ -423,7 +426,7 @@ const BookingConfirmation = () => {
             )}
             <div className="border-t border-gray-100 pt-4 flex justify-between items-center">
               <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Total Cost</span>
-              <span className="text-sm font-bold tracking-tight text-charcoal">Rs. {Math.round(customerAmounts.total).toLocaleString('en-IN')}</span>
+              <span className="text-sm font-bold tracking-tight text-charcoal">Rs. {Math.round(payableTotal).toLocaleString('en-IN')}</span>
             </div>
             {booking.payment_type === 'advance' && (
               <>

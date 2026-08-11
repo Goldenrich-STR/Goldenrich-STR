@@ -4,6 +4,7 @@ from services.email_service import email_service
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from datetime import datetime, timezone
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -107,9 +108,58 @@ class NotificationService:
         phone = user.get("phone")
         if not phone:
             return {"success": False, "error": "No phone number"}
+
+        data = data or {}
+        template_name = None
+        template_parameters = None
+
+        if notification_type == NotificationType.PROPERTY_APPROVED:
+            template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_PROPERTY_LISTED", "").strip()
+            template_parameters = [
+                data.get("host_name") or user.get("full_name") or "Host",
+                data.get("property_title") or data.get("property_name") or data.get("title") or "Your property",
+                data.get("property_id") or "",
+                data.get("location") or data.get("property_address") or "",
+                data.get("status") or "Listed",
+            ]
+        elif notification_type == NotificationType.BOOKING_CONFIRMED:
+            template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_BOOKING_CONFIRMED_GUEST", "").strip()
+            template_parameters = [
+                data.get("guest_name") or data.get("customer_name") or user.get("full_name") or "Guest",
+                data.get("booking_id") or "",
+                data.get("property_title") or "Your property",
+                data.get("check_in_date") or "",
+                data.get("check_out_date") or "",
+                data.get("property_address") or "",
+                data.get("host_name") or "Host",
+                data.get("host_mobile") or "",
+            ]
+        elif notification_type == NotificationType.NEW_BOOKING_RECEIVED:
+            template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_NEW_BOOKING_HOST", "").strip()
+            template_parameters = [
+                data.get("host_name") or user.get("full_name") or "Host",
+                data.get("booking_id") or "",
+                data.get("guest_name") or data.get("customer_name") or "Guest",
+                data.get("property_title") or "Your property",
+                data.get("check_in_date") or "",
+                data.get("check_out_date") or "",
+                data.get("guest_count") or data.get("guests") or data.get("number_of_guests") or "",
+            ]
+        elif notification_type == NotificationType.PROPERTY_REJECTED:
+            template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_PROPERTY_REJECTED", "").strip()
+            template_parameters = [
+                data.get("host_name") or user.get("full_name") or "Host",
+                data.get("property_title") or data.get("property_name") or data.get("title") or "Your property",
+                data.get("property_id") or "",
+                data.get("reason") or data.get("remarks") or "Please check remarks",
+            ]
         
-        # Send WhatsApp via MSG91
-        result = msg91_service.send_whatsapp(phone, message)
+        # Use approved WhatsApp templates when configured; otherwise keep the
+        # older generic path useful for demo/local testing.
+        if template_name and template_parameters is not None:
+            result = msg91_service.send_whatsapp_template(phone, template_name, template_parameters)
+        else:
+            result = msg91_service.send_whatsapp(phone, message)
         
         # Store notification
         notification = Notification(

@@ -1,4 +1,4 @@
-const plainMoney = (value) => Number(value || 0).toFixed(2);
+const plainMoney = (value) => Math.round(Number(value || 0)).toLocaleString('en-IN');
 
 const formatDate = (value) => {
   if (!value) return 'NA';
@@ -41,6 +41,27 @@ const formatReadableText = (value) => {
     : value;
   const text = String(rawValue || '').trim();
   if (!text) return '';
+  const aliasKey = text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const aliases = {
+    ac: 'Air Conditioning',
+    air_conditioner: 'Air Conditioning',
+    air_conditioning: 'Air Conditioning',
+    tv: 'Smart TV',
+    smart_tv: 'Smart TV',
+    wifi: 'WiFi',
+    wi_fi: 'WiFi',
+    pool: 'Swimming Pool',
+    swimming_pool: 'Swimming Pool',
+    kitchen: 'Fully-Equipped Kitchen',
+    fully_equipped_kitchen: 'Fully-Equipped Kitchen',
+    gym: 'Fitness Center/Gym',
+    fitness_center_gym: 'Fitness Center/Gym',
+    washer: 'Washing Machine',
+    washing_machine: 'Washing Machine',
+    parking: 'Parking Space',
+    parking_space: 'Parking Space',
+  };
+  if (aliases[aliasKey]) return aliases[aliasKey];
   const normalized = text.includes(' ')
     ? text.replace(/_+/g, ' ')
     : text.replace(/[_-]+/g, ' ');
@@ -64,6 +85,64 @@ const asArray = (value) => {
     return value.split(',').map((item) => item.trim()).filter(Boolean);
   }
   return [];
+};
+
+const EXTRA_CHARGE_LABELS = {
+  platform_fee: 'Platform Fee',
+  payment_gateway_charge: 'Payment Gateway Charge',
+  convenience_fee: 'Convenience Fee',
+  insurance_fee: 'Insurance Fee',
+  cleaning_fee: 'Cleaning Fee',
+  extra_guest_fee: 'Extra Guest Fee',
+};
+
+const getExtraChargeEntries = (booking = {}, totalExtraCharges = 0) => {
+  const source = booking.extra_charges || booking.customer_charge_breakdown || booking.charge_breakdown || booking.applied_charges || {};
+  const amountFor = (...keys) => keys.reduce((sum, key) => (
+    sum + Number(source[key] ?? booking[key] ?? 0)
+  ), 0);
+  const platformAmount = amountFor('platform_fee', 'service_fee');
+  const gatewayAmount = amountFor('payment_gateway_charge', 'gateway_charge');
+  const convenienceAmount = amountFor('convenience_fee');
+  const insuranceAmount = amountFor('insurance_fee');
+  const explicitCleaningAmount = amountFor('cleaning_fee');
+  const extraGuestAmount = amountFor('extra_guest_fee');
+  const knownWithoutCleaning = platformAmount + gatewayAmount + convenienceAmount + insuranceAmount + extraGuestAmount;
+  const residualCleaningAmount = Math.max(0, Number(totalExtraCharges || 0) - knownWithoutCleaning);
+  const cleaningAmount = explicitCleaningAmount > 0 ? explicitCleaningAmount : residualCleaningAmount;
+
+  return [
+    {
+      key: 'platform_fee',
+      label: EXTRA_CHARGE_LABELS.platform_fee,
+      amount: platformAmount,
+    },
+    {
+      key: 'payment_gateway_charge',
+      label: EXTRA_CHARGE_LABELS.payment_gateway_charge,
+      amount: gatewayAmount,
+    },
+    {
+      key: 'convenience_fee',
+      label: EXTRA_CHARGE_LABELS.convenience_fee,
+      amount: convenienceAmount,
+    },
+    {
+      key: 'insurance_fee',
+      label: EXTRA_CHARGE_LABELS.insurance_fee,
+      amount: insuranceAmount,
+    },
+    {
+      key: 'cleaning_fee',
+      label: EXTRA_CHARGE_LABELS.cleaning_fee,
+      amount: cleaningAmount,
+    },
+    {
+      key: 'extra_guest_fee',
+      label: EXTRA_CHARGE_LABELS.extra_guest_fee,
+      amount: extraGuestAmount,
+    },
+  ];
 };
 
 const daysBetween = (start, end) => {
@@ -113,20 +192,30 @@ export const getCustomerBookingAmounts = (booking = {}) => {
   const total = Number(booking.total_amount || 0);
   const paid = Number(booking.paid_amount || booking.amount_paid || total || 0);
   const discount = Number(booking.discount_amount || booking.customer_discount_amount || 0);
+  const explicitTaxes = Number(
+    booking.gst_amount
+    ?? booking.tax_amount
+    ?? booking.taxes
+    ?? (Number(booking.cgst || 0) + Number(booking.sgst || 0) + Number(booking.igst || 0))
+    ?? 0
+  );
+  const taxes = Number.isFinite(explicitTaxes) ? explicitTaxes : 0;
   const extraCharges = Number(
-    booking.total_extra_charges
-    ?? booking.extra_charges_total
+    booking.extra_charges_total
+    ?? booking.total_extra_charges
     ?? booking.platform_fee
     ?? booking.service_fee
     ?? booking.convenience_fee
     ?? 0
   );
-  const base = Math.max(0, Number(booking.customer_base_amount ?? booking.base_amount ?? (paid - extraCharges + discount)));
-  return { base, extraCharges, discount, total, paid };
+  const base = Math.max(0, Number(booking.customer_base_amount ?? booking.base_amount ?? (paid - taxes - extraCharges + discount)));
+  const taxable = Math.max(0, Number(booking.taxable_amount ?? (paid - taxes)));
+  return { base, extraCharges, discount, total, paid, taxes, taxable };
 };
 
 export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, user = {}, options = {}) => {
   const amounts = getCustomerBookingAmounts(booking);
+  const extraChargeEntries = options.showExtraChargeBreakdown ? getExtraChargeEntries(booking, amounts.extraCharges) : [];
   const bookingId = booking.booking_id || booking.id || 'NA';
   const invoiceNo = booking.invoice_no || booking.booking_invoice_no || booking.transaction_id || (bookingId !== 'NA' ? `STRC/26-27/${String(bookingId).slice(-5)}` : 'NA');
   const invoiceDate = formatDate(booking.created_at || new Date());
@@ -167,10 +256,17 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
   const uniqueAmenities = [...new Set(amenities.map(formatReadableText).filter(Boolean))].slice(0, 8);
   const displayAmenities = uniqueAmenities.length ? uniqueAmenities : ['Property Amenities as per listing'];
 
-  const taxAmount = Math.max(0, amounts.extraCharges);
-  const cgst = taxAmount / 2;
-  const sgst = taxAmount / 2;
-  const taxableValue = Math.max(0, amounts.paid - taxAmount);
+  const gstAmount = Number(
+    booking.gst_amount
+    ?? booking.tax_amount
+    ?? booking.taxes
+    ?? amounts.taxes
+    ?? Math.max(0, amounts.paid - amounts.base - amounts.extraCharges + amounts.discount)
+  );
+  const cgst = Number(booking.cgst ?? (booking.igst ? 0 : gstAmount / 2));
+  const sgst = Number(booking.sgst ?? (booking.igst ? 0 : gstAmount / 2));
+  const taxableValue = Math.max(0, amounts.taxable || (amounts.base + amounts.extraCharges - amounts.discount));
+  const publicAccommodationAmount = options.showExtraChargeBreakdown ? amounts.base : taxableValue;
   const accommodationDescription = `Accommodation / Property Booking – ${propertyName}<br />Stay: ${escapeHtml(nights)} Night | Room: ${escapeHtml(roomType)}`;
 
   const termsList = [
@@ -229,8 +325,9 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
     .details-table td.label { width: 50%; font-weight: 900; border-right: 1px solid #000; }
     .details-table td.value { width: 50%; font-weight: 500; }
 
-    .amenities-container { border-bottom: 1px solid #000; padding: 6px 8px; font-size: 8.5px; line-height: 1.35; }
-    .amenities-container div { margin-bottom: 2px; }
+    .amenities-container { border-bottom: 1px solid #000; padding: 8px 10px; font-size: 8.5px; line-height: 1.35; }
+    .amenities-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 10px; }
+    .amenity-item { border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; padding: 6px 8px; font-weight: 800; color: #111; }
 
     .price-title { font-weight: 900; font-size: 9.5px; padding: 5px 6px; border-bottom: 1px solid #000; text-transform: lowercase; }
     .price-title::first-letter { text-transform: uppercase; }
@@ -345,7 +442,11 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
       </table>
 
       <div class="section-title">PROPERTY AMENITIES</div>
-      <div class="amenities-container">${displayAmenities.map((item) => `<div>- ${escapeHtml(item)}</div>`).join('')}</div>
+      <div class="amenities-container">
+        <div class="amenities-grid">
+          ${displayAmenities.map((item) => `<div class="amenity-item">• ${escapeHtml(item)}</div>`).join('')}
+        </div>
+      </div>
 
       <div class="price-title">Price summary</div>
       <table class="price-table">
@@ -358,12 +459,17 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
         <tbody>
           <tr>
             <td class="desc">${accommodationDescription}</td>
-            <td class="amount">${plainMoney(taxableValue || amounts.base)}</td>
+            <td class="amount">${plainMoney(publicAccommodationAmount)}</td>
           </tr>
-          <tr>
+          ${options.showExtraChargeBreakdown ? `<tr>
             <td class="desc">Discount</td>
             <td class="amount">${plainMoney(amounts.discount)}</td>
-          </tr>
+          </tr>` : ''}
+          ${extraChargeEntries.map((item) => `
+          <tr>
+            <td class="desc">${escapeHtml(item.label)}</td>
+            <td class="amount">${item.amount > 0 ? plainMoney(item.amount) : 'NA'}</td>
+          </tr>`).join('')}
           <tr>
             <td class="desc">Taxable Value</td>
             <td class="amount">${plainMoney(taxableValue || amounts.base)}</td>

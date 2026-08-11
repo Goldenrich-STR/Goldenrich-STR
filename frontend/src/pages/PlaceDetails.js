@@ -200,7 +200,7 @@ const PlaceDetails = () => {
                         {item.category === 'commercial' ? 'Monthly' : 'Per Night'}
                       </p>
                       <p className="font-bold text-charcoal text-lg">
-                        ₹{Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0).toLocaleString('en-IN')}
+                        ₹{Math.round(Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0)).toLocaleString('en-IN')}
                       </p>
                     </div>
                   </div>

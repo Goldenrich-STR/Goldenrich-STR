@@ -5,7 +5,9 @@ from pydantic import BaseModel
 from models.property import Property, PropertyCreate, PropertyUpdate, PropertyStatus, PropertyCategory
 from models.subscription import SubscriptionStatus
 from models.user import UserRole
+from models.notification import NotificationChannel, NotificationType
 from middleware.auth_middleware import get_current_user, require_role
+from services.notification_service import send_multi_channel_notification
 from services.booking_calculation_service import (
     BOOKING_CHARGE_KEYS,
     as_float,
@@ -125,6 +127,40 @@ async def create_property(
         # Insert into database
         property_dict = property_obj.model_dump()
         await db.properties.insert_one(property_dict)
+
+        host_name = (
+            (host_user or {}).get("full_name")
+            or current_user.get("full_name")
+            or current_user.get("email")
+            or "Host"
+        )
+        location_parts = [
+            getattr(property_obj, "city", "") or property_dict.get("city", ""),
+            getattr(property_obj, "state", "") or property_dict.get("state", ""),
+        ]
+        location = ", ".join(part for part in location_parts if part) or "Location not specified"
+
+        asyncio.create_task(send_multi_channel_notification(
+            db=db,
+            user_id=current_user["user_id"],
+            notification_type=NotificationType.PROPERTY_APPROVED,
+            title="Property listed",
+            message=(
+                f"Your property '{property_obj.title}' has been listed successfully "
+                "on X-Space360."
+            ),
+            channels=[
+                NotificationChannel.IN_APP,
+                NotificationChannel.WHATSAPP,
+            ],
+            data={
+                "host_name": host_name,
+                "property_id": property_obj.property_id,
+                "property_title": property_obj.title,
+                "location": location,
+                "status": property_obj.status.value if hasattr(property_obj.status, "value") else property_obj.status,
+            },
+        ))
         
         logger.info(f"Property created: {property_obj.property_id} by {current_user['user_id']} (broker assigned: {host_broker_id})")
         return property_obj
