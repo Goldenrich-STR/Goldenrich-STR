@@ -47,13 +47,15 @@ L.Icon.Default.mergeOptions({
 const PROPERTY_TYPES = [
   { value: '', label: 'Any type' },
   { value: 'apartment', label: 'Apartment' },
-  { value: 'villa', label: 'Villa' },
-  { value: 'studio', label: 'Studio' },
+  { value: 'villa', label: 'Villa / Bungalow' },
+  { value: 'studio', label: 'Studio / Private House' },
   { value: 'independent_house', label: 'Independent House' },
   { value: 'private_office', label: 'Private Office' },
   { value: 'co_working', label: 'Co-working' },
   { value: 'meeting_room', label: 'Meeting Room' },
+  { value: 'conference_room', label: 'Conference Room' },
   { value: 'banquet_hall', label: 'Banquet Hall' },
+  { value: 'wedding_venue', label: 'Wedding Venue' },
   { value: 'farmhouse', label: 'Farmhouse' },
   { value: 'hotel_ballroom', label: 'Hotel Ballroom' },
 ];
@@ -67,7 +69,7 @@ const BHK_TYPES = [
   { value: '4bhk', label: '4 BHK' },
 ];
 
-const COMMERCIAL_SIZE_TYPES = new Set(['private_office', 'co_working', 'meeting_room']);
+const COMMERCIAL_SIZE_TYPES = new Set(['private_office', 'co_working', 'meeting_room', 'conference_room']);
 
 const SIZE_TYPES = [
   { value: '', label: 'Any size' },
@@ -1453,9 +1455,11 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
            </span>
         </div>
         <h3 className="text-lg font-bold tracking-tight text-charcoal mb-1 group-hover:text-terracotta transition-colors line-clamp-1">{property.title}</h3>
-        <div className="flex items-center text-charcoal-muted mb-3">
-          <MapPin className="w-3.5 h-3.5 mr-1.5 text-sage" />
-          <span className="text-xs font-semibold">{property.city}{property.state ? `, ${property.state}` : ''}</span>
+        <div className="flex items-center text-charcoal-muted mb-3 min-w-0">
+          <MapPin className="w-3.5 h-3.5 mr-1.5 text-sage shrink-0" />
+          <span className="text-xs font-semibold truncate" title={`${property.address ? `${property.address}, ` : ''}${property.city}${property.state ? `, ${property.state}` : ''}`}>
+            {property.address ? `${property.address}, ` : ''}{property.city}{property.state ? `, ${property.state}` : ''}
+          </span>
         </div>
         
         {/* Additional Property Info */}

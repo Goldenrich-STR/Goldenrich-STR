@@ -175,6 +175,57 @@ async def search_properties(
 
         radius_search = latitude is not None and longitude is not None and radius_km is not None
 
+        HUB_LOCATIONS = {
+            "trimbakeshwar": {
+                "coords": (19.9323, 73.5305),
+                "radius_km": 15.0,
+                "pincodes": {"422212", "422213", "422220"},
+                "keywords": ["trimbakeshwar", "trimbak", "trambak", "trimabk", "talwade"]
+            },
+            "nashik": {
+                "coords": (19.9975, 73.7898),
+                "radius_km": 20.0,
+                "pincodes": {"422001", "422002", "422003", "422004", "422005", "422006", "422007", "422008", "422009", "422010", "422011", "422012", "422013", "422101", "422102", "422050"},
+                "keywords": ["nashik", "nasik", "panchavati", "pathardi", "indira nagar", "cidco", "govind nagar", "satpur", "deolali"]
+            },
+            "sula": {
+                "coords": (20.0059, 73.6889),
+                "radius_km": 8.0,
+                "pincodes": {"422222", "422013"},
+                "keywords": ["sula", "vineyards", "savargaon"]
+            },
+            "gangapur": {
+                "coords": (20.0081, 73.6846),
+                "radius_km": 10.0,
+                "pincodes": {"422222", "422013"},
+                "keywords": ["gangapur", "dam", "savargaon"]
+            },
+            "igatpuri": {
+                "coords": (19.6952, 73.5626),
+                "radius_km": 15.0,
+                "pincodes": {"422403", "422402", "422401"},
+                "keywords": ["igatpuri", "ghoti", "vaitarna", "kasara"]
+            },
+            "anjaneri": {
+                "coords": (19.9176, 73.5790),
+                "radius_km": 8.0,
+                "pincodes": {"422212", "422213"},
+                "keywords": ["anjaneri"]
+            },
+            "harihar": {
+                "coords": (19.9025, 73.4727),
+                "radius_km": 12.0,
+                "pincodes": {"422212"},
+                "keywords": ["harihar", "fort", "harshagad", "nirgudpada"]
+            },
+            "bhandardara": {
+                "coords": (19.5392, 73.7533),
+                "radius_km": 20.0,
+                "pincodes": {"414601", "422601", "422604"},
+                "keywords": ["bhandardara", "shendi", "arthur lake", "wilson dam", "kalsubai"]
+            }
+        }
+
         def get_location_keywords(location: str) -> list:
             loc_lower = location.strip().lower()
             synonym_groups = [
@@ -205,6 +256,21 @@ async def search_properties(
                     {"state": {"$regex": escaped, "$options": "i"}},
                     {"address": {"$regex": escaped, "$options": "i"}},
                 ])
+            
+            # Coordinate & Pincode bound checking based on Hub matching
+            city_clean = location.strip().lower()
+            for key, config in HUB_LOCATIONS.items():
+                if city_clean == key or any(kw in city_clean for kw in config["keywords"]) or any(city_clean in kw for kw in config["keywords"]):
+                    conditions.append({"pin_code": {"$in": list(config["pincodes"])}})
+                    hub_lat, hub_lng = config["coords"]
+                    rad = config["radius_km"]
+                    lat_delta = rad / 111.0
+                    lng_delta = rad / (111.0 * max(math.cos(math.radians(hub_lat)), 0.01))
+                    conditions.append({
+                        "latitude": {"$gte": hub_lat - lat_delta, "$lte": hub_lat + lat_delta},
+                        "longitude": {"$gte": hub_lng - lng_delta, "$lte": hub_lng + lng_delta}
+                    })
+                    break
             return conditions
 
         if city and not radius_search:
@@ -291,6 +357,8 @@ async def search_properties(
             "category": 1,
             "bhk_type": 1,
             "city": 1,
+            "address": 1,
+            "state": 1,
             "latitude": 1,
             "longitude": 1,
             "max_guests": 1,

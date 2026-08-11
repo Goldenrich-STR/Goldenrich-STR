@@ -10,9 +10,9 @@ const CATEGORIES = [
     icon: Home,
     color: 'text-gray-900 bg-gray-50 border border-gray-200',
     subtypes: [
-      { label: 'Villas', value: 'villa' },
+      { label: 'Villas / Bungalows', value: 'villa' },
       { label: 'Apartments', value: 'apartment' },
-      { label: 'Studios', value: 'studio' },
+      { label: 'Studios / Private Houses', value: 'studio' },
       { label: 'Farmhouses', value: 'farmhouse' }
     ]
   },
@@ -25,7 +25,8 @@ const CATEGORIES = [
     subtypes: [
       { label: 'Private Offices', value: 'private_office' },
       { label: 'Co-working Desks', value: 'co_working' },
-      { label: 'Meeting Rooms', value: 'meeting_room' }
+      { label: 'Meeting Rooms', value: 'meeting_room' },
+      { label: 'Conference Rooms', value: 'conference_room' }
     ]
   },
   {
@@ -36,7 +37,8 @@ const CATEGORIES = [
     color: 'text-gray-900 bg-gray-50 border border-gray-200',
     subtypes: [
       { label: 'Banquet Halls', value: 'banquet_hall' },
-      { label: 'Hotel Ballrooms', value: 'hotel_ballroom' }
+      { label: 'Hotel Ballrooms', value: 'hotel_ballroom' },
+      { label: 'Wedding Venues', value: 'wedding_venue' }
     ]
   }
 ];
