@@ -90,8 +90,9 @@ const CATEGORY_DATA = {
     propertyTypes: [
       { value: 'apartment', label: 'Apartment' },
       { value: 'villa', label: 'Villa' },
+      { value: 'bungalow', label: 'Bungalow' },
       { value: 'studio', label: 'Studio' },
-      { value: 'independent_house', label: 'Independent House' },
+      { value: 'independent_house', label: 'Private House' },
       { value: 'farmhouse', label: 'Farmhouse' },
     ],
     bhkTypes: [
@@ -108,6 +109,7 @@ const CATEGORY_DATA = {
       { value: 'private_office', label: 'Private Office' },
       { value: 'co_working', label: 'Co-working' },
       { value: 'meeting_room', label: 'Meeting Room' },
+      { value: 'conference_room', label: 'Conference Room' },
       { value: 'shop', label: 'Shop/Showroom' },
       { value: 'warehouse', label: 'Warehouse' },
     ],
@@ -123,6 +125,7 @@ const CATEGORY_DATA = {
     propertyTypes: [
       { value: 'banquet_hall', label: 'Banquet' },
       { value: 'hotel_ballroom', label: 'Hotel Ballroom' },
+      { value: 'wedding_venue', label: 'Wedding Venue' },
     ],
     bhkTypes: [
       { value: 'small_event', label: 'Mini (up to 50 guests)' },

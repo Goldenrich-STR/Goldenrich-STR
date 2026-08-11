@@ -13,7 +13,9 @@ export const PROPERTY_TYPE_LABELS = {
   farmhouse: 'Farmhouse',
   resort: 'Resort',
   studio: 'Studio',
+  independent_house: 'Private House',
   private_office: 'Private Office',
+  co_working: 'Co-working Desk',
   coworking_space: 'Coworking Space',
   retail_shop: 'Retail Shop',
   warehouse: 'Warehouse',
@@ -22,6 +24,8 @@ export const PROPERTY_TYPE_LABELS = {
   rooftop: 'Rooftop',
   party_hall: 'Party Hall',
   conference_hall: 'Conference Hall',
+  conference_room: 'Conference Room',
+  wedding_venue: 'Wedding Venue',
   short_term_rental: 'Short-Term Rental',
 };
 

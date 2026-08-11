@@ -171,8 +171,9 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     'residential': [
       {'value': 'apartment', 'label': 'Apartment'},
       {'value': 'villa', 'label': 'Villa'},
+      {'value': 'bungalow', 'label': 'Bungalow'},
       {'value': 'studio', 'label': 'Studio'},
-      {'value': 'independent_house', 'label': 'Independent House'},
+      {'value': 'independent_house', 'label': 'Private House'},
       {'value': 'pg', 'label': 'PG'},
       {'value': 'co_living', 'label': 'Co-living'},
       {'value': 'farmhouse', 'label': 'Farmhouse'},
@@ -181,6 +182,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       {'value': 'private_office', 'label': 'Private Office'},
       {'value': 'co_working', 'label': 'Co-working'},
       {'value': 'meeting_room', 'label': 'Meeting Room'},
+      {'value': 'conference_room', 'label': 'Conference Room'},
       {'value': 'shop', 'label': 'Shop/Showroom'},
       {'value': 'warehouse', 'label': 'Warehouse'},
     ],
@@ -188,6 +190,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       {'value': 'banquet_hall', 'label': 'Banquet Hall'},
       {'value': 'rooftop', 'label': 'Rooftop'},
       {'value': 'hotel_ballroom', 'label': 'Hotel Ballroom'},
+      {'value': 'wedding_venue', 'label': 'Wedding Venue'},
       {'value': 'garden', 'label': 'Garden/Lawn'},
       {'value': 'party_plot', 'label': 'Party Plot'},
     ]

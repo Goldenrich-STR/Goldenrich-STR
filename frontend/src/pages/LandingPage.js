@@ -1118,16 +1118,10 @@ const EXPLORE_MENU_TABS = [
         createExploreItem('Villas in Bhandardara', { category: 'residential', property_type: 'villa', city: 'Bhandardara' }),
       ],
       [
-        createExploreItem('Villas in Karjat', { category: 'residential', property_type: 'villa', city: 'Karjat' }),
-        createExploreItem('Villas in Lonavala', { category: 'residential', property_type: 'villa', city: 'Lonavala' }),
-        createExploreItem('Villas in Alibaug', { category: 'residential', property_type: 'villa', city: 'Alibaug' }),
-        createExploreItem('Villas in Goa', { category: 'residential', property_type: 'villa', city: 'Goa' }),
-      ],
-      [
         createExploreItem('Luxury Villas in Nashik', { category: 'residential', property_type: 'villa', city: 'Nashik', min_price: '50000' }),
         createExploreItem('Pool Villas in Trimbak', { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar' }),
         createExploreItem('Weekend Villas in Igatpuri', { category: 'residential', property_type: 'villa', city: 'Igatpuri' }),
-        createExploreItem('Private Villas in Karjat', { category: 'residential', property_type: 'villa', city: 'Karjat' }),
+        createExploreItem('Scenic Villas in Bhandardara', { category: 'residential', property_type: 'villa', city: 'Bhandardara' }),
       ]
     ]
   },
@@ -1137,24 +1131,17 @@ const EXPLORE_MENU_TABS = [
     columns: [
       [
         createExploreItem('Homestays in Nashik', { category: 'residential', city: 'Nashik' }),
-        createExploreItem('Homestays in Pune', { category: 'residential', city: 'Pune' }),
-        createExploreItem('Homestays in Mumbai', { category: 'residential', city: 'Mumbai' }),
-        createExploreItem('Homestays in Goa', { category: 'residential', city: 'Goa' }),
-      ],
-      [
         createExploreItem('Apartments in Nashik', { category: 'residential', property_type: 'apartment', city: 'Nashik' }),
-        createExploreItem('Studios in Pune', { category: 'residential', property_type: 'studio', city: 'Pune' }),
         createExploreItem('Farmhouses in Nashik', { category: 'residential', property_type: 'farmhouse', city: 'Nashik' }),
         createExploreItem('Holiday Homes in Igatpuri', { category: 'residential', city: 'Igatpuri' }),
       ],
       [
         createExploreItem('Family Stays in Trimbak', { category: 'residential', city: 'Trimbakeshwar' }),
-        createExploreItem('Group Stays in Karjat', { category: 'residential', city: 'Karjat' }),
-        createExploreItem('Long Stays in Alibaug', { category: 'residential', city: 'Alibaug' }),
-        createExploreItem('Scenic Homes in Lonavala', { category: 'residential', city: 'Lonavala' }),
+        createExploreItem('Homestays in Igatpuri', { category: 'residential', city: 'Igatpuri' }),
+        createExploreItem('Apartments in Trimbak', { category: 'residential', property_type: 'apartment', city: 'Trimbakeshwar' }),
+        createExploreItem('Nature Stays in Bhandardara', { category: 'residential', city: 'Bhandardara' }),
       ]
     ]
-
   },
   {
     key: 'weddings',
@@ -1162,21 +1149,15 @@ const EXPLORE_MENU_TABS = [
     columns: [
       [
         createExploreItem('Wedding Venues in Nashik', { category: 'event_venue', city: 'Nashik' }),
-        createExploreItem('Wedding Venues in Pune', { category: 'event_venue', city: 'Pune' }),
-        createExploreItem('Wedding Venues in Mumbai', { category: 'event_venue', city: 'Mumbai' }),
-        createExploreItem('Wedding Venues in Goa', { category: 'event_venue', city: 'Goa' }),
-      ],
-      [
         createExploreItem('Banquet Halls in Nashik', { category: 'event_venue', property_type: 'banquet_hall', city: 'Nashik' }),
-        createExploreItem('Banquet Halls in Pune', { category: 'event_venue', property_type: 'banquet_hall', city: 'Pune' }),
-        createExploreItem('Hotel Ballrooms in Mumbai', { category: 'event_venue', property_type: 'hotel_ballroom', city: 'Mumbai' }),
-        createExploreItem('Resorts & Lawns in Trimbak', { category: 'event_venue', property_type: 'resort', city: 'Trimbakeshwar' }),
+        createExploreItem('Corporate Events in Nashik', { category: 'event_venue', city: 'Nashik' }),
+        createExploreItem('Celebration Venues in Igatpuri', { category: 'event_venue', city: 'Igatpuri' }),
       ],
       [
-        createExploreItem('Corporate Events in Nashik', { category: 'event_venue', city: 'Nashik' }),
-        createExploreItem('Destination Weddings in Goa', { category: 'event_venue', city: 'Goa' }),
-        createExploreItem('Celebration Venues in Igatpuri', { category: 'event_venue', city: 'Igatpuri' }),
-        createExploreItem('Garden Events in Karjat', { category: 'event_venue', city: 'Karjat' }),
+        createExploreItem('Resorts & Lawns in Trimbak', { category: 'event_venue', property_type: 'resort', city: 'Trimbakeshwar' }),
+        createExploreItem('Wedding Venues in Igatpuri', { category: 'event_venue', city: 'Igatpuri' }),
+        createExploreItem('Event Lawns in Nashik', { category: 'event_venue', property_type: 'lawn', city: 'Nashik' }),
+        createExploreItem('Resorts in Bhandardara', { category: 'event_venue', property_type: 'resort', city: 'Bhandardara' }),
       ]
     ]
   },
@@ -1186,21 +1167,15 @@ const EXPLORE_MENU_TABS = [
     columns: [
       [
         createExploreItem('Workspaces in Nashik', { category: 'commercial', city: 'Nashik' }),
-        createExploreItem('Workspaces in Pune', { category: 'commercial', city: 'Pune' }),
-        createExploreItem('Workspaces in Mumbai', { category: 'commercial', city: 'Mumbai' }),
-        createExploreItem('Workspaces in Goa', { category: 'commercial', city: 'Goa' }),
-      ],
-      [
         createExploreItem('Private Offices in Nashik', { category: 'commercial', property_type: 'private_office', city: 'Nashik' }),
-        createExploreItem('Co-working Desks in Pune', { category: 'commercial', property_type: 'co_working', city: 'Pune' }),
-        createExploreItem('Meeting Rooms in Mumbai', { category: 'commercial', property_type: 'meeting_room', city: 'Mumbai' }),
         createExploreItem('Team Spaces in Nashik', { category: 'commercial', city: 'Nashik' }),
+        createExploreItem('Premium Offices in Nashik', { category: 'commercial', property_type: 'private_office', city: 'Nashik' }),
       ],
       [
         createExploreItem('Office Suites in Trimbak', { category: 'commercial', city: 'Trimbakeshwar' }),
-        createExploreItem('Studios for Creators in Pune', { category: 'commercial', city: 'Pune' }),
-        createExploreItem('Corporate Retreat Spaces in Igatpuri', { category: 'commercial', city: 'Igatpuri' }),
-        createExploreItem('Premium Offices in Nashik', { category: 'commercial', property_type: 'private_office', city: 'Nashik' }),
+        createExploreItem('Corporate Spaces in Igatpuri', { category: 'commercial', city: 'Igatpuri' }),
+        createExploreItem('Co-working in Nashik', { category: 'commercial', property_type: 'co_working', city: 'Nashik' }),
+        createExploreItem('Meeting Rooms in Nashik', { category: 'commercial', property_type: 'meeting_room', city: 'Nashik' }),
       ]
     ]
   },
@@ -1219,12 +1194,6 @@ const EXPLORE_MENU_TABS = [
         createExploreItem('Harihar Fort', { path: '/places/harihar-fort' }),
         createExploreItem('Bhandardara', { path: '/places/bhandardara' }),
         createExploreItem('Igatpuri', { path: '/places/igatpuri' }),
-      ],
-      [
-        createExploreItem('Karjat', { path: '/places/karjat' }),
-        createExploreItem('Lonavala', { path: '/places/lonavala' }),
-        createExploreItem('Alibaug', { path: '/places/alibaug' }),
-        createExploreItem('Goa', { path: '/places/goa' }),
       ]
     ]
   }
@@ -1302,16 +1271,6 @@ const CURATED_DESTINATION_ROWS = [
     { name: 'Anjaneri', type: 'tourist' },
     { name: 'Harihar Fort', type: 'historical' },
     { name: 'Bhandardara', type: 'tourist' },
-  ],
-  [
-    { name: 'Mumbai', type: 'city' },
-    { name: 'Pune', type: 'city' },
-    { name: 'Karjat', type: 'tourist' },
-    { name: 'Alibaug', type: 'tourist' },
-    { name: 'Goa', type: 'tourist' },
-    { name: 'Lonavala', type: 'tourist' },
-    { name: 'Mahabaleshwar', type: 'tourist' },
-    { name: 'Kokan', type: 'tourist' },
   ],
 ];
 
@@ -1807,19 +1766,9 @@ const PREMIUM_COLLECTIONS = [
     label: 'Commercial & Co-working Spaces',
     subtitle: 'Premium offices and collaborative work studios',
     detail: 'Short-term or long-term rentals for startups, corporate offsites, and growing teams. Our commercial spaces include boardrooms, co-working zones, event halls & plug-and-play setups.',
-    tag: 'Corporate Picks',
+    tag: 'Offices',
     image: 'https://images.unsplash.com/photo-1497366412874-3415097a27e7?auto=format&fit=crop&q=80&w=900',
     query: 'commercial'
-  },
-  {
-    id: 'resort-villas',
-    label: 'Resort Villas & Pool Stays',
-    subtitle: 'Private resort-style escapes for families and groups',
-    detail: 'Scenic villas, pool stays, and weekend resorts near Nashik, Lonavala, Alibaug, Konkan, and Goa with lawns, caretakers, and premium leisure amenities.',
-    tag: 'Resort Picks',
-    image: '/videos/hero/pexels-roman-odintsov-4870616.jpg',
-    query: 'residential',
-    property_type: 'villa'
   }
 ];
 
@@ -1905,7 +1854,7 @@ const CollectionsSection = ({
             'radial-gradient(circle at 10% 10%, rgba(255,153,51,0.22), transparent 34%), radial-gradient(circle at 88% 12%, rgba(255,153,51,0.16), transparent 28%), radial-gradient(circle at 14% 88%, rgba(19,136,8,0.18), transparent 32%), radial-gradient(circle at 86% 86%, rgba(19,136,8,0.14), transparent 26%), linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.94) 46%, rgba(248,250,252,0.98) 100%)'
         }}
       />
-      <div className="relative w-full px-4 md:px-[10vw]">
+      <div className="relative w-full max-w-[1440px] mx-auto px-4 md:px-8">
         <ScrollReveal duration="duration-[800ms]">
           <div className="mb-14">
             <div className="mb-8 flex items-end justify-between gap-4">
@@ -2686,7 +2635,7 @@ const LandingPage = () => {
     return (
       <div className="relative mb-4 md:mb-6 group">
         {/* Header */}
-        <div className="flex items-end justify-between mb-6 px-4 md:px-[10vw] w-full">
+        <div className="flex items-end justify-between mb-6 max-w-[1440px] mx-auto px-4 md:px-8 w-full">
           <div className="text-left">
             <h3 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
               {title}
@@ -2706,7 +2655,7 @@ const LandingPage = () => {
         </div>
         
         {/* Slider */}
-        <div className="w-full relative px-4 md:px-[10vw]">
+        <div className="w-full max-w-[1440px] mx-auto relative px-4 md:px-8">
           <div 
             id={sectionId} 
             onScroll={(e) => {
@@ -2777,8 +2726,8 @@ const LandingPage = () => {
                     )}
                   </div>
                   
-                  <p className="text-gray-550 text-xs font-medium mb-1">
-                    {item.type || item.property_type || 'Property'} in {item.city}
+                  <p className="text-gray-550 text-xs font-medium mb-1 truncate" title={`${formatPropertyTypeLabel(item.type || item.property_type)} in ${item.address ? `${item.address}, ` : ''}${item.city}`}>
+                    {formatPropertyTypeLabel(item.type || item.property_type) || 'Property'} in {item.address ? `${item.address}, ` : ''}{item.city}
                   </p>
                   
                   <div className="mt-auto flex items-baseline">
@@ -2831,176 +2780,178 @@ const LandingPage = () => {
       />
       {/* Navbar */}
       <nav
-        className={`fixed top-0 left-0 right-0 w-full z-50 flex justify-between items-center px-8 md:px-[12vw] h-20 md:h-24 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 w-full z-50 h-20 md:h-24 transition-all duration-300 ${
           isNavScrolled
             ? 'bg-white/95 text-charcoal shadow-subtle backdrop-blur-xl border-b border-gray-100'
             : 'bg-transparent text-white'
         }`}
       >
-        {/* Left Logo */}
-        <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
-          <img
-            src="/logo.png"
-            alt="X-Space360 Logo"
-            className={`h-8 md:h-10 w-auto object-contain transition-all duration-300 ${isNavScrolled ? '' : 'logo-white'}`}
-          />
-        </div>
+        <div className="max-w-[1440px] mx-auto w-full h-full flex justify-between items-center px-4 md:px-8">
+          {/* Left Logo */}
+          <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
+            <img
+              src="/logo.png"
+              alt="X-Space360 Logo"
+              className={`h-8 md:h-10 w-auto object-contain transition-all duration-300 ${isNavScrolled ? '' : 'logo-white'}`}
+            />
+          </div>
 
-        {/* Center Menu Links (Flat Style) */}
-        <div className={`hidden lg:flex items-center space-x-8 font-sans font-semibold text-[17px] tracking-tight transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
-          <a
-            href="#"
-            onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
-            className="hover:text-terracotta transition-colors duration-200"
-          >
-            Discover
-          </a>
-
-          <button
-            onClick={() => setShowHowItWorksModal(true)}
-            className="hover:text-terracotta transition-colors duration-200"
-          >
-            How It Works
-          </button>
-          <a
-            href="#"
-            onClick={(e) => { e.preventDefault(); navigate(user ? '/host/list-property' : '/register?role=host'); }}
-            className="hover:text-terracotta transition-colors duration-200"
-          >
-            List your Property
-          </a>
-          <div
-            className="relative"
-            onMouseEnter={openExploreMenu}
-            onMouseLeave={closeExploreMenuWithDelay}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                if (isExploreMenuOpen) {
-                  setIsExploreMenuOpen(false);
-                } else {
-                  openExploreMenu();
-                }
-              }}
-              className="hover:text-terracotta transition-colors duration-200 flex items-center gap-1"
+          {/* Center Menu Links (Flat Style) */}
+          <div className={`hidden lg:flex items-center space-x-8 font-sans font-semibold text-[17px] tracking-tight transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
+            <a
+              href="#"
+              onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
+              className="hover:text-terracotta transition-colors duration-200"
             >
-              <span>Explore</span>
-              <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExploreMenuOpen ? 'rotate-180' : ''}`} />
+              Discover
+            </a>
+
+            <button
+              onClick={() => setShowHowItWorksModal(true)}
+              className="hover:text-terracotta transition-colors duration-200"
+            >
+              How It Works
+            </button>
+            <a
+              href="#"
+              onClick={(e) => { e.preventDefault(); navigate(user ? '/host/list-property' : '/register?role=host'); }}
+              className="hover:text-terracotta transition-colors duration-200"
+            >
+              List your Property
+            </a>
+            <div
+              className="relative"
+              onMouseEnter={openExploreMenu}
+              onMouseLeave={closeExploreMenuWithDelay}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  if (isExploreMenuOpen) {
+                    setIsExploreMenuOpen(false);
+                  } else {
+                    openExploreMenu();
+                  }
+                }}
+                className="hover:text-terracotta transition-colors duration-200 flex items-center gap-1"
+              >
+                <span>Explore</span>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExploreMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isExploreMenuOpen && (
+                <div
+                  className="absolute left-1/2 -translate-x-1/2 top-full mt-4 w-[860px] rounded-[28px] bg-white border border-gray-200 shadow-elevated ring-1 ring-black/5 px-5 py-4 z-[999] text-gray-900"
+                  onMouseEnter={openExploreMenu}
+                  onMouseLeave={closeExploreMenuWithDelay}
+                >
+                  <div className="flex items-center gap-8 border-b border-gray-200 px-3 pb-4 overflow-x-auto no-scrollbar">
+                    {EXPLORE_MENU_TABS.map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onMouseEnter={() => setActiveExploreTab(tab.key)}
+                        onClick={() => {
+                          openExploreMenu();
+                          setActiveExploreTab(tab.key);
+                        }}
+                        className={`relative whitespace-nowrap text-[15px] font-medium transition-colors duration-200 ${
+                          activeExploreTab === tab.key ? 'text-charcoal' : 'text-gray-500 hover:text-charcoal'
+                        }`}
+                      >
+                        {tab.label}
+                        {activeExploreTab === tab.key && (
+                          <span className="absolute left-0 right-0 -bottom-[17px] h-[2px] bg-charcoal rounded-full" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-0 pt-4">
+                    {activeExploreMenu?.columns?.map((column, columnIndex) => (
+                      <div
+                        key={`${activeExploreMenu.key}-column-${columnIndex}`}
+                        className="px-4 first:pl-2 last:pr-2 border-r border-gray-100 last:border-r-0"
+                      >
+                        <div className="flex flex-col space-y-3">
+                          {column.map((item) => (
+                            <button
+                              key={item.label}
+                              type="button"
+                              onClick={() => handleExploreNavigate(item.params)}
+                              className="text-left text-[15px] text-gray-500 hover:text-charcoal transition-colors duration-200"
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Side Options */}
+          <div className="hidden lg:flex items-center space-x-6">
+            <LanguageSelector showPropertyTypes />
+
+            {/* Get in Touch Button */}
+            <button 
+              onClick={() => navigate('/support')}
+              className={`flex items-center gap-2 rounded-full px-5 py-2.5 transition font-sans font-semibold text-[17px] tracking-tight shadow-sm border ${
+                isNavScrolled
+                  ? 'border-gray-200 text-charcoal hover:bg-gray-50'
+                  : 'border-white/40 text-white hover:bg-white/10'
+              }`}
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>Get in Touch</span>
             </button>
 
-            {isExploreMenuOpen && (
-              <div
-                className="absolute left-1/2 -translate-x-1/2 top-full mt-4 w-[860px] rounded-[28px] bg-white border border-gray-200 shadow-elevated ring-1 ring-black/5 px-5 py-4 z-[999] text-gray-900"
-                onMouseEnter={openExploreMenu}
-                onMouseLeave={closeExploreMenuWithDelay}
-              >
-                <div className="flex items-center gap-8 border-b border-gray-200 px-3 pb-4 overflow-x-auto no-scrollbar">
-                  {EXPLORE_MENU_TABS.map((tab) => (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      onMouseEnter={() => setActiveExploreTab(tab.key)}
-                      onClick={() => {
-                        openExploreMenu();
-                        setActiveExploreTab(tab.key);
-                      }}
-                      className={`relative whitespace-nowrap text-[15px] font-medium transition-colors duration-200 ${
-                        activeExploreTab === tab.key ? 'text-charcoal' : 'text-gray-500 hover:text-charcoal'
-                      }`}
-                    >
-                      {tab.label}
-                      {activeExploreTab === tab.key && (
-                        <span className="absolute left-0 right-0 -bottom-[17px] h-[2px] bg-charcoal rounded-full" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-3 gap-0 pt-4">
-                  {activeExploreMenu?.columns?.map((column, columnIndex) => (
-                    <div
-                      key={`${activeExploreMenu.key}-column-${columnIndex}`}
-                      className="px-4 first:pl-2 last:pr-2 border-r border-gray-100 last:border-r-0"
-                    >
-                      <div className="flex flex-col space-y-3">
-                        {column.map((item) => (
-                          <button
-                            key={item.label}
-                            type="button"
-                            onClick={() => handleExploreNavigate(item.params)}
-                            className="text-left text-[15px] text-gray-500 hover:text-charcoal transition-colors duration-200"
-                          >
-                            {item.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            {/* User/Profile Button */}
+            {user ? (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center border transition shadow-subtle ${
+                    isNavScrolled
+                      ? 'bg-gray-50 hover:bg-gray-100 text-charcoal border-gray-200'
+                      : 'bg-white/25 hover:bg-white/35 text-white border-white/30'
+                  }`}
+                  title="Dashboard"
+                >
+                  <User className="w-4.5 h-4.5" />
+                </button>
+                <button
+                  onClick={handleSignOut}
+                  className="bg-terracotta hover:bg-terracotta/90 text-white font-sans font-semibold text-[14px] tracking-tight px-5 py-2.5 rounded-full transition shadow-premium"
+                >
+                  Sign Out
+                </button>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Right Side Options */}
-        <div className="hidden lg:flex items-center space-x-6">
-          <LanguageSelector showPropertyTypes />
-
-          {/* Get in Touch Button */}
-          <button 
-            onClick={() => navigate('/support')}
-            className={`flex items-center gap-2 rounded-full px-5 py-2.5 transition font-sans font-semibold text-[17px] tracking-tight shadow-sm border ${
-              isNavScrolled
-                ? 'border-gray-200 text-charcoal hover:bg-gray-50'
-                : 'border-white/40 text-white hover:bg-white/10'
-            }`}
-          >
-            <Phone className="w-3.5 h-3.5" />
-            <span>Get in Touch</span>
-          </button>
-
-          {/* User/Profile Button */}
-          {user ? (
-            <div className="flex items-center gap-2">
+            ) : (
               <button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/login')}
                 className={`w-10 h-10 rounded-full flex items-center justify-center border transition shadow-subtle ${
                   isNavScrolled
                     ? 'bg-gray-50 hover:bg-gray-100 text-charcoal border-gray-200'
                     : 'bg-white/25 hover:bg-white/35 text-white border-white/30'
                 }`}
-                title="Dashboard"
+                title="Sign In"
               >
                 <User className="w-4.5 h-4.5" />
               </button>
-              <button
-                onClick={handleSignOut}
-                className="bg-terracotta hover:bg-terracotta/90 text-white font-sans font-semibold text-[14px] tracking-tight px-5 py-2.5 rounded-full transition shadow-premium"
-              >
-                Sign Out
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => navigate('/login')}
-              className={`w-10 h-10 rounded-full flex items-center justify-center border transition shadow-subtle ${
-                isNavScrolled
-                  ? 'bg-gray-50 hover:bg-gray-100 text-charcoal border-gray-200'
-                  : 'bg-white/25 hover:bg-white/35 text-white border-white/30'
-              }`}
-              title="Sign In"
-            >
-              <User className="w-4.5 h-4.5" />
-            </button>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Mobile Hamburger Icon */}
-        <div className="lg:hidden flex items-center">
-          <button onClick={() => setIsMobileMenuOpen(true)} className={`${isNavScrolled ? 'text-charcoal' : 'text-white'} hover:text-terracotta transition p-2`}>
-            <Menu className="w-8 h-8 drop-shadow-subtle" />
-          </button>
+          {/* Mobile Hamburger Icon */}
+          <div className="lg:hidden flex items-center">
+            <button onClick={() => setIsMobileMenuOpen(true)} className={`${isNavScrolled ? 'text-charcoal' : 'text-white'} hover:text-terracotta transition p-2`}>
+              <Menu className="w-8 h-8 drop-shadow-subtle" />
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -3541,7 +3492,7 @@ const LandingPage = () => {
       {/* ── Category Shortcut Strip ── */}
       <ScrollReveal duration="duration-[800ms]">
         <div className="w-full bg-white relative z-20 py-8 md:py-12 border-b border-sand-100">
-          <div className="px-4 md:px-[10vw]">
+          <div className="max-w-[1440px] mx-auto px-4 md:px-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
               <div className="flex items-baseline gap-2 flex-wrap">
                 <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">Pick a Destination</h2>
@@ -3897,7 +3848,7 @@ const LandingPage = () => {
 
           {/* Post Property Free Banner */}
           <ScrollReveal duration="duration-[800ms]">
-            <div className="px-4 md:px-[10vw] mb-8 md:mb-12">
+            <div className="max-w-[1440px] mx-auto px-4 md:px-8 mb-8 md:mb-12">
               <div className="bg-[#FFF9EA] border border-[#FBEFCD] rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
                 <div className="text-left">
                   <h4 className="text-xl md:text-2xl font-bold text-charcoal flex items-baseline gap-1.5">
@@ -3919,12 +3870,11 @@ const LandingPage = () => {
             </div>
           </ScrollReveal>
 
-          {/* Ad Campaign Carousel (Promo & Host) */}
+          {/* Ad Campaign Banner (Promo Only) */}
           <ScrollReveal duration="duration-[1000ms]">
-            <div className="px-4 md:px-[10vw] mb-12 md:mb-24">
+            <div className="max-w-[1440px] mx-auto px-4 md:px-8 mb-12 md:mb-24">
               <div className="relative rounded-[2rem] overflow-hidden shadow-premium h-[300px] md:h-[350px] bg-stone">
-                {/* Slide 1: Guest Promo */}
-                <div className={`absolute inset-0 flex items-center transition-all duration-700 ${currentPromoSlide === 0 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
+                <div className="absolute inset-0 flex items-center">
                   <div 
                     className="absolute inset-0 bg-cover bg-center"
                     style={{ backgroundImage: `url('/images/premium_banner_bg.png')` }}
@@ -3957,57 +3907,6 @@ const LandingPage = () => {
                     </div>
                   </div>
                 </div>
-
-                {/* Slide 2: Host Campaign */}
-                <div className={`absolute inset-0 flex items-center transition-all duration-700 ${currentPromoSlide === 1 ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4 pointer-events-none'}`}>
-                  <div 
-                    className="absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url('/images/host_banner_bg.png')` }}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-charcoal/80 via-charcoal/40 to-transparent" />
-                  
-                  <div className="relative z-10 w-full px-8 md:px-16 text-left max-w-xl md:max-w-2xl text-white">
-                    <h3 className="text-3xl md:text-5xl font-bold tracking-tight mb-3 text-white">
-                      Ready to Host with Us?
-                    </h3>
-                    <p className="text-white/95 text-xs md:text-sm font-semibold leading-relaxed mb-6 max-w-md">
-                      Join India's most exclusive short-term rental network and turn your premium space into a high-yielding asset.
-                    </p>
-                    <div className="flex flex-wrap items-center gap-4">
-                      <button 
-                        onClick={() => navigate(user ? '/dashboard' : '/register?role=host')}
-                        className="bg-terracotta hover:bg-terracotta/90 text-white font-bold px-8 py-3 rounded-full transition shadow-premium text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 duration-200"
-                      >
-                        List Your Property
-                      </button>
-                      <a href="#" className="text-white hover:text-terracotta text-xs font-bold transition-colors duration-300">
-                        Learn about our fees →
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Floating Badge */}
-                  <div className="hidden md:flex absolute right-24 top-1/2 -translate-y-1/2 z-10 bg-white text-terracotta px-5 py-3 rounded-2xl shadow-elevated items-center gap-3 border border-sand-200">
-                    <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center shrink-0">
-                      <Sparkles className="w-5 h-5 text-terracotta" />
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none">Free</p>
-                      <p className="text-xl font-black text-terracotta tracking-tight leading-none mt-1">3-Mo Trial</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Slider Dot Indicators */}
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-                  {[0, 1].map((idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentPromoSlide(idx)}
-                      className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${currentPromoSlide === idx ? 'bg-white w-6' : 'bg-white/40 hover:bg-white/70'}`}
-                    />
-                  ))}
-                </div>
               </div>
             </div>
           </ScrollReveal>{/* end banner px-wrapper */}
@@ -4024,7 +3923,7 @@ const LandingPage = () => {
               };
 
               return (
-                <div className="w-full px-4 md:px-[10vw] mt-16 mb-24">
+                <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 mt-16 mb-24">
                   <div className="w-full bg-[#E5DFD9] rounded-3xl overflow-hidden shadow-lg flex flex-col md:flex-row h-auto md:h-[380px] mb-16 border border-[#dcd6d0]">
                     <div className="w-full md:w-[45%] p-8 md:p-10 flex flex-col justify-center text-left text-[#3c3732]">
                       <div>
@@ -4146,8 +4045,8 @@ const LandingPage = () => {
                               <h4 className="font-bold text-sm text-charcoal truncate mb-1 group-hover:text-amber-600 transition-colors">
                                 {item.title}
                               </h4>
-                              <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider mb-3">
-                                {item.property_type || item.type || 'Villa'} in {item.city}
+                              <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider mb-3 truncate" title={`${formatPropertyTypeLabel(item.property_type || item.type)} in ${item.address ? `${item.address}, ` : ''}${item.city}`}>
+                                {formatPropertyTypeLabel(item.property_type || item.type) || 'Villa'} in {item.address ? `${item.address}, ` : ''}{item.city}
                               </p>
                               <div className="flex items-baseline gap-1">
                                 <span className="font-black text-sm text-charcoal">₹{Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0).toLocaleString('en-IN')}</span>
