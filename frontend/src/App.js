@@ -50,6 +50,7 @@ const SupportPage = lazy(() => import("./pages/SupportPage"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
 const Blog = lazy(() => import("./pages/Blog"));
 const LegalPage = lazy(() => import("./pages/LegalPage"));
+const AccountDeletionPage = lazy(() => import("./pages/AccountDeletionPage"));
 
 const ScreenLoading = () => (
   <div className="min-h-screen bg-stone flex items-center justify-center">
@@ -251,6 +252,7 @@ function AppRoutes() {
         <Route path="/terms" element={<LegalPage />} />
         <Route path="/privacy" element={<LegalPage />} />
         <Route path="/refund-policy" element={<LegalPage />} />
+        <Route path="/account-deletion" element={<AccountDeletionPage />} />
         <Route path="/sso/goldenrich/callback" element={<SsoCallback />} />
 
         {/* Role-based Dashboard Redirect */}

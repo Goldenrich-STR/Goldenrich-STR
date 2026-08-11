@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme.dart';
+import '../../config.dart';
 import 'password_recovery_screen.dart';
 import '../shared/app_shell.dart';
 import '../shared/app_logo.dart';
@@ -985,11 +986,39 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showDeveloperSettingsDialog() {
+    if (AppConfig.isProduction) {
+      showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(
+              'Production API',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            ),
+            content: Text(
+              'Release build uses https://api.x-space360.in.',
+              style: GoogleFonts.outfit(
+                  fontSize: 14, color: AppTheme.charcoalMuted),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text('OK', style: GoogleFonts.outfit()),
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
     final TextEditingController urlController =
         TextEditingController(text: ApiService().baseUrl);
     showDialog(
       context: context,
-      builder: (context) {
+      builder: (dialogContext) {
         return AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1010,7 +1039,7 @@ class _LoginScreenState extends State<LoginScreen> {
               TextField(
                 controller: urlController,
                 decoration: InputDecoration(
-                  hintText: 'http://10.0.2.2:8001',
+                  hintText: 'Development API URL',
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8)),
                   contentPadding:
@@ -1020,14 +1049,14 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Note: Use http://10.0.2.2:8001 for emulator, or http://<YOUR_LAN_IP>:8001 for real devices on the same WiFi.',
+                'Note: Use your development backend URL for local testing.',
                 style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey),
               ),
             ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child:
                   Text('CANCEL', style: GoogleFonts.outfit(color: Colors.grey)),
             ),
@@ -1036,12 +1065,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 final newUrl = urlController.text.trim();
                 if (newUrl.isNotEmpty) {
                   await ApiService().setBaseUrl(newUrl);
-                  if (mounted) {
+                  if (mounted && dialogContext.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                           content: Text('API Base URL updated to: $newUrl')),
                     );
-                    Navigator.pop(context);
+                    Navigator.pop(dialogContext);
                   }
                 }
               },

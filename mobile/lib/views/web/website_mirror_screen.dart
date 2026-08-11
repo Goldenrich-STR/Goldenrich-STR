@@ -19,9 +19,8 @@ class _WebsiteMirrorScreenState extends State<WebsiteMirrorScreen> {
   bool _hasError = false;
   String _errorMessage = '';
 
-  String get _targetUrl => AppConfig.isProduction
-      ? AppConfig.prodBaseUrl
-      : AppConfig.webBaseUrl;
+  String get _targetUrl =>
+      AppConfig.isProduction ? AppConfig.publicUrl : AppConfig.webBaseUrl;
 
   @override
   void initState() {
@@ -106,7 +105,9 @@ class _WebsiteMirrorScreenState extends State<WebsiteMirrorScreen> {
         child: Stack(
           children: [
             Positioned.fill(
-              child: _hasError ? _buildErrorState() : WebViewWidget(controller: _controller),
+              child: _hasError
+                  ? _buildErrorState()
+                  : WebViewWidget(controller: _controller),
             ),
             if (!_hasError && _progress < 1)
               Align(

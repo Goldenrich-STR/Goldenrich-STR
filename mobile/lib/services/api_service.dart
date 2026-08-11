@@ -50,10 +50,20 @@ class ApiService {
   Future<void> init() async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (AppConfig.isProduction ||
+          AppConfig.prodBaseUrl == AppConfig.activeBaseUrl) {
+        await prefs.remove('custom_api_base_url');
+        _baseUrl = AppConfig.prodBaseUrl;
+        dio.options.baseUrl = _baseUrl;
+        return;
+      }
+
       final customUrl = prefs.getString('custom_api_base_url');
       if (customUrl != null && customUrl.isNotEmpty) {
-        if (!AppConfig.isProduction &&
-            customUrl.contains('uat.x-space360.in')) {
+        if (customUrl.contains('uat.x-space360.in') ||
+            customUrl.contains('x-space360.in/api') ||
+            customUrl.contains('localhost') ||
+            customUrl.contains('10.0.2.2')) {
           await prefs.remove('custom_api_base_url');
           return;
         }
@@ -64,6 +74,16 @@ class ApiService {
   }
 
   Future<void> setBaseUrl(String url) async {
+    if (AppConfig.isProduction) {
+      _baseUrl = AppConfig.prodBaseUrl;
+      dio.options.baseUrl = _baseUrl;
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('custom_api_base_url');
+      } catch (_) {}
+      return;
+    }
+
     _baseUrl = url.trim().replaceAll(RegExp(r'/$'), '');
     dio.options.baseUrl = _baseUrl;
     try {
