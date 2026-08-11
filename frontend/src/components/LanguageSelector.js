@@ -10,9 +10,11 @@ const CATEGORIES = [
     icon: Home,
     color: 'text-gray-900 bg-gray-50 border border-gray-200',
     subtypes: [
-      { label: 'Villas / Bungalows', value: 'villa' },
+      { label: 'Villas', value: 'villa' },
+      { label: 'Bungalows', value: 'bungalow' },
       { label: 'Apartments', value: 'apartment' },
-      { label: 'Studios / Private Houses', value: 'studio' },
+      { label: 'Studios', value: 'studio' },
+      { label: 'Private Houses', value: 'independent_house' },
       { label: 'Farmhouses', value: 'farmhouse' }
     ]
   },
