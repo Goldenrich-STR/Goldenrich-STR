@@ -170,9 +170,10 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
   final Map<String, List<Map<String, String>>> _propertyTypesByCategory = {
     'residential': [
       {'value': 'apartment', 'label': 'Apartment'},
-      {'value': 'villa', 'label': 'Villa / Bungalow'},
-      {'value': 'studio', 'label': 'Studio / Private House'},
-      {'value': 'independent_house', 'label': 'Independent House'},
+      {'value': 'villa', 'label': 'Villa'},
+      {'value': 'bungalow', 'label': 'Bungalow'},
+      {'value': 'studio', 'label': 'Studio'},
+      {'value': 'independent_house', 'label': 'Private House'},
       {'value': 'pg', 'label': 'PG'},
       {'value': 'co_living', 'label': 'Co-living'},
       {'value': 'farmhouse', 'label': 'Farmhouse'},

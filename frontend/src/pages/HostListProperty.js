@@ -89,9 +89,10 @@ const CATEGORY_DATA = {
   residential: {
     propertyTypes: [
       { value: 'apartment', label: 'Apartment' },
-      { value: 'villa', label: 'Villa / Bungalow' },
-      { value: 'studio', label: 'Studio / Private House' },
-      { value: 'independent_house', label: 'Independent House' },
+      { value: 'villa', label: 'Villa' },
+      { value: 'bungalow', label: 'Bungalow' },
+      { value: 'studio', label: 'Studio' },
+      { value: 'independent_house', label: 'Private House' },
       { value: 'farmhouse', label: 'Farmhouse' },
     ],
     bhkTypes: [

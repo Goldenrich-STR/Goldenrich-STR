@@ -8,11 +8,12 @@ export const CATEGORY_LABELS = {
 
 export const PROPERTY_TYPE_LABELS = {
   apartment: 'Apartment',
-  villa: 'Villa / Bungalow',
+  villa: 'Villa',
   bungalow: 'Bungalow',
   farmhouse: 'Farmhouse',
   resort: 'Resort',
-  studio: 'Studio / Private House',
+  studio: 'Studio',
+  independent_house: 'Private House',
   private_office: 'Private Office',
   co_working: 'Co-working Desk',
   coworking_space: 'Coworking Space',
