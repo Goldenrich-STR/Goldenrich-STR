@@ -2511,9 +2511,9 @@ const LandingPage = () => {
       try {
         const cacheBust = Date.now();
         const [resRes, resComm, resEvent] = await Promise.all([
-          propertyAPI.searchProperties({ category: 'residential', limit: 10, sort: 'rating_desc', _t: cacheBust }),
-          propertyAPI.searchProperties({ category: 'commercial', limit: 10, sort: 'rating_desc', _t: cacheBust }),
-          propertyAPI.searchProperties({ category: 'event_venue', limit: 10, sort: 'rating_desc', _t: cacheBust })
+          propertyAPI.searchProperties({ category: 'residential', limit: 10, _t: cacheBust }),
+          propertyAPI.searchProperties({ category: 'commercial', limit: 10, _t: cacheBust }),
+          propertyAPI.searchProperties({ category: 'event_venue', limit: 10, _t: cacheBust })
         ]);
 
         setProperties({

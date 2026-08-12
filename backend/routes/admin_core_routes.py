@@ -518,11 +518,12 @@ def _analytics_export_config() -> dict:
     return {
         "users": ("users", "created_at", ["user_id", "full_name", "role", "email", "phone", "city", "is_active", "created_at"]),
         "properties": ("properties", "created_at", ["property_id", "title", "category", "city", "status", "owner_id", "created_at"]),
-        "bookings": ("bookings", "created_at", ["booking_id", "property_id", "user_id", "booking_status", "payment_status", "total_amount", "created_at"]),
+        "bookings": ("bookings", "created_at", ["booking_id", "property_id", "user_id", "booking_status", "payment_status", "total_amount", "paid_amount", "number_of_guests", "check_in_date", "check_out_date", "created_at"]),
         "finance": ("transactions", "created_at", ["transaction_id", "type", "status", "amount", "user_id", "booking_id", "created_at"]),
         "support": ("support_tickets", "created_at", ["ticket_id", "subject", "category", "priority", "status", "user_id", "created_at"]),
         "crm": ("crm_leads", "created_at", ["lead_id", "name", "phone", "email", "status", "source", "created_at"]),
         "cms": ("cms_content", "updated_at", ["content_id", "page", "section", "content_type", "is_active", "updated_at"]),
+        "subscriptions": ("subscriptions", "created_at", ["subscription_id", "user_id", "property_id", "plan_id", "status", "start_date", "end_date", "created_at"]),
     }
 
 
@@ -2437,6 +2438,8 @@ async def property_operations(
     }
     if tab in status_map:
         query["status"] = status_map[tab]
+    elif tab == "boosted":
+        query["is_boosted"] = True
     elif tab == "broker_verification":
         query["status"] = {"$in": ["pending_verification", "under_review"]}
     elif tab == "rm_verification":
@@ -2531,7 +2534,10 @@ async def property_operations(
                 query["$or"].append({"owner_id": {"$in": matching_assigned_host_ids}})
     if and_conditions:
         query["$and"] = and_conditions
-    props = await db.properties.find(query, {"_id": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
+    sort_fields = [("created_at", -1)]
+    if tab == "boosted":
+        sort_fields = [("boost_rank", 1), ("created_at", -1)]
+    props = await db.properties.find(query, {"_id": 0}).sort(sort_fields).skip(skip).limit(limit).to_list(length=limit)
     owner_ids = list({p.get("owner_id") for p in props if p.get("owner_id")})
     owners = await db.users.find({"user_id": {"$in": owner_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(owner_ids) or 1)
     owner_map = {u["user_id"]: u for u in owners}
@@ -2729,6 +2735,75 @@ async def update_property_operation_status(property_id: str, payload: PropertySt
     await db.property_status_history.insert_one({"history_id": f"psh_{uuid4().hex[:12]}", "property_id": property_id, "old_status": prop.get("status"), "new_status": payload.status, "reason": payload.reason, "changed_by": current_user["user_id"], "created_at": _now()})
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="property_operations", action="property_status_changed", record_id=property_id, old_value={"status": prop.get("status")}, new_value=updates, reason=payload.reason)
     return api_response("Property status updated")
+
+
+class PropertyBoostPayload(BaseModel):
+    is_boosted: bool
+    boost_days: Optional[int] = None
+    boost_rank: Optional[int] = None
+
+
+@router.patch("/properties-operations/{property_id}/boost")
+async def update_property_boost(property_id: str, payload: PropertyBoostPayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
+    prop = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+    if not prop:
+        raise HTTPException(status_code=404, detail="Property not found")
+    
+    expires_at = None
+    rank = None
+    if payload.is_boosted:
+        rank = payload.boost_rank
+        if not rank or rank < 1 or rank > 5:
+            raise HTTPException(status_code=400, detail="Boost rank must be between 1 and 5.")
+
+        # Collision validation: check if another property in the same category has this rank active
+        other = await db.properties.find_one({
+            "category": prop["category"],
+            "is_boosted": True,
+            "boost_rank": rank,
+            "property_id": {"$ne": property_id}
+        })
+        if other:
+            other_expires = other.get("boost_expires_at")
+            is_active = True
+            if other_expires:
+                try:
+                    from datetime import datetime, timezone
+                    exp_dt = datetime.fromisoformat(other_expires.replace("Z", "+00:00"))
+                    if exp_dt < datetime.now(timezone.utc):
+                        is_active = False
+                except Exception:
+                    pass
+            if is_active:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Rank #{rank} is already occupied by '{other.get('title')}' in this category. You must stop its boost first."
+                )
+
+        if payload.boost_days:
+            from datetime import timedelta
+            expires_at = (_now() + timedelta(days=payload.boost_days)).isoformat()
+
+    updates = {
+        "is_boosted": payload.is_boosted,
+        "boost_expires_at": expires_at,
+        "boost_rank": rank,
+        "updated_at": _now()
+    }
+    
+    await db.properties.update_one({"property_id": property_id}, {"$set": updates})
+    await write_audit_log(
+        db, 
+        user_id=current_user["user_id"], 
+        role=current_user["role"], 
+        module="property_operations", 
+        action="property_boost_changed", 
+        record_id=property_id, 
+        old_value={"is_boosted": prop.get("is_boosted", False), "boost_expires_at": prop.get("boost_expires_at"), "boost_rank": prop.get("boost_rank")}, 
+        new_value=updates, 
+        reason=f"Boost toggled to {payload.is_boosted} (rank={rank}, days={payload.boost_days})"
+    )
+    return api_response("Property boost updated successfully", {"property_id": property_id, **updates})
 
 
 @router.get("/subscriptions")

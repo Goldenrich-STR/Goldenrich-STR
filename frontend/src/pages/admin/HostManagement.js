@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Building2, CheckCircle2, ExternalLink, FileCheck2, IndianRupee, RotateCcw, Search, ShieldCheck, UserCog, Users, XCircle } from 'lucide-react';
+import { AlertCircle, Building2, CheckCircle2, ExternalLink, FileCheck2, IndianRupee, RotateCcw, Search, ShieldCheck, UserCog, Users, XCircle, Download } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, Pagination } from './shared';
 
 const tabs = [
   ['all', 'All Hosts'], ['pending_kyc', 'Pending KYC'], ['kyc_approved', 'KYC Approved'], ['kyc_rejected', 'KYC Rejected'], ['subscription_status', 'Subscription Status'],
@@ -150,6 +150,11 @@ const HostManagement = () => {
   const [search, setSearch] = useState('');
   const [state, setState] = useState({ loading: true, error: '', hosts: [] });
   const [selected, setSelected] = useState({ loading: false, host: null, error: '' });
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [tab, search]);
   const [assignees, setAssignees] = useState({ loading: true, error: '', brokers: [], relationship_managers: [], branch_managers: [] });
   const [assignment, setAssignment] = useState({
     open: false,
@@ -203,6 +208,58 @@ const HostManagement = () => {
   }, [tab, search]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleExportCSV = () => {
+    if (!visibleHosts.length) {
+      showNotice({ title: 'Export Empty', description: 'No hosts available in this view to export.', eyebrow: 'Action Aborted' });
+      return;
+    }
+    const headers = ['Host Name', 'User ID', 'Email', 'Phone', 'Role', 'Branch', 'KYC Status', 'Is Active', 'Assigned Broker Name', 'Assigned Broker Code', 'Assigned RM Name', 'Assigned RM Code', 'Branch Manager Name', 'Branch Manager Code', 'Created At'];
+    
+    const escapeCsv = (val) => {
+      if (val === undefined || val === null) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = visibleHosts.map((host) => {
+      const brokerName = host.broker?.full_name || host.broker_name || '';
+      const brokerCode = host.broker?.lg_code || host.broker_lg_code || '';
+      const rmName = host.rm?.full_name || host.rm_name || '';
+      const rmCode = host.rm?.employee_code || host.rm_code || '';
+      const bmName = host.branch_manager?.full_name || host.branch_manager_name || '';
+      const bmCode = host.branch_manager?.employee_code || host.branch_manager_code || '';
+
+      return [
+        host.full_name || '',
+        host.user_id || '',
+        host.email || '',
+        host.phone || '',
+        host.role || '',
+        host.branch || '',
+        host.kyc_status || 'unverified',
+        host.is_active !== false ? 'Active' : 'Inactive',
+        brokerName,
+        brokerCode,
+        rmName,
+        rmCode,
+        bmName,
+        bmCode,
+        host.created_at || '',
+      ];
+    });
+
+    const csvContent = [headers, ...rows].map(row => row.map(escapeCsv).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `hosts_${tab}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
   const loadAssignees = useCallback(async () => {
     try {
@@ -339,7 +396,15 @@ const HostManagement = () => {
 
   return (
     <div>
-      <PageHeader title="Host Management" description="Manage host KYC, agreements, bank verification, subscriptions, assignments and host risk review." />
+      <PageHeader
+        title="Host Management"
+        description="Manage host KYC, agreements, bank verification, subscriptions, assignments and host risk review."
+        action={
+          <button onClick={handleExportCSV} className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(5,150,105,0.22)] transition hover:bg-emerald-700">
+            <Download className="h-4 w-4" /> Export CSV
+          </button>
+        }
+      />
       <div className="mb-4 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
         <MetricCard label="Hosts" value={metrics.total} icon={Users} />
         <MetricCard label="KYC Approved" value={metrics.approved} icon={ShieldCheck} tone="emerald" />
@@ -361,7 +426,7 @@ const HostManagement = () => {
       ) : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="grid content-start gap-4 lg:grid-cols-2">
-          {visibleHosts.map((host) => {
+          {visibleHosts.slice((page - 1) * 10, page * 10).map((host) => {
             const summary = host.kyc_verification?.summary || {};
             const checklist = host.kyc_verification?.checklist || [];
             const uploadedDocs = checklist.filter((doc) => doc.document_url).length;
@@ -430,6 +495,7 @@ const HostManagement = () => {
           );})}
           {!visibleHosts.length && <Panel className="p-6 text-sm text-slate-500">No hosts found.</Panel>}
         </div>
+        <Pagination currentPage={page} totalItems={visibleHosts.length} itemsPerPage={10} onPageChange={setPage} />
         <KycReviewPanel selected={selected} onClose={() => setSelected({ loading: false, host: null, error: '' })} onDoc={decideDocument} onBank={decideBank} onAgreement={decideAgreement} onReupload={requestReupload} onFinal={decideKyc} />
         </div>
       )}

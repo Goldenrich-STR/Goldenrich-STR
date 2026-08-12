@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Bell, Headphones, Mail, MessageSquare, Search, Send, ShieldAlert } from 'lucide-react';
+import { Bell, Headphones, Mail, MessageSquare, Search, Send, ShieldAlert, Download } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { cmsAPI } from '../../services/api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestInput, requestReason, showNotice } from './shared';
@@ -173,9 +173,67 @@ const CommunicationCenter = () => {
     await load();
   };
 
+  const handleExportCSV = () => {
+    let headers = [];
+    let rows = [];
+    let filename = `communication_${active}_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    const escapeCsv = (val) => {
+      if (val === undefined || val === null) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    if (active === 'overview') {
+      headers = ['Category', 'Title/Subject', 'Channel/Priority', 'Recipient/Contact', 'Status', 'Created At'];
+      const notifs = (state.recent_notifications || []).map(r => ['Notification', r.title || r.type || '', r.channel || '', r.recipient || r.user_id || '', r.status || 'pending', r.created_at || '']);
+      const msgs = (state.recent_contact_messages || []).map(r => ['Contact Message', r.subject || r.category || '', '', r.email || r.phone || '', r.status || 'pending', r.created_at || '']);
+      const tix = (state.recent_support_tickets || []).map(r => ['Support Ticket', r.ticket_id || '', r.priority || 'medium', r.user_id || '', r.status || 'open', r.created_at || '']);
+      rows = [...notifs, ...msgs, ...tix];
+    } else if (active === 'contactInbox') {
+      headers = ['Name', 'Email', 'Phone', 'Subject', 'Category', 'Status', 'Message', 'Admin Notes', 'Created At'];
+      rows = filteredMessages.map(m => [m.name || m.full_name || '', m.email || '', m.phone || '', m.subject || '', m.category || '', m.status || 'pending', m.message || '', m.admin_notes || '', m.created_at || '']);
+    } else if (active === 'notifications') {
+      headers = ['Notification ID', 'Title', 'Type', 'Channel', 'Recipient/User ID', 'Message', 'Status', 'Created At'];
+      rows = state.notifications.map(n => [n.notification_id || '', n.title || '', n.type || '', n.channel || '', n.recipient || n.user_id || '', n.message || '', n.status || 'pending', n.created_at || '']);
+    } else if (active === 'rules') {
+      headers = ['Rule ID', 'Rule Name', 'Event Name', 'Channels', 'Recipient Roles', 'Template text', 'Retry Enabled', 'Status'];
+      rows = state.notification_rules.map(r => [r.notification_rule_id || '', r.rule_name || '', r.event_name || '', (r.channels || []).join('; '), (r.recipient_roles || []).join('; '), r.template || '', r.retry_enabled === false ? 'No' : 'Yes', r.status || 'active']);
+    } else if (active === 'deliveryAudit') {
+      headers = ['Type', 'Title/Action', 'Channel/User', 'Recipient/Record ID', 'Status/Reason', 'Created At'];
+      const failed = (state.delivery_audit?.failed_notifications || []).map(r => ['Failed Delivery', r.title || '', r.channel || '', r.recipient || r.user_id || '', r.type || 'failed', r.created_at || '']);
+      const audits = (state.delivery_audit?.recent_audits || []).map(r => ['Audit Log', r.action || '', r.user_id || '', r.record_id || '', r.reason || '', r.created_at || '']);
+      rows = [...failed, ...audits];
+    }
+
+    if (!rows.length) {
+      showNotice({ title: 'Export Empty', description: `No records in the ${active} tab to export.`, eyebrow: 'Action Aborted' });
+      return;
+    }
+
+    const csvContent = [headers, ...rows].map(row => row.map(escapeCsv).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
-      <PageHeader title="Communication Center" description="Monitor platform messages, notifications, channel health and support communication queues." />
+      <PageHeader
+        title="Communication Center"
+        description="Monitor platform messages, notifications, channel health and support communication queues."
+        action={
+          <button onClick={handleExportCSV} className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(5,150,105,0.22)] transition hover:bg-emerald-700">
+            <Download className="h-4 w-4" /> Export CSV
+          </button>
+        }
+      />
       <Panel className="mb-4 p-3">
         <div className="mb-3 flex gap-2 overflow-x-auto">
           {tabs.map(([id, label]) => <button key={id} onClick={() => setActive(id)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${active === id ? 'bg-charcoal text-white' : 'bg-slate-100 text-slate-600'}`}>{label}</button>)}
@@ -261,123 +319,141 @@ const RecentTickets = ({ rows }) => (
   </Panel>
 );
 
-const ContactInbox = ({ messages, selected, selectedId, setSelectedId, onUpdate }) => (
-  <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
-    <Panel className="overflow-hidden">
-      <div className="border-b border-slate-200 p-4">
-        <h2 className="font-black">Contact Messages</h2>
-        <p className="text-xs text-slate-500">Website contact requests and support inquiries.</p>
-      </div>
-      <div className="max-h-[680px] overflow-y-auto p-3">
-        {messages.map((message) => {
-          const id = message._id || message.message_id;
-          return (
-            <button key={id} onClick={() => setSelectedId(id)} className={`mb-2 w-full rounded-lg border p-3 text-left text-sm ${selectedId === id ? 'border-terracotta bg-terracotta/10' : 'border-slate-200 bg-slate-50 hover:border-terracotta'}`}>
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-black">{message.name || message.full_name || 'Unknown'}</span>
-                <StatusBadge value={message.status || 'pending'} />
-              </div>
-              <p className="mt-1 truncate text-xs text-slate-500">{message.subject || message.category || 'General inquiry'}</p>
-              <p className="mt-1 text-xs text-slate-400">{message.created_at ? String(message.created_at).slice(0, 16).replace('T', ' ') : '-'}</p>
-            </button>
-          );
-        })}
-        {!messages.length && <p className="p-3 text-sm text-slate-500">No contact messages found.</p>}
-      </div>
-    </Panel>
-    <Panel className="overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
-        <div>
-          <h2 className="font-black">{selected?.subject || selected?.category || 'Message Detail'}</h2>
-          <p className="text-xs text-slate-500">{selected?.email || selected?.phone || 'No contact selected'}</p>
+const ContactInbox = ({ messages, selected, selectedId, setSelectedId, onUpdate }) => {
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [messages.length]);
+  const rows = messages.slice((page - 1) * 10, page * 10);
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
+      <Panel className="overflow-hidden">
+        <div className="border-b border-slate-200 p-4">
+          <h2 className="font-black">Contact Messages</h2>
+          <p className="text-xs text-slate-500">Website contact requests and support inquiries.</p>
         </div>
-        {selected && <StatusBadge value={selected.status || 'pending'} />}
-      </div>
-      {selected ? (
-        <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_260px]">
-          <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2">
-              <Detail label="Name" value={selected.name || selected.full_name || '-'} />
-              <Detail label="Email" value={selected.email || '-'} />
-              <Detail label="Phone" value={selected.phone || '-'} />
+        <div className="max-h-[680px] overflow-y-auto p-3">
+          {rows.map((message) => {
+            const id = message._id || message.message_id;
+            return (
+              <button key={id} onClick={() => setSelectedId(id)} className={`mb-2 w-full rounded-lg border p-3 text-left text-sm ${selectedId === id ? 'border-terracotta bg-terracotta/10' : 'border-slate-200 bg-slate-50 hover:border-terracotta'}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-black">{message.name || message.full_name || 'Unknown'}</span>
+                  <StatusBadge value={message.status || 'pending'} />
+                </div>
+                <p className="mt-1 truncate text-xs text-slate-500">{message.subject || message.category || 'General inquiry'}</p>
+                <p className="mt-1 text-xs text-slate-400">{message.created_at ? String(message.created_at).slice(0, 16).replace('T', ' ') : '-'}</p>
+              </button>
+            );
+          })}
+          {!messages.length && <p className="p-3 text-sm text-slate-500">No contact messages found.</p>}
+        </div>
+        <Pagination currentPage={page} totalItems={messages.length} itemsPerPage={10} onPageChange={setPage} />
+      </Panel>
+      <Panel className="overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
+          <div>
+            <h2 className="font-black">{selected?.subject || selected?.category || 'Message Detail'}</h2>
+            <p className="text-xs text-slate-500">{selected?.email || selected?.phone || 'No contact selected'}</p>
+          </div>
+          {selected && <StatusBadge value={selected.status || 'pending'} />}
+        </div>
+        {selected ? (
+          <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_260px]">
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-2">
+                <Detail label="Name" value={selected.name || selected.full_name || '-'} />
+                <Detail label="Email" value={selected.email || '-'} />
+                <Detail label="Phone" value={selected.phone || '-'} />
+                <Detail label="Created" value={selected.created_at ? String(selected.created_at).slice(0, 16).replace('T', ' ') : '-'} />
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Message</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selected.message || '-'}</p>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-white p-4">
+                <p className="text-xs font-bold uppercase text-slate-500">Admin Notes</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selected.admin_notes || '-'}</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <button onClick={() => onUpdate(selected, 'pending')} className="w-full rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700">Mark Pending</button>
+              <button onClick={() => onUpdate(selected, 'in-progress')} className="w-full rounded-lg bg-blue-50 px-3 py-2 text-sm font-bold text-blue-700">Mark In Progress</button>
+              <button onClick={() => onUpdate(selected, 'resolved')} className="w-full rounded-lg bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">Mark Resolved</button>
+              {selected.email && <a href={`mailto:${selected.email}`} className="block w-full rounded-lg bg-charcoal px-3 py-2 text-center text-sm font-bold text-white">Reply by Email</a>}
+            </div>
+          </div>
+        ) : <p className="p-6 text-sm text-slate-500">Select a contact message.</p>}
+      </Panel>
+    </div>
+  );
+};
+
+const NotificationCenter = ({ notifications, selected, selectedId, setSelectedId, onSendTest }) => {
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [notifications.length]);
+  const rows = notifications.slice((page - 1) * 10, page * 10);
+
+  return (
+    <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
+      <Panel className="overflow-hidden">
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
+          <div>
+            <h2 className="font-black">Notifications</h2>
+            <p className="text-xs text-slate-500">Delivery records across in-app, email, SMS and WhatsApp.</p>
+          </div>
+          <button onClick={onSendTest} className="rounded-lg bg-charcoal px-3 py-2 text-xs font-bold text-white">Send Test</button>
+        </div>
+        <div className="max-h-[700px] overflow-y-auto p-3">
+          {rows.map((notification) => (
+            <button key={notification.notification_id} onClick={() => setSelectedId(notification.notification_id)} className={`mb-2 w-full rounded-lg border p-3 text-left text-sm ${selectedId === notification.notification_id ? 'border-terracotta bg-terracotta/10' : 'border-slate-200 bg-slate-50 hover:border-terracotta'}`}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate font-black">{notification.title || notification.type || '-'}</span>
+                <StatusBadge value={notification.status || 'pending'} />
+              </div>
+              <p className="mt-1 text-xs text-slate-500">{notification.channel || '-'} / {notification.recipient || notification.user_id || '-'}</p>
+              <p className="mt-1 text-xs text-slate-400">{notification.created_at ? String(notification.created_at).slice(0, 16).replace('T', ' ') : '-'}</p>
+            </button>
+          ))}
+          {!notifications.length && <p className="p-3 text-sm text-slate-500">No notifications found.</p>}
+        </div>
+        <Pagination currentPage={page} totalItems={notifications.length} itemsPerPage={10} onPageChange={setPage} />
+      </Panel>
+      <Panel className="overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
+          <div>
+            <h2 className="font-black">{selected?.title || 'Notification Detail'}</h2>
+            <p className="text-xs text-slate-500">{selected?.notification_id || 'No notification selected'}</p>
+          </div>
+          {selected && <StatusBadge value={selected.status || 'pending'} />}
+        </div>
+        {selected ? (
+          <div className="space-y-4 p-4">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <Detail label="Type" value={selected.type || '-'} />
+              <Detail label="Channel" value={selected.channel || '-'} />
+              <Detail label="Recipient" value={selected.recipient || selected.user_id || '-'} />
               <Detail label="Created" value={selected.created_at ? String(selected.created_at).slice(0, 16).replace('T', ' ') : '-'} />
             </div>
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-bold uppercase text-slate-500">Message</p>
               <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selected.message || '-'}</p>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-4">
-              <p className="text-xs font-bold uppercase text-slate-500">Admin Notes</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selected.admin_notes || '-'}</p>
+            <div className="grid gap-4 xl:grid-cols-2">
+              <JsonBlock title="Payload Data" value={selected.data} />
+              <JsonBlock title="Provider Response" value={selected.provider_response} />
             </div>
           </div>
-          <div className="space-y-2">
-            <button onClick={() => onUpdate(selected, 'pending')} className="w-full rounded-lg bg-slate-100 px-3 py-2 text-sm font-bold text-slate-700">Mark Pending</button>
-            <button onClick={() => onUpdate(selected, 'in-progress')} className="w-full rounded-lg bg-blue-50 px-3 py-2 text-sm font-bold text-blue-700">Mark In Progress</button>
-            <button onClick={() => onUpdate(selected, 'resolved')} className="w-full rounded-lg bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700">Mark Resolved</button>
-            {selected.email && <a href={`mailto:${selected.email}`} className="block w-full rounded-lg bg-charcoal px-3 py-2 text-center text-sm font-bold text-white">Reply by Email</a>}
-          </div>
-        </div>
-      ) : <p className="p-6 text-sm text-slate-500">Select a contact message.</p>}
-    </Panel>
-  </div>
-);
-
-const NotificationCenter = ({ notifications, selected, selectedId, setSelectedId, onSendTest }) => (
-  <div className="grid gap-4 xl:grid-cols-[420px_minmax(0,1fr)]">
-    <Panel className="overflow-hidden">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
-        <div>
-          <h2 className="font-black">Notifications</h2>
-          <p className="text-xs text-slate-500">Delivery records across in-app, email, SMS and WhatsApp.</p>
-        </div>
-        <button onClick={onSendTest} className="rounded-lg bg-charcoal px-3 py-2 text-xs font-bold text-white">Send Test</button>
-      </div>
-      <div className="max-h-[700px] overflow-y-auto p-3">
-        {notifications.map((notification) => (
-          <button key={notification.notification_id} onClick={() => setSelectedId(notification.notification_id)} className={`mb-2 w-full rounded-lg border p-3 text-left text-sm ${selectedId === notification.notification_id ? 'border-terracotta bg-terracotta/10' : 'border-slate-200 bg-slate-50 hover:border-terracotta'}`}>
-            <div className="flex items-center justify-between gap-2">
-              <span className="truncate font-black">{notification.title || notification.type || '-'}</span>
-              <StatusBadge value={notification.status || 'pending'} />
-            </div>
-            <p className="mt-1 text-xs text-slate-500">{notification.channel || '-'} / {notification.recipient || notification.user_id || '-'}</p>
-            <p className="mt-1 text-xs text-slate-400">{notification.created_at ? String(notification.created_at).slice(0, 16).replace('T', ' ') : '-'}</p>
-          </button>
-        ))}
-        {!notifications.length && <p className="p-3 text-sm text-slate-500">No notifications found.</p>}
-      </div>
-    </Panel>
-    <Panel className="overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
-        <div>
-          <h2 className="font-black">{selected?.title || 'Notification Detail'}</h2>
-          <p className="text-xs text-slate-500">{selected?.notification_id || 'No notification selected'}</p>
-        </div>
-        {selected && <StatusBadge value={selected.status || 'pending'} />}
-      </div>
-      {selected ? (
-        <div className="space-y-4 p-4">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <Detail label="Type" value={selected.type || '-'} />
-            <Detail label="Channel" value={selected.channel || '-'} />
-            <Detail label="Recipient" value={selected.recipient || selected.user_id || '-'} />
-            <Detail label="Created" value={selected.created_at ? String(selected.created_at).slice(0, 16).replace('T', ' ') : '-'} />
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-bold uppercase text-slate-500">Message</p>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selected.message || '-'}</p>
-          </div>
-          <div className="grid gap-4 xl:grid-cols-2">
-            <JsonBlock title="Payload Data" value={selected.data} />
-            <JsonBlock title="Provider Response" value={selected.provider_response} />
-          </div>
-        </div>
-      ) : <p className="p-6 text-sm text-slate-500">Select a notification.</p>}
-    </Panel>
-  </div>
-);
+        ) : <p className="p-6 text-sm text-slate-500">Select a notification.</p>}
+      </Panel>
+    </div>
+  );
+};
 
 const TemplateRules = ({ rules, form, setForm, onSave, onEdit, onStatus }) => {
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [rules.length]);
+  const rows = rules.slice((page - 1) * 10, page * 10);
+
   const setField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
   const setCsvField = (field, value) => setField(field, value.split(',').map((item) => item.trim()).filter(Boolean));
   return (
@@ -415,7 +491,7 @@ const TemplateRules = ({ rules, form, setForm, onSave, onEdit, onStatus }) => {
           <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Rule', 'Event', 'Channels', 'Recipients', 'Retry', 'Status', 'Actions'].map((header) => <th key={header} className="px-4 py-3">{header}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {rules.map((rule) => (
+              {rows.map((rule) => (
                 <tr key={rule.notification_rule_id}>
                   <td className="px-4 py-3"><p className="font-black">{rule.rule_name}</p><p className="font-mono text-xs text-slate-500">{rule.notification_rule_id}</p></td>
                   <td className="px-4 py-3">{rule.event_name}</td>
@@ -430,6 +506,7 @@ const TemplateRules = ({ rules, form, setForm, onSave, onEdit, onStatus }) => {
           </table>
           {!rules.length && <p className="p-6 text-sm text-slate-500">No notification rules found.</p>}
         </div>
+        <Pagination currentPage={page} totalItems={rules.length} itemsPerPage={10} onPageChange={setPage} />
       </Panel>
     </div>
   );

@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle, CheckCircle2, ExternalLink, Image, Search, Trash2, UserCog, XCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ExternalLink, Image, Search, Trash2, UserCog, XCircle, Download } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice, Pagination } from './shared';
 
 const tabs = [
   ['all', 'All Properties'],
@@ -12,6 +12,7 @@ const tabs = [
   ['admin_review', 'Admin Review'],
   ['live', 'Live'],
   ['rejected', 'Rejected'],
+  ['boosted', 'Ranked / Boosted'],
 ];
 
 const Modal = ({ title, children, onClose }) => (
@@ -39,6 +40,12 @@ const PropertyOperations = () => {
   const [rmFilter, setRmFilter] = useState('');
   const [state, setState] = useState({ loading: true, error: '', properties: [] });
   const [selected, setSelected] = useState({ loading: false, property: null, error: '' });
+  const [boostProperty, setBoostProperty] = useState(null);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [tab, search, category, propertyType, hostFilter, brokerFilter, rmFilter]);
 
   const load = useCallback(async () => {
     try {
@@ -188,9 +195,61 @@ const PropertyOperations = () => {
     refreshSelected();
   };
 
+  const handleExportCSV = () => {
+    if (!state.properties.length) {
+      showNotice({ title: 'Export Empty', description: 'No properties available in this view to export.', eyebrow: 'Action Aborted' });
+      return;
+    }
+    const headers = ['Property Title', 'Property ID', 'Host Name', 'Owner ID', 'Property Type', 'Category', 'City', 'Broker Name', 'Broker Code', 'RM Name', 'RM Code', 'Branch Manager Name', 'Branch Manager Code', 'Status', 'Subscription', 'Price Per Night'];
+    
+    const escapeCsv = (val) => {
+      if (val === undefined || val === null) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = state.properties.map((property) => [
+      property.title || '',
+      property.property_id || '',
+      property.host_name || '',
+      property.owner_id || '',
+      property.property_type || property.bhk_type || '',
+      property.category || '',
+      property.city || '',
+      property.broker_name || '',
+      property.broker_code || property.assigned_broker || '',
+      property.rm_name || '',
+      property.rm_code || property.assigned_rm || '',
+      property.branch_manager_name || '',
+      property.branch_manager_code || property.assigned_branch_manager || '',
+      property.status || '',
+      property.subscription_status || '',
+      property.price_per_night || 0,
+    ]);
+
+    const csvContent = [headers, ...rows].map(row => row.map(escapeCsv).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `properties_${tab}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
-      <PageHeader title="Property Operations" description="Manage property verification workflow from draft to submitted, broker verification, RM verification, admin review and live operations." />
+      <PageHeader
+        title="Property Operations"
+        description="Manage property verification workflow from draft to submitted, broker verification, RM verification, admin review and live operations."
+        action={
+          <button onClick={handleExportCSV} className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(5,150,105,0.22)] transition hover:bg-emerald-700">
+            <Download className="h-4 w-4" /> Export CSV
+          </button>
+        }
+      />
       <Panel className="mb-4 p-4">
         <div className="mb-4 flex gap-2 overflow-x-auto pb-1">{tabs.map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${tab === id ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>)}</div>
         <div className="grid gap-3 md:grid-cols-[1fr_220px]">
@@ -210,11 +269,12 @@ const PropertyOperations = () => {
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1200px] text-left text-sm">
               <thead className="bg-[#f8fafc] text-[11px] uppercase tracking-[0.16em] text-slate-400"><tr>{['Property', 'Host Name', 'Property Type', 'Category', 'City', 'Broker Name', 'RM Name', 'Branch Manager', 'Stage', 'Subscription', 'Price', 'Actions'].map((h) => <th key={h} className="px-4 py-4 font-bold">{h}</th>)}</tr></thead>
-              <tbody className="divide-y divide-slate-100">{state.properties.map((property) => <tr key={property.property_id} className="transition hover:bg-slate-50/70"><td className="px-4 py-4"><p className="font-black">{property.title}</p><p className="font-mono text-xs text-slate-500">{property.property_id}</p></td><td className="px-4 py-4"><p className="font-bold">{property.host_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.owner_id}</p></td><td className="px-4 py-4 capitalize">{String(property.property_type || property.bhk_type || '-').replace(/_/g, ' ')}</td><td className="px-4 py-4 capitalize">{property.category}</td><td className="px-4 py-4">{property.city}</td><td className="px-4 py-4"><p className="font-bold">{property.broker_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.broker_code || property.assigned_broker || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.rm_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.rm_code || property.assigned_rm || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.branch_manager_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.branch_manager_code || property.assigned_branch_manager || '-'}</p></td><td className="px-4 py-4"><StatusBadge value={property.status} /></td><td className="px-4 py-4">{property.subscription_status || '-'}</td><td className="px-4 py-4">{formatMoney(property.price_per_night || 0)}</td><td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} /></td></tr>)}</tbody>
+              <tbody className="divide-y divide-slate-100">{state.properties.slice((page - 1) * 10, page * 10).map((property) => <tr key={property.property_id} className="transition hover:bg-slate-50/70"><td className="px-4 py-4"><div className="flex items-center gap-1.5"><p className="font-black">{property.title}</p>{property.is_boosted && <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700 ring-1 ring-inset ring-amber-600/20">⚡ BOOSTED #{property.boost_rank || '1'}</span>}</div><p className="font-mono text-xs text-slate-500">{property.property_id}</p></td><td className="px-4 py-4"><p className="font-bold">{property.host_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.owner_id}</p></td><td className="px-4 py-4 capitalize">{String(property.property_type || property.bhk_type || '-').replace(/_/g, ' ')}</td><td className="px-4 py-4 capitalize">{property.category}</td><td className="px-4 py-4">{property.city}</td><td className="px-4 py-4"><p className="font-bold">{property.broker_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.broker_code || property.assigned_broker || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.rm_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.rm_code || property.assigned_rm || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.branch_manager_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.branch_manager_code || property.assigned_branch_manager || '-'}</p></td><td className="px-4 py-4"><StatusBadge value={property.status} /></td><td className="px-4 py-4">{property.subscription_status || '-'}</td><td className="px-4 py-4">{formatMoney(property.price_per_night || 0)}</td><td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></td></tr>)}</tbody>
             </table>
           </div>
-          <div className="grid gap-3 p-4 md:hidden">{state.properties.map((property) => <Panel key={property.property_id} className="p-4"><div className="flex items-start justify-between gap-3"><div><p className="font-black">{property.title}</p><p className="text-xs text-slate-500">{property.property_id}</p></div><StatusBadge value={property.status} /></div><p className="mt-2 text-sm">{property.city} / {property.category}</p><div className="mt-3 grid gap-1 text-xs text-slate-500"><p><b>Broker:</b> {property.broker_name || '-'} / {property.broker_code || '-'}</p><p><b>RM:</b> {property.rm_name || '-'} / {property.rm_code || '-'}</p><p><b>BM:</b> {property.branch_manager_name || '-'} / {property.branch_manager_code || '-'}</p></div><div className="mt-3"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} /></div></Panel>)}</div>
+          <div className="grid gap-3 p-4 md:hidden">{state.properties.slice((page - 1) * 10, page * 10).map((property) => <Panel key={property.property_id} className="p-4"><div className="flex items-start justify-between gap-3"><div><div className="flex items-center gap-1.5"><p className="font-black">{property.title}</p>{property.is_boosted && <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700 ring-1 ring-inset ring-amber-600/20">⚡ BOOSTED #{property.boost_rank || '1'}</span>}</div><p className="text-xs text-slate-500">{property.property_id}</p></div><StatusBadge value={property.status} /></div><p className="mt-2 text-sm">{property.city} / {property.category}</p><div className="mt-3 grid gap-1 text-xs text-slate-500"><p><b>Broker:</b> {property.broker_name || '-'} / {property.broker_code || '-'}</p><p><b>RM:</b> {property.rm_name || '-'} / {property.rm_code || '-'}</p><p><b>BM:</b> {property.branch_manager_name || '-'} / {property.branch_manager_code || '-'}</p></div><div className="mt-3"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></div></Panel>)}</div>
         </Panel>
+        <Pagination currentPage={page} totalItems={state.properties.length} itemsPerPage={10} onPageChange={setPage} />
         </div>
       )}
       {selected.property && (
@@ -222,11 +282,22 @@ const PropertyOperations = () => {
           <PropertyReviewPanel selected={selected} onClose={() => setSelected({ loading: false, property: null, error: '' })} onChecklist={updateChecklist} onStage={updateStage} onFinal={finalStatus} onEdit={editProperty} />
         </Modal>
       )}
+      {boostProperty && (
+        <BoostModal 
+          property={boostProperty} 
+          properties={state.properties} 
+          onClose={() => setBoostProperty(null)} 
+          onSuccess={() => {
+            setBoostProperty(null);
+            load();
+          }} 
+        />
+      )}
     </div>
   );
 };
 
-const PropertyActions = ({ property, tab, onReview, onAssign, onStatus, onDelete, onEdit }) => {
+const PropertyActions = ({ property, tab, onReview, onAssign, onStatus, onDelete, onEdit, onBoost }) => {
   const isRejected = tab === 'rejected' || String(property.status || '').toLowerCase() === 'rejected';
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -235,6 +306,9 @@ const PropertyActions = ({ property, tab, onReview, onAssign, onStatus, onDelete
       <button onClick={() => onAssign(property)} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]">Assign</button>
       <button onClick={() => onStatus(property, 'live')} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]">Live</button>
       <button onClick={() => onStatus(property, 'rejected')} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700">Reject</button>
+      <button onClick={() => onBoost(property)} className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition-all ${property.is_boosted ? 'bg-amber-500 text-white hover:bg-amber-600' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'}`}>
+        ⚡ {property.is_boosted ? `Boosted #${property.boost_rank || '1'}` : 'Boost'}
+      </button>
       {isRejected && (
         <button onClick={() => onDelete(property)} className="inline-flex items-center gap-1 rounded-xl bg-red-600 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-red-700">
           <Trash2 className="h-3.5 w-3.5" /> Delete
@@ -530,6 +604,164 @@ const StageRow = ({ stage, data, onStage }) => {
       <div className="mt-3 flex gap-2">
         <button disabled={isClosed} onClick={() => onStage(stage, 'approved')} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6] disabled:cursor-not-allowed disabled:opacity-40">Approve</button>
         <button disabled={isClosed} onClick={() => onStage(stage, 'rejected')} className="rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-40">Reject</button>
+      </div>
+    </div>
+  );
+};
+
+const BoostModal = ({ property, properties, onClose, onSuccess }) => {
+  const [rank, setRank] = useState(property.boost_rank || 1);
+  const [duration, setDuration] = useState(property.boost_expires_at ? '7' : 'permanent');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const categoryProperties = properties.filter(p => p.category === property.category && p.property_id !== property.property_id);
+  const occupiedRanks = categoryProperties.filter(p => p.is_boosted).map(p => ({ rank: p.boost_rank, title: p.title }));
+  const occupiedMap = occupiedRanks.reduce((acc, curr) => {
+    acc[curr.rank] = curr.title;
+    return acc;
+  }, {});
+
+  const handleSetBoost = async () => {
+    setError('');
+    if (occupiedMap[rank]) {
+      setError(`Rank #${rank} is already occupied by "${occupiedMap[rank]}". You must stop its boost first.`);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const boost_days = duration === 'permanent' ? null : parseInt(duration);
+      await adminPhase1API.updatePropertyBoost(property.property_id, {
+        is_boosted: true,
+        boost_rank: parseInt(rank),
+        boost_days
+      });
+      await showNotice({
+        title: 'Boost Configured',
+        description: `Successfully pinned to Rank #${rank} for ${boost_days ? `${boost_days} days` : 'permanent duration'}.`,
+        eyebrow: 'Action Completed'
+      });
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to update property boost settings.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleStopBoost = async () => {
+    setError('');
+    setSubmitting(true);
+    try {
+      await adminPhase1API.updatePropertyBoost(property.property_id, {
+        is_boosted: false
+      });
+      await showNotice({
+        title: 'Boost Stopped',
+        description: 'Successfully removed priorities and disabled boost for this property.',
+        eyebrow: 'Action Completed'
+      });
+      onSuccess();
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to stop property boost.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-elevated">
+        <h3 className="text-lg font-black text-slate-950 flex items-center gap-2">
+          <span>⚡ Boost Settings</span>
+        </h3>
+        <p className="mt-1 text-sm font-semibold text-slate-500 leading-normal">
+          Configure search priority rank and duration for:
+        </p>
+        <p className="mt-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-900 border border-slate-100">
+          {property.title} <span className="block mt-1 font-mono text-xs text-slate-500 font-bold capitalize">{property.category.replace(/_/g, ' ')}</span>
+        </p>
+
+        {error && (
+          <div className="mt-4 rounded-2xl bg-red-50 p-4 border border-red-100 text-xs font-bold text-red-700 leading-relaxed">
+            ⚠️ {error}
+          </div>
+        )}
+
+        <div className="mt-5 space-y-4">
+          <div>
+            <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Priority Rank Slot</label>
+            <select
+              value={rank}
+              onChange={(e) => setRank(parseInt(e.target.value))}
+              className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-[#2f6df6]/20 focus:border-[#2f6df6]"
+            >
+              {[1, 2, 3, 4, 5].map((r) => (
+                <option key={r} value={r}>
+                  Rank #{r} {occupiedMap[r] ? `(Occupied by: ${occupiedMap[r]})` : '(Available)'}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">Boost Duration</label>
+            <select
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              className="w-full h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm outline-none focus:ring-2 focus:ring-[#2f6df6]/20 focus:border-[#2f6df6]"
+            >
+              <option value="1">1 Day</option>
+              <option value="3">3 Days</option>
+              <option value="7">7 Days</option>
+              <option value="30">30 Days</option>
+              <option value="permanent">Permanent / Infinite</option>
+            </select>
+          </div>
+        </div>
+
+        {occupiedRanks.length > 0 && (
+          <div className="mt-5 rounded-2xl bg-slate-50 p-4 border border-slate-100">
+            <span className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Currently Boosted in {property.category.replace(/_/g, ' ')}</span>
+            <div className="space-y-1.5 max-h-[100px] overflow-y-auto pr-1">
+              {occupiedRanks.map((item, idx) => (
+                <div key={idx} className="flex justify-between text-xs font-bold text-slate-600">
+                  <span>Rank #{item.rank}</span>
+                  <span className="truncate max-w-[200px] text-slate-800 font-semibold">{item.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-wrap gap-2 justify-end border-t border-slate-100 pt-4">
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="h-11 px-4 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
+          >
+            Cancel
+          </button>
+          
+          {property.is_boosted && (
+            <button
+              onClick={handleStopBoost}
+              disabled={submitting}
+              className="h-11 px-4 rounded-xl text-xs font-bold bg-red-50 text-red-700 hover:bg-red-100 transition cursor-pointer"
+            >
+              {submitting ? 'Stopping...' : 'Stop Boost'}
+            </button>
+          )}
+
+          <button
+            onClick={handleSetBoost}
+            disabled={submitting}
+            className="h-11 px-5 rounded-xl text-xs font-bold bg-[#2f6df6] text-white hover:bg-[#1a55db] transition shadow-sm cursor-pointer"
+          >
+            {submitting ? 'Saving...' : 'Set Boost'}
+          </button>
+        </div>
       </div>
     </div>
   );

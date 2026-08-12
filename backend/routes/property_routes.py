@@ -408,7 +408,10 @@ async def search_properties(
             "review_count": 1,
             "has_self_cook": 1,
             "status": 1,
-            "subscription_id": 1
+            "subscription_id": 1,
+            "is_boosted": 1,
+            "boost_expires_at": 1,
+            "boost_rank": 1
         }
         raw_properties = await db.properties.find(query, projection).to_list(length=1000)
 
@@ -481,14 +484,35 @@ async def search_properties(
                 if max_price is not None:
                     raw_properties = [p for p in raw_properties if numeric_price(p) <= max_price]
 
+        def is_property_boosted(p: dict) -> bool:
+            is_b = p.get("is_boosted", False)
+            if not is_b:
+                return False
+            expires_at = p.get("boost_expires_at")
+            if expires_at:
+                try:
+                    from datetime import datetime, timezone
+                    exp_dt = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+                    if exp_dt < datetime.now(timezone.utc):
+                        return False
+                except Exception:
+                    pass
+            return True
+
+        boosted = [p for p in raw_properties if is_property_boosted(p)]
+        non_boosted = [p for p in raw_properties if not is_property_boosted(p)]
+
+        # Sort boosted properties primarily by boost_rank ascending
+        boosted.sort(key=lambda p: p.get("boost_rank") if p.get("boost_rank") is not None else 999999)
+
         if sort == "price_asc":
-            raw_properties.sort(key=numeric_price)
+            non_boosted.sort(key=numeric_price)
         elif sort == "price_desc":
-            raw_properties.sort(key=numeric_price, reverse=True)
+            non_boosted.sort(key=numeric_price, reverse=True)
         elif sort == "newest":
-            raw_properties.sort(key=lambda p: p.get("created_at") or "", reverse=True)
+            non_boosted.sort(key=lambda p: p.get("created_at") or "", reverse=True)
         elif sort == "rating_desc":
-            raw_properties.sort(
+            non_boosted.sort(
                 key=lambda p: (
                     p.get("average_rating") or p.get("rating") or 0,
                     p.get("reviews_count") or p.get("review_count") or 0,
@@ -496,10 +520,11 @@ async def search_properties(
                 reverse=True,
             )
         else:
-            raw_properties.sort(
-                key=lambda p: (bool(p.get("instant_booking")), p.get("created_at") or ""),
-                reverse=True,
-            )
+            # Default / recommended: shuffle remaining normal listings
+            import random
+            random.shuffle(non_boosted)
+
+        raw_properties = boosted + non_boosted
 
         total = len(raw_properties)
         properties = raw_properties[skip: skip + limit]

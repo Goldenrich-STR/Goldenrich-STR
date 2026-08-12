@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Edit, History, KeyRound, Power, Search, ShieldCheck, Trash2, UserPlus, X } from 'lucide-react';
+import { Edit, History, KeyRound, Power, Search, ShieldCheck, Trash2, UserPlus, X, Download } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestConfirm, requestInput, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestConfirm, requestInput, requestReason, Pagination } from './shared';
 
 const tabs = [
   ['all', 'All Users'], ['guest', 'Guests'], ['host', 'Hosts'], ['employee', 'Employees'], ['broker', 'Brokers'], ['admin', 'Administrators'], ['inactive', 'Inactive Users'],
@@ -655,6 +655,11 @@ const UserOrganizationManagement = () => {
   const [organizationCodes, setOrganizationCodes] = useState({ branches: [], franchises: [] });
   const [modal, setModal] = useState(null);
   const [notice, setNotice] = useState('');
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [tab, search]);
 
   const managers = useMemo(() => state.users.filter((u) => ['admin', 'employee', 'broker'].includes(u.role) && u.is_active !== false), [state.users]);
 
@@ -790,12 +795,40 @@ const UserOrganizationManagement = () => {
     setModal({ type: 'form', user: null });
   };
 
+  const handleExportUsersCSV = async () => {
+    try {
+      const cleanSearch = search.trim() || undefined;
+      const params = tab === 'inactive'
+        ? { status: 'inactive', search: cleanSearch }
+        : { role: tab === 'all' ? undefined : tab, search: cleanSearch };
+      const response = await adminPhase1API.exportUsers(params);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `users_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      setNotice('Failed to export users CSV.');
+    }
+  };
+
   return (
     <div>
       <PageHeader
         title="User & Organization Management"
         description="Manage users, employees, brokers, administrators, access, reporting managers, branches and user lifecycle."
-        action={<button onClick={openCreateUserModal} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#2f6df6] px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(47,109,246,0.22)] transition hover:bg-[#255fe0]"><UserPlus className="h-4 w-4" /> Create User</button>}
+        action={
+          <div className="flex gap-2">
+            <button onClick={handleExportUsersCSV} className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(5,150,105,0.22)] transition hover:bg-emerald-700">
+              <Download className="h-4 w-4" /> Export CSV
+            </button>
+            <button onClick={openCreateUserModal} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#2f6df6] px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(47,109,246,0.22)] transition hover:bg-[#255fe0]">
+              <UserPlus className="h-4 w-4" /> Create User
+            </button>
+          </div>
+        }
       />
       {notice && <div className="mb-4 rounded-2xl border border-[#cfe0ff] bg-[#eef5ff] p-3 text-sm font-bold text-[#2f6df6]">{notice}</div>}
       <Panel className="mb-4 p-4">
@@ -826,7 +859,7 @@ const UserOrganizationManagement = () => {
                 <tr>{['User', 'Contact', 'Personal', 'Location', 'Role & Code', 'Organization', 'Reporting', 'Access Control', 'Status', 'Dates', 'Actions'].map((h) => <th key={h} className="px-4 py-4 font-bold">{h}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {state.users.map((u) => (
+                {state.users.slice((page - 1) * 10, page * 10).map((u) => (
                   <tr key={u.user_id} className="align-top transition hover:bg-slate-50/70">
                     <td className="px-4 py-5">
                       <div className="flex min-w-[240px] items-start gap-3">
@@ -907,7 +940,7 @@ const UserOrganizationManagement = () => {
             </table>
           </div>
           <div className="divide-y divide-slate-100 md:hidden">
-            {state.users.map((u) => (
+            {state.users.slice((page - 1) * 10, page * 10).map((u) => (
               <div key={u.user_id} className="p-4">
                 <div className="flex justify-between gap-3"><div><p className="font-black">{u.full_name}</p><p className="text-xs text-slate-500">{u.email}</p></div><StatusBadge value={u.is_active === false ? 'inactive' : 'active'} /></div>
                 <div className="mt-3 grid gap-2 rounded-2xl bg-slate-50 p-3 text-sm">
@@ -931,6 +964,7 @@ const UserOrganizationManagement = () => {
           </div>
         </Panel>
       )}
+      <Pagination currentPage={page} totalItems={state.users.length} itemsPerPage={10} onPageChange={setPage} />
       {modal?.type === 'form' && (
         <ModalShell title={modal.user ? 'Edit User' : 'Create User'} onClose={() => setModal(null)}>
           <UserForm initialUser={modal.user} managers={managers} roles={roles} organizationCodes={organizationCodes} onCancel={() => setModal(null)} onSaved={closeAndReload} />

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, CreditCard, FileText, PlayCircle, RefreshCcw, Search, TrendingUp, WalletCards } from 'lucide-react';
+import { CheckCircle2, CreditCard, FileText, PlayCircle, RefreshCcw, Search, TrendingUp, WalletCards, Download } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice, Pagination } from './shared';
 import { AdminAccountTransactionsTab } from '../AdminAccount';
 
 const financeSteps = [
@@ -217,20 +217,100 @@ const FinanceSettlements = () => {
   };
 
   const exportTransactions = async () => {
-    try {
-      const res = await adminPhase1API.exportFinanceTransactions({ q: search });
-      const blob = new Blob([res.data], { type: 'text/csv' });
-      const href = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = href;
-      link.download = `xspace360-finance-${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(href);
-    } catch (error) {
-      await showNotice({ title: 'Export Failed', description: error.response?.data?.detail || 'Failed to export finance report', eyebrow: 'Action Failed' });
+    let headers = [];
+    let rows = [];
+    let filename = `finance_${active}_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    const escapeCsv = (val) => {
+      if (val === undefined || val === null) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    if (active === 'settlements') {
+      headers = ['Payout ID', 'Host ID', 'Host Name', 'Property ID', 'Booking ID', 'Gross Amount', 'TDS Amount', 'Net Amount', 'Status', 'Payout Ref', 'Created At'];
+      rows = state.payouts.map(p => [
+        p.payout_id || '',
+        p.host_id || '',
+        p.host?.full_name || '',
+        p.property_id || '',
+        p.booking_id || '',
+        p.gross_amount || 0,
+        p.tds_amount || 0,
+        p.net_amount || 0,
+        p.status || '',
+        p.payout_reference || '',
+        p.created_at || '',
+      ]);
+    } else if (active === 'refunds') {
+      headers = ['Refund ID', 'Booking ID', 'Refund Amount', 'Policy Tier', 'Refund %', 'Reason', 'Transaction ID', 'Status'];
+      rows = state.refunds.map(r => [
+        r.refund_id || '',
+        r.booking_id || '',
+        r.refund_amount || 0,
+        r.policy_tier || '',
+        r.refund_percent || 0,
+        r.reason || '',
+        r.razorpay_refund_id || r.razorpay_payment_id || '',
+        r.status || '',
+      ]);
+    } else if (active === 'tax_commission') {
+      headers = ['Tax ID', 'Type', 'Taxable Amount', 'Rate', 'Tax Amount', 'Status'];
+      rows = (state.taxCommission?.tax_ledger || []).map(r => [
+        r.tax_id || '',
+        r.tax_type || '',
+        r.taxable_amount || 0,
+        r.tax_rate || 0,
+        r.tax_amount || 0,
+        r.status || '',
+      ]);
+    } else if (active === 'commissions') {
+      headers = ['Commission ID', 'Broker Name', 'Broker ID', 'Booking ID', 'Property ID', 'Booking Amount', 'Rate %', 'Commission Amount', 'Payment Ref', 'Status'];
+      rows = (state.taxCommission?.commissions || []).map(r => [
+        r.commission_id || '',
+        r.broker?.full_name || '',
+        r.broker_id || '',
+        r.booking_id || '',
+        r.property_id || '',
+        r.booking_amount || 0,
+        r.commission_percentage || 0,
+        r.commission_amount || 0,
+        r.payment_reference || '',
+        r.status || '',
+      ]);
+    } else {
+      try {
+        const res = await adminPhase1API.exportFinanceTransactions({ q: search });
+        const blob = new Blob([res.data], { type: 'text/csv' });
+        const href = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = href;
+        link.download = `xspace360-finance-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(href);
+      } catch (error) {
+        await showNotice({ title: 'Export Failed', description: error.response?.data?.detail || 'Failed to export finance report', eyebrow: 'Action Failed' });
+      }
+      return;
     }
+
+    if (!rows.length) {
+      showNotice({ title: 'Export Empty', description: `No records in the ${active} tab to export.`, eyebrow: 'Action Aborted' });
+      return;
+    }
+
+    const csvContent = [headers, ...rows].map(row => row.map(escapeCsv).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   };
 
   const shareInvoice = async (transaction) => {
@@ -280,7 +360,15 @@ const FinanceSettlements = () => {
 
   return (
     <div>
-      <PageHeader title="Finance & Settlements" description="Central finance overview for revenue, host settlements, refunds, tax liability, broker commission and invoice operations." />
+      <PageHeader
+        title="Finance & Settlements"
+        description="Central finance overview for revenue, host settlements, refunds, tax liability, broker commission and invoice operations."
+        action={
+          <button onClick={exportTransactions} className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(5,150,105,0.22)] transition hover:bg-emerald-700">
+            <Download className="h-4 w-4" /> Export CSV
+          </button>
+        }
+      />
       <Panel className="mb-4 p-3">
         <div className="mb-3 flex gap-2 overflow-x-auto">
           {workspaceTabs.map(([id, label]) => <button key={id} onClick={() => setActive(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${active === id ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>)}
@@ -338,6 +426,9 @@ const FinanceSettlements = () => {
 const Info = ({ label, value }) => <p className="flex justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2.5"><span className="font-bold text-slate-500">{label}</span><span className="font-black text-slate-950">{value}</span></p>;
 
 const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, autoStatus, busy, onProcess, onAction }) => {
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [payouts.length]);
+  const rows = payouts.slice((page - 1) * 10, page * 10);
   const sample = payouts[0] || {};
 
   return (
@@ -394,7 +485,7 @@ const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, a
                 <tr>{['Payout / Due', 'Host', 'Property', 'Broker', 'Employee (RM)', 'Booking', 'Host Actual Value', 'Extra Charges', 'TDS Base', 'TDS', 'Net Host Payable', 'Destination', 'Status', 'Action'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {payouts.map((payout) => {
+                {rows.map((payout) => {
                   const chargesTotal = extraChargeTotal(payout);
                   return (
                     <tr key={payout.payout_id}>
@@ -422,6 +513,7 @@ const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, a
             </table>
             {!payouts.length && <p className="p-6 text-sm text-slate-500">No payouts in this bucket. Click Sweep Eligibility after paid/completed bookings are available.</p>}
           </div>
+          <Pagination currentPage={page} totalItems={payouts.length} itemsPerPage={10} onPageChange={setPage} />
         </Panel>
         <div className="space-y-4">
           <Panel className="overflow-hidden">
@@ -456,6 +548,10 @@ const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, a
 };
 
 const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onInitiate, onPreview, policyPreview }) => {
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [refunds.length]);
+  const rows = refunds.slice((page - 1) * 10, page * 10);
+
   const totals = refunds.reduce((acc, row) => {
     acc.original += Number(row.original_amount || 0);
     acc.refund += Number(row.refund_amount || 0);
@@ -507,7 +603,7 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
           <table className="w-full min-w-[1100px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Refund', 'Booking', 'Guest', 'Host', 'Original', 'Refund', 'Policy', 'Reason', 'Gateway Ref', 'Status'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {refunds.map((refund) => (
+              {rows.map((refund) => (
                 <tr key={refund.refund_id}>
                   <td className="px-4 py-3"><p className="font-mono text-xs font-bold">{refund.refund_id}</p><p className="text-xs text-slate-500">{String(refund.created_at || '-').slice(0, 10)}</p></td>
                   <td className="px-4 py-3 font-mono text-xs">{refund.booking_id}</td>
@@ -525,6 +621,7 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
           </table>
           {!refunds.length && <p className="p-6 text-sm text-slate-500">No refunds found.</p>}
         </div>
+        <Pagination currentPage={page} totalItems={refunds.length} itemsPerPage={10} onPageChange={setPage} />
       </Panel>
     </div>
   );
@@ -533,6 +630,9 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
 const TaxesWorkspace = ({ data }) => {
   const summary = data?.summary || {};
   const taxLedger = data?.tax_ledger || [];
+  const [page, setPage] = useState(1);
+  useEffect(() => { setPage(1); }, [taxLedger.length]);
+  const rows = taxLedger.slice((page - 1) * 10, page * 10);
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -552,10 +652,11 @@ const TaxesWorkspace = ({ data }) => {
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Tax ID', 'Type', 'Taxable Amount', 'Rate', 'Tax Amount', 'Status'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
               <tbody className="divide-y divide-slate-100">
-                {taxLedger.map((row) => <tr key={row.tax_id}><td className="px-4 py-3 font-mono text-xs font-bold">{row.tax_id}</td><td className="px-4 py-3">{row.tax_type}</td><td className="px-4 py-3">{formatMoney(row.taxable_amount || 0)}</td><td className="px-4 py-3">{row.tax_rate}%</td><td className="px-4 py-3 font-black">{formatMoney(row.tax_amount || 0)}</td><td className="px-4 py-3"><StatusBadge value={row.status} /></td></tr>)}
+                {rows.map((row) => <tr key={row.tax_id}><td className="px-4 py-3 font-mono text-xs font-bold">{row.tax_id}</td><td className="px-4 py-3">{row.tax_type}</td><td className="px-4 py-3">{formatMoney(row.taxable_amount || 0)}</td><td className="px-4 py-3">{row.tax_rate}%</td><td className="px-4 py-3 font-black">{formatMoney(row.tax_amount || 0)}</td><td className="px-4 py-3"><StatusBadge value={row.status} /></td></tr>)}
               </tbody>
             </table>
           </div>
+          <Pagination currentPage={page} totalItems={taxLedger.length} itemsPerPage={10} onPageChange={setPage} />
       </Panel>
     </div>
   );
@@ -565,6 +666,14 @@ const CommissionWorkspace = ({ data, payouts, busy, onProcessHost }) => {
   const summary = data?.summary || {};
   const commissions = data?.commissions || [];
   const hostPending = (payouts || []).filter((row) => ['eligible', 'failed', 'needs_destination'].includes(row.status));
+
+  const [pageHost, setPageHost] = useState(1);
+  const [pageBroker, setPageBroker] = useState(1);
+  useEffect(() => { setPageHost(1); }, [hostPending.length]);
+  useEffect(() => { setPageBroker(1); }, [commissions.length]);
+  const rowsHost = hostPending.slice((pageHost - 1) * 10, pageHost * 10);
+  const rowsBroker = commissions.slice((pageBroker - 1) * 10, pageBroker * 10);
+
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -584,7 +693,7 @@ const CommissionWorkspace = ({ data, payouts, busy, onProcessHost }) => {
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Host', 'Booking', 'Gross', 'Platform Commission', 'TDS', 'Host Payable', 'Status', 'Action'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {hostPending.map((payout) => (
+              {rowsHost.map((payout) => (
                 <tr key={payout.payout_id}>
                   <td className="px-4 py-3 font-bold">{payout.host?.full_name || payout.host_id}</td>
                   <td className="px-4 py-3 font-mono text-xs">{payout.booking_id}</td>
@@ -600,6 +709,7 @@ const CommissionWorkspace = ({ data, payouts, busy, onProcessHost }) => {
           </table>
           {!hostPending.length && <p className="p-6 text-sm text-slate-500">No host commission/payable rows pending.</p>}
         </div>
+        <Pagination currentPage={pageHost} totalItems={hostPending.length} itemsPerPage={10} onPageChange={setPageHost} />
       </Panel>
       <Panel className="overflow-hidden">
         <div className="border-b border-slate-200 p-4">
@@ -610,7 +720,7 @@ const CommissionWorkspace = ({ data, payouts, busy, onProcessHost }) => {
           <table className="w-full min-w-[1000px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Commission', 'Broker', 'Booking', 'Property', 'Booking Amount', 'Rate', 'Commission', 'Payment Ref', 'Status'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-100">
-              {commissions.map((row) => (
+              {rowsBroker.map((row) => (
                 <tr key={row.commission_id}>
                   <td className="px-4 py-3"><p className="font-mono text-xs font-bold">{row.commission_id}</p><p className="text-xs text-slate-500">{String(row.created_at || '-').slice(0, 10)}</p></td>
                   <td className="px-4 py-3"><p className="font-bold">{row.broker?.full_name || row.broker_id}</p><p className="text-xs text-slate-500">{row.broker?.email || '-'}</p></td>
@@ -627,6 +737,7 @@ const CommissionWorkspace = ({ data, payouts, busy, onProcessHost }) => {
           </table>
           {!commissions.length && <p className="p-6 text-sm text-slate-500">No broker commission records found.</p>}
         </div>
+        <Pagination currentPage={pageBroker} totalItems={commissions.length} itemsPerPage={10} onPageChange={setPageBroker} />
       </Panel>
     </div>
   );

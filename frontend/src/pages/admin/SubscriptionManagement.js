@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, CreditCard, Edit3, PlusCircle, PauseCircle, Search, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle2, CreditCard, Edit3, PlusCircle, PauseCircle, Search, Trash2, XCircle, Download } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestConfirm, requestReason, showNotice } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestConfirm, requestReason, showNotice, Pagination } from './shared';
 
 const tabs = [
   ['all', 'All Subscriptions'],
@@ -17,6 +17,11 @@ const SubscriptionManagement = () => {
   const [tab, setTab] = useState('all');
   const [search, setSearch] = useState('');
   const [state, setState] = useState({ loading: true, error: '', subscriptions: [], plans: [], metrics: {} });
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [tab, search]);
 
   const load = useCallback(async () => {
     try {
@@ -38,6 +43,25 @@ const SubscriptionManagement = () => {
   }, [tab, search]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleExportCSV = async () => {
+    try {
+      const response = await adminPhase1API.exportAnalytics({ module: 'subscriptions' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `subscriptions_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      await showNotice({
+        title: 'Export Failed',
+        description: error.response?.data?.detail || 'Failed to export subscriptions CSV.',
+        eyebrow: 'Action Failed',
+      });
+    }
+  };
 
   const updateSubscriptionStatus = async (subscription, status) => {
     const reason = await requestReason({
@@ -110,7 +134,15 @@ const SubscriptionManagement = () => {
 
   return (
     <div>
-      <PageHeader title="Subscription Management" description="Manage host plans, trial, active, expired and cancelled subscriptions with property status sync." />
+      <PageHeader
+        title="Subscription Management"
+        description="Manage host plans, trial, active, expired and cancelled subscriptions with property status sync."
+        action={tab !== 'plans' && (
+          <button onClick={handleExportCSV} className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(5,150,105,0.22)] transition hover:bg-emerald-700">
+            <Download className="h-4 w-4" /> Export CSV
+          </button>
+        )}
+      />
       <Panel className="mb-4 p-3">
         <div className="mb-3 flex gap-2 overflow-x-auto">
           {tabs.map(([id, label]) => <button key={id} onClick={() => setTab(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${tab === id ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>)}
@@ -140,7 +172,7 @@ const SubscriptionManagement = () => {
                   <tr>{['Subscription', 'Host', 'Property', 'Plan', 'Cycle', 'Amount', 'End Date', 'Payment Ref', 'Status', 'Actions'].map((item) => <th key={item} className="px-4 py-3">{item}</th>)}</tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {rows.map((subscription) => (
+                  {rows.slice((page - 1) * 10, page * 10).map((subscription) => (
                     <tr key={subscription.subscription_id}>
                       <td className="px-4 py-3"><p className="font-black">{subscription.subscription_id}</p><p className="text-xs text-slate-500">{subscription.days_remaining ?? '-'} days left</p></td>
                       <td className="px-4 py-3"><p className="font-bold">{subscription.host?.full_name || subscription.user_id}</p><p className="text-xs text-slate-500">{subscription.host?.phone || subscription.host?.email || '-'}</p></td>
@@ -159,6 +191,7 @@ const SubscriptionManagement = () => {
               {!rows.length && <p className="p-6 text-sm text-slate-500">No subscriptions found.</p>}
             </div>
           </Panel>
+          <Pagination currentPage={page} totalItems={rows.length} itemsPerPage={10} onPageChange={setPage} />
         </div>
       )}
     </div>

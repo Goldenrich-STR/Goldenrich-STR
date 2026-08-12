@@ -317,3 +317,68 @@ export const requestInput = (options = {}) => mountDialog((cleanup) => <PromptDi
 export const requestConfirm = (options = {}) => mountDialog((cleanup) => <ConfirmDialog {...options} onResolve={cleanup} />);
 
 export const showNotice = (options = {}) => mountDialog((cleanup) => <NoticeDialog {...options} onResolve={cleanup} />);
+
+export const Pagination = ({ currentPage, totalItems, itemsPerPage = 10, onPageChange }) => {
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex justify-between items-center bg-white px-6 py-4 rounded-2xl border border-gray-100 mt-6 flex-wrap gap-4">
+      <p className="text-xs text-slate-500 font-semibold">
+        Showing <span className="font-bold text-slate-900">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+        <span className="font-bold text-slate-900">
+          {Math.min(currentPage * itemsPerPage, totalItems)}
+        </span>{' '}
+        of <span className="font-bold text-slate-900">{totalItems}</span> items
+      </p>
+      <div className="flex items-center space-x-2">
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
+          disabled={currentPage === 1}
+          className="px-3 py-2 rounded-xl border border-gray-100 text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold"
+        >
+          &larr; Prev
+        </button>
+        {Array.from({ length: totalPages }).map((_, idx) => {
+          const pageNum = idx + 1;
+          if (
+            pageNum === 1 ||
+            pageNum === totalPages ||
+            Math.abs(pageNum - currentPage) <= 1
+          ) {
+            return (
+              <button
+                key={pageNum}
+                type="button"
+                onClick={() => onPageChange(pageNum)}
+                className={`w-8 h-8 rounded-xl text-xs font-bold transition-colors ${
+                  currentPage === pageNum
+                    ? 'bg-[#2f6df6] text-white font-bold'
+                    : 'border border-gray-100 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {pageNum}
+              </button>
+            );
+          }
+          if (
+            pageNum === 2 ||
+            pageNum === totalPages - 1
+          ) {
+            return <span key={pageNum} className="text-slate-400 px-1 text-xs">...</span>;
+          }
+          return null;
+        })}
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
+          disabled={currentPage === totalPages}
+          className="px-3 py-2 rounded-xl border border-gray-100 text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs font-bold"
+        >
+          Next &rarr;
+        </button>
+      </div>
+    </div>
+  );
+};

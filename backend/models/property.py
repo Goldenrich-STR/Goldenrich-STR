@@ -137,6 +137,11 @@ class Property(BaseModel):
     subscription_id: Optional[str] = None
     subscription_status: str = "trial"  # trial, active, expired
     
+    # Boost feature
+    is_boosted: bool = False
+    boost_expires_at: Optional[str] = None # ISO date string
+    boost_rank: Optional[int] = None
+    
     # Rating
     rating: float = 0.0
     review_count: int = 0
@@ -244,3 +249,6 @@ class PropertyUpdate(BaseModel):
     subscription_id: Optional[str] = None
     blocked_dates: Optional[List[str]] = None
     is_edited: Optional[bool] = None
+    is_boosted: Optional[bool] = None
+    boost_expires_at: Optional[str] = None
+    boost_rank: Optional[int] = None

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { CalendarCheck, CreditCard, Search, XCircle } from 'lucide-react';
+import { CalendarCheck, CreditCard, Search, XCircle, Download } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestReason } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestReason, Pagination } from './shared';
 
 const statusTabs = [
   ['', 'All'],
@@ -18,6 +18,11 @@ const BookingOperations = () => {
   const [search, setSearch] = useState('');
   const [state, setState] = useState({ loading: true, error: '', bookings: [], metrics: {} });
   const [selected, setSelected] = useState({ loading: false, booking: null, error: '' });
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter, paymentStatus, search]);
 
   const load = useCallback(async () => {
     try {
@@ -30,6 +35,21 @@ const BookingOperations = () => {
   }, [statusFilter, paymentStatus, search]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleExportCSV = async () => {
+    try {
+      const response = await adminPhase1API.exportAnalytics({ module: 'bookings' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `bookings_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Failed to export bookings CSV:', error);
+    }
+  };
 
   const openBooking = async (booking) => {
     try {
@@ -59,7 +79,15 @@ const BookingOperations = () => {
 
   return (
     <div>
-      <PageHeader title="Booking Operations" description="Track booking lifecycle, payment status, host/guest/property context, cancellations, refunds and operational risk flags." />
+      <PageHeader
+        title="Booking Operations"
+        description="Track booking lifecycle, payment status, host/guest/property context, cancellations, refunds and operational risk flags."
+        action={
+          <button onClick={handleExportCSV} className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(5,150,105,0.22)] transition hover:bg-emerald-700">
+            <Download className="h-4 w-4" /> Export CSV
+          </button>
+        }
+      />
       <Panel className="mb-4 p-3">
         <div className="mb-3 flex gap-2 overflow-x-auto">
           {statusTabs.map(([id, label]) => <button key={label} onClick={() => setStatusFilter(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${statusFilter === id ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>)}
@@ -92,12 +120,13 @@ const BookingOperations = () => {
                 <table className="w-full min-w-[1180px] text-left text-sm">
                   <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Booking', 'Property', 'Guest', 'Host', 'Dates', 'Guests', 'Amount', 'Payment', 'Status', 'Actions'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
                   <tbody className="divide-y divide-slate-100">
-                    {state.bookings.map((booking) => <BookingRow key={booking.booking_id} booking={booking} onOpen={openBooking} onStatus={updateStatus} />)}
+                    {state.bookings.slice((page - 1) * 10, page * 10).map((booking) => <BookingRow key={booking.booking_id} booking={booking} onOpen={openBooking} onStatus={updateStatus} />)}
                   </tbody>
                 </table>
                 {!state.bookings.length && <p className="p-6 text-sm text-slate-500">No bookings found.</p>}
               </div>
             </Panel>
+            <Pagination currentPage={page} totalItems={state.bookings.length} itemsPerPage={10} onPageChange={setPage} />
           </div>
           <BookingDetailPanel selected={selected} onClose={() => setSelected({ loading: false, booking: null, error: '' })} onStatus={updateStatus} />
         </div>
