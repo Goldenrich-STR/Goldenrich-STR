@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  X, Send, MessageSquare, Sparkles,
+  X, MessageSquare, Sparkles,
   User, Home, Phone, Search, Layers, CreditCard, HelpCircle, FileText, ShieldCheck, DollarSign, Mail, ArrowLeft,
-  Calendar, ShieldAlert, BadgeInfo, PencilLine, AlertTriangle, Landmark, Scale, Clock, RefreshCw
+  Calendar, ShieldAlert, BadgeInfo, PencilLine, AlertTriangle, Landmark, Scale, Clock, RefreshCw, Landmark as Bank, LifeBuoy
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -28,76 +28,79 @@ const IconMap = {
   bank: Landmark,
   scale: Scale,
   clock: Clock,
-  refresh: RefreshCw
+  refresh: RefreshCw,
+  ticket: LifeBuoy
 };
 
 // Deeply Nested Dialog Flows
 const FLOWS = {
   main: {
-    message: "Welcome to X-Space360 Helpdesk! Let us know how we can assist you today. Please select your role:",
+    message: "### **Welcome to X-Space360 Helpdesk!**\nHow can we assist you today? Please select your query area below to get started:",
     options: [
       { label: "I am a Guest / Customer", next: "guest_main", icon: "user" },
       { label: "I am a Host / Property Owner", next: "host_main", icon: "home" },
-      { label: "Contact Support Desk", next: "support", icon: "phone" }
+      { label: "Grievance & Support Desk", next: "support", icon: "phone" }
     ]
   },
   
   // ==================== GUEST FLOWS ====================
   guest_main: {
-    message: "### **Guest Support Menu**\nHow can we help you with finding, booking, or managing spaces?",
+    message: "### **Guest Support Menu**\nExplore topics related to finding, booking, and managing your stays on X-Space360:",
     options: [
       { label: "How to Browse & Book?", next: "guest_booking", icon: "search" },
       { label: "Property Categories & Rules", next: "guest_categories", icon: "layers" },
-      { label: "Payment & Refund Policy", next: "guest_refunds", icon: "creditCard" },
+      { label: "Payments, Cancellations & Refunds", next: "guest_refunds", icon: "creditCard" },
+      { label: "Meet our CRM Team (Brokers/RM/BM)", next: "guest_crm_info", icon: "shield" },
+      { label: "How to Raise a Support Ticket?", next: "guest_tickets", icon: "ticket" },
       { label: "Back to Main Menu", next: "main", icon: "arrowLeft" }
     ]
   },
   guest_booking: {
-    message: "### **How to Book a Space**\nBooking on X-Space360 is simple:\n\n1. Use the **search bar** to choose city, check-in/out dates, and guest count.\n2. Filter by Category (Residential, Commercial, or Event Venue).\n3. Click on a property to see pricing, rules, and amenities.\n4. Click **Book Now** to submit a booking request. \n5. Once approved, pay securely via Razorpay.",
+    message: "### **How to Book a Space**\nBooking is secure and straightforward:\n\n1. **Search**: Enter the city, dates, and number of guests on the search bar.\n2. **Filter**: Filter by Category (Residential, Commercial, or Event Venue) and property types.\n3. **Request**: Click **Book Now** to submit a booking request. \n4. **Approval**: The host has **24 hours** to approve your request. No charge is made until approved.\n5. **Payment**: Once approved, complete payment securely via Razorpay to confirm.",
     options: [
-      { label: "How does approval work?", next: "guest_booking_approval", icon: "clock" },
+      { label: "Instant Booking vs Request", next: "guest_booking_instant", icon: "sparkles" },
       { label: "Can I reschedule dates?", next: "guest_booking_reschedule", icon: "calendar" },
       { label: "Back to Guest Menu", next: "guest_main", icon: "arrowLeft" }
     ]
   },
-  guest_booking_approval: {
-    message: "### **Booking Approval Policy**\n* **Host Approval**: Every booking request is sent to the host. The host must approve or reject it within **24 hours**.\n* **Expirations**: If a host fails to respond in 24 hours, the request expires automatically.\n* **No Advance Fee**: You are only charged *after* the host approves the request.",
+  guest_booking_instant: {
+    message: "### **Instant Booking vs Request**\n* **Instant Booking**: Properties with a orange **Zap / Lightning icon** are active for instant booking. You pay immediately, and the booking is confirmed instantly without host approval.\n* **Booking Request**: Standard properties require the host to confirm availability. The request is active for **24 hours**. You are only billed after host approval.",
     options: [
       { label: "Can I reschedule dates?", next: "guest_booking_reschedule", icon: "calendar" },
       { label: "Back to Guest Menu", next: "guest_main", icon: "arrowLeft" }
     ]
   },
   guest_booking_reschedule: {
-    message: "### **Rescheduling & Modifications**\n* **Before Host Approval**: You can cancel and submit a new request with updated dates anytime.\n* **After Payment**: Modifications require host consent. If the host agrees, our support team can adjust dates on the backend.\n* **Pricing Difference**: If the new dates have higher weekend rates, the difference must be paid via a secure payment link.",
+    message: "### **Rescheduling Policy**\n* **Before Payment**: Simply cancel the booking request and submit a new one with your updated dates.\n* **After Payment**: Date modifications require the host's consent. Please contact your assigned **Relationship Manager (RM)** or support desk. If approved, we will adjust the reservation on the backend.",
     options: [
-      { label: "How does approval work?", next: "guest_booking_approval", icon: "clock" },
+      { label: "Instant Booking vs Request", next: "guest_booking_instant", icon: "sparkles" },
       { label: "Back to Guest Menu", next: "guest_main", icon: "arrowLeft" }
     ]
   },
   guest_categories: {
-    message: "### **Categories & House Rules**\nWe list three premium categories:\n\n1. **Residential Stays**: Villas, apartments, and farmhouses.\n2. **Commercial Spaces**: Co-working desks, private cabins, and meeting rooms.\n3. **Event Venues**: Open lawns, banquet halls, and garden lawns.\n\nChoose below to learn about specific rules:",
+    message: "### **Property Categories & Guidelines**\nWe list three premium categories:\n\n1. **Residential Stays**: Villas, Bungalows, Apartments, Studios, Private Houses, and Farmhouses.\n2. **Commercial Spaces**: Private Offices, Co-working Desks, Meeting Rooms, and Conference Rooms.\n3. **Event Venues**: Banquet Halls, Hotel Ballrooms, and Wedding Venues.\n\nChoose below to learn about specific rules:",
     options: [
       { label: "Rules for Events & Shoots", next: "guest_event_rules", icon: "scale" },
-      { label: "Discounts on Workspaces", next: "guest_workspace_discounts", icon: "dollar" },
+      { label: "Long-term Workspace Discounts", next: "guest_workspace_discounts", icon: "dollar" },
       { label: "Back to Guest Menu", next: "guest_main", icon: "arrowLeft" }
     ]
   },
   guest_event_rules: {
-    message: "### **Event & Shoot Rules**\n* **Guest Limit**: Every venue has a strict maximum capacity. Exceeding it will incur heavy penalties.\n* **Music & Noise**: Outdoor music/DJ must stop by **10:00 PM** in accordance with local regulations.\n* **Catering/Decor**: You can bring external caterers and decorators only if pre-approved by the host.",
+    message: "### **Event & Shoot Rules**\n* **Capacity Limit**: Exceeding the maximum capacity of a venue without permission will incur extra guest fees.\n* **Music & Noise**: Loud music, sound systems, and DJs must stop by **10:00 PM** in accordance with local regulations.\n* **Decor/Catering**: External caterers and decorators are allowed only after prior written approval from the host.",
     options: [
-      { label: "Discounts on Workspaces", next: "guest_workspace_discounts", icon: "dollar" },
+      { label: "Long-term Workspace Discounts", next: "guest_workspace_discounts", icon: "dollar" },
       { label: "Back to Guest Menu", next: "guest_main", icon: "arrowLeft" }
     ]
   },
   guest_workspace_discounts: {
-    message: "### **Workspace Long-term Discounts**\n* **Weekly Desks**: Save **10-15%** on booking co-working desks or cabins for 7+ consecutive days.\n* **Monthly Rates**: Save up to **30%** on bookings of 30+ days.\n* **Corporate Rates**: Contact [customer.support@x-space360.com](mailto:customer.support@x-space360.com) for special bulk discounts for teams.",
+    message: "### **Workspace Long-term Discounts**\n* **Weekly Stays**: Save **10-15%** on booking co-working desks or private cabins for 7+ consecutive days.\n* **Monthly Stays**: Save up to **30%** on bookings of 30+ days.\n* **Corporate Rates**: Contact [customer.support@x-space360.com](mailto:customer.support@x-space360.com) for special bulk discounts for teams.",
     options: [
       { label: "Rules for Events & Shoots", next: "guest_event_rules", icon: "scale" },
       { label: "Back to Guest Menu", next: "guest_main", icon: "arrowLeft" }
     ]
   },
   guest_refunds: {
-    message: "### **Payments & Refunds**\nAll transactions are securely processed via Razorpay:\n\n* **Service Fee**: A **10% Premium Service Fee** is added to the base booking price at checkout.\n* **Cancellation & Refund Rules**:\n  * **100% Refund**: Cancel up to 48 hours before check-in (Premium Service Fee is non-refundable).\n  * **50% Refund**: Cancel between 24-48 hours before check-in.\n  * **No Refund**: Cancel less than 24 hours prior to check-in.",
+    message: "### **Payments & Refunds**\nAll transactions are processed securely via Razorpay:\n\n* **Premium Service Fee**: A **10% Service Fee** is added at checkout (non-refundable for voluntary cancellations).\n* **Cancellation & Refund Windows**:\n  * **100% Refund**: Cancel up to 48 hours before check-in.\n  * **50% Refund**: Cancel between 24-48 hours before check-in.\n  * **No Refund**: Cancel less than 24 hours prior to check-in.",
     options: [
       { label: "How to claim a refund?", next: "guest_refund_claim", icon: "refresh" },
       { label: "Security Deposit refunds", next: "guest_security_refund", icon: "shieldAlert" },
@@ -105,33 +108,46 @@ const FLOWS = {
     ]
   },
   guest_refund_claim: {
-    message: "### **How to Claim Your Refund**\n1. Go to **Dashboard** $\\rightarrow$ **My Bookings**.\n2. Locate your booking and click **Cancel Booking**.\n3. The system will calculate your refund percentage based on the cancellation window.\n4. Approved refunds are initiated immediately and take **5-7 business days** to reflect in your source payment account.",
+    message: "### **How to Claim Your Refund**\n1. Go to **Dashboard** $\\rightarrow$ **My Bookings**.\n2. Locate your booking and click **Cancel Booking**.\n3. The system will calculate your eligible refund percentage based on the cancellation window.\n4. Approved refunds are initiated immediately and take **5-7 business days** to reflect in your bank account.",
     options: [
       { label: "Security Deposit refunds", next: "guest_security_refund", icon: "shieldAlert" },
       { label: "Back to Guest Menu", next: "guest_main", icon: "arrowLeft" }
     ]
   },
   guest_security_refund: {
-    message: "### **Security Deposit Refund Policy**\n* **Collection**: Hosts may charge a security deposit for high-value properties (villas/banquets) to cover potential damage.\n* **Refund Timing**: The deposit is fully refunded by the host within **48 hours of check-out** after inspection.\n* **Disputes**: In case of damage claims, hosts must submit photo evidence to X-Space360 within 24 hours.",
+    message: "### **Security Deposit Refund Policy**\n* **Collection**: Hosts may charge a security deposit for high-value properties to cover potential damage.\n* **Refund Timing**: The deposit is fully refunded by the host within **48 hours of check-out** after property inspection.\n* **Disputes**: In case of damage claims, hosts must submit photos and proof to X-Space360 within 24 hours.",
     options: [
       { label: "How to claim a refund?", next: "guest_refund_claim", icon: "refresh" },
+      { label: "Back to Guest Menu", next: "guest_main", icon: "arrowLeft" }
+    ]
+  },
+  guest_crm_info: {
+    message: "### **Our CRM Team (Brokers/RM/BM)**\nTo deliver a premium experience, X-Space360 employs a dedicated management team:\n\n* **Broker**: Local partner assigned to inspect properties, assist with site visits, and coordinate listing verify.\n* **Relationship Manager (RM)**: Your dedicated point of contact for issues related to check-in assistance, booking edits, and host disputes.\n* **Branch Manager (BM)**: The regional head supervising all RM and Broker activities, ensuring policy compliance.",
+    options: [
+      { label: "Back to Guest Menu", next: "guest_main", icon: "arrowLeft" }
+    ]
+  },
+  guest_tickets: {
+    message: "### **Raising a Support Ticket**\nIf you face an issue during your stay, you can raise an official support ticket:\n\n1. Login to your account.\n2. Go to **Dashboard** $\\rightarrow$ **Support Tickets**.\n3. Click **Raise Support Ticket**.\n4. Enter a subject, description, and category.\n5. Our system automatically assigns a Relationship Manager (RM) who will contact you within **1 hour**.",
+    options: [
       { label: "Back to Guest Menu", next: "guest_main", icon: "arrowLeft" }
     ]
   },
 
   // ==================== HOST FLOWS ====================
   host_main: {
-    message: "### **Host Support Menu**\nWelcome Host! How can we help you manage your properties, payments, or account verification?",
+    message: "### **Host Support Menu**\nWelcome Host Partner! How can we help you manage your properties, bookings, or payouts?",
     options: [
       { label: "Host Onboarding & KYC", next: "host_onboarding", icon: "shield" },
-      { label: "Listing a Space & Map Pinning", next: "host_listing", icon: "layers" },
+      { label: "Listing a Space & Calendar Blockouts", next: "host_listing", icon: "layers" },
       { label: "Subscription Plans & Free Trial", next: "host_subscriptions", icon: "dollar" },
-      { label: "Payouts, Earnings & Taxes", next: "host_payouts", icon: "creditCard" },
+      { label: "Payouts, Earnings & 0% Commission", next: "host_payouts", icon: "creditCard" },
+      { label: "Host Support Team & Managers", next: "host_crm_info", icon: "badgeInfo" },
       { label: "Back to Main Menu", next: "main", icon: "arrowLeft" }
     ]
   },
   host_onboarding: {
-    message: "### **Host Registration & KYC Verification**\nTo list your property, you need a verified host account:\n\n1. Register as a host on the [Registration Page](/register).\n2. Head to your **Host Dashboard** $\\rightarrow$ **Verification** tab.\n3. Upload clear copies of Aadhaar, PAN, Address Proof, and Shop Act.\n4. Admin will review within 24-48 hours.",
+    message: "### **Host Onboarding & KYC Verification**\nEvery listing goes live after account verification:\n\n1. Register as a Host on the [Registration Page](/register).\n2. Navigate to **Host Dashboard** $\\rightarrow$ **Verification** tab.\n3. Upload clear copies of: Aadhaar, PAN, Address Proof, and Municipal NOC/Shop Act.\n4. Admin reviews and approves KYC within 24-48 hours.",
     options: [
       { label: "Why is Shop Act mandatory?", next: "host_shop_act", icon: "badgeInfo" },
       { label: "KYC Rejection reasons", next: "host_kyc_rejections", icon: "shieldAlert" },
@@ -139,65 +155,47 @@ const FLOWS = {
     ]
   },
   host_shop_act: {
-    message: "### **Shop Act License Requirement**\n* **Why is it required?**: Under local commercial laws in Maharashtra and major states, commercial leasing/renting of event venues or short-term properties requires a local municipal registration.\n* **Alternatives**: If you do not have a Shop Act, you can upload a **GST registration certificate** or a **NOC from the local Gram Panchayat/Municipality**.",
+    message: "### **Shop Act License Requirement**\n* **Why is it required?**: Under local commercial laws, commercial leasing of event venues or short-term stays requires registration.\n* **Alternatives**: If you do not have a Shop Act, you can upload a **GST registration certificate**, **Property Tax receipt (commercial)**, or **NOC from the local Gram Panchayat/Municipality**.",
     options: [
       { label: "KYC Rejection reasons", next: "host_kyc_rejections", icon: "shieldAlert" },
       { label: "Back to Host Menu", next: "host_main", icon: "arrowLeft" }
     ]
   },
   host_kyc_rejections: {
-    message: "### **Common KYC Rejection Reasons**\n1. **Blurred Images**: Upload high-resolution, readable documents.\n2. **Name Mismatch**: The name on the bank account must match the Aadhaar and PAN.\n3. **Incorrect Address Proof**: Electricity bill or deed must match the listing address.\n4. **Expired Licenses**: Ensure municipal NOC or Shop Act is current.",
+    message: "### **Common KYC Rejection Reasons**\n1. **Blurred Images**: Re-upload clear, readable document files.\n2. **Name Mismatch**: The bank account owner name must match the Aadhaar and PAN.\n3. **Address Proof Mismatch**: Utility bill or lease deed must match the listing address.\n4. **Expired Document**: Ensure municipal licenses are current.",
     options: [
       { label: "Why is Shop Act mandatory?", next: "host_shop_act", icon: "badgeInfo" },
       { label: "Back to Host Menu", next: "host_main", icon: "arrowLeft" }
     ]
   },
   host_listing: {
-    message: "### **How to List a Property**\nOnce approved as a host, follow these steps to list your property:\n\n1. Go to your Dashboard and click **+ List New Property**.\n2. Choose Category (Residential, Commercial, or Event Venue).\n3. Add basic pricing, security deposit, and description.\n4. Select your amenities and upload high-resolution images.\n5. Select your location on our Leaflet Map.",
-    options: [
-      { label: "Listing Guidelines", next: "host_listing_guidelines", icon: "fileText" },
-      { label: "How to edit active listings?", next: "host_listing_edit", icon: "pencil" },
-      { label: "Back to Host Menu", next: "host_main", icon: "arrowLeft" }
-    ]
-  },
-  host_listing_guidelines: {
-    message: "### **Property Listing Guidelines**\n* **Photos**: Upload at least **5 high-resolution photos** showing the interior, exterior, and bathroom. Blurred photos will be rejected.\n* **Accuracy**: Set the map marker precisely. Inaccurate locations can lead to cancellation disputes.\n* **Description**: Be detailed about house rules, check-in/out times, and extra guest charges.",
+    message: "### **Listing & Calendar Management**\nManaging your listings is quick and simple:\n\n* **Listing a Space**: Head to dashboard, click **+ List New Property**, set pricing, rules, upload photos, and pinpoint your location on the map.\n* **Calendar Blockouts**: Go to **Calendar** $\\rightarrow$ select dates $\\rightarrow$ click **Block Selected Dates** to prevent guest bookings during maintenance or personal use.\n* **Instant Booking**: Toggle this on to allow guests to book instantly without waiting for your manual approval.",
     options: [
       { label: "How to edit active listings?", next: "host_listing_edit", icon: "pencil" },
       { label: "Back to Host Menu", next: "host_main", icon: "arrowLeft" }
     ]
   },
   host_listing_edit: {
-    message: "### **Editing Active Listings**\n* **Simple Changes**: Go to **My Listings** $\\rightarrow$ **Edit** to modify descriptions, change daily rates, or toggle amenities instantly.\n* **Calendar Blockout**: Use the Calendar tab to block out specific dates when your property is unavailable (e.g. for maintenance or personal use).\n* **Map Location**: Modifying the map coordinates requires re-approval by the admin.",
+    message: "### **Editing Active Listings**\n* **Instant Edits**: Go to **My Listings** $\\rightarrow$ click **Edit** to modify descriptions, change base prices, or toggle amenities instantly.\n* **Address changes**: Changing the map coordinates or street address will temporarily return the listing to a pending verification status for admin check.",
     options: [
-      { label: "Listing Guidelines", next: "host_listing_guidelines", icon: "fileText" },
       { label: "Back to Host Menu", next: "host_main", icon: "arrowLeft" }
     ]
   },
   host_subscriptions: {
-    message: "### **Hosting Fees & Subscription Plans**\n* **Promotional Offer**: Listing your property and hosting on X-Space360 is **completely FREE until December 2026**! No subscription or membership fees apply during this launch phase.\n* **Post-Promo BHK Plans**: Standard BHK-specific plans (₹999/mo for Studio/1BHK, ₹1,999/mo for 2/3BHK) will only commence starting January 2027.",
+    message: "### **Hosting Fees & Subscription Plans**\n* **Promotional Offer**: Hosting on X-Space360 is **completely FREE until December 2026**! No subscription or registration fees apply.\n* **Post-Promo BHK Plans**: Standard BHK-specific plans (₹999/mo for Studio/1BHK, ₹1,999/mo for 2/3BHK) will commence starting January 2027.",
     options: [
       { label: "Subscription renewals post-promo", next: "host_sub_renewals", icon: "alert" },
-      { label: "Upgrading/Downgrading plans", next: "host_sub_changes", icon: "pencil" },
       { label: "Back to Host Menu", next: "host_main", icon: "arrowLeft" }
     ]
   },
   host_sub_renewals: {
-    message: "### **Subscription Renewal (Post-Promo)**\n* **Auto-Billing**: Subscriptions will auto-renew monthly via stored Razorpay credentials once active in 2027.\n* **Grace Period**: If a renewal payment fails, you receive a **3-day grace period** to clear dues before listings are hidden.",
+    message: "### **Subscription Renewal (Post-Promo)**\n* **Auto-Billing**: Subscriptions will auto-renew monthly via stored Razorpay credentials once active in 2027.\n* **Grace Period**: If renewal fails, you receive a **3-day grace period** to clear dues before listings are hidden.",
     options: [
-      { label: "Upgrading/Downgrading plans", next: "host_sub_changes", icon: "pencil" },
-      { label: "Back to Host Menu", next: "host_main", icon: "arrowLeft" }
-    ]
-  },
-  host_sub_changes: {
-    message: "### **Upgrading/Downgrading BHK Plans**\n* **Upgrades**: Calculate pro-rata difference for the remaining active days in the current cycle.\n* **Downgrades**: Active from the next monthly billing cycle.",
-    options: [
-      { label: "Subscription renewals post-promo", next: "host_sub_renewals", icon: "alert" },
       { label: "Back to Host Menu", next: "host_main", icon: "arrowLeft" }
     ]
   },
   host_payouts: {
-    message: "### **Payouts & Platform Commission**\n* **Zero Host Commission**: X-Space360 does **not deduct any platform fees or commissions** from your listed prices. You receive **100%** of your property's daily/nightly base rates!\n* **Guest Booking Fee**: A **10% Premium Service Fee** is charged directly to the Guest / Customer during checkout.\n* **Schedule**: Transferred directly to your verified bank account within **3 business days** after guest check-out.\n* **Government TDS**: 1% TDS is deducted under Section 194O of the IT Act (claimable in your annual ITR).",
+    message: "### **Payouts & Platform Commission**\n* **0% Host Commission**: X-Space360 does **not deduct any platform fees or commission** from your base rate. You receive **100%** of your listed price!\n* **Schedule**: Payouts are transferred to your verified bank account within **3 business days** after guest check-out.\n* **Government TDS**: 1% TDS is deducted under Section 194O of the IT Act (claimable in your annual ITR).",
     options: [
       { label: "GST & Tax Regulations", next: "host_tax_details", icon: "bank" },
       { label: "Delayed Payout Troubleshooting", next: "host_delayed_payout", icon: "alert" },
@@ -205,53 +203,33 @@ const FLOWS = {
     ]
   },
   host_tax_details: {
-    message: "### **GST & Indian Tax Regulations**\n* **TDS under 194O**: As an e-commerce platform, we deduct **1% TDS** on the gross booking amount and file it against your PAN. You can claim this refund during your ITR filing.\n* **GST**: Hosts are responsible for filing GST on renting commercial/residential properties if their annual turnover exceeds the threshold (₹20 Lakhs).",
+    message: "### **GST & Indian Tax Regulations**\n* **TDS under 194O**: As an e-commerce platform, we deduct **1% TDS** on the gross booking amount and file it against your PAN. You can claim this refund during your annual tax filing.\n* **GST**: Hosts are responsible for filing GST on renting commercial/residential properties if their annual turnover exceeds the threshold.",
     options: [
       { label: "Delayed Payout Troubleshooting", next: "host_delayed_payout", icon: "alert" },
       { label: "Back to Host Menu", next: "host_main", icon: "arrowLeft" }
     ]
   },
   host_delayed_payout: {
-    message: "### **Delayed Payout Troubleshooting**\nIf your payout has not arrived in 3 business days, check the following:\n\n1. **Bank Verification**: Ensure your IFSC code and account number are correct on your dashboard.\n2. **Bank Holidays**: Payouts are not processed on Saturdays, Sundays, and national holidays.\n3. **Guest Disputes**: If a guest files a major dispute/claim regarding amenities, payouts may be temporarily held until resolved.",
+    message: "### **Delayed Payout Troubleshooting**\nIf your payout has not arrived in 3 business days, check the following:\n\n1. **Bank Details**: Ensure your IFSC code and account number are correct on your dashboard.\n2. **Bank Holidays**: Payouts are not processed on Saturdays, Sundays, and national holidays.\n3. **Guest Disputes**: If a guest files a dispute regarding amenities, payouts may be temporarily held until resolved.",
     options: [
       { label: "GST & Tax Regulations", next: "host_tax_details", icon: "bank" },
+      { label: "Back to Host Menu", next: "host_main", icon: "arrowLeft" }
+    ]
+  },
+  host_crm_info: {
+    message: "### **Meet Your Management Team**\nTo assist hosts in managing listings, X-Space360 assigns a dedicated team:\n\n* **Local Broker**: Conducts physical verification, photographs the property, and answers local guest queries.\n* **Relationship Manager (RM)**: Helps hosts resolve booking conflicts, payout delays, and guest complaints.\n* **Branch Manager (BM)**: The regional leader supervising both Brokers and RMs, ensuring top-tier service.",
+    options: [
       { label: "Back to Host Menu", next: "host_main", icon: "arrowLeft" }
     ]
   },
 
   // ==================== SUPPORT FLOW ====================
   support: {
-    message: "### **Contact X-Space360 Helpdesk**\nIf you have any specific query or need direct escalation, contact our team:\n\n* **Helpline**: [+91 8484826247](tel:+918484826247) (9 AM - 7 PM)\n* **Email Support**: [customer.support@x-space360.com](mailto:customer.support@x-space360.com)\n* **Grievance Desk**: Escalations to [customer.support@x-space360.com](mailto:customer.support@x-space360.com)",
+    message: "### **Contact X-Space360 Helpdesk**\nIf you need direct escalation or phone assistance, contact our support team:\n\n* **Helpline**: [+91 8484826247](tel:+918484826247) (9 AM - 7 PM)\n* **Email Support**: [customer.support@x-space360.com](mailto:customer.support@x-space360.com)\n* **Grievance Desk**: Email to [customer.support@x-space360.com](mailto:customer.support@x-space360.com) with booking ID.",
     options: [
       { label: "Main Menu", next: "main", icon: "home" }
     ]
   }
-};
-
-const getLocalResponse = (query) => {
-  const q = query.toLowerCase();
-  
-  if (q.includes('onboard') || q.includes('step') || q.includes('register') || q.includes('signup') || q.includes('kyc') || q.includes('document') || q.includes('aadhaar') || q.includes('pan') || q.includes('license')) {
-    return FLOWS.host_onboarding.message;
-  }
-  
-  if (q.includes('list') || q.includes('add') || q.includes('property') || q.includes('space') || q.includes('villa') || q.includes('kashi') || q.includes('karychi') || q.includes('host')) {
-    return FLOWS.host_listing.message;
-  }
-  
-  if (q.includes('sub') || q.includes('plan') || q.includes('price') || q.includes('fee') || q.includes('charge') || q.includes('pay') || q.includes('cost')) {
-    return FLOWS.host_subscriptions.message;
-  }
-  
-  if (q.includes('refund') || q.includes('cancel') || q.includes('book') || q.includes('policy')) {
-    return FLOWS.guest_refunds.message;
-  }
-  
-  if (q.includes('contact') || q.includes('support') || q.includes('help') || q.includes('phone') || q.includes('email') || q.includes('officer') || q.includes('nodal') || q.includes('number') || q.includes('call')) {
-    return FLOWS.support.message;
-  }
-  
-  return `### **X-Space360 Assistant**\nI'm here to help you. Since I couldn't find a direct match for your question, you can choose one of the quick links below:\n\n* **Host Registration & Verification Steps**\n* **How to List a Property**\n* **Subscription Pricing & Plans**\n* **Refund and Booking Cancellation Policy**\n* **Contact Support & Grievances**\n\nOr try rephrasing your question using simple keywords like *onboard*, *list*, *plans*, *refund*, or *contact*.`;
 };
 
 const ChatbotWidget = () => {
@@ -263,7 +241,6 @@ const ChatbotWidget = () => {
       options: FLOWS.main.options 
     }
   ]);
-  const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -305,28 +282,14 @@ const ChatbotWidget = () => {
     }, 600);
   };
 
-  const sendQuery = (queryText) => {
-    if (!queryText.trim()) return;
-
-    const newMessages = [...messages, { role: 'user', content: queryText }];
-    setMessages(newMessages);
-    setIsTyping(true);
-
-    setTimeout(() => {
-      const fallbackReply = getLocalResponse(queryText);
-      setMessages([
-        ...newMessages, 
-        { 
-          role: 'model', 
-          content: fallbackReply, 
-          options: [
-            { label: "Go to Main Menu", next: "main", icon: "home" },
-            { label: "Contact Support Desk", next: "support", icon: "phone" }
-          ]
-        }
-      ]);
-      setIsTyping(false);
-    }, 800);
+  const handleRestart = () => {
+    setMessages([
+      { 
+        role: 'model', 
+        content: FLOWS.main.message, 
+        options: FLOWS.main.options 
+      }
+    ]);
   };
 
   return (
@@ -392,8 +355,8 @@ const ChatbotWidget = () => {
                             className="w-full text-left px-4 py-2.5 bg-white hover:bg-terracotta hover:text-white text-charcoal font-bold text-xs rounded-xl border border-[#EAE3D2] transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between shadow-sm"
                           >
                             <div className="flex items-center space-x-2">
-                              <IconComponent className="w-4 h-4 shrink-0 transition-colors duration-200" />
-                              <span>{opt.label}</span>
+                               <IconComponent className="w-4 h-4 shrink-0 transition-colors duration-200" />
+                               <span>{opt.label}</span>
                             </div>
                             <span className="text-gray-400 font-normal transition-colors hover:text-white">→</span>
                           </button>
@@ -420,34 +383,27 @@ const ChatbotWidget = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Bar */}
-          <div className="p-4 bg-white border-t border-gray-100 flex flex-col space-y-2 z-10 shadow-inner">
-            <form 
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!input.trim() || isTyping) return;
-                sendQuery(input);
-                setInput('');
-              }}
-              className="flex items-center space-x-2"
-            >
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your question..."
-                disabled={isTyping}
-                className="flex-1 px-4 py-2.5 bg-gray-100/50 border border-gray-200 rounded-xl text-sm font-semibold text-charcoal focus:outline-none focus:ring-1 focus:ring-terracotta disabled:opacity-50"
-              />
+          {/* Footer Navigation Bar */}
+          <div className="p-4 bg-white border-t border-gray-100 flex flex-col space-y-3 z-10 shadow-inner">
+            <div className="flex items-center justify-between gap-3">
               <button
-                type="submit"
-                disabled={isTyping || !input.trim()}
-                className="p-2.5 bg-[#1E1E1E] hover:bg-black text-white font-bold rounded-xl transition-all duration-200 disabled:opacity-50 cursor-pointer shadow-md flex items-center justify-center border-none"
+                onClick={handleRestart}
+                disabled={isTyping}
+                className="flex-1 py-2 px-3 bg-gray-100 hover:bg-[#1E1E1E] text-charcoal hover:text-white font-bold text-xs rounded-xl transition duration-200 cursor-pointer disabled:opacity-50 border border-gray-200 flex items-center justify-center gap-1.5"
               >
-                <Send className="w-4 h-4 text-white" />
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Restart Assistant</span>
               </button>
-            </form>
-            <div className="text-center mt-1">
+              <button
+                onClick={() => handleOptionClick({ label: "Contact Support Desk", next: "support" })}
+                disabled={isTyping}
+                className="flex-1 py-2 px-3 bg-terracotta/10 hover:bg-terracotta text-terracotta hover:text-white font-bold text-xs rounded-xl transition duration-200 cursor-pointer disabled:opacity-50 border border-terracotta/20 flex items-center justify-center gap-1.5"
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span>Call Support</span>
+              </button>
+            </div>
+            <div className="text-center">
               <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Powered by X-Space360 Helpdesk</span>
             </div>
           </div>

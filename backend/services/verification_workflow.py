@@ -469,6 +469,14 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
             or property_data.get("property_name")
             or "Your property"
         )
+        location = ", ".join(
+            part
+            for part in [
+                property_data.get("city") or "",
+                property_data.get("state") or "",
+            ]
+            if part
+        )
         await _notify(
             db,
             property_data["owner_id"],
@@ -478,6 +486,8 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
             {
                 "property_id": property_data["property_id"],
                 "property_title": property_title,
+                "location": location or "Location not specified",
+                "status": "Live",
                 "approval_date": approval_date,
                 "published_date": approval_date,
                 "action_url": dashboard_url,

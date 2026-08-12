@@ -4206,6 +4206,10 @@ const InvoiceModal = ({ transaction, onClose }) => {
 
   if (t.type === 'booking_payment') {
     const bookingObj = t.booking || {};
+    const bookingBaseAmount = Number(invoiceBreakdown.base_amount ?? invoiceBreakdown.gross ?? invoiceBreakdown.plan_fee ?? baseAmount);
+    const bookingTaxableAmount = Number(invoiceBreakdown.taxable_amount ?? Math.max(0, amountINR - Number(invoiceBreakdown.gst_amount || 0)));
+    const derivedExtraTotal = Math.max(0, bookingTaxableAmount - bookingBaseAmount + discountAmount);
+    const bookingExtraTotal = Math.max(Number(invoiceBreakdown.extra_charges_total || 0), derivedExtraTotal);
     const effectiveProperty = {
       ...(bookingObj.property || {}),
       ...(property || {}),
@@ -4222,15 +4226,21 @@ const InvoiceModal = ({ transaction, onClose }) => {
       created_at: bookingObj.created_at || t.created_at,
       total_amount: amountINR,
       paid_amount: amountINR,
-      total_extra_charges: Math.max(0, amountINR - baseAmount + discountAmount),
+      total_extra_charges: bookingExtraTotal,
+      extra_charges_total: bookingExtraTotal,
+      extra_charges: invoiceBreakdown.extra_charges || {},
       discount_amount: discountAmount,
+      gst_amount: invoiceBreakdown.gst_amount,
+      cgst: invoiceBreakdown.cgst,
+      sgst: invoiceBreakdown.sgst,
+      igst: invoiceBreakdown.igst,
       razorpay_payment_id: t.razorpay_payment_id || bookingObj.razorpay_payment_id,
       upi_transaction_id: t.upi_transaction_id || bookingObj.upi_transaction_id,
       payment_id: t.razorpay_payment_id || t.upi_transaction_id || t.transaction_id,
-      customer_base_amount: baseAmount,
+      customer_base_amount: bookingBaseAmount,
       property: effectiveProperty,
       user: effectiveUser,
-    }, effectiveProperty, effectiveUser, { hideToolbar: true });
+    }, effectiveProperty, effectiveUser, { hideToolbar: true, showExtraChargeBreakdown: true });
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto print:p-0 print:bg-white" data-testid="invoice-modal">
         <div className="bg-white rounded-xl w-full max-w-6xl border border-gray-100 shadow-elevated p-5 relative">

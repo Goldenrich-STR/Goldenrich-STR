@@ -1987,13 +1987,13 @@ const CollectionsSection = ({
               className="flex snap-x gap-5 overflow-x-auto pb-5 scroll-smooth no-scrollbar"
             >
               {filteredCollections.map((item, index) => {
-                const price = Number(
+                const price = Math.round(Number(
                   item.display_price_per_night ??
                   item.customer_price_per_night ??
                   item.price_per_night ??
                   item.price ??
                   0
-                );
+                ));
                 return (
                   <article
                     key={item.property_id || `${item.title}-${index}`}
@@ -2731,7 +2731,7 @@ const LandingPage = () => {
                   </p>
                   
                   <div className="mt-auto flex items-baseline">
-                    <span className="font-bold text-sm md:text-base text-charcoal">₹{Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0).toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-sm md:text-base text-charcoal">₹{Math.round(Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0)).toLocaleString('en-IN')}</span>
                     <span className="text-gray-500 text-[10px] md:text-xs ml-1 font-normal">
                       &nbsp;/ {item.category === 'commercial' || item.category === 'event_venue'
                         ? (item.pricing_cycle === 'hourly' ? 'hour' : item.pricing_cycle === 'weekly' ? 'week' : item.pricing_cycle === 'monthly' ? 'month' : 'day')
@@ -4049,7 +4049,7 @@ const LandingPage = () => {
                                 {formatPropertyTypeLabel(item.property_type || item.type) || 'Villa'} in {item.address ? `${item.address}, ` : ''}{item.city}
                               </p>
                               <div className="flex items-baseline gap-1">
-                                <span className="font-black text-sm text-charcoal">₹{Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0).toLocaleString('en-IN')}</span>
+                                <span className="font-black text-sm text-charcoal">₹{Math.round(Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0)).toLocaleString('en-IN')}</span>
                                 <span className="text-[10px] text-gray-500 font-semibold">/ night</span>
                               </div>
                             </div>
@@ -4687,3 +4687,4 @@ const LandingPage = () => {
 };
 
 export default LandingPage;
+

@@ -14,6 +14,7 @@ class MSG91Service:
         self.sender_id = os.getenv("MSG91_SENDER_ID", "PROPNT")
         self.sms_api_url = "https://api.msg91.com/api/v5/flow/"
         self.whatsapp_api_url = "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/"
+        self.whatsapp_integrated_number = os.getenv("MSG91_WHATSAPP_INTEGRATED_NUMBER", "").strip()
         
         demo_mode = os.getenv("MSG91_DEMO_MODE", "").strip().lower()
         demo_values = {
@@ -172,12 +173,18 @@ class MSG91Service:
                 }
             
             # Real MSG91 WhatsApp API call
+            if not self.whatsapp_integrated_number:
+                return {
+                    "success": False,
+                    "error": "MSG91_WHATSAPP_INTEGRATED_NUMBER is not configured",
+                }
+
             # Format phone number
             clean_phone = phone.replace("+", "").replace(" ", "")
             
             # Prepare payload
             payload = {
-                "integrated_number": "919876543210",  # Your WhatsApp Business number
+                "integrated_number": self.whatsapp_integrated_number,
                 "content_type": "template",
                 "payload": {
                     "to": clean_phone,
@@ -235,6 +242,88 @@ class MSG91Service:
             return {
                 "success": False,
                 "error": str(e)
+            }
+
+    def send_whatsapp_template(self, phone: str, template_name: str, parameters: list[str]) -> Dict:
+        """Send WhatsApp template with numbered body variables via MSG91."""
+        try:
+            if self.is_demo_mode:
+                logger.info(
+                    f"[DEMO] WhatsApp template to {phone}: template={template_name}, parameters={parameters}"
+                )
+                return {
+                    "success": True,
+                    "message_id": f"demo_wa_template_{int(datetime.now(timezone.utc).timestamp())}",
+                    "demo_mode": True,
+                }
+
+            if not self.whatsapp_integrated_number:
+                return {
+                    "success": False,
+                    "error": "MSG91_WHATSAPP_INTEGRATED_NUMBER is not configured",
+                }
+
+            clean_phone = phone.replace("+", "").replace(" ", "")
+            body_parameters = [
+                {"type": "text", "text": str(value if value is not None else "")}
+                for value in parameters
+            ]
+            payload = {
+                "integrated_number": self.whatsapp_integrated_number,
+                "content_type": "template",
+                "payload": {
+                    "to": clean_phone,
+                    "type": "template",
+                    "template": {
+                        "name": template_name,
+                        "language": {
+                            "code": "en",
+                            "policy": "deterministic",
+                        },
+                        "components": [
+                            {
+                                "type": "body",
+                                "parameters": body_parameters,
+                            }
+                        ],
+                    },
+                },
+            }
+            headers = {
+                "authkey": self.authkey,
+                "Content-Type": "application/json",
+            }
+
+            response = requests.post(
+                self.whatsapp_api_url,
+                json=payload,
+                headers=headers,
+                timeout=10,
+            )
+
+            if 200 <= response.status_code < 300:
+                logger.info(f"WhatsApp template sent successfully to {phone}: {response.text}")
+                try:
+                    message_id = response.json().get("message_id")
+                except Exception:
+                    message_id = response.text
+                return {
+                    "success": True,
+                    "message_id": message_id,
+                    "demo_mode": False,
+                }
+
+            logger.error(f"WhatsApp template failed: {response.status_code} {response.text}")
+            return {
+                "success": False,
+                "error": response.text,
+            }
+
+        except Exception as e:
+            logger.error(f"Error sending WhatsApp template: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
             }
     
     def send_otp_sms(self, phone: str, otp: str) -> Dict:
