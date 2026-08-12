@@ -311,7 +311,7 @@ async def startup_sequence():
             "transactions", "payouts", "refunds", "reviews", 
             "notifications", "subscription_plans", "subscriptions", "cms_content", "leads", "coupons",
             "deleted_properties", "search_logs", "ai_calls", "ai_agents", "calendar_sync_logs",
-            "contact_messages", "support_tickets", "commissions", "password_reset_tokens", "platform_settings",
+            "contact_messages", "support_tickets", "account_deletion_requests", "commissions", "password_reset_tokens", "platform_settings",
             "booking_tax_slabs", "tds_configurations", "host_tax_profiles",
             "host_financial_year_summaries", "host_payout_ledger",
             "payout_job_runs", "roles", "permissions", "role_permissions", "user_permissions", "departments",
