@@ -107,3 +107,34 @@ def open_s3_object(object_path: str) -> dict | None:
         return None
     key, _ = found
     return _client().get_object(Bucket=uploads_bucket(), Key=key)
+
+
+def delete_upload(object_path: str) -> bool:
+    """Delete a current or legacy uploaded object from S3/local storage."""
+    if not object_path:
+        return False
+    deleted = False
+    safe_path = _safe_object_key(object_path)
+    bucket = uploads_bucket()
+
+    if bucket:
+        found = find_s3_object(safe_path)
+        if found:
+            key, _ = found
+            _client().delete_object(Bucket=bucket, Key=key)
+            deleted = True
+
+    candidates = [
+        LOCAL_UPLOAD_DIR / safe_path,
+        LOCAL_UPLOAD_DIR / Path(safe_path).name,
+    ]
+    for candidate in candidates:
+        try:
+            resolved = candidate.resolve()
+            if LOCAL_UPLOAD_DIR.resolve() in resolved.parents and resolved.is_file():
+                resolved.unlink()
+                deleted = True
+        except Exception as exc:
+            logger.warning("Unable to delete local upload %s: %s", candidate, exc)
+
+    return deleted

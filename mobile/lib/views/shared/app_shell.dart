@@ -1165,18 +1165,18 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
     );
   }
 
-  bool _canSelfDeactivate(dynamic user) {
+  bool _canSelfDelete(dynamic user) {
     final role = (user?.role ?? '').toString().toLowerCase();
     return role == 'host' || role == 'guest';
   }
 
-  Future<void> _confirmDeactivateAccount() async {
+  Future<void> _confirmDeleteAccount() async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Deactivate account?'),
+        title: const Text('Delete account permanently?'),
         content: const Text(
-          'Your account will be marked inactive and you will be signed out. You can ask admin to activate it again.',
+          'Your account access will be removed and personal profile data will be deleted or anonymized. Booking, payment, tax, security, and legal records may be retained only for required periods.',
         ),
         actions: [
           TextButton(
@@ -1186,7 +1186,7 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red.shade700),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Deactivate'),
+            child: const Text('Delete Account'),
           ),
         ],
       ),
@@ -1195,13 +1195,13 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
     if (confirmed != true || !mounted) return;
 
     setState(() => _isDeactivating = true);
-    final success = await widget.auth.deactivateAccount();
+    final success = await widget.auth.deleteAccount();
     if (!mounted) return;
     setState(() => _isDeactivating = false);
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account deactivated.')),
+        const SnackBar(content: Text('Account deletion completed.')),
       );
       Navigator.pushAndRemoveUntil(
         context,
@@ -1213,7 +1213,7 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(widget.auth.lastError ?? 'Unable to deactivate account.'),
+        content: Text(widget.auth.lastError ?? 'Unable to delete account.'),
       ),
     );
   }
@@ -1378,11 +1378,11 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
           ),
           if (user != null) ...[
             const SizedBox(height: 24),
-            if (_canSelfDeactivate(user)) ...[
+            if (_canSelfDelete(user)) ...[
               SizedBox(
                 height: 54,
                 child: OutlinedButton.icon(
-                  onPressed: _isDeactivating ? null : _confirmDeactivateAccount,
+                  onPressed: _isDeactivating ? null : _confirmDeleteAccount,
                   icon: _isDeactivating
                       ? SizedBox(
                           width: 18,
@@ -1394,7 +1394,7 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
                         )
                       : const Icon(Icons.person_off_outlined),
                   label: Text(
-                    _isDeactivating ? 'Deactivating...' : 'Deactivate Account',
+                    _isDeactivating ? 'Deleting...' : 'Delete Account',
                   ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.red.shade700,

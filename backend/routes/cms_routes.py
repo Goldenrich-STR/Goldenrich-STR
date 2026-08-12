@@ -87,11 +87,19 @@ These Terms are governed by the laws of India. Subject to applicable law, courts
 
 PRIVACY_POLICY_TEXT = """## PRIVACY POLICY
 
-X-Space360 collects and processes information necessary to operate a secure short-term rental platform, including account details, contact information, identity documents, property details, booking records, payment references, support messages, verification information, device metadata, and operational logs. We use this information for registration, authentication, listing review, booking facilitation, payment coordination, fraud prevention, customer support, legal compliance, analytics, and service improvement.
+X-Space360 collects and processes information necessary to operate a secure short-term rental platform, including name, email address, phone number, user IDs, address, property location, identity/KYC documents, property details, listing photos/videos, booking records, payment/order references, support messages, verification information, device metadata, and operational logs. We use this information for registration, authentication, OTP verification, listing review, booking facilitation, payment coordination, refunds, fraud prevention, customer support, legal compliance, analytics, and service improvement.
+
+We use MSG91 and related communication providers to send OTP, SMS, email, and WhatsApp notifications. We may send the user's phone number, email address, name, message/template details, and transactional notification content to those providers only for communication delivery and support on our behalf. The app does not read or collect SMS/MMS content from the user's device.
+
+We use Razorpay and payment partners for online payments, booking payments, refunds, payouts, and payment status. Payment/order identifiers, amount, currency, booking reference, name, email, phone number, and payment status may be shared with Razorpay for payment processing, reconciliation, refunds, fraud prevention, and legal compliance. X-Space360 does not store card numbers, UPI PINs, CVV, bank passwords, or full payment credentials entered inside Razorpay Checkout.
 
 We may share relevant information with payment partners, verification providers, support teams, employees, brokers, service vendors, legal advisors, auditors, government authorities, and other parties where required to deliver Platform services, comply with law, investigate disputes, prevent fraud, or protect rights and safety.
 
-Users must ensure that submitted personal, property, tax, banking, and verification information is accurate and authorized. The Platform applies reasonable technical and organizational safeguards, but no digital system can be guaranteed completely secure. Users may contact support for reasonable account, correction, or privacy requests subject to legal, operational, and record-retention requirements."""
+Users can request account deletion in the mobile app from Profile > Delete Account, or externally at https://x-space360.in/account-deletion or by emailing customer.support@x-space360.com from the registered email address. After verification, account access is removed and deletable personal profile/contact data, sessions/tokens, notifications, listing media references, and support contact fields are deleted or anonymized where legally and operationally permitted.
+
+Some records may be retained after deletion where required for legal, tax, financial, payment, fraud-prevention, security, dispute, or audit obligations. Booking, purchase, invoice, payment/order, Razorpay reference, refund, payout, tax, KYC, ownership, agreement, compliance, dispute, and legal records may be retained for 8 years from the end of the relevant financial year, or longer if a legal hold/dispute applies. Account deletion request, support, security, and audit records may be retained for 3 years after request completion, or longer if required by law.
+
+Users must ensure that submitted personal, property, tax, banking, and verification information is accurate and authorized. The Platform applies reasonable technical and organizational safeguards, but no digital system can be guaranteed completely secure. Users may contact customer.support@x-space360.com for account, correction, privacy, or deletion requests subject to legal, operational, and record-retention requirements."""
 
 REFUND_CANCELLATION_TEXT = """## CANCELLATION AND REFUND POLICY
 
@@ -491,6 +499,17 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                 "created_at": now,
                 "updated_at": now
             })
+        else:
+            privacy_text = ((legal_terms_doc.get("content_data") or {}).get("privacy_text") or "")
+            if "account-deletion" not in privacy_text and "Profile > Delete Account" not in privacy_text:
+                await db.cms_content.update_one(
+                    {"page": "landing", "section": "legal_terms"},
+                    {"$set": {
+                        "content_data.privacy_text": PRIVACY_POLICY_TEXT,
+                        "content_data.privacy_label": "Privacy Policy",
+                        "updated_at": datetime.now(timezone.utc),
+                    }},
+                )
     return content
 
 async def _ensure_seeded_support_content(db: AsyncIOMotorDatabase):

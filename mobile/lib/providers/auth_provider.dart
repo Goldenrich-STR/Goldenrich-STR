@@ -253,35 +253,37 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> deactivateAccount() async {
+  Future<bool> deleteAccount() async {
     if (_token == null) return false;
     _isLoading = true;
     _lastError = null;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/api/auth/deactivate');
+      final response = await _apiService.dio.post('/api/auth/delete-account');
       if (response.statusCode == 200) {
         await logout();
         return true;
       }
-      _lastError = 'Unable to deactivate account.';
+      _lastError = 'Unable to delete account.';
       return false;
     } on DioException catch (e) {
       final data = e.response?.data;
       if (data is Map && data['detail'] != null) {
         _lastError = data['detail'].toString();
       } else {
-        _lastError = e.message ?? 'Unable to deactivate account.';
+        _lastError = e.message ?? 'Unable to delete account.';
       }
       return false;
     } catch (e) {
-      _lastError = 'Unable to deactivate account.';
+      _lastError = 'Unable to delete account.';
       return false;
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
+
+  Future<bool> deactivateAccount() => deleteAccount();
 
   Future<void> logout() async {
     _token = null;

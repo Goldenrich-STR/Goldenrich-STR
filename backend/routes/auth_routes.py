@@ -6,6 +6,7 @@ from models.user import UserCreate, UserLogin, UserResponse, User, UserRole
 from utils.auth import hash_password, verify_password, create_access_token
 from services.otp_service import otp_service
 from services.msg91_service import msg91_service
+from services.object_storage import delete_upload
 from middleware.auth_middleware import get_current_user
 import phonenumbers
 from phonenumbers.phonenumberutil import NumberParseException
@@ -18,6 +19,8 @@ import secrets
 import time
 from datetime import datetime, timezone
 from urllib.parse import quote, urlencode, urlparse
+from typing import Optional
+from uuid import uuid4
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -43,10 +46,39 @@ class ResetPasswordRequest(BaseModel):
     token: str
     password: str
 
+class AccountDeletionRequest(BaseModel):
+    full_name: Optional[str] = None
+    email: str
+    phone: Optional[str] = None
+    message: Optional[str] = None
+
 GOLDENRICH_SSO_COOKIE = "goldenrich_sso_state"
 PASSWORD_RESET_TTL_SECONDS = 30 * 60
 SSO_STATE_TTL_SECONDS = 10 * 60
 _sso_state_store: dict[str, float] = {}
+
+ACCOUNT_DELETION_RETAINED_DATA = [
+    {
+        "category": "Booking, purchase, invoice, tax and payment/order records",
+        "retention_period": "8 years from the end of the relevant financial year",
+        "reason": "Legal, tax, accounting, refund, chargeback and dispute obligations",
+    },
+    {
+        "category": "Razorpay payment, refund, payout and reconciliation references",
+        "retention_period": "8 years from the end of the relevant financial year",
+        "reason": "Payment reconciliation, fraud prevention, audits, refunds and legal compliance",
+    },
+    {
+        "category": "KYC, ownership, agreement and compliance records tied to completed transactions or disputes",
+        "retention_period": "8 years from the end of the relevant financial year, or longer if a dispute/legal hold is active",
+        "reason": "Regulatory, legal, fraud-prevention and dispute obligations",
+    },
+    {
+        "category": "Account deletion request, support ticket and security/audit logs",
+        "retention_period": "3 years after request completion, or longer if required by law/legal hold",
+        "reason": "Proof of request handling, support accountability, abuse prevention and legal compliance",
+    },
+]
 
 
 def _password_reset_token_hash(token: str) -> str:
@@ -1080,6 +1112,295 @@ async def _enrich_host_assignment_profile(user: dict, db: AsyncIOMotorDatabase) 
     return user
 
 
+async def _safe_update_many(db: AsyncIOMotorDatabase, collection_name: str, query: dict, update: dict) -> int:
+    try:
+        result = await getattr(db, collection_name).update_many(query, update)
+        return getattr(result, "modified_count", 0) or 0
+    except Exception as exc:
+        logger.warning("Account deletion update skipped for %s: %s", collection_name, exc)
+        return 0
+
+
+async def _safe_delete_many(db: AsyncIOMotorDatabase, collection_name: str, query: dict) -> int:
+    try:
+        result = await getattr(db, collection_name).delete_many(query)
+        return getattr(result, "deleted_count", 0) or 0
+    except Exception as exc:
+        logger.warning("Account deletion delete skipped for %s: %s", collection_name, exc)
+        return 0
+
+
+def _extract_upload_object_path(value) -> str | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    raw = value.strip()
+    if raw.startswith("data:"):
+        return None
+    parsed_path = urlparse(raw).path if raw.startswith(("http://", "https://")) else raw
+    marker = "/api/uploads/"
+    if marker in parsed_path:
+        parsed_path = parsed_path.split(marker, 1)[1]
+    else:
+        parsed_path = parsed_path.lstrip("/")
+        if parsed_path.startswith("api/uploads/"):
+            parsed_path = parsed_path[len("api/uploads/"):]
+        elif parsed_path.startswith("uploads/"):
+            parsed_path = parsed_path[len("uploads/"):]
+    if not parsed_path or "/" not in parsed_path and "." not in parsed_path:
+        return None
+    return parsed_path
+
+
+def _collect_upload_object_paths(value) -> set[str]:
+    paths: set[str] = set()
+    if isinstance(value, dict):
+        for nested in value.values():
+            paths.update(_collect_upload_object_paths(nested))
+    elif isinstance(value, list):
+        for nested in value:
+            paths.update(_collect_upload_object_paths(nested))
+    else:
+        path = _extract_upload_object_path(value)
+        if path:
+            paths.add(path)
+    return paths
+
+
+def _delete_upload_objects(paths: set[str]) -> dict:
+    result = {"attempted": len(paths), "deleted": 0, "failed": 0}
+    for path in sorted(paths):
+        try:
+            if delete_upload(path):
+                result["deleted"] += 1
+        except Exception as exc:
+            logger.warning("Account deletion upload removal failed for %s: %s", path, exc)
+            result["failed"] += 1
+    return result
+
+
+async def _delete_or_anonymize_account(
+    db: AsyncIOMotorDatabase,
+    user: dict,
+    source: str,
+    request_message: str = "",
+) -> dict:
+    now = datetime.now(timezone.utc)
+    user_id = user["user_id"]
+    deletion_id = f"adr_{uuid4().hex}"
+    anonymized_email = f"deleted_{hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]}@x-space360.deleted"
+    property_rows = await db.properties.find({"owner_id": user_id}, {"_id": 0}).to_list(length=5000)
+    property_ids = [row["property_id"] for row in property_rows if row.get("property_id")]
+    upload_paths = _collect_upload_object_paths(user)
+    for row in property_rows:
+        upload_paths.update(_collect_upload_object_paths(row))
+    if property_ids:
+        verification_rows = await db.property_verifications.find(
+            {"property_id": {"$in": property_ids}},
+            {"_id": 0},
+        ).to_list(length=5000)
+        for row in verification_rows:
+            upload_paths.update(_collect_upload_object_paths(row))
+
+    operations = {}
+    operations["uploads_deleted"] = _delete_upload_objects(upload_paths)
+    operations["notifications_deleted"] = await _safe_delete_many(db, "notifications", {"user_id": user_id})
+    operations["push_tokens_deleted"] = await _safe_delete_many(db, "push_tokens", {"user_id": user_id})
+    operations["otp_sessions_deleted"] = await _safe_delete_many(db, "otp_sessions", {"phone": user.get("phone")})
+    operations["password_reset_tokens_deleted"] = await _safe_delete_many(
+        db,
+        "password_reset_tokens",
+        {"$or": [{"user_id": user_id}, {"email": user.get("email")}]},
+    )
+    operations["reviews_deleted"] = await _safe_delete_many(
+        db,
+        "reviews",
+        {"$or": [{"guest_id": user_id}, {"host_id": user_id}, {"user_id": user_id}]},
+    )
+
+    if property_ids:
+        operations["properties_unpublished"] = await _safe_update_many(
+            db,
+            "properties",
+            {"property_id": {"$in": property_ids}},
+            {"$set": {
+                "is_active": False,
+                "status": "deleted_by_account_request",
+                "account_deleted": True,
+                "deleted_at": now,
+                "deleted_by": user_id,
+                "images": [],
+                "videos": [],
+                "documents": [],
+                "owner_contact_name": "Deleted User",
+                "owner_contact_email": "",
+                "owner_contact_phone": "",
+                "updated_at": now,
+            }},
+        )
+        operations["calendar_feeds_deleted"] = await _safe_delete_many(
+            db,
+            "external_calendars",
+            {"property_id": {"$in": property_ids}},
+        )
+        operations["manual_blocked_dates_deleted"] = await _safe_delete_many(
+            db,
+            "blocked_dates",
+            {"property_id": {"$in": property_ids}, "source": {"$ne": "booking"}},
+        )
+        operations["property_verifications_anonymized"] = await _safe_update_many(
+            db,
+            "property_verifications",
+            {"property_id": {"$in": property_ids}},
+            {"$set": {
+                "status": "account_deleted",
+                "geo_tagged_photos": [],
+                "documents": [],
+                "notes": "",
+                "updated_at": now,
+            }},
+        )
+
+    operations["guest_bookings_anonymized"] = await _safe_update_many(
+        db,
+        "bookings",
+        {"guest_id": user_id},
+        {"$set": {
+            "guest_name": "Deleted User",
+            "guest_email": "",
+            "guest_phone": "",
+            "account_deleted_guest": True,
+            "updated_at": now,
+        }},
+    )
+    operations["host_bookings_anonymized"] = await _safe_update_many(
+        db,
+        "bookings",
+        {"host_id": user_id},
+        {"$set": {
+            "host_name": "Deleted User",
+            "host_email": "",
+            "host_phone": "",
+            "account_deleted_host": True,
+            "updated_at": now,
+        }},
+    )
+    operations["transactions_marked_retained"] = await _safe_update_many(
+        db,
+        "transactions",
+        {"$or": [{"user_id": user_id}, {"host_id": user_id}, {"guest_id": user_id}]},
+        {"$set": {
+            "account_deleted": True,
+            "user_display_name": "Deleted User",
+            "user_email": "",
+            "user_phone": "",
+            "retention_policy": ACCOUNT_DELETION_RETAINED_DATA[0],
+            "updated_at": now,
+        }},
+    )
+    operations["payouts_marked_retained"] = await _safe_update_many(
+        db,
+        "payouts",
+        {"host_id": user_id},
+        {"$set": {
+            "account_deleted": True,
+            "host_name": "Deleted User",
+            "host_email": "",
+            "host_phone": "",
+            "retention_policy": ACCOUNT_DELETION_RETAINED_DATA[1],
+            "updated_at": now,
+        }},
+    )
+    operations["refunds_marked_retained"] = await _safe_update_many(
+        db,
+        "refunds",
+        {"$or": [{"user_id": user_id}, {"guest_id": user_id}, {"host_id": user_id}]},
+        {"$set": {
+            "account_deleted": True,
+            "user_name": "Deleted User",
+            "user_email": "",
+            "user_phone": "",
+            "retention_policy": ACCOUNT_DELETION_RETAINED_DATA[1],
+            "updated_at": now,
+        }},
+    )
+    operations["support_tickets_anonymized"] = await _safe_update_many(
+        db,
+        "support_tickets",
+        {"user_id": user_id},
+        {"$set": {
+            "user_name": "Deleted User",
+            "user_email": "",
+            "user_phone": "",
+            "account_deleted": True,
+            "updated_at": now,
+        }},
+    )
+
+    await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {
+            "email": anonymized_email,
+            "phone": "",
+            "full_name": "Deleted User",
+            "password_hash": "",
+            "profile_image": "",
+            "city": "",
+            "state": "",
+            "franchise": "",
+            "branch": "",
+            "birthdate": "",
+            "uid": "",
+            "lg_code": "",
+            "broker_id": "",
+            "branch_manager_id": "",
+            "branch_manager_code": "",
+            "kyc_status": "unverified",
+            "kyc_documents": [],
+            "pan_number": "",
+            "agreement_owner_name": "",
+            "agreement_owner_address": "",
+            "agreement_signature": "",
+            "agreement_signed_at": "",
+            "region": "",
+            "rm_id": "",
+            "employee_region": "",
+            "employee_code": "",
+            "is_active": False,
+            "is_email_verified": False,
+            "is_phone_verified": False,
+            "account_deleted": True,
+            "account_deletion_status": "completed",
+            "account_deleted_at": now,
+            "account_deletion_source": source,
+            "account_deletion_request_id": deletion_id,
+            "retained_data_policy": ACCOUNT_DELETION_RETAINED_DATA,
+            "updated_at": now,
+        }},
+    )
+
+    request_doc = {
+        "request_id": deletion_id,
+        "user_id": user_id,
+        "source": source,
+        "status": "completed",
+        "requested_at": now,
+        "completed_at": now,
+        "registered_email_hash": hashlib.sha256((user.get("email") or "").lower().encode("utf-8")).hexdigest(),
+        "registered_phone_hash": hashlib.sha256((user.get("phone") or "").encode("utf-8")).hexdigest(),
+        "message": request_message[:1000],
+        "operations": operations,
+        "retained_data": ACCOUNT_DELETION_RETAINED_DATA,
+    }
+    await db.account_deletion_requests.insert_one(request_doc)
+    return {
+        "request_id": deletion_id,
+        "status": "completed",
+        "deleted": True,
+        "operations": operations,
+        "retained_data": ACCOUNT_DELETION_RETAINED_DATA,
+    }
+
+
 @router.get("/me")
 async def get_current_user_profile(
     current_user: dict = Depends(get_current_user),
@@ -1099,15 +1420,78 @@ async def get_current_user_profile(
     user = await _enrich_host_assignment_profile(user, db)
     return user
 
-@router.post("/deactivate")
-async def deactivate_current_user(
+@router.post("/account-deletion/request")
+async def request_account_deletion_from_web(
+    payload: AccountDeletionRequest,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Create an external account deletion request for users without app access."""
+    email = (payload.email or "").strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A valid registered email is required")
+
+    now = datetime.now(timezone.utc)
+    request_id = f"adr_{uuid4().hex}"
+    matching_user = await db.users.find_one({"email": email}, {"_id": 0, "user_id": 1, "role": 1, "is_active": 1})
+    request_doc = {
+        "request_id": request_id,
+        "source": "external_web",
+        "status": "pending_verification",
+        "requested_at": now,
+        "full_name": (payload.full_name or "").strip(),
+        "email": email,
+        "phone": (payload.phone or "").strip(),
+        "message": (payload.message or "").strip()[:1000],
+        "matched_user_id": (matching_user or {}).get("user_id", ""),
+        "matched_user_role": (matching_user or {}).get("role", ""),
+        "process": [
+            "Support/admin verifies account ownership.",
+            "Account access is removed after verification.",
+            "Deletable profile/contact/listing/upload data is deleted or anonymized.",
+            "Payment, booking, tax, audit and legal records are retained only for documented periods.",
+            "Support marks the request completed and records the completion date.",
+        ],
+        "retained_data": ACCOUNT_DELETION_RETAINED_DATA,
+        "support_email": "customer.support@x-space360.com",
+        "updated_at": now,
+    }
+    await db.account_deletion_requests.insert_one(request_doc)
+    try:
+        await db.support_tickets.insert_one({
+            "ticket_id": f"ticket_{uuid4().hex}",
+            "user_id": (matching_user or {}).get("user_id", "external_account_deletion"),
+            "user_name": request_doc["full_name"] or "External deletion requester",
+            "user_email": email,
+            "user_phone": request_doc["phone"],
+            "user_role": (matching_user or {}).get("role", "external"),
+            "subject": "Account Deletion Request",
+            "message": request_doc["message"] or "User requested account and data deletion from the public webpage.",
+            "category": "account_deletion",
+            "priority": "high",
+            "status": "open",
+            "account_deletion_request_id": request_id,
+            "created_at": now,
+            "updated_at": now,
+        })
+    except Exception as exc:
+        logger.warning("Could not create support ticket for account deletion request %s: %s", request_id, exc)
+    return {
+        "message": "Account deletion request received. Support will verify ownership before processing deletion.",
+        "request_id": request_id,
+        "status": "pending_verification",
+        "support_email": "customer.support@x-space360.com",
+    }
+
+
+@router.post("/delete-account")
+async def delete_current_user_account(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Allow host and guest users to deactivate their own account."""
+    """Allow host and guest users to delete their own account and anonymize retained records."""
     user = await db.users.find_one(
         {"user_id": current_user["user_id"]},
-        {"_id": 0, "role": 1, "is_active": 1},
+        {"_id": 0},
     )
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -1115,22 +1499,33 @@ async def deactivate_current_user(
     if user.get("role") not in {UserRole.HOST.value, UserRole.GUEST.value}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only host and guest accounts can be deactivated from the mobile app",
+            detail="Only host and guest accounts can be deleted from the mobile app",
         )
 
-    if user.get("is_active") is False:
-        return {"message": "Account is already deactivated", "is_active": False}
-
-    await db.users.update_one(
-        {"user_id": current_user["user_id"]},
-        {"$set": {
+    if user.get("account_deleted") is True:
+        return {
+            "message": "Account deletion has already been completed",
             "is_active": False,
-            "deactivated_at": datetime.now(timezone.utc),
-            "deactivation_source": "mobile_self_service",
-            "updated_at": datetime.now(timezone.utc),
-        }},
-    )
-    return {"message": "Account deactivated successfully", "is_active": False}
+            "account_deleted": True,
+            "retained_data": user.get("retained_data_policy") or ACCOUNT_DELETION_RETAINED_DATA,
+        }
+
+    result = await _delete_or_anonymize_account(db, user, "mobile_self_service")
+    return {
+        "message": "Account deletion completed. You have been signed out.",
+        "is_active": False,
+        "account_deleted": True,
+        **result,
+    }
+
+
+@router.post("/deactivate")
+async def deactivate_current_user(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Backward-compatible route: old app builds now run account deletion."""
+    return await delete_current_user_account(current_user=current_user, db=db)
 
 @router.post("/claim-promo")
 async def claim_promo(
