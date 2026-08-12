@@ -191,6 +191,19 @@ if "*" in _cors_origins:
         "http://127.0.0.1:8001",
     ]
 
+
+def _cors_headers_for_origin(origin: str | None) -> dict[str, str]:
+    if not origin:
+        return {}
+    if "*" in _cors_origins or origin in _cors_origins:
+        return {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Vary": "Origin",
+        }
+    return {}
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -224,12 +237,16 @@ async def security_headers_and_rate_limit(request: Request, call_next):
     path = request.url.path
     if path.startswith("/api"):
         content_length = request.headers.get("content-length")
-        if content_length and int(content_length) > 10 * 1024 * 1024:
+        max_upload_mb = int(os.getenv("MAX_IMAGE_UPLOAD_MB", "25"))
+        if content_length and int(content_length) > max_upload_mb * 1024 * 1024:
             from fastapi.responses import JSONResponse
             return JSONResponse(
-                {"detail": "Request body too large"},
+                {"detail": f"Request body too large (max {max_upload_mb} MB)"},
                 status_code=413,
-                headers={"Retry-After": "60"},
+                headers={
+                    "Retry-After": "60",
+                    **_cors_headers_for_origin(request.headers.get("origin")),
+                },
             )
 
         limit, window = _rate_limit_for_path(path)
@@ -243,7 +260,10 @@ async def security_headers_and_rate_limit(request: Request, call_next):
             return JSONResponse(
                 {"detail": "Too many requests"},
                 status_code=429,
-                headers={"Retry-After": str(window)},
+                headers={
+                    "Retry-After": str(window),
+                    **_cors_headers_for_origin(request.headers.get("origin")),
+                },
             )
         bucket.append(now)
 
