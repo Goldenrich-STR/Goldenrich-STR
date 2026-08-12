@@ -1378,6 +1378,39 @@ async def _delete_or_anonymize_account(
         }},
     )
 
+    support_ticket_id = None
+    if source == "mobile_self_service":
+        existing_mobile_ticket = await db.support_tickets.find_one(
+            {
+                "user_id": user_id,
+                "category": "account_deletion",
+                "account_deletion_request_id": deletion_id,
+            },
+            {"_id": 0, "ticket_id": 1},
+        )
+        if existing_mobile_ticket:
+            support_ticket_id = existing_mobile_ticket.get("ticket_id")
+        else:
+            support_ticket_id = f"ticket_{uuid4().hex}"
+            await db.support_tickets.insert_one({
+                "ticket_id": support_ticket_id,
+                "user_id": user_id,
+                "user_name": "Deleted User",
+                "user_email": anonymized_email,
+                "user_phone": "",
+                "user_role": user.get("role", ""),
+                "subject": "Mobile Account Deletion Completed",
+                "message": "User completed mobile self-service account deletion. Personal data was deleted or anonymized according to the Privacy Policy.",
+                "category": "account_deletion",
+                "priority": "high",
+                "status": "resolved",
+                "account_deletion_request_id": deletion_id,
+                "account_deleted": True,
+                "retention_policy": ACCOUNT_DELETION_RETAINED_DATA[3],
+                "created_at": now,
+                "updated_at": now,
+            })
+
     request_doc = {
         "request_id": deletion_id,
         "user_id": user_id,
@@ -1390,6 +1423,7 @@ async def _delete_or_anonymize_account(
         "message": request_message[:1000],
         "operations": operations,
         "retained_data": ACCOUNT_DELETION_RETAINED_DATA,
+        "support_ticket_id": support_ticket_id,
     }
     await db.account_deletion_requests.insert_one(request_doc)
     return {
