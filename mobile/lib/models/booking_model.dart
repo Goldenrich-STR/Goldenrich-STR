@@ -14,6 +14,9 @@ class BookingModel {
   final String bookingStatus;
   final String? paymentStatus;
   final String? razorpayOrderId;
+  final String? razorpayKeyId;
+  final int? razorpayAmount;
+  final String? currency;
   final String? couponCode;
   final String? guestPhone;
   final String? guestEmail;
@@ -42,6 +45,9 @@ class BookingModel {
     required this.bookingStatus,
     this.paymentStatus,
     this.razorpayOrderId,
+    this.razorpayKeyId,
+    this.razorpayAmount,
+    this.currency,
     this.couponCode,
     this.guestPhone,
     this.guestEmail,
@@ -80,6 +86,9 @@ class BookingModel {
       bookingStatus: json['booking_status'] ?? '',
       paymentStatus: json['payment_status'],
       razorpayOrderId: json['razorpay_order_id'],
+      razorpayKeyId: json['razorpay_key_id'],
+      razorpayAmount: (json['amount'] as num?)?.toInt(),
+      currency: json['currency'],
       couponCode: json['coupon_code'],
       guestPhone: json['guest_phone'] ?? (guestJson != null ? guestJson['phone'] : null),
       guestEmail: json['guest_email'] ?? (guestJson != null ? guestJson['email'] : null),
@@ -116,6 +125,9 @@ class BookingModel {
       'booking_status': bookingStatus,
       'payment_status': paymentStatus,
       'razorpay_order_id': razorpayOrderId,
+      'razorpay_key_id': razorpayKeyId,
+      'amount': razorpayAmount,
+      'currency': currency,
       'coupon_code': couponCode,
       'guest_phone': guestPhone,
       'guest_email': guestEmail,

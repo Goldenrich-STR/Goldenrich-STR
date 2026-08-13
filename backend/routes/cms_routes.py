@@ -637,6 +637,62 @@ async def _ensure_seeded_support_content(db: AsyncIOMotorDatabase):
             )
     return content
 
+
+async def _sync_privacy_policy_compliance_text(db: AsyncIOMotorDatabase):
+    legal_terms_doc = await db.cms_content.find_one(
+        {"page": "landing", "section": "legal_terms"},
+        {"_id": 0},
+    )
+    privacy_text = ((legal_terms_doc or {}).get("content_data") or {}).get("privacy_text") or ""
+    required_markers = [
+        "Profile > Delete Account",
+        "https://x-space360.in/account-deletion",
+        "MSG91",
+        "Razorpay",
+        "8 years",
+        "3 years",
+        "customer.support@x-space360.com",
+    ]
+    if legal_terms_doc and all(marker in privacy_text for marker in required_markers):
+        return legal_terms_doc
+
+    now = datetime.now(timezone.utc)
+    if legal_terms_doc:
+        await db.cms_content.update_one(
+            {"page": "landing", "section": "legal_terms"},
+            {"$set": {
+                "content_data.privacy_label": "Privacy Policy",
+                "content_data.privacy_text": PRIVACY_POLICY_TEXT,
+                "updated_at": now,
+            }},
+        )
+    else:
+        await db.cms_content.insert_one({
+            "content_id": "cms_legal_terms_default",
+            "page": "landing",
+            "section": "legal_terms",
+            "content_type": "object",
+            "content_data": {
+                "title": "Legal Terms & Platform Policies",
+                "version": "2026.1",
+                "effective_date": "2026-07-03",
+                "terms_label": "Terms & Conditions",
+                "terms_text": LEGAL_TERMS_TEXT,
+                "privacy_label": "Privacy Policy",
+                "privacy_text": PRIVACY_POLICY_TEXT,
+                "refund_label": "Cancellation & Refund Policy",
+                "refund_text": REFUND_CANCELLATION_TEXT,
+            },
+            "is_active": True,
+            "created_at": now,
+            "updated_at": now,
+        })
+    return await db.cms_content.find_one(
+        {"page": "landing", "section": "legal_terms"},
+        {"_id": 0},
+    )
+
+
 # ========== PUBLIC CMS ENDPOINTS ==========
 
 @router.get("/landing-page")
@@ -647,6 +703,7 @@ async def get_landing_page_content(
     """Get all active landing page content (public)."""
     try:
         await _ensure_seeded_landing_content(db)
+        synced_legal_terms = await _sync_privacy_policy_compliance_text(db)
         
         cursor = db.cms_content.find(
             {"page": "landing", "is_active": True},
@@ -659,6 +716,8 @@ async def get_landing_page_content(
         for item in content:
             section = item["section"]
             organized_content[section] = item["content_data"]
+        if synced_legal_terms:
+            organized_content["legal_terms"] = synced_legal_terms.get("content_data") or organized_content.get("legal_terms", {})
         
         # Admin cover changes should be visible immediately on the landing page.
         response.headers["Cache-Control"] = "no-store"

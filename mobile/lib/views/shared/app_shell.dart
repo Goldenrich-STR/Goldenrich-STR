@@ -1947,7 +1947,7 @@ class _WishlistsTab extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '₹${prop.pricePerNight.toStringAsFixed(0)} / night',
+                          '₹${prop.pricePerNight.toStringAsFixed(0)}${prop.pricingUnitSuffix}',
                           style: GoogleFonts.manrope(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,

@@ -87,6 +87,24 @@ class PropertyModel {
     this.reviewCount,
   });
 
+  bool get isEventVenue => category.toLowerCase().trim() == 'event_venue';
+
+  bool get isCommercial =>
+      category.toLowerCase().trim() == 'commercial' ||
+      propertyType.toLowerCase().contains('commercial') ||
+      propertyType.toLowerCase().contains('office') ||
+      propertyType.toLowerCase().contains('shop') ||
+      propertyType.toLowerCase().contains('retail') ||
+      propertyType.toLowerCase().contains('warehouse');
+
+  String get pricingUnitLabel {
+    if (isEventVenue) return 'day';
+    if (isCommercial) return 'month';
+    return 'night';
+  }
+
+  String get pricingUnitSuffix => ' / $pricingUnitLabel';
+
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
     return PropertyModel(
       propertyId: json['property_id'] ?? '',

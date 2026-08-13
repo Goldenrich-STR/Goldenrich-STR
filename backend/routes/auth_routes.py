@@ -1130,6 +1130,13 @@ async def _safe_delete_many(db: AsyncIOMotorDatabase, collection_name: str, quer
         return 0
 
 
+async def _ensure_account_deletion_storage(db: AsyncIOMotorDatabase) -> None:
+    ensure_table = getattr(db, "ensure_table", None)
+    if callable(ensure_table):
+        await ensure_table("account_deletion_requests")
+        await ensure_table("support_tickets")
+
+
 def _extract_upload_object_path(value) -> str | None:
     if not isinstance(value, str) or not value.strip():
         return None
@@ -1425,6 +1432,7 @@ async def _delete_or_anonymize_account(
         "retained_data": ACCOUNT_DELETION_RETAINED_DATA,
         "support_ticket_id": support_ticket_id,
     }
+    await _ensure_account_deletion_storage(db)
     await db.account_deletion_requests.insert_one(request_doc)
     return {
         "request_id": deletion_id,
@@ -1489,6 +1497,7 @@ async def request_account_deletion_from_web(
         "support_email": "customer.support@x-space360.com",
         "updated_at": now,
     }
+    await _ensure_account_deletion_storage(db)
     await db.account_deletion_requests.insert_one(request_doc)
     try:
         await db.support_tickets.insert_one({

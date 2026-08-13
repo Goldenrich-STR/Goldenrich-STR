@@ -1034,7 +1034,10 @@ async def apply_coupon(
             "charges": pricing["charges"],
             "pricing_breakdown": pricing,
             "new_total": new_total,
-            "razorpay_order_id": razorpay_order_id
+            "razorpay_order_id": razorpay_order_id,
+            "razorpay_key_id": razorpay_service.key_id,
+            "amount": int(round(new_total * 100)),
+            "currency": "INR",
         }
 
     except HTTPException:

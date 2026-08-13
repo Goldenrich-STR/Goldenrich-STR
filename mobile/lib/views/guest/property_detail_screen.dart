@@ -5,11 +5,14 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../config.dart';
 import '../../providers/property_provider.dart';
 import '../../providers/booking_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../models/booking_model.dart';
 import '../../models/property_model.dart';
 import '../../theme.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -34,6 +37,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   int _currentImageIndex = 0;
   bool _isDescriptionExpanded = false;
   final PageController _pageController = PageController();
+  late final Razorpay _razorpay;
+  BookingModel? _pendingPaymentBooking;
+  bool _isOpeningCheckout = false;
 
   // New State variables for availability calendar, reviews, and guest count
   int _guestCount = 1;
@@ -71,7 +77,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       symbol: 'Rs ',
       decimalDigits: 0,
     ).format(prop.pricePerNight);
-    return 'Check out ${prop.title} in ${prop.city} on X-Space360. Starting from $price/night.\n${_propertyShareUrl(prop)}';
+    return 'Check out ${prop.title} in ${prop.city} on X-Space360. Starting from $price/${prop.pricingUnitLabel}.\n${_propertyShareUrl(prop)}';
   }
 
   Future<void> _copyPropertyLink(PropertyModel prop) async {
@@ -183,6 +189,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final propertyProvider =
           Provider.of<PropertyProvider>(context, listen: false);
@@ -251,6 +261,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
 
   @override
   void dispose() {
+    _razorpay.clear();
     _couponController.dispose();
     _pageController.dispose();
     super.dispose();
@@ -424,7 +435,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               (booking.advanceAmount ?? 0.0) > 0.0)
           ? booking.advanceAmount!
           : booking.totalAmount;
-      _showPaymentSheet(context, booking.bookingId, displayPayable);
+      _showPaymentSheet(context, booking, displayPayable);
     } else if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -436,7 +447,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   void _showPaymentSheet(
-      BuildContext context, String bookingId, double totalAmount) {
+      BuildContext context, BookingModel booking, double totalAmount) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -494,7 +505,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       ),
                     ),
                     Text(
-                      '₹${NumberFormat('#,##,###').format(totalAmount)}',
+                      '${AppConfig.currencySymbol}${NumberFormat('#,##,###').format(totalAmount)}',
                       style: GoogleFonts.manrope(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -532,11 +543,16 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       final bookingProvider =
                           Provider.of<BookingProvider>(context, listen: false);
                       final success = await bookingProvider.applyCoupon(
-                          bookingId, _couponController.text.trim());
+                          booking.bookingId, _couponController.text.trim());
                       if (success && context.mounted) {
                         Navigator.pop(context);
-                        _showPaymentSheet(context, bookingId,
-                            bookingProvider.currentBooking!.totalAmount);
+                        final updatedBooking = bookingProvider.currentBooking!;
+                        final updatedPayable =
+                            (updatedBooking.paymentType == 'advance' &&
+                                    (updatedBooking.advanceAmount ?? 0.0) > 0.0)
+                                ? updatedBooking.advanceAmount!
+                                : updatedBooking.totalAmount;
+                        _showPaymentSheet(context, updatedBooking, updatedPayable);
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -551,26 +567,14 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () async {
-                  final success =
-                      await Provider.of<BookingProvider>(context, listen: false)
-                          .mockPay(bookingId);
-                  if (success && context.mounted) {
-                    Navigator.pop(context); // Close sheet
-                    Navigator.pop(context); // Close details screen
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Payment Successful! Booking confirmed.'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  }
+                  await _openRazorpayCheckout(context, booking, totalAmount);
                 },
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: AppTheme.primary,
                 ),
                 child: Text(
-                  'Pay via Simulated UPI (Mock)',
+                  _isOpeningCheckout ? 'Opening Razorpay...' : 'Pay with Razorpay',
                   style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
                 ),
               ),
@@ -579,6 +583,124 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           ),
         );
       },
+    );
+  }
+
+  Future<void> _openRazorpayCheckout(
+      BuildContext context, BookingModel booking, double amount) async {
+    final orderId = booking.razorpayOrderId;
+    if (orderId == null || orderId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment order could not be created. Please try again.'),
+          backgroundColor: AppTheme.primary,
+        ),
+      );
+      return;
+    }
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final keyId = booking.razorpayKeyId;
+    if (keyId == null || keyId.isEmpty || keyId.startsWith('rzp_test_mock')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Live Razorpay key is not configured for this build.'),
+          backgroundColor: AppTheme.primary,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _pendingPaymentBooking = booking;
+      _isOpeningCheckout = true;
+    });
+
+    try {
+      _razorpay.open({
+        'key': keyId,
+        'amount': (amount * 100).round(),
+        'currency': booking.currency ?? 'INR',
+        'name': 'X-Space360',
+        'description': booking.propertyTitle ?? 'Booking ${booking.bookingId}',
+        'order_id': orderId,
+        'prefill': {
+          'name': auth.currentUser?.fullName ?? booking.guestName ?? '',
+          'email': auth.currentUser?.email ?? booking.guestEmail ?? '',
+          'contact': auth.currentUser?.phone ?? booking.guestPhone ?? '',
+        },
+        'theme': {'color': '#C05C4F'},
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isOpeningCheckout = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to open Razorpay checkout. Please try again.'),
+          backgroundColor: AppTheme.primary,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    final booking = _pendingPaymentBooking;
+    if (booking == null) return;
+
+    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+    final success = await bookingProvider.confirmPayment({
+      'booking_id': booking.bookingId,
+      'razorpay_payment_id': response.paymentId,
+      'razorpay_order_id': response.orderId ?? booking.razorpayOrderId,
+      'razorpay_signature': response.signature,
+    });
+
+    if (!mounted) return;
+    setState(() {
+      _isOpeningCheckout = false;
+      _pendingPaymentBooking = null;
+    });
+
+    if (success) {
+      Navigator.pop(context);
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment successful. Booking confirmed.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment received, but verification failed. Please contact support.'),
+          backgroundColor: AppTheme.primary,
+        ),
+      );
+    }
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    if (!mounted) return;
+    setState(() {
+      _isOpeningCheckout = false;
+      _pendingPaymentBooking = null;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(response.message?.isNotEmpty == true
+            ? response.message!
+            : 'Payment failed or was cancelled.'),
+        backgroundColor: AppTheme.primary,
+      ),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('External wallet selected: ${response.walletName ?? 'wallet'}')),
     );
   }
 
@@ -2563,7 +2685,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                               ),
                             ),
                             Text(
-                              showPerDay ? ' / day' : ' / night',
+                              prop.pricingUnitSuffix,
                               style: GoogleFonts.manrope(
                                 fontSize: 13,
                                 color: AppTheme.charcoalLight,
@@ -2573,7 +2695,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             if (auth.isPromoClaimed) ...[
                               const SizedBox(width: 6),
                               Text(
-                                '₹${NumberFormat('#,##,###').format(prop.pricePerNight)}',
+                                '${AppConfig.currencySymbol}${NumberFormat('#,##,###').format(prop.pricePerNight)}',
                                 style: GoogleFonts.manrope(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -3285,7 +3407,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             Expanded(
               child: _buildFactTile(
                 'Starting price',
-                'Rs ${NumberFormat('#,##,###').format(prop.pricePerNight)}${showPerDay ? '/day' : '/night'}',
+                'Rs ${NumberFormat('#,##,###').format(prop.pricePerNight)}/${prop.pricingUnitLabel}',
                 Icons.local_offer_outlined,
               ),
             ),

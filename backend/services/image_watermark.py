@@ -14,6 +14,8 @@ WATERMARK_LOGO_CANDIDATES = [
 WATERMARK_MARGIN_PX = 24
 WATERMARK_WIDTH_RATIO = 0.14
 WATERMARK_OPACITY = 0.18
+MAX_PROPERTY_IMAGE_DIMENSION = 1600
+JPEG_WEBP_QUALITY = 82
 
 
 def _load_logo() -> Image.Image:
@@ -83,14 +85,20 @@ def apply_image_watermark(contents: bytes, detected_kind: str) -> bytes:
         )
         return output.getvalue()
 
+    if max(image.size) > MAX_PROPERTY_IMAGE_DIMENSION:
+        image.thumbnail(
+            (MAX_PROPERTY_IMAGE_DIMENSION, MAX_PROPERTY_IMAGE_DIMENSION),
+            Image.Resampling.LANCZOS,
+        )
+
     watermarked = _watermark_frame(image, logo)
     output = io.BytesIO()
 
     if detected_kind == "png":
         watermarked.save(output, format="PNG", optimize=True)
     elif detected_kind == "webp":
-        watermarked.save(output, format="WEBP", quality=95, method=6)
+        watermarked.save(output, format="WEBP", quality=JPEG_WEBP_QUALITY, method=6)
     else:
-        watermarked.convert("RGB").save(output, format="JPEG", quality=95, optimize=True)
+        watermarked.convert("RGB").save(output, format="JPEG", quality=JPEG_WEBP_QUALITY, optimize=True, progressive=True)
 
     return output.getvalue()

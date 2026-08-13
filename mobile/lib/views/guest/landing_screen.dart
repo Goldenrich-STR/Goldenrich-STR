@@ -2059,7 +2059,7 @@ class _PropertyCard extends StatelessWidget {
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () async {
-                        final String shareText = 'Check out ${property.title} in ${property.city} on X-Space360. Starting from Rs ${NumberFormat.currency(locale: 'en_IN', symbol: '', decimalDigits: 0).format(property.pricePerNight).trim()}/night.\nhttps://x-space360.in/property/${Uri.encodeComponent(property.propertyId)}';
+                        final String shareText = 'Check out ${property.title} in ${property.city} on X-Space360. Starting from Rs ${NumberFormat.currency(locale: 'en_IN', symbol: '', decimalDigits: 0).format(property.pricePerNight).trim()}/${property.pricingUnitLabel}.\nhttps://x-space360.in/property/${Uri.encodeComponent(property.propertyId)}';
                         await Share.share(shareText, subject: property.title);
                       },
                       child: Container(
@@ -2168,7 +2168,7 @@ class _PropertyCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '${NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0).format(property.pricePerNight)} / night',
+              '${NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0).format(property.pricePerNight)}${property.pricingUnitSuffix}',
               style: GoogleFonts.manrope(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,

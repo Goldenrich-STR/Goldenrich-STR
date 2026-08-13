@@ -23,6 +23,10 @@ val hasReleaseKeystore = keystorePropertiesFile.exists() &&
     keystoreProperties["storePassword"] != null &&
     releaseStoreFile?.exists() == true
 
+if (!hasReleaseKeystore) {
+    throw GradleException("Release signing is not configured. Check android/key.properties and the release keystore file.")
+}
+
 android {
     namespace = "com.xspace360.app"
     compileSdk = flutter.compileSdkVersion
@@ -63,11 +67,7 @@ android {
             manifestPlaceholders["usesCleartextTraffic"] = "false"
             isMinifyEnabled = false
             isShrinkResources = false
-            if (hasReleaseKeystore) {
-                signingConfig = signingConfigs.getByName("release")
-            } else {
-                signingConfig = signingConfigs.getByName("debug")
-            }
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
