@@ -54,6 +54,9 @@ export const getApiErrorMessage = (error, fallback = 'Something went wrong') => 
 
 export { apiClient };
 
+export const PROPERTY_IMAGE_PLACEHOLDER =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800"%3E%3Cdefs%3E%3ClinearGradient id="g" x1="0" y1="0" x2="0" y2="1"%3E%3Cstop offset="0" stop-color="%23f8fafc"/%3E%3Cstop offset="1" stop-color="%23e5e7eb"/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width="1200" height="800" fill="url(%23g)"/%3E%3Crect x="430" y="300" width="340" height="200" rx="24" fill="%23ffffff" stroke="%23d1d5db" stroke-width="4"/%3E%3Ccircle cx="520" cy="370" r="34" fill="%23d1d5db"/%3E%3Cpath d="M460 470l120-105 80 70 50-45 120 80H460z" fill="%23cbd5e1"/%3E%3Ctext x="600" y="570" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="%236b7280"%3EProperty photo unavailable%3C/text%3E%3C/svg%3E';
+
 export const loadRazorpaySdk = () => {
   if (window.Razorpay) return Promise.resolve(true);
   return new Promise((resolve) => {
@@ -94,6 +97,20 @@ export const loadRazorpaySdk = () => {
 
 export const getImageUrl = (url) => {
   if (!url) return null;
+  if (typeof url !== 'string') return null;
+  const cleanUrl = url.trim().split('#')[0].trim();
+  if (!cleanUrl) return null;
+  if (
+    cleanUrl.startsWith('/data/') ||
+    cleanUrl.includes('/data/user/') ||
+    cleanUrl.includes('/cache/') ||
+    cleanUrl.startsWith('content://') ||
+    cleanUrl.startsWith('file://') ||
+    cleanUrl.startsWith('blob:')
+  ) {
+    return null;
+  }
+  url = cleanUrl;
   if (url.startsWith('http')) {
     try {
       const parsed = new URL(url);

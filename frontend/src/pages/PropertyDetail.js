@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI } from '../services/api';
+import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
 import LegalLinks from '../components/LegalLinks';
@@ -45,7 +45,7 @@ import {
   Plus
 } from 'lucide-react';
 
-const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?auto=format&fit=crop&q=80&w=1400';
+const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
 
 const AMENITY_ICONS = {
   wifi: Wifi,
@@ -623,6 +623,7 @@ const PropertyDetail = () => {
     fetchCoupons();
     bookingAPI.getPaymentConfig()
       .then((res) => setPaymentConfig({
+        ...res.data,
         platform_fee_percent: res.data.platform_fee_percent ?? 10,
         platform_fee_label: res.data.platform_fee_label || 'Premium Service Fee',
       }))
@@ -652,9 +653,7 @@ const PropertyDetail = () => {
   }, [id]);
 
   const images = useMemo(() => {
-    const raw = property?.images?.length
-      ? property.images
-      : ['https://images.unsplash.com/photo-1503174971373-b1f69850bded?w=1200#Other'];
+    const raw = property?.images?.length ? property.images : [];
     
     // Deduplicate by pure URL
     const seen = new Set();
@@ -967,6 +966,7 @@ const PropertyDetail = () => {
     }
 
     bookingAPI.getPricingQuote({
+      property_id: property?.property_id || id,
       host_amount: hostAmount,
       tax_slab_base_amount: Number(taxSlabBaseAmount) || hostAmount,
       pricing_units: Math.max(1, Number(nights) || 1),

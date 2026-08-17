@@ -235,7 +235,11 @@ def _rate_limit_for_path(path: str) -> tuple[int, int]:
 @app.middleware("http")
 async def security_headers_and_rate_limit(request: Request, call_next):
     path = request.url.path
-    if path.startswith("/api"):
+    is_public_upload_read = (
+        path.startswith("/api/uploads/")
+        and request.method.upper() in {"GET", "HEAD", "OPTIONS"}
+    )
+    if path.startswith("/api") and not is_public_upload_read:
         content_length = request.headers.get("content-length")
         max_upload_mb = int(os.getenv("MAX_IMAGE_UPLOAD_MB", "25"))
         if content_length and int(content_length) > max_upload_mb * 1024 * 1024:

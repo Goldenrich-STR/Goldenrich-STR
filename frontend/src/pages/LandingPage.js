@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { Crown, Building2, MapPin, Calendar, Star, Zap, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Youtube, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone } from 'lucide-react';
-import apiClient, { propertyAPI, getImageUrl } from '../services/api';
+import apiClient, { propertyAPI, getImageUrl, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import ChatbotWidget from '../components/ChatbotWidget';
@@ -14,7 +14,16 @@ import LegalDocument from '../components/LegalDocument';
 import ScrollReveal from '../components/ui/ScrollReveal';
 import DateRangePicker from '../components/ui/DateRangePicker';
 
-const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800';
+const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
+
+const getPropertyCardImage = (item) => {
+  const fromImages = getImageUrl(item?.images?.[0]);
+  if (fromImages) return fromImages;
+  if (!item?.property_id) {
+    return getImageUrl(item?.img || item?.image_url) || PROPERTY_IMAGE_FALLBACK;
+  }
+  return PROPERTY_IMAGE_FALLBACK;
+};
 
 const homeSchema = {
   "@context": "https://schema.org",
@@ -2006,7 +2015,7 @@ const CollectionsSection = ({
                     >
                       <div className="relative aspect-[1.14] overflow-hidden">
                         <img
-                          src={item.img || getImageUrl(item.images?.[0]) || PROPERTY_IMAGE_FALLBACK}
+                          src={getPropertyCardImage(item)}
                           alt={item.title}
                           loading="lazy"
                           decoding="async"
@@ -2673,7 +2682,7 @@ const LandingPage = () => {
               >
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-3">
                   <img 
-                    src={item.img || getImageUrl(item.images?.[0]) || PROPERTY_IMAGE_FALLBACK}
+                    src={getPropertyCardImage(item)}
                     alt={item.title} 
                     loading="lazy"
                     decoding="async"
@@ -3577,7 +3586,7 @@ const LandingPage = () => {
                   >
                     <div className="relative aspect-[16/10] bg-stone overflow-hidden">
                       <img
-                        src={item.img || getImageUrl(item.images?.[0]) || PROPERTY_IMAGE_FALLBACK}
+                        src={getPropertyCardImage(item)}
                         alt={item.title}
                         loading="lazy"
                         decoding="async"
@@ -4018,7 +4027,7 @@ const LandingPage = () => {
                           >
                             <div className="relative h-48 md:h-52 overflow-hidden">
                               <img
-                                src={getImageUrl(item.images?.[0]) || PROPERTY_IMAGE_FALLBACK}
+                                src={getPropertyCardImage(item)}
                                 alt={item.title}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                               />

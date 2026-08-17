@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useAuth } from '../contexts/AuthContext';
-import { propertyAPI, getImageUrl } from '../services/api';
+import { propertyAPI, getImageUrl, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
 import DateRangePicker from '../components/ui/DateRangePicker';
@@ -1331,9 +1331,15 @@ const GuestBrowse = () => {
                       <Popup className="premium-popup">
                         <div className="p-2" style={{ minWidth: 200 }}>
                           <img 
-                            src={getImageUrl(p.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?w=800'} 
+                            src={getImageUrl(p.images?.[0]) || PROPERTY_IMAGE_PLACEHOLDER} 
                             className="w-full h-24 object-cover rounded-lg mb-3 shadow-sm"
                             alt=""
+                            loading="lazy"
+                            decoding="async"
+                            onError={(event) => {
+                              event.currentTarget.onerror = null;
+                              event.currentTarget.src = PROPERTY_IMAGE_PLACEHOLDER;
+                            }}
                           />
                           <h4 className="font-bold tracking-tight text-charcoal leading-tight mb-1">{p.title}</h4>
                           <div className="flex items-center text-charcoal-muted text-[10px] font-bold uppercase tracking-widest mb-3">
@@ -1383,8 +1389,14 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
   >
     <div className={`relative overflow-hidden ${compact ? 'w-full sm:w-1/3 rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none h-48 sm:h-auto' : 'h-48 sm:h-72 rounded-t-2xl'}`}>
       <img
-        src={getImageUrl(property.images?.[0]) || 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?w=800'}
+        src={getImageUrl(property.images?.[0]) || PROPERTY_IMAGE_PLACEHOLDER}
         alt={property.title}
+        loading="lazy"
+        decoding="async"
+        onError={(event) => {
+          event.currentTarget.onerror = null;
+          event.currentTarget.src = PROPERTY_IMAGE_PLACEHOLDER;
+        }}
         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
