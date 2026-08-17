@@ -738,10 +738,11 @@ const HostListProperty = () => {
             check_out_time: p.check_out_time || '11:00',
           };
           
-          // Only overwrite form with backend data if there was no local form in localStorage
-          if (!localStorage.getItem(`list_property_form_${draftStorageId}`)) {
-            setForm(backendForm);
-          }
+          // In edit/manage mode, always trust the latest backend data. A stale
+          // browser draft can otherwise resend old photo URLs and hide new uploads.
+          localStorage.removeItem(`list_property_form_${draftStorageId}`);
+          localStorage.removeItem(`list_property_step_${draftStorageId}`);
+          setForm(backendForm);
         })
         .catch((err) => {
           setError(formatError(err, 'Failed to load draft property details'));
