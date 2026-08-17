@@ -70,6 +70,10 @@ def _kind_to_extension(kind: str) -> str:
     return "jpg" if kind == "jpg" else kind
 
 
+def _kind_to_content_type(kind: str) -> str:
+    return f"image/{'jpeg' if kind == 'jpg' else kind}"
+
+
 def _extract_image_url_from_html(html: str) -> str | None:
     patterns = [
         r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']',
@@ -211,12 +215,13 @@ async def upload_image(
 
     original_filename = f"{uuid4().hex}_original.{ext}"
     watermarked_filename = original_filename.replace("_original.", "_wm.")
+    detected_content_type = _kind_to_content_type(detected)
 
     original_object_key = store_upload(
         contents,
         original_filename,
         "properties-original",
-        file.content_type,
+        detected_content_type,
     )
     
     # Try watermarking safely; if watermarking fails, fallback to original image contents
@@ -232,7 +237,7 @@ async def upload_image(
         watermarked_contents,
         watermarked_filename,
         "properties",
-        file.content_type,
+        detected_content_type,
     )
 
     logger.info(

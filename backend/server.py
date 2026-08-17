@@ -8,6 +8,7 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 import os
 import logging
 import asyncio
+import mimetypes
 from pathlib import Path
 from create_missing_users import create_missing_users
 from collections import defaultdict, deque
@@ -107,6 +108,28 @@ class DynamicCacheStaticFiles(StaticFiles):
 _uploads_dir = ROOT_DIR / "uploads"
 _uploads_dir.mkdir(parents=True, exist_ok=True)
 
+UPLOAD_MEDIA_TYPES = {
+    ".webp": "image/webp",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
+    ".mp4": "video/mp4",
+    ".webm": "video/webm",
+    ".pdf": "application/pdf",
+}
+
+
+def _upload_media_type(object_path: str, stored_content_type: str | None = None) -> str:
+    suffix = Path(object_path).suffix.lower()
+    guessed = UPLOAD_MEDIA_TYPES.get(suffix) or mimetypes.guess_type(object_path)[0]
+    if guessed:
+        return guessed
+    if stored_content_type and stored_content_type.lower() not in {"text/plain", "binary/octet-stream"}:
+        return stored_content_type
+    return "application/octet-stream"
+
 @app.get("/api/uploads/{object_path:path}", include_in_schema=False)
 async def serve_upload(object_path: str):
     from services.object_storage import open_s3_object
@@ -119,6 +142,7 @@ async def serve_upload(object_path: str):
     if local_file.is_file():
         return FileResponse(
             local_file,
+            media_type=_upload_media_type(filename),
             headers={"Cache-Control": "public,max-age=31536000,immutable"},
         )
 
@@ -152,7 +176,7 @@ async def serve_upload(object_path: str):
 
     return StreamingResponse(
         stream_body(),
-        media_type=s3_object.get("ContentType") or "application/octet-stream",
+        media_type=_upload_media_type(object_path, s3_object.get("ContentType")),
         headers=headers,
     )
 
