@@ -398,7 +398,7 @@ const GuestBrowse = () => {
     return {
       city: params.get('city') || '',
       search: params.get('search') || '',
-      category: params.get('category') || 'residential',
+      category: params.get('category') || '',
       property_type: params.get('property_type') || '',
       bhk_type: '',
       min_price: isSignature ? '50000' : '',
