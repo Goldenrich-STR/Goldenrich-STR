@@ -772,18 +772,9 @@ const GuestBrowse = () => {
 
         <div className="w-full max-w-5xl mx-auto lg:relative z-50">
           {/* Capsule Search Bar */}
-          <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-[44px] p-[1px]">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 rounded-[34px] lg:rounded-[44px] opacity-100"
-              style={{
-                background:
-                  'linear-gradient(90deg, rgba(249,115,22,0.24) 0%, rgba(251,191,36,0.16) 12%, rgba(255,255,255,0.94) 28%, rgba(255,255,255,0.98) 50%, rgba(255,255,255,0.94) 72%, rgba(244,63,94,0.14) 88%, rgba(219,39,119,0.2) 100%)',
-              }}
-            />
             <form
               onSubmit={handleSearch}
-              className="flex flex-col lg:flex-row items-center bg-white rounded-2xl lg:rounded-full w-full shadow-elevated border border-gray-100 lg:relative z-50 overflow-visible p-1"
+              className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[30px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-3 lg:p-3 relative overflow-visible bg-white z-50"
             >
               <div
                 aria-hidden="true"
@@ -795,7 +786,7 @@ const GuestBrowse = () => {
               />
 
               {/* Raksha Bandhan Festive Rakhi Icon */}
-              <div className="flex items-center shrink-0 pl-3 pr-1 text-pink-600 select-none animate-pulse z-10" title="Raksha Bandhan Special">
+              <div className="flex items-center shrink-0 pl-3 pr-1 text-pink-600 select-none animate-pulse z-10 justify-center mb-2 lg:mb-0" title="Raksha Bandhan Special">
                 <svg className="w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
                   <path d="M0,5 Q10,0 20,5 T40,5" stroke="currentColor" strokeWidth="2.5" fill="none" />
                 </svg>
@@ -818,11 +809,11 @@ const GuestBrowse = () => {
                     const el = document.getElementById('browse-destination');
                     if (el) el.focus();
                   }}
-                  className="flex items-center px-4 lg:px-6 py-4 w-full cursor-pointer group rounded-t-2xl lg:rounded-l-full border-b border-gray-100 lg:border-none hover:bg-gray-50/50 transition"
+                  className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full cursor-pointer group rounded-2xl lg:rounded-l-full border-b border-sand-100 lg:border-none hover:bg-stone/50 transition duration-200"
                 >
-                  <MapPin className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors" />
+                  <MapPin className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                   <div className="w-full text-left">
-                    <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">Where</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Where</p>
                     <input
                       id="browse-destination"
                       name="destination"
@@ -835,7 +826,7 @@ const GuestBrowse = () => {
                         setActiveDropdown('location');
                       }}
                       placeholder="Location"
-                      className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-400 font-bold text-sm focus:ring-0 focus:outline-none p-0 mt-0.5"
+                      className="bg-transparent border-none outline-none text-charcoal w-full placeholder-slate-400 font-bold text-[15px] focus:ring-0 focus:outline-none p-0 mt-0.5"
                     />
                   </div>
                 </div>
@@ -843,7 +834,7 @@ const GuestBrowse = () => {
                 {/* Airbnb-style Suggested Destinations Dropdown */}
                 {activeDropdown === 'location' && (
                   <div className="absolute left-0 top-full mt-3 w-80 bg-white border border-gray-100 rounded-3xl shadow-elevated z-50 p-4 max-h-96 overflow-y-auto">
-                    <p className="text-xs font-bold tracking-tight text-gray-400 uppercase tracking-wider mb-3 px-2">Suggested destinations</p>
+                    <p className="text-xs font-bold tracking-tight text-slate-400 uppercase tracking-wider mb-3 px-2">Suggested destinations</p>
                     <div className="space-y-1">
                       {SUGGESTED_DESTINATIONS.filter(dest => 
                         !filters.city || 
@@ -864,7 +855,7 @@ const GuestBrowse = () => {
                           </div>
                           <div>
                             <p className="text-sm font-bold text-charcoal">{dest.city}, {dest.state}</p>
-                            <p className="text-xs text-gray-400 font-semibold mt-0.5">{dest.desc}</p>
+                            <p className="text-xs text-slate-400 font-semibold mt-0.5">{dest.desc}</p>
                           </div>
                         </button>
                       ))}
@@ -873,27 +864,27 @@ const GuestBrowse = () => {
                         dest.city.toLowerCase().includes(filters.city.toLowerCase()) || 
                         dest.state.toLowerCase().includes(filters.city.toLowerCase())
                       ).length === 0 && (
-                        <p className="text-xs font-semibold text-gray-400 p-2 italic text-center">No locations matched. Press enter to search anyway.</p>
+                        <p className="text-xs font-semibold text-slate-400 p-2 italic text-center">No locations matched. Press enter to search anyway.</p>
                       )}
                     </div>
                   </div>
                 )}
               </div>
-              <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
+              <div className="hidden lg:block w-[1px] h-8 bg-sand-200" />
               
               {/* Check-in */}
-              <div className={`flex items-center px-4 lg:px-6 py-4 w-full lg:w-auto border-b border-gray-100 lg:border-none hover:bg-gray-50 transition group lg:relative ${activeDropdown === 'dates' && browseCalendarAnchor === 'checkIn' ? 'z-50' : ''}`}>
-                <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
+              <div className={`flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full lg:w-auto border-b border-sand-100 lg:border-none hover:bg-stone/50 transition duration-200 group lg:relative z-10 ${activeDropdown === 'dates' && browseCalendarAnchor === 'checkIn' ? 'z-50' : ''}`}>
+                <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                 <button
                   type="button"
                   onClick={() => {
                     setBrowseCalendarAnchor('checkIn');
                     setActiveDropdown('dates');
                   }}
-                  className="w-full text-left"
+                  className="w-full text-left outline-none border-none bg-transparent"
                 >
-                  <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
-                  <p className={`font-bold text-sm mt-0.5 ${filters.check_in ? 'text-charcoal' : 'text-gray-400'}`}>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">When</p>
+                  <p className={`font-bold text-[15px] mt-0.5 ${filters.check_in ? 'text-charcoal' : 'text-slate-400'}`}>
                     {filters.check_in || 'Check-in'}
                   </p>
                 </button>
@@ -915,21 +906,21 @@ const GuestBrowse = () => {
                   />
                 )}
               </div>
-              <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
+              <div className="hidden lg:block w-[1px] h-8 bg-sand-200" />
               
               {/* Check-out */}
-              <div className={`flex items-center px-4 lg:px-6 py-4 w-full lg:w-auto border-b border-gray-100 lg:border-none hover:bg-gray-50 transition group lg:relative ${activeDropdown === 'dates' && browseCalendarAnchor === 'checkOut' ? 'z-50' : ''}`}>
-                <Calendar className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors z-0" />
+              <div className={`flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full lg:w-auto border-b border-sand-100 lg:border-none hover:bg-stone/50 transition duration-200 group lg:relative z-10 ${activeDropdown === 'dates' && browseCalendarAnchor === 'checkOut' ? 'z-50' : ''}`}>
+                <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                 <button
                   type="button"
                   onClick={() => {
                     setBrowseCalendarAnchor('checkOut');
                     setActiveDropdown('dates');
                   }}
-                  className="w-full text-left"
+                  className="w-full text-left outline-none border-none bg-transparent"
                 >
-                  <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">When</p>
-                  <p className={`font-bold text-sm mt-0.5 ${filters.check_out ? 'text-charcoal' : 'text-gray-400'}`}>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">When</p>
+                  <p className={`font-bold text-[15px] mt-0.5 ${filters.check_out ? 'text-charcoal' : 'text-slate-400'}`}>
                     {filters.check_out || 'Check-out'}
                   </p>
                 </button>
@@ -951,20 +942,18 @@ const GuestBrowse = () => {
                   />
                 )}
               </div>
-              <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
-
-
+              <div className="hidden lg:block w-[1px] h-8 bg-sand-200" />
               
-              {/* Guests Selector with Airbnb style +/- counter popover */}
-              <div className="relative flex-1 w-full">
+              {/* Guests Selector */}
+              <div className="relative flex-1 w-full z-10">
                 <div 
                   onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                  className="flex items-center px-4 lg:px-6 py-4 w-full cursor-pointer hover:bg-gray-50 transition rounded-b-2xl lg:rounded-none"
+                  className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full cursor-pointer hover:bg-stone/50 transition duration-200 rounded-2xl lg:rounded-none"
                 >
-                  <User className="w-5 h-5 text-gray-400 mr-3" />
+                  <User className="w-4.5 h-4.5 text-gray-400 mr-3 shrink-0" />
                   <div className="text-left">
-                    <p className="text-xs text-gray-400 font-semibold tracking-tight uppercase tracking-wider">Who</p>
-                    <p className="text-charcoal font-bold text-sm mt-0.5 whitespace-nowrap">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Who</p>
+                    <p className="text-charcoal font-bold text-[15px] mt-0.5 whitespace-nowrap">
                       {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
                     </p>
                   </div>
@@ -976,7 +965,7 @@ const GuestBrowse = () => {
                     <div className="flex items-center justify-between">
                       <div className="text-left">
                         <p className="text-sm font-bold text-charcoal">Adults</p>
-                        <p className="text-xs text-gray-400 font-semibold mt-0.5">Age 13 or above</p>
+                        <p className="text-xs text-slate-400 font-semibold mt-0.5">Age 13 or above</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <button
@@ -1001,7 +990,7 @@ const GuestBrowse = () => {
                     <div className="flex items-center justify-between">
                       <div className="text-left">
                         <p className="text-sm font-bold text-charcoal">Children</p>
-                        <p className="text-xs text-gray-400 font-semibold mt-0.5">Ages 2–12</p>
+                        <p className="text-xs text-slate-400 font-semibold mt-0.5">Ages 2–12</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <button
@@ -1024,9 +1013,10 @@ const GuestBrowse = () => {
                   </div>
                 )}
               </div>
+              <div className="hidden lg:block w-[1px] h-8 bg-sand-200" />
               
               {/* Filter & Search Buttons */}
-              <div className="p-2 w-full lg:w-auto flex items-center gap-2 shrink-0">
+              <div className="p-2 w-full lg:w-auto flex items-center justify-between lg:justify-end gap-3 shrink-0 z-10 mt-3 lg:mt-0">
                 <button
                   type="button"
                   onClick={() => setShowFilters((v) => !v)}
