@@ -62,6 +62,7 @@ const PropertyOperations = () => {
         rm: rmFilter,
         date_from: dateFrom,
         date_to: dateTo,
+        limit: 50000,
       });
       setState({ loading: false, error: '', properties: res.data.data.properties });
     } catch (error) {
