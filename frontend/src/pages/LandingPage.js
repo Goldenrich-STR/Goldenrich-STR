@@ -58,7 +58,7 @@ const DEFAULT_HERO_SLIDES = [
     titleHighlight: 'Nashik',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['Raksha Bandhan Special: 15% OFF on Family Stays*']
+    badges: ['Raksha Bandhan Special: 10% OFF on Family Stays*']
   },
   {
     src: '/videos/hero/hero-villa-mobile-crop.png',
@@ -69,7 +69,7 @@ const DEFAULT_HERO_SLIDES = [
     titleHighlight: 'Wine Capital',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['Gift Your Sibling A Luxury Getaway: Flat 30% OFF*']
+    badges: ['Gift Your Sibling A Luxury Getaway: Flat 15% OFF*']
   },
   {
     src: '/videos/hero/pexels-thevisionaryvows-33485961.jpg',
@@ -80,7 +80,7 @@ const DEFAULT_HERO_SLIDES = [
     titleHighlight: 'Beautiful Memories',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['Rakhi Special Offer: Flat ₹5,000 Cashbacks on Event Bookings*']
+    badges: ['Rakhi Special Offer: Flat 20% OFF on Venue Bookings*']
   },
   {
     src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg',
@@ -91,7 +91,7 @@ const DEFAULT_HERO_SLIDES = [
     titleHighlight: 'Comfort of Home',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['Celebrate The Bond: Special Sibling Getaways at 50% OFF*']
+    badges: ['Celebrate The Bond: Special Sibling Getaways at 25% OFF*']
   }
 ];
 
