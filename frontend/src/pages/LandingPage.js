@@ -1890,74 +1890,126 @@ const CollectionsSection = ({
         {/* Floating Rakhi 1 */}
         <div className="absolute top-[8%] left-[3%] w-52 h-52 animate-float-1 text-pink-600">
           <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            {/* Wavy twisted threads */}
-            <path d="M0,50 Q25,40 50,50 T100,50" stroke="#FF4500" strokeWidth="3" fill="none" />
-            <path d="M0,50 Q25,60 50,50 T100,50" stroke="#D4AF37" strokeWidth="1.8" fill="none" />
-            {/* Thread Beads */}
-            <circle cx="15" cy="46" r="2.8" fill="#D4AF37" />
-            <circle cx="26" cy="50" r="2.8" fill="#E11D48" />
-            <circle cx="74" cy="50" r="2.8" fill="#E11D48" />
-            <circle cx="85" cy="54" r="2.8" fill="#D4AF37" />
+            <defs>
+              <radialGradient id="gemGrad1" cx="35%" cy="35%" r="65%">
+                <stop offset="0%" stopColor="#FFA07A" />
+                <stop offset="40%" stopColor="#DC2626" />
+                <stop offset="100%" stopColor="#7F1D1D" />
+              </radialGradient>
+              <radialGradient id="goldGrad1" cx="35%" cy="35%" r="65%">
+                <stop offset="0%" stopColor="#FDE68A" />
+                <stop offset="70%" stopColor="#D4AF37" />
+                <stop offset="100%" stopColor="#92400E" />
+              </radialGradient>
+            </defs>
+            {/* Diagonal thread (Dora) */}
+            <line x1="5" y1="95" x2="95" y2="5" stroke="#DC2626" strokeWidth="2.5" />
+            <line x1="5" y1="95" x2="95" y2="5" stroke="#F59E0B" strokeWidth="1" strokeDasharray="3,2" />
             
-            <circle cx="50" cy="50" r="28" stroke="#FF4500" strokeWidth="1.2" fill="none" strokeDasharray="4,4" />
-            <circle cx="50" cy="50" r="24" stroke="#D4AF37" strokeWidth="0.8" fill="none" />
+            {/* Thread Beads (diagonal) */}
+            <circle cx="34" cy="66" r="3.2" fill="#7F1D1D" stroke="#D4AF37" strokeWidth="0.5" />
+            <circle cx="26" cy="74" r="3" fill="#FEF3C7" stroke="#D4AF37" strokeWidth="0.5" />
+            <circle cx="66" cy="34" r="3.2" fill="#7F1D1D" stroke="#D4AF37" strokeWidth="0.5" />
+            <circle cx="74" cy="26" r="3" fill="#FEF3C7" stroke="#D4AF37" strokeWidth="0.5" />
+
+            {/* Central Scalloped Base */}
             {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle, idx) => (
               <g key={idx} transform={`rotate(${angle} 50 50)`}>
-                <path d="M50,22 C44,32 56,32 50,22" fill="#E11D48" stroke="#D4AF37" strokeWidth="0.8" />
-                <circle cx="50" cy="27" r="2.2" fill="#D4AF37" />
+                <circle cx="50" cy="34" r="6" fill="#D4AF37" />
+                <circle cx="50" cy="34" r="4.5" fill="#7F1D1D" />
               </g>
             ))}
-            <circle cx="50" cy="50" r="18" fill="#D4AF37" stroke="#8B0000" strokeWidth="1" />
-            <circle cx="50" cy="50" r="14" fill="#DC2626" />
-            <circle cx="50" cy="50" r="8" fill="#D4AF37" />
-            <circle cx="50" cy="50" r="4.5" fill="#8B0000" />
-            <circle cx="50" cy="50" r="2" fill="#FFFFFF" />
+            
+            {/* Concentric layered rings */}
+            <circle cx="50" cy="50" r="19" fill="url(#goldGrad1)" stroke="#8B0000" strokeWidth="0.8" />
+            <circle cx="50" cy="50" r="16" fill="#7F1D1D" />
+            
+            {/* Pearls inside circle */}
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, idx) => (
+              <circle key={idx} cx="50" cy="37" r="1.5" fill="#FFFFFF" transform={`rotate(${angle} 50 50)`} />
+            ))}
+
+            {/* Inner Star */}
+            <polygon points="50,38 53,46 62,46 55,51 58,59 50,54 42,59 45,51 38,46 47,46" fill="url(#goldGrad1)" stroke="#B45309" strokeWidth="0.5" />
+            
+            {/* Center Gemstone */}
+            <circle cx="50" cy="50" r="7" fill="url(#gemGrad1)" stroke="#FFFFFF" strokeWidth="0.5" />
           </svg>
         </div>
 
         {/* Floating Rakhi 2 */}
         <div className="absolute top-[40%] right-[5%] w-60 h-60 animate-float-2 text-amber-500">
           <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            {/* Wavy twisted threads */}
-            <path d="M0,50 Q25,60 50,50 T100,50" stroke="#DC2626" strokeWidth="3" fill="none" />
-            <path d="M0,50 Q25,40 50,50 T100,50" stroke="#D4AF37" strokeWidth="1.8" fill="none" />
-            {/* Thread Beads */}
-            <circle cx="20" cy="52" r="3.2" fill="#F59E0B" />
-            <circle cx="80" cy="48" r="3.2" fill="#F59E0B" />
+            {/* Diagonal thread (Dora) */}
+            <line x1="5" y1="5" x2="95" y2="95" stroke="#B91C1C" strokeWidth="2.5" />
+            <line x1="5" y1="5" x2="95" y2="95" stroke="#FBBF24" strokeWidth="1" strokeDasharray="3,2" />
+            
+            {/* Thread Beads (diagonal) */}
+            <circle cx="34" cy="34" r="3.2" fill="#7F1D1D" stroke="#D4AF37" strokeWidth="0.5" />
+            <circle cx="26" cy="26" r="3" fill="#FEF3C7" stroke="#D4AF37" strokeWidth="0.5" />
+            <circle cx="66" cy="66" r="3.2" fill="#7F1D1D" stroke="#D4AF37" strokeWidth="0.5" />
+            <circle cx="74" cy="74" r="3" fill="#FEF3C7" stroke="#D4AF37" strokeWidth="0.5" />
 
-            <circle cx="50" cy="50" r="30" stroke="#D4AF37" strokeWidth="1" fill="none" />
-            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, idx) => (
+            {/* Central Scalloped Base */}
+            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle, idx) => (
               <g key={idx} transform={`rotate(${angle} 50 50)`}>
-                <path d="M50,18 L46,28 L54,28 Z" fill="#F59E0B" stroke="#D4AF37" strokeWidth="0.8" />
-                <circle cx="50" cy="20" r="2.5" fill="#DC2626" />
+                <circle cx="50" cy="34" r="6" fill="#D4AF37" />
+                <circle cx="50" cy="34" r="4.5" fill="#7F1D1D" />
               </g>
             ))}
-            <circle cx="50" cy="50" r="16" fill="#DC2626" stroke="#D4AF37" strokeWidth="1.2" />
-            <circle cx="50" cy="50" r="10" fill="#F59E0B" />
-            <circle cx="50" cy="50" r="5" fill="#FFFFFF" />
+            
+            {/* Concentric layered rings */}
+            <circle cx="50" cy="50" r="19" fill="url(#goldGrad1)" stroke="#8B0000" strokeWidth="0.8" />
+            <circle cx="50" cy="50" r="16" fill="#7F1D1D" />
+            
+            {/* Pearls inside circle */}
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, idx) => (
+              <circle key={idx} cx="50" cy="37" r="1.5" fill="#FFFFFF" transform={`rotate(${angle} 50 50)`} />
+            ))}
+
+            {/* Inner Star */}
+            <polygon points="50,38 53,46 62,46 55,51 58,59 50,54 42,59 45,51 38,46 47,46" fill="url(#goldGrad1)" stroke="#B45309" strokeWidth="0.5" />
+            
+            {/* Center Gemstone */}
+            <circle cx="50" cy="50" r="7" fill="url(#gemGrad1)" stroke="#FFFFFF" strokeWidth="0.5" />
           </svg>
         </div>
 
         {/* Floating Rakhi 3 */}
         <div className="absolute bottom-[8%] left-[15%] w-56 h-56 animate-float-3 text-red-500">
           <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            {/* Wavy twisted threads */}
-            <path d="M0,50 Q25,40 50,50 T100,50" stroke="#E11D48" strokeWidth="3" fill="none" />
-            <path d="M0,50 Q25,60 50,50 T100,50" stroke="#F59E0B" strokeWidth="1.8" fill="none" />
-            {/* Thread Beads */}
-            <circle cx="18" cy="46" r="3" fill="#FFFFFF" stroke="#E11D48" strokeWidth="1" />
-            <circle cx="82" cy="54" r="3" fill="#FFFFFF" stroke="#E11D48" strokeWidth="1" />
+            {/* Diagonal thread (Dora) */}
+            <line x1="5" y1="95" x2="95" y2="5" stroke="#DC2626" strokeWidth="2.5" />
+            <line x1="5" y1="95" x2="95" y2="5" stroke="#F59E0B" strokeWidth="1" strokeDasharray="3,2" />
+            
+            {/* Thread Beads (diagonal) */}
+            <circle cx="34" cy="66" r="3.2" fill="#7F1D1D" stroke="#D4AF37" strokeWidth="0.5" />
+            <circle cx="26" cy="74" r="3" fill="#FEF3C7" stroke="#D4AF37" strokeWidth="0.5" />
+            <circle cx="66" cy="34" r="3.2" fill="#7F1D1D" stroke="#D4AF37" strokeWidth="0.5" />
+            <circle cx="74" cy="26" r="3" fill="#FEF3C7" stroke="#D4AF37" strokeWidth="0.5" />
 
-            <circle cx="50" cy="50" r="26" stroke="#E11D48" strokeWidth="1" fill="none" strokeDasharray="3,3" />
-            {[0, 60, 120, 180, 240, 300].map((angle, idx) => (
+            {/* Central Scalloped Base */}
+            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle, idx) => (
               <g key={idx} transform={`rotate(${angle} 50 50)`}>
-                <path d="M50,20 C42,28 58,28 50,20" fill="#E11D48" stroke="#D4AF37" strokeWidth="0.8" />
-                <circle cx="50" cy="25" r="2.5" fill="#F59E0B" />
+                <circle cx="50" cy="34" r="6" fill="#D4AF37" />
+                <circle cx="50" cy="34" r="4.5" fill="#7F1D1D" />
               </g>
             ))}
-            <circle cx="50" cy="50" r="15" fill="#F59E0B" stroke="#E11D48" strokeWidth="1.2" />
-            <circle cx="50" cy="50" r="9" fill="#10B981" />
-            <circle cx="50" cy="50" r="4.5" fill="#FFFFFF" />
+            
+            {/* Concentric layered rings */}
+            <circle cx="50" cy="50" r="19" fill="url(#goldGrad1)" stroke="#8B0000" strokeWidth="0.8" />
+            <circle cx="50" cy="50" r="16" fill="#7F1D1D" />
+            
+            {/* Pearls inside circle */}
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, idx) => (
+              <circle key={idx} cx="50" cy="37" r="1.5" fill="#FFFFFF" transform={`rotate(${angle} 50 50)`} />
+            ))}
+
+            {/* Inner Star */}
+            <polygon points="50,38 53,46 62,46 55,51 58,59 50,54 42,59 45,51 38,46 47,46" fill="url(#goldGrad1)" stroke="#B45309" strokeWidth="0.5" />
+            
+            {/* Center Gemstone */}
+            <circle cx="50" cy="50" r="7" fill="url(#gemGrad1)" stroke="#FFFFFF" strokeWidth="0.5" />
           </svg>
         </div>
       </div>
