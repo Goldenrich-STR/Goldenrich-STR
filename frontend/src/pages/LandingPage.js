@@ -2693,7 +2693,7 @@ const LandingPage = () => {
     const totalGuests = guestCounts.adults + guestCounts.children;
     const params = new URLSearchParams();
     if (locationQuery.trim()) {
-      params.set('city', locationQuery.trim());
+      params.set('search', locationQuery.trim());
       setRecentLocationSearches((current) => {
         const next = [locationQuery.trim(), ...current.filter((item) => item !== locationQuery.trim())].slice(0, 5);
         localStorage.setItem(RECENT_LOCATION_STORAGE_KEY, JSON.stringify(next));
@@ -3371,121 +3371,31 @@ const LandingPage = () => {
                           </svg>
                         </div>
                         
-                        {/* Location */}
-                        <div className={`relative flex-1 w-full min-w-0 ${activeDropdown === 'location' ? 'z-[60]' : 'z-[1]'}`}>
+                        {/* Search Input */}
+                        <div className="relative flex-1 w-full min-w-0 z-10">
                           <div 
                             onClick={() => {
-                              setActiveDropdown('location');
-                              const el = document.getElementById('landing-destination');
+                              const el = document.getElementById('landing-search-query');
                               if (el) el.focus();
                             }}
                             className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full cursor-pointer group rounded-2xl lg:rounded-full hover:bg-stone/50 transition duration-200"
                           >
-                            <MapPin className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
+                            <Search className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Where</p>
+                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Search</p>
                               <input
-                                id="landing-destination"
-                                name="destination"
+                                id="landing-search-query"
+                                name="search"
                                 type="text"
-                                autoComplete="address-level2"
                                 value={locationQuery}
-                                onFocus={() => setActiveDropdown('location')}
                                 onChange={(e) => {
                                   setLocationQuery(e.target.value);
-                                  setActiveDropdown('location');
                                 }}
-                                placeholder="Select Location"
+                                placeholder="Search properties..."
                                 className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-400 font-extrabold text-sm focus:ring-0 focus:outline-none p-0 mt-1"
                               />
                             </div>
                           </div>
-
-                          {/* Airbnb-style Suggested Destinations Dropdown */}
-                          {activeDropdown === 'location' && (
-                            <div className="absolute left-0 top-full mt-3 w-full min-w-[320px] max-w-[380px] bg-white border border-gray-100 rounded-[28px] shadow-elevated z-[60] p-3">
-                              <div className="space-y-3">
-                                <div className="rounded-2xl border border-gray-100 bg-white overflow-hidden">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleShowNearbyLocations();
-                                      setActiveDropdown(null);
-                                    }}
-                                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-stone transition"
-                                  >
-                                    <div className="w-11 h-11 rounded-2xl bg-[#F7F4EE] flex items-center justify-center shrink-0">
-                                      <MapPin className="w-5 h-5 text-charcoal" />
-                                    </div>
-                                    <div>
-                                      <p className="text-[11px] font-semibold text-gray-400">Use Current Location</p>
-                                      <p className="text-base font-bold text-charcoal">
-                                        {isDetectingNearby ? 'Finding nearby places...' : 'Near Me'}
-                                      </p>
-                                    </div>
-                                  </button>
-                                  {!!recentLocationSearches.length && (
-                                    <div className="border-t border-gray-100 px-4 py-3">
-                                      <p className="mb-2 text-[11px] font-semibold text-gray-400">Recent Searches</p>
-                                      <div className="flex flex-wrap gap-2">
-                                        {recentLocationSearches.map((recent) => (
-                                          <button
-                                            key={recent}
-                                            type="button"
-                                            onClick={() => {
-                                              setLocationQuery(recent);
-                                              saveRecentLocation(recent);
-                                              setActiveDropdown(null);
-                                            }}
-                                            className="rounded-full bg-[#EEF4FF] px-3 py-1.5 text-xs font-bold text-charcoal"
-                                          >
-                                            {recent}
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                                <p className="text-[11px] font-bold tracking-[0.18em] text-gray-400 uppercase px-3">Suggested destinations</p>
-                              </div>
-                              <div className="space-y-1 max-h-[320px] overflow-y-auto pr-1">
-                                {SUGGESTED_DESTINATIONS.filter(dest => 
-                                  !locationQuery || 
-                                  dest.city.toLowerCase().includes(locationQuery.toLowerCase()) || 
-                                  dest.state.toLowerCase().includes(locationQuery.toLowerCase())
-                                ).map((dest, i) => (
-                                  <button
-                                    key={i}
-                                    type="button"
-                                    onClick={() => {
-                                      setLocationQuery(dest.city);
-                                      saveRecentLocation(dest.city);
-                                      setActiveDropdown(null);
-                                    }}
-                                    className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-stone transition text-left"
-                                  >
-                                    <div className="w-11 h-11 rounded-2xl bg-[#F7F4EE] flex items-center justify-center shrink-0">
-                                      {(() => {
-                                        const DestIcon = dest.icon || MapPin;
-                                        return <DestIcon className="w-5 h-5 text-gray-500" />;
-                                      })()}
-                                    </div>
-                                    <div>
-                                      <p className="text-sm font-bold text-charcoal">{dest.city}, {dest.state}</p>
-                                      <p className="text-xs text-gray-400 font-semibold mt-0.5">{dest.desc}</p>
-                                    </div>
-                                  </button>
-                                ))}
-                                {SUGGESTED_DESTINATIONS.filter(dest => 
-                                  !locationQuery || 
-                                  dest.city.toLowerCase().includes(locationQuery.toLowerCase()) || 
-                                  dest.state.toLowerCase().includes(locationQuery.toLowerCase())
-                                ).length === 0 && (
-                                  <p className="text-xs font-semibold text-gray-400 p-2 italic text-center">No locations matched. Press enter to search anyway.</p>
-                                )}
-                              </div>
-                            </div>
-                          )}
                         </div>
                         <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
                         

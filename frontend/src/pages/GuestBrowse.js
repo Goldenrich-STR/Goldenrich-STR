@@ -397,6 +397,7 @@ const GuestBrowse = () => {
     const isSignature = params.get('signature') === 'true';
     return {
       city: params.get('city') || '',
+      search: params.get('search') || '',
       category: params.get('category') || 'residential',
       property_type: params.get('property_type') || '',
       bhk_type: '',
@@ -418,6 +419,7 @@ const GuestBrowse = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const city = params.get('city');
+    const search = params.get('search');
     const category = params.get('category');
     const propertyType = params.get('property_type');
     const checkIn = params.get('checkIn');
@@ -439,10 +441,11 @@ const GuestBrowse = () => {
         min_price: '50000'
       }));
     }
-    if (city || category || propertyType || checkIn || checkOut || guests || latitude || longitude || radiusKm) {
+    if (city || search || category || propertyType || checkIn || checkOut || guests || latitude || longitude || radiusKm) {
       setFilters(prev => ({
         ...prev,
         city: city || prev.city,
+        search: search || prev.search,
         category: category || prev.category,
         property_type: propertyType || prev.property_type,
         check_in: checkIn || prev.check_in,
@@ -507,6 +510,7 @@ const GuestBrowse = () => {
     }
     const params = {};
     if (filters.city) params.city = filters.city;
+    if (filters.search) params.search = filters.search;
     if (filters.category) params.category = filters.category;
     if (filters.property_type) params.property_type = filters.property_type;
     if (filters.bhk_type) params.bhk_type = filters.bhk_type;
@@ -810,74 +814,31 @@ const GuestBrowse = () => {
                 </svg>
               </div>
 
-              {/* Location */}
+              {/* Search Input */}
               <div className="relative flex-1 w-full z-10">
                 <div 
                   onClick={() => {
-                    setActiveDropdown('location');
-                    const el = document.getElementById('browse-destination');
+                    const el = document.getElementById('browse-search-query');
                     if (el) el.focus();
                   }}
                   className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full cursor-pointer group rounded-2xl lg:rounded-l-full border-b border-sand-100 lg:border-none hover:bg-stone/50 transition duration-200"
                 >
-                  <MapPin className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
+                  <Search className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                   <div className="w-full text-left">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Where</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Search</p>
                     <input
-                      id="browse-destination"
-                      name="destination"
+                      id="browse-search-query"
+                      name="search"
                       type="text"
-                      autoComplete="address-level2"
-                      value={filters.city}
-                      onFocus={() => setActiveDropdown('location')}
+                      value={filters.search}
                       onChange={(e) => {
-                        setFilters({ ...filters, city: e.target.value, latitude: '', longitude: '', radius_km: '' });
-                        setActiveDropdown('location');
+                        setFilters({ ...filters, search: e.target.value });
                       }}
-                      placeholder="Location"
+                      placeholder="Search properties..."
                       className="bg-transparent border-none outline-none text-charcoal w-full placeholder-slate-400 font-bold text-[15px] focus:ring-0 focus:outline-none p-0 mt-0.5"
                     />
                   </div>
                 </div>
-
-                {/* Airbnb-style Suggested Destinations Dropdown */}
-                {activeDropdown === 'location' && (
-                  <div className="absolute left-0 top-full mt-3 w-80 bg-white border border-gray-100 rounded-3xl shadow-elevated z-50 p-4 max-h-96 overflow-y-auto">
-                    <p className="text-xs font-bold tracking-tight text-slate-400 uppercase tracking-wider mb-3 px-2">Suggested destinations</p>
-                    <div className="space-y-1">
-                      {SUGGESTED_DESTINATIONS.filter(dest => 
-                        !filters.city || 
-                        dest.city.toLowerCase().includes(filters.city.toLowerCase()) || 
-                        dest.state.toLowerCase().includes(filters.city.toLowerCase())
-                      ).map((dest, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => {
-                            setFilters({ ...filters, city: dest.city, latitude: '', longitude: '', radius_km: '' });
-                            setActiveDropdown(null);
-                          }}
-                          className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-stone transition text-left"
-                        >
-                          <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center shrink-0">
-                            {dest.icon ? <dest.icon className="w-5 h-5 text-gray-500" /> : <MapPin className="w-5 h-5 text-gray-500" />}
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-charcoal">{dest.city}, {dest.state}</p>
-                            <p className="text-xs text-slate-400 font-semibold mt-0.5">{dest.desc}</p>
-                          </div>
-                        </button>
-                      ))}
-                      {SUGGESTED_DESTINATIONS.filter(dest => 
-                        !filters.city || 
-                        dest.city.toLowerCase().includes(filters.city.toLowerCase()) || 
-                        dest.state.toLowerCase().includes(filters.city.toLowerCase())
-                      ).length === 0 && (
-                        <p className="text-xs font-semibold text-slate-400 p-2 italic text-center">No locations matched. Press enter to search anyway.</p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
               <div className="hidden lg:block w-[1px] h-8 bg-sand-200" />
               

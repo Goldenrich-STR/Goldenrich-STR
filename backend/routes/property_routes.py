@@ -179,6 +179,7 @@ async def search_properties(
     response: Response,
     category: Optional[PropertyCategory] = None,
     city: Optional[str] = None,
+    search: Optional[str] = None,
     property_type: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
@@ -208,6 +209,16 @@ async def search_properties(
 
         if category:
             query["category"] = category.value
+
+        if search:
+            escaped = re.escape(search.strip())
+            query["$or"] = [
+                {"title": {"$regex": escaped, "$options": "i"}},
+                {"description": {"$regex": escaped, "$options": "i"}},
+                {"city": {"$regex": escaped, "$options": "i"}},
+                {"state": {"$regex": escaped, "$options": "i"}},
+                {"address": {"$regex": escaped, "$options": "i"}},
+            ]
 
         radius_search = latitude is not None and longitude is not None and radius_km is not None
 
