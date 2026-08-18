@@ -772,6 +772,15 @@ const GuestBrowse = () => {
 
         <div className="w-full max-w-5xl mx-auto lg:relative z-50">
           {/* Capsule Search Bar */}
+          <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-[44px] p-[1px]">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 rounded-[34px] lg:rounded-[44px] opacity-100"
+              style={{
+                background:
+                  'linear-gradient(90deg, rgba(249,115,22,0.24) 0%, rgba(251,191,36,0.16) 12%, rgba(255,255,255,0.94) 28%, rgba(255,255,255,0.98) 50%, rgba(255,255,255,0.94) 72%, rgba(244,63,94,0.14) 88%, rgba(219,39,119,0.2) 100%)',
+              }}
+            />
             <form
               onSubmit={handleSearch}
               className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[30px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-3 lg:p-3 relative overflow-visible bg-white z-50"
