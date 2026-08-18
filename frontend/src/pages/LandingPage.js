@@ -1886,72 +1886,64 @@ const CollectionsSection = ({
         .animate-float-3 { animation: float-rakhi-3 28s infinite ease-in-out; }
       `}</style>
       
-      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-[1] opacity-[0.09] blur-[0.5px]">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0 opacity-[0.09] blur-[0.5px]">
         {/* Floating Rakhi 1 */}
-        <div className="absolute top-[10%] left-[5%] w-36 h-36 animate-float-1 text-pink-600">
+        <div className="absolute top-[8%] left-[3%] w-52 h-52 animate-float-1 text-pink-600">
           <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="12" fill="#F59E0B" />
-            <circle cx="50" cy="50" r="8" fill="#DC2626" />
-            <circle cx="50" cy="50" r="3" fill="#FBBF24" />
+            <path d="M0,50 Q25,45 50,50 T100,50" stroke="#FF4500" strokeWidth="2" fill="none" />
+            <path d="M0,50 Q25,55 50,50 T100,50" stroke="#D4AF37" strokeWidth="1.2" fill="none" strokeDasharray="3,2" />
+            <circle cx="50" cy="50" r="28" stroke="#FF4500" strokeWidth="1.2" fill="none" strokeDasharray="4,4" />
+            <circle cx="50" cy="50" r="24" stroke="#D4AF37" strokeWidth="0.8" fill="none" />
             {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle, idx) => (
-              <path
-                key={idx}
-                d="M50,15 C47,25 53,25 50,15"
-                transform={`rotate(${angle} 50 50)`}
-                stroke="#DC2626"
-                strokeWidth="1.5"
-                fill="#F59E0B"
-              />
+              <g key={idx} transform={`rotate(${angle} 50 50)`}>
+                <path d="M50,22 C44,32 56,32 50,22" fill="#E11D48" stroke="#D4AF37" strokeWidth="0.8" />
+                <circle cx="50" cy="27" r="2.2" fill="#D4AF37" />
+              </g>
             ))}
-            <path d="M0,50 L38,50" stroke="#F59E0B" strokeWidth="2" strokeDasharray="3,3" />
-            <path d="M62,50 L100,50" stroke="#F59E0B" strokeWidth="2" strokeDasharray="3,3" />
+            <circle cx="50" cy="50" r="18" fill="#D4AF37" stroke="#8B0000" strokeWidth="1" />
+            <circle cx="50" cy="50" r="14" fill="#DC2626" />
+            <circle cx="50" cy="50" r="8" fill="#D4AF37" />
+            <circle cx="50" cy="50" r="4.5" fill="#8B0000" />
+            <circle cx="50" cy="50" r="2" fill="#FFFFFF" />
           </svg>
         </div>
 
         {/* Floating Rakhi 2 */}
-        <div className="absolute top-[45%] right-[8%] w-44 h-44 animate-float-2 text-amber-500">
+        <div className="absolute top-[40%] right-[5%] w-60 h-60 animate-float-2 text-amber-500">
           <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="15" fill="#E11D48" />
-            <circle cx="50" cy="50" r="9" fill="#F59E0B" />
-            <circle cx="50" cy="50" r="4" fill="#FFFFFF" />
+            <path d="M0,50 Q25,35 50,50 T100,50" stroke="#D4AF37" strokeWidth="2" fill="none" />
+            <path d="M0,50 Q25,65 50,50 T100,50" stroke="#DC2626" strokeWidth="1" fill="none" />
+            <circle cx="50" cy="50" r="30" stroke="#D4AF37" strokeWidth="1" fill="none" />
             {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, idx) => (
-              <line
-                key={idx}
-                x1="50"
-                y1="20"
-                x2="50"
-                y2="35"
-                transform={`rotate(${angle} 50 50)`}
-                stroke="#F59E0B"
-                strokeWidth="2.5"
-              />
+              <g key={idx} transform={`rotate(${angle} 50 50)`}>
+                <path d="M50,18 L46,28 L54,28 Z" fill="#F59E0B" stroke="#D4AF37" strokeWidth="0.8" />
+                <circle cx="50" cy="20" r="2.5" fill="#DC2626" />
+              </g>
             ))}
-            <path d="M0,50 Q25,40 35,50" stroke="#E11D48" strokeWidth="2.5" fill="none" />
-            <path d="M65,50 Q75,60 100,50" stroke="#E11D48" strokeWidth="2.5" fill="none" />
+            <circle cx="50" cy="50" r="16" fill="#DC2626" stroke="#D4AF37" strokeWidth="1.2" />
+            <circle cx="50" cy="50" r="10" fill="#F59E0B" />
+            <circle cx="50" cy="50" r="5" fill="#FFFFFF" />
           </svg>
         </div>
 
         {/* Floating Rakhi 3 */}
-        <div className="absolute bottom-[10%] left-[20%] w-40 h-40 animate-float-3 text-red-500">
+        <div className="absolute bottom-[8%] left-[15%] w-56 h-56 animate-float-3 text-red-500">
           <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="10" fill="#F59E0B" />
-            <circle cx="50" cy="50" r="6" fill="#10B981" />
+            <path d="M0,50 L100,50" stroke="#E11D48" strokeWidth="2.2" />
+            <circle cx="50" cy="50" r="26" stroke="#E11D48" strokeWidth="1" fill="none" strokeDasharray="3,3" />
             {[0, 60, 120, 180, 240, 300].map((angle, idx) => (
-              <circle
-                key={idx}
-                cx="50"
-                cy="30"
-                r="6"
-                transform={`rotate(${angle} 50 50)`}
-                fill="#E11D48"
-              />
+              <g key={idx} transform={`rotate(${angle} 50 50)`}>
+                <path d="M50,20 C42,28 58,28 50,20" fill="#E11D48" stroke="#D4AF37" strokeWidth="0.8" />
+                <circle cx="50" cy="25" r="2.5" fill="#F59E0B" />
+              </g>
             ))}
-            <path d="M0,50 L40,50" stroke="#E11D48" strokeWidth="2" />
-            <path d="M60,50 L100,50" stroke="#E11D48" strokeWidth="2" />
+            <circle cx="50" cy="50" r="15" fill="#F59E0B" stroke="#E11D48" strokeWidth="1.2" />
+            <circle cx="50" cy="50" r="9" fill="#10B981" />
+            <circle cx="50" cy="50" r="4.5" fill="#FFFFFF" />
           </svg>
         </div>
       </div>
-      <div className="relative w-full max-w-[1440px] mx-auto px-4 md:px-8">
+      <div className="relative w-full max-w-[1440px] mx-auto px-4 md:px-8 z-10">
         <ScrollReveal duration="duration-[800ms]">
           <div className="mb-14">
             <div className="mb-8 flex items-end justify-between gap-4">
