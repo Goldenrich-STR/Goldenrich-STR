@@ -1863,6 +1863,94 @@ const CollectionsSection = ({
             'radial-gradient(circle at 10% 10%, rgba(219,39,119,0.14), transparent 34%), radial-gradient(circle at 88% 12%, rgba(251,191,36,0.18), transparent 28%), radial-gradient(circle at 14% 88%, rgba(249,115,22,0.15), transparent 32%), radial-gradient(circle at 86% 86%, rgba(219,39,119,0.12), transparent 26%), linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.94) 46%, rgba(254,250,246,0.98) 100%)'
         }}
       />
+      
+      {/* Floating background Rakhi shapes */}
+      <style>{`
+        @keyframes float-rakhi-1 {
+          0% { transform: translate(0, 0) rotate(0deg); }
+          50% { transform: translate(30px, -45px) rotate(180deg); }
+          100% { transform: translate(0, 0) rotate(360deg); }
+        }
+        @keyframes float-rakhi-2 {
+          0% { transform: translate(0, 0) rotate(0deg); }
+          50% { transform: translate(-45px, -30px) rotate(-180deg); }
+          100% { transform: translate(0, 0) rotate(-360deg); }
+        }
+        @keyframes float-rakhi-3 {
+          0% { transform: translate(0, 0) rotate(0deg); }
+          50% { transform: translate(25px, 35px) rotate(120deg); }
+          100% { transform: translate(0, 0) rotate(360deg); }
+        }
+        .animate-float-1 { animation: float-rakhi-1 25s infinite ease-in-out; }
+        .animate-float-2 { animation: float-rakhi-2 30s infinite ease-in-out; }
+        .animate-float-3 { animation: float-rakhi-3 28s infinite ease-in-out; }
+      `}</style>
+      
+      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-[1] opacity-[0.09] blur-[0.5px]">
+        {/* Floating Rakhi 1 */}
+        <div className="absolute top-[10%] left-[5%] w-36 h-36 animate-float-1 text-pink-600">
+          <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="12" fill="#F59E0B" />
+            <circle cx="50" cy="50" r="8" fill="#DC2626" />
+            <circle cx="50" cy="50" r="3" fill="#FBBF24" />
+            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle, idx) => (
+              <path
+                key={idx}
+                d="M50,15 C47,25 53,25 50,15"
+                transform={`rotate(${angle} 50 50)`}
+                stroke="#DC2626"
+                strokeWidth="1.5"
+                fill="#F59E0B"
+              />
+            ))}
+            <path d="M0,50 L38,50" stroke="#F59E0B" strokeWidth="2" strokeDasharray="3,3" />
+            <path d="M62,50 L100,50" stroke="#F59E0B" strokeWidth="2" strokeDasharray="3,3" />
+          </svg>
+        </div>
+
+        {/* Floating Rakhi 2 */}
+        <div className="absolute top-[45%] right-[8%] w-44 h-44 animate-float-2 text-amber-500">
+          <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="15" fill="#E11D48" />
+            <circle cx="50" cy="50" r="9" fill="#F59E0B" />
+            <circle cx="50" cy="50" r="4" fill="#FFFFFF" />
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, idx) => (
+              <line
+                key={idx}
+                x1="50"
+                y1="20"
+                x2="50"
+                y2="35"
+                transform={`rotate(${angle} 50 50)`}
+                stroke="#F59E0B"
+                strokeWidth="2.5"
+              />
+            ))}
+            <path d="M0,50 Q25,40 35,50" stroke="#E11D48" strokeWidth="2.5" fill="none" />
+            <path d="M65,50 Q75,60 100,50" stroke="#E11D48" strokeWidth="2.5" fill="none" />
+          </svg>
+        </div>
+
+        {/* Floating Rakhi 3 */}
+        <div className="absolute bottom-[10%] left-[20%] w-40 h-40 animate-float-3 text-red-500">
+          <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
+            <circle cx="50" cy="50" r="10" fill="#F59E0B" />
+            <circle cx="50" cy="50" r="6" fill="#10B981" />
+            {[0, 60, 120, 180, 240, 300].map((angle, idx) => (
+              <circle
+                key={idx}
+                cx="50"
+                cy="30"
+                r="6"
+                transform={`rotate(${angle} 50 50)`}
+                fill="#E11D48"
+              />
+            ))}
+            <path d="M0,50 L40,50" stroke="#E11D48" strokeWidth="2" />
+            <path d="M60,50 L100,50" stroke="#E11D48" strokeWidth="2" />
+          </svg>
+        </div>
+      </div>
       <div className="relative w-full max-w-[1440px] mx-auto px-4 md:px-8">
         <ScrollReveal duration="duration-[800ms]">
           <div className="mb-14">
