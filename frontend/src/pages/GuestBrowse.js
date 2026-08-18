@@ -771,20 +771,74 @@ const GuestBrowse = () => {
         )}
 
         <div className="w-full max-w-5xl mx-auto lg:relative z-50">
-          <form
-            onSubmit={handleSearch}
-            className="flex flex-col lg:flex-row items-center bg-white rounded-2xl lg:rounded-full w-full shadow-elevated border border-gray-100 lg:relative z-50"
-          >
-              
+          {/* Capsule Search Bar */}
+          <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-[44px] p-[1px]">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 rounded-[34px] lg:rounded-[44px] opacity-100"
+              style={{
+                background:
+                  'linear-gradient(90deg, rgba(249,115,22,0.24) 0%, rgba(251,191,36,0.16) 12%, rgba(255,255,255,0.94) 28%, rgba(255,255,255,0.98) 50%, rgba(255,255,255,0.94) 72%, rgba(244,63,94,0.14) 88%, rgba(219,39,119,0.2) 100%)',
+              }}
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-1 left-0 w-36 rounded-full blur-2xl"
+              style={{ background: 'rgba(219,39,119,0.28)' }}
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-1 right-0 w-36 rounded-full blur-2xl"
+              style={{ background: 'rgba(251,191,36,0.24)' }}
+            />
+            <form
+              onSubmit={handleSearch}
+              className="flex flex-col lg:flex-row items-center bg-white rounded-2xl lg:rounded-full w-full shadow-elevated border border-gray-100 lg:relative z-50 overflow-visible p-1"
+            >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 rounded-[30px] lg:rounded-full"
+                style={{
+                  background:
+                    'linear-gradient(90deg, rgba(249,115,22,0.18) 0%, rgba(254,243,199,0.86) 14%, rgba(255,255,255,0.98) 32%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.98) 68%, rgba(253,244,245,0.86) 86%, rgba(219,39,119,0.15) 100%)',
+                }}
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 left-4 w-28 rounded-full blur-2xl"
+                style={{ background: 'rgba(219,39,119,0.22)' }}
+              />
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 right-4 w-28 rounded-full blur-2xl"
+                style={{ background: 'rgba(249,115,22,0.2)' }}
+              />
+
+              {/* Raksha Bandhan Festive Rakhi Icon */}
+              <div className="flex items-center shrink-0 pl-3 pr-1 text-pink-600 select-none animate-pulse z-10" title="Raksha Bandhan Special">
+                <svg className="hidden sm:block w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
+                  <path d="M0,5 Q10,0 20,5 T40,5" stroke="currentColor" strokeWidth="2.5" fill="none" />
+                </svg>
+                <div className="relative w-5 h-5 flex items-center justify-center mx-1">
+                  <div className="absolute inset-0 rounded-full border border-dashed border-red-500 bg-amber-400 animate-spin" style={{ animationDuration: '10s' }} />
+                  <div className="absolute w-3.5 h-3.5 rounded-full bg-red-600 flex items-center justify-center shadow-inner">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-300" />
+                  </div>
+                </div>
+                <svg className="hidden sm:block w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
+                  <path d="M0,5 Q10,0 20,5 T40,5" stroke="currentColor" strokeWidth="2.5" fill="none" />
+                </svg>
+              </div>
+
               {/* Location */}
-              <div className="relative flex-1 w-full">
+              <div className="relative flex-1 w-full z-10">
                 <div 
                   onClick={() => {
                     setActiveDropdown('location');
                     const el = document.getElementById('browse-destination');
                     if (el) el.focus();
                   }}
-                  className="flex items-center px-4 lg:px-6 py-4 w-full cursor-pointer group rounded-t-2xl lg:rounded-l-full border-b border-gray-100 lg:border-none hover:bg-gray-50 transition"
+                  className="flex items-center px-4 lg:px-6 py-4 w-full cursor-pointer group rounded-t-2xl lg:rounded-l-full border-b border-gray-100 lg:border-none hover:bg-gray-50/50 transition"
                 >
                   <MapPin className="w-5 h-5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors" />
                   <div className="w-full text-left">
@@ -1021,6 +1075,7 @@ const GuestBrowse = () => {
               </div>
 
           </form>
+          </div>
         </div>
       </div>
       {/* Advanced filters drawer */}
