@@ -422,7 +422,8 @@ async def search_properties(
             "subscription_id": 1,
             "is_boosted": 1,
             "boost_expires_at": 1,
-            "boost_rank": 1
+            "boost_rank": 1,
+            "created_at": 1
         }
         raw_properties = await db.properties.find(query, projection).to_list(length=1000)
 
@@ -531,9 +532,8 @@ async def search_properties(
                 reverse=True,
             )
         else:
-            # Default / recommended: shuffle remaining normal listings
-            import random
-            random.shuffle(non_boosted)
+            # Default / recommended: sort stably newest first (created_at descending)
+            non_boosted.sort(key=lambda p: p.get("created_at") or "", reverse=True)
 
         raw_properties = boosted + non_boosted
 
