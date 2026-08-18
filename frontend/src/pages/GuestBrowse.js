@@ -796,7 +796,7 @@ const GuestBrowse = () => {
 
               {/* Raksha Bandhan Festive Rakhi Icon */}
               <div className="flex items-center shrink-0 pl-3 pr-1 text-pink-600 select-none animate-pulse z-10" title="Raksha Bandhan Special">
-                <svg className="hidden sm:block w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
+                <svg className="w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
                   <path d="M0,5 Q10,0 20,5 T40,5" stroke="currentColor" strokeWidth="2.5" fill="none" />
                 </svg>
                 <div className="relative w-5 h-5 flex items-center justify-center mx-1">
@@ -805,7 +805,7 @@ const GuestBrowse = () => {
                     <div className="w-1.5 h-1.5 rounded-full bg-amber-300" />
                   </div>
                 </div>
-                <svg className="hidden sm:block w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
+                <svg className="w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
                   <path d="M0,5 Q10,0 20,5 T40,5" stroke="currentColor" strokeWidth="2.5" fill="none" />
                 </svg>
               </div>
