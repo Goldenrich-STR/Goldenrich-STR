@@ -2466,12 +2466,21 @@ async def property_operations(
     host: Optional[str] = None,
     broker: Optional[str] = None,
     rm: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
     limit: int = 100,
     skip: int = 0,
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     query = {}
+    created_range = {}
+    if date_from:
+        created_range["$gte"] = _parse_date_start(date_from)
+    if date_to:
+        created_range["$lte"] = _parse_date_end(date_to)
+    if created_range:
+        query["created_at"] = created_range
     status_map = {
         "draft": "draft",
         "submitted": "pending_verification",

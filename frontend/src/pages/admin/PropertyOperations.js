@@ -38,6 +38,8 @@ const PropertyOperations = () => {
   const [hostFilter, setHostFilter] = useState('');
   const [brokerFilter, setBrokerFilter] = useState('');
   const [rmFilter, setRmFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [state, setState] = useState({ loading: true, error: '', properties: [] });
   const [selected, setSelected] = useState({ loading: false, property: null, error: '' });
   const [boostProperty, setBoostProperty] = useState(null);
@@ -45,17 +47,27 @@ const PropertyOperations = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [tab, search, category, propertyType, hostFilter, brokerFilter, rmFilter]);
+  }, [tab, search, category, propertyType, hostFilter, brokerFilter, rmFilter, dateFrom, dateTo]);
 
   const load = useCallback(async () => {
     try {
       setState((current) => ({ ...current, loading: true }));
-      const res = await adminPhase1API.propertyOperations({ tab, search, category, property_type: propertyType, host: hostFilter, broker: brokerFilter, rm: rmFilter });
+      const res = await adminPhase1API.propertyOperations({
+        tab,
+        search,
+        category,
+        property_type: propertyType,
+        host: hostFilter,
+        broker: brokerFilter,
+        rm: rmFilter,
+        date_from: dateFrom,
+        date_to: dateTo,
+      });
       setState({ loading: false, error: '', properties: res.data.data.properties });
     } catch (error) {
       setState({ loading: false, error: error.response?.data?.detail || 'Failed to load properties', properties: [] });
     }
-  }, [tab, search, category, propertyType, hostFilter, brokerFilter, rmFilter]);
+  }, [tab, search, category, propertyType, hostFilter, brokerFilter, rmFilter, dateFrom, dateTo]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -261,6 +273,28 @@ const PropertyOperations = () => {
           <select className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm" value={hostFilter} onChange={(e) => setHostFilter(e.target.value)}><option value="">All Hosts</option>{filterOptions.hosts.map((item) => <option key={item} value={item}>{item}</option>)}</select>
           <select className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm" value={brokerFilter} onChange={(e) => setBrokerFilter(e.target.value)}><option value="">All Brokers</option>{filterOptions.brokers.map((item) => <option key={item} value={item}>{item}</option>)}</select>
           <select className="h-12 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm" value={rmFilter} onChange={(e) => setRmFilter(e.target.value)}><option value="">All RMs</option>{filterOptions.rms.map((item) => <option key={item} value={item}>{item}</option>)}</select>
+        </div>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5">
+            <span className="text-xs font-bold text-slate-400 w-24 shrink-0">Created From:</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-full bg-transparent text-sm font-semibold text-slate-700 outline-none"
+            />
+            {dateFrom && <button type="button" onClick={() => setDateFrom('')} className="text-red-500 hover:text-red-700 text-xs font-bold shrink-0 ml-1">Clear</button>}
+          </div>
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5">
+            <span className="text-xs font-bold text-slate-400 w-24 shrink-0">Created To:</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-full bg-transparent text-sm font-semibold text-slate-700 outline-none"
+            />
+            {dateTo && <button type="button" onClick={() => setDateTo('')} className="text-red-500 hover:text-red-700 text-xs font-bold shrink-0 ml-1">Clear</button>}
+          </div>
         </div>
       </Panel>
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} /> : (
