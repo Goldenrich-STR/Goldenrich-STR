@@ -1860,7 +1860,7 @@ const CollectionsSection = ({
         className="pointer-events-none absolute inset-0 opacity-100"
         style={{
           background:
-            'radial-gradient(circle at 10% 10%, rgba(255,153,51,0.22), transparent 34%), radial-gradient(circle at 88% 12%, rgba(255,153,51,0.16), transparent 28%), radial-gradient(circle at 14% 88%, rgba(19,136,8,0.18), transparent 32%), radial-gradient(circle at 86% 86%, rgba(19,136,8,0.14), transparent 26%), linear-gradient(180deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.94) 46%, rgba(248,250,252,0.98) 100%)'
+            'radial-gradient(circle at 10% 10%, rgba(219,39,119,0.14), transparent 34%), radial-gradient(circle at 88% 12%, rgba(251,191,36,0.18), transparent 28%), radial-gradient(circle at 14% 88%, rgba(249,115,22,0.15), transparent 32%), radial-gradient(circle at 86% 86%, rgba(219,39,119,0.12), transparent 26%), linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.94) 46%, rgba(254,250,246,0.98) 100%)'
         }}
       />
       <div className="relative w-full max-w-[1440px] mx-auto px-4 md:px-8">
@@ -3192,18 +3192,18 @@ const LandingPage = () => {
                         className="pointer-events-none absolute inset-0 rounded-[34px] lg:rounded-[44px] opacity-100"
                         style={{
                           background:
-                            'linear-gradient(90deg, rgba(255,153,51,0.34) 0%, rgba(255,214,163,0.22) 12%, rgba(255,255,255,0.94) 28%, rgba(255,255,255,0.98) 50%, rgba(255,255,255,0.94) 72%, rgba(179,229,168,0.24) 88%, rgba(19,136,8,0.3) 100%)',
+                            'linear-gradient(90deg, rgba(249,115,22,0.24) 0%, rgba(251,191,36,0.16) 12%, rgba(255,255,255,0.94) 28%, rgba(255,255,255,0.98) 50%, rgba(255,255,255,0.94) 72%, rgba(244,63,94,0.14) 88%, rgba(219,39,119,0.2) 100%)',
                         }}
                       />
                       <div
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-y-1 left-0 w-36 rounded-full blur-2xl"
-                        style={{ background: 'rgba(255,153,51,0.28)' }}
+                        style={{ background: 'rgba(219,39,119,0.28)' }}
                       />
                       <div
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-y-1 right-0 w-36 rounded-full blur-2xl"
-                        style={{ background: 'rgba(19,136,8,0.24)' }}
+                        style={{ background: 'rgba(251,191,36,0.24)' }}
                       />
                       <div className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[30px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-3 lg:p-3 relative overflow-visible bg-white">
                         <div
@@ -3211,19 +3211,35 @@ const LandingPage = () => {
                         className="pointer-events-none absolute inset-0 rounded-[30px] lg:rounded-full"
                         style={{
                           background:
-                            'linear-gradient(90deg, rgba(255,153,51,0.24) 0%, rgba(255,239,221,0.86) 14%, rgba(255,255,255,0.98) 32%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.98) 68%, rgba(229,246,225,0.86) 86%, rgba(19,136,8,0.22) 100%)',
+                            'linear-gradient(90deg, rgba(249,115,22,0.18) 0%, rgba(254,243,199,0.86) 14%, rgba(255,255,255,0.98) 32%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.98) 68%, rgba(253,244,245,0.86) 86%, rgba(219,39,119,0.15) 100%)',
                         }}
                       />
                       <div
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-y-0 left-4 w-28 rounded-full blur-2xl"
-                        style={{ background: 'rgba(255,153,51,0.22)' }}
+                        style={{ background: 'rgba(219,39,119,0.22)' }}
                       />
                       <div
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-y-0 right-4 w-28 rounded-full blur-2xl"
-                        style={{ background: 'rgba(19,136,8,0.2)' }}
+                        style={{ background: 'rgba(249,115,22,0.2)' }}
                       />
+                        
+                        {/* Raksha Bandhan Festive Rakhi Icon */}
+                        <div className="flex items-center shrink-0 pl-3 pr-1 text-pink-600 select-none animate-pulse" title="Raksha Bandhan Special">
+                          <svg className="hidden sm:block w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
+                            <path d="M0,5 Q10,0 20,5 T40,5" stroke="currentColor" strokeWidth="2.5" fill="none" />
+                          </svg>
+                          <div className="relative w-5 h-5 flex items-center justify-center mx-1">
+                            <div className="absolute inset-0 rounded-full border border-dashed border-red-500 bg-amber-400 animate-spin" style={{ animationDuration: '10s' }} />
+                            <div className="absolute w-3.5 h-3.5 rounded-full bg-red-600 flex items-center justify-center shadow-inner">
+                              <div className="w-1.5 h-1.5 rounded-full bg-amber-300" />
+                            </div>
+                          </div>
+                          <svg className="hidden sm:block w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
+                            <path d="M0,5 Q10,0 20,5 T40,5" stroke="currentColor" strokeWidth="2.5" fill="none" />
+                          </svg>
+                        </div>
                         
                         {/* Location */}
                         <div className={`relative flex-1 w-full min-w-0 ${activeDropdown === 'location' ? 'z-[60]' : 'z-[1]'}`}>

@@ -1166,7 +1166,7 @@ const GuestBrowse = () => {
           </h2>
           <p className="text-charcoal-muted font-medium mt-1">
              {new URLSearchParams(window.location.search).get('signature') === 'true'
-                ? "Indulge in India's most ultra-luxury private villas and premium resort stays."
+                ? "Indulge in India's most ultra-luxury private villas and premium villa stays."
                 : filters.city ? t('curatedResults').replace('{city}', filters.city) : t('discoverExclusive')}
           </p>
         </div>

@@ -539,7 +539,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                   Enjoy the luxuries & privacy of a villa with
                 </p>
                 <div className="border border-dashed border-white/80 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-1.5 text-xs font-bold tracking-wide text-white drop-shadow-sm">
-                  Rooms Starting at ₹5,000*
+                  Rooms Starting at ₹2,000*
                 </div>
               </div>
             </div>

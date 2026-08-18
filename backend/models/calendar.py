@@ -38,6 +38,7 @@ class ExternalCalendar(BaseModel):
     property_id: str
     owner_id: str
     
+    
     # Calendar details
     name: str
     ical_url: str
