@@ -1890,8 +1890,15 @@ const CollectionsSection = ({
         {/* Floating Rakhi 1 */}
         <div className="absolute top-[8%] left-[3%] w-52 h-52 animate-float-1 text-pink-600">
           <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            <path d="M0,50 Q25,45 50,50 T100,50" stroke="#FF4500" strokeWidth="2" fill="none" />
-            <path d="M0,50 Q25,55 50,50 T100,50" stroke="#D4AF37" strokeWidth="1.2" fill="none" strokeDasharray="3,2" />
+            {/* Wavy twisted threads */}
+            <path d="M0,50 Q25,40 50,50 T100,50" stroke="#FF4500" strokeWidth="3" fill="none" />
+            <path d="M0,50 Q25,60 50,50 T100,50" stroke="#D4AF37" strokeWidth="1.8" fill="none" />
+            {/* Thread Beads */}
+            <circle cx="15" cy="46" r="2.8" fill="#D4AF37" />
+            <circle cx="26" cy="50" r="2.8" fill="#E11D48" />
+            <circle cx="74" cy="50" r="2.8" fill="#E11D48" />
+            <circle cx="85" cy="54" r="2.8" fill="#D4AF37" />
+            
             <circle cx="50" cy="50" r="28" stroke="#FF4500" strokeWidth="1.2" fill="none" strokeDasharray="4,4" />
             <circle cx="50" cy="50" r="24" stroke="#D4AF37" strokeWidth="0.8" fill="none" />
             {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle, idx) => (
@@ -1911,8 +1918,13 @@ const CollectionsSection = ({
         {/* Floating Rakhi 2 */}
         <div className="absolute top-[40%] right-[5%] w-60 h-60 animate-float-2 text-amber-500">
           <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            <path d="M0,50 Q25,35 50,50 T100,50" stroke="#D4AF37" strokeWidth="2" fill="none" />
-            <path d="M0,50 Q25,65 50,50 T100,50" stroke="#DC2626" strokeWidth="1" fill="none" />
+            {/* Wavy twisted threads */}
+            <path d="M0,50 Q25,60 50,50 T100,50" stroke="#DC2626" strokeWidth="3" fill="none" />
+            <path d="M0,50 Q25,40 50,50 T100,50" stroke="#D4AF37" strokeWidth="1.8" fill="none" />
+            {/* Thread Beads */}
+            <circle cx="20" cy="52" r="3.2" fill="#F59E0B" />
+            <circle cx="80" cy="48" r="3.2" fill="#F59E0B" />
+
             <circle cx="50" cy="50" r="30" stroke="#D4AF37" strokeWidth="1" fill="none" />
             {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, idx) => (
               <g key={idx} transform={`rotate(${angle} 50 50)`}>
@@ -1929,7 +1941,13 @@ const CollectionsSection = ({
         {/* Floating Rakhi 3 */}
         <div className="absolute bottom-[8%] left-[15%] w-56 h-56 animate-float-3 text-red-500">
           <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            <path d="M0,50 L100,50" stroke="#E11D48" strokeWidth="2.2" />
+            {/* Wavy twisted threads */}
+            <path d="M0,50 Q25,40 50,50 T100,50" stroke="#E11D48" strokeWidth="3" fill="none" />
+            <path d="M0,50 Q25,60 50,50 T100,50" stroke="#F59E0B" strokeWidth="1.8" fill="none" />
+            {/* Thread Beads */}
+            <circle cx="18" cy="46" r="3" fill="#FFFFFF" stroke="#E11D48" strokeWidth="1" />
+            <circle cx="82" cy="54" r="3" fill="#FFFFFF" stroke="#E11D48" strokeWidth="1" />
+
             <circle cx="50" cy="50" r="26" stroke="#E11D48" strokeWidth="1" fill="none" strokeDasharray="3,3" />
             {[0, 60, 120, 180, 240, 300].map((angle, idx) => (
               <g key={idx} transform={`rotate(${angle} 50 50)`}>
