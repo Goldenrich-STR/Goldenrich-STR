@@ -841,11 +841,11 @@ def _days_until(value):
 
 
 def _parse_date_start(value: str):
-    return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
+    return datetime.fromisoformat(value).replace(tzinfo=None)
 
 
 def _parse_date_end(value: str):
-    return datetime.fromisoformat(value).replace(hour=23, minute=59, second=59, microsecond=999999, tzinfo=timezone.utc)
+    return datetime.fromisoformat(value).replace(hour=23, minute=59, second=59, microsecond=999999, tzinfo=None)
 
 
 async def _assert_unique_user_fields(db, *, email: str, phone: str, employee_code: str = "", user_id: str = ""):

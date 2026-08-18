@@ -207,48 +207,67 @@ const PropertyOperations = () => {
     refreshSelected();
   };
 
-  const handleExportCSV = () => {
-    if (!state.properties.length) {
-      showNotice({ title: 'Export Empty', description: 'No properties available in this view to export.', eyebrow: 'Action Aborted' });
-      return;
+  const handleExportCSV = async () => {
+    try {
+      const res = await adminPhase1API.propertyOperations({
+        tab,
+        search,
+        category,
+        property_type: propertyType,
+        host: hostFilter,
+        broker: brokerFilter,
+        rm: rmFilter,
+        date_from: dateFrom,
+        date_to: dateTo,
+        limit: 50000,
+      });
+      const exportProperties = res.data?.data?.properties || [];
+      if (!exportProperties.length) {
+        showNotice({ title: 'Export Empty', description: 'No properties available in this view to export.', eyebrow: 'Action Aborted' });
+        return;
+      }
+      const headers = ['Property Title', 'Property ID', 'Host Name', 'Owner ID', 'Property Type', 'Category', 'City', 'Broker Name', 'Broker Code', 'RM Name', 'RM Code', 'Branch Manager Name', 'Branch Manager Code', 'Status', 'Workflow Stage', 'Subscription', 'Price Per Night'];
+      
+      const escapeCsv = (val) => {
+        if (val === undefined || val === null) return '""';
+        const str = String(val).replace(/"/g, '""');
+        return `"${str}"`;
+      };
+
+      const rows = exportProperties.map((property) => [
+        property.title || '',
+        property.property_id || '',
+        property.host_name || '',
+        property.owner_id || '',
+        property.property_type || property.bhk_type || '',
+        property.category || '',
+        property.city || '',
+        property.broker_name || '',
+        property.broker_code || property.assigned_broker || '',
+        property.rm_name || '',
+        property.rm_code || property.assigned_rm || '',
+        property.branch_manager_name || '',
+        property.branch_manager_code || property.assigned_branch_manager || '',
+        property.status || '',
+        property.workflow_stage || '',
+        property.subscription_status || '',
+        property.price_per_night || 0,
+      ]);
+
+      const csvContent = [headers, ...rows].map(row => row.map(escapeCsv).join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `properties_${tab}_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      showNotice({ title: 'Export Failed', description: 'Failed to generate property CSV report.', eyebrow: 'Action Failed' });
     }
-    const headers = ['Property Title', 'Property ID', 'Host Name', 'Owner ID', 'Property Type', 'Category', 'City', 'Broker Name', 'Broker Code', 'RM Name', 'RM Code', 'Branch Manager Name', 'Branch Manager Code', 'Status', 'Subscription', 'Price Per Night'];
-    
-    const escapeCsv = (val) => {
-      if (val === undefined || val === null) return '""';
-      const str = String(val).replace(/"/g, '""');
-      return `"${str}"`;
-    };
-
-    const rows = state.properties.map((property) => [
-      property.title || '',
-      property.property_id || '',
-      property.host_name || '',
-      property.owner_id || '',
-      property.property_type || property.bhk_type || '',
-      property.category || '',
-      property.city || '',
-      property.broker_name || '',
-      property.broker_code || property.assigned_broker || '',
-      property.rm_name || '',
-      property.rm_code || property.assigned_rm || '',
-      property.branch_manager_name || '',
-      property.branch_manager_code || property.assigned_branch_manager || '',
-      property.status || '',
-      property.subscription_status || '',
-      property.price_per_night || 0,
-    ]);
-
-    const csvContent = [headers, ...rows].map(row => row.map(escapeCsv).join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `properties_${tab}_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
   };
 
   return (
