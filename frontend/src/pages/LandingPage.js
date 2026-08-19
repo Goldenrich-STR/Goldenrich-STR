@@ -3979,7 +3979,7 @@ const LandingPage = () => {
               };
 
               return (
-                <div className="w-full bg-[#FAF9F6] py-16 border-t border-b border-sand-100/50 mt-16 mb-24">
+                <div className="w-full bg-[#F5F2EB] py-16 border-t border-b border-sand-200/60 mt-16 mb-24">
                   <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8">
                     <div className="w-full bg-[#E5DFD9] rounded-3xl overflow-hidden shadow-lg flex flex-col md:flex-row h-auto md:h-[380px] mb-16 border border-[#dcd6d0]">
                       <div className="w-full md:w-[45%] p-8 md:p-10 flex flex-col justify-center text-left text-[#3c3732]">
