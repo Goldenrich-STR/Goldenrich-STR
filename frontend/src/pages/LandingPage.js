@@ -3590,106 +3590,107 @@ const LandingPage = () => {
               ))}
             </div>
 
-            {recentlyVisitedProperties.length > 0 && (
-            <div className="mt-12 md:mt-16 pt-8 md:pt-10 border-t border-sand-200">
-              <div className="flex items-end justify-between gap-4 mb-6">
-                <div className="text-left">
-                  <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">Recently Visited</h2>
-                  <div className="mt-6 inline-flex flex-col items-start">
-                    <span className="text-sm md:text-base font-bold text-charcoal">Properties</span>
-                    <span className="mt-2 h-[2px] w-full bg-charcoal" />
-                  </div>
-                </div>
-                <div className="hidden md:flex items-center gap-3 text-charcoal">
-                  <span
-                    type="button"
-                    onClick={() => scrollSlider('left', 'slider-recently-visited')}
-                    className="p-1 hover:text-terracotta transition"
-                    aria-label="Previous recently visited properties"
-                  >
-                    <ChevronLeft className="w-6 h-6" />
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => scrollSlider('right', 'slider-recently-visited')}
-                    className="p-1 hover:text-terracotta transition"
-                    aria-label="Next recently visited properties"
-                  >
-                    <ChevronRight className="w-6 h-6" />
-                  </button>
-                </div>
-              </div>
-
-              <div
-                id="slider-recently-visited"
-                className="flex overflow-x-auto gap-4 md:gap-6 pb-4 no-scrollbar snap-x scroll-smooth"
-              >
-                {recentlyVisitedProperties.map((item, index) => (
-                  <button
-                    key={item.property_id || index}
-                    type="button"
-                    onClick={() => navigate(`/property/${item.property_id}`)}
-                    className="min-w-[260px] md:min-w-[285px] w-[260px] md:w-[285px] bg-white rounded-xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-elevated transition text-left snap-start flex-shrink-0"
-                  >
-                    <div className="relative aspect-[16/10] bg-stone overflow-hidden">
-                      <img
-                        src={getPropertyCardImage(item)}
-                        alt={item.title}
-                        loading="lazy"
-                        decoding="async"
-                        onError={({ currentTarget }) => {
-                          currentTarget.onerror = null;
-                          currentTarget.src = PROPERTY_IMAGE_FALLBACK;
-                        }}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-3 left-3 flex gap-2 z-20">
-                        {item.rating > 0 && item.review_count > 0 && (
-                          <div className="bg-charcoal/70 text-white rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
-                            <span>{Number(item.rating).toFixed(1)}</span>
-                            <Star className="w-3.5 h-3.5 text-[#E0A51B] fill-current" />
-                          </div>
-                        )}
-                        <div className="glass px-3 py-1 rounded-full shadow-sm bg-white/70 backdrop-blur-md">
-                          <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal">
-                            {formatPropertyTypeLabel(item.property_type || item.type) || 'Stay'}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                        className="absolute top-3 right-3 text-white z-20"
-                        aria-label="Toggle wishlist"
-                      >
-                        <Heart className={`w-5 h-5 drop-shadow-md ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-                      </button>
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-bold text-charcoal text-sm md:text-base line-clamp-1">{item.title}</h3>
-                      <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-charcoal-muted">
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span>{item.city || 'Maharashtra'}{item.state ? `, ${item.state}` : ''}</span>
-                      </p>
-                      <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-charcoal-muted font-semibold line-clamp-1">
-                        Up to {item.max_guests || item.guests || 4} Guests
-                        <span className="mx-1">-</span>
-                        {item.bedrooms || item.rooms || 1} Room{(item.bedrooms || item.rooms || 1) > 1 ? 's' : ''}
-                        <span className="mx-1">-</span>
-                        {item.bathrooms || item.baths || 1} Bath{(item.bathrooms || item.baths || 1) > 1 ? 's' : ''}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-            )}
           </div>
         </div>
       </ScrollReveal>
       {/* Content Section — full width, overflow guard */}
       <div className="w-full bg-white relative z-20 overflow-x-hidden">
+
+        {recentlyVisitedProperties.length > 0 && (
+          <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-8 md:py-12 border-b border-sand-100">
+            <div className="flex items-end justify-between gap-4 mb-6">
+              <div className="text-left">
+                <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">Recently Visited</h2>
+                <div className="mt-6 inline-flex flex-col items-start">
+                  <span className="text-sm md:text-base font-bold text-charcoal">Properties</span>
+                  <span className="mt-2 h-[2px] w-full bg-charcoal" />
+                </div>
+              </div>
+              <div className="hidden md:flex items-center gap-3 text-charcoal">
+                <button
+                  type="button"
+                  onClick={() => scrollSlider('left', 'slider-recently-visited')}
+                  className="p-1 hover:text-terracotta transition cursor-pointer"
+                  aria-label="Previous recently visited properties"
+                >
+                  <ChevronLeft className="w-6 h-6" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollSlider('right', 'slider-recently-visited')}
+                  className="p-1 hover:text-terracotta transition cursor-pointer"
+                  aria-label="Next recently visited properties"
+                >
+                  <ChevronRight className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="slider-recently-visited"
+              className="flex overflow-x-auto gap-4 md:gap-6 pb-4 no-scrollbar snap-x scroll-smooth"
+            >
+              {recentlyVisitedProperties.map((item, index) => (
+                <button
+                  key={item.property_id || index}
+                  type="button"
+                  onClick={() => navigate(`/property/${item.property_id}`)}
+                  className="min-w-[260px] md:min-w-[285px] w-[260px] md:w-[285px] bg-white rounded-xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-elevated transition text-left snap-start flex-shrink-0"
+                >
+                  <div className="relative aspect-[16/10] bg-stone overflow-hidden">
+                    <img
+                      src={getPropertyCardImage(item)}
+                      alt={item.title}
+                      loading="lazy"
+                      decoding="async"
+                      onError={({ currentTarget }) => {
+                        currentTarget.onerror = null;
+                        currentTarget.src = PROPERTY_IMAGE_FALLBACK;
+                      }}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute top-3 left-3 flex gap-2 z-20">
+                      {item.rating > 0 && item.review_count > 0 && (
+                        <div className="bg-charcoal/70 text-white rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
+                          <span>{Number(item.rating).toFixed(1)}</span>
+                          <Star className="w-3.5 h-3.5 text-[#E0A51B] fill-current" />
+                        </div>
+                      )}
+                      <div className="glass px-3 py-1 rounded-full shadow-sm bg-white/70 backdrop-blur-md">
+                        <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal">
+                          {formatPropertyTypeLabel(item.property_type || item.type) || 'Stay'}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
+                      className="absolute top-3 right-3 text-white z-20"
+                      aria-label="Toggle wishlist"
+                    >
+                      <Heart className={`w-5 h-5 drop-shadow-md ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
+                    </button>
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-bold text-charcoal text-sm md:text-base line-clamp-1">{item.title}</h3>
+                    <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-charcoal-muted">
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>{item.city || 'Maharashtra'}{item.state ? `, ${item.state}` : ''}</span>
+                    </p>
+                    <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-charcoal-muted font-semibold line-clamp-1">
+                      Up to {item.max_guests || item.guests || 4} Guests
+                      <span className="mx-1">-</span>
+                      {item.bedrooms || item.rooms || 1} Room{(item.bedrooms || item.rooms || 1) > 1 ? 's' : ''}
+                      <span className="mx-1">-</span>
+                      {item.bathrooms || item.baths || 1} Bath{(item.bathrooms || item.baths || 1) > 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ===== Discover Our Collections — Full Width ===== */}
         <CollectionsSection
