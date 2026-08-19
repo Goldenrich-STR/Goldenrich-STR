@@ -3762,7 +3762,7 @@ const LandingPage = () => {
                   ))}
                   
                   {/* Dark overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/30 to-black/60 md:bg-black/45 z-10" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/10 via-black/45 to-black/85 z-10" />
 
                   {/* Slider Dots indicators */}
                   {slides.length > 1 && (
@@ -3783,7 +3783,7 @@ const LandingPage = () => {
                   )}
 
                   {/* Floating Overlay Card on the right */}
-                  <div className="absolute inset-x-0 bottom-0 md:inset-y-0 md:right-0 md:left-auto w-full md:w-[480px] lg:w-[550px] bg-gradient-to-t from-black/88 via-black/72 to-black/55 md:bg-black/65 backdrop-blur-md flex flex-col justify-end md:justify-center px-5 py-6 md:px-12 md:py-0 text-left text-white border-t border-white/10 md:border-t-0 md:border-l md:border-white/10 z-20">
+                  <div className="absolute inset-y-0 right-0 w-full md:w-[480px] lg:w-[550px] flex flex-col justify-end md:justify-center px-5 py-6 md:px-12 md:py-0 text-left text-white z-20">
                     <div className="max-w-[92%] md:max-w-none">
                       <span className="text-amber-400 font-extrabold text-[9px] md:text-[10px] uppercase tracking-[0.22em] mb-2 block">
                         Hospitality Reimagined
@@ -3799,8 +3799,19 @@ const LandingPage = () => {
                     {/* Features Grid */}
                     <div className="grid grid-cols-2 gap-y-3 gap-x-3 md:gap-y-6 md:gap-x-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <Waves className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                            <defs>
+                              <linearGradient id="poolGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#4fd1c5" />
+                                <stop offset="100%" stopColor="#2b6cb0" />
+                              </linearGradient>
+                            </defs>
+                            <path d="M2 12c4-2 6 2 10 0s6-2 10 0" stroke="url(#poolGrad)" strokeWidth="2.5" strokeLinecap="round" />
+                            <path d="M2 16c4-2 6 2 10 0s6-2 10 0" stroke="url(#poolGrad)" strokeWidth="2.5" strokeLinecap="round" opacity="0.7" />
+                            <circle cx="12" cy="7" r="2.5" fill="#f6ad55" />
+                            <path d="M8 12c1.5-1.5 3.5-1.5 5 0" stroke="#f6ad55" strokeWidth="2" strokeLinecap="round" />
+                          </svg>
                         </div>
                         <div>
                           <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Private Pool</h5>
@@ -3809,8 +3820,17 @@ const LandingPage = () => {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <ChefHat className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                            <defs>
+                              <linearGradient id="chefGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#fbd38d" />
+                                <stop offset="100%" stopColor="#dd6b20" />
+                              </linearGradient>
+                            </defs>
+                            <path d="M6 18c0-3.5 2-6.5 5-7.5V9.5C9.5 9 8.5 7.5 8.5 6c0-2.2 1.8-4 4-4s4 1.8 4 4c0 1.5-1 3-2.5 3.5v1c3 1 5 4 5 7.5H6z" fill="url(#chefGrad)" />
+                            <rect x="7" y="18" width="10" height="3" rx="1.5" fill="#e2e8f0" />
+                          </svg>
                         </div>
                         <div>
                           <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">In-house Chef</h5>
@@ -3819,8 +3839,21 @@ const LandingPage = () => {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <ConciergeBell className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                            <defs>
+                              <linearGradient id="butlerGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#ecc94b" />
+                                <stop offset="100%" stopColor="#b7791f" />
+                              </linearGradient>
+                            </defs>
+                            <path d="M4 4h16v16H4z" fill="#2d3748" className="opacity-10" />
+                            <path d="M4 4l8 8 8-8v16H4V4z" fill="#1a202c" />
+                            <path d="M8 4l4 4 4-4H8z" fill="#edf2f7" />
+                            <path d="M10 8h4v1.5h-4z" fill="url(#butlerGrad)" />
+                            <circle cx="12" cy="12" r="1.5" fill="url(#butlerGrad)" />
+                            <circle cx="12" cy="15" r="1.5" fill="url(#butlerGrad)" />
+                          </svg>
                         </div>
                         <div>
                           <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Butler Service</h5>
@@ -3829,8 +3862,18 @@ const LandingPage = () => {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <UserCheck className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                            <defs>
+                              <linearGradient id="careGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#f6ad55" />
+                                <stop offset="100%" stopColor="#dd6b20" />
+                              </linearGradient>
+                            </defs>
+                            <circle cx="10" cy="10" r="6" stroke="url(#careGrad)" strokeWidth="3" />
+                            <path d="M14.5 14.5L21 21" stroke="url(#careGrad)" strokeWidth="3" strokeLinecap="round" />
+                            <path d="M10 6l1 2.5L13.5 9l-2.5 1L10 12.5l-1-2.5-2.5-1 2.5-1z" fill="#ecc94b" />
+                          </svg>
                         </div>
                         <div>
                           <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Caretaker Onsite</h5>
@@ -3839,8 +3882,19 @@ const LandingPage = () => {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <Compass className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                            <defs>
+                              <linearGradient id="compGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#63b3ed" />
+                                <stop offset="100%" stopColor="#3182ce" />
+                              </linearGradient>
+                            </defs>
+                            <circle cx="12" cy="12" r="9" stroke="url(#compGrad)" strokeWidth="2.5" />
+                            <path d="M12 3v2M12 19v2M3 12h2M19 12h2" stroke="url(#compGrad)" strokeWidth="1.5" strokeLinecap="round" />
+                            <path d="M12 12l3-5-1 4 4 1-6 0z" fill="#e53e3e" />
+                            <path d="M12 12l-3 5 1-4-4-1 6 0z" fill="#e2e8f0" />
+                          </svg>
                         </div>
                         <div>
                           <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Local Experiences</h5>
@@ -3849,8 +3903,18 @@ const LandingPage = () => {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <Gamepad2 className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                            <defs>
+                              <linearGradient id="gameGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#fc8181" />
+                                <stop offset="100%" stopColor="#e53e3e" />
+                              </linearGradient>
+                            </defs>
+                            <rect x="3" y="5" width="11" height="15" rx="1.5" fill="#edf2f7" stroke="#cbd5e0" strokeWidth="1.5" transform="rotate(-10 3 5)" />
+                            <rect x="9" y="4" width="11" height="15" rx="1.5" fill="white" stroke="#e2e8f0" strokeWidth="1.5" />
+                            <path d="M14.5 10c0-1.5-2.5-3-2.5-3s-2.5 1.5-2.5 3c0 1 1 2 2.5 3.5 1.5-1.5 2.5-2.5 2.5-3.5z" fill="url(#gameGrad)" />
+                          </svg>
                         </div>
                         <div>
                           <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Recreation & Games</h5>
@@ -3859,8 +3923,18 @@ const LandingPage = () => {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <Trees className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                            <defs>
+                              <linearGradient id="grassGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#68d391" />
+                                <stop offset="100%" stopColor="#2f855a" />
+                              </linearGradient>
+                            </defs>
+                            <path d="M12 22C12 15 8 10 4 8c4 4 6 9 8 14z" fill="url(#grassGrad)" />
+                            <path d="M12 22C12 12 17 6 21 3c-2 6-4 13-9 19z" fill="url(#grassGrad)" />
+                            <path d="M12 22c0-8 3-14 7-17-2 5-3 10-7 17z" fill="url(#grassGrad)" opacity="0.8" />
+                          </svg>
                         </div>
                         <div>
                           <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Green Open Spaces</h5>
@@ -3869,8 +3943,21 @@ const LandingPage = () => {
                       </div>
 
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
-                          <PartyPopper className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
+                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                            <defs>
+                              <linearGradient id="popGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stopColor="#fbb6ce" />
+                                <stop offset="100%" stopColor="#d53f8c" />
+                              </linearGradient>
+                            </defs>
+                            <path d="M5 19l6-6 3 3-6 6H5v-3z" fill="url(#popGrad)" />
+                            <path d="M14 11l4-4 2 2-4 4-2-2z" fill="#edf2f7" />
+                            <circle cx="16" cy="6" r="1.5" fill="#f6ad55" />
+                            <circle cx="19" cy="11" r="1" fill="#ecc94b" />
+                            <circle cx="20" cy="5" r="1" fill="#4fd1c5" />
+                            <path d="M11 11c3-3 6-3 8-5M12 12c1-3 3-5 5-5" stroke="#ecc94b" strokeWidth="1.5" strokeLinecap="round" />
+                          </svg>
                         </div>
                         <div>
                           <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Custom Events</h5>
