@@ -425,6 +425,7 @@ const HostManagement = () => {
         <SubscriptionStatusView hosts={visibleHosts} />
       ) : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="space-y-4">
         <div className="grid content-start gap-4 lg:grid-cols-2">
           {visibleHosts.slice((page - 1) * 10, page * 10).map((host) => {
             const summary = host.kyc_verification?.summary || {};
@@ -496,6 +497,7 @@ const HostManagement = () => {
           {!visibleHosts.length && <Panel className="p-6 text-sm text-slate-500">No hosts found.</Panel>}
         </div>
         <Pagination currentPage={page} totalItems={visibleHosts.length} itemsPerPage={10} onPageChange={setPage} />
+        </div>
         <KycReviewPanel selected={selected} onClose={() => setSelected({ loading: false, host: null, error: '' })} onDoc={decideDocument} onBank={decideBank} onAgreement={decideAgreement} onReupload={requestReupload} onFinal={decideKyc} />
         </div>
       )}
