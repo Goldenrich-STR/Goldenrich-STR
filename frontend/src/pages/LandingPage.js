@@ -3979,33 +3979,34 @@ const LandingPage = () => {
               };
 
               return (
-                <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 mt-16 mb-24">
-                  <div className="w-full bg-[#E5DFD9] rounded-3xl overflow-hidden shadow-lg flex flex-col md:flex-row h-auto md:h-[380px] mb-16 border border-[#dcd6d0]">
-                    <div className="w-full md:w-[45%] p-8 md:p-10 flex flex-col justify-center text-left text-[#3c3732]">
-                      <div>
-                        <h4 className="font-serif text-xl md:text-2xl font-bold leading-relaxed mb-6">
-                          Indulge in India's <span className="italic font-normal">finest</span> ultra-luxury private estates, handpicked for the discerning traveler...
-                        </h4>
-                        <ul className="space-y-3.5 text-xs font-semibold text-[#5a544e]">
-                          <li className="flex items-center gap-2.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
-                            Handpicked portfolio of premium estates & architectural marvels
-                          </li>
-                          <li className="flex items-center gap-2.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
-                            Fully serviced stays with master chefs & personalized butler service
-                          </li>
-                          <li className="flex items-center gap-2.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
-                            Breathtaking views, infinity pools, & complete privacy guaranteed
-                          </li>
-                          <li className="flex items-center gap-2.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
-                            Seamless digital check-ins & verified elite hospitality standards
-                          </li>
-                        </ul>
+                <div className="w-full bg-[#FAF9F6] py-16 border-t border-b border-sand-100/50 mt-16 mb-24">
+                  <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8">
+                    <div className="w-full bg-[#E5DFD9] rounded-3xl overflow-hidden shadow-lg flex flex-col md:flex-row h-auto md:h-[380px] mb-16 border border-[#dcd6d0]">
+                      <div className="w-full md:w-[45%] p-8 md:p-10 flex flex-col justify-center text-left text-[#3c3732]">
+                        <div>
+                          <h4 className="font-serif text-xl md:text-2xl font-bold leading-relaxed mb-6">
+                            Indulge in India's <span className="italic font-normal">finest</span> ultra-luxury private estates, handpicked for the discerning traveler...
+                          </h4>
+                          <ul className="space-y-3.5 text-xs font-semibold text-[#5a544e]">
+                            <li className="flex items-center gap-2.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
+                              Handpicked, ultra-luxury private villas & resorts
+                            </li>
+                            <li className="flex items-center gap-2.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
+                              Private pools, master chefs & personal butler service
+                            </li>
+                            <li className="flex items-center gap-2.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
+                              Complete privacy and verified premium stays
+                            </li>
+                            <li className="flex items-center gap-2.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
+                              Seamless and direct bookings
+                            </li>
+                          </ul>
+                        </div>
                       </div>
-                    </div>
 
                     <div className="w-full md:w-[55%] relative h-[280px] md:h-full overflow-hidden">
                       <img
@@ -4136,7 +4137,8 @@ const LandingPage = () => {
                     </div>
                   </div>
                 </div>
-              );
+              </div>
+            );
             };
             return (
               <ScrollReveal duration="duration-[900ms]">
