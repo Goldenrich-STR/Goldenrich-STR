@@ -149,6 +149,7 @@ class Property(BaseModel):
     # Event Venue Specific
     veg_price: Optional[float] = None
     non_veg_price: Optional[float] = None
+    food_type: Optional[str] = None
     guest_size: Optional[int] = None
     packages: Optional[List[dict]] = None
     
@@ -199,6 +200,7 @@ class PropertyCreate(BaseModel):
     has_taxi: bool = False
     veg_price: Optional[float] = None
     non_veg_price: Optional[float] = None
+    food_type: Optional[str] = None
     guest_size: Optional[int] = None
     packages: Optional[list] = None
     subscription_id: Optional[str] = None
@@ -244,6 +246,7 @@ class PropertyUpdate(BaseModel):
     has_taxi: Optional[bool] = None
     veg_price: Optional[float] = None
     non_veg_price: Optional[float] = None
+    food_type: Optional[str] = None
     guest_size: Optional[int] = None
     packages: Optional[list] = None
     subscription_id: Optional[str] = None

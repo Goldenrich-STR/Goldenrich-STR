@@ -47,6 +47,7 @@ HOST_MANAGE_EDITABLE_FIELDS = {
     "has_taxi",
     "veg_price",
     "non_veg_price",
+    "food_type",
     "guest_size",
     "packages",
     "check_in_time",
@@ -1484,5 +1485,80 @@ async def generate_title(
     except Exception as e:
         logger.error(f"Error in generate_title: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to generate title")
+
+
+@router.get("/pincode/{pincode}")
+async def get_pincode_details(pincode: str):
+    """Fetch location details (state, city/district, post offices/localities) for a 6-digit Indian pincode."""
+    import httpx
+    
+    # 1. Validate pincode is a 6-digit Indian Pincode
+    if not pincode.isdigit() or len(pincode) != 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Pincode must be exactly 6 digits."
+        )
+    
+    try:
+        # 2. Call the public Indian pincode API
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.get(f"https://api.postalpincode.in/pincode/{pincode}")
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Failed to fetch location details from pincode provider."
+                )
+            
+            data = response.json()
+            if not data or not isinstance(data, list) or len(data) == 0:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No location data found for this pincode."
+                )
+                
+            pincode_data = data[0]
+            status_val = pincode_data.get("Status")
+            post_offices = pincode_data.get("PostOffice")
+            
+            if status_val != "Success" or not post_offices:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="No location data found for this pincode."
+                )
+            
+            # 3. Extract State, City/District, and unique localities
+            first_po = post_offices[0]
+            state = first_po.get("State")
+            city = first_po.get("District") or first_po.get("Division")
+            
+            # Collect unique locality / post office names
+            localities = []
+            seen = set()
+            for po in post_offices:
+                name = po.get("Name")
+                if name and name not in seen:
+                    seen.add(name)
+                    localities.append(name)
+                    
+            return {
+                "state": state,
+                "city": city,
+                "localities": localities
+            }
+            
+    except httpx.HTTPError as he:
+        logger.error(f"HTTP error fetching pincode details: {str(he)}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Error connecting to pincode location provider."
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resolving pincode location: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve location details."
+        )
         
 

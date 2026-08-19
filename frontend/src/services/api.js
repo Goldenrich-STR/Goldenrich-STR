@@ -257,6 +257,9 @@ export const propertyAPI = {
   
   createProperty: (propertyData) =>
     apiClient.post('/properties/', propertyData),
+
+  fetchPincodeDetails: (pincode) =>
+    apiClient.get(`/properties/pincode/${pincode}`),
   
   updateProperty: (propertyId, updates) =>
     apiClient.patch(`/properties/${propertyId}`, updates),

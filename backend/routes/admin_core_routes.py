@@ -841,11 +841,31 @@ def _days_until(value):
 
 
 def _parse_date_start(value: str):
-    return datetime.fromisoformat(value).replace(tzinfo=None)
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        dt = datetime.strptime(value[:10], "%Y-%m-%d")
+    from datetime import timezone as dt_timezone, timedelta
+    ist = dt_timezone(timedelta(hours=5, minutes=30))
+    if dt.tzinfo is not None:
+        dt_ist = dt.astimezone(ist).replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        dt_ist = dt.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=ist)
+    return dt_ist.astimezone(timezone.utc)
 
 
 def _parse_date_end(value: str):
-    return datetime.fromisoformat(value).replace(hour=23, minute=59, second=59, microsecond=999999, tzinfo=None)
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        dt = datetime.strptime(value[:10], "%Y-%m-%d")
+    from datetime import timezone as dt_timezone, timedelta
+    ist = dt_timezone(timedelta(hours=5, minutes=30))
+    if dt.tzinfo is not None:
+        dt_ist = dt.astimezone(ist).replace(hour=23, minute=59, second=59, microsecond=999999)
+    else:
+        dt_ist = dt.replace(hour=23, minute=59, second=59, microsecond=999999, tzinfo=ist)
+    return dt_ist.astimezone(timezone.utc)
 
 
 async def _assert_unique_user_fields(db, *, email: str, phone: str, employee_code: str = "", user_id: str = ""):

@@ -766,7 +766,11 @@ const PropertyDetail = () => {
       setProperty(res.data);
       if (res.data) {
         saveRecentlyVisitedProperty(res.data);
-        if (res.data.veg_price && res.data.veg_price > 0) {
+        if (res.data.food_type === 'non_veg') {
+          setFoodPreference('non_veg');
+        } else if (res.data.food_type === 'veg') {
+          setFoodPreference('veg');
+        } else if (res.data.veg_price && res.data.veg_price > 0) {
           setFoodPreference('veg');
         } else if (res.data.non_veg_price && res.data.non_veg_price > 0) {
           setFoodPreference('non_veg');
@@ -1757,7 +1761,13 @@ const PropertyDetail = () => {
                    Event Venue Details
                    <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
+                     <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Food Option</p>
+                     <p className="text-xl font-bold tracking-tight text-amber-800 uppercase">
+                       {property.food_type ? (property.food_type === 'both' ? 'Veg & Non-Veg' : property.food_type === 'veg' ? 'Veg Only' : 'Non-Veg Only') : 'Veg & Non-Veg'}
+                     </p>
+                  </div>
                   {property.veg_price && Number(property.veg_price) > 0 ? (
                     <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
                      <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Veg Price</p>
@@ -2453,7 +2463,7 @@ const PropertyDetail = () => {
                     <div className="w-full mt-2 pt-3 border-t border-sand-100 flex flex-col space-y-3">
                       <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block">Food Preference</label>
                       <div className="flex flex-col space-y-3">
-                        {property.veg_price && Number(property.veg_price) > 0 ? (
+                        {property.veg_price && Number(property.veg_price) > 0 && (property.food_type === 'veg' || property.food_type === 'both' || !property.food_type) ? (
                           <div 
                           onClick={() => setFoodPreference('veg')}
                           className="flex items-center justify-between cursor-pointer group hover:bg-stone p-2 -mx-2 rounded-lg transition-colors"
@@ -2474,7 +2484,7 @@ const PropertyDetail = () => {
                           </div>
                           </div>
                         ) : null}
-                        {property.non_veg_price && Number(property.non_veg_price) > 0 ? (
+                        {property.non_veg_price && Number(property.non_veg_price) > 0 && (property.food_type === 'non_veg' || property.food_type === 'both' || !property.food_type) ? (
                           <div 
                           onClick={() => setFoodPreference('non_veg')}
                           className="flex items-center justify-between cursor-pointer group hover:bg-stone p-2 -mx-2 rounded-lg transition-colors"

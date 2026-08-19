@@ -69,8 +69,8 @@ def test_escalation_status_boundaries(age_hours, sla_hours, expected):
 def test_audit_date_filter_bounds_are_timezone_aware():
     start = _parse_date_start("2026-07-25")
     end = _parse_date_end("2026-07-25")
-    assert start == datetime(2026, 7, 25, tzinfo=timezone.utc)
-    assert end == datetime(2026, 7, 25, 23, 59, 59, 999999, tzinfo=timezone.utc)
+    assert start == datetime(2026, 7, 24, 18, 30, tzinfo=timezone.utc)
+    assert end == datetime(2026, 7, 25, 18, 29, 59, 999999, tzinfo=timezone.utc)
     assert end - start == timedelta(days=1, microseconds=-1)
 
 
@@ -97,7 +97,7 @@ def test_phase8_default_maintenance_settings_include_backup_checklist():
 
 def test_phase9_analytics_export_config_has_supported_modules():
     config = _analytics_export_config()
-    assert {"users", "properties", "bookings", "finance", "support", "crm", "cms"} == set(config)
+    assert {"users", "properties", "bookings", "finance", "support", "crm", "cms", "subscriptions"} == set(config)
     assert config["users"][0] == "users"
     assert config["finance"][0] == "transactions"
     for _module, (_collection, date_field, fields) in config.items():

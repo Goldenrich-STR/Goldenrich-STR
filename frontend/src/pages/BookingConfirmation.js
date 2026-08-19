@@ -390,7 +390,7 @@ const BookingConfirmation = () => {
              Itinerary Summary
              <div className="ml-4 h-[1px] flex-1 bg-gray-50"></div>
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-8">
             <div className="space-y-1">
               <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Check-in</p>
               <p className="text-sm font-bold tracking-tight text-charcoal">{booking.check_in_date}</p>
@@ -402,6 +402,10 @@ const BookingConfirmation = () => {
             <div className="space-y-1">
               <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Total Guests</p>
               <p className="text-sm font-bold tracking-tight text-charcoal">{booking.number_of_guests}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Food Pref</p>
+              <p className="text-sm font-bold tracking-tight text-charcoal uppercase">{booking.food_preference ? (booking.food_preference === 'veg' ? 'Veg' : 'Non-Veg') : 'N/A'}</p>
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Booking Status</p>

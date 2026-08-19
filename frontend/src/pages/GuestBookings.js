@@ -392,6 +392,14 @@ const GuestBookings = () => {
                           <span>{b.check_out_date}</span>
                           <span className="text-sand-300">|</span>
                           <span>{b.number_of_guests} Guest{b.number_of_guests === 1 ? '' : 's'}</span>
+                          {b.food_preference && (
+                            <>
+                              <span className="text-sand-300">|</span>
+                              <span className="bg-amber-500/10 text-amber-800 px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]">
+                                Food: {b.food_preference === 'veg' ? 'Veg' : 'Non-Veg'}
+                              </span>
+                            </>
+                          )}
                         </div>
                         
                         <div className="text-[10px] text-charcoal-muted mt-2 font-mono uppercase tracking-widest">

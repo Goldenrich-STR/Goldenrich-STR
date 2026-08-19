@@ -141,7 +141,7 @@ const PHOTO_CATEGORIES = [
 ];
 
 const COMMON_AMENITIES = [
-  'wifi', 'ac', 'parking', 'kitchen', 'pool', 'gym', 'tv',
+  'wifi', 'ac', 'parking', 'kitchen', 'gym', 'tv',
   'fireplace', 'rooftop', 'bar', 'av_system', 'stage', 'catering',
   'coffee', 'printer', 'restrooms', 'washer', 'heating', 'workspace',
   'live_music', 'food_court', 'birthday_celebration', 'indoor_games',
@@ -153,7 +153,6 @@ const CATEGORY_AMENITIES = {
     { value: 'ac', label: 'Air Conditioning' },
     { value: 'parking', label: 'Parking Space' },
     { value: 'kitchen', label: 'Fully-Equipped Kitchen' },
-    { value: 'pool', label: 'Swimming Pool' },
     { value: 'gym', label: 'Fitness Center/Gym' },
     { value: 'tv', label: 'Smart TV' },
     { value: 'washer', label: 'Washing Machine' },
@@ -524,7 +523,8 @@ const initialForm = {
   veg_price: '',
   non_veg_price: '',
   has_veg: true,
-  has_non_veg: false,
+  has_non_veg: true,
+  food_type: 'both',
   guest_size: '',
   packages: [
     { type: 'veg', items: { ...DEFAULT_VEG_ITEMS_OBJ } },
@@ -622,6 +622,45 @@ const HostListProperty = () => {
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [editingPropertyStatus, setEditingPropertyStatus] = useState('');
   const [fetchingLocation, setFetchingLocation] = useState(false);
+  const [fetchingPincode, setFetchingPincode] = useState(false);
+  const [localities, setLocalities] = useState([]);
+  const [pincodeError, setPincodeError] = useState('');
+  
+  const handlePincodeChange = async (v) => {
+    update({ pin_code: v });
+    setPincodeError('');
+    setLocalities([]);
+    
+    // Validate 6-digit Indian Pincode
+    if (/^\d{6}$/.test(v)) {
+      setFetchingPincode(true);
+      try {
+        const res = await propertyAPI.fetchPincodeDetails(v);
+        const { state, city, localities: locs } = res.data;
+        
+        update({
+          state: state || '',
+          city: city || ''
+        });
+        
+        if (locs && locs.length > 0) {
+          setLocalities(locs);
+        } else {
+          setPincodeError('No localities found for this pincode.');
+        }
+      } catch (err) {
+        console.error("Error fetching pincode details", err);
+        const errMsg = err.response?.data?.detail || 'Failed to fetch location details for this pincode.';
+        setPincodeError(errMsg);
+      } finally {
+        setFetchingPincode(false);
+      }
+    }
+  };
+
+  const handleLocalitySelect = (locality) => {
+    update({ address: locality });
+  };
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [pricingSummaryPlan, setPricingSummaryPlan] = useState(null);
   const [subscriptionCoupons, setSubscriptionCoupons] = useState([]);
@@ -732,6 +771,7 @@ const HostListProperty = () => {
             non_veg_price: p.non_veg_price !== null && p.non_veg_price !== undefined ? String(p.non_veg_price) : '',
             has_veg: p.veg_price !== null && p.veg_price !== undefined && p.veg_price !== '',
             has_non_veg: p.non_veg_price !== null && p.non_veg_price !== undefined && p.non_veg_price !== '',
+            food_type: p.food_type || (p.veg_price && p.non_veg_price ? 'both' : p.non_veg_price ? 'non_veg' : 'veg'),
             guest_size: p.guest_size !== null && p.guest_size !== undefined ? String(p.guest_size) : '',
             packages: mergePackagesWithDefaults(p.packages || []),
             check_in_time: p.check_in_time || '12:00',
@@ -1412,6 +1452,7 @@ const HostListProperty = () => {
       has_taxi: form.has_taxi,
       veg_price: form.has_veg && form.veg_price ? Number(form.veg_price) : null,
       non_veg_price: form.has_non_veg && form.non_veg_price ? Number(form.non_veg_price) : null,
+      food_type: form.category === 'event_venue' ? (form.food_type || 'both') : null,
       guest_size: form.guest_size ? Number(form.guest_size) : null,
       packages: (form.packages || []).filter(pkg => {
         if (pkg.type === 'veg') return !!form.has_veg;
@@ -1442,6 +1483,7 @@ const HostListProperty = () => {
       has_taxi: fullPayload.has_taxi,
       veg_price: fullPayload.veg_price,
       non_veg_price: fullPayload.non_veg_price,
+      food_type: fullPayload.food_type,
       guest_size: fullPayload.guest_size,
       packages: fullPayload.packages,
       check_in_time: fullPayload.check_in_time,
@@ -1877,10 +1919,41 @@ const HostListProperty = () => {
               
               <Input label="Street address" testid="location-address" value={form.address} onChange={(v) => update({ address: v })} placeholder="123 Beach Road" />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input label="Pin code" testid="location-pin" value={form.pin_code} onChange={handlePincodeChange} placeholder="403001" />
                 <Input label="City" testid="location-city" value={form.city} onChange={(v) => update({ city: v })} />
                 <Input label="State" testid="location-state" value={form.state} onChange={(v) => update({ state: v })} />
-                <Input label="Pin code" testid="location-pin" value={form.pin_code} onChange={(v) => update({ pin_code: v })} placeholder="403001" />
               </div>
+              
+              {fetchingPincode && (
+                <p className="text-xs text-slate-500 flex items-center gap-1.5 px-1 animate-pulse">
+                  <span className="w-3 h-3 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" />
+                  Fetching location details...
+                </p>
+              )}
+              
+              {pincodeError && (
+                <p className="text-xs text-red-500 px-1 font-semibold">
+                  ⚠️ {pincodeError}
+                </p>
+              )}
+              
+              {localities.length > 0 && (
+                <div className="p-4 bg-stone/50 rounded-2xl border border-gray-100 space-y-2 animate-fade-in">
+                  <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block">Select Area / Locality / Post Office</label>
+                  <select
+                    onChange={(e) => handleLocalitySelect(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all font-semibold text-charcoal cursor-pointer"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>-- Select Locality --</option>
+                    {localities.map((loc) => (
+                      <option key={loc} value={loc}>
+                        {loc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input type="number" label="Latitude (If Applicable)" testid="location-lat" value={form.latitude} onChange={handleLatChange} placeholder="15.5736" />
                 <Input type="number" label="Longitude (If Applicable)" testid="location-lng" value={form.longitude} onChange={handleLngChange} placeholder="73.7407" />
@@ -1914,31 +1987,43 @@ const HostListProperty = () => {
               
               {form.category === 'event_venue' ? (
                 <>
-                  <div className="flex flex-wrap gap-6 mb-5 bg-stone/50 p-4 rounded-2xl border border-gray-100">
-                    <label className="flex items-center space-x-2.5 text-sm font-bold cursor-pointer text-charcoal select-none">
-                      <input
-                        type="checkbox"
-                        checked={!!form.has_veg}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          update({ has_veg: checked, veg_price: checked ? form.veg_price : '' });
-                        }}
-                        className="h-4.5 w-4.5 cursor-pointer rounded border-gray-300 text-slate-900 focus:ring-slate-400"
-                      />
-                      <span>Vegetarian Available</span>
-                    </label>
-                    <label className="flex items-center space-x-2.5 text-sm font-bold cursor-pointer text-charcoal select-none">
-                      <input
-                        type="checkbox"
-                        checked={!!form.has_non_veg}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          update({ has_non_veg: checked, non_veg_price: checked ? form.non_veg_price : '' });
-                        }}
-                        className="h-4.5 w-4.5 cursor-pointer rounded border-gray-300 text-slate-900 focus:ring-slate-400"
-                      />
-                      <span>Non-Vegetarian Available</span>
-                    </label>
+                  <div className="mb-5 bg-stone/50 p-5 rounded-2xl border border-gray-100">
+                    <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-2">Food Option (Select exactly one)</label>
+                    <div className="flex items-center gap-6">
+                      <label className="flex items-center space-x-2 text-sm font-bold cursor-pointer text-charcoal select-none">
+                        <input
+                          type="radio"
+                          name="food_type"
+                          value="veg"
+                          checked={form.food_type === 'veg'}
+                          onChange={() => update({ food_type: 'veg', has_veg: true, has_non_veg: false, non_veg_price: '' })}
+                          className="h-4 w-4 cursor-pointer text-slate-900 focus:ring-slate-400"
+                        />
+                        <span>Veg Only</span>
+                      </label>
+                      <label className="flex items-center space-x-2 text-sm font-bold cursor-pointer text-charcoal select-none">
+                        <input
+                          type="radio"
+                          name="food_type"
+                          value="non_veg"
+                          checked={form.food_type === 'non_veg'}
+                          onChange={() => update({ food_type: 'non_veg', has_veg: false, has_non_veg: true, veg_price: '' })}
+                          className="h-4 w-4 cursor-pointer text-slate-900 focus:ring-slate-400"
+                        />
+                        <span>Non-Veg Only</span>
+                      </label>
+                      <label className="flex items-center space-x-2 text-sm font-bold cursor-pointer text-charcoal select-none">
+                        <input
+                          type="radio"
+                          name="food_type"
+                          value="both"
+                          checked={form.food_type === 'both'}
+                          onChange={() => update({ food_type: 'both', has_veg: true, has_non_veg: true })}
+                          className="h-4 w-4 cursor-pointer text-slate-900 focus:ring-slate-400"
+                        />
+                        <span>Both Veg & Non-Veg</span>
+                      </label>
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <Input 

@@ -1786,7 +1786,6 @@ const STANDARD_FEATURES = [
   { label: 'Caretaker Onsite', icon: UserCheck },
   { label: 'In-house Chef', icon: ChefHat },
   { label: 'Local Experiences', icon: Compass },
-  { label: 'Private Pool', icon: Waves },
   { label: 'Butler Service', icon: ConciergeBell },
   { label: 'Games & Recreation', icon: Gamepad2 },
   { label: 'Green Open Spaces', icon: Trees }
@@ -3807,26 +3806,6 @@ const LandingPage = () => {
                     {currentSlide.id === 'standard' ? (
                       /* Features Grid for Slide 1 */
                       <div className="grid grid-cols-2 gap-y-3 gap-x-3 md:gap-y-5 md:gap-x-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
-                            <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
-                              <defs>
-                                <linearGradient id="poolGrad" x1="0" y1="0" x2="1" y2="1">
-                                  <stop offset="0%" stopColor="#4fd1c5" />
-                                  <stop offset="100%" stopColor="#2b6cb0" />
-                                </linearGradient>
-                              </defs>
-                              <path d="M2 12c4-2 6 2 10 0s6-2 10 0" stroke="url(#poolGrad)" strokeWidth="2.5" strokeLinecap="round" />
-                              <path d="M2 16c4-2 6 2 10 0s6-2 10 0" stroke="url(#poolGrad)" strokeWidth="2.5" strokeLinecap="round" opacity="0.7" />
-                              <circle cx="12" cy="7" r="2.5" fill="#f6ad55" />
-                              <path d="M8 12c1.5-1.5 3.5-1.5 5 0" stroke="#f6ad55" strokeWidth="2" strokeLinecap="round" />
-                            </svg>
-                          </div>
-                          <div>
-                            <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Private Pool</h5>
-                            <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Exclusive access stays</p>
-                          </div>
-                        </div>
 
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">

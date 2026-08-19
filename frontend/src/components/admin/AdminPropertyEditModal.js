@@ -63,7 +63,7 @@ const STATUSES = [
 ];
 
 const POPULAR_AMENITIES = [
-  'Wifi', 'AC', 'Parking', 'Kitchen', 'Pool', 'Gym', 'TV', 
+  'Wifi', 'AC', 'Parking', 'Kitchen', 'Gym', 'TV', 
   'Washing Machine', 'Heater', 'Elevator', 'Geyser', 'Security', 'Backup Generator'
 ];
 

@@ -81,7 +81,7 @@ const SIZE_TYPES = [
 ];
 
 const AMENITY_OPTIONS = [
-  'wifi', 'ac', 'parking', 'kitchen', 'pool', 'gym', 'tv',
+  'wifi', 'ac', 'parking', 'kitchen', 'gym', 'tv',
   'fireplace', 'rooftop', 'bar', 'av_system', 'stage', 'catering',
   'coffee', 'printer', 'restrooms', 'live_music', 'food_court',
   'birthday_celebration', 'indoor_games',
@@ -1564,6 +1564,11 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
         
         {/* Additional Property Info */}
         <div className="flex flex-wrap gap-2 mb-4">
+           {property.category === 'event_venue' && property.food_type && (
+             <div className="flex items-center space-x-1 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-md text-[10px] font-bold text-amber-800 uppercase">
+               <span>Food: {property.food_type === 'both' ? 'Veg & Non-Veg' : property.food_type === 'veg' ? 'Veg Only' : 'Non-Veg Only'}</span>
+             </div>
+           )}
            {property.guests && (
              <div className="flex items-center space-x-1 bg-stone border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted">
                <span>{property.guests} Guests</span>
