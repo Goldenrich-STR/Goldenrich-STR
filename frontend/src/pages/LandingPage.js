@@ -3736,18 +3736,12 @@ const LandingPage = () => {
                   tag: 'Hospitality Reimagined',
                   title: 'The X-Space360 Standard',
                   subtitle: 'Handpicked signature features that make every stay feel elevated, effortless, and memorable.'
-                },
-                {
-                  id: 'promise',
-                  image: '/images/hero/hospitality_team_welcome.png',
-                  tag: 'Why X-Space360?',
-                  title: <>Not just a booking. <span className="font-serif italic font-normal text-amber-300">A promise.</span></>,
-                  subtitle: 'Our commitment to excellence from the moment you book to the moment you check out.'
                 }
               ];
               const [currentIndex, setCurrentIndex] = useState(0);
 
               useEffect(() => {
+                if (slides.length <= 1) return;
                 const interval = setInterval(() => {
                   setCurrentIndex((prev) => (prev + 1) % slides.length);
                 }, 7000);
@@ -3778,20 +3772,22 @@ const LandingPage = () => {
                   <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-black/55 to-black/90 z-10" />
 
                   {/* Slider Dots indicators */}
-                  <div className="absolute bottom-6 left-8 md:left-12 z-30 flex items-center space-x-2">
-                    {slides.map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setCurrentIndex(idx)}
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                          idx === currentIndex 
-                            ? 'w-8 bg-amber-400' 
-                            : 'w-2 bg-white/40 hover:bg-white/80'
-                        }`}
-                        aria-label={`Go to slide ${idx + 1}`}
-                      />
-                    ))}
-                  </div>
+                  {slides.length > 1 && (
+                    <div className="absolute bottom-6 left-8 md:left-12 z-30 flex items-center space-x-2">
+                      {slides.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentIndex(idx)}
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            idx === currentIndex 
+                              ? 'w-8 bg-amber-400' 
+                              : 'w-2 bg-white/40 hover:bg-white/80'
+                          }`}
+                          aria-label={`Go to slide ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
 
                   {/* Floating Content Card on the right */}
                   <div className="absolute inset-y-0 right-0 w-full md:w-[500px] lg:w-[580px] flex flex-col justify-center px-6 py-8 md:px-12 text-left text-white z-20">
