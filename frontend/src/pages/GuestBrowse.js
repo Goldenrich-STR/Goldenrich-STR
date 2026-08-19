@@ -94,6 +94,8 @@ const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest' },
 ];
 
+const PAGE_SIZE = 20;
+
 const VIEW_MODES = {
   GRID: 'grid',
   SPLIT: 'split',
@@ -324,6 +326,8 @@ const GuestBrowse = () => {
   }, [guestCounts]);
 
   const [properties, setProperties] = useState([]);
+  const [totalProperties, setTotalProperties] = useState(0);
+  const [page, setPage] = useState(1);
   const [seoData, setSeoData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -398,8 +402,8 @@ const GuestBrowse = () => {
     return {
       city: params.get('city') || '',
       search: params.get('search') || '',
-      category: params.get('category') || '',
-      property_type: params.get('property_type') || '',
+      category: isSignature ? 'residential' : (params.get('category') || ''),
+      property_type: isSignature ? 'villa' : (params.get('property_type') || ''),
       bhk_type: '',
       min_price: isSignature ? '50000' : '',
       max_price: '',
@@ -438,7 +442,9 @@ const GuestBrowse = () => {
     if (isSignature) {
       setFilters(prev => ({
         ...prev,
-        min_price: '50000'
+        min_price: '50000',
+        property_type: 'villa',
+        category: 'residential'
       }));
     }
     if (city || search || category || propertyType || checkIn || checkOut || guests || latitude || longitude || radiusKm) {
@@ -446,8 +452,8 @@ const GuestBrowse = () => {
         ...prev,
         city: city || prev.city,
         search: search || prev.search,
-        category: category || prev.category,
-        property_type: propertyType || prev.property_type,
+        category: isSignature ? 'residential' : (category || prev.category),
+        property_type: isSignature ? 'villa' : (propertyType || prev.property_type),
         check_in: checkIn || prev.check_in,
         check_out: checkOut || prev.check_out,
         guests: guests || prev.guests,
@@ -459,7 +465,11 @@ const GuestBrowse = () => {
   }, []);
 
   useEffect(() => {
-    fetchProperties();
+    if (page === 1) {
+      fetchProperties(1);
+    } else {
+      setPage(1);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     filters.sort,
@@ -482,6 +492,11 @@ const GuestBrowse = () => {
   ]);
 
   useEffect(() => {
+    fetchProperties(page);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
+
+  useEffect(() => {
     if (!showSortMenu) return undefined;
 
     const handleClose = () => setShowSortMenu(false);
@@ -501,21 +516,33 @@ const GuestBrowse = () => {
     }
   }, [configurationOptions, filters.bhk_type]);
 
-  const buildParams = () => {
+  const buildParams = (pageNum = page) => {
+    const isSignature = new URLSearchParams(window.location.search).get('signature') === 'true';
     if (showWishlistOnly) {
       const params = { limit: 100 };
       if (filters.check_in) params.check_in = filters.check_in;
       if (filters.check_out) params.check_out = filters.check_out;
       return params;
     }
-    const params = {};
+    const params = {
+      limit: PAGE_SIZE,
+      skip: (pageNum - 1) * PAGE_SIZE
+    };
     if (filters.city) params.city = filters.city;
     if (filters.search) params.search = filters.search;
-    if (filters.category) params.category = filters.category;
-    if (filters.property_type) params.property_type = filters.property_type;
-    if (filters.bhk_type) params.bhk_type = filters.bhk_type;
-    if (filters.min_price) params.min_price = Number(filters.min_price);
+    
+    if (isSignature) {
+      params.category = 'residential';
+      params.property_type = 'villa';
+      params.min_price = Math.max(Number(filters.min_price || 0), 50000);
+    } else {
+      if (filters.category) params.category = filters.category;
+      if (filters.property_type) params.property_type = filters.property_type;
+      if (filters.min_price) params.min_price = Number(filters.min_price);
+    }
+    
     if (filters.max_price) params.max_price = Number(filters.max_price);
+    if (filters.bhk_type) params.bhk_type = filters.bhk_type;
     if (filters.instant_booking) params.instant_booking = true;
     if (filters.pet_friendly) params.pet_friendly = true;
     if (filters.check_in) params.check_in = filters.check_in;
@@ -528,12 +555,13 @@ const GuestBrowse = () => {
     return params;
   };
 
-  const fetchProperties = async () => {
+  const fetchProperties = async (pageNum = page) => {
     setLoading(true);
     setError('');
     try {
-      const res = await propertyAPI.searchProperties(buildParams());
+      const res = await propertyAPI.searchProperties(buildParams(pageNum));
       setProperties(res.data.properties || []);
+      setTotalProperties(res.data.total || 0);
       setSeoData(res.data.seo || null);
     } catch (e) {
       console.error(e);
@@ -551,12 +579,13 @@ const GuestBrowse = () => {
   };
 
   const clearFilters = () => {
+    const isSignature = new URLSearchParams(window.location.search).get('signature') === 'true';
     setFilters({
       city: '',
-      category: '',
-      property_type: '',
+      category: isSignature ? 'residential' : '',
+      property_type: isSignature ? 'villa' : '',
       bhk_type: '',
-      min_price: '',
+      min_price: isSignature ? '50000' : '',
       max_price: '',
       guests: '',
       instant_booking: false,
@@ -1027,7 +1056,8 @@ const GuestBrowse = () => {
               <select
                 value={filters.property_type}
                 onChange={(e) => setFilters({ ...filters, property_type: e.target.value })}
-                className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                disabled={new URLSearchParams(window.location.search).get('signature') === 'true'}
+                className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none disabled:bg-gray-100 disabled:text-gray-400"
               >
                 {PROPERTY_TYPES.map((tOpt) => (
                   <option key={tOpt.value} value={tOpt.value}>{tOpt.label}</option>
@@ -1055,7 +1085,8 @@ const GuestBrowse = () => {
                    type="number"
                    value={filters.min_price}
                    onChange={(e) => setFilters({ ...filters, min_price: e.target.value })}
-                   placeholder="Min"
+                   placeholder={new URLSearchParams(window.location.search).get('signature') === 'true' ? "50000" : "Min"}
+                   min={new URLSearchParams(window.location.search).get('signature') === 'true' ? "50000" : undefined}
                    className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none"
                  />
                  <span className="text-sand-400 font-bold">−</span>
@@ -1273,28 +1304,90 @@ const GuestBrowse = () => {
           >
             {/* Cards Grid */}
             {viewMode !== VIEW_MODES.MAP && (
-              <div
-                className={
-                  viewMode === VIEW_MODES.SPLIT
-                    ? 'overflow-y-auto pr-4 space-y-6 custom-scrollbar'
-                    : 'flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar scroll-smooth sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-6 animate-slide-up w-full'
-                }
-              >
-                {displayedProperties.map((p, idx) => (
-                  <PropertyCard
-                    key={p.property_id}
-                    property={p}
-                    compact={viewMode === VIEW_MODES.SPLIT}
-                    onHover={setHoveredId}
-                    onClick={() => navigateToProperty(p.property_id)}
-                    style={{ animationDelay: `${idx * 100}ms` }}
-                    t={t}
-                    isWishlisted={wishlist.includes(p.property_id)}
-                    onWishlistToggle={handleWishlistToggle}
-                    onShare={handleShareWhatsApp}
-                    user={user}
-                  />
-                ))}
+              <div className={viewMode === VIEW_MODES.SPLIT ? 'flex flex-col h-full overflow-hidden' : ''}>
+                <div
+                  className={
+                    viewMode === VIEW_MODES.SPLIT
+                      ? 'flex-1 overflow-y-auto pr-4 space-y-6 custom-scrollbar'
+                      : 'flex overflow-x-auto snap-x snap-mandatory gap-4 pb-4 no-scrollbar scroll-smooth sm:grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-6 animate-slide-up w-full'
+                  }
+                >
+                  {displayedProperties.map((p, idx) => (
+                    <PropertyCard
+                      key={p.property_id}
+                      property={p}
+                      compact={viewMode === VIEW_MODES.SPLIT}
+                      onHover={setHoveredId}
+                      onClick={() => navigateToProperty(p.property_id)}
+                      style={{ animationDelay: `${idx * 100}ms` }}
+                      t={t}
+                      isWishlisted={wishlist.includes(p.property_id)}
+                      onWishlistToggle={handleWishlistToggle}
+                      onShare={handleShareWhatsApp}
+                      user={user}
+                    />
+                  ))}
+                </div>
+
+                {/* Premium Pagination Controls */}
+                {Math.ceil(totalProperties / PAGE_SIZE) > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-sand-200">
+                    <p className="text-xs font-semibold text-charcoal-muted uppercase tracking-wider">
+                      Showing {Math.min(totalProperties, (page - 1) * PAGE_SIZE + 1)} - {Math.min(totalProperties, page * PAGE_SIZE)} of {totalProperties} spaces
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          if (page > 1) {
+                            setPage(page - 1);
+                            if (viewMode !== VIEW_MODES.SPLIT) {
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }
+                        }}
+                        disabled={page === 1}
+                        className="px-4 py-2 border border-gray-200 rounded-full text-xs font-bold text-charcoal hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                      >
+                        Previous
+                      </button>
+                      {[...Array(Math.ceil(totalProperties / PAGE_SIZE))].map((_, i) => {
+                        const pageNum = i + 1;
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => {
+                              setPage(pageNum);
+                              if (viewMode !== VIEW_MODES.SPLIT) {
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              }
+                            }}
+                            className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${
+                              page === pageNum
+                                ? 'bg-terracotta text-white shadow-premium'
+                                : 'border border-gray-200 text-charcoal hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                      <button
+                        onClick={() => {
+                          if (page < Math.ceil(totalProperties / PAGE_SIZE)) {
+                            setPage(page + 1);
+                            if (viewMode !== VIEW_MODES.SPLIT) {
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }
+                        }}
+                        disabled={page === Math.ceil(totalProperties / PAGE_SIZE)}
+                        className="px-4 py-2 border border-gray-200 rounded-full text-xs font-bold text-charcoal hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
