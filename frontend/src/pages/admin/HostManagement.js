@@ -537,7 +537,7 @@ const KycReviewPanel = ({ selected, onClose, onDoc, onBank, onAgreement, onReupl
   const finalApproved = String(host.kyc_status || '').toLowerCase() === 'approved';
   const finalRejected = String(host.kyc_status || '').toLowerCase() === 'rejected';
   return (
-    <Panel className="overflow-hidden xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto">
+    <Panel className="fixed inset-3 z-50 max-h-[calc(100vh-1.5rem)] overflow-y-auto shadow-2xl xl:sticky xl:inset-auto xl:top-4 xl:z-auto xl:max-h-[calc(100vh-2rem)] xl:overflow-y-auto xl:shadow-none">
       <div className="border-b border-slate-100 bg-slate-50 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
