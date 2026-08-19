@@ -324,7 +324,18 @@ async def search_properties(
             query["$or"] = city_match_conditions(city)
 
         if property_type:
-            query["property_type"] = property_type
+            if property_type.startswith("not:"):
+                neg_val = property_type[4:]
+                if "," in neg_val:
+                    types = [t.strip() for t in neg_val.split(",") if t.strip()]
+                    query["property_type"] = {"$nin": types}
+                else:
+                    query["property_type"] = {"$ne": neg_val.strip()}
+            elif "," in property_type:
+                types = [t.strip() for t in property_type.split(",") if t.strip()]
+                query["property_type"] = {"$in": types}
+            else:
+                query["property_type"] = property_type
 
         if bhk_type:
             query["bhk_type"] = bhk_type

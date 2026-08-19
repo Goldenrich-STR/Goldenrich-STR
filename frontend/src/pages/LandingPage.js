@@ -1738,7 +1738,7 @@ const PREMIUM_COLLECTIONS = [
     tag: 'Most Booked',
     image: '/videos/Discover our collection/Villas/Bellissimo Villa4 (1).jpg',
     query: 'residential',
-    property_type: 'villa'
+    property_type: 'villa,farmhouse'
   },
   {
     id: 'hilltop-retreats',
@@ -1758,7 +1758,7 @@ const PREMIUM_COLLECTIONS = [
     tag: 'Trending',
     image: '/videos/Discover our collection/Wedding venues/Pegasus Banquet Hall4 (1).jpg',
     query: 'event_venue',
-    property_type: 'banquet_hall'
+    property_type: ''
   },
   {
     id: 'residential-stays',
@@ -1768,7 +1768,7 @@ const PREMIUM_COLLECTIONS = [
     tag: 'New Launches',
     image: '/videos/Discover our collection/Residential stay/Vayavia Divine1 (1).jpg',
     query: 'residential',
-    property_type: 'apartment'
+    property_type: 'not:villa,farmhouse'
   },
   {
     id: 'commercial-spaces',
