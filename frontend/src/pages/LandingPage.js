@@ -4009,16 +4009,16 @@ const LandingPage = () => {
 
                     <div className="w-full md:w-[55%] relative h-[280px] md:h-full overflow-hidden">
                       <img
-                        src="https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&q=80&w=1200"
-                        alt="Amarah Villa Dining"
+                        src="/videos/Discover our collection/Signature series/3baaabd56fa442979578b06924b47477.jpg"
+                        alt="Horizon Block Nashik"
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-[#8c7b50]/15 mix-blend-multiply pointer-events-none" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent z-10 pointer-events-none" />
 
                       <div className="absolute bottom-6 left-6 z-20 text-left text-white">
-                        <h5 className="font-serif text-lg font-bold leading-tight text-white">Amarah</h5>
-                        <p className="text-white/80 text-[10px] uppercase tracking-wider mt-0.5">Assagao, Goa</p>
+                        <h5 className="font-serif text-lg font-bold leading-tight text-white">Horizon Block</h5>
+                        <p className="text-white/80 text-[10px] uppercase tracking-wider mt-0.5">Nashik, Maharashtra</p>
                       </div>
                     </div>
                   </div>
