@@ -3422,6 +3422,7 @@ const LandingPage = () => {
                           {/* Arrow Separator */}
                           <div className="hidden lg:flex items-center text-gray-300 mx-1 shrink-0">
                             <ArrowRight className="w-4 h-4" />
+                          </div>
                           {/* Check-out */}
                           <div className="relative flex-1 flex items-center px-3 lg:px-6 py-2.5 lg:py-3 hover:bg-stone/50 rounded-2xl lg:rounded-full transition duration-200 group shrink-0">
                             <Calendar className="w-4.5 h-4.5 text-gray-400 mr-2 lg:mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
