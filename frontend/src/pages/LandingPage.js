@@ -3422,8 +3422,6 @@ const LandingPage = () => {
                           {/* Arrow Separator */}
                           <div className="hidden lg:flex items-center text-gray-300 mx-1 shrink-0">
                             <ArrowRight className="w-4 h-4" />
-                          </div>
-                          
                           {/* Check-out */}
                           <div className="relative flex-1 flex items-center px-3 lg:px-6 py-2.5 lg:py-3 hover:bg-stone/50 rounded-2xl lg:rounded-full transition duration-200 group shrink-0">
                             <Calendar className="w-4.5 h-4.5 text-gray-400 mr-2 lg:mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
@@ -3731,20 +3729,34 @@ const LandingPage = () => {
             // Local stateful slider inside an IIFE
             const StandardSlider = () => {
               const slides = [
-                'https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?auto=format&fit=crop&q=80&w=1600', // Gourmet chef plating / food
+                {
+                  id: 'standard',
+                  image: 'https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?auto=format&fit=crop&q=80&w=1600',
+                  tag: 'Hospitality Reimagined',
+                  title: 'The X-Space360 Standard',
+                  subtitle: 'Handpicked signature features that make every stay feel elevated, effortless, and memorable.'
+                },
+                {
+                  id: 'promise',
+                  image: '/images/hero/hospitality_team_welcome.png',
+                  tag: 'Why X-Space360?',
+                  title: <>Not just a booking. <span className="font-serif italic font-normal text-amber-300">A promise.</span></>,
+                  subtitle: 'Our commitment to excellence from the moment you book to the moment you check out.'
+                }
               ];
               const [currentIndex, setCurrentIndex] = useState(0);
 
               useEffect(() => {
-                if (slides.length <= 1) return;
                 const interval = setInterval(() => {
                   setCurrentIndex((prev) => (prev + 1) % slides.length);
-                }, 5000);
+                }, 7000);
                 return () => clearInterval(interval);
               }, [slides.length]);
 
+              const currentSlide = slides[currentIndex];
+
               return (
-                <div className="relative w-full min-h-[360px] md:h-[600px] overflow-hidden my-12 md:my-16 rounded-none">
+                <div className="relative w-full min-h-[420px] md:h-[620px] overflow-hidden my-12 md:my-16 rounded-none">
                   {/* Sliding Background Images */}
                   {slides.map((slide, idx) => (
                     <div
@@ -3754,217 +3766,276 @@ const LandingPage = () => {
                       }`}
                     >
                       <img
-                        src={slide}
-                        alt={`X-Space360 Standard ${idx + 1}`}
+                        src={slide.image}
+                        alt={slide.tag}
                         className="w-full h-full object-cover"
                       />
                     </div>
                   ))}
                   
                   {/* Dark overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/10 via-black/45 to-black/85 z-10" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-black/55 to-black/90 z-10" />
 
                   {/* Slider Dots indicators */}
-                  {slides.length > 1 && (
-                    <div className="absolute bottom-6 left-8 md:left-12 z-30 flex items-center space-x-2">
-                      {slides.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setCurrentIndex(idx)}
-                          className={`h-1.5 rounded-full transition-all duration-300 ${
-                            idx === currentIndex 
-                              ? 'w-6 bg-white' 
-                              : 'w-1.5 bg-white/40 hover:bg-white/80'
-                          }`}
-                          aria-label={`Go to slide ${idx + 1}`}
-                        />
-                      ))}
-                    </div>
-                  )}
+                  <div className="absolute bottom-6 left-8 md:left-12 z-30 flex items-center space-x-2">
+                    {slides.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setCurrentIndex(idx)}
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          idx === currentIndex 
+                            ? 'w-8 bg-amber-400' 
+                            : 'w-2 bg-white/40 hover:bg-white/80'
+                        }`}
+                        aria-label={`Go to slide ${idx + 1}`}
+                      />
+                    ))}
+                  </div>
 
-                  {/* Floating Overlay Card on the right */}
-                  <div className="absolute inset-y-0 right-0 w-full md:w-[480px] lg:w-[550px] flex flex-col justify-end md:justify-center px-5 py-6 md:px-12 md:py-0 text-left text-white z-20">
-                    <div className="max-w-[92%] md:max-w-none">
+                  {/* Floating Content Card on the right */}
+                  <div className="absolute inset-y-0 right-0 w-full md:w-[500px] lg:w-[580px] flex flex-col justify-center px-6 py-8 md:px-12 text-left text-white z-20">
+                    <div className="max-w-[95%] md:max-w-none mb-4 md:mb-6">
                       <span className="text-amber-400 font-extrabold text-[9px] md:text-[10px] uppercase tracking-[0.22em] mb-2 block">
-                        Hospitality Reimagined
+                        {currentSlide.tag}
                       </span>
-                      <h3 className="font-lufga text-[1.9rem] leading-[1.05] md:text-4xl font-bold mb-2 md:mb-3 tracking-tight text-white">
-                        The X-Space360 Standard
+                      <h3 className="font-lufga text-[1.9rem] leading-[1.1] md:text-4xl font-bold mb-2 md:mb-3 tracking-tight text-white">
+                        {currentSlide.title}
                       </h3>
-                      <p className="text-white/78 text-[11px] md:text-sm leading-relaxed mb-4 md:mb-8 max-w-[30rem]">
-                        Handpicked signature features that make every stay feel elevated, effortless, and memorable.
+                      <p className="text-white/80 text-[11px] md:text-sm leading-relaxed max-w-[32rem]">
+                        {currentSlide.subtitle}
                       </p>
                     </div>
 
-                    {/* Features Grid */}
-                    <div className="grid grid-cols-2 gap-y-3 gap-x-3 md:gap-y-6 md:gap-x-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
-                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
-                            <defs>
-                              <linearGradient id="poolGrad" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor="#4fd1c5" />
-                                <stop offset="100%" stopColor="#2b6cb0" />
-                              </linearGradient>
-                            </defs>
-                            <path d="M2 12c4-2 6 2 10 0s6-2 10 0" stroke="url(#poolGrad)" strokeWidth="2.5" strokeLinecap="round" />
-                            <path d="M2 16c4-2 6 2 10 0s6-2 10 0" stroke="url(#poolGrad)" strokeWidth="2.5" strokeLinecap="round" opacity="0.7" />
-                            <circle cx="12" cy="7" r="2.5" fill="#f6ad55" />
-                            <path d="M8 12c1.5-1.5 3.5-1.5 5 0" stroke="#f6ad55" strokeWidth="2" strokeLinecap="round" />
-                          </svg>
+                    {/* Dynamic Content depending on slide */}
+                    {currentSlide.id === 'standard' ? (
+                      /* Features Grid for Slide 1 */
+                      <div className="grid grid-cols-2 gap-y-3 gap-x-3 md:gap-y-5 md:gap-x-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                              <defs>
+                                <linearGradient id="poolGrad" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#4fd1c5" />
+                                  <stop offset="100%" stopColor="#2b6cb0" />
+                                </linearGradient>
+                              </defs>
+                              <path d="M2 12c4-2 6 2 10 0s6-2 10 0" stroke="url(#poolGrad)" strokeWidth="2.5" strokeLinecap="round" />
+                              <path d="M2 16c4-2 6 2 10 0s6-2 10 0" stroke="url(#poolGrad)" strokeWidth="2.5" strokeLinecap="round" opacity="0.7" />
+                              <circle cx="12" cy="7" r="2.5" fill="#f6ad55" />
+                              <path d="M8 12c1.5-1.5 3.5-1.5 5 0" stroke="#f6ad55" strokeWidth="2" strokeLinecap="round" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Private Pool</h5>
+                            <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Exclusive access stays</p>
+                          </div>
                         </div>
-                        <div>
-                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Private Pool</h5>
-                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Exclusive access stays</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
-                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
-                            <defs>
-                              <linearGradient id="chefGrad" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor="#fbd38d" />
-                                <stop offset="100%" stopColor="#dd6b20" />
-                              </linearGradient>
-                            </defs>
-                            <path d="M6 18c0-3.5 2-6.5 5-7.5V9.5C9.5 9 8.5 7.5 8.5 6c0-2.2 1.8-4 4-4s4 1.8 4 4c0 1.5-1 3-2.5 3.5v1c3 1 5 4 5 7.5H6z" fill="url(#chefGrad)" />
-                            <rect x="7" y="18" width="10" height="3" rx="1.5" fill="#e2e8f0" />
-                          </svg>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                              <defs>
+                                <linearGradient id="chefGrad" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#fbd38d" />
+                                  <stop offset="100%" stopColor="#dd6b20" />
+                                </linearGradient>
+                              </defs>
+                              <path d="M6 18c0-3.5 2-6.5 5-7.5V9.5C9.5 9 8.5 7.5 8.5 6c0-2.2 1.8-4 4-4s4 1.8 4 4c0 1.5-1 3-2.5 3.5v1c3 1 5 4 5 7.5H6z" fill="url(#chefGrad)" />
+                              <rect x="7" y="18" width="10" height="3" rx="1.5" fill="#e2e8f0" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">In-house Chef</h5>
+                            <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Gourmet dining on demand</p>
+                          </div>
                         </div>
-                        <div>
-                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">In-house Chef</h5>
-                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Gourmet dining on demand</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
-                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
-                            <defs>
-                              <linearGradient id="butlerGrad" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor="#ecc94b" />
-                                <stop offset="100%" stopColor="#b7791f" />
-                              </linearGradient>
-                            </defs>
-                            <path d="M4 4h16v16H4z" fill="#2d3748" className="opacity-10" />
-                            <path d="M4 4l8 8 8-8v16H4V4z" fill="#1a202c" />
-                            <path d="M8 4l4 4 4-4H8z" fill="#edf2f7" />
-                            <path d="M10 8h4v1.5h-4z" fill="url(#butlerGrad)" />
-                            <circle cx="12" cy="12" r="1.5" fill="url(#butlerGrad)" />
-                            <circle cx="12" cy="15" r="1.5" fill="url(#butlerGrad)" />
-                          </svg>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                              <defs>
+                                <linearGradient id="butlerGrad" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#ecc94b" />
+                                  <stop offset="100%" stopColor="#b7791f" />
+                                </linearGradient>
+                              </defs>
+                              <path d="M4 4h16v16H4z" fill="#2d3748" className="opacity-10" />
+                              <path d="M4 4l8 8 8-8v16H4V4z" fill="#1a202c" />
+                              <path d="M8 4l4 4 4-4H8z" fill="#edf2f7" />
+                              <path d="M10 8h4v1.5h-4z" fill="url(#butlerGrad)" />
+                              <circle cx="12" cy="12" r="1.5" fill="url(#butlerGrad)" />
+                              <circle cx="12" cy="15" r="1.5" fill="url(#butlerGrad)" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Butler Service</h5>
+                            <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Personalized assistance</p>
+                          </div>
                         </div>
-                        <div>
-                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Butler Service</h5>
-                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Personalized assistance</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
-                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
-                            <defs>
-                              <linearGradient id="careGrad" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor="#f6ad55" />
-                                <stop offset="100%" stopColor="#dd6b20" />
-                              </linearGradient>
-                            </defs>
-                            <circle cx="10" cy="10" r="6" stroke="url(#careGrad)" strokeWidth="3" />
-                            <path d="M14.5 14.5L21 21" stroke="url(#careGrad)" strokeWidth="3" strokeLinecap="round" />
-                            <path d="M10 6l1 2.5L13.5 9l-2.5 1L10 12.5l-1-2.5-2.5-1 2.5-1z" fill="#ecc94b" />
-                          </svg>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                              <defs>
+                                <linearGradient id="careGrad" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#f6ad55" />
+                                  <stop offset="100%" stopColor="#dd6b20" />
+                                </linearGradient>
+                              </defs>
+                              <circle cx="10" cy="10" r="6" stroke="url(#careGrad)" strokeWidth="3" />
+                              <path d="M14.5 14.5L21 21" stroke="url(#careGrad)" strokeWidth="3" strokeLinecap="round" />
+                              <path d="M10 6l1 2.5L13.5 9l-2.5 1L10 12.5l-1-2.5-2.5-1 2.5-1z" fill="#ecc94b" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Caretaker Onsite</h5>
+                            <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">24/7 guest support</p>
+                          </div>
                         </div>
-                        <div>
-                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Caretaker Onsite</h5>
-                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">24/7 guest support</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
-                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
-                            <defs>
-                              <linearGradient id="compGrad" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor="#63b3ed" />
-                                <stop offset="100%" stopColor="#3182ce" />
-                              </linearGradient>
-                            </defs>
-                            <circle cx="12" cy="12" r="9" stroke="url(#compGrad)" strokeWidth="2.5" />
-                            <path d="M12 3v2M12 19v2M3 12h2M19 12h2" stroke="url(#compGrad)" strokeWidth="1.5" strokeLinecap="round" />
-                            <path d="M12 12l3-5-1 4 4 1-6 0z" fill="#e53e3e" />
-                            <path d="M12 12l-3 5 1-4-4-1 6 0z" fill="#e2e8f0" />
-                          </svg>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                              <defs>
+                                <linearGradient id="compGrad" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#63b3ed" />
+                                  <stop offset="100%" stopColor="#3182ce" />
+                                </linearGradient>
+                              </defs>
+                              <circle cx="12" cy="12" r="9" stroke="url(#compGrad)" strokeWidth="2.5" />
+                              <path d="M12 3v2M12 19v2M3 12h2M19 12h2" stroke="url(#compGrad)" strokeWidth="1.5" strokeLinecap="round" />
+                              <path d="M12 12l3-5-1 4 4 1-6 0z" fill="#e53e3e" />
+                              <path d="M12 12l-3 5 1-4-4-1 6 0z" fill="#e2e8f0" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Local Experiences</h5>
+                            <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Curated local guides</p>
+                          </div>
                         </div>
-                        <div>
-                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Local Experiences</h5>
-                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Curated local guides</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
-                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
-                            <defs>
-                              <linearGradient id="gameGrad" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor="#fc8181" />
-                                <stop offset="100%" stopColor="#e53e3e" />
-                              </linearGradient>
-                            </defs>
-                            <rect x="3" y="5" width="11" height="15" rx="1.5" fill="#edf2f7" stroke="#cbd5e0" strokeWidth="1.5" transform="rotate(-10 3 5)" />
-                            <rect x="9" y="4" width="11" height="15" rx="1.5" fill="white" stroke="#e2e8f0" strokeWidth="1.5" />
-                            <path d="M14.5 10c0-1.5-2.5-3-2.5-3s-2.5 1.5-2.5 3c0 1 1 2 2.5 3.5 1.5-1.5 2.5-2.5 2.5-3.5z" fill="url(#gameGrad)" />
-                          </svg>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                              <defs>
+                                <linearGradient id="gameGrad" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#fc8181" />
+                                  <stop offset="100%" stopColor="#e53e3e" />
+                                </linearGradient>
+                              </defs>
+                              <rect x="3" y="5" width="11" height="15" rx="1.5" fill="#edf2f7" stroke="#cbd5e0" strokeWidth="1.5" transform="rotate(-10 3 5)" />
+                              <rect x="9" y="4" width="11" height="15" rx="1.5" fill="white" stroke="#e2e8f0" strokeWidth="1.5" />
+                              <path d="M14.5 10c0-1.5-2.5-3-2.5-3s-2.5 1.5-2.5 3c0 1 1 2 2.5 3.5 1.5-1.5 2.5-2.5 2.5-3.5z" fill="url(#gameGrad)" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Recreation & Games</h5>
+                            <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Indoor & outdoor setups</p>
+                          </div>
                         </div>
-                        <div>
-                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Recreation & Games</h5>
-                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Indoor & outdoor setups</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
-                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
-                            <defs>
-                              <linearGradient id="grassGrad" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor="#68d391" />
-                                <stop offset="100%" stopColor="#2f855a" />
-                              </linearGradient>
-                            </defs>
-                            <path d="M12 22C12 15 8 10 4 8c4 4 6 9 8 14z" fill="url(#grassGrad)" />
-                            <path d="M12 22C12 12 17 6 21 3c-2 6-4 13-9 19z" fill="url(#grassGrad)" />
-                            <path d="M12 22c0-8 3-14 7-17-2 5-3 10-7 17z" fill="url(#grassGrad)" opacity="0.8" />
-                          </svg>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                              <defs>
+                                <linearGradient id="grassGrad" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#68d391" />
+                                  <stop offset="100%" stopColor="#2f855a" />
+                                </linearGradient>
+                              </defs>
+                              <path d="M12 22C12 15 8 10 4 8c4 4 6 9 8 14z" fill="url(#grassGrad)" />
+                              <path d="M12 22C12 12 17 6 21 3c-2 6-4 13-9 19z" fill="url(#grassGrad)" />
+                              <path d="M12 22c0-8 3-14 7-17-2 5-3 10-7 17z" fill="url(#grassGrad)" opacity="0.8" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Green Open Spaces</h5>
+                            <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Lush gardens & lawns</p>
+                          </div>
                         </div>
-                        <div>
-                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Green Open Spaces</h5>
-                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Lush gardens & lawns</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
-                          <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
-                            <defs>
-                              <linearGradient id="popGrad" x1="0" y1="0" x2="1" y2="1">
-                                <stop offset="0%" stopColor="#fbb6ce" />
-                                <stop offset="100%" stopColor="#d53f8c" />
-                              </linearGradient>
-                            </defs>
-                            <path d="M5 19l6-6 3 3-6 6H5v-3z" fill="url(#popGrad)" />
-                            <path d="M14 11l4-4 2 2-4 4-2-2z" fill="#edf2f7" />
-                            <circle cx="16" cy="6" r="1.5" fill="#f6ad55" />
-                            <circle cx="19" cy="11" r="1" fill="#ecc94b" />
-                            <circle cx="20" cy="5" r="1" fill="#4fd1c5" />
-                            <path d="M11 11c3-3 6-3 8-5M12 12c1-3 3-5 5-5" stroke="#ecc94b" strokeWidth="1.5" strokeLinecap="round" />
-                          </svg>
-                        </div>
-                        <div>
-                          <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Custom Events</h5>
-                          <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Bespoke celebrations</p>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center shrink-0">
+                            <svg viewBox="0 0 24 24" className="w-7 h-7 md:w-8 md:h-8" fill="none">
+                              <defs>
+                                <linearGradient id="popGrad" x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor="#fbb6ce" />
+                                  <stop offset="100%" stopColor="#d53f8c" />
+                                </linearGradient>
+                              </defs>
+                              <path d="M5 19l6-6 3 3-6 6H5v-3z" fill="url(#popGrad)" />
+                              <path d="M14 11l4-4 2 2-4 4-2-2z" fill="#edf2f7" />
+                              <circle cx="16" cy="6" r="1.5" fill="#f6ad55" />
+                              <circle cx="19" cy="11" r="1" fill="#ecc94b" />
+                              <circle cx="20" cy="5" r="1" fill="#4fd1c5" />
+                              <path d="M11 11c3-3 6-3 8-5M12 12c1-3 3-5 5-5" stroke="#ecc94b" strokeWidth="1.5" strokeLinecap="round" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-[12px] md:text-sm text-white leading-tight">Custom Events</h5>
+                            <p className="text-white/60 text-[9px] md:text-[10px] mt-0.5">Bespoke celebrations</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ) : (
+                      /* Promise List for Slide 2 */
+                      <div className="space-y-3 md:space-y-4">
+                        <div className="flex items-start gap-3.5">
+                          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-black/40 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-md">
+                            <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-6 md:h-6" fill="none">
+                              <path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-5.45 8-12V5l-8-3z" fill="#D4AF37" opacity="0.3" />
+                              <path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-5.45 8-12V5l-8-3z" stroke="#FBBF24" strokeWidth="1.5" />
+                              <path d="M9 12l2 2 4-4" stroke="#FBBF24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-xs md:text-sm text-white leading-snug">Every villa, personally verified</h5>
+                            <p className="text-white/70 text-[10px] md:text-xs mt-0.5 leading-relaxed">We visit, assess, and curate. No listing makes it without meeting our standard.</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3.5">
+                          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-black/40 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-md">
+                            <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-6 md:h-6" fill="none">
+                              <circle cx="12" cy="12" r="9" fill="#DD6B20" opacity="0.3" />
+                              <path d="M12 6v6l4 2" stroke="#FBD38D" strokeWidth="2" strokeLinecap="round" />
+                              <path d="M7 17c2-1 4-1 5 0s3 1 5 0" stroke="#FBD38D" strokeWidth="1.5" strokeLinecap="round" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-xs md:text-sm text-white leading-snug">In-villa dining & experiences</h5>
+                            <p className="text-white/70 text-[10px] md:text-xs mt-0.5 leading-relaxed">Private chefs, bonfire setups, curated celebrations — we handle the memories.</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3.5">
+                          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-black/40 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-md">
+                            <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-6 md:h-6" fill="none">
+                              <circle cx="12" cy="8" r="4" stroke="#FBBF24" strokeWidth="1.5" fill="#D4AF37" opacity="0.3" />
+                              <path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" stroke="#FBBF24" strokeWidth="1.5" strokeLinecap="round" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-xs md:text-sm text-white leading-snug">A dedicated host, start to finish</h5>
+                            <p className="text-white/70 text-[10px] md:text-xs mt-0.5 leading-relaxed">One point of contact from booking to checkout. No call centers, no runarounds.</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-3.5">
+                          <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-black/40 border border-amber-400/30 flex items-center justify-center shrink-0 shadow-md">
+                            <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-6 md:h-6" fill="none">
+                              <rect x="5" y="10" width="14" height="10" rx="2" stroke="#34D399" strokeWidth="1.5" fill="#059669" opacity="0.3" />
+                              <path d="M8 10V7a4 4 0 118 0v3" stroke="#34D399" strokeWidth="1.5" />
+                              <circle cx="12" cy="15" r="1.5" fill="#34D399" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h5 className="font-semibold text-xs md:text-sm text-white leading-snug">Transparent pricing, always</h5>
+                            <p className="text-white/70 text-[10px] md:text-xs mt-0.5 leading-relaxed">What you see is what you pay. No surprise charges at checkout, ever.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
