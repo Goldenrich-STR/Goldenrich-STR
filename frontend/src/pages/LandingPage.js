@@ -3984,24 +3984,24 @@ const LandingPage = () => {
                     <div className="w-full md:w-[45%] p-8 md:p-10 flex flex-col justify-center text-left text-[#3c3732]">
                       <div>
                         <h4 className="font-serif text-xl md:text-2xl font-bold leading-relaxed mb-6">
-                          List your home amongst India's <span className="italic font-normal">finest</span> luxury villas. and become part of our prestigious homeowner community...
+                          Indulge in India's <span className="italic font-normal">finest</span> ultra-luxury private estates, handpicked for the discerning traveler...
                         </h4>
                         <ul className="space-y-3.5 text-xs font-semibold text-[#5a544e]">
                           <li className="flex items-center gap-2.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
-                            Trusted by 300+ HNIs, Industrialists, & Celebrities
+                            Handpicked portfolio of premium estates & architectural marvels
                           </li>
                           <li className="flex items-center gap-2.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
-                            Earn 40% net margins upon partnering with us
+                            Fully serviced stays with master chefs & personalized butler service
                           </li>
                           <li className="flex items-center gap-2.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
-                            Enhance the warmth and beauty of your Villa
+                            Breathtaking views, infinity pools, & complete privacy guaranteed
                           </li>
                           <li className="flex items-center gap-2.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#8c7b50]" />
-                            Peace of mind with an end-to-end hospitality operation
+                            Seamless digital check-ins & verified elite hospitality standards
                           </li>
                         </ul>
                       </div>
