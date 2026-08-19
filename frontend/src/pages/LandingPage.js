@@ -2273,18 +2273,7 @@ const LandingPage = () => {
     commercial: [],
     event_venue: []
   });
-  const signatureProperties = React.useMemo(() => {
-    const all = [
-      ...(properties.residential || []),
-      ...(properties.commercial || []),
-      ...(properties.event_venue || [])
-    ];
-    return all.filter(item => {
-      const type = (item.property_type || item.type || '').toLowerCase();
-      const price = item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0;
-       return type === 'villa' && price >= 50000;
-    });
-  }, [properties]);
+  const [signatureProperties, setSignatureProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
 
@@ -2669,10 +2658,11 @@ const LandingPage = () => {
       setLoading(true);
       try {
         const cacheBust = Date.now();
-        const [resRes, resComm, resEvent] = await Promise.all([
+        const [resRes, resComm, resEvent, resSig] = await Promise.all([
           propertyAPI.searchProperties({ category: 'residential', limit: 10, _t: cacheBust }),
           propertyAPI.searchProperties({ category: 'commercial', limit: 10, _t: cacheBust }),
-          propertyAPI.searchProperties({ category: 'event_venue', limit: 10, _t: cacheBust })
+          propertyAPI.searchProperties({ category: 'event_venue', limit: 10, _t: cacheBust }),
+          propertyAPI.searchProperties({ property_type: 'villa', min_price: 50000, limit: 10, _t: cacheBust })
         ]);
 
         setProperties({
@@ -2680,6 +2670,7 @@ const LandingPage = () => {
           commercial: resComm.data.properties || [],
           event_venue: resEvent.data.properties || []
         });
+        setSignatureProperties(resSig.data.properties || []);
       } catch (err) {
         console.error("Failed to fetch featured properties:", err);
       } finally {
@@ -4123,7 +4114,7 @@ const LandingPage = () => {
                       ) : (
                         /* Placeholder when database has no 50k+ villas/resorts yet */
                         <div className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-gray-50 rounded-3xl overflow-hidden border border-dashed border-gray-250 p-6 flex flex-col justify-center items-center text-center text-gray-400 font-medium">
-                          <p className="text-xs">No active Signature Series properties currently in database.</p>
+                          <p className="text-xs">No active Signature Series properties currently available.</p>
                         </div>
                       )}
 
