@@ -1736,7 +1736,7 @@ const PREMIUM_COLLECTIONS = [
     subtitle: 'Private pools, lush lawns & royal stays across India',
     detail: 'From Alibaug to Coorg, our hand-picked villas offer complete privacy, personal caretakers, BBQ setups & breathtaking views. Perfect for family vacations, pre-wedding shoots & weekend escapes.',
     tag: 'Most Booked',
-    image: 'https://images.unsplash.com/photo-1744448365250-9b6aa1a7e4a3?auto=format&fit=crop&q=80&w=900',
+    image: '/videos/Discover our collection/Villas/Bellissimo Villa4 (1).jpg',
     query: 'residential',
     property_type: 'villa'
   },
@@ -1746,7 +1746,7 @@ const PREMIUM_COLLECTIONS = [
     subtitle: 'The ultimate pinnacle of private luxury stays',
     detail: 'A curated portfolio of India’s most exclusive private estates, featuring infinity pools, personalized butler service, master chefs, and unparalleled tranquility.',
     tag: 'Signature Series',
-    image: 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=900',
+    image: '/videos/Discover our collection/Signature series/3baaabd56fa442979578b06924b47477.jpg',
     query: 'residential',
     property_type: 'resort'
   },
@@ -1756,7 +1756,7 @@ const PREMIUM_COLLECTIONS = [
     subtitle: 'Magical backdrops for your dream celebration',
     detail: 'Say goodbye to Big Fat Weddings, say hello to intimate, curated celebration venues with floral-wrapped courtyards, rooftop terraces & in-house chefs. Available for 50 to 300 guests.',
     tag: 'Trending',
-    image: 'https://images.pexels.com/photos/12153938/pexels-photo-12153938.jpeg?auto=compress&cs=tinysrgb&w=900',
+    image: '/videos/Discover our collection/Wedding venues/Pegasus Banquet Hall4 (1).jpg',
     query: 'event_venue',
     property_type: 'banquet_hall'
   },
@@ -1766,7 +1766,7 @@ const PREMIUM_COLLECTIONS = [
     subtitle: 'Fully serviced urban homes with hotel-grade amenities',
     detail: 'Monthly or nightly, our premium residential properties come with AC, WiFi, housekeeping & verified hosts. Ideal for business travelers, relocating professionals & long-term stays in metro cities.',
     tag: 'New Launches',
-    image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&q=80&w=900',
+    image: '/videos/Discover our collection/Residential stay/Vayavia Divine1 (1).jpg',
     query: 'residential',
     property_type: 'apartment'
   },
@@ -1776,7 +1776,7 @@ const PREMIUM_COLLECTIONS = [
     subtitle: 'Premium offices and collaborative work studios',
     detail: 'Short-term or long-term rentals for startups, corporate offsites, and growing teams. Our commercial spaces include boardrooms, co-working zones, event halls & plug-and-play setups.',
     tag: 'Offices',
-    image: 'https://images.unsplash.com/photo-1497366412874-3415097a27e7?auto=format&fit=crop&q=80&w=900',
+    image: '/videos/Discover our collection/office spaces/a69603cfa2714a9baf245d7b43f2cd26.jpg',
     query: 'commercial'
   }
 ];
