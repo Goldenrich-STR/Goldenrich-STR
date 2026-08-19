@@ -2061,7 +2061,7 @@ const CollectionsSection = ({
                       alt={col.label}
                       className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-black/10 transition-opacity duration-300 group-hover:opacity-90" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-300 group-hover:opacity-90" />
                     <div className="absolute left-4 top-4 z-10">
                       {col.tag === 'Signature Series' ? (
                         <div className="flex items-center gap-1.5 border border-[#D4AF37]/50 bg-black px-3 py-1 shadow-md">
@@ -2077,8 +2077,7 @@ const CollectionsSection = ({
                       )}
                     </div>
                     <div className="absolute inset-0 z-10 flex flex-col justify-end p-5 md:p-6">
-                      <p className="mb-1 text-[9px] font-bold uppercase tracking-widest text-white/60">Explore</p>
-                      <h3 className="text-lg font-bold leading-snug text-white transition-transform duration-500 group-hover:-translate-y-1 md:text-xl">
+                      <h3 className="text-lg font-serif-hero leading-snug text-white transition-transform duration-500 group-hover:-translate-y-1 md:text-xl">
                         {col.label}
                       </h3>
                       <div className="max-h-0 overflow-hidden opacity-0 transition-all duration-500 ease-in-out group-hover:mt-2 group-hover:max-h-[120px] group-hover:opacity-100">
